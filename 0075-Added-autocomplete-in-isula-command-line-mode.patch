@@ -1,0 +1,140 @@
+From 5f1fe5416c56846da50dd88c7423e80ec8514f5f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E5=B0=B9=E7=A7=80=E6=B1=9F?= <yinxiujiang@kylinos.cn>
+Date: Thu, 15 Apr 2021 16:23:30 +0800
+Subject: [PATCH 075/104] Added autocomplete in isula command line mode
+
+---
+ iSulad.spec                  |  5 ++
+ src/contrib/completion/isula | 90 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 95 insertions(+)
+ create mode 100644 src/contrib/completion/isula
+
+diff --git a/iSulad.spec b/iSulad.spec
+index eca7ddd8..532af2dc 100644
+--- a/iSulad.spec
++++ b/iSulad.spec
+@@ -107,6 +107,8 @@ install -d $RPM_BUILD_ROOT/%{_initddir}
+ install -p -m 0640 ../src/contrib/init/isulad.init $RPM_BUILD_ROOT/%{_initddir}/isulad.init
+ %endif
+ 
++install -d $RPM_BUILD_ROOT/usr/share/bash-completion/completions
++install -p -m 0644 ../src/contrib/completion/isula $RPM_BUILD_ROOT/usr/share/bash-completion/completions/isula
+ %clean
+ rm -rf %{buildroot}
+ 
+@@ -125,6 +127,8 @@ fi
+ fi
+ 
+ %post
++source /usr/share/bash-completion/completions/isula
++
+ if ! getent group isula > /dev/null; then
+     groupadd --system isula
+ fi
+@@ -211,6 +215,7 @@ fi
+ %else
+ %config(noreplace,missingok) %{_initddir}/isulad.init
+ %endif
++/usr/share/bash-completion/completions/isula
+ 
+ %changelog
+ * Tue Sep 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 2.0.5-20200910.140350.git72990229
+diff --git a/src/contrib/completion/isula b/src/contrib/completion/isula
+new file mode 100644
+index 00000000..305c5150
+--- /dev/null
++++ b/src/contrib/completion/isula
+@@ -0,0 +1,90 @@
++#!/usr/bin/env bash
++_isula_isula() {
++    local isula_management_commands=(
++        volume
++    )
++
++    local isula_commands=(
++        attach
++        cp
++        create
++        events
++        exec
++        export
++        images
++        import
++        info
++        inspect
++        kill
++        load
++        login
++        logout
++        logs
++        pause
++        ps
++        pull
++        rename
++        restart
++        rm
++        rmi
++        run
++        start
++        stats
++        stop
++        tag
++        top
++        unpause
++        update
++        version
++        wait
++    )
++
++    local commands=(${isula_management_commands[*]} ${isula_commands[*]})
++    local common_options=(
++        --help
++        -H --host
++        --tls
++        --tlscacert
++        --tlscert
++        --tlskey
++        --tlsverify
++        --version
++    )
++
++    case "$prev" in
++        #todo.....
++    esac
++
++    case "$cur" in
++        -*)
++            COMPREPLY=( $( compgen -W "${common_options[*]}" -- "$cur" ) )
++            ;;
++        *)
++            COMPREPLY=( $( compgen -W "${commands[*]}" -- "$cur" ) )
++            ;;
++    esac
++}
++
++
++_isula() {
++    COMPREPLY=()
++
++    #An array variable consisting of the individual words in the current command line
++    local words=(${COMP_WORDS[*]})
++    #An index into ${word} of the word containing the current cursor position
++    local cword=$COMP_CWORD
++    local cur="${words[$cword]}"
++    local prev="${words[$cword-1]}"
++    local command='isula'
++
++    local completions_func=_isula_${command//-/_}
++
++    #The completion of the secondary command will be added later
++    if [ $cword -lt 2 ] ; then
++        declare -F $completions_func >/dev/null && $completions_func
++    fi
++
++    return 0
++}
++
++complete -F _isula isula
+-- 
+2.25.1
+

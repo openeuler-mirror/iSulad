@@ -1,0 +1,45 @@
+From 1e76bdb3a7adc95631b692e9068a6131aa0ed622 Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Sat, 15 May 2021 17:21:16 +0800
+Subject: [PATCH 102/104] CI: fix integration_check.sh
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ CI/test_cases/image_cases/integration_check.sh | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/CI/test_cases/image_cases/integration_check.sh b/CI/test_cases/image_cases/integration_check.sh
+index 7c2af949..01f683c5 100755
+--- a/CI/test_cases/image_cases/integration_check.sh
++++ b/CI/test_cases/image_cases/integration_check.sh
+@@ -46,9 +46,6 @@ function test_image_info()
+   isula images | grep busybox
+   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
+ 
+-  isula images | grep ${uimage}
+-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${uimage}" && ((ret++))
+-
+   lid=$(isula inspect -f '{{.image.top_layer}}' ${image})
+   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid image top layer: ${image}" && ((ret++))
+ 
+@@ -83,7 +80,7 @@ function test_image_info()
+   isula images | grep busybox
+   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid image: ${image} exist" && ((ret++))
+ 
+-  isula images | grep ${uimage}
++  isula images | grep nats
+   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - valid image: ${uimage} do not exist" && ((ret++))
+ 
+   isula rm ${ucid}
+@@ -98,6 +95,8 @@ function test_image_info()
+   isula rm ${ucid}
+   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - remove container failed" && ((ret++))
+ 
++  isula rm -f `isula ps -aq`
++
+   msg_info "${test} finished with return ${ret}..."
+   return ${ret}
+ }
+-- 
+2.25.1
+
