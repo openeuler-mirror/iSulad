@@ -1,7 +1,7 @@
 From adde17cdd844a51fa606c74a0f241c62dbf11a27 Mon Sep 17 00:00:00 2001
 From: gaohuatao <gaohuatao@huawei.com>
 Date: Fri, 5 Mar 2021 23:13:31 -0500
-Subject: [PATCH 50/53] devicemapper: umount when resize2fs command failed
+Subject: [PATCH 052/104] devicemapper: umount when resize2fs command failed
 
 Signed-off-by: gaohuatao <gaohuatao@huawei.com>
 ---

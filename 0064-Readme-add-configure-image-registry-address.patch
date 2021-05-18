@@ -1,0 +1,44 @@
+From 36912c87592d8b46aae340df9b51287c6a8ce78b Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Thu, 1 Apr 2021 20:14:05 +0800
+Subject: [PATCH 064/104] Readme: add configure image registry address
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ README.md | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index 68f35f34..fdbc8757 100644
+--- a/README.md
++++ b/README.md
+@@ -53,10 +53,25 @@ For more information contact your distribution or package provider.
+ 
+ you should run `rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openEuler` first
+ 
++
++### Configure
++
++Configure the container image registry address, for example "docker.io" or other registry addrss.
++
++```sh
++# cat /etc/isulad/daemon.json
++.....
++    "registry-mirrors": [
++        "docker.io"
++    ],
++.....
++```
++
+ ### Run
++
+ We provide `systemd` service to start `iSulad`:
+ ```sh
+-systemctl start isulad # run the server with systemd command
++systemctl restart isulad # restart the server with systemd command
+ ```
+ 
+ You can use direct command to start `iSulad` server：
+-- 
+2.25.1
+
