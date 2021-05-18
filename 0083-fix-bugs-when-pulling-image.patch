@@ -1,0 +1,206 @@
+From 3347d4d8de7599f3b186bfcd893aca89d1328563 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Wed, 21 Apr 2021 20:26:09 +0800
+Subject: [PATCH 083/104] fix bugs when pulling image
+
+1. service in Www-Authenticate may have space, do not split it
+2. if url have space, we need to translate it
+3. fill diffid if reuse cached layer
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ .../modules/image/oci/registry/registry.c     | 10 ++++
+ .../image/oci/registry/registry_apiv2.c       | 24 ++++----
+ src/utils/http/http.c                         | 57 ++++++++++++++++++-
+ 3 files changed, 80 insertions(+), 11 deletions(-)
+
+diff --git a/src/daemon/modules/image/oci/registry/registry.c b/src/daemon/modules/image/oci/registry/registry.c
+index 1bb91d0f..bd8e8fd0 100644
+--- a/src/daemon/modules/image/oci/registry/registry.c
++++ b/src/daemon/modules/image/oci/registry/registry.c
+@@ -389,6 +389,7 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
+     cached_layer *cache = NULL;
+     struct linked_list *node = NULL;
+     char *src_file = NULL;
++    thread_fetch_info *src_info = NULL;
+     file_elem *elem = {NULL};
+     pull_descriptor *desc = info->desc;
+ 
+@@ -430,6 +431,12 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
+                 goto out;
+             }
+             src_file = ((file_elem*)elem)->file;
++            src_info = ((file_elem*)elem)->info;
++            if (src_info == NULL) {
++                ERROR("source info is NULL, this should never happen");
++                ret = -1;
++                goto out;
++            }
+ 
+             if (link(src_file, file) != 0) {
+                 ERROR("link %s to %s failed: %s", src_file, file, strerror(errno));
+@@ -438,6 +445,9 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
+             }
+             // As layer have already downloaded, set this flag to let register thread to do register
+             info->notified = true;
++            if (info->diffid == NULL) {
++                info->diffid = util_strdup_s(src_info->diffid);
++            }
+         } else {
+             ERROR("cached layer have result %d", cache->result);
+             ret = -1;
+diff --git a/src/daemon/modules/image/oci/registry/registry_apiv2.c b/src/daemon/modules/image/oci/registry/registry_apiv2.c
+index 935aa4d6..b26e42ba 100644
+--- a/src/daemon/modules/image/oci/registry/registry_apiv2.c
++++ b/src/daemon/modules/image/oci/registry/registry_apiv2.c
+@@ -162,27 +162,32 @@ static int parse_auth(pull_descriptor *desc, char *auth)
+     char *origin_tmp_auth = NULL;
+     char *trimmed_auth = NULL;
+     int ret = 0;
+-    char **parts = NULL;
++    char *schema = NULL;
++    char *params = NULL;
+ 
+     if (auth == NULL) {
+         return -1;
+     }
+ 
++    // auth: Bearer realm="https://auth.isula.org/token",service="isula registry"
+     origin_tmp_auth = util_strdup_s(auth);
+     util_trim_newline(origin_tmp_auth);
+     trimmed_auth = util_trim_space(origin_tmp_auth);
+-    parts = util_string_split_multi(trimmed_auth, ' ');
+-    if (util_array_len((const char **)parts) < 2) {
+-        ERROR("Split auth failed, auth: %s", trimmed_auth);
++    params = strchr(trimmed_auth, ' ');
++    if (params == NULL) {
++        ERROR("invalid auth when parse challenges, auth: %s", trimmed_auth);
+         ret = -1;
+         goto out;
+     }
++    // params: realm="https://auth.isula.org/token",service="isula registry"
++    params[0] = 0;
++    params += 1;
++    // schema: Bearer
++    schema = trimmed_auth;
+ 
+-    // parts[0]: Bearer
+-    // parts[1]: realm="https://auth.isula.org/token",service="registry.isula.org"
+-    ret = parse_challenges(desc, parts[0], parts[1]);
++    ret = parse_challenges(desc, schema, params);
+     if (ret != 0) {
+-        ERROR("Parse challenges failed, schema: %s, params: %s", parts[0], parts[1]);
++        ERROR("Parse challenges failed, schema: %s, params: %s", schema, params);
+         ret = -1;
+         goto out;
+     }
+@@ -190,7 +195,6 @@ static int parse_auth(pull_descriptor *desc, char *auth)
+ out:
+     free(origin_tmp_auth);
+     origin_tmp_auth = NULL;
+-    util_free_array(parts);
+ 
+     return ret;
+ }
+@@ -268,7 +272,7 @@ static int parse_ping_header(pull_descriptor *desc, char *http_head)
+         HTTP/1.1 401 Unauthorized
+         Content-Type: application/json
+         Docker-Distribution-Api-Version: registry/2.0
+-        Www-Authenticate: Bearer realm="https://auth.isula.org/token",service="registry.isula.org"
++        Www-Authenticate: Bearer realm="https://auth.isula.org/token",service="isula registry"
+         Date: Mon, 16 Mar 2020 01:16:09 GMT
+         Content-Length: 87
+         Strict-Transport-Security: max-age=31536000
+diff --git a/src/utils/http/http.c b/src/utils/http/http.c
+index bf9b8ab2..e502bb83 100644
+--- a/src/utils/http/http.c
++++ b/src/utils/http/http.c
+@@ -337,6 +337,53 @@ static struct curl_slist *set_custom_header(CURL *curl_handle, const struct http
+     return chunk;
+ }
+ 
++static size_t calc_replaced_url_len(const char *url)
++{
++    size_t i = 0;
++    size_t size = 0;
++    size_t max = 0;
++    size = strlen(url);
++
++    for (i = 0; i < size; i++) {
++        if (url[i] != ' ') {
++            max++;
++            continue;
++        }
++        max += 3;	/* ' ' to %20 so size should add 3 */
++    }
++
++    return max + 1; /* +1 for terminator */
++}
++
++static char *replace_url(const char *url)
++{
++    size_t i = 0;
++    size_t pos = 0;
++    size_t size = 0;
++    size_t max = 0;
++    char *replaced_url = NULL;
++
++    size = strlen(url);
++    max = calc_replaced_url_len(url);
++    replaced_url = util_common_calloc_s(max);
++    if (replaced_url == NULL) {
++        ERROR("out of memory");
++        return NULL;
++    }
++
++    for (i = 0; i < size; i++) {
++        if (url[i] != ' ') {
++            *(replaced_url + pos) = url[i];
++            pos++;
++            continue;
++        }
++        (void)strcat(replaced_url + pos, "%20");
++        pos += 3; /* ' ' to %20 so multiply 3 */
++    }
++
++    return replaced_url;
++}
++
+ int http_request(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
+ {
+ #define MAX_REDIRCT_NUMS 32
+@@ -352,6 +399,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
+     char *redir_url = NULL;
+     char *tmp = NULL;
+     size_t fsize = 0;
++    char *replaced_url = 0;
+ 
+     if (recursive_len + 1 >= MAX_REDIRCT_NUMS) {
+         ERROR("reach the max redirect num");
+@@ -364,8 +412,14 @@ int http_request(const char *url, struct http_get_options *options, long *respon
+         return -1;
+     }
+ 
++    replaced_url = replace_url(url);
++    if (replaced_url == NULL) {
++        ret = -1;
++        goto out;
++    }
++
+     /* set URL to get here */
+-    curl_easy_setopt(curl_handle, CURLOPT_URL, url);
++    curl_easy_setopt(curl_handle, CURLOPT_URL, replaced_url);
+     curl_easy_setopt(curl_handle, CURLOPT_NOSIGNAL, 1L);
+     /* complete connection within 30 seconds */
+     curl_easy_setopt(curl_handle, CURLOPT_CONNECTTIMEOUT, 30L);
+@@ -417,6 +471,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
+     }
+ 
+ out:
++    free(replaced_url);
+     close_file(pagefile);
+     free_rpath(rpath);
+ 
+-- 
+2.25.1
+

@@ -1,5 +1,5 @@
 %global _version 2.0.8
-%global _release 20210326.094027.gitac974aa6
+%global _release 20210518.144540.git5288ed92
 %global is_systemd 1
 
 Name:      iSulad
@@ -60,12 +60,62 @@ Patch45: 0045-rollback-setuped-network-if-mult-network-failed.patch
 Patch46: 0046-add-testcase-for-rollback-mutlnetworks.patch
 Patch47: 0047-log-adjust-log-level-from-EVENT-to-WARN-to-reduce-lo.patch
 Patch48: 0048-isulad-shim-fix-shim-exit-bug.patch
-Patch49: 0049-remove-redundant-code.patch
-Patch50: 0050-devicemapper-umount-when-resize2fs-command-failed.patch
-Patch51: 0051-ignore-to-create-mtab-when-runtime-is-kata-runtime.patch
-Patch52: 0052-remove-unchecked-layer-ignore-rootfs-layer.patch
-Patch53: 0053-add-test-to-check-running-container-with-image-integ.patch
-Patch54: 0054-fix-coredump-when-inspect-container-when-daemon-sets.patch
+Patch49: 0049-support-pull-option-when-create-run-container.patch
+Patch50: 0050-add-testcase-for-pull-option.patch
+Patch51: 0051-remove-redundant-code.patch
+Patch52: 0052-devicemapper-umount-when-resize2fs-command-failed.patch
+Patch53: 0053-support-isula-exec-workdir.patch
+Patch54: 0054-add-testcase-for-isula-exec-workdir.patch
+Patch55: 0055-ignore-to-create-mtab-when-runtime-is-kata-runtime.patch
+Patch56: 0056-remove-unchecked-layer-ignore-rootfs-layer.patch
+Patch57: 0057-add-test-to-check-running-container-with-image-integ.patch
+Patch58: 0058-fix-coredump-when-inspect-container-when-daemon-sets.patch
+Patch59: 0059-Readme-add-related-resouces-in-readme.patch
+Patch60: 0060-update-docs-build_guide_zh.md.patch
+Patch61: 0061-fix-health_check.sh-execute-failure.patch
+Patch62: 0062-support-cgroup-v2.patch
+Patch63: 0063-add-testcases-for-cgroup-v2.patch
+Patch64: 0064-Readme-add-configure-image-registry-address.patch
+Patch65: 0065-add-iSulad-experiment-in-README.patch
+Patch66: 0066-CI-add-testcase-for-long-label.patch
+Patch67: 0067-event-fix-memory-leak-when-pack-annotation-failed.patch
+Patch68: 0068-Readme-add-script-to-install-iSulad-on-Centos7.patch
+Patch69: 0069-cri-fix-residual-IO-copy-thread-in-CRI-exec-operatio.patch
+Patch70: 0070-CI-add-testcase-for-cri-stream.patch
+Patch71: 0071-stats-show-cpu-usage-normal-when-stats-with-no-strea.patch
+Patch72: 0072-Readme-add-script-to-install-iSulad-on-Ubuntu-20.04-.patch
+Patch73: 0073-update-libarchive-requirement-to-v3.4.patch
+Patch74: 0074-correct-the-mistake-package-libarchive-dev.patch
+Patch75: 0075-Added-autocomplete-in-isula-command-line-mode.patch
+Patch76: 0076-iSulad-fix-bugs-of-isula-runtime-ops.patch
+Patch77: 0077-Compatible-with-registry-URL-ending-in.patch
+Patch78: 0078-CI-fix-CI-to-fit-run-on-2-cpu-4G-memory-environment.patch
+Patch79: 0079-added-default-completion.patch
+Patch80: 0080-fix-coredump-when-poweroff.patch
+Patch81: 0081-CI-keep-container-when-build-failed-for-debug.patch
+Patch82: 0082-devmapper-decrease-log-level-of-check-dm-device.patch
+Patch83: 0083-fix-bugs-when-pulling-image.patch
+Patch84: 0084-add-testcase-for-pulling-image.patch
+Patch85: 0085-check-return-value-to-valid-use-NULL-pointer.patch
+Patch86: 0086-move-reinstall_thinpool-to-helper.sh.patch
+Patch87: 0087-CI-activate-vg-isulad.patch
+Patch88: 0088-CI-devicemapper-add-filter.patch
+Patch89: 0089-syslog-tag-support-dynamic-tag-values.patch
+Patch90: 0090-add-testcase-for-contailer-log-opts.patch
+Patch91: 0091-CI-run-the-containers-one-by-one.patch
+Patch92: 0092-completion-isula-images.patch
+Patch93: 0093-fix-memory-leak-when-pulling-image.patch
+Patch94: 0094-isula-fix-help-xx-coredump.patch
+Patch95: 0095-workdir-must-be-absolute-path.patch
+Patch96: 0096-check-if-pull-option-is-valid.patch
+Patch97: 0097-fix-memory-usage-of-stats-not-right-when-runtime-is-.patch
+Patch98: 0098-log-adjust-log-level-to-reduce-log.patch
+Patch99: 0099-CI-use-ali-registry-instead-of-docker.io.patch
+Patch100: 0100-do-not-check-key-s-case-when-parse-http-header.patch
+Patch101: 0101-CI-use-docker.io-registry.patch
+Patch102: 0102-CI-fix-integration_check.sh.patch
+Patch103: 0103-optimize-token-generation.patch
+Patch104: 0104-fix-string-array-initialization-failure.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -268,6 +318,12 @@ fi
 %endif
 
 %changelog
+* Tue May 18 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.8-20210518.144540.git5288ed92
+- Type: sync from upstream
+- ID: NA
+- SUG: NA
+- DESC: update from master
+
 * Fri Mar 26 2021 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.8-20210326.094027.gitac974aa6
 - Type: sync from upstream
 - ID: NA
