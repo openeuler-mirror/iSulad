@@ -96,7 +96,8 @@ std::string RequestCache::UniqueToken()
     // Number of bytes to be TokenLen when base64 encoded.
     const int rawTokenSize = ceil(static_cast<double>(TokenLen) * 6 / 8);
     for (int i {}; i < maxTries; ++i) {
-        char rawToken[rawTokenSize + 1] = { 0x00 };
+        char rawToken[rawTokenSize + 1];
+        (void)memset(rawToken, 0, sizeof(rawToken));
         if (util_generate_random_str(rawToken, (size_t)rawTokenSize)) {
             ERROR("Generate rawToken failed");
             continue;
@@ -110,6 +111,7 @@ std::string RequestCache::UniqueToken()
 
         std::string token(b64_encode_buf);
         free(b64_encode_buf);
+        b64_encode_buf = nullptr;
         if (token.length() != TokenLen) {
             continue;
         }
