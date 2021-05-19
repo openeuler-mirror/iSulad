@@ -418,7 +418,7 @@ fi
 - SUG:NA
 - DESC: remove unused config
 
-* Tue Sep 10 2020  <yangjiaqi11@huawei.com> - 2.0.5-20200910.144345.git71b1055b
+* Thu Sep 10 2020  <yangjiaqi11@huawei.com> - 2.0.5-20200910.144345.git71b1055b
 - Type:enhancement
 - ID:NA
 - SUG:NA
