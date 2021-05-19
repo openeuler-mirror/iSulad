@@ -1,0 +1,443 @@
+From a5b1605c8e6552aa78439fb45ff4df59f542ef27 Mon Sep 17 00:00:00 2001
+From: lifeng68 <lifeng68@huawei.com>
+Date: Wed, 21 Apr 2021 08:54:19 +0800
+Subject: [PATCH 078/104] CI: fix CI to fit run on 2 cpu 4G memory environment
+
+Signed-off-by: lifeng68 <lifeng68@huawei.com>
+---
+ .gitignore                                    |  1 +
+ CI/Dockerfile                                 | 36 ++++++++--
+ .../container_cases/bigdata_stream.sh         | 70 +++++++++----------
+ .../container_cases/bigdata_stream_runc.sh    | 40 +++++------
+ 4 files changed, 87 insertions(+), 60 deletions(-)
+
+diff --git a/.gitignore b/.gitignore
+index 8c2dfb40..26e5010e 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -12,3 +12,4 @@ compile_commands.json
+ tags
+ .clangd
+ iSula-libutils
++isulad_ci_test_data
+diff --git a/CI/Dockerfile b/CI/Dockerfile
+index e0a50f65..d25db5c9 100644
+--- a/CI/Dockerfile
++++ b/CI/Dockerfile
+@@ -219,13 +219,39 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
+ 	cd ~ && \
+ 	git clone https://gitee.com/src-openeuler/libwebsockets.git && \
+ 	cd libwebsockets && \
+-	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
+-	tar -xzvf libwebsockets-2.4.2.tar.gz && \
+-	cd libwebsockets-2.4.2 && \
+-	patch -p1 -F1 -s < ../libwebsockets-fix-coredump.patch && \
++	git checkout -b openEuler-21.03-20210330 openEuler-21.03-20210330 && \
++	tar -xzvf libwebsockets-4.0.20.tar.gz && \
++	cd libwebsockets-4.0.20 && \
+ 	mkdir build && \
+ 	cd build && \
+-	cmake -DLWS_WITH_SSL=0 -DLWS_MAX_SMP=32 -DCMAKE_BUILD_TYPE=Debug ../ && \
++	cmake \
++	-D LWS_WITH_HTTP2=ON \
++	-D LWS_IPV6=ON \
++    	-D LWS_WITH_ZIP_FOPS=ON \
++    	-D LWS_WITH_SOCKS5=ON \
++    	-D LWS_WITH_RANGES=ON \
++    	-D LWS_WITH_ACME=ON \
++    	-D LWS_WITH_LIBUV=OFF \
++    	-D LWS_WITH_LIBEV=OFF \
++    	-D LWS_WITH_LIBEVENT=OFF \
++    	-D LWS_WITH_FTS=ON \
++    	-D LWS_WITH_THREADPOOL=ON \
++    	-D LWS_UNIX_SOCK=ON \
++    	-D LWS_WITH_HTTP_PROXY=ON \
++    	-D LWS_WITH_DISKCACHE=ON \
++    	-D LWS_WITH_LWSAC=ON \
++    	-D LWS_LINK_TESTAPPS_DYNAMIC=ON \
++    	-D LWS_WITHOUT_BUILTIN_GETIFADDRS=ON \
++    	-D LWS_USE_BUNDLED_ZLIB=OFF \
++    	-D LWS_WITHOUT_BUILTIN_SHA1=ON \
++    	-D LWS_WITH_STATIC=OFF \
++    	-D LWS_WITHOUT_CLIENT=OFF \
++    	-D LWS_WITHOUT_SERVER=OFF \
++    	-D LWS_WITHOUT_TESTAPPS=OFF \
++    	-D LWS_WITHOUT_TEST_SERVER=ON \
++    	-D LWS_WITHOUT_TEST_SERVER_EXTPOLL=ON \
++    	-D LWS_WITHOUT_TEST_PING=ON \
++    	-D LWS_WITHOUT_TEST_CLIENT=ON .. && \
+ 	make -j $(nproc) && \
+ 	make install && \
+ 	ldconfig
+diff --git a/CI/test_cases/container_cases/bigdata_stream.sh b/CI/test_cases/container_cases/bigdata_stream.sh
+index 768e9703..1eae3df2 100755
+--- a/CI/test_cases/container_cases/bigdata_stream.sh
++++ b/CI/test_cases/container_cases/bigdata_stream.sh
+@@ -2,7 +2,7 @@
+ #
+ # attributes: isulad basic container stream exec start attach 
+ # concurrent: NA
+-# spend time: 6
++# spend time: 224
+ 
+ #######################################################################
+ ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
+@@ -119,16 +119,16 @@ function test_concurrent_bigdata_stream()
+ 	declare -a pids
+ 
+ 	for index in $(seq 1 5); do
+-		nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M_$index &
++		nohup isula exec -it $CID cat test_500M > /home/iocopy_stream_data_500M_$index &
+ 		pids[${#pids[@]}]=$!
+ 	done
+ 	wait ${pids[*]// /|}
+ 
+ 	for index in $(seq 1 5); do
+-		ls -l /tmp/iocopy_stream_data_500M_$index
+-		total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M_$index)
++		ls -l /home/iocopy_stream_data_500M_$index
++		total_size=$(stat -c"%s" /home/iocopy_stream_data_500M_$index)
+ 		[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+-		rm -f /tmp/iocopy_stream_data_500M_$index
++		rm -f /home/iocopy_stream_data_500M_$index
+ 	done
+ 
+ 	check_last_status
+@@ -146,16 +146,16 @@ function test_concurrent_bigdata_stream_without_pty()
+ 	declare -a pids
+ 
+ 	for index in $(seq 1 5); do
+-		nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M_$index &
++		nohup isula exec $CID cat test_500M > /home/iocopy_stream_data_500M_$index &
+ 		pids[${#pids[@]}]=$!
+ 	done
+ 	wait ${pids[*]// /|}
+ 
+ 	for index in $(seq 1 5); do
+-		ls -l /tmp/iocopy_stream_data_500M_$index
+-		total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M_$index)
++		ls -l /home/iocopy_stream_data_500M_$index
++		total_size=$(stat -c"%s" /home/iocopy_stream_data_500M_$index)
+ 		[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+-		rm -f /tmp/iocopy_stream_data_500M_$index
++		rm -f /home/iocopy_stream_data_500M_$index
+ 	done
+ 
+ 	check_last_status
+@@ -175,16 +175,16 @@ function test_more_concurrent_stream()
+ 	isula exec -it $CID dd if=/dev/zero of=test_20M bs=1M count=20
+ 
+ 	for index in $(seq 1 30); do
+-		nohup isula exec -it $CID cat test_20M > /tmp/iocopy_stream_data_20M_$index &
++		nohup isula exec -it $CID cat test_20M > /home/iocopy_stream_data_20M_$index &
+ 		pids[${#pids[@]}]=$!
+ 	done
+ 	wait ${pids[*]// /|}
+ 
+ 	for index in $(seq 1 30); do
+-		ls -l /tmp/iocopy_stream_data_20M_$index
+-		total_size=$(stat -c"%s" /tmp/iocopy_stream_data_20M_$index)
++		ls -l /home/iocopy_stream_data_20M_$index
++		total_size=$(stat -c"%s" /home/iocopy_stream_data_20M_$index)
+ 		[[ $total_size -ne 20971520 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+-		rm -f /tmp/iocopy_stream_data_20M_$index
++		rm -f /home/iocopy_stream_data_20M_$index
+ 	done
+ 
+ 	check_last_status
+@@ -200,7 +200,7 @@ function test_stream_with_stop_client()
+ 	local test="test_stream_with_stop_client => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec -it $CID cat test_500M > /home/iocopy_stream_data_500M &
+ 	pid=$!
+ 	sleep 2
+ 	kill -19 $pid
+@@ -209,8 +209,8 @@ function test_stream_with_stop_client()
+ 
+ 	wait $pid
+ 
+-	ls -l /tmp/iocopy_stream_data_500M
+-	total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M)
++	ls -l /home/iocopy_stream_data_500M
++	total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+ 	[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+ 
+ 	check_last_status
+@@ -226,7 +226,7 @@ function test_stream_with_kill_client()
+ 	local test="test_stream_with_kill_client => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec -it $CID cat test_500M > /home/iocopy_stream_data_500M &
+ 	pid=$!
+ 	sleep 5
+ 	kill -9 $pid
+@@ -244,7 +244,7 @@ function test_stream_with_stop_attach()
+ 	local test="test_stream_with_stop_attach => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec -it $CID cat test_500M > /home/iocopy_stream_data_500M &
+     exec_pid=$!
+ 	sleep 2
+ 	pid=$(ps aux | grep lxc-attach | grep $CID |grep "cat test_500M" | awk '{print $2}')
+@@ -254,8 +254,8 @@ function test_stream_with_stop_attach()
+ 
+ 	wait $exec_pid
+ 
+-	ls -l /tmp/iocopy_stream_data_500M
+-	total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M)
++	ls -l /home/iocopy_stream_data_500M
++	total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+ 	[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+ 
+ 	check_last_status
+@@ -271,7 +271,7 @@ function test_stream_with_kill_attach()
+ 	local test="test_stream_with_kill_client => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec -it $CID cat test_500M > /home/iocopy_stream_data_500M &
+ 	sleep 3
+ 	pid=$(ps aux | grep lxc-attach | grep $CID |grep "cat test_500M" | awk '{print $2}')
+ 	kill -9 $pid
+@@ -289,7 +289,7 @@ function test_stream_with_stop_lxc_monitor()
+ 	local test="test_stream_with_stop_lxc_monitor => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec -it $CID cat test_500M > /home/iocopy_stream_data_500M &
+     exec_pid=$!
+ 	sleep 2
+ 	pid=$(ps aux | grep "lxc monitor" | grep $CID  | awk '{print $2}')
+@@ -299,8 +299,8 @@ function test_stream_with_stop_lxc_monitor()
+ 
+ 	wait $exec_pid
+ 
+-	ls -l /tmp/iocopy_stream_data_500M
+-	total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M)
++	ls -l /home/iocopy_stream_data_500M
++	total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+ 	[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+ 
+ 	check_last_status
+@@ -316,7 +316,7 @@ function test_stream_with_kill_lxc_monitor()
+ 	local test="test_stream_with_kill_lxc_monitor => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec -it $CID cat test_500M > /home/iocopy_stream_data_500M &
+ 	sleep 3
+ 	pid=$(ps aux | grep "lxc monitor" | grep $CID  | awk '{print $2}')
+ 	kill -9 $pid
+@@ -338,7 +338,7 @@ function test_stream_with_stop_isulad()
+ 	local test="test_stream_with_stop_isulad => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec -it $CID cat test_500M > /home/iocopy_stream_data_500M &
+     pid=$!
+ 	sleep 2
+ 	kill -19 $(cat /var/run/isulad.pid)
+@@ -347,8 +347,8 @@ function test_stream_with_stop_isulad()
+ 
+ 	wait $pid 
+ 
+-	ls -l /tmp/iocopy_stream_data_500M
+-	total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M)
++	ls -l /home/iocopy_stream_data_500M
++	total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+ 	[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+ 
+ 	check_last_status
+@@ -364,7 +364,7 @@ function test_stream_with_kill_isulad()
+ 	local test="test_stream_with_kill_isulad => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec -it $CID cat test_500M > /home/iocopy_stream_data_500M &
+ 	sleep 3
+     isulad_pid=$(cat /var/run/isulad.pid)
+ 	kill -9 $isulad_pid
+@@ -393,16 +393,16 @@ function test_stream_with_runc()
+ 	isula exec -it $RUNCID dd if=/dev/zero of=test_500M bs=1M count=500
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create bigdata" && ((ret++))
+ 
+-	isula exec -it $RUNCID cat test_500M > /tmp/iocopy_stream_data_500M
++	isula exec -it $RUNCID cat test_500M > /home/iocopy_stream_data_500M
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cat bigdata" && ((ret++))
+ 
+-	total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M)
++	total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+ 	[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+ 
+ 	isula rm -f $RUNCID
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container" && ((ret++))
+ 
+-	rm -rf /tmp/iocopy_stream_data_500M
++	rm -rf /home/iocopy_stream_data_500M
+ 
+ 	msg_info "${test} finished with return ${ret}..."
+ 	return ${ret}
+@@ -414,7 +414,7 @@ function tear_down()
+ 	isula rm -f $CID
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container: $CID" && ((ret++))
+ 
+-	rm -rf //tmp/iocopy_stream_data_*
++	rm -rf //home/iocopy_stream_data_*
+ 
+ 	stop_isulad_without_valgrind
+ 
+@@ -435,10 +435,10 @@ function test_memory_leak_with_bigdata_stream()
+ 	isula exec -it $CID dd if=/dev/zero of=test_100M bs=1M count=100
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create bigdata" && ((ret++))
+ 
+-	isula exec -it $CID cat test_100M > /tmp/iocopy_stream_data_100M
++	isula exec -it $CID cat test_100M > /home/iocopy_stream_data_100M
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cat bigdata from container" && ((ret++))
+ 
+-	rm -rf /tmp/iocopy_stream_data_100M
++	rm -rf /home/iocopy_stream_data_100M
+ 
+ 	isula rm -f $CID
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container" && ((ret++))
+diff --git a/CI/test_cases/container_cases/bigdata_stream_runc.sh b/CI/test_cases/container_cases/bigdata_stream_runc.sh
+index 1313774e..e5ae77a2 100755
+--- a/CI/test_cases/container_cases/bigdata_stream_runc.sh
++++ b/CI/test_cases/container_cases/bigdata_stream_runc.sh
+@@ -2,7 +2,7 @@
+ #
+ # attributes: isulad basic container stream exec start attach 
+ # concurrent: NA
+-# spend time: 6
++# spend time: 144
+ 
+ #######################################################################
+ ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
+@@ -113,16 +113,16 @@ function test_cat_bigdata()
+ 	declare -a pids
+ 
+ 	for index in $(seq 1 5); do
+-		nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M_$index &
++		nohup isula exec -it $CID cat test_500M > /home/iocopy_stream_data_500M_$index &
+ 		pids[${#pids[@]}]=$!
+ 	done
+ 	wait ${pids[*]// /|}
+ 
+ 	for index in $(seq 1 5); do
+-		ls -l /tmp/iocopy_stream_data_500M_$index
+-		total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M_$index)
++		ls -l /home/iocopy_stream_data_500M_$index
++		total_size=$(stat -c"%s" /home/iocopy_stream_data_500M_$index)
+ 		[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+-		rm -f /tmp/iocopy_stream_data_500M_$index
++		rm -f /home/iocopy_stream_data_500M_$index
+ 	done
+ 
+ 	check_last_status
+@@ -140,16 +140,16 @@ function test_cat_bigdata_without_pty()
+ 	declare -a pids
+ 
+ 	for index in $(seq 1 5); do
+-		nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M_$index &
++		nohup isula exec $CID cat test_500M > /home/iocopy_stream_data_500M_$index &
+ 		pids[${#pids[@]}]=$!
+ 	done
+ 	wait ${pids[*]// /|}
+ 
+ 	for index in $(seq 1 5); do
+-		ls -l /tmp/iocopy_stream_data_500M_$index
+-		total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M_$index)
++		ls -l /home/iocopy_stream_data_500M_$index
++		total_size=$(stat -c"%s" /home/iocopy_stream_data_500M_$index)
+ 		[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+-		rm -f /tmp/iocopy_stream_data_500M_$index
++		rm -f /home/iocopy_stream_data_500M_$index
+ 	done
+ 
+ 	check_last_status
+@@ -165,7 +165,7 @@ function test_stream_with_stop_client()
+ 	local test="test_stream_with_stop_client => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec $CID cat test_500M > /home/iocopy_stream_data_500M &
+ 	pid=$!
+ 	sleep 2
+ 	kill -19 $pid
+@@ -174,8 +174,8 @@ function test_stream_with_stop_client()
+ 
+ 	wait $pid
+ 
+-	ls -l /tmp/iocopy_stream_data_500M
+-	total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M)
++	ls -l /home/iocopy_stream_data_500M
++	total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+ 	[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+ 
+ 	check_last_status
+@@ -191,7 +191,7 @@ function test_stream_with_kill_client()
+ 	local test="test_stream_with_kill_client => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec $CID cat test_500M > /home/iocopy_stream_data_500M &
+ 	pid=$!
+ 	sleep 5
+ 	kill -9 $pid
+@@ -209,7 +209,7 @@ function test_stream_with_stop_isulad()
+ 	local test="test_stream_with_stop_isulad => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec $CID cat test_500M > /home/iocopy_stream_data_500M &
+     pid=$!
+ 	sleep 2
+ 	kill -19 $(cat /var/run/isulad.pid)
+@@ -218,8 +218,8 @@ function test_stream_with_stop_isulad()
+ 
+ 	wait $pid 
+ 
+-	ls -l /tmp/iocopy_stream_data_500M
+-	total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M)
++	ls -l /home/iocopy_stream_data_500M
++	total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+ 	[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+ 
+ 	check_last_status
+@@ -235,7 +235,7 @@ function test_stream_with_kill_isulad()
+ 	local test="test_stream_with_kill_isulad => (${FUNCNAME[@]})"
+ 	msg_info "${test} starting..."
+ 
+-	nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M &
++	nohup isula exec $CID cat test_500M > /home/iocopy_stream_data_500M &
+ 	sleep 3
+     isulad_pid=$(cat /var/run/isulad.pid)
+ 	kill -9 $isulad_pid
+@@ -259,7 +259,7 @@ function tear_down()
+ 	isula rm -f $CID
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container: $CID" && ((ret++))
+ 
+-	rm -rf //tmp/iocopy_stream_data_*
++	rm -rf //home/iocopy_stream_data_*
+ 
+ 	stop_isulad_without_valgrind
+ 
+@@ -280,10 +280,10 @@ function test_memory_leak_with_bigdata_stream()
+ 	isula exec -it $CID dd if=/dev/zero of=test_100M bs=1M count=100
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create bigdata" && ((ret++))
+ 
+-	isula exec -it $CID cat test_100M > /tmp/iocopy_stream_data_100M
++	isula exec -it $CID cat test_100M > /home/iocopy_stream_data_100M
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cat bigdata from container" && ((ret++))
+ 
+-	rm -rf /tmp/iocopy_stream_data_100M
++	rm -rf /home/iocopy_stream_data_100M
+ 
+ 	isula rm -f $CID
+ 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container" && ((ret++))
+-- 
+2.25.1
+

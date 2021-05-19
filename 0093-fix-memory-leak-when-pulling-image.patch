@@ -1,0 +1,110 @@
+From 90b3ae01ff05140cb00baeaf63491bba19ceade6 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Thu, 6 May 2021 16:22:17 +0800
+Subject: [PATCH 093/104] fix memory leak when pulling image
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ .../modules/image/oci/registry/http_request.c      |  5 +++++
+ src/daemon/modules/image/oci/registry/registry.c   | 14 ++++++++++++++
+ src/daemon/modules/image/oci/registry_type.c       |  3 +++
+ src/daemon/modules/image/oci/registry_type.h       |  2 ++
+ 4 files changed, 24 insertions(+)
+
+diff --git a/src/daemon/modules/image/oci/registry/http_request.c b/src/daemon/modules/image/oci/registry/http_request.c
+index 2127795e..e86f37f0 100644
+--- a/src/daemon/modules/image/oci/registry/http_request.c
++++ b/src/daemon/modules/image/oci/registry/http_request.c
+@@ -23,6 +23,7 @@
+ #include <strings.h>
+ #include <time.h>
+ #include <curl/curl.h>
++#include <pthread.h>
+ 
+ #include "isula_libutils/log.h"
+ #include "buffer.h"
+@@ -371,8 +372,10 @@ static int setup_auth_challenges(pull_descriptor *desc, char ***custom_headers)
+                 goto out;
+             }
+         } else if (!strcasecmp(desc->challenges[i].schema, "Bearer")) {
++            (void)pthread_mutex_lock(&desc->challenges_mutex);
+             ret = get_bearer_token(desc, &desc->challenges[i]);
+             if (ret != 0) {
++                (void)pthread_mutex_unlock(&desc->challenges_mutex);
+                 ERROR("get bearer token failed");
+                 isulad_try_set_error_message("authentication failed");
+                 goto out;
+@@ -380,9 +383,11 @@ static int setup_auth_challenges(pull_descriptor *desc, char ***custom_headers)
+ 
+             auth_header = auth_header_str("Bearer", desc->challenges[i].cached_token);
+             if (auth_header == NULL) {
++                (void)pthread_mutex_unlock(&desc->challenges_mutex);
+                 ret = -1;
+                 goto out;
+             }
++            (void)pthread_mutex_unlock(&desc->challenges_mutex);
+         } else {
+             WARN("Unsupported schema %s", desc->challenges[i].schema);
+             continue;
+diff --git a/src/daemon/modules/image/oci/registry/registry.c b/src/daemon/modules/image/oci/registry/registry.c
+index bd8e8fd0..cc5f6805 100644
+--- a/src/daemon/modules/image/oci/registry/registry.c
++++ b/src/daemon/modules/image/oci/registry/registry.c
+@@ -1910,6 +1910,13 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
+     }
+     desc->mutex_inited = true;
+ 
++    ret = pthread_mutex_init(&desc->challenges_mutex, NULL);
++    if (ret != 0) {
++        ERROR("Failed to init challenges mutex for pull");
++        goto out;
++    }
++    desc->challenges_mutex_inited = true;
++
+     ret = pthread_cond_init(&desc->cond, NULL);
+     if (ret != 0) {
+         ERROR("Failed to init cond for pull");
+@@ -2166,6 +2173,13 @@ int registry_login(registry_login_options *options)
+     desc->username = util_strdup_s(options->auth.username);
+     desc->password = util_strdup_s(options->auth.password);
+ 
++    ret = pthread_mutex_init(&desc->challenges_mutex, NULL);
++    if (ret != 0) {
++        ERROR("Failed to init challenges mutex for login");
++        goto out;
++    }
++    desc->challenges_mutex_inited = true;
++
+     ret = login_to_registry(desc);
+     if (ret != 0) {
+         ERROR("login to registry failed");
+diff --git a/src/daemon/modules/image/oci/registry_type.c b/src/daemon/modules/image/oci/registry_type.c
+index 3e0c5e19..51fc1697 100644
+--- a/src/daemon/modules/image/oci/registry_type.c
++++ b/src/daemon/modules/image/oci/registry_type.c
+@@ -150,6 +150,9 @@ void free_pull_desc(pull_descriptor *desc)
+     if (desc->mutex_inited) {
+         pthread_mutex_destroy(&desc->mutex);
+     }
++    if (desc->challenges_mutex_inited) {
++        pthread_mutex_destroy(&desc->challenges_mutex);
++    }
+ 
+     free(desc);
+ 
+diff --git a/src/daemon/modules/image/oci/registry_type.h b/src/daemon/modules/image/oci/registry_type.h
+index 86449543..11135250 100644
+--- a/src/daemon/modules/image/oci/registry_type.h
++++ b/src/daemon/modules/image/oci/registry_type.h
+@@ -102,6 +102,8 @@ typedef struct {
+     bool skip_tls_verify;
+     bool insecure_registry;
+     char *scope;
++    pthread_mutex_t challenges_mutex;
++    bool challenges_mutex_inited;
+     challenge challenges[CHALLENGE_MAX];
+     // This is temporary field. Once http request is performed, it is cleared
+     char **headers;
+-- 
+2.25.1
+
