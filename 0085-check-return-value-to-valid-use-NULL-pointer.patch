@@ -1,0 +1,84 @@
+From 64ba80d5f9faec9a0a6400fd5f4e21943271cf03 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Fri, 23 Apr 2021 15:35:13 +0800
+Subject: [PATCH 085/104] check return value to valid use NULL pointer
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/cmd/isula/isula_host_spec.c                           | 5 +++++
+ .../modules/image/oci/storage/image_store/image_store.c   | 8 +++++++-
+ src/daemon/modules/spec/specs.c                           | 2 +-
+ src/utils/http/certificate.c                              | 4 ++++
+ 4 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/src/cmd/isula/isula_host_spec.c b/src/cmd/isula/isula_host_spec.c
+index 1a2ad4ed..85451dd4 100644
+--- a/src/cmd/isula/isula_host_spec.c
++++ b/src/cmd/isula/isula_host_spec.c
+@@ -1021,6 +1021,11 @@ static int parse_security_opts(const isula_host_config_t *srcconfig, host_config
+ 
+     for (i = 0; i < srcconfig->security_len; i++) {
+         items = util_string_split_n(srcconfig->security[i], '=', 2);
++        if (items == NULL) {
++            COMMAND_ERROR("Invalid --security-opt: %s", srcconfig->security[i]);
++            ret = -1;
++            goto out;
++        }
+         if (util_array_len((const char **)items) == 1) {
+             if (strcmp(items[0], "no-new-privileges") != 0) {
+                 ret = -1;
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+index 83345ab3..9db158d4 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+@@ -2089,6 +2089,12 @@ static int pack_repo_digest(char ***old_repo_digests, const char **image_tags, c
+             continue;
+         }
+         tag_pos = util_tag_pos(ref);
++        if (tag_pos == NULL) {
++            ERROR("invalid ref %s", ref);
++            free(ref);
++            ref = NULL;
++            continue;
++        }
+         *tag_pos = '\0';
+ 
+         nret = asprintf(&tmp_repo_digests, "%s@%s", ref, digest);
+@@ -3581,4 +3587,4 @@ out:
+     }
+     free(root_dir);
+     return ret;
+-}
+\ No newline at end of file
++}
+diff --git a/src/daemon/modules/spec/specs.c b/src/daemon/modules/spec/specs.c
+index d056b005..d8d05ba0 100644
+--- a/src/daemon/modules/spec/specs.c
++++ b/src/daemon/modules/spec/specs.c
+@@ -1929,7 +1929,7 @@ static int generate_security_opt(host_config *hc)
+ 
+     for (i = 0; i < hc->security_opt_len; i++) {
+         char **items = util_string_split(hc->security_opt[i], '=');
+-        if (*items == NULL) {
++        if (items == NULL) {
+             ERROR("Out of memory");
+             return -1;
+         }
+diff --git a/src/utils/http/certificate.c b/src/utils/http/certificate.c
+index 117bc15c..64f35bdb 100644
+--- a/src/utils/http/certificate.c
++++ b/src/utils/http/certificate.c
+@@ -49,6 +49,10 @@ static void check_algo(X509 *cert)
+     }
+     const char *sig_algo = OBJ_nid2ln(OBJ_obj2nid(cert->sig_alg->algorithm));
+ #endif
++    if (sig_algo == NULL) {
++        ERROR("sig algo is NULL");
++        return;
++    }
+ 
+     for (i = 0; i < len; i++) {
+         if (strcmp(g_weak_algos[i], sig_algo) == 0) {
+-- 
+2.25.1
+

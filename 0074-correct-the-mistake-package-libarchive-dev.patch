@@ -1,0 +1,26 @@
+From 8b5115b5d43cc73d41ade4e984e7ee38eb237d3a Mon Sep 17 00:00:00 2001
+From: XiyouNiGo <1275810355@qq.com>
+Date: Thu, 15 Apr 2021 12:33:07 +0800
+Subject: [PATCH 074/104] correct the mistake package: libarchive-dev
+
+---
+ docs/install_iSulad_on_Ubuntu_20_04_LTS.sh | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/docs/install_iSulad_on_Ubuntu_20_04_LTS.sh b/docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
+index 4b0b7a85..630febe1 100644
+--- a/docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
++++ b/docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
+@@ -7,8 +7,7 @@ set -e
+ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+ export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:/lib/x86_64-linux-gnu/:$LD_LIBRARY_PATH
+ echo "/usr/local/lib" >> /etc/ld.so.conf
+-
+-apt install -y g++ libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc++-dev libgrpc-dev libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux1-dev libseccomp-dev libcap-dev libsystemd-dev git libarchive libarchive-dev libcurl4-gnutls-dev openssl libdevmapper-dev python3 libtar0 libtar-dev libhttp-parser-dev libwebsockets-dev
++apt install -y g++ libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc++-dev libgrpc-dev libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux1-dev libseccomp-dev libcap-dev libsystemd-dev git libarchive-dev libcurl4-gnutls-dev openssl libdevmapper-dev python3 libtar0 libtar-dev libhttp-parser-dev libwebsockets-dev
+ 
+ BUILD_DIR=/tmp/build_isulad
+ 
+-- 
+2.25.1
+

@@ -1,0 +1,92 @@
+From 1e2ebc309064e88d0d5aac6a91b23ef8cbc0c727 Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Tue, 6 Apr 2021 15:05:59 +0800
+Subject: [PATCH 067/104] event: fix memory leak when pack annotation failed
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ .../connect/grpc/grpc_containers_client.cc     |  2 +-
+ src/daemon/modules/events/collector.c          | 18 +++---------------
+ 2 files changed, 4 insertions(+), 16 deletions(-)
+
+diff --git a/src/client/connect/grpc/grpc_containers_client.cc b/src/client/connect/grpc/grpc_containers_client.cc
+index 6661970b..bb50d811 100644
+--- a/src/client/connect/grpc/grpc_containers_client.cc
++++ b/src/client/connect/grpc/grpc_containers_client.cc
+@@ -1810,8 +1810,8 @@ private:
+         for (const auto &iter : map) {
+             std::string anno = iter.first + "=" + iter.second;
+             (void)util_array_append(&event->annotations, anno.c_str());
+-            event->annotations_len++;
+         }
++        event->annotations_len = util_array_len((const char **)event->annotations);
+     }
+ 
+     auto events_request_to_grpc(const struct isula_events_request *request, EventsRequest *grequest) -> int
+diff --git a/src/daemon/modules/events/collector.c b/src/daemon/modules/events/collector.c
+index 3e587aeb..67a823f1 100644
+--- a/src/daemon/modules/events/collector.c
++++ b/src/daemon/modules/events/collector.c
+@@ -332,44 +332,36 @@ static int supplement_labels_for_container_msg(const container_t *cont, const st
+     return 0;
+ }
+ 
+-static int supplement_annotations_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
+-                                                    struct isulad_events_format *format_msg)
++static void supplement_annotations_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
++                                                     struct isulad_events_format *format_msg)
+ {
+     if (supplement_pid_for_container_msg(cont, msg, format_msg) != 0) {
+         ERROR("Failed to supplement pid info");
+-        return -1;
+     }
+ 
+     if (supplement_exitcode_for_container_msg(cont, msg, format_msg) != 0) {
+         ERROR("Failed to supplement exitCode info");
+-        return -1;
+     }
+ 
+     if (supplement_image_for_container_msg(cont, msg, format_msg) != 0) {
+         ERROR("Failed to supplement image info");
+-        return -1;
+     }
+ 
+     if (supplement_name_for_container_msg(cont, msg, format_msg) != 0) {
+         ERROR("Failed to supplement name info");
+-        return -1;
+     }
+ 
+     if (supplement_labels_for_container_msg(cont, msg, format_msg) != 0) {
+         ERROR("Failed to supplement label info");
+-        return -1;
+     }
+ 
+     if (strlen(msg->extra_annations) != 0) {
+         if (util_array_append(&format_msg->annotations, msg->extra_annations) != 0) {
+             ERROR("Failed to supplement extra annations info");
+-            return -1;
+         }
+     }
+ 
+     format_msg->annotations_len = util_array_len((const char **)format_msg->annotations);
+-
+-    return 0;
+ }
+ 
+ static int supplement_msg_for_container(struct monitord_msg *msg, struct isulad_events_format *format_msg)
+@@ -395,11 +387,7 @@ static int supplement_msg_for_container(struct monitord_msg *msg, struct isulad_
+         goto out;
+     }
+ 
+-    if (supplement_annotations_for_container_msg(cont, msg, format_msg) != 0) {
+-        ERROR("Failed to supplement annotations info");
+-        ret = -1;
+-        goto out;
+-    }
++    supplement_annotations_for_container_msg(cont, msg, format_msg);
+ 
+ out:
+     container_unref(cont);
+-- 
+2.25.1
+

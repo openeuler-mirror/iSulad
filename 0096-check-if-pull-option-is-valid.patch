@@ -1,0 +1,42 @@
+From 160a8a6660e1839f72ea625ebe2b30b5bebb46c3 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Fri, 7 May 2021 18:46:32 +0800
+Subject: [PATCH 096/104] check if pull option is valid
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/cmd/isula/base/create.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/src/cmd/isula/base/create.c b/src/cmd/isula/base/create.c
+index 48dc29be..2083dcf5 100644
+--- a/src/cmd/isula/base/create.c
++++ b/src/cmd/isula/base/create.c
+@@ -1568,11 +1568,6 @@ int cmd_create_main(int argc, const char **argv)
+         exit(ECOMMON);
+     }
+ 
+-    if (!valid_pull_option(g_cmd_create_args.pull)) {
+-        COMMAND_ERROR("invalid --pull option, only \"always\"|\"missing\"|\"never\" is allowed");
+-        exit(ECOMMON);
+-    }
+-
+     ret = client_create(&g_cmd_create_args);
+     if (ret != 0) {
+         ERROR("Container \"%s\" create failed", g_cmd_create_args.name);
+@@ -2177,6 +2172,12 @@ int create_checker(struct client_arguments *args)
+         goto out;
+     }
+ 
++    if (!valid_pull_option(args->pull)) {
++        COMMAND_ERROR("invalid --pull option, only \"always\"|\"missing\"|\"never\" is allowed");
++        ret = -1;
++        goto out;
++    }
++
+     if (create_check_rootfs(args)) {
+         ret = -1;
+         goto out;
+-- 
+2.25.1
+

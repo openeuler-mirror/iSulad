@@ -1,0 +1,118 @@
+From ac38baf0a2a49b9cfeb8010393b5f8e5d8a49739 Mon Sep 17 00:00:00 2001
+From: NiGo <nigo@xiyoulinux.org>
+Date: Tue, 13 Apr 2021 19:49:14 +0800
+Subject: [PATCH 072/104] Readme: add script to install iSulad on Ubuntu 20.04
+ LTS
+
+---
+ docs/build_guide.md                        |  6 ++-
+ docs/build_guide_zh.md                     |  6 ++-
+ docs/install_iSulad_on_Ubuntu_20_04_LTS.sh | 62 ++++++++++++++++++++++
+ 3 files changed, 70 insertions(+), 4 deletions(-)
+ create mode 100644 docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
+
+diff --git a/docs/build_guide.md b/docs/build_guide.md
+index 449767ae..1b481a11 100644
+--- a/docs/build_guide.md
++++ b/docs/build_guide.md
+@@ -17,8 +17,10 @@ $ sudo ./install_iSulad_on_Centos_7.sh
+ ```
+ 
+ ### install basic dependencies based on Ubuntu distribution
+-```bash
+-$ sudo apt install -y g++ libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc++-dev libgrpc-dev libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux-dev libseccomp-dev libcap-dev libsystemd-dev git libcurl4-gnutls-dev openssl libdevmapper-dev golang python3 libtar libtar-dev
++```sh
++$ git clone https://gitee.com/openeuler/iSulad.git
++$ cd iSulad/docs
++$ sudo ./docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
+ ```
+ 
+ ## Build and install other dependencies from source
+diff --git a/docs/build_guide_zh.md b/docs/build_guide_zh.md
+index 2cb709e8..0c844816 100644
+--- a/docs/build_guide_zh.md
++++ b/docs/build_guide_zh.md
+@@ -27,8 +27,10 @@ $ sudo ./install_iSulad_on_Centos_7.sh
+ ```
+ 
+ ### Ubuntu的安装命令
+-```bash
+-$ sudo apt install -y g++ libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc++-dev libgrpc-dev libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux-dev libseccomp-dev libcap-dev libsystemd-dev git libarchive libarchive-dev libcurl4-gnutls-dev openssl libdevmapper-dev python3 libtar libtar-dev
++```sh
++$ git clone https://gitee.com/openeuler/iSulad.git
++$ cd iSulad/docs
++$ sudo ./docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
+ ```
+ 
+ ## 从源码构建和安装关键依赖
+diff --git a/docs/install_iSulad_on_Ubuntu_20_04_LTS.sh b/docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
+new file mode 100644
+index 00000000..4b0b7a85
+--- /dev/null
++++ b/docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
+@@ -0,0 +1,62 @@
++#!/bin/bash
++
++set -x
++set -e
++
++# export LDFLAGS
++export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
++export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:/lib/x86_64-linux-gnu/:$LD_LIBRARY_PATH
++echo "/usr/local/lib" >> /etc/ld.so.conf
++
++apt install -y g++ libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc++-dev libgrpc-dev libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux1-dev libseccomp-dev libcap-dev libsystemd-dev git libarchive libarchive-dev libcurl4-gnutls-dev openssl libdevmapper-dev python3 libtar0 libtar-dev libhttp-parser-dev libwebsockets-dev
++
++BUILD_DIR=/tmp/build_isulad
++
++rm -rf $BUILD_DIR
++mkdir -p $BUILD_DIR
++
++# build lxc
++cd $BUILD_DIR
++git clone https://gitee.com/src-openeuler/lxc.git
++cd lxc
++tar -zxf lxc-4.0.3.tar.gz
++./apply-patches
++cd lxc-4.0.3
++./autogen.sh
++./configure
++make -j $(nproc)
++make install
++
++# build lcr
++cd $BUILD_DIR
++git clone https://gitee.com/openeuler/lcr.git
++cd lcr
++mkdir build
++cd build
++cmake ..
++make -j $(nproc)
++make install
++
++# build and install clibcni
++cd $BUILD_DIR
++git clone https://gitee.com/openeuler/clibcni.git
++cd clibcni
++mkdir build
++cd build
++cmake ..
++make -j $(nproc)
++make install
++
++# build and install iSulad
++cd $BUILD_DIR
++git clone https://gitee.com/openeuler/iSulad.git
++cd iSulad
++mkdir build
++cd build
++cmake ..
++make -j $(nproc)
++make install
++
++# clean
++rm -rf $BUILD_DIR
++apt autoremove
+-- 
+2.25.1
+
