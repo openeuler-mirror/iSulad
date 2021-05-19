@@ -1,7 +1,7 @@
 From 64b45885abf0c4b3563008d2be5d04b5ec8cd28d Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Thu, 18 Mar 2021 11:05:33 +0800
-Subject: [PATCH 52/53] remove unchecked layer ignore rootfs layer
+Subject: [PATCH 056/104] remove unchecked layer ignore rootfs layer
 
 Signed-off-by: haozi007 <liuhao27@huawei.com>
 ---

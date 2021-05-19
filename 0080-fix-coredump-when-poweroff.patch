@@ -1,0 +1,80 @@
+From 6259cabf9ae7560f64cfab86cf32b77d0ca8cd79 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Thu, 22 Apr 2021 17:30:06 +0800
+Subject: [PATCH 080/104] fix coredump when poweroff
+
+when doing poweroff cpu are downing and we may
+got aviable cpus less then sysinfo->ncpus which
+we got when system startup. It can cause crash.
+now we use const sysinfo->ncpus to check to
+avoid crash.
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/daemon/modules/spec/verify.c | 20 ++++++++++++--------
+ 1 file changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/src/daemon/modules/spec/verify.c b/src/daemon/modules/spec/verify.c
+index 2a73f7c1..57501cde 100644
+--- a/src/daemon/modules/spec/verify.c
++++ b/src/daemon/modules/spec/verify.c
+@@ -556,7 +556,7 @@ static bool check_cpu(const char *provided, const char *available)
+ }
+ 
+ /* parse unit list */
+-int parse_unit_list(const char *val, bool *available_list)
++int parse_unit_list(const char *val, bool *available_list, int cpu_num)
+ {
+     int ret = -1;
+     char *str = NULL;
+@@ -576,7 +576,7 @@ int parse_unit_list(const char *val, bool *available_list)
+         subchr = strchr(tmp, '-');
+         if (subchr == NULL) {
+             int value = 0;
+-            if (util_safe_int(tmp, &value) || value < 0) {
++            if (util_safe_int(tmp, &value) || value < 0 || value >= cpu_num) {
+                 goto out;
+             }
+             available_list[value] = true;
+@@ -588,7 +588,7 @@ int parse_unit_list(const char *val, bool *available_list)
+             if (util_safe_int(tmp, &min) || min < 0) {
+                 goto out;
+             }
+-            if (util_safe_int(subchr, &max) || max < 0) {
++            if (util_safe_int(subchr, &max) || max < 0 || max >= cpu_num) {
+                 goto out;
+             }
+             for (i = min; i <= max; i++) {
+@@ -615,12 +615,15 @@ static bool is_cpuset_list_available(const char *provided, const char *available
+     bool ret = false;
+     bool *parsed_provided = NULL;
+     bool *parsed_available = NULL;
++    sysinfo_t *sysinfo = NULL;
+ 
+-    cpu_num = get_nprocs();
+-    if (cpu_num <= 0) {
+-        ERROR("failed to get the number of processors configured by the operating system!");
+-        goto out;
++    sysinfo = get_sys_info(true);
++    if (sysinfo == NULL) {
++        ERROR("get sysinfo failed");
++        return false;
+     }
++
++    cpu_num = sysinfo->ncpus;
+     if ((size_t)cpu_num > SIZE_MAX / sizeof(bool)) {
+         ERROR("invalid cpu num");
+         goto out;
+@@ -640,7 +643,8 @@ static bool is_cpuset_list_available(const char *provided, const char *available
+         goto out;
+     }
+ 
+-    if (parse_unit_list(provided, parsed_provided) < 0 || parse_unit_list(available, parsed_available) < 0) {
++    if (parse_unit_list(provided, parsed_provided, cpu_num) < 0 ||
++        parse_unit_list(available, parsed_available, cpu_num) < 0) {
+         goto out;
+     }
+     for (i = 0; i < cpu_num; i++) {
+-- 
+2.25.1
+

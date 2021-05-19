@@ -1,0 +1,26 @@
+From 65a13abeb6315985cf43522597ec3494d762e029 Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Fri, 14 May 2021 09:21:10 +0800
+Subject: [PATCH 099/104] CI: use ali registry instead of docker.io
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ CI/test_cases/container_cases/test_data/daemon.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CI/test_cases/container_cases/test_data/daemon.json b/CI/test_cases/container_cases/test_data/daemon.json
+index aa88c9da..27b0e7ce 100644
+--- a/CI/test_cases/container_cases/test_data/daemon.json
++++ b/CI/test_cases/container_cases/test_data/daemon.json
+@@ -23,7 +23,7 @@
+         "overlay2.override_kernel_check=true"
+     ],
+     "registry-mirrors": [
+-        "docker.io"
++        "https://3laho3y3.mirror.aliyuncs.com"
+     ],
+     "insecure-registries": [
+     ],
+-- 
+2.25.1
+
