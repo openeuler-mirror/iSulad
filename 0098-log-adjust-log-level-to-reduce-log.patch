@@ -1,0 +1,207 @@
+From 3b05de4f3ecbe8e9fd8c37b61aa20273a9477127 Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Thu, 13 May 2021 15:07:03 +0800
+Subject: [PATCH 098/104] log: adjust log level to reduce log
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ src/daemon/entry/connect/grpc/runtime_runtime_service.cc | 8 ++++----
+ src/daemon/executor/container_cb/execution_extend.c      | 6 +++---
+ src/daemon/modules/events/collector.c                    | 4 ++--
+ src/daemon/modules/image/image.c                         | 4 ++--
+ src/daemon/modules/image/image_rootfs_handler.c          | 5 +++--
+ src/daemon/modules/image/oci/oci_common_operators.c      | 4 ++--
+ src/daemon/modules/service/service_container.c           | 4 ++--
+ src/utils/cutils/utils_file.c                            | 2 +-
+ 8 files changed, 19 insertions(+), 18 deletions(-)
+
+diff --git a/src/daemon/entry/connect/grpc/runtime_runtime_service.cc b/src/daemon/entry/connect/grpc/runtime_runtime_service.cc
+index c9702401..7cceefc9 100644
+--- a/src/daemon/entry/connect/grpc/runtime_runtime_service.cc
++++ b/src/daemon/entry/connect/grpc/runtime_runtime_service.cc
+@@ -260,7 +260,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ExecSync(grpc::ServerContext *context,
+ {
+     Errors error;
+ 
+-    EVENT("Event: {Object: CRI, Type: sync execing Container: %s}", request->container_id().c_str());
++    WARN("Event: {Object: CRI, Type: sync execing Container: %s}", request->container_id().c_str());
+ 
+     rService->ExecSync(request->container_id(), request->cmd(), request->timeout(), reply, error);
+     if (!error.Empty()) {
+@@ -268,7 +268,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ExecSync(grpc::ServerContext *context,
+         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+     }
+ 
+-    EVENT("Event: {Object: CRI, Type: sync execed Container: %s}", request->container_id().c_str());
++    WARN("Event: {Object: CRI, Type: sync execed Container: %s}", request->container_id().c_str());
+ 
+     return grpc::Status::OK;
+ }
+@@ -390,7 +390,7 @@ RuntimeRuntimeServiceImpl::UpdateContainerResources(grpc::ServerContext *context
+ {
+     Errors error;
+ 
+-    EVENT("Event: {Object: CRI, Type: Updating container resources: %s}", request->container_id().c_str());
++    WARN("Event: {Object: CRI, Type: Updating container resources: %s}", request->container_id().c_str());
+ 
+     rService->UpdateContainerResources(request->container_id(), request->linux(), error);
+     if (error.NotEmpty()) {
+@@ -399,7 +399,7 @@ RuntimeRuntimeServiceImpl::UpdateContainerResources(grpc::ServerContext *context
+         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+     }
+ 
+-    EVENT("Event: {Object: CRI, Type: Updated container resources: %s}", request->container_id().c_str());
++    WARN("Event: {Object: CRI, Type: Updated container resources: %s}", request->container_id().c_str());
+ 
+     return grpc::Status::OK;
+ }
+diff --git a/src/daemon/executor/container_cb/execution_extend.c b/src/daemon/executor/container_cb/execution_extend.c
+index 77f29fe8..028a3dea 100644
+--- a/src/daemon/executor/container_cb/execution_extend.c
++++ b/src/daemon/executor/container_cb/execution_extend.c
+@@ -1223,15 +1223,15 @@ static int container_update_cb(const container_update_request *request, containe
+ 
+     id = cont->common_config->id;
+     isula_libutils_set_log_prefix(id);
+-    EVENT("Event: {Object: %s, Type: updating}", id);
++    WARN("Event: {Object: %s, Type: updating}", id);
+ 
+     if (do_update_resources(request, cont) != 0) {
+         cc = ISULAD_ERR_EXEC;
+         goto pack_response;
+     }
+ 
+-    EVENT("Event: {Object: %s, Type: updated}", id);
+-    (void)isulad_monitor_send_container_event(id, CREATE, -1, 0, NULL, NULL);
++    WARN("Event: {Object: %s, Type: updated}", id);
++    (void)isulad_monitor_send_container_event(id, UPDATE, -1, 0, NULL, NULL);
+ 
+ pack_response:
+     pack_update_response(*response, cc, id);
+diff --git a/src/daemon/modules/events/collector.c b/src/daemon/modules/events/collector.c
+index 67a823f1..1a867354 100644
+--- a/src/daemon/modules/events/collector.c
++++ b/src/daemon/modules/events/collector.c
+@@ -481,7 +481,7 @@ static int write_events_log(const struct isulad_events_format *events)
+ 
+     len = calculate_annaotation_info_len(events);
+     if (len == 1) {
+-        EVENT("Event: {Object: %s, Type: %s}", events->id, events->opt);
++        WARN("Event: {Object: %s, Type: %s}", events->id, events->opt);
+     } else {
+         annotation = (char *)util_common_calloc_s(len);
+         if (annotation == NULL) {
+@@ -499,7 +499,7 @@ static int write_events_log(const struct isulad_events_format *events)
+         }
+         (void)strcat(annotation, ")");
+ 
+-        EVENT("Event: {Object: %s, Type: %s %s}", events->id, events->opt, annotation);
++        WARN("Event: {Object: %s, Type: %s %s}", events->id, events->opt, annotation);
+     }
+ 
+ out:
+diff --git a/src/daemon/modules/image/image.c b/src/daemon/modules/image/image.c
+index 8e663863..6832aec3 100644
+--- a/src/daemon/modules/image/image.c
++++ b/src/daemon/modules/image/image.c
+@@ -842,7 +842,7 @@ int im_list_images(const im_list_request *ctx, im_list_response **response)
+         return -1;
+     }
+ 
+-    EVENT("Event: {Object: list images, Type: listing}");
++    WARN("Event: {Object: list images, Type: listing}");
+ 
+     for (i = 0; i < g_numbims; i++) {
+         if (g_bims[i].ops->list_ims == NULL) {
+@@ -862,7 +862,7 @@ int im_list_images(const im_list_request *ctx, im_list_response **response)
+         images_tmp = NULL;
+     }
+ 
+-    EVENT("Event: {Object: list images, Type: listed}");
++    WARN("Event: {Object: list images, Type: listed}");
+ 
+     if (g_isulad_errmsg != NULL) {
+         (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+diff --git a/src/daemon/modules/image/image_rootfs_handler.c b/src/daemon/modules/image/image_rootfs_handler.c
+index f9250a8d..f7bc9bc9 100644
+--- a/src/daemon/modules/image/image_rootfs_handler.c
++++ b/src/daemon/modules/image/image_rootfs_handler.c
+@@ -275,7 +275,8 @@ static int append_additional_groups(const struct group *grp, struct group **grou
+     struct group *new_groups = NULL;
+     size_t new_len = *len + 1;
+ 
+-    ret = util_mem_realloc((void **)&new_groups, new_len * sizeof(struct group), *groups, (*len) * sizeof(struct group));
++    ret = util_mem_realloc((void **)&new_groups, new_len * sizeof(struct group), *groups,
++                           (*len) * sizeof(struct group));
+     if (ret != 0) {
+         ERROR("Out of memory");
+         return -1;
+@@ -414,7 +415,7 @@ static int read_user_file(const char *basefs, const char *user_path, FILE **stre
+ 
+     *stream = util_fopen(real_path, "r");
+     if (*stream == NULL) {
+-        ERROR("Failed to open %s: %s", real_path, strerror(errno));
++        WARN("Failed to open %s: %s", real_path, strerror(errno));
+         ret = 0;
+         goto out;
+     }
+diff --git a/src/daemon/modules/image/oci/oci_common_operators.c b/src/daemon/modules/image/oci/oci_common_operators.c
+index 845e1fde..09405651 100644
+--- a/src/daemon/modules/image/oci/oci_common_operators.c
++++ b/src/daemon/modules/image/oci/oci_common_operators.c
+@@ -488,7 +488,7 @@ int oci_status_image(im_status_request *request, im_status_response *response)
+         goto pack_response;
+     }
+ 
+-    EVENT("Event: {Object: %s, Type: statusing image}", resolved_name);
++    WARN("Event: {Object: %s, Type: statusing image}", resolved_name);
+ 
+     image_info = storage_img_get(resolved_name);
+     if (image_info == NULL) {
+@@ -501,7 +501,7 @@ int oci_status_image(im_status_request *request, im_status_response *response)
+     response->image_info->image = image_info;
+     image_info = NULL;
+ 
+-    EVENT("Event: {Object: %s, Type: statused image}", resolved_name);
++    WARN("Event: {Object: %s, Type: statused image}", resolved_name);
+ 
+ pack_response:
+     free(resolved_name);
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index 561f24eb..c8e2b1d8 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -1926,7 +1926,7 @@ int exec_container(const container_t *cont, const container_exec_request *reques
+     }
+ 
+     id = cont->common_config->id;
+-    EVENT("Event: {Object: %s, Type: execing}", id);
++    WARN("Event: {Object: %s, Type: execing}", id);
+ 
+     get_exec_command(request, exec_command, sizeof(exec_command));
+     (void)isulad_monitor_send_container_event(id, EXEC_CREATE, -1, 0, exec_command, NULL);
+@@ -1984,7 +1984,7 @@ int exec_container(const container_t *cont, const container_exec_request *reques
+         goto pack_response;
+     }
+ 
+-    EVENT("Event: {Object: %s, Type: execed}", id);
++    WARN("Event: {Object: %s, Type: execed with exit code %d}", id, exit_code);
+     (void)isulad_monitor_send_container_event(id, EXEC_DIE, -1, 0, NULL, NULL);
+ 
+ pack_response:
+diff --git a/src/utils/cutils/utils_file.c b/src/utils/cutils/utils_file.c
+index d2e342a5..302e4e32 100644
+--- a/src/utils/cutils/utils_file.c
++++ b/src/utils/cutils/utils_file.c
+@@ -862,7 +862,7 @@ int64_t util_file_size(const char *filename)
+     }
+ 
+     if (stat(filename, &st)) {
+-        ERROR("stat file %s failed: %s", filename, strerror(errno));
++        WARN("stat file %s failed: %s", filename, strerror(errno));
+         return -1;
+     }
+ 
+-- 
+2.25.1
+

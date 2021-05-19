@@ -1,0 +1,36 @@
+From d6cc390f40a2c3eb0c37a1ea13634c4c33c81362 Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Fri, 23 Apr 2021 09:40:13 +0800
+Subject: [PATCH 081/104] CI: keep container when build failed for debug
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ CI/build.sh | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/CI/build.sh b/CI/build.sh
+index 2c535c70..cf7691d9 100755
+--- a/CI/build.sh
++++ b/CI/build.sh
+@@ -473,12 +473,12 @@ if [[ -e $CIDIR/${CONTAINER_NAME}.runflag ]]; then
+     rm -rf /var/lib/isulad/${CONTAINER_NAME}_cptemp
+     exit 0;
+ else
+-    for container in ${containers[@]}
+-    do
+-        docker rm -f $container
+-        rm -rf /var/lib/isulad/$container
+-    done
+-    rm -rf /var/lib/isulad/${CONTAINER_NAME}_cptemp
++    #for container in ${containers[@]}
++    #do
++    #    docker rm -f $container
++    #    rm -rf /var/lib/isulad/$container
++    #done
++    #rm -rf /var/lib/isulad/${CONTAINER_NAME}_cptemp
+     echo_error "Test failed!"
+     exit -1;
+ fi
+-- 
+2.25.1
+
