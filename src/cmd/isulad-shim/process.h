@@ -27,15 +27,17 @@ extern "C" {
 #endif
 
 enum {
-    stdid_in = 0,
-    stdid_out,
-    stdid_err
+    STDID_IN = 0,
+    STDID_OUT,
+    STDID_ERR,
+    EXEC_RESIZE
 };
 
 typedef struct {
     int in;
     int out;
     int err;
+    int resize;
 } stdio_t;
 
 typedef struct fd_node {
@@ -47,7 +49,7 @@ typedef struct fd_node {
 typedef struct {
     int fd_from;
     fd_node_t *fd_to;
-    int id;// 0,1,2
+    int id;// 0,1,2,3
     pthread_mutex_t mutex;
 } io_copy_t;
 
@@ -73,7 +75,7 @@ typedef struct process {
     log_terminal *terminal;
     stdio_t *stdio;// shim to on runtime side, in:r out/err: w
     stdio_t *shim_io; // shim io on isulad side, in: w  out/err: r
-    io_thread_t *io_threads[3];// stdin,stdout,stderr
+    io_thread_t *io_threads[4];// stdin,stdout,stderr,exec_resize
     shim_client_process_state *state;
     sem_t sem_mainloop;
 } process_t;

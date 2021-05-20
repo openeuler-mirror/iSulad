@@ -1345,13 +1345,14 @@ static int runtime_resize_helper(const char *id, const char *runtime, const char
     return ret;
 }
 
-static int runtime_exec_resize_helper(const char *id, const char *runtime, const char *rootpath, const char *suffix,
+static int runtime_exec_resize_helper(const char *id, const char *state, const char *runtime, const char *rootpath, const char *suffix,
                                       unsigned int height, unsigned int width)
 {
     int ret = 0;
     rt_exec_resize_params_t params = { 0 };
 
     params.rootpath = rootpath;
+    params.state = state;
     params.suffix = suffix;
     params.height = height;
     params.width = width;
@@ -1380,7 +1381,7 @@ static int resize_container(container_t *cont, const char *suffix, unsigned int 
 
     if (suffix != NULL) {
         DEBUG("Failed to resize container:%s suffix:%s", id, suffix);
-        if (runtime_exec_resize_helper(id, cont->runtime, cont->root_path, suffix, height, width)) {
+        if (runtime_exec_resize_helper(id, cont->state_path, cont->runtime, cont->root_path, suffix, height, width)) {
             ERROR("Failed to resize container:%s", id);
             ret = -1;
             goto out;

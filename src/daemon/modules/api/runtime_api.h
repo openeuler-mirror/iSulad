@@ -173,6 +173,7 @@ typedef struct _rt_resize_params_t {
 
 typedef struct _rt_exec_resize_params_t {
     const char *rootpath;
+    const char *state;
     const char *suffix;
     unsigned int height;
     unsigned int width;

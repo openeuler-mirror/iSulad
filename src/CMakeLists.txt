@@ -87,9 +87,10 @@ target_link_libraries(isula libisula -lpthread)
 # ------ build isulad-shim -------
 add_executable(isulad-shim
     ${ISULAD_SHIM_SRCS}
+    ${SHARED_SRCS}
     )
 target_include_directories(isulad-shim PUBLIC ${ISULAD_SHIM_INCS} ${SHARED_INCS})
-target_link_libraries(isulad-shim ${LIBYAJL_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lpthread)
+target_link_libraries(isulad-shim ${LIBYAJL_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${ZLIB_LIBRARY} ${CRYPTO_LIBRARY} -lpthread)
 
 # ------ build isula-shim finish -------
 
