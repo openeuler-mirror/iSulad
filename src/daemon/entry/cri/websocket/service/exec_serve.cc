@@ -16,6 +16,7 @@
 #include "exec_serve.h"
 #include "io_wrapper.h"
 #include "utils.h"
+#include "cri_helpers.h"
 
 int ExecServe::Execute(lwsContext lws_ctx, const std::string &token, int read_pipe_fd)
 {
@@ -123,6 +124,13 @@ int ExecServe::RequestFromCri(const runtime::v1alpha2::ExecRequest &grequest, co
             tmpreq->argv[i] = util_strdup_s(grequest.cmd(i).c_str());
         }
         tmpreq->argv_len = (size_t)grequest.cmd_size();
+    }
+
+    tmpreq->suffix = CRIHelpers::GenerateExecSuffix();
+    if (tmpreq->suffix == nullptr) {
+        ERROR("Failed to generate exec suffix(id)");
+        free_container_exec_request(tmpreq);
+        return -1;
     }
 
     *request = tmpreq;
