@@ -1121,6 +1121,12 @@ void ContainerManagerServiceImpl::ExecSyncFromGRPC(const std::string &containerI
             (*request)->argv_len++;
         }
     }
+
+    (*request)->suffix = CRIHelpers::GenerateExecSuffix();
+    if ((*request)->suffix == nullptr) {
+        error.SetError("Failed to generate exec suffix(id)");
+        return;
+    }
 }
 
 static auto WriteToString(void *context, const void *data, size_t len) -> ssize_t

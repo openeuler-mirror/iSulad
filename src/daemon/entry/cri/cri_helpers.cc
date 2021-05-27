@@ -14,6 +14,7 @@
  *********************************************************************************/
 
 #include "cri_helpers.h"
+#include "constants.h"
 #include <algorithm>
 #include <functional>
 #include <iostream>
@@ -966,4 +967,22 @@ cleanup:
     free_container_stop_request(request);
     free_container_stop_response(response);
 }
+
+char *GenerateExecSuffix()
+{
+    char *exec_suffix = (char *)util_common_calloc_s(sizeof(char) * (CONTAINER_ID_MAX_LEN + 1));
+    if (exec_suffix == nullptr) {
+        ERROR("Out of memory");
+        return nullptr;
+    }
+
+    if (util_generate_random_str(exec_suffix, (size_t)CONTAINER_ID_MAX_LEN)) {
+        ERROR("Failed to generate exec suffix(id)");
+        free(exec_suffix);
+        return nullptr;
+    }
+
+    return exec_suffix;
+}
+
 } // namespace CRIHelpers
