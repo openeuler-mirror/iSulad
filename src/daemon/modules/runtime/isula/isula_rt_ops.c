@@ -998,6 +998,28 @@ int rt_isula_rm(const char *id, const char *runtime, const rt_rm_params_t *param
     return 0;
 }
 
+static char *try_generate_exec_id()
+{
+    char *id = NULL;
+
+    id = util_common_calloc_s(sizeof(char) * (CONTAINER_EXEC_ID_MAX_LEN + 1));
+    if (id == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    if (util_generate_random_str(id, (size_t)CONTAINER_EXEC_ID_MAX_LEN) != 0) {
+        ERROR("Generate id failed");
+        goto err_out;
+    }
+
+    return id;
+
+err_out:
+    free(id);
+    return NULL;
+}
+
 static bool fg_exec(const rt_exec_params_t *params)
 {
     if (params->console_fifos[0] != NULL || params->console_fifos[1] != NULL || params->console_fifos[2] != NULL) {
@@ -1033,9 +1055,14 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
         goto out;
     }
 
-    exec_id = strdup(params->suffix);
+    if (params->suffix != NULL) {
+        exec_id = util_strdup_s(params->suffix);
+    } else {
+        exec_id = try_generate_exec_id();
+    }
+
     if (exec_id == NULL) {
-        ERROR("out of memory");
+        ERROR("Out of memory or generate exec id failed");
         ret = -1;
         goto out;
     }
@@ -1236,6 +1263,12 @@ int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resi
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
         return -1;
+    }
+
+    /* crictl not suport exec auto resize */
+    if (params->suffix == NULL) {
+        WARN("exec resize not support when isula not being used");
+        return 0;
     }
 
     if (snprintf(workdir, sizeof(workdir), "%s/%s/exec/%s", params->state, id, params->suffix) < 0) {
