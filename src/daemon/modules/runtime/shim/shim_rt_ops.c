@@ -437,7 +437,11 @@ int rt_shim_exec(const char *id, const char *runtime, const rt_exec_params_t *pa
         goto out;
     }
 
-    *exit_code = pid;
+    if (shim_v2_wait(id, params->suffix, exit_code) != 0) {
+        ERROR("%s: failed to wait exec process", id);
+        ret = -1;
+        goto out;
+    }
 
 out:
     free(data);
