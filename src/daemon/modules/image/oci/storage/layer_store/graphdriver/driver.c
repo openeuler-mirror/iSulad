@@ -136,6 +136,12 @@ int graphdriver_init(const struct storage_module_init_options *opts)
 
     for (i = 0; i < g_numdrivers; i++) {
         if (strcmp(opts->driver_name, g_drivers[i].name) == 0) {
+            if (pthread_rwlock_init(&(g_drivers[i].rwlock), NULL) != 0) {
+                ERROR("Failed to init driver rwlock");
+                ret = -1;
+                goto out;
+            }
+
             if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)opts->driver_opts,
                                        opts->driver_opts_len) != 0) {
                 ret = -1;
@@ -148,13 +154,6 @@ int graphdriver_init(const struct storage_module_init_options *opts)
 
     if (i == g_numdrivers) {
         ERROR("unsupported driver %s", opts->driver_name);
-        ret = -1;
-        goto out;
-    }
-
-    ret = pthread_rwlock_init(&(g_graphdriver->rwlock), NULL);
-    if (ret != 0) {
-        ERROR("Failed to init driver rwlock");
         ret = -1;
         goto out;
     }

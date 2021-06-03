@@ -89,7 +89,7 @@ void free_devmapper_status(struct status *st);
 
 int device_set_shutdown(struct device_set *devset, const char *home);
 
-void free_device_set(struct device_set *devset);
+int free_deviceset_with_lock(struct device_set *devset);
 
 #ifdef __cplusplus
 }
