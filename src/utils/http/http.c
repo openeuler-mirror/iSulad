@@ -429,7 +429,9 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     /* provide a buffer to store errors in */
     curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, errbuf);
     curl_easy_setopt(curl_handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+#if defined(CURLOPT_SUPPRESS_CONNECT_HEADERS)
     curl_easy_setopt(curl_handle, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
+#endif
 
     ret = http_custom_options(curl_handle, options);
     if (ret) {
