@@ -573,8 +573,26 @@ int rt_shim_resume(const char *id, const char *runtime, const rt_resume_params_t
 int rt_shim_listpids(const char *id, const char *runtime, const rt_listpids_params_t *params,
                      rt_listpids_out_t *out)
 {
-    ERROR("isula top/listpids not support on isulad-shim");
-    isulad_set_error_message("isula top/listpids not support on shim-v2");
+    int pid = 0;
+
+    if (id == NULL || out == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    if (shim_v2_pids(id, &pid) != 0) {
+        ERROR("%s: shim listpids failed", id);
+        return -1;
+    }
+
+    out->pids_len = 1;
+    out->pids = util_smart_calloc_s(sizeof(pid_t), out->pids_len);
+    if (out->pids == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    *(out->pids) = (pid_t)pid;
     return 0;
 }
 
