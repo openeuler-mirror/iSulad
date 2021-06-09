@@ -598,7 +598,12 @@ int devmapper_clean_up(struct graphdriver *driver)
         goto out;
     }
 
-    free_device_set(driver->devset);
+    if (free_deviceset_with_lock(driver->devset) != 0) {
+        ERROR("Free device set data failed");
+        ret = -1;
+        goto out;
+    }
+    driver->devset = NULL;
 
 out:
     return ret;
