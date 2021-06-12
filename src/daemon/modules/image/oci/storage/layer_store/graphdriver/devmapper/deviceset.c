@@ -1651,7 +1651,8 @@ static int cancel_deferred_removal_if_needed(struct device_set *devset, image_de
     }
 
     nret = cancel_deferred_removal(devset, info->hash);
-    if (nret != 0 && nret != ERR_BUSY) {
+    // If Error is ERR_ENXIO. Device is probably already gone. Continue
+    if (nret != 0 && nret != ERR_ENXIO) {
         ERROR("devmapper: cancel deferred remove for device with hash:%s failed, err:%s", info->hash,
               dev_strerror(nret));
         ret = -1;
