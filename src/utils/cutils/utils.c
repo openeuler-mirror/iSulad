@@ -1517,3 +1517,37 @@ out:
 
     return dst;
 }
+
+// convert_v2_runtime validate is the param_runtime in runtime-v2 format (io.containerd.<runtime>.<version>).
+// If param_runtime is legal and param_binary is not NULL, convert runtime binary name into it.
+// io.containerd.<runtime>.<version> --> containerd-shim-<runtime>-<version>
+int convert_v2_runtime(const char *runtime, char *binary)
+{
+    char **parts = NULL;
+    int parts_len = 0;
+    char buf[PATH_MAX]  = {0};
+    int ret = 0;
+
+    parts = util_string_split_multi(runtime, '.');
+    if (parts == NULL) {
+        ERROR("split failed: %s", runtime);
+        ret = -1;
+        goto out;
+    }
+
+    parts_len = util_array_len((const char **)parts);
+    if (!(parts_len == 4 && strcmp(parts[0], "io") == 0 && strcmp(parts[1], "containerd") == 0)) {
+        ERROR("ShimV2 runtime format is wrong");
+        ret = -1;
+        goto out;
+    }
+
+    if (binary != NULL) {
+        snprintf(buf, sizeof(buf), "%s-%s-%s-%s", "containerd", "shim", parts[2], parts[3]);
+        strcpy(binary, buf);
+    }
+
+out:
+    util_free_array(parts);
+    return ret;
+}

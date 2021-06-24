@@ -67,3 +67,9 @@ if (ENABLE_SELINUX STREQUAL "ON")
     set(ENABLE_SELINUX 1)
 endif()
 
+option(ENABLE_SHIM_V2 "enable shim v2 runtime" OFF)
+if (ENABLE_SHIM_V2 STREQUAL "ON")
+	add_definitions(-DENABLE_SHIM_V2=1)
+	set(ENABLE_SHIM_V2 1)
+endif()
+

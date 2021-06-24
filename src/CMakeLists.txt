@@ -10,6 +10,12 @@ set(CHECKED_INCLUDE_DIRS
     ${ISULA_LIBUTILS_INCLUDE_DIR}
     )
 
+if (ENABLE_SHIM_V2)
+	list(APPEND CHECKED_INCLUDE_DIRS
+	    ${LIBSHIM_V2_INCLUDE_DIR}
+	    )
+endif()
+
 if (GRPC_CONNECTOR)
     list(APPEND CHECKED_INCLUDE_DIRS
         ${GRPC_INCLUDE_DIR}
@@ -64,7 +70,21 @@ target_include_directories(libisula PUBLIC
 
 # set libisula FLAGS
 set_target_properties(libisula PROPERTIES PREFIX "")
-target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
+
+target_link_libraries(libisula
+    ${LIBYAJL_LIBRARY}
+    ${SELINUX_LIBRARY}
+    ${ISULA_LIBUTILS_LIBRARY}
+    ${LIBARCHIVE_LIBRARY}
+    ${LIBTAR_LIBRARY}
+    ${WEBSOCKET_LIBRARY}
+    ${CRYPTO_LIBRARY}
+   )
+
+if (ENABLE_SHIM_V2)
+    target_link_libraries(libisula ${LIBSHIM_V2_LIBRARY})
+endif()
+
 
 if (GRPC_CONNECTOR)
     target_link_libraries(libisula -Wl,--as-needed -lstdc++)
@@ -113,7 +133,13 @@ target_include_directories(isulad PUBLIC
     )
 
 target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
+
 target_link_libraries(isulad -ldl ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lpthread libhttpclient)
+
+if (ENABLE_SHIM_V2)
+    target_link_libraries(isulad ${LIBSHIM_V2_LIBRARY})
+endif()
+
 if (ENABLE_EMBEDDED_IMAGE)
     target_link_libraries(isulad ${SQLITE3_LIBRARY})
 endif()

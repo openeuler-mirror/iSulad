@@ -111,6 +111,14 @@ RUN echo "export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> /
 # disalbe sslverify
 RUN git config --global http.sslverify false
 
+# install rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+# configure rust
+RUN echo "[source.crates-io]" >> ${HOME}/.cargo/config && \
+    echo "[source.local-registry]" >> ${HOME}/.cargo/config && \
+    echo "directory = \"vendor\"" >> ${HOME}/.cargo/config
+
 # install cmake
 RUN set -x && \
 	cd ~ && \

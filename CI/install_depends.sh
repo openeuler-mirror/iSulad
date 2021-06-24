@@ -131,6 +131,18 @@ make -j $(nproc)
 \cp -f ./runc ${builddir}/bin
 cd -
 
+# install lib-shim-v2
+source $HOME/.cargo/env
+cd ~
+git clone https://gitee.com/src-openeuler/lib-shim-v2.git
+cd lib-shim-v2
+tar xf lib-shim-v2-*
+cd lib-shim-v2-*
+cargo build --release
+make install
+cd -
+ldconfig
+
 # install clibcni
 cd ~
 git clone https://gitee.com/openeuler/clibcni.git

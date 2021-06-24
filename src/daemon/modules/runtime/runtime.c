@@ -23,6 +23,9 @@
 #include "utils.h"
 #include "lcr_rt_ops.h"
 #include "isula_rt_ops.h"
+#ifdef ENABLE_SHIM_V2
+#include "shim_rt_ops.h"
+#endif
 
 static const struct rt_ops g_lcr_rt_ops = {
     .detect = rt_lcr_detect,
@@ -41,6 +44,7 @@ static const struct rt_ops g_lcr_rt_ops = {
     .rt_resources_stats = rt_lcr_resources_stats,
     .rt_resize = rt_lcr_resize,
     .rt_exec_resize = rt_lcr_exec_resize,
+    .rt_kill = rt_lcr_kill,
 };
 
 static const struct rt_ops g_isula_rt_ops = {
@@ -60,10 +64,36 @@ static const struct rt_ops g_isula_rt_ops = {
     .rt_resources_stats = rt_isula_resources_stats,
     .rt_resize = rt_isula_resize,
     .rt_exec_resize = rt_isula_exec_resize,
+    .rt_kill = rt_isula_kill,
 };
+
+#ifdef ENABLE_SHIM_V2
+static const struct rt_ops g_shim_rt_ops = {
+    .detect = rt_shim_detect,
+    .rt_create = rt_shim_create,
+    .rt_start = rt_shim_start,
+    .rt_restart = rt_shim_restart,
+    .rt_clean_resource = rt_shim_clean_resource,
+    .rt_rm = rt_shim_rm,
+    .rt_status = rt_shim_status,
+    .rt_exec = rt_shim_exec,
+    .rt_pause = rt_shim_pause,
+    .rt_resume = rt_shim_resume,
+    .rt_attach = rt_shim_attach,
+    .rt_update = rt_shim_update,
+    .rt_listpids = rt_shim_listpids,
+    .rt_resources_stats = rt_shim_resources_stats,
+    .rt_resize = rt_shim_resize,
+    .rt_exec_resize = rt_shim_exec_resize,
+    .rt_kill = rt_shim_kill,
+};
+#endif
 
 static const struct rt_ops *g_rt_ops[] = {
     &g_lcr_rt_ops,
+#ifdef ENABLE_SHIM_V2
+    &g_shim_rt_ops,
+#endif
     &g_isula_rt_ops,
 };
 
@@ -129,6 +159,30 @@ int runtime_start(const char *name, const char *runtime, const rt_start_params_t
     }
 
     ret = ops->rt_start(name, runtime, params, pid_info);
+
+out:
+    return ret;
+}
+
+int runtime_kill(const char *name, const char *runtime, const rt_kill_params_t *params)
+{
+    int ret = 0;
+    const struct rt_ops *ops = NULL;
+
+    if (name == NULL || runtime == NULL) {
+        ERROR("Invalid arguments for runtime kill");
+        ret = -1;
+        goto out;
+    }
+
+    ops = rt_ops_query(runtime);
+    if (ops == NULL) {
+        ERROR("Failed to get runtime ops");
+        ret = -1;
+        goto out;
+    }
+
+    ret = ops->rt_kill(name, runtime, params);
 
 out:
     return ret;

@@ -664,3 +664,24 @@ out:
     }
     return ret;
 }
+
+int rt_lcr_kill(const char *id, const char *runtime, const rt_kill_params_t *params)
+{
+    if (util_process_alive(params->pid, params->start_time) == false) {
+        if (params->signal == params->stop_signal || params->signal == SIGKILL) {
+            WARN("Process %d is not alive", params->pid);
+            return 0;
+        } else {
+            ERROR("Process (pid=%d) is not alive, can not kill with signal %u", params->pid, params->signal);
+            return -1;
+        }
+    } else {
+        int ret = kill(params->pid, (int)params->signal);
+        if (ret < 0) {
+            ERROR("Can not kill process (pid=%d) with signal %u: %s", params->pid, params->signal, strerror(errno));
+            return -1;
+        }
+    }
+
+    return 0;
+}

@@ -1260,7 +1260,13 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
         goto out;
     }
 
-    ret = send_signal_to_process(cont->state->state->pid, cont->state->state->start_time, stop_signal, signal);
+    rt_kill_params_t kill_params = {
+        .pid = cont->state->state->pid,
+        .start_time = cont->state->state->start_time,
+        .signal = signal,
+        .stop_signal = stop_signal,
+    };
+    ret = runtime_kill(id, cont->runtime, &kill_params);
     if (ret != 0) {
         ERROR("Failed to send signal to container %s with signal %u", id, signal);
     }

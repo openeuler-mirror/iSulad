@@ -81,6 +81,7 @@ typedef struct _rt_create_params_t {
 typedef struct _rt_start_params_t {
     const char *rootpath;
     const char *state;
+    const char *bundle;
     bool tty;
     bool open_stdin;
 
@@ -95,6 +96,13 @@ typedef struct _rt_start_params_t {
     const char *exit_fifo;
 } rt_start_params_t;
 
+typedef struct _rt_kill_params_t {
+    const uint32_t signal;
+    const uint32_t stop_signal;
+    const pid_t pid;
+    const unsigned long long start_time;
+} rt_kill_params_t;
+
 typedef struct _rt_restart_params_t {
     const char *rootpath;
 } rt_restart_params_t;
@@ -104,6 +112,7 @@ typedef struct _rt_clean_params_t {
     const char *statepath;
     const char *logpath;
     const char *loglevel;
+    const char *bundle;
     pid_t pid;
 } rt_clean_params_t;
 
@@ -190,6 +199,8 @@ struct rt_ops {
 
     int (*rt_restart)(const char *name, const char *runtime, const rt_restart_params_t *params);
 
+    int (*rt_kill)(const char *name, const char *runtime, const rt_kill_params_t *params);
+
     int (*rt_clean_resource)(const char *name, const char *runtime, const rt_clean_params_t *params);
 
     int (*rt_rm)(const char *name, const char *runtime, const rt_rm_params_t *params);
@@ -218,6 +229,7 @@ struct rt_ops {
 int runtime_create(const char *name, const char *runtime, const rt_create_params_t *params);
 int runtime_clean_resource(const char *name, const char *runtime, const rt_clean_params_t *params);
 int runtime_start(const char *name, const char *runtime, const rt_start_params_t *params, pid_ppid_info_t *pid_info);
+int runtime_kill(const char *name, const char *runtime, const rt_kill_params_t *params);
 int runtime_restart(const char *name, const char *runtime, const rt_restart_params_t *params);
 int runtime_rm(const char *name, const char *runtime, const rt_rm_params_t *params);
 int runtime_status(const char *name, const char *runtime, const rt_status_params_t *params,
