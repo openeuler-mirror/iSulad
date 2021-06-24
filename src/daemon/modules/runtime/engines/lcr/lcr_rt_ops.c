@@ -668,7 +668,7 @@ out:
 int rt_lcr_kill(const char *id, const char *runtime, const rt_kill_params_t *params)
 {
     if (util_process_alive(params->pid, params->start_time) == false) {
-        if (params->signal == SIGTERM || params->signal == SIGKILL) {
+        if (params->signal == params->stop_signal || params->signal == SIGKILL) {
             WARN("Process %d is not alive", params->pid);
             return 0;
         } else {

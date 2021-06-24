@@ -98,6 +98,7 @@ typedef struct _rt_start_params_t {
 
 typedef struct _rt_kill_params_t {
     const uint32_t signal;
+    const uint32_t stop_signal;
     const pid_t pid;
     const unsigned long long start_time;
 } rt_kill_params_t;
