@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -9,15 +9,15 @@
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
  * Author: gaohuatao
- * Create: 2020-1-20
- * Description: runtime ops
+ * Create: 2021-05-20
+ * Description: shim v2 runtime interface defination
  ******************************************************************************/
 
-#ifndef SHIM_RT_OPS_H
-#define SHIM_RT_OPS_H /* SHIM_RT_OPS_H */
+#ifndef DAEMON_MODULES_RUNTIME_SHIM_SHIM_RT_OPS_H
+#define DAEMON_MODULES_RUNTIME_SHIM_SHIM_RT_OPS_H
 
 #include "runtime_api.h"
-#include "shim_v2.h"
+#include <shim_v2.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,4 +64,4 @@ int rt_shim_exec_resize(const char *id, const char *runtime, const rt_exec_resiz
 }
 #endif
 
-#endif /* SHIM_RT_OPS_H */
+#endif /* DAEMON_MODULES_RUNTIME_SHIM_SHIM_RT_OPS_H */

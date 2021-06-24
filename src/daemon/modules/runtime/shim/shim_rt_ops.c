@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -9,31 +9,30 @@
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
  * Author: gaohuatao
- * Create: 2020-1-20
- * Description: runtime ops
+ * Create: 2021-05-20
+ * Description: shim v2 runtime interface implementation
  ******************************************************************************/
 
 #define _GNU_SOURCE
 
-
+#include "shim_rt_ops.h"
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <limits.h>
-
-#include "shim_rt_ops.h"
 #include "isula_libutils/log.h"
+#include "isula_libutils/shim_client_process_state.h"
+#include "utils.h"
+#include "utils_string.h"
+#include "constants.h"
 #include "error.h"
 #include "err_msg.h"
 #include "engine.h"
-#include "constants.h"
-#include "isula_libutils/shim_client_process_state.h"
-#include "utils_string.h"
-#include "shim_v2.h"
 
 #define SHIM_LOG_SIZE ((BUFSIZ-100)/2)
 #define PID_WAIT_TIME 120
+#define EXIT_SIGNAL_OFFSET_X 128
 
 static void copy_process(shim_client_process_state *p, defs_process *dp)
 {
@@ -54,8 +53,6 @@ static void copy_process(shim_client_process_state *p, defs_process *dp)
     p->rlimits_len = dp->rlimits_len;
 }
 
-#define ExitSignalOffsetX 128
-
 static int status_to_exit_code(int status)
 {
     int exit_code = 0;
@@ -68,7 +65,7 @@ static int status_to_exit_code(int status)
 
     if (WIFSIGNALED(status)) {
         int signal = WTERMSIG(status);
-        exit_code = ExitSignalOffsetX + signal;
+        exit_code = EXIT_SIGNAL_OFFSET_X + signal;
     }
 
     return exit_code;
@@ -267,7 +264,7 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
     }
 
     state_path = util_path_dir(exit_fifo_path);
-    if (exit_fifo_path == NULL) {
+    if (state_path == NULL) {
         ERROR("%s:failed to get state dir from %s", id, exit_fifo_path);
         ret = -1;
         goto out;
@@ -301,7 +298,7 @@ out:
 
 int rt_shim_start(const char *id, const char *runtime, const rt_start_params_t *params, pid_ppid_info_t *pid_info)
 {
-    int pid = 0;
+    int pid = -1;
 
     if (shim_v2_start(id, NULL, &pid) != 0) {
         ERROR("%s: failed to start container", id);
@@ -322,6 +319,7 @@ int rt_shim_restart(const char *id, const char *runtime, const rt_restart_params
 int rt_shim_clean_resource(const char *id, const char *runtime, const rt_clean_params_t *params)
 {
     int ret = 0;
+    int nret = 0;
     char workdir[PATH_MAX] = {0};
     struct DeleteResponse res = {};
 
@@ -336,7 +334,8 @@ int rt_shim_clean_resource(const char *id, const char *runtime, const rt_clean_p
         goto out;
     }
 
-    if (snprintf(workdir, sizeof(workdir), "%s/%s", params->statepath, id) < 0) {
+    nret = snprintf(workdir, sizeof(workdir), "%s/%s", params->statepath, id);
+    if (nret < 0 || nret >= sizeof(workdir)) {
         ERROR("failed to get shim workdir");
         ret = -1;
         goto out;
@@ -365,6 +364,7 @@ out:
 int rt_shim_rm(const char *id, const char *runtime, const rt_rm_params_t *params)
 {
     int ret = 0;
+    int nret = 0;
     char libdir[PATH_MAX] = {0};
 
     if (id == NULL || runtime == NULL || params == NULL) {
@@ -378,7 +378,8 @@ int rt_shim_rm(const char *id, const char *runtime, const rt_rm_params_t *params
         goto out;
     }
 
-    if (snprintf(libdir, sizeof(libdir), "%s/%s", params->rootpath, id) < 0) {
+    nret = snprintf(libdir, sizeof(libdir), "%s/%s", params->rootpath, id);
+    if (nret < 0 && nret >= sizeof(libdir)) {
         ERROR("failed to get shim workdir");
         ret = -1;
         goto out;
@@ -467,7 +468,7 @@ static int file_read_address(const char *fname, char *addr)
         goto out;
     }
 
-    (void) stpcpy(addr, buf);
+    (void)stpcpy(addr, buf);
 
 out:
     free(buf);
@@ -547,7 +548,7 @@ int rt_shim_update(const char *id, const char *runtime, const rt_update_params_t
 {
     ERROR("rt_shim_update not impl");
     isulad_set_error_message("isula update not support on shim-v2");
-    return 0;
+    return -1;
 }
 
 int rt_shim_pause(const char *id, const char *runtime, const rt_pause_params_t *params)
@@ -600,7 +601,7 @@ int rt_shim_resources_stats(const char *id, const char *runtime, const rt_stats_
                             struct runtime_container_resources_stats_info *rs_stats)
 {
     ERROR("rt_shim_resources_stats not impl");
-    return 0;
+    return -1;
 }
 
 int rt_shim_resize(const char *id, const char *runtime, const rt_resize_params_t *params)
