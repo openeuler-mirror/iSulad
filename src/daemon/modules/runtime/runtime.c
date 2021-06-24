@@ -23,7 +23,9 @@
 #include "utils.h"
 #include "lcr_rt_ops.h"
 #include "isula_rt_ops.h"
+#ifdef ENABLE_SHIM_V2
 #include "shim_rt_ops.h"
+#endif
 
 static const struct rt_ops g_lcr_rt_ops = {
     .detect = rt_lcr_detect,
@@ -65,6 +67,7 @@ static const struct rt_ops g_isula_rt_ops = {
     .rt_kill = rt_isula_kill,
 };
 
+#ifdef ENABLE_SHIM_V2
 static const struct rt_ops g_shim_rt_ops = {
     .detect = rt_shim_detect,
     .rt_create = rt_shim_create,
@@ -84,10 +87,13 @@ static const struct rt_ops g_shim_rt_ops = {
     .rt_exec_resize = rt_shim_exec_resize,
     .rt_kill = rt_shim_kill,
 };
+#endif
 
 static const struct rt_ops *g_rt_ops[] = {
     &g_lcr_rt_ops,
+#ifdef ENABLE_SHIM_V2
     &g_shim_rt_ops,
+#endif
     &g_isula_rt_ops,
 };
 
