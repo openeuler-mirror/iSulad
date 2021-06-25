@@ -138,6 +138,13 @@ git clone https://gitee.com/src-openeuler/lib-shim-v2.git
 cd lib-shim-v2
 tar xf lib-shim-v2-*
 cd lib-shim-v2-*
+mkdir .cargo
+cat >> ./.cargo/config << EOF
+[source.crates-io]
+replace-with = "local-registry"
+[source.local-registry]
+directory = "vendor"
+EOF
 cargo build --release
 make install
 cd -
