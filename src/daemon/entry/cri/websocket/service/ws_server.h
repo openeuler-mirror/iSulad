@@ -39,6 +39,8 @@
 #define PIPE_FD_NUM 2
 #define BUF_BASE_SIZE 1024
 #define LWS_TIMEOUT 50
+// io copy maximum single transfer 4K, let max total buffer size: 1GB
+#define FIFO_LIST_BUFFER_MAX_LEN 262144
 
 enum WebsocketChannel {
     STDINCHANNEL = 0,
@@ -48,7 +50,7 @@ enum WebsocketChannel {
 
 struct session_data {
     std::array<int, MAX_ARRAY_LEN> pipes;
-    volatile bool close { false };
+    bool *close;
     std::mutex *buf_mutex;
     sem_t *sync_close_sem;
     std::list<unsigned char *> buffer;
@@ -71,11 +73,19 @@ struct session_data {
         buf_mutex->unlock();
     }
 
-    void PushMessage(unsigned char *message)
+    int PushMessage(unsigned char *message)
     {
+        // In extreme scenarios, websocket data cannot be processed,
+        // ignore the data coming in later to prevent iSulad from getting stuck
+        if (*close || buffer.size() >= FIFO_LIST_BUFFER_MAX_LEN) {
+            free(message);
+            return -1;
+        }
         buf_mutex->lock();
         buffer.push_back(message);
         buf_mutex->unlock();
+
+        return 0;
     }
 
     void EraseAllMessage()

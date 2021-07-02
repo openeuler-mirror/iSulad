@@ -1345,8 +1345,8 @@ static int runtime_resize_helper(const char *id, const char *runtime, const char
     return ret;
 }
 
-static int runtime_exec_resize_helper(const char *id, const char *state, const char *runtime, const char *rootpath, const char *suffix,
-                                      unsigned int height, unsigned int width)
+static int runtime_exec_resize_helper(const char *id, const char *state, const char *runtime, const char *rootpath,
+                                      const char *suffix, unsigned int height, unsigned int width)
 {
     int ret = 0;
     rt_exec_resize_params_t params = { 0 };

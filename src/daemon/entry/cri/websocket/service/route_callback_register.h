@@ -27,6 +27,7 @@
 struct lwsContext {
     int fd;
     sem_t *sync_close_sem;
+    bool *close;
 };
 
 class StreamingServeInterface {
