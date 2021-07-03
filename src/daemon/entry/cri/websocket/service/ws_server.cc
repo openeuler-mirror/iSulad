@@ -162,6 +162,7 @@ void WebsocketServer::CloseAllWsSession()
         close(it->second.pipes.at(0));
         close(it->second.pipes.at(1));
         delete it->second.buf_mutex;
+        delete it->second.close;
     }
     m_wsis.clear();
 }
@@ -170,6 +171,7 @@ void WebsocketServer::CloseWsSession(int socketID)
 {
     auto it = m_wsis.find(socketID);
     if (it != m_wsis.end()) {
+        *(it->second.close) = true;
         it->second.EraseAllMessage();
         // close the pipe write endpoint first, make sure io copy thread exit,
         // otherwise epoll will trigger EOF
@@ -181,6 +183,9 @@ void WebsocketServer::CloseWsSession(int socketID)
         (void)sem_destroy(it->second.sync_close_sem);
         close(it->second.pipes.at(0));
         delete it->second.buf_mutex;
+        it->second.buf_mutex = nullptr;
+        delete it->second.close;
+        it->second.close = nullptr;
         m_wsis.erase(it);
     }
 }
@@ -208,6 +213,7 @@ int WebsocketServer::GenerateSessionData(session_data &session) noexcept
     session.pipes = std::array<int, MAX_ARRAY_LEN> { read_pipe_fd[0], read_pipe_fd[1] };
     session.buf_mutex = buf_mutex;
     session.sync_close_sem = sync_close_sem;
+    session.close = new bool(false);
 
     return 0;
 }
@@ -244,6 +250,7 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
     lwsContext lwsCtx = {
         .fd = socketID,
         .sync_close_sem = m_wsis[socketID].sync_close_sem,
+        .close = m_wsis[socketID].close,
     };
     std::thread streamTh([ = ]() {
         StreamTask(&m_handler, lwsCtx, vec.at(1), vec.at(2), m_wsis[socketID].pipes.at(0)).Run();
@@ -361,7 +368,7 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
                     }
                 }
 
-                if (it->second.close) {
+                if (*(it->second.close)) {
                     DEBUG("websocket session disconnected");
                     return -1;
                 }
@@ -429,7 +436,7 @@ namespace {
 void DoWriteToClient(int fd, session_data *session,
                      const void *data, size_t len, WebsocketChannel channel)
 {
-    unsigned char *buf = (unsigned char *)util_common_calloc_s(LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
+    unsigned char *buf = (unsigned char *)util_common_calloc_s(LWS_PRE + len + 1);
     if (buf == nullptr) {
         ERROR("Out of memory");
         return;
@@ -440,14 +447,19 @@ void DoWriteToClient(int fd, session_data *session,
     (void)memcpy(&buf[LWS_PRE + 1], (void *)data, len);
 
     // push back to message list
-    session->PushMessage(buf);
+    if (session->PushMessage(buf) != 0) {
+        ERROR("Abnormal, websocket data cannot be processed, ignore the data"
+              "coming in later to prevent daemon from getting stuck");
+    }
 }
 
 ssize_t WsWriteToClient(void *context, const void *data, size_t len, WebsocketChannel channel)
 {
     auto *lwsCtx = static_cast<lwsContext *>(context);
     int fd = lwsCtx->fd;
-
+    if (lwsCtx->close == nullptr || *(lwsCtx->close)) {
+        return 0;
+    }
     WebsocketServer *server = WebsocketServer::GetInstance();
     auto itor = server->GetWsisData().find(fd);
     if (itor == server->GetWsisData().end()) {
@@ -490,7 +502,7 @@ int closeWsConnect(void *context, char **err)
         return -1;
     }
     // will close websocket session on LWS_CALLBACK_SERVER_WRITEABLE polling
-    it->second.close = true;
+    *(it->second.close) = true;
     server->UnlockAllWsSession();
 
     delete lwsCtx;
