@@ -436,7 +436,7 @@ namespace {
 void DoWriteToClient(int fd, session_data *session,
                      const void *data, size_t len, WebsocketChannel channel)
 {
-    unsigned char *buf = (unsigned char *)util_common_calloc_s(LWS_PRE + len + 1);
+    unsigned char *buf = (unsigned char *)util_common_calloc_s(LWS_PRE + MAX_BUFFER_SIZE + 1);
     if (buf == nullptr) {
         ERROR("Out of memory");
         return;
