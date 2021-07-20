@@ -163,8 +163,7 @@ void WebsocketServer::CloseAllWsSession()
         it->second.EraseAllMessage();
         close(it->second.pipes.at(0));
         close(it->second.pipes.at(1));
-        delete it->second.buf_mutex;
-        delete it->second.close;
+        delete it->second.session_mutex;
     }
     m_wsis.clear();
 }
@@ -173,7 +172,7 @@ void WebsocketServer::CloseWsSession(int socketID)
 {
     auto it = m_wsis.find(socketID);
     if (it != m_wsis.end()) {
-        *(it->second.close) = true;
+        it->second.close = true;
         it->second.EraseAllMessage();
         // close the pipe write endpoint first, make sure io copy thread exit,
         // otherwise epoll will trigger EOF
@@ -184,10 +183,8 @@ void WebsocketServer::CloseWsSession(int socketID)
         (void)sem_wait(it->second.sync_close_sem);
         (void)sem_destroy(it->second.sync_close_sem);
         close(it->second.pipes.at(0));
-        delete it->second.buf_mutex;
-        it->second.buf_mutex = nullptr;
-        delete it->second.close;
-        it->second.close = nullptr;
+        delete it->second.session_mutex;
+        it->second.session_mutex = nullptr;
         m_wsis.erase(it);
     }
 }
@@ -198,7 +195,6 @@ int WebsocketServer::GenerateSessionData(session_data &session, const std::strin
     int read_pipe_fd[PIPE_FD_NUM] = {-1, -1};
     std::mutex *buf_mutex = nullptr;
     sem_t *sync_close_sem = nullptr;
-    bool *close_flag = nullptr;
 
     suffix = CRIHelpers::GenerateExecSuffix();
     if (suffix == nullptr) {
@@ -213,7 +209,6 @@ int WebsocketServer::GenerateSessionData(session_data &session, const std::strin
 
     buf_mutex = new std::mutex;
     sync_close_sem = new sem_t;
-    close_flag = new bool(false);
 
     if (sem_init(sync_close_sem, 0, 0) != 0) {
         ERROR("Semaphore initialization failed");
@@ -221,9 +216,9 @@ int WebsocketServer::GenerateSessionData(session_data &session, const std::strin
     }
 
     session.pipes = std::array<int, MAX_ARRAY_LEN> { read_pipe_fd[0], read_pipe_fd[1] };
-    session.buf_mutex = buf_mutex;
+    session.session_mutex = buf_mutex;
     session.sync_close_sem = sync_close_sem;
-    session.close = close_flag;
+    session.close = false;
     session.container_id = containerID;
     session.suffix = std::string(suffix);
 
@@ -246,9 +241,6 @@ out:
     }
     if (sync_close_sem) {
         delete sync_close_sem;
-    }
-    if (close_flag != nullptr) {
-        delete close_flag;
     }
 
     return -1;
@@ -274,6 +266,12 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
         return -1;
     }
 
+    int socketID = lws_get_socket_fd(wsi);
+    if (m_wsis.count(socketID) != 0) {
+        ERROR("socketID already exist!");
+        return -1;
+    }
+
     std::string containerID = cache->GetContainerIDByToken(vec.at(1), vec.at(2));
     if (containerID.empty()) {
         ERROR("Failed to get container id from %s request", vec.at(1).c_str());
@@ -287,13 +285,11 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
     }
 
     std::string suffixID = session.suffix;
-    int socketID = lws_get_socket_fd(wsi);
     m_wsis.insert(std::make_pair(socketID, std::move(session)));
 
     lwsContext lwsCtx = {
         .fd = socketID,
         .sync_close_sem = m_wsis[socketID].sync_close_sem,
-        .close = m_wsis[socketID].close,
     };
 
     std::thread streamTh([ = ]() {
@@ -491,7 +487,7 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
                     }
                 }
 
-                if (*(it->second.close)) {
+                if (it->second.IsClosed()) {
                     DEBUG("websocket session disconnected");
                     return -1;
                 }
@@ -578,21 +574,28 @@ void DoWriteToClient(int fd, session_data *session,
 
 ssize_t WsWriteToClient(void *context, const void *data, size_t len, WebsocketChannel channel)
 {
+    int ret = 0;
     auto *lwsCtx = static_cast<lwsContext *>(context);
     int fd = lwsCtx->fd;
-    if (lwsCtx->close == nullptr || *(lwsCtx->close)) {
-        return 0;
-    }
     WebsocketServer *server = WebsocketServer::GetInstance();
+
+    server->ReadLockAllWsSession();
     auto itor = server->GetWsisData().find(fd);
     if (itor == server->GetWsisData().end()) {
         ERROR("invalid session!");
-        return 0;
+        goto unlock;
+    }
+
+    if (itor->second.IsClosed()) {
+        goto unlock;
     }
 
     DoWriteToClient(fd, &itor->second, data, len, channel);
+    ret = static_cast<ssize_t>(len);
 
-    return static_cast<ssize_t>(len);
+unlock:
+    server->UnlockAllWsSession();
+    return ret;
 }
 };
 
@@ -625,7 +628,7 @@ int closeWsConnect(void *context, char **err)
         return -1;
     }
     // will close websocket session on LWS_CALLBACK_SERVER_WRITEABLE polling
-    *(it->second.close) = true;
+    it->second.CloseSession();
     server->UnlockAllWsSession();
 
     delete lwsCtx;
