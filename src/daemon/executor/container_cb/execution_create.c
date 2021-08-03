@@ -880,6 +880,7 @@ static int create_container_root_dir(const char *id, const char *runtime_root)
     int nret;
     char container_root[PATH_MAX] = { 0x00 };
     mode_t mask = umask(S_IWOTH);
+    char* userns_remap = conf_get_isulad_userns_remap();
 
     nret = snprintf(container_root, sizeof(container_root), "%s/%s", runtime_root, id);
     if ((size_t)nret >= sizeof(container_root) || nret < 0) {
@@ -894,8 +895,15 @@ static int create_container_root_dir(const char *id, const char *runtime_root)
         goto out;
     }
 
+    if (set_file_owner_for_userns_remap(container_root, userns_remap) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", container_root);
+        ret = -1;
+        goto out;
+    }
+
 out:
     umask(mask);
+    free(userns_remap);
     return ret;
 }
 

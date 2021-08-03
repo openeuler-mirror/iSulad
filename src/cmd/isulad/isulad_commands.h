@@ -266,7 +266,14 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
     { CMD_OPT_TYPE_BOOL,                                                                                          \
       false, "selinux-enabled", 0, &(cmdargs)->json_confs->selinux_enabled,                                       \
       "Enable selinux support", NULL                                                                              \
-    }
+    },                                                                                                            \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
+      false,                                                                                                      \
+      "userns-remap",                                                                                             \
+      0,                                                                                                          \
+      &(cmdargs)->json_confs->userns_remap,                                                                       \
+      "User/Group setting for user namespaces",                                                                   \
+      NULL }
 
 #ifdef __cplusplus
 }

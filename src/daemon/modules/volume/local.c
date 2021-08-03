@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 
 #include "isula_libutils/log.h"
+#include "isulad_config.h"
 #include "volume_api.h"
 #include "utils.h"
 #include "map.h"
@@ -156,6 +157,7 @@ out:
 static int init_volume_root_dir(struct volumes_info *vols_info, char *root_dir)
 {
     int ret = 0;
+    char *userns_remap = conf_get_isulad_userns_remap();
 
     ret = util_mkdir_p(root_dir, LOCAL_VOLUME_ROOT_DIR_MODE);
     if (ret != 0) {
@@ -163,10 +165,16 @@ static int init_volume_root_dir(struct volumes_info *vols_info, char *root_dir)
         goto out;
     }
 
+    if (set_file_owner_for_userns_remap(root_dir, userns_remap) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", root_dir);
+        ret = -1;
+        goto out;
+    }
+
     vols_info->root_dir = util_strdup_s(root_dir);
 
 out:
-
+    free(userns_remap);
     return ret;
 }
 
