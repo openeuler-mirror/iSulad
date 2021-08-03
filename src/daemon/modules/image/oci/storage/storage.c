@@ -29,6 +29,7 @@
 #include "utils.h"
 #include "utils_images.h"
 #include "isula_libutils/log.h"
+#include "isulad_config.h"
 #include "layer_store.h"
 #include "image_store.h"
 #include "rootfs_store.h"
@@ -942,6 +943,12 @@ static int make_storage_directory(struct storage_module_init_options *opts)
 
     if (util_mkdir_p(opts->storage_root, IMAGE_STORE_PATH_MODE) != 0) {
         SYSERROR("Failed to make %s", opts->storage_root);
+        ret = -1;
+        goto out;
+    }
+
+    if (set_file_owner_for_userns_remap(opts->storage_root, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", opts->storage_root);
         ret = -1;
         goto out;
     }

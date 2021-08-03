@@ -26,6 +26,7 @@
 #include <strings.h>
 
 #include "isula_libutils/log.h"
+#include "isulad_config.h"
 #include "path.h"
 #include "utils.h"
 #include "util_archive.h"
@@ -271,6 +272,7 @@ out:
 int overlay2_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len)
 {
     int ret = 0;
+    char *p = NULL;
     char *link_dir = NULL;
     char *root_dir = NULL;
 
@@ -300,6 +302,26 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
 
     if (util_mkdir_p(link_dir, 0700) != 0) {
         ERROR("Unable to create driver home directory %s.", link_dir);
+        ret = -1;
+        goto out;
+    }
+
+    if (set_file_owner_for_userns_remap(link_dir, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", link_dir);
+        ret = -1;
+        goto out;
+    }
+
+    // find parent directory
+    p = strrchr(link_dir, '/');
+    if (p == NULL) {
+        ERROR("Failed to find parent directory for %s", link_dir);
+        goto out;
+    }
+    *p = '\0';
+
+    if (set_file_owner_for_userns_remap(link_dir, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", link_dir);
         ret = -1;
         goto out;
     }
@@ -397,6 +419,12 @@ static int mk_diff_directory(const char *layer_dir)
 
     if (util_mkdir_p(diff_dir, DEFAULT_HIGHEST_DIRECTORY_MODE) != 0) {
         ERROR("Unable to create layer diff directory %s.", diff_dir);
+        ret = -1;
+        goto out;
+    }
+
+    if (set_file_owner_for_userns_remap(diff_dir, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", diff_dir);
         ret = -1;
         goto out;
     }
@@ -502,6 +530,12 @@ static int mk_work_directory(const char *layer_dir)
         goto out;
     }
 
+    if (set_file_owner_for_userns_remap(work_dir, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", work_dir);
+        ret = -1;
+        goto out;
+    }
+
 out:
     free(work_dir);
     return ret;
@@ -521,6 +555,12 @@ static int mk_merged_directory(const char *layer_dir)
 
     if (util_mkdir_p(merged_dir, 0700) != 0) {
         ERROR("Unable to create layer merged directory %s.", merged_dir);
+        ret = -1;
+        goto out;
+    }
+
+    if (set_file_owner_for_userns_remap(merged_dir, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", merged_dir);
         ret = -1;
         goto out;
     }
@@ -795,6 +835,12 @@ static int do_create(const char *id, const char *parent, const struct graphdrive
 
     if (util_mkdir_p(layer_dir, 0700) != 0) {
         ERROR("Unable to create layer directory %s.", layer_dir);
+        ret = -1;
+        goto out;
+    }
+
+    if (set_file_owner_for_userns_remap(layer_dir, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", layer_dir);
         ret = -1;
         goto out;
     }
@@ -1654,6 +1700,10 @@ out:
 int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content)
 {
     int ret = 0;
+
+    unsigned int size = 0;   
+    const char *userns_remap = NULL;
+    
     char *layer_dir = NULL;
     char *layer_diff = NULL;
     struct archive_options options = { 0 };
@@ -1680,6 +1730,15 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
     }
 
     options.whiteout_format = OVERLAY_WHITEOUT_FORMATE;
+    
+    userns_remap = conf_get_isulad_userns_remap();
+    if(userns_remap != NULL){
+        if (util_parse_user_remap(userns_remap, &options.uid, &options.gid, &size)) {
+            ERROR("Failed to split string '%s'.", userns_remap);
+            ret = -1;
+            goto out;
+        }
+    }
 
     ret = archive_unpack(content, layer_diff, &options, &err);
     if (ret != 0) {

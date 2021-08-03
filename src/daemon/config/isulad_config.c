@@ -1156,6 +1156,28 @@ out:
     return plugins;
 }
 
+char *conf_get_isulad_userns_remap()
+{
+    struct service_arguments *conf = NULL;
+    char *userns_remap = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        ERROR("BUG conf_rdlock failed");
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->userns_remap == NULL) {
+        goto out;
+    }
+
+    userns_remap = conf->json_confs->userns_remap;
+
+out:
+    (void)isulad_server_conf_unlock();
+    return userns_remap;
+}
+
 /* conf get websocket server listening port */
 int32_t conf_get_websocket_server_listening_port()
 {
@@ -1509,6 +1531,7 @@ int merge_json_confs_into_global(struct service_arguments *args)
     override_string_value(&args->json_confs->engine, &tmp_json_confs->engine);
     override_string_value(&args->json_confs->hook_spec, &tmp_json_confs->hook_spec);
     override_string_value(&args->json_confs->enable_plugins, &tmp_json_confs->enable_plugins);
+    override_string_value(&args->json_confs->userns_remap, &tmp_json_confs->userns_remap);
     override_string_value(&args->json_confs->native_umask, &tmp_json_confs->native_umask);
     override_string_value(&args->json_confs->cgroup_parent, &tmp_json_confs->cgroup_parent);
     override_string_value(&args->json_confs->rootfsmntdir, &tmp_json_confs->rootfsmntdir);

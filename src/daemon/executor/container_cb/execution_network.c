@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "isula_libutils/log.h"
+#include "isulad_config.h"
 #include "utils.h"
 #include "container_api.h"
 #include "namespace.h"
@@ -887,6 +888,11 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
         ret = -1;
         goto out;
     }
+    
+    if (set_file_owner_for_userns_remap(file_path, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change file %s owner for user remap.", file_path);
+        ret = -1;
+    }
 
     free(v2_spec->hostname_path);
     v2_spec->hostname_path = util_strdup_s(file_path);
@@ -958,6 +964,11 @@ static int create_default_hosts(const char *id, const char *rootpath, bool share
         ret = write_default_hosts(file_path, v2_spec->config->hostname);
     }
 
+    if (set_file_owner_for_userns_remap(file_path, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change file %s owner for user remap.", file_path);
+        ret = -1;
+    }
+
     if (ret != 0) {
         ERROR("Failed to create default hosts");
         goto out;
@@ -998,6 +1009,11 @@ static int create_default_resolv(const char *id, const char *rootpath, container
     if (ret != 0) {
         ERROR("Failed to create default resolv.conf");
         goto out;
+    }
+
+    if (set_file_owner_for_userns_remap(file_path, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change file %s owner for user remap.", file_path);
+        ret = -1;
     }
 
     free(v2_spec->resolv_conf_path);

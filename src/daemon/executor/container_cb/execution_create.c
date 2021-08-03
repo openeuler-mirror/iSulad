@@ -895,6 +895,12 @@ static int create_container_root_dir(const char *id, const char *runtime_root)
         goto out;
     }
 
+    if (set_file_owner_for_userns_remap(container_root, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", container_root);
+        ret = -1;
+        goto out;
+    }
+
 out:
     umask(mask);
     return ret;

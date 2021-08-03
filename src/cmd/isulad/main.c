@@ -131,6 +131,14 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
         goto out;
     }
 
+    if(conf_get_isulad_userns_remap() != NULL){
+        ret = chmod(rootfsdir, USER_REMAP_DIRECTORY_MODE);
+        if (ret != 0) {
+            ERROR("Failed to chmod mount dir '%s' for user remap", rootfsdir);
+            goto out;
+        }
+    }
+
     // find parent directory
     p = strrchr(rootfsdir, '/');
     if (p == NULL) {
@@ -665,6 +673,37 @@ out:
     return ret;
 }
 
+static int update_graph_for_userns_remap(struct service_arguments *args)
+{
+    int ret = 0;
+    char graph[PATH_MAX] = { 0 };
+    unsigned int host_uid = 0;
+    unsigned int host_gid = 0;
+    unsigned int size = 0;
+
+    if (args->json_confs->userns_remap == NULL){
+        goto out;
+    }
+
+    if (util_parse_user_remap(args->json_confs->userns_remap, &host_uid, &host_gid, &size)) {
+        ERROR("Failed to split string '%s'.", args->json_confs->userns_remap);
+        ret = -1;
+        goto out;
+    }
+
+    ret = snprintf(graph, sizeof(graph), "%s/%d.%d", ISULAD_ROOT_PATH ,host_uid, host_gid);
+    if (ret < 0 || (size_t)ret >= sizeof(graph)) {
+        ERROR("Path is too long");
+        goto out;
+    }
+
+    free(args->json_confs->graph);
+    args->json_confs->graph = util_strdup_s(graph);
+    ret = 0;
+
+out:
+    return ret;
+}
 // update values for options after flag parsing is complete
 static int update_tls_options(struct service_arguments *args)
 {
@@ -908,6 +947,11 @@ static int update_server_args(struct service_arguments *args)
 {
     int ret = 0;
 
+    if(update_graph_for_userns_remap(args) != 0){
+        ret = -1;
+        goto out;
+    }
+
     if (update_tls_options(args)) {
         ret = -1;
         goto out;
@@ -1128,7 +1172,13 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
         ret = -1;
         goto out;
     }
-
+    
+    if (set_file_owner_for_userns_remap(args->json_confs->graph, conf_get_isulad_userns_remap()) != 0) {
+        ERROR("Unable to change root directory %s owner for user remap.", args->json_confs->graph);
+        ret = -1;
+        goto out;
+    }
+    
     if (mount_rootfs_mnt_dir(args->json_confs->rootfsmntdir)) {
         ERROR("Create and mount parent directory failed");
         ret = -1;
