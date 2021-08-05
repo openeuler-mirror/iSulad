@@ -271,9 +271,9 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       false,                                                                                                      \
       "userns-remap",                                                                                             \
       0,                                                                                                          \
-      &(cmdargs)->json_confs->userns_remap,                                                                         \
-      "User namespace remap",                                                                                     \
-      NULL }                                                     
+      &(cmdargs)->json_confs->userns_remap,                                                                       \
+      "User/Group setting for user namespaces",                                                                   \
+      NULL }                                                                                                      
 
 #ifdef __cplusplus
 }

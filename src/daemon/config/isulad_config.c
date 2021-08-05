@@ -1156,7 +1156,7 @@ out:
     return plugins;
 }
 
-char *conf_get_isulad_userns_remap()
+const char *conf_get_isulad_userns_remap()
 {
     struct service_arguments *conf = NULL;
     char *userns_remap = NULL;

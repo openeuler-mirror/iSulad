@@ -2101,13 +2101,17 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_c
 
     if (host_spec->user_remap == NULL && !host_spec->system_container)
     {
-        host_spec->user_remap = conf_get_isulad_userns_remap();
-    }
-
-    ret = make_userns_remap(oci_spec, host_spec->user_remap);
-    if (ret != 0) {
-        ERROR("Failed to make user remap for container");
-        goto out;
+        ret = make_userns_remap(oci_spec, conf_get_isulad_userns_remap());
+        if (ret != 0) {
+            ERROR("Failed to make user remap for container");
+            goto out;
+        }
+    } else {
+        ret = make_userns_remap(oci_spec, host_spec->user_remap);
+        if (ret != 0) {
+            ERROR("Failed to make user remap for container");
+            goto out;
+        }
     }
 
     ret = merge_oci_cgroups_path(v2_spec->id, oci_spec, host_spec);

@@ -676,9 +676,10 @@ out:
 static int update_graph_for_userns_remap(struct service_arguments *args)
 {
     int ret = 0;
+    int nret = 0;
     char graph[PATH_MAX] = { 0 };
-    unsigned int host_uid = 0;
-    unsigned int host_gid = 0;
+    uid_t host_uid = 0;
+    gid_t host_gid = 0;
     unsigned int size = 0;
 
     if (args->json_confs->userns_remap == NULL){
@@ -691,15 +692,15 @@ static int update_graph_for_userns_remap(struct service_arguments *args)
         goto out;
     }
 
-    ret = snprintf(graph, sizeof(graph), "%s/%d.%d", ISULAD_ROOT_PATH ,host_uid, host_gid);
-    if (ret < 0 || (size_t)ret >= sizeof(graph)) {
+    nret = snprintf(graph, sizeof(graph), "%s/%d.%d", ISULAD_ROOT_PATH, host_uid, host_gid);
+    if (nret < 0 || (size_t)nret >= sizeof(graph)) {
         ERROR("Path is too long");
+        ret = -1;
         goto out;
     }
 
     free(args->json_confs->graph);
     args->json_confs->graph = util_strdup_s(graph);
-    ret = 0;
 
 out:
     return ret;

@@ -2073,8 +2073,8 @@ out:
 int set_file_owner_for_userns_remap(const char *filename, const char *userns_remap)
 {
     int ret = 0;
-    unsigned int host_uid = 0;
-    unsigned int host_gid = 0;
+    uid_t host_uid = 0;
+    gid_t host_gid = 0;
     unsigned int size = 0;
     
     if (filename == NULL || userns_remap == NULL) {

@@ -316,6 +316,7 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
     p = strrchr(link_dir, '/');
     if (p == NULL) {
         ERROR("Failed to find parent directory for %s", link_dir);
+        ret = -1;
         goto out;
     }
     *p = '\0';
@@ -1731,7 +1732,7 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
 
     options.whiteout_format = OVERLAY_WHITEOUT_FORMATE;
     
-    userns_remap = conf_get_isulad_userns_remap();
+    *(&userns_remap) = conf_get_isulad_userns_remap();
     if(userns_remap != NULL){
         if (util_parse_user_remap(userns_remap, &options.uid, &options.gid, &size)) {
             ERROR("Failed to split string '%s'.", userns_remap);
