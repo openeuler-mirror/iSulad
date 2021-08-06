@@ -30,7 +30,8 @@ $ sudo ./install_iSulad_on_Centos_7.sh
 ```sh
 $ git clone https://gitee.com/openeuler/iSulad.git
 $ cd iSulad/docs
-$ sudo ./docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
+$ sudo chmod +x ./install_iSulad_on_Ubuntu_20_04_LTS.sh
+$ sudo ./install_iSulad_on_Ubuntu_20_04_LTS.sh
 ```
 
 ## 从源码构建和安装关键依赖
