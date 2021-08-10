@@ -105,6 +105,14 @@ void PodSandboxManagerServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alph
         return;
     }
 
+    // Apply a container name label for infra container. This is used in summary v1.
+    if (append_json_map_string_string(custom_config->labels,
+                                      CRIHelpers::Constants::KUBERNETES_CONTAINER_NAME_LABEL.c_str(),
+                                      CRIHelpers::Constants::POD_INFRA_CONTAINER_NAME.c_str()) != 0) {
+        error.SetError("Append kubernetes container name into labels failed");
+        return;
+    }
+
     custom_config->annotations = CRIHelpers::MakeAnnotations(c.annotations(), error);
     if (error.NotEmpty()) {
         return;
