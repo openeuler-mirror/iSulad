@@ -167,6 +167,8 @@ static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::Namespace
     if (nsOpts.network() == runtime::v1alpha2::NamespaceMode::NODE) {
         free(hostConfig->network_mode);
         hostConfig->network_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
+        free(hostConfig->uts_mode);
+        hostConfig->uts_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
     }
     // Note: default networkMode is not supported
 }
@@ -190,6 +192,9 @@ static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOp
     ModifyCommonNamespaceOptions(nsOpts, hostConfig);
     /* modify host network option for container */
     ModifyHostNetworkOptionForContainer(nsOpts.network(), podSandboxID, hostConfig);
+
+    free(hostConfig->uts_mode);
+    hostConfig->uts_mode = util_strdup_s(sandboxNSMode.c_str());
 }
 
 static void ModifySandboxNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts, host_config *hostConfig)

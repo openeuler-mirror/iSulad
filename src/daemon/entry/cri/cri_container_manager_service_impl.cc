@@ -365,10 +365,11 @@ cleanup:
     return request;
 }
 
-std::string ContainerManagerServiceImpl::CreateContainer(const std::string &podSandboxID,
-                                                         const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                                         const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-                                                         Errors &error)
+std::string ContainerManagerServiceImpl::CreateContainer(
+    const std::string &podSandboxID,
+    const runtime::v1alpha2::ContainerConfig &containerConfig,
+    const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+    Errors &error)
 {
     std::string response_id;
     std::string podSandboxRuntime;
