@@ -16,8 +16,9 @@
 #include "attach_serve.h"
 #include "utils.h"
 
-int AttachServe::Execute(lwsContext lws_ctx, const std::string &token, int read_pipe_fd)
+int AttachServe::Execute(lwsContext lws_ctx, const std::string &token, const std::string &suffix, int read_pipe_fd)
 {
+    (void)suffix;
     prctl(PR_SET_NAME, "AttachServe");
 
     service_executor_t *cb = get_service_executor();

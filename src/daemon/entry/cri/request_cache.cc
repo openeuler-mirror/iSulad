@@ -180,3 +180,40 @@ runtime::v1alpha2::AttachRequest RequestCache::ConsumeAttachRequest(const std::s
 
     return ele.attachRequest.at(0);
 }
+
+std::string RequestCache::GetExecContainerIDByToken(const std::string &token)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    if (m_tokens.count(token) == 0 || m_tokens[token].execRequest.size() == 0) {
+        ERROR("Invalid token");
+        return "";
+    }
+
+    return m_tokens[token].execRequest.at(0).container_id();
+}
+
+std::string RequestCache::GetAttachContainerIDByToken(const std::string &token)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    if (m_tokens.count(token) == 0 || m_tokens[token].attachRequest.size() == 0) {
+        ERROR("Invalid token");
+        return "";
+    }
+
+    return m_tokens[token].attachRequest.at(0).container_id();
+}
+
+std::string RequestCache::GetContainerIDByToken(const std::string &method, const std::string &token)
+{
+    if (method == "exec") {
+        return GetExecContainerIDByToken(token);
+    } else if (method == "attach") {
+        return GetAttachContainerIDByToken(token);
+    }
+
+    ERROR ("Invalid method: %s", method.c_str());
+
+    return "";
+}

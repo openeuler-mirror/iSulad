@@ -18,7 +18,7 @@
 #include "utils.h"
 #include "cri_helpers.h"
 
-int ExecServe::Execute(lwsContext lws_ctx, const std::string &token, int read_pipe_fd)
+int ExecServe::Execute(lwsContext lws_ctx, const std::string &token, const std::string &suffix, int read_pipe_fd)
 {
     service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->container.exec == nullptr) {
@@ -27,7 +27,7 @@ int ExecServe::Execute(lwsContext lws_ctx, const std::string &token, int read_pi
     }
 
     container_exec_request *container_req = nullptr;
-    if (GetContainerRequest(token, &container_req) != 0) {
+    if (GetContainerRequest(token, suffix, &container_req) != 0) {
         ERROR("Failed to get contaner request");
         sem_post(lws_ctx.sync_close_sem);
         return -1;
@@ -76,12 +76,13 @@ int ExecServe::Execute(lwsContext lws_ctx, const std::string &token, int read_pi
     return ret;
 }
 
-int ExecServe::GetContainerRequest(const std::string &token, container_exec_request **container_req)
+int ExecServe::GetContainerRequest(const std::string &token, const std::string &suffix,
+                                   container_exec_request **container_req)
 {
     RequestCache *cache = RequestCache::GetInstance();
     auto request = cache->ConsumeExecRequest(token);
 
-    int ret = RequestFromCri(request, container_req);
+    int ret = RequestFromCri(request, suffix, container_req);
     if (ret != 0) {
         ERROR("Failed to transform grpc request!");
     }
@@ -89,7 +90,8 @@ int ExecServe::GetContainerRequest(const std::string &token, container_exec_requ
     return ret;
 }
 
-int ExecServe::RequestFromCri(const runtime::v1alpha2::ExecRequest &grequest, container_exec_request **request)
+int ExecServe::RequestFromCri(const runtime::v1alpha2::ExecRequest &grequest, const std::string &suffix,
+                              container_exec_request **request)
 {
     container_exec_request *tmpreq = nullptr;
 
@@ -126,12 +128,7 @@ int ExecServe::RequestFromCri(const runtime::v1alpha2::ExecRequest &grequest, co
         tmpreq->argv_len = (size_t)grequest.cmd_size();
     }
 
-    tmpreq->suffix = CRIHelpers::GenerateExecSuffix();
-    if (tmpreq->suffix == nullptr) {
-        ERROR("Failed to generate exec suffix(id)");
-        free_container_exec_request(tmpreq);
-        return -1;
-    }
+    tmpreq->suffix = util_strdup_s(suffix.c_str());
 
     *request = tmpreq;
     return 0;

@@ -29,6 +29,7 @@
 #include "url.h"
 #include "errors.h"
 #include "read_write_lock.h"
+#include "isula_libutils/cri_terminal_size.h"
 
 #define MAX_ECHO_PAYLOAD 4096
 #define MAX_ARRAY_LEN 2
@@ -45,7 +46,9 @@
 enum WebsocketChannel {
     STDINCHANNEL = 0,
     STDOUTCHANNEL,
-    STDERRCHANNEL
+    STDERRCHANNEL,
+    ERRORCHANNEL,
+    RESIZECHANNEL
 };
 
 struct session_data {
@@ -54,6 +57,8 @@ struct session_data {
     std::mutex *buf_mutex;
     sem_t *sync_close_sem;
     std::list<unsigned char *> buffer;
+    std::string container_id;
+    std::string suffix;
 
     unsigned char *FrontMessage()
     {
@@ -127,12 +132,14 @@ private:
     int  Wswrite(struct lws *wsi, const unsigned char *message);
     inline void DumpHandshakeInfo(struct lws *wsi) noexcept;
     int RegisterStreamTask(struct lws *wsi) noexcept;
-    int GenerateSessionData(session_data &session) noexcept;
+    int GenerateSessionData(session_data &session, const std::string containerID) noexcept;
     static int Callback(struct lws *wsi, enum lws_callback_reasons reason,
                         void *user, void *in, size_t len);
     void ServiceWorkThread(int threadid);
     void CloseWsSession(int socketID);
     void CloseAllWsSession();
+    int ResizeTerminal(int socketID, const char *jsonData, const std::string &containerID, const std::string &suffix);
+    int parseTerminalSize(const char *jsonData, uint16_t &width, uint16_t &height);
 
 private:
     static RWMutex m_mutex;
@@ -140,8 +147,8 @@ private:
     volatile int m_force_exit = 0;
     std::thread m_pthread_service;
     const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = {
-        {  "channel.k8s.io", Callback, 0, MAX_ECHO_PAYLOAD, },
-        { NULL, NULL, 0, 0 }
+        { "channel.k8s.io", Callback, 0, MAX_ECHO_PAYLOAD, },
+        { nullptr, nullptr, 0, 0 }
     };
     RouteCallbackRegister m_handler;
     static std::unordered_map<int, session_data> m_wsis;

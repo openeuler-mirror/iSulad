@@ -34,7 +34,6 @@
 #include "service_container_api.h"
 
 namespace CRIHelpers {
-const std::string Constants::DEFAULT_RUNTIME_NAME { "lcr" };
 const std::string Constants::POD_NETWORK_ANNOTATION_KEY { "network.alpha.kubernetes.io/network" };
 const std::string Constants::CONTAINER_TYPE_LABEL_KEY { "cri.isulad.type" };
 const std::string Constants::CONTAINER_TYPE_LABEL_SANDBOX { "podsandbox" };
