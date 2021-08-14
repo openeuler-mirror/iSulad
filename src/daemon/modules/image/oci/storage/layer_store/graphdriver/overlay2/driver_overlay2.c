@@ -275,6 +275,7 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
     char *p = NULL;
     char *link_dir = NULL;
     char *root_dir = NULL;
+    const char *userns_remap = conf_get_isulad_userns_remap();
 
     if (driver == NULL || drvier_home == NULL) {
         ERROR("Invalid input arguments");
@@ -306,28 +307,30 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
         goto out;
     }
 
-    if (set_file_owner_for_userns_remap(link_dir, conf_get_isulad_userns_remap()) != 0) {
-        ERROR("Unable to change directory %s owner for user remap.", link_dir);
-        ret = -1;
-        goto out;
-    }
-
-    // find parent directory
-    p = strrchr(link_dir, '/');
-    if (p == NULL) {
-        ERROR("Failed to find parent directory for %s", link_dir);
-        ret = -1;
-        goto out;
-    }
-    *p = '\0';
-
-    if (set_file_owner_for_userns_remap(link_dir, conf_get_isulad_userns_remap()) != 0) {
-        ERROR("Unable to change directory %s owner for user remap.", link_dir);
-        ret = -1;
-        goto out;
-    }
-
     rm_invalid_symlink(link_dir);
+
+    if (userns_remap != NULL) {
+        if (set_file_owner_for_userns_remap(link_dir, userns_remap) != 0) {
+            ERROR("Unable to change directory %s owner for user remap.", link_dir);
+            ret = -1;
+            goto out;
+        }
+
+        // find parent directory
+        p = strrchr(link_dir, '/');
+        if (p == NULL) {
+            ERROR("Failed to find parent directory for %s", link_dir);
+            ret = -1;
+            goto out;
+        }
+        *p = '\0';
+
+        if (set_file_owner_for_userns_remap(link_dir, userns_remap) != 0) {
+            ERROR("Unable to change directory %s owner for user remap.", link_dir);
+            ret = -1;
+            goto out;
+        }
+    }
 
     driver->home = util_strdup_s(drvier_home);
 

@@ -2589,6 +2589,7 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
     bool has_mount = false;
     char *spath = NULL;
     char *p = NULL;
+    const char *userns_remap = conf_get_isulad_userns_remap();
     // has mount for /dev/shm
     if (has_mount_shm(host_spec, v2_spec)) {
         return 0;
@@ -2623,24 +2624,27 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
     }
 
     v2_spec->shm_path = spath;
-    // find parent directory
-    p = strrchr(spath, '/');
-    if (p == NULL) {
-        ERROR("Failed to find parent directory for %s", spath);
-        goto out;
-    }
-    *p = '\0';
-    p = strrchr(spath, '/');
-    if (p == NULL) {
-        ERROR("Failed to find parent directory for %s", spath);
-        goto out;
-    }
-    *p = '\0';
-    
-    if (set_file_owner_for_userns_remap(spath, conf_get_isulad_userns_remap()) != 0) {
-        ERROR("Unable to change directory %s owner for user remap.", spath);
-        ret = -1;
-        goto out;
+
+    if (userns_remap != NULL) {
+        // find parent directory
+        p = strrchr(spath, '/');
+        if (p == NULL) {
+            ERROR("Failed to find parent directory for %s", spath);
+            goto out;
+        }
+        *p = '\0';
+        p = strrchr(spath, '/');
+        if (p == NULL) {
+            ERROR("Failed to find parent directory for %s", spath);
+            goto out;
+        }
+        *p = '\0';
+
+        if (set_file_owner_for_userns_remap(spath, userns_remap) != 0) {
+            ERROR("Unable to change directory %s owner for user remap.", spath);
+            ret = -1;
+            goto out;
+        }
     }
 
     spath = NULL;

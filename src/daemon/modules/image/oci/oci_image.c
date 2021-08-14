@@ -263,12 +263,6 @@ static int recreate_image_tmpdir()
         goto out;
     }
 
-    if (set_file_owner_for_userns_remap(image_tmp_path, conf_get_isulad_userns_remap()) != 0) {
-        ERROR("Unable to change directory %s owner for user remap.", image_tmp_path);
-        ret = -1;
-        goto out;
-    }
-
 out:
     free(image_tmp_path);
 

@@ -1450,6 +1450,14 @@ static int merge_share_single_namespace(const oci_runtime_spec *oci_spec, const 
     return merge_share_namespace_helper(oci_spec, path, type);
 }
 
+static bool userns_remap_is_enabled(const oci_runtime_spec *oci_spec)
+{
+    if (oci_spec->linux->uid_mappings != NULL && oci_spec->linux->gid_mappings != NULL) {
+        return true;
+    }
+    return false;
+}
+
 int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = -1;
@@ -1461,15 +1469,9 @@ int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_sp
     if (make_sure_oci_spec_linux(oci_spec) < 0) {
         goto out;
     }
-
+    
     // user
-    if (merge_share_single_namespace(oci_spec, host_spec->userns_mode, TYPE_NAMESPACE_USER) != 0) {
-        ret = -1;
-        goto out;
-    }
-
-    // user remap
-    if (host_spec->user_remap != NULL && merge_share_single_namespace(oci_spec, "user", TYPE_NAMESPACE_USER) != 0) {
+    if (userns_remap_is_enabled(oci_spec) && merge_share_single_namespace(oci_spec, "user", TYPE_NAMESPACE_USER) != 0) {
         ret = -1;
         goto out;
     }
@@ -2099,7 +2101,7 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_c
         goto out;
     }
 
-    if (host_spec->user_remap == NULL && !host_spec->system_container)
+    if (host_spec->user_remap == NULL && !host_spec->system_container && !namespace_is_host(host_spec->userns_mode))
     {
         ret = make_userns_remap(oci_spec, conf_get_isulad_userns_remap());
         if (ret != 0) {
