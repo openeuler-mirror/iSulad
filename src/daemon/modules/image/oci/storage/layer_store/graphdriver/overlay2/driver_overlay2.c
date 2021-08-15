@@ -1705,9 +1705,9 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
 {
     int ret = 0;
 
-    unsigned int size = 0;   
+    unsigned int size = 0;
     const char *userns_remap = NULL;
-    
+
     char *layer_dir = NULL;
     char *layer_diff = NULL;
     struct archive_options options = { 0 };
@@ -1734,9 +1734,9 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
     }
 
     options.whiteout_format = OVERLAY_WHITEOUT_FORMATE;
-    
+
     *(&userns_remap) = conf_get_isulad_userns_remap();
-    if(userns_remap != NULL){
+    if (userns_remap != NULL) {
         if (util_parse_user_remap(userns_remap, &options.uid, &options.gid, &size)) {
             ERROR("Failed to split string '%s'.", userns_remap);
             ret = -1;

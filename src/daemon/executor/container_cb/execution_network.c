@@ -888,7 +888,7 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
         ret = -1;
         goto out;
     }
-    
+
     if (set_file_owner_for_userns_remap(file_path, conf_get_isulad_userns_remap()) != 0) {
         ERROR("Unable to change file %s owner for user remap.", file_path);
         ret = -1;

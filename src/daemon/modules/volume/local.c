@@ -163,7 +163,7 @@ static int init_volume_root_dir(struct volumes_info *vols_info, char *root_dir)
         ERROR("create volume directory %s failed: %s", root_dir, strerror(errno));
         goto out;
     }
-    
+
     if (set_file_owner_for_userns_remap(root_dir, conf_get_isulad_userns_remap()) != 0) {
         ERROR("Unable to change directory %s owner for user remap.", root_dir);
         ret = -1;

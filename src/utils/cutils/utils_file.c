@@ -2076,11 +2076,11 @@ int set_file_owner_for_userns_remap(const char *filename, const char *userns_rem
     uid_t host_uid = 0;
     gid_t host_gid = 0;
     unsigned int size = 0;
-    
+
     if (filename == NULL || userns_remap == NULL) {
         goto out;
     }
-    
+
     if (util_parse_user_remap(userns_remap, &host_uid, &host_gid, &size)) {
         ERROR("Failed to split string '%s'.", userns_remap);
         ret = -1;

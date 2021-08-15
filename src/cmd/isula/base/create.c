@@ -1973,6 +1973,7 @@ static int create_namespaces_checker(const struct client_arguments *args)
     int ret = 0;
     const char *net_mode = args->custom_conf.share_ns[NAMESPACE_NET];
     const char *user_mode = args->custom_conf.share_ns[NAMESPACE_USER];
+
     if (args->custom_conf.share_ns[NAMESPACE_NET]) {
         if (!namespace_is_host(net_mode) && !namespace_is_container(net_mode) && !namespace_is_none(net_mode)) {
             COMMAND_ERROR("Unsupported network mode %s", net_mode);

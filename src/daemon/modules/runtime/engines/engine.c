@@ -147,10 +147,10 @@ static int create_engine_root_path(const char *path)
         // find parent directory
         p = strrchr(path, '/');
         if (p == NULL) {
-           ERROR("Failed to find parent directory for %s", path);
-           goto out;
+            ERROR("Failed to find parent directory for %s", path);
+            goto out;
         }
-       *p = '\0';
+        *p = '\0';
 
         if (set_file_owner_for_userns_remap(path, userns_remap) != 0) {
             ERROR("Unable to change directory %s owner for user remap.", path);
