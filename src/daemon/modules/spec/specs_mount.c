@@ -2588,6 +2588,7 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
     int nret = 0;
     bool has_mount = false;
     char *spath = NULL;
+    char *tmp_path = NULL;
     char *p = NULL;
     const char *userns_remap = conf_get_isulad_userns_remap();
     // has mount for /dev/shm
@@ -2623,26 +2624,37 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
         goto out;
     }
 
+    nret = chown_for_shm(spath, userns_remap);
+    if (nret != 0) {
+        goto out;
+    }
+
     v2_spec->shm_path = spath;
 
     if (userns_remap != NULL) {
         // find parent directory
-        p = strrchr(spath, '/');
+        tmp_path = util_strdup_s(spath);
+        p = strrchr(tmp_path, '/');
         if (p == NULL) {
-            ERROR("Failed to find parent directory for %s", spath);
-            goto out;
-        }
-        *p = '\0';
-        p = strrchr(spath, '/');
-        if (p == NULL) {
-            ERROR("Failed to find parent directory for %s", spath);
+            ERROR("Failed to find parent directory for %s", tmp_path);
             goto out;
         }
         *p = '\0';
 
-        if (set_file_owner_for_userns_remap(spath, userns_remap) != 0) {
-            ERROR("Unable to change directory %s owner for user remap.", spath);
-            ret = -1;
+        if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
+            ERROR("Unable to change directory %s owner for user remap.", tmp_path);
+            goto out;
+        }
+
+        p = strrchr(tmp_path, '/');
+        if (p == NULL) {
+            ERROR("Failed to find parent directory for %s", tmp_path);
+            goto out;
+        }
+        *p = '\0';
+
+        if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
+            ERROR("Unable to change directory %s owner for user remap.", tmp_path);
             goto out;
         }
     }
@@ -2654,6 +2666,7 @@ out:
         (void)umount(spath);
     }
     free(spath);
+    free(tmp_path);
     return ret;
 }
 

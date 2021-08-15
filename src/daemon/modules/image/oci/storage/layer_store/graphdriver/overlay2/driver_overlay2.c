@@ -269,15 +269,14 @@ out:
     return ret;
 }
 
-int overlay2_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len)
+int overlay2_init(struct graphdriver *driver, const char *driver_home, const char **options, size_t len)
 {
     int ret = 0;
-    char *p = NULL;
     char *link_dir = NULL;
     char *root_dir = NULL;
     const char *userns_remap = conf_get_isulad_userns_remap();
 
-    if (driver == NULL || drvier_home == NULL) {
+    if (driver == NULL || driver_home == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }
@@ -294,9 +293,9 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
         goto out;
     }
 
-    link_dir = util_path_join(drvier_home, OVERLAY_LINK_DIR);
+    link_dir = util_path_join(driver_home, OVERLAY_LINK_DIR);
     if (link_dir == NULL) {
-        ERROR("Unable to create driver link directory %s.", drvier_home);
+        ERROR("Unable to create driver link directory %s.", driver_home);
         ret = -1;
         goto out;
     }
@@ -316,27 +315,18 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
             goto out;
         }
 
-        // find parent directory
-        p = strrchr(link_dir, '/');
-        if (p == NULL) {
-            ERROR("Failed to find parent directory for %s", link_dir);
-            ret = -1;
-            goto out;
-        }
-        *p = '\0';
-
-        if (set_file_owner_for_userns_remap(link_dir, userns_remap) != 0) {
-            ERROR("Unable to change directory %s owner for user remap.", link_dir);
+        if (set_file_owner_for_userns_remap(driver_home, userns_remap) != 0) {
+            ERROR("Unable to change directory %s owner for user remap.", driver_home);
             ret = -1;
             goto out;
         }
     }
 
-    driver->home = util_strdup_s(drvier_home);
+    driver->home = util_strdup_s(driver_home);
 
-    root_dir = util_path_dir(drvier_home);
+    root_dir = util_path_dir(driver_home);
     if (root_dir == NULL) {
-        ERROR("Unable to get driver root home directory %s.", drvier_home);
+        ERROR("Unable to get driver root home directory %s.", driver_home);
         ret = -1;
         goto out;
     }
@@ -354,7 +344,7 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
         goto out;
     }
 
-    if (!util_support_d_type(drvier_home)) {
+    if (!util_support_d_type(driver_home)) {
         ERROR("The backing %s filesystem is formatted without d_type support, which leads to incorrect behavior.",
               driver->backing_fs);
         ret = -1;
@@ -363,7 +353,7 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
     driver->support_dtype = true;
 
     if (!driver->overlay_opts->skip_mount_home) {
-        if (util_ensure_mounted_as(drvier_home, "private") != 0) {
+        if (util_ensure_mounted_as(driver_home, "private") != 0) {
             ret = -1;
             goto out;
         }
