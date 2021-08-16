@@ -2635,7 +2635,7 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
             goto out;
         }
         *p = '\0';
-        
+
         if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
             ERROR("Unable to change directory %s owner for user remap.", tmp_path);
             goto out;
