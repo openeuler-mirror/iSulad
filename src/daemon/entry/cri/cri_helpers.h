@@ -50,15 +50,20 @@ public:
     static const std::string POD_CHECKPOINT_KEY;
     static const size_t MAX_CHECKPOINT_KEY_LEN { 250 };
     static const std::string CONTAINER_TYPE_ANNOTATION_KEY;
+    static const std::string CONTAINER_NAME_ANNOTATION_KEY;
     static const std::string CONTAINER_TYPE_ANNOTATION_CONTAINER;
     static const std::string CONTAINER_TYPE_ANNOTATION_SANDBOX;
     static const std::string SANDBOX_ID_ANNOTATION_KEY;
+    static const std::string SANDBOX_NAMESPACE_ANNOTATION_KEY;
+    static const std::string SANDBOX_NAME_ANNOTATION_KEY;
 
     static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE;
     static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR;
     static const std::string CNI_MUTL_NET_EXTENSION_KEY;
     static const std::string CNI_MUTL_NET_EXTENSION_ARGS_KEY;
     static const std::string CNI_ARGS_EXTENSION_PREFIX_KEY;
+
+    static const std::string IMAGE_NAME_ANNOTATION_KEY;
 };
 
 auto GetDefaultSandboxImage(Errors &err) -> std::string;

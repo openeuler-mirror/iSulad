@@ -224,7 +224,8 @@ void ContainerManagerServiceImpl::MakeContainerConfig(const runtime::v1alpha2::C
 }
 
 auto ContainerManagerServiceImpl::GenerateCreateContainerCustomConfig(
-    const std::string &realPodSandboxID, const runtime::v1alpha2::ContainerConfig &containerConfig,
+    const std::string &containerName, const std::string &realPodSandboxID,
+    const runtime::v1alpha2::ContainerConfig &containerConfig,
     const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error) -> container_config *
 {
     container_config *custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
@@ -270,11 +271,43 @@ auto ContainerManagerServiceImpl::GenerateCreateContainerCustomConfig(
         error.SetError("Append map string string failed");
         goto cleanup;
     }
+
+    if (append_json_map_string_string(custom_config->annotations,
+                                      CRIHelpers::Constants::CONTAINER_NAME_ANNOTATION_KEY.c_str(),
+                                      containerName.c_str()) != 0) {
+        error.SetError("Append container name into annotation failed");
+        goto cleanup;
+    }
+
     if (append_json_map_string_string(custom_config->annotations,
                                       CRIHelpers::Constants::SANDBOX_ID_ANNOTATION_KEY.c_str(),
                                       realPodSandboxID.c_str()) != 0) {
         error.SetError("Append map string string failed");
         goto cleanup;
+    }
+
+    if (podSandboxConfig.has_metadata()) {
+        if (append_json_map_string_string(custom_config->annotations,
+                                          CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY.c_str(),
+                                          podSandboxConfig.metadata().name().c_str()) != 0) {
+            error.SetError("Append sandbox name into annotation failed");
+            goto cleanup;
+        }
+        if (append_json_map_string_string(custom_config->annotations,
+                                          CRIHelpers::Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY.c_str(),
+                                          podSandboxConfig.metadata().namespace_().c_str()) != 0) {
+            error.SetError("Append sandbox namespace into annotation failed");
+            goto cleanup;
+        }
+    }
+
+    if (!containerConfig.image().image().empty()) {
+        if (append_json_map_string_string(custom_config->annotations,
+                                          CRIHelpers::Constants::IMAGE_NAME_ANNOTATION_KEY.c_str(),
+                                          containerConfig.image().image().c_str()) != 0) {
+            error.SetError("Append image name into annotation failed");
+            goto cleanup;
+        }
     }
 
     if (append_json_map_string_string(custom_config->labels, CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str(),
@@ -332,7 +365,7 @@ ContainerManagerServiceImpl::GenerateCreateContainerRequest(const std::string &r
         hostconfig->cgroup_parent = util_strdup_s(podSandboxConfig.linux().cgroup_parent().c_str());
     }
 
-    custom_config = GenerateCreateContainerCustomConfig(realPodSandboxID, containerConfig, podSandboxConfig, error);
+    custom_config = GenerateCreateContainerCustomConfig(cname, realPodSandboxID, containerConfig, podSandboxConfig, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
