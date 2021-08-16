@@ -123,6 +123,20 @@ void PodSandboxManagerServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alph
         error.SetError("Append container type into annotation failed");
         return;
     }
+    if (c.has_metadata()) {
+        if (append_json_map_string_string(custom_config->annotations,
+                                          CRIHelpers::Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY.c_str(),
+                                          c.metadata().namespace_().c_str()) != 0) {
+            error.SetError("Append sandbox namespace into annotation failed");
+            return;
+        }
+        if (append_json_map_string_string(custom_config->annotations,
+                                          CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY.c_str(),
+                                          c.metadata().name().c_str()) != 0) {
+            error.SetError("Append sandbox name into annotation failed");
+            return;
+        }
+    }
 
     if (!c.hostname().empty()) {
         custom_config->hostname = util_strdup_s(c.hostname().c_str());

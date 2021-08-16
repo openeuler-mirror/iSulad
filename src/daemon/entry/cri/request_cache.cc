@@ -213,7 +213,7 @@ std::string RequestCache::GetContainerIDByToken(const std::string &method, const
         return GetAttachContainerIDByToken(token);
     }
 
-    ERROR ("Invalid method: %s", method.c_str());
+    ERROR("Invalid method: %s", method.c_str());
 
     return "";
 }

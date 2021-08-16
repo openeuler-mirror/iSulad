@@ -81,7 +81,7 @@ private:
                                         Errors &error) -> container_create_request *;
     auto GenerateCreateContainerHostConfig(const runtime::v1alpha2::ContainerConfig &containerConfig,
                                            Errors &error) -> host_config *;
-    auto GenerateCreateContainerCustomConfig(const std::string &realPodSandboxID,
+    auto GenerateCreateContainerCustomConfig(const std::string &containerName, const std::string &realPodSandboxID,
                                              const runtime::v1alpha2::ContainerConfig &containerConfig,
                                              const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
                                              Errors &error) -> container_config *;

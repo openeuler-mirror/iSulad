@@ -49,14 +49,18 @@ const std::string Constants::RUNTIME_READY { "RuntimeReady" };
 const std::string Constants::NETWORK_READY { "NetworkReady" };
 const std::string Constants::POD_CHECKPOINT_KEY { "cri.sandbox.isulad.checkpoint" };
 const std::string Constants::CONTAINER_TYPE_ANNOTATION_KEY { "io.kubernetes.cri.container-type" };
+const std::string Constants::CONTAINER_NAME_ANNOTATION_KEY { "io.kubernetes.cri.container-name" };
 const std::string Constants::CONTAINER_TYPE_ANNOTATION_CONTAINER { "container" };
 const std::string Constants::CONTAINER_TYPE_ANNOTATION_SANDBOX { "sandbox" };
 const std::string Constants::SANDBOX_ID_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-id" };
+const std::string Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-namespace" };
+const std::string Constants::SANDBOX_NAME_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-name" };
 const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE { "pod-cidr-change" };
 const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR { "pod-cidr" };
 const std::string Constants::CNI_MUTL_NET_EXTENSION_KEY { "extension.network.kubernetes.io/cni" };
 const std::string Constants::CNI_MUTL_NET_EXTENSION_ARGS_KEY { "CNI_MUTLINET_EXTENSION" };
 const std::string Constants::CNI_ARGS_EXTENSION_PREFIX_KEY { "extension.network.kubernetes.io/cniargs/" };
+const std::string Constants::IMAGE_NAME_ANNOTATION_KEY { "io.kubernetes.cri.image-name" };
 
 const char *InternalLabelKeys[] = { CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY.c_str(),
                                     CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str(),
