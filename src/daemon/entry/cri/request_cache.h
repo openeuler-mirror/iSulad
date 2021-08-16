@@ -53,11 +53,14 @@ public:
     std::string InsertAttachRequest(const runtime::v1alpha2::AttachRequest &req);
     runtime::v1alpha2::ExecRequest ConsumeExecRequest(const std::string &token);
     runtime::v1alpha2::AttachRequest ConsumeAttachRequest(const std::string &token);
+    std::string GetContainerIDByToken(const std::string &method, const std::string &token);
     bool IsValidToken(const std::string &token);
 
 private:
     void GarbageCollection();
     std::string UniqueToken();
+    std::string GetExecContainerIDByToken(const std::string &token);
+    std::string GetAttachContainerIDByToken(const std::string &token);
 
 private:
     RequestCache() = default;

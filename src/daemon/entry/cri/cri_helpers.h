@@ -32,7 +32,6 @@
 namespace CRIHelpers {
 class Constants {
 public:
-    static const std::string DEFAULT_RUNTIME_NAME;
     static const std::string POD_NETWORK_ANNOTATION_KEY;
     static const std::string CONTAINER_TYPE_LABEL_KEY;
     static const std::string CONTAINER_TYPE_LABEL_SANDBOX;

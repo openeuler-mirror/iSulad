@@ -25,6 +25,8 @@
 #include "request_cache.h"
 #include "constants.h"
 #include "isulad_config.h"
+#include "callback.h"
+#include "cri_helpers.h"
 
 struct lws_context *WebsocketServer::m_context = nullptr;
 std::atomic<WebsocketServer *> WebsocketServer::m_instance;
@@ -190,32 +192,66 @@ void WebsocketServer::CloseWsSession(int socketID)
     }
 }
 
-int WebsocketServer::GenerateSessionData(session_data &session) noexcept
+int WebsocketServer::GenerateSessionData(session_data &session, const std::string containerID) noexcept
 {
-    int read_pipe_fd[PIPE_FD_NUM];
-    if (InitRWPipe(read_pipe_fd) < 0) {
-        ERROR("failed to init read/write pipe!");
+    char *suffix = nullptr;
+    int read_pipe_fd[PIPE_FD_NUM] = {-1, -1};
+    std::mutex *buf_mutex = nullptr;
+    sem_t *sync_close_sem = nullptr;
+    bool *close_flag = nullptr;
+
+    suffix = CRIHelpers::GenerateExecSuffix();
+    if (suffix == nullptr) {
+        ERROR("Failed to generate suffix(id)");
         return -1;
     }
 
-    std::mutex *buf_mutex = new std::mutex;
-    sem_t *sync_close_sem = new sem_t;
+    if (InitRWPipe(read_pipe_fd) < 0) {
+        ERROR("failed to init read/write pipe!");
+        goto out;
+    }
+
+    buf_mutex = new std::mutex;
+    sync_close_sem = new sem_t;
+    close_flag = new bool(false);
 
     if (sem_init(sync_close_sem, 0, 0) != 0) {
         ERROR("Semaphore initialization failed");
-        close(read_pipe_fd[1]);
-        close(read_pipe_fd[0]);
-        delete buf_mutex;
-        delete sync_close_sem;
-        return -1;
+        goto out;
     }
 
     session.pipes = std::array<int, MAX_ARRAY_LEN> { read_pipe_fd[0], read_pipe_fd[1] };
     session.buf_mutex = buf_mutex;
     session.sync_close_sem = sync_close_sem;
-    session.close = new bool(false);
+    session.close = close_flag;
+    session.container_id = containerID;
+    session.suffix = std::string(suffix);
+
+    free(suffix);
 
     return 0;
+
+out:
+    if (suffix != nullptr) {
+        free(suffix);
+    }
+    if (read_pipe_fd[1] >= 0) {
+        close(read_pipe_fd[1]);
+    }
+    if (read_pipe_fd[0] >= 0) {
+        close(read_pipe_fd[0]);
+    }
+    if (buf_mutex != nullptr) {
+        delete buf_mutex;
+    }
+    if (sync_close_sem) {
+        delete sync_close_sem;
+    }
+    if (close_flag != nullptr) {
+        delete close_flag;
+    }
+
+    return -1;
 }
 
 int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
@@ -238,12 +274,19 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
         return -1;
     }
 
+    std::string containerID = cache->GetContainerIDByToken(vec.at(1), vec.at(2));
+    if (containerID.empty()) {
+        ERROR("Failed to get container id from %s request", vec.at(1).c_str());
+        return -1;
+    }
+
     session_data session;
-    if (GenerateSessionData(session) != 0) {
+    if (GenerateSessionData(session, containerID) != 0) {
         ERROR("failed to fill generate session data");
         return -1;
     }
 
+    std::string suffixID = session.suffix;
     int socketID = lws_get_socket_fd(wsi);
     m_wsis.insert(std::make_pair(socketID, std::move(session)));
 
@@ -252,8 +295,9 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
         .sync_close_sem = m_wsis[socketID].sync_close_sem,
         .close = m_wsis[socketID].close,
     };
+
     std::thread streamTh([ = ]() {
-        StreamTask(&m_handler, lwsCtx, vec.at(1), vec.at(2), m_wsis[socketID].pipes.at(0)).Run();
+        StreamTask(&m_handler, lwsCtx, vec.at(1), vec.at(2), suffixID, m_wsis[socketID].pipes.at(0)).Run();
     });
     streamTh.detach();
 
@@ -303,20 +347,96 @@ int WebsocketServer::Wswrite(struct lws *wsi, const unsigned char *message)
     return 0;
 }
 
+int WebsocketServer::parseTerminalSize(const char *jsonData, uint16_t &width, uint16_t &height)
+{
+    int ret = 0;
+    parser_error err = nullptr;
+    cri_terminal_size *terminalSize = nullptr;
+
+    if (jsonData == nullptr) {
+        return -1;
+    }
+
+    // parse json data. eg: {"Width":xx,"Height":xx}
+    terminalSize = cri_terminal_size_parse_data(jsonData, nullptr, &err);
+    if (terminalSize == nullptr) {
+        ERROR("Failed to parse json: %s", err);
+        ret = -1;
+    } else {
+        width = terminalSize->width;
+        height = terminalSize->height;
+    }
+
+    free(err);
+    free_cri_terminal_size(terminalSize);
+
+    return ret;
+}
+
+int WebsocketServer::ResizeTerminal(
+    int socketID, const char *jsonData,
+    const std::string &containerID,
+    const std::string &suffix)
+{
+    int ret;
+    service_executor_t *cb = nullptr;
+    struct isulad_container_resize_request *req = nullptr;
+    struct isulad_container_resize_response *res = nullptr;
+    uint16_t width = 0;
+    uint16_t height = 0;
+
+    cb = get_service_executor();
+    if (cb == nullptr || cb->container.resize == nullptr) {
+        return -1;
+    }
+
+    if (parseTerminalSize(jsonData, width, height) != 0) {
+        return -1;
+    }
+
+    req = (struct isulad_container_resize_request *)util_common_calloc_s(
+              sizeof(struct isulad_container_resize_request));
+    if (req == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    req->id = util_strdup_s(containerID.c_str());
+    req->suffix = util_strdup_s(suffix.c_str());
+    req->height = height;
+    req->width = width;
+
+    ret = cb->container.resize(req, &res);
+
+    isulad_container_resize_request_free(req);
+    isulad_container_resize_response_free(res);
+
+
+    return ret;
+}
+
 void WebsocketServer::Receive(int socketID, void *in, size_t len)
 {
-    if (m_wsis.find(socketID) == m_wsis.end()) {
+    auto it = m_wsis.find(socketID);
+    if (it == m_wsis.end()) {
         ERROR("invailed websocket session!");
         return;
     }
 
-    if (*static_cast<char *>(in) != WebsocketChannel::STDINCHANNEL) {
-        ERROR("recevice date from client: %s", (char *)in + 1);
-        return;
-    }
-
-    if (write(m_wsis[socketID].pipes.at(1), (void *)((char *)in + 1), len - 1) < 0) {
-        ERROR("sub write over!");
+    if (*static_cast<char *>(in) == WebsocketChannel::RESIZECHANNEL) {
+        std::string containerID = it->second.container_id;
+        std::string suffix = it->second.suffix;
+        if (ResizeTerminal(socketID, (char *)in + 1, containerID, suffix) != 0) {
+            ERROR("Failed to resize terminal tty");
+            return;
+        }
+    } else if (*static_cast<char *>(in) == WebsocketChannel::STDINCHANNEL) {
+        if (write(m_wsis[socketID].pipes.at(1), (void *)((char *)in + 1), len - 1) < 0) {
+            ERROR("sub write over!");
+            return;
+        }
+    } else {
+        ERROR("invalid data: %s", (char *)in);
         return;
     }
 }
