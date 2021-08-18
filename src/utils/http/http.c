@@ -429,7 +429,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     /* provide a buffer to store errors in */
     curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, errbuf);
     curl_easy_setopt(curl_handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-#if defined(CURLOPT_SUPPRESS_CONNECT_HEADERS)
+#if CURL_AT_LEAST_VERSION(7, 54, 0)
     curl_easy_setopt(curl_handle, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
 #endif
 
