@@ -707,6 +707,7 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
     int ret = 0;
     int nret = 0;
     char root_path[PATH_MAX] = { 0x00 };
+    const char *userns_remap = conf_get_isulad_userns_remap();
 
     if (runtime_root == NULL || id == NULL) {
         ERROR("empty runtime root or id");
@@ -719,7 +720,22 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
         return -1;
     }
 
+    ret = chown_network(userns_remap, root_path, "/hostname");
+    if (ret) {
+        return -1;
+    }
+
+    ret = chown_network(userns_remap, root_path, "/hosts");
+    if (ret) {
+        return -1;
+    }
+
     ret = merge_resolv(host_spec, root_path, "/resolv.conf");
+    if (ret) {
+        return -1;
+    }
+
+    ret = chown_network(userns_remap, root_path, "/resolv.conf");
     if (ret) {
         return -1;
     }
@@ -888,12 +904,7 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
         ret = -1;
         goto out;
     }
-
-    if (set_file_owner_for_userns_remap(file_path, conf_get_isulad_userns_remap()) != 0) {
-        ERROR("Unable to change file %s owner for user remap.", file_path);
-        ret = -1;
-    }
-
+    
     free(v2_spec->hostname_path);
     v2_spec->hostname_path = util_strdup_s(file_path);
 
@@ -964,11 +975,6 @@ static int create_default_hosts(const char *id, const char *rootpath, bool share
         ret = write_default_hosts(file_path, v2_spec->config->hostname);
     }
 
-    if (set_file_owner_for_userns_remap(file_path, conf_get_isulad_userns_remap()) != 0) {
-        ERROR("Unable to change file %s owner for user remap.", file_path);
-        ret = -1;
-    }
-
     if (ret != 0) {
         ERROR("Failed to create default hosts");
         goto out;
@@ -1009,11 +1015,6 @@ static int create_default_resolv(const char *id, const char *rootpath, container
     if (ret != 0) {
         ERROR("Failed to create default resolv.conf");
         goto out;
-    }
-
-    if (set_file_owner_for_userns_remap(file_path, conf_get_isulad_userns_remap()) != 0) {
-        ERROR("Unable to change file %s owner for user remap.", file_path);
-        ret = -1;
     }
 
     free(v2_spec->resolv_conf_path);

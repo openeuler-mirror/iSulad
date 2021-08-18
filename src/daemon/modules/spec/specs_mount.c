@@ -2626,7 +2626,7 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
 
     v2_spec->shm_path = spath;
 
-    if (userns_remap != NULL) {
+    if (host_spec->user_remap == NULL && userns_remap != NULL) {
         // find parent directory
         tmp_path = util_strdup_s(spath);
         p = strrchr(tmp_path, '/');
