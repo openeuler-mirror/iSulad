@@ -138,8 +138,9 @@ private:
     void ServiceWorkThread(int threadid);
     void CloseWsSession(int socketID);
     void CloseAllWsSession();
-    int ResizeTerminal(int socketID, const char *jsonData, const std::string &containerID, const std::string &suffix);
-    int parseTerminalSize(const char *jsonData, uint16_t &width, uint16_t &height);
+    int ResizeTerminal(int socketID, const char *jsonData, size_t len,
+        const std::string &containerID, const std::string &suffix);
+    int parseTerminalSize(const char *jsonData, size_t len, uint16_t &width, uint16_t &height);
 
 private:
     static RWMutex m_mutex;
