@@ -429,7 +429,10 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     /* provide a buffer to store errors in */
     curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, errbuf);
     curl_easy_setopt(curl_handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-#if CURL_AT_LEAST_VERSION(7, 54, 0)
+    /* libcurl support option CURLOPT_SUPPRESS_CONNECT_HEADERS when version >= 7.54.0
+     * #define CURL_VERSION_BITS(x,y,z) ((x)<<16|(y)<<8|(z))
+     * CURL_VERSION_BITS(7,54,0) = 0x073600 */
+#if (LIBCURL_VERSION_NUM >= 0x073600)
     curl_easy_setopt(curl_handle, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
 #endif
 
