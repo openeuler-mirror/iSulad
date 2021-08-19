@@ -347,18 +347,21 @@ int WebsocketServer::Wswrite(struct lws *wsi, const unsigned char *message)
     return 0;
 }
 
-int WebsocketServer::parseTerminalSize(const char *jsonData, uint16_t &width, uint16_t &height)
+int WebsocketServer::parseTerminalSize(const char *jsonData, size_t len, uint16_t &width, uint16_t &height)
 {
     int ret = 0;
     parser_error err = nullptr;
     cri_terminal_size *terminalSize = nullptr;
 
-    if (jsonData == nullptr) {
+    if (jsonData == nullptr || len == 0) {
         return -1;
     }
 
+    // No terminator is included in json data, and len contains a character occupied by channal
+    std::string jsonDataStr { jsonData, len - 1 };
+
     // parse json data. eg: {"Width":xx,"Height":xx}
-    terminalSize = cri_terminal_size_parse_data(jsonData, nullptr, &err);
+    terminalSize = cri_terminal_size_parse_data(jsonDataStr.c_str(), nullptr, &err);
     if (terminalSize == nullptr) {
         ERROR("Failed to parse json: %s", err);
         ret = -1;
@@ -374,7 +377,7 @@ int WebsocketServer::parseTerminalSize(const char *jsonData, uint16_t &width, ui
 }
 
 int WebsocketServer::ResizeTerminal(
-    int socketID, const char *jsonData,
+    int socketID, const char *jsonData, size_t len,
     const std::string &containerID,
     const std::string &suffix)
 {
@@ -390,7 +393,7 @@ int WebsocketServer::ResizeTerminal(
         return -1;
     }
 
-    if (parseTerminalSize(jsonData, width, height) != 0) {
+    if (parseTerminalSize(jsonData, len, width, height) != 0) {
         return -1;
     }
 
@@ -426,7 +429,7 @@ void WebsocketServer::Receive(int socketID, void *in, size_t len)
     if (*static_cast<char *>(in) == WebsocketChannel::RESIZECHANNEL) {
         std::string containerID = it->second.container_id;
         std::string suffix = it->second.suffix;
-        if (ResizeTerminal(socketID, (char *)in + 1, containerID, suffix) != 0) {
+        if (ResizeTerminal(socketID, (char *)in + 1, len, containerID, suffix) != 0) {
             ERROR("Failed to resize terminal tty");
             return;
         }
