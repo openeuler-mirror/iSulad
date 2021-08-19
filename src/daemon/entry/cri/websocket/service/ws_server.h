@@ -53,8 +53,8 @@ enum WebsocketChannel {
 
 struct session_data {
     std::array<int, MAX_ARRAY_LEN> pipes;
-    bool *close;
-    std::mutex *buf_mutex;
+    bool close;
+    std::mutex *session_mutex;
     sem_t *sync_close_sem;
     std::list<unsigned char *> buffer;
     std::string container_id;
@@ -64,44 +64,88 @@ struct session_data {
     {
         unsigned char *message = nullptr;
 
-        buf_mutex->lock();
+        if (session_mutex == nullptr) {
+            return nullptr;
+        }
+
+        session_mutex->lock();
         message = buffer.front();
-        buf_mutex->unlock();
+        session_mutex->unlock();
 
         return message;
     }
 
     void PopMessage()
     {
-        buf_mutex->lock();
+        if (session_mutex == nullptr) {
+            return;
+        }
+
+        session_mutex->lock();
         buffer.pop_front();
-        buf_mutex->unlock();
+        session_mutex->unlock();
     }
 
     int PushMessage(unsigned char *message)
     {
-        // In extreme scenarios, websocket data cannot be processed,
-        // ignore the data coming in later to prevent iSulad from getting stuck
-        if (*close || buffer.size() >= FIFO_LIST_BUFFER_MAX_LEN) {
-            free(message);
+        if (session_mutex == nullptr) {
             return -1;
         }
-        buf_mutex->lock();
-        buffer.push_back(message);
-        buf_mutex->unlock();
 
+        session_mutex->lock();
+
+        // In extreme scenarios, websocket data cannot be processed,
+        // ignore the data coming in later to prevent iSulad from getting stuck
+        if (close || buffer.size() >= FIFO_LIST_BUFFER_MAX_LEN) {
+            free(message);
+            session_mutex->unlock();
+            return -1;
+        }
+
+        buffer.push_back(message);
+        session_mutex->unlock();
         return 0;
+    }
+
+    bool IsClosed()
+    {
+        bool c = false;
+
+        if (session_mutex == nullptr) {
+            return true;
+        }
+
+        session_mutex->lock();
+        c = close;
+        session_mutex->unlock();
+
+        return c;
+    }
+
+    void CloseSession()
+    {
+        if (session_mutex == nullptr) {
+            return;
+        }
+
+        session_mutex->lock();
+        close = true;
+        session_mutex->unlock();
     }
 
     void EraseAllMessage()
     {
-        buf_mutex->lock();
+        if (session_mutex == nullptr) {
+            return;
+        }
+
+        session_mutex->lock();
         for (auto iter = buffer.begin(); iter != buffer.end();) {
             free(*iter);
             *iter = NULL;
             iter = buffer.erase(iter);
         }
-        buf_mutex->unlock();
+        session_mutex->unlock();
     }
 };
 
