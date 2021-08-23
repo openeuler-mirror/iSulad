@@ -1458,6 +1458,18 @@ static int merge_registry_conf_into_global(struct service_arguments *args, isula
         return -1;
     }
 
+    // registry transformation support config only in config file
+    args->json_confs->registry_transformation = util_common_calloc_s(sizeof(json_map_string_string));
+    if (args->json_confs->registry_transformation == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    if (dup_json_map_string_string(tmp_json_confs->registry_transformation,
+                                   args->json_confs->registry_transformation) != 0) {
+        ERROR("failed to dup registry transformation");
+        return -1;
+    }
+
     return 0;
 }
 
