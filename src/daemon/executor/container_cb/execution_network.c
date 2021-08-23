@@ -904,7 +904,7 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
         ret = -1;
         goto out;
     }
-    
+
     free(v2_spec->hostname_path);
     v2_spec->hostname_path = util_strdup_s(file_path);
 
