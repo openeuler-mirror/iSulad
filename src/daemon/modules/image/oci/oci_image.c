@@ -56,6 +56,28 @@ static void free_oci_image_data(void)
     util_free_array_by_len(g_oci_image_module_data.insecure_registries, g_oci_image_module_data.insecure_registries_len);
     g_oci_image_module_data.insecure_registries = NULL;
     g_oci_image_module_data.insecure_registries_len = 0;
+
+    free_json_map_string_string(g_oci_image_module_data.registry_transformation);
+    g_oci_image_module_data.registry_transformation = NULL;
+}
+
+static bool valid_registry_transformation(json_map_string_string *registry_transformation)
+{
+    size_t i = 0;
+
+    if (registry_transformation == NULL) {
+        return false;
+    }
+
+    for (i = 0; i < registry_transformation->len; i++) {
+        if (!util_valid_host_name(registry_transformation->keys[i]) ||
+            !util_valid_host_name(registry_transformation->values[i])) {
+            ERROR("invalid hostname, key:%s value:%s", registry_transformation->keys[i],
+                  registry_transformation->values[i]);
+            return false;
+        }
+    }
+    return true;
 }
 
 static int oci_image_data_init(const isulad_daemon_configs *args)
@@ -113,6 +135,22 @@ static int oci_image_data_init(const isulad_daemon_configs *args)
                 goto free_out;
             }
             g_oci_image_module_data.insecure_registries_len++;
+        }
+    }
+
+    if (args->registry_transformation != NULL) {
+        if (!valid_registry_transformation(args->registry_transformation)) {
+            goto free_out;
+        }
+        g_oci_image_module_data.registry_transformation = util_common_calloc_s(sizeof(json_map_string_string));
+        if (g_oci_image_module_data.registry_transformation == NULL) {
+            ERROR("Out of memory");
+            goto free_out;
+        }
+        if (dup_json_map_string_string(args->registry_transformation,
+                                       g_oci_image_module_data.registry_transformation) != 0) {
+            ERROR("Failed to registry transformation opts");
+            goto free_out;
         }
     }
 

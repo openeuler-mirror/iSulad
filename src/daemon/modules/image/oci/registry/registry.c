@@ -1811,24 +1811,35 @@ out:
     return ret;
 }
 
-static void update_host(pull_descriptor *desc)
+static void update_host(pull_descriptor *desc, const json_map_string_string *registry_transformation)
 {
+    size_t i = 0;
+
     if (desc == NULL) {
         ERROR("Invalid NULL param");
         return;
     }
 
-    // registry-1.docker.io is the real docker.io's registry. index.docker.io is V1 registry, we do not support
-    // V1 registry, try use registry-1.docker.io.
-    if (!strcmp(desc->host, DOCKER_HOSTNAME) || !strcmp(desc->host, DOCKER_V1HOSTNAME)) {
-        free(desc->host);
-        desc->host = util_strdup_s(DOCKER_REGISTRY);
+    if (registry_transformation == NULL) {
+        return;
+    }
+
+    // replace specific registry to another due to compatability reason
+    for (i = 0; i < registry_transformation->len; i++) {
+        if (registry_transformation->keys[i] == NULL || registry_transformation->values[i] == NULL) {
+            continue;
+        }
+        if (strcmp(desc->host, registry_transformation->keys[i]) == 0) {
+            free(desc->host);
+            desc->host = util_strdup_s(registry_transformation->values[i]);
+            break;
+        }
     }
 
     return;
 }
 
-static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *options)
+static int prepare_pull_desc(pull_descriptor *desc, const registry_pull_options *options)
 {
     int ret = 0;
     int sret = 0;
@@ -1867,7 +1878,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         goto out;
     }
 
-    update_host(desc);
+    update_host(desc, options->registry_transformation);
 
     oci_image_data = get_oci_image_data();
     ret = makesure_isulad_tmpdir_perm_right(oci_image_data->root_dir);
@@ -1995,7 +2006,7 @@ static void try_rollback_layers(pull_descriptor *desc)
     }
 }
 
-int registry_pull(registry_pull_options *options)
+int registry_pull(const registry_pull_options *options)
 {
     int ret = 0;
     pull_descriptor *desc = NULL;
@@ -2144,7 +2155,7 @@ out:
     return ret;
 }
 
-int registry_login(registry_login_options *options)
+int registry_login(const registry_login_options *options)
 {
     int ret = 0;
     pull_descriptor *desc = NULL;
@@ -2166,7 +2177,7 @@ int registry_login(registry_login_options *options)
     oci_image_data = get_oci_image_data();
 
     desc->host = util_strdup_s(options->host);
-    update_host(desc);
+    update_host(desc, options->registry_transformation);
     desc->use_decrypted_key = oci_image_data->use_decrypted_key;
     desc->skip_tls_verify = options->skip_tls_verify;
     desc->insecure_registry = options->insecure_registry;
