@@ -1824,9 +1824,7 @@ static void update_host(pull_descriptor *desc, const json_map_string_string *reg
         return;
     }
 
-    // replace specific registry to another due to compatability reason, for example:
-    // registry-1.docker.io is the real docker.io's registry. index.docker.io is V1 registry, we do not support
-    // V1 registry, try use registry-1.docker.io.
+    // replace specific registry to another due to compatability reason
     for (i = 0; i < registry_transformation->len; i++) {
         if (registry_transformation->keys[i] == NULL || registry_transformation->values[i] == NULL) {
             continue;
