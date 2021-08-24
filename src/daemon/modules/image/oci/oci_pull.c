@@ -117,6 +117,7 @@ static int pull_image(const im_pull_request *request, char **name)
 
     oci_image_data = get_oci_image_data();
     options->skip_tls_verify = oci_image_data->insecure_skip_verify_enforce;
+    options->registry_transformation = oci_image_data->registry_transformation;
     insecure_registries = oci_image_data->insecure_registries;
 
     host = oci_get_host(request->image);
@@ -124,7 +125,7 @@ static int pull_image(const im_pull_request *request, char **name)
         options->image_name = oci_default_tag(request->image);
         options->dest_image_name = oci_normalize_image_name(request->image);
         update_option_insecure_registry(options, insecure_registries, host);
-        ret = registry_pull(options);
+        ret = registry_pull((const registry_pull_options *)options);
         if (ret != 0) {
             ERROR("pull image failed");
             goto out;
@@ -150,7 +151,7 @@ static int pull_image(const im_pull_request *request, char **name)
             free(host);
             host = NULL;
             options->dest_image_name = oci_normalize_image_name(request->image);
-            ret = registry_pull(options);
+            ret = registry_pull((const registry_pull_options *)options);
             if (ret != 0) {
                 continue;
             }
