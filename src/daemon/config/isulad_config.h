@@ -23,6 +23,7 @@
 #include "daemon_arguments.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/isulad_daemon_configs.h"
+#include "isula_libutils/isulad_daemon_constants.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -98,6 +99,9 @@ bool conf_get_skip_insecure_verify_flag();
 int parse_log_opts(struct service_arguments *args, const char *key, const char *value);
 
 char *conf_get_isulad_monitor_fifo_path();
+
+int init_isulad_daemon_constants();
+isulad_daemon_constants *get_isulad_daemon_constants();
 
 #ifdef __cplusplus
 }

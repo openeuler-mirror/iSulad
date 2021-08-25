@@ -1813,16 +1813,30 @@ out:
 
 static void update_host(pull_descriptor *desc)
 {
-    if (desc == NULL) {
+    size_t i = 0;
+    isulad_daemon_constants *config = get_isulad_daemon_constants();
+    json_map_string_string *registry_transformation = NULL;
+
+    if (desc == NULL || config == NULL) {
         ERROR("Invalid NULL param");
         return;
     }
 
-    // registry-1.docker.io is the real docker.io's registry. index.docker.io is V1 registry, we do not support
-    // V1 registry, try use registry-1.docker.io.
-    if (!strcmp(desc->host, DOCKER_HOSTNAME) || !strcmp(desc->host, DOCKER_V1HOSTNAME)) {
-        free(desc->host);
-        desc->host = util_strdup_s(DOCKER_REGISTRY);
+    registry_transformation = config->registry_transformation;
+    if (registry_transformation == NULL) {
+        return;
+    }
+
+    // replace specific registry to another due to compatability reason
+    for (i = 0; i < registry_transformation->len; i++) {
+        if (registry_transformation->keys[i] == NULL || registry_transformation->values[i] == NULL) {
+            continue;
+        }
+        if (strcmp(desc->host, registry_transformation->keys[i]) == 0) {
+            free(desc->host);
+            desc->host = util_strdup_s(registry_transformation->values[i]);
+            break;
+        }
     }
 
     return;
