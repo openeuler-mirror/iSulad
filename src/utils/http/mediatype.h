@@ -67,6 +67,9 @@
 
 #define MediaTypeJson "application/json"
 
+#define DOCKER_HOSTNAME "docker.io"
+#define DOCKER_V1HOSTNAME "index.docker.io"
+#define DOCKER_REGISTRY "registry-1.docker.io"
 #define DOCKER_MANIFEST_SCHEMA2_JSON "application/vnd.docker.distribution.manifest.v2+json"
 #define DOCKER_MANIFEST_SCHEMA2_LIST "application/vnd.docker.distribution.manifest.list.v2+json"
 #define DOCKER_MANIFEST_SCHEMA1_JSON "application/vnd.docker.distribution.manifest.v1+json"
