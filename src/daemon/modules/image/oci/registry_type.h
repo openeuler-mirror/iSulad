@@ -21,7 +21,6 @@
 #include <stdbool.h>
 
 #include "utils_timestamp.h"
-#include "isula_libutils/json_common.h"
 
 // 8 is enough for challenge, usually only one challenge is provided.
 #define CHALLENGE_MAX 8
@@ -102,7 +101,6 @@ typedef struct {
     char *protocol;
     bool skip_tls_verify;
     bool insecure_registry;
-    json_map_string_string *registry_transformation;
     char *scope;
     pthread_mutex_t challenges_mutex;
     bool challenges_mutex_inited;
