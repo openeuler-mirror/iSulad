@@ -37,8 +37,6 @@ struct oci_image_module_data {
 
     char **insecure_registries;
     size_t insecure_registries_len;
-
-    json_map_string_string *registry_transformation;
 };
 struct oci_image_module_data *get_oci_image_data(void);
 

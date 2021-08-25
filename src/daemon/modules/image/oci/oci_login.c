@@ -64,7 +64,6 @@ int oci_do_login(const char *server, const char *username, const char *password)
 
     oci_image_data = get_oci_image_data();
     options.skip_tls_verify = oci_image_data->insecure_skip_verify_enforce;
-    options.registry_transformation = oci_image_data->registry_transformation;
 
     insecure_registries = oci_image_data->insecure_registries;
     for (registry = insecure_registries; (registry != NULL) && (*registry != NULL); registry++) {

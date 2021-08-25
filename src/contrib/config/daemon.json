@@ -26,10 +26,6 @@
     ],
     "insecure-registries": [
     ],
-    "registry-transformation":{
-        "docker.io": "registry-1.docker.io",
-        "index.docker.io": "registry-1.docker.io"
-    },
     "pod-sandbox-image": "",
     "native.umask": "secure",
     "network-plugin": "",
