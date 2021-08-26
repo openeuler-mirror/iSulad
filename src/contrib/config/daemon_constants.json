@@ -1,0 +1,7 @@
+{
+    "default-host": "docker.io",
+    "registry-transformation":{
+        "docker.io": "registry-1.docker.io",
+        "index.docker.io": "registry-1.docker.io"
+    }
+}
