@@ -17,8 +17,6 @@
 
 #include <stdbool.h>
 
-#include "isula_libutils/json_common.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -34,7 +32,6 @@ typedef struct {
     registry_auth auth;
     bool skip_tls_verify;
     bool insecure_registry;
-    json_map_string_string *registry_transformation;
 } registry_pull_options;
 
 typedef struct {
@@ -42,12 +39,11 @@ typedef struct {
     registry_auth auth;
     bool skip_tls_verify;
     bool insecure_registry;
-    json_map_string_string *registry_transformation;
 } registry_login_options;
 
 int registry_init(char *auths_path, char *certs_dir);
-int registry_pull(const registry_pull_options *options);
-int registry_login(const registry_login_options *options);
+int registry_pull(registry_pull_options *options);
+int registry_login(registry_login_options *options);
 int registry_logout(char *host);
 
 void free_registry_pull_options(registry_pull_options *options);

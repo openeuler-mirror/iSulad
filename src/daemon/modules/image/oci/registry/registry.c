@@ -1811,15 +1811,18 @@ out:
     return ret;
 }
 
-static void update_host(pull_descriptor *desc, const json_map_string_string *registry_transformation)
+static void update_host(pull_descriptor *desc)
 {
     size_t i = 0;
+    isulad_daemon_constants *config = get_isulad_daemon_constants();
+    json_map_string_string *registry_transformation = NULL;
 
-    if (desc == NULL) {
+    if (desc == NULL || config == NULL) {
         ERROR("Invalid NULL param");
         return;
     }
 
+    registry_transformation = config->registry_transformation;
     if (registry_transformation == NULL) {
         return;
     }
@@ -1839,7 +1842,7 @@ static void update_host(pull_descriptor *desc, const json_map_string_string *reg
     return;
 }
 
-static int prepare_pull_desc(pull_descriptor *desc, const registry_pull_options *options)
+static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *options)
 {
     int ret = 0;
     int sret = 0;
@@ -1878,7 +1881,7 @@ static int prepare_pull_desc(pull_descriptor *desc, const registry_pull_options 
         goto out;
     }
 
-    update_host(desc, options->registry_transformation);
+    update_host(desc);
 
     oci_image_data = get_oci_image_data();
     ret = makesure_isulad_tmpdir_perm_right(oci_image_data->root_dir);
@@ -2006,7 +2009,7 @@ static void try_rollback_layers(pull_descriptor *desc)
     }
 }
 
-int registry_pull(const registry_pull_options *options)
+int registry_pull(registry_pull_options *options)
 {
     int ret = 0;
     pull_descriptor *desc = NULL;
@@ -2155,7 +2158,7 @@ out:
     return ret;
 }
 
-int registry_login(const registry_login_options *options)
+int registry_login(registry_login_options *options)
 {
     int ret = 0;
     pull_descriptor *desc = NULL;
@@ -2177,7 +2180,7 @@ int registry_login(const registry_login_options *options)
     oci_image_data = get_oci_image_data();
 
     desc->host = util_strdup_s(options->host);
-    update_host(desc, options->registry_transformation);
+    update_host(desc);
     desc->use_decrypted_key = oci_image_data->use_decrypted_key;
     desc->skip_tls_verify = options->skip_tls_verify;
     desc->insecure_registry = options->insecure_registry;

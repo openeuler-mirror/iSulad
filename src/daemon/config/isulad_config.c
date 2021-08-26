@@ -47,6 +47,7 @@
 
 static struct isulad_conf g_isulad_conf;
 static double g_jiffy = 0.0;
+static isulad_daemon_constants *g_isulad_daemon_constants = NULL;
 
 /* tick to ns */
 static inline unsigned long long tick_to_ns(uint64_t tick)
@@ -1458,18 +1459,6 @@ static int merge_registry_conf_into_global(struct service_arguments *args, isula
         return -1;
     }
 
-    // registry transformation support config only in config file
-    args->json_confs->registry_transformation = util_common_calloc_s(sizeof(json_map_string_string));
-    if (args->json_confs->registry_transformation == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    if (dup_json_map_string_string(tmp_json_confs->registry_transformation,
-                                   args->json_confs->registry_transformation) != 0) {
-        ERROR("failed to dup registry transformation");
-        return -1;
-    }
-
     return 0;
 }
 
@@ -1587,4 +1576,67 @@ out:
     free(err);
     free_isulad_daemon_configs(tmp_json_confs);
     return ret;
+}
+
+static bool valid_isulad_daemon_constants(isulad_daemon_constants *config)
+{
+    json_map_string_string *registry_transformation = NULL;
+    size_t i = 0;
+
+    if (config == NULL) {
+        return false;
+    }
+
+    if (config->registry_transformation != NULL) {
+        registry_transformation = config->registry_transformation;
+        for (i = 0; i < registry_transformation->len; i++) {
+            if (!util_valid_host_name(registry_transformation->keys[i]) ||
+                !util_valid_host_name(registry_transformation->values[i])) {
+                ERROR("invalid hostname, key:%s value:%s", registry_transformation->keys[i],
+                      registry_transformation->values[i]);
+                return false;
+            }
+        }
+    }
+
+    if (config->default_host != NULL) {
+        if (!util_valid_host_name(config->default_host)) {
+            ERROR("invalid hostname %s", config->default_host);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+int init_isulad_daemon_constants()
+{
+    parser_error err = NULL;
+    int ret = 0;
+
+    g_isulad_daemon_constants = isulad_daemon_constants_parse_file(ISULAD_DAEMON_CONSTANTS_JSON_CONF_FILE, NULL, &err);
+    if (g_isulad_daemon_constants == NULL) {
+        ERROR("Load isulad constants json config failed: %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (!valid_isulad_daemon_constants(g_isulad_daemon_constants)) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(err);
+
+    if (ret != 0) {
+        free_isulad_daemon_constants(g_isulad_daemon_constants);
+        g_isulad_daemon_constants = NULL;
+    }
+    return ret;
+}
+
+isulad_daemon_constants *get_isulad_daemon_constants()
+{
+    return g_isulad_daemon_constants;
 }

@@ -67,6 +67,7 @@ extern "C" {
 #define ISULAD_CONFIG "/etc/isulad"
 
 #define ISULAD_DAEMON_JSON_CONF_FILE ISULAD_CONFIG "/daemon.json"
+#define ISULAD_DAEMON_CONSTANTS_JSON_CONF_FILE ISULAD_CONFIG "/daemon_constants.json"
 
 #define DEFAULT_CA_FILE "ca.pem"
 #define DEFAULT_KEY_FILE "key.pem"

@@ -1419,6 +1419,11 @@ static int pre_init_daemon(int argc, char **argv, char **msg)
         goto out;
     }
 
+    if (init_isulad_daemon_constants() != 0) {
+        *msg = "Failed to parse isulad daemon constants";
+        goto out;
+    }
+
     /* note: daemonize will close all fds */
     if (daemonize()) {
         *msg = "Failed to become a daemon";
