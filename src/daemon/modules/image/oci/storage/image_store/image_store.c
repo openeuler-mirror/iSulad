@@ -2937,8 +2937,7 @@ static int strip_default_hostname(storage_image *im)
 
     hostname_to_strip = get_hostname_to_strip();
     if (hostname_to_strip == NULL) {
-        ret = -1;
-        goto out;
+        return 0;
     }
 
     for (i = 0; i < im->names_len; i++) {

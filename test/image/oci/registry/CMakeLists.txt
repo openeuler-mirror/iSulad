@@ -32,6 +32,8 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/certs.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/auths.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/aes.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/isulad_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/daemon_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/storage_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/oci_image_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/http_mock.cc
