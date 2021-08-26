@@ -1281,7 +1281,7 @@ int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resi
         return -1;
     }
 
-    if (snprintf(data, sizeof(data), "%d %d", params->width, params->height) < 0) {
+    if (snprintf(data, sizeof(data), "%u %u", params->width, params->height) < 0) {
         ERROR("failed to write resize data");
         return -1;
     }
