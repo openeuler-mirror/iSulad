@@ -574,28 +574,24 @@ void DoWriteToClient(int fd, session_data *session,
 
 ssize_t WsWriteToClient(void *context, const void *data, size_t len, WebsocketChannel channel)
 {
-    int ret = 0;
     auto *lwsCtx = static_cast<lwsContext *>(context);
     int fd = lwsCtx->fd;
     WebsocketServer *server = WebsocketServer::GetInstance();
 
-    server->ReadLockAllWsSession();
+    // CloseWsSession wait IOCopy finished, and then delete session in m_wsis
+    // So don't need rdlock m_wsis here
     auto itor = server->GetWsisData().find(fd);
     if (itor == server->GetWsisData().end()) {
         ERROR("invalid session!");
-        goto unlock;
+        return 0;
     }
 
     if (itor->second.IsClosed()) {
-        goto unlock;
+        return 0;
     }
 
     DoWriteToClient(fd, &itor->second, data, len, channel);
-    ret = static_cast<ssize_t>(len);
-
-unlock:
-    server->UnlockAllWsSession();
-    return ret;
+    return static_cast<ssize_t>(len);
 }
 };
 
