@@ -86,7 +86,7 @@ _isula_isula_list_images_with_tag()
             images_with_tag=($(isula images |awk 'NR>1{printf "%s:%s\n",$1,$2}'))
             ;;
     esac
-            
+
     COMPREPLY=( $( compgen -W "${images_with_tag[*]}" -- "$cur" ) )
 }
 
@@ -105,12 +105,502 @@ _isula_isula_images()
     _isula_isula_list_images_with_tag
 }
 
+_isula_isula_pull()
+{
+    _isula_isula_list_images_with_tag
+}
+
+__isula_containers(){
+    local format
+    format='{{.Names}}'
+    isula ps --format "$format" "$@"
+}
+
+__isula_complete_containers() {
+    COMPREPLY=( $(compgen -W "$(__isula_containers "$@")" -- "$cur") )
+}
+
+__isula_containers_all() {
+    __isula_complete_containers "$@" --all
+}
+
+__isula_containers_removable() {
+
+    COMPREPLY=( $(compgen -W "$(__isula_containers --filter status=created) $(__isula_containers --filter status=exited)" -- "$cur") )
+}
+
+__isula_containers_running(){
+    __isula_complete_containers "$@" --filter status=running
+}
+
+__isula_containers_unpause(){
+    __isula_complete_containers "$@" --filter status=paused
+}
+
+__isula_containers_stopped(){
+    __isula_complete_containers "$@" --filter status=exited
+}
+
+__isula_container_run_and_create(){
+    local all_options_with_args="
+            --add-host
+            --annotation
+            --blkio-weight
+            --blkio-weight-device
+            --cap-add
+            --cap-drop 
+            --cgroup-parent
+            --cpu-period
+            --cpu-quota
+            --cpu-rt-period
+            --cpu-rt-runtime
+            --cpu-shares
+            --cpus
+            --cpuset-cpus
+            --cpuset-mems
+            --debug -D
+            --detach -d
+            --device
+            --device-cgroup-rule
+            --device-read-bps
+            --device-read-iops
+            --device-write-bps
+            --device-write-iops
+            --dns
+            --dns-opt
+            --dns-search
+            --entrypoint
+            --env -e
+            --env-file
+            --env-target-file
+            --external-rootfs 
+            --files-limit 
+            --group-add
+            --health-cmd 
+            --health-exit-on-unhealthy
+            --health-interval
+            --health-retries
+            --health-start-period
+            --health-timeout
+            --help
+            --hook-spec
+            --host -H
+            --host-channel
+            --hostname -h
+            --hugetlb-limit
+            --interactive -i
+            --ipc
+            --kernel-memory
+            --label -l
+            --label-file
+            --log-driver
+            --log-opt
+            --memory -m
+            --memory-reservation
+            --memory-swap
+            --memory-swappiness
+            --mount
+            --name -n
+            --net
+            --no-healthcheck
+            --ns-change-opt
+            --oom-kill-disable
+            --oom-score-adj
+            --pid
+            --pids-limit
+            --privileged
+            --pull
+            --read-only
+            --restart
+            --rm
+            --runtime -R
+            --security-opt 
+            --shm-size
+            --stop-signal
+            --storage-opt
+            --sysctl
+            --system-container
+            --tls
+            --tlscacert 
+            --tlscert
+            --tlskey
+            --tlsverify
+            --tmpfs
+            --tty -t
+            --ulimit
+            --user -u
+            --user-remap
+            --uts 
+            --volume -v
+            --volumes-from
+            --workdir    
+    "
+    case "$prev" in
+            --add-host)
+                    return
+                    ;;
+            --cap-add)
+                    return
+                    ;;          
+            --cap-drop)
+                    return
+                    ;;
+            --device)
+                    return
+                    ;;
+            --env|-e)
+                    COMPREPLY=( $( compgen -e -- "$cur" ) )
+                    return
+                    ;;
+            --log-driver|--log-opt)
+                    return
+                    ;;
+            --user|-u)
+                    return
+                    ;;
+    esac
+
+    case "$cur" in
+            -*)
+                 COMPREPLY=( $( compgen -W "$all_options_with_args" -- "$cur" ) )
+                ;;
+            *)
+                _isula_isula_list_images_with_tag
+                ;;
+    esac
+}
+
+_isula_isula_attach(){
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --help --host -H --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)  
+                __isula_containers_running
+    esac
+}
+
+_isula_isula_create(){
+    __isula_container_run_and_create
+}
+
+_isula_isula_run(){
+    __isula_container_run_and_create
+}
+
+_isula_isula_exec(){
+    local all_options_with_args="
+            --debug -D
+            --detach -d
+            --env -e
+            --help
+            --host -H
+            --interactive -i
+            --tls
+            --tlscacert
+            --tlscert
+            --tlskey
+            --tlsverify
+            --tty -t
+            --user -u
+            --workdir
+    "
+
+    case "$prev" in
+            --env|-e)
+                return
+                ;;
+            --user|-u)
+                return
+                ;;
+            --workdir|-w)
+                return
+                ;;
+    esac
+
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "$all_options_with_args" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_running
+                ;;
+    esac
+}
+
+_isula_isula_export(){        
+    case "$prev" in
+            --output|-o)
+                return
+                ;;
+    esac
+
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --help --host -H --output -o --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_all
+                ;;
+    esac
+}
+
+_isula_isula_inspect(){
+    case "$prev" in
+            --format|-f)
+                return
+                ;;
+    esac
+
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --format -f --help --host -H --time -t --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                COMPREPLY=( $( compgen -W " $(__isula_containers --all) $(isula images |awk 'NR>1{printf "%s:%s\n",$1,$2}')" -- "$cur" ) )
+                ;;
+    esac       
+}
+
+_isula_isula_kill(){
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --help --host -H --signal -s --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_running
+                ;;
+    esac
+}
+
+_isula_isula_logs(){
+    case "$prev" in
+            --tail)
+                return
+                ;;
+    esac
+    
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --follow -f --help --host -H --tail --timestamps -t --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_all
+                ;;
+    esac
+}
+
+_isula_isula_pause(){
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --help --host -H --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_running
+                ;;
+    esac
+}
+
+_isula_isula_ps(){
+    case "$prev" in
+	    --filter|-f)
+		    return
+		    ;;
+	    --format)
+		    return
+		    ;;
+    esac
+    
+    case "$cur" in
+	        -*)
+ 		        COMPREPLY=( $( compgen -W "--all -a --debug -D --filter -f --format --help --host -H --no-trunc -q --quiet --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+    esac
+}
+
+_isula_isula_rename(){
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --help --host -H --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_all
+                ;;
+    esac
+}
+
+_isula_isula_restart(){
+    case "$prev" in
+            --time|-t)
+                return
+                ;;
+    esac
+
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --help --host -H --time -t --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_all
+                ;;
+     esac
+}
+
+_isula_isula_start(){
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--attach -a --debug -D --help --host -H --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_stopped
+                ;;
+    esac
+}
+
+_isula_isula_stats(){
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--all -a --debug -D --help --host -H --no-stream --original --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_running
+                ;;
+    esac                
+
+}
+
+_isula_isula_stop(){
+    case "$prev" in
+            --time|-t)
+                return
+                ;;
+    esac
+
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --force -f --help --host -H --time -t --tls --tlscacert --tlscert --tlskey  --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_running
+                ;;
+    esac
+}
+
+_isula_isula_top(){
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --help --host -H --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_running
+                ;;
+    esac
+}
+
+_isula_isula_unpause(){
+    case "$cur" in
+            -*) 
+                COMPREPLY=( $( compgen -W "--debug -D --help --host -H --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_unpause
+                ;;
+    esac
+}
+
+_isula_isula_update(){
+    local all_options_with_args="    
+            --blkio-weight
+            --cpu-period
+            --cpu-quota
+            --cpu-rt-period
+            --cpu-rt-runtime
+            --cpus
+            --cpuset-cpus
+            --cpuset-mems
+            --kernel-memory
+            --memory -m
+            --memory-reservation
+            --memory-swap
+            --restart    
+            --debug -D
+            --help
+            --host -H
+            --kernel-memory
+            --tls
+            --tlscacert
+            --tlscert
+            --tlskey
+            --tlsverify
+    "
+
+    case "$prev" in
+            --blkio-weight|\
+            --cpu-period|\
+            --cpu-quota|\
+            --cpu-rt-period|\
+            --cpu-rt-runtime|\
+            --cpus|\
+            --cpuset-cpus|\
+            --cpuset-mems|\
+            --kernel-memory|\
+            --memory|-m|\
+            --memory-reservation|\
+            --memory-swap|\
+            --restart)
+            return
+            ;;
+    esac
+    
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "$all_options_with_args" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_all
+                ;;
+    esac
+}
+
+_isula_isula_wait(){
+    case "$cur" in
+            -*)
+                COMPREPLY=( $( compgen -W "--debug -D --help --host -H --tls --tlscacert --tlscert --tlskey --tlsverify" -- "$cur" ) )
+                ;;
+            *)
+                __isula_containers_all
+                ;;
+    esac
+}
+
+_isula_isula_rm()
+{
+    case "$cur" in
+        -*)
+            COMPREPLY=( $( compgen -W "--debug -D --force --help -f --host -H --tls --tlscacert --tlscert --tlskey --tlsverify --volumes -v" -- "$cur" ) )
+            ;;
+        *)
+        for arg in "${COMP_WORDS[@]}"; do
+                      case "$arg" in
+                           --force|-f)
+                           __isula_containers_all
+                           return
+                           ;;
+                      esac
+	    done
+        __isula_containers_removable
+        ;;
+    esac
+}
+
 _isula()
 {
     COMPREPLY=()
 
-    local cur prev words cword
-    _get_comp_words_by_ref -n : cur prev words cword
+    local words=(${COMP_WORDS[*]})
+    local cword=$COMP_CWORD
+    local cur="${words[$cword]}"
+    local prev="${words[$cword-1]}"
     local command='isula'
     if [ $cword -gt 1 ] ; then
         command="isula_${words[1]}"
