@@ -172,7 +172,7 @@ void WebsocketServer::CloseWsSession(int socketID)
 {
     auto it = m_wsis.find(socketID);
     if (it != m_wsis.end()) {
-        it->second.close = true;
+        it->second.CloseSession();
         it->second.EraseAllMessage();
         // close the pipe write endpoint first, make sure io copy thread exit,
         // otherwise epoll will trigger EOF
@@ -474,6 +474,7 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
                     return -1;
                 }
 
+                auto isSessionClosed = it->second.IsClosed();
                 while (!it->second.buffer.empty()) {
                     unsigned char *message = it->second.FrontMessage();
                     // send success! free it and erase for list
@@ -487,7 +488,8 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
                     }
                 }
 
-                if (it->second.IsClosed()) {
+                // avoid: push message to buffer and set closed true
+                if (isSessionClosed) {
                     DEBUG("websocket session disconnected");
                     return -1;
                 }
