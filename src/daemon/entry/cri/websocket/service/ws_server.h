@@ -53,7 +53,7 @@ enum WebsocketChannel {
 
 struct session_data {
     std::array<int, MAX_ARRAY_LEN> pipes;
-    bool close;
+    volatile bool close;
     std::mutex *session_mutex;
     sem_t *sync_close_sem;
     std::list<unsigned char *> buffer;
