@@ -32,7 +32,6 @@
 namespace CRIHelpers {
 class Constants {
 public:
-    static const std::string DEFAULT_RUNTIME_NAME;
     static const std::string POD_NETWORK_ANNOTATION_KEY;
     static const std::string CONTAINER_TYPE_LABEL_KEY;
     static const std::string CONTAINER_TYPE_LABEL_SANDBOX;
@@ -41,6 +40,7 @@ public:
     static const std::string CONTAINER_HUGETLB_ANNOTATION_KEY;
     static const std::string SANDBOX_ID_LABEL_KEY;
     static const std::string KUBERNETES_CONTAINER_NAME_LABEL;
+    static const std::string POD_INFRA_CONTAINER_NAME;
     // DOCKER_IMAGEID_PREFIX is the prefix of image id in container status.
     static const std::string DOCKER_IMAGEID_PREFIX;
     // DOCKER_PULLABLE_IMAGEID_PREFIX is the prefix of pullable image id in container status.
@@ -50,15 +50,20 @@ public:
     static const std::string POD_CHECKPOINT_KEY;
     static const size_t MAX_CHECKPOINT_KEY_LEN { 250 };
     static const std::string CONTAINER_TYPE_ANNOTATION_KEY;
+    static const std::string CONTAINER_NAME_ANNOTATION_KEY;
     static const std::string CONTAINER_TYPE_ANNOTATION_CONTAINER;
     static const std::string CONTAINER_TYPE_ANNOTATION_SANDBOX;
     static const std::string SANDBOX_ID_ANNOTATION_KEY;
+    static const std::string SANDBOX_NAMESPACE_ANNOTATION_KEY;
+    static const std::string SANDBOX_NAME_ANNOTATION_KEY;
 
     static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE;
     static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR;
     static const std::string CNI_MUTL_NET_EXTENSION_KEY;
     static const std::string CNI_MUTL_NET_EXTENSION_ARGS_KEY;
     static const std::string CNI_ARGS_EXTENSION_PREFIX_KEY;
+
+    static const std::string IMAGE_NAME_ANNOTATION_KEY;
 };
 
 auto GetDefaultSandboxImage(Errors &err) -> std::string;

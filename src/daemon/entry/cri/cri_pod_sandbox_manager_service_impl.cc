@@ -105,6 +105,14 @@ void PodSandboxManagerServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alph
         return;
     }
 
+    // Apply a container name label for infra container. This is used in summary v1.
+    if (append_json_map_string_string(custom_config->labels,
+                                      CRIHelpers::Constants::KUBERNETES_CONTAINER_NAME_LABEL.c_str(),
+                                      CRIHelpers::Constants::POD_INFRA_CONTAINER_NAME.c_str()) != 0) {
+        error.SetError("Append kubernetes container name into labels failed");
+        return;
+    }
+
     custom_config->annotations = CRIHelpers::MakeAnnotations(c.annotations(), error);
     if (error.NotEmpty()) {
         return;
@@ -114,6 +122,20 @@ void PodSandboxManagerServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alph
                                       CRIHelpers::Constants::CONTAINER_TYPE_ANNOTATION_SANDBOX.c_str()) != 0) {
         error.SetError("Append container type into annotation failed");
         return;
+    }
+    if (c.has_metadata()) {
+        if (append_json_map_string_string(custom_config->annotations,
+                                          CRIHelpers::Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY.c_str(),
+                                          c.metadata().namespace_().c_str()) != 0) {
+            error.SetError("Append sandbox namespace into annotation failed");
+            return;
+        }
+        if (append_json_map_string_string(custom_config->annotations,
+                                          CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY.c_str(),
+                                          c.metadata().name().c_str()) != 0) {
+            error.SetError("Append sandbox name into annotation failed");
+            return;
+        }
     }
 
     if (!c.hostname().empty()) {

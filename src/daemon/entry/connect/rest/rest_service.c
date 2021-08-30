@@ -22,6 +22,9 @@
 #include "utils.h"
 #include "rest_containers_service.h"
 #include "rest_images_service.h"
+#ifdef ENABLE_METRICS
+#include "rest_metrics_service.h"
+#endif
 
 #define REST_PTHREAD_NUM 100
 #define BACKLOG 2048
@@ -57,6 +60,11 @@ static int rest_register_handler(evhtp_t *g_htp)
         return -1;
     }
 
+#ifdef ENABLE_METRICS
+    if (rest_register_metrics_handler(g_htp) != 0) {
+        return -1;
+    }
+#endif
     return 0;
 }
 
@@ -135,4 +143,3 @@ void rest_server_shutdown(void)
         }
     }
 }
-

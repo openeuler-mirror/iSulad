@@ -2887,11 +2887,11 @@ static int do_append_image(storage_image *im)
     return 0;
 }
 
-static void strip_dockerio_prefix(char **name)
+static void strip_host_prefix(char **name)
 {
     char *new_image_name = NULL;
 
-    new_image_name = oci_strip_dockerio_prefix(*name);
+    new_image_name = oci_strip_host_prefix(*name);
     if (new_image_name == NULL) {
         return;
     }
@@ -2902,22 +2902,63 @@ static void strip_dockerio_prefix(char **name)
     return;
 }
 
+static int deduplicate_names(storage_image *im)
+{
+    char **unique_names = NULL;
+    size_t unique_names_len = 0;
+
+    if (im == NULL) {
+        ERROR("invalid NULL param");
+        return -1;
+    }
+
+    if (im->names_len == 0) {
+        return 0;
+    }
+
+    if (util_string_array_unique((const char **)im->names, im->names_len, &unique_names, &unique_names_len) != 0) {
+        ERROR("Failed to unique names");
+        return -1;
+    }
+
+    util_free_array_by_len(im->names, im->names_len);
+    im->names = unique_names;
+    im->names_len = unique_names_len;
+
+    return 0;
+}
+
 static int strip_default_hostname(storage_image *im)
 {
     int ret = 0;
     size_t i = 0;
     bool striped = false;
+    char *hostname_to_strip = NULL;
+
+    hostname_to_strip = get_hostname_to_strip();
+    if (hostname_to_strip == NULL) {
+        return 0;
+    }
 
     for (i = 0; i < im->names_len; i++) {
-        if (util_has_prefix(im->names[i], HOSTNAME_TO_STRIP) || util_has_prefix(im->names[i], REPO_PREFIX_TO_STRIP)) {
-            strip_dockerio_prefix(&im->names[i]);
+        if (util_has_prefix(im->names[i], hostname_to_strip) || util_has_prefix(im->names[i], REPO_PREFIX_TO_STRIP)) {
+            strip_host_prefix(&im->names[i]);
             striped = true;
         }
+    }
+
+    if (deduplicate_names(im) != 0) {
+        ret = -1;
+        goto out;
     }
 
     if (striped) {
         ret = save_image(im);
     }
+
+out:
+
+    free(hostname_to_strip);
 
     return ret;
 }

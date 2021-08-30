@@ -168,14 +168,14 @@ char *oci_add_host(const char *host, const char *name)
     return with_host;
 }
 
-// normalize strip the docker.io/library prefix if necessary
+// normalize strip the prefix if necessary
 // and add default latest tag if no tag found
 char *oci_normalize_image_name(const char *name)
 {
     char *with_tag = oci_default_tag(name);
     char *result = NULL;
 
-    result = oci_strip_dockerio_prefix(with_tag);
+    result = oci_strip_host_prefix(with_tag);
     free(with_tag);
 
     return result;
@@ -220,23 +220,52 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
     return 0;
 }
 
-char *oci_strip_dockerio_prefix(const char *name)
+char *get_hostname_to_strip()
+{
+    char *name = NULL;
+
+    isulad_daemon_constants *config = get_isulad_daemon_constants();
+    if (config == NULL || config->default_host == NULL) {
+        return NULL;
+    }
+
+    name = (char *)util_common_calloc_s(strlen(config->default_host) + 2); // +2 means "/" and "\0"
+    if (name == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+
+    (void)strcat(name, config->default_host);
+    (void)strcat(name, "/");
+
+    return name;
+}
+
+char *oci_strip_host_prefix(const char *name)
 {
     const char *striped = name;
+    char *hostname_to_strip = NULL;
 
     if (name == NULL) {
         ERROR("NULL image name");
         return NULL;
     }
 
-    // Strip docker.io/
-    if (util_has_prefix(name, HOSTNAME_TO_STRIP)) {
-        striped += strlen(HOSTNAME_TO_STRIP);
+    hostname_to_strip = get_hostname_to_strip();
+    if (hostname_to_strip == NULL) {
+        return util_strdup_s(name);
+    }
+
+    // Strip host prefix
+    if (util_has_prefix(name, hostname_to_strip)) {
+        striped += strlen(hostname_to_strip);
     }
     // Strip library/
     if (util_has_prefix(striped, REPO_PREFIX_TO_STRIP)) {
         striped += strlen(REPO_PREFIX_TO_STRIP);
     }
+
+    free(hostname_to_strip);
 
     return util_strdup_s(striped);
 }

@@ -18,6 +18,7 @@
 
 #include <gmock/gmock.h>
 #include "isulad_config.h"
+#include "isula_libutils/isulad_daemon_constants.h"
 
 class MockIsuladConf {
 public:
@@ -36,6 +37,8 @@ public:
     MOCK_METHOD0(GetMonitordPath, char *(void));
     MOCK_METHOD0(ConfGetISuladRootDir, char *(void));
     MOCK_METHOD0(ConfGetUseDecryptedKeyFlag, bool (void));
+    MOCK_METHOD0(InitIsuladDaemonConstants, int (void));
+    MOCK_METHOD0(GetIsuladDaemonConstants, isulad_daemon_constants * (void));
 };
 
 void MockIsuladConf_SetMock(MockIsuladConf *mock);

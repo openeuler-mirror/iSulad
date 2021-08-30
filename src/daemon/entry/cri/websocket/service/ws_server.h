@@ -29,6 +29,7 @@
 #include "url.h"
 #include "errors.h"
 #include "read_write_lock.h"
+#include "isula_libutils/cri_terminal_size.h"
 
 #define MAX_ECHO_PAYLOAD 4096
 #define MAX_ARRAY_LEN 2
@@ -45,58 +46,106 @@
 enum WebsocketChannel {
     STDINCHANNEL = 0,
     STDOUTCHANNEL,
-    STDERRCHANNEL
+    STDERRCHANNEL,
+    ERRORCHANNEL,
+    RESIZECHANNEL
 };
 
 struct session_data {
     std::array<int, MAX_ARRAY_LEN> pipes;
-    bool *close;
-    std::mutex *buf_mutex;
+    volatile bool close;
+    std::mutex *session_mutex;
     sem_t *sync_close_sem;
     std::list<unsigned char *> buffer;
+    std::string container_id;
+    std::string suffix;
 
     unsigned char *FrontMessage()
     {
         unsigned char *message = nullptr;
 
-        buf_mutex->lock();
+        if (session_mutex == nullptr) {
+            return nullptr;
+        }
+
+        session_mutex->lock();
         message = buffer.front();
-        buf_mutex->unlock();
+        session_mutex->unlock();
 
         return message;
     }
 
     void PopMessage()
     {
-        buf_mutex->lock();
+        if (session_mutex == nullptr) {
+            return;
+        }
+
+        session_mutex->lock();
         buffer.pop_front();
-        buf_mutex->unlock();
+        session_mutex->unlock();
     }
 
     int PushMessage(unsigned char *message)
     {
-        // In extreme scenarios, websocket data cannot be processed,
-        // ignore the data coming in later to prevent iSulad from getting stuck
-        if (*close || buffer.size() >= FIFO_LIST_BUFFER_MAX_LEN) {
-            free(message);
+        if (session_mutex == nullptr) {
             return -1;
         }
-        buf_mutex->lock();
-        buffer.push_back(message);
-        buf_mutex->unlock();
 
+        session_mutex->lock();
+
+        // In extreme scenarios, websocket data cannot be processed,
+        // ignore the data coming in later to prevent iSulad from getting stuck
+        if (close || buffer.size() >= FIFO_LIST_BUFFER_MAX_LEN) {
+            free(message);
+            session_mutex->unlock();
+            return -1;
+        }
+
+        buffer.push_back(message);
+        session_mutex->unlock();
         return 0;
+    }
+
+    bool IsClosed()
+    {
+        bool c = false;
+
+        if (session_mutex == nullptr) {
+            return true;
+        }
+
+        session_mutex->lock();
+        c = close;
+        session_mutex->unlock();
+
+        return c;
+    }
+
+    void CloseSession()
+    {
+        if (session_mutex == nullptr) {
+            return;
+        }
+
+        session_mutex->lock();
+        close = true;
+        session_mutex->unlock();
     }
 
     void EraseAllMessage()
     {
-        buf_mutex->lock();
+        if (session_mutex == nullptr) {
+            return;
+        }
+
+        session_mutex->lock();
         for (auto iter = buffer.begin(); iter != buffer.end();) {
             free(*iter);
             *iter = NULL;
             iter = buffer.erase(iter);
         }
-        buf_mutex->unlock();
+        session_mutex->unlock();
     }
 };
 
@@ -127,12 +176,15 @@ private:
     int  Wswrite(struct lws *wsi, const unsigned char *message);
     inline void DumpHandshakeInfo(struct lws *wsi) noexcept;
     int RegisterStreamTask(struct lws *wsi) noexcept;
-    int GenerateSessionData(session_data &session) noexcept;
+    int GenerateSessionData(session_data &session, const std::string containerID) noexcept;
     static int Callback(struct lws *wsi, enum lws_callback_reasons reason,
                         void *user, void *in, size_t len);
     void ServiceWorkThread(int threadid);
     void CloseWsSession(int socketID);
     void CloseAllWsSession();
+    int ResizeTerminal(int socketID, const char *jsonData, size_t len,
+        const std::string &containerID, const std::string &suffix);
+    int parseTerminalSize(const char *jsonData, size_t len, uint16_t &width, uint16_t &height);
 
 private:
     static RWMutex m_mutex;
@@ -140,8 +192,8 @@ private:
     volatile int m_force_exit = 0;
     std::thread m_pthread_service;
     const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = {
-        {  "channel.k8s.io", Callback, 0, MAX_ECHO_PAYLOAD, },
-        { NULL, NULL, 0, 0 }
+        { "channel.k8s.io", Callback, 0, MAX_ECHO_PAYLOAD, },
+        { nullptr, nullptr, 0, 0 }
     };
     RouteCallbackRegister m_handler;
     static std::unordered_map<int, session_data> m_wsis;
