@@ -1572,6 +1572,10 @@ int merge_json_confs_into_global(struct service_arguments *args)
     args->json_confs->selinux_enabled = tmp_json_confs->selinux_enabled;
 #endif
 
+#ifdef ENABLE_METRICS
+    args->json_confs->metrics_port = tmp_json_confs->metrics_port;
+#endif
+
 out:
     free(err);
     free_isulad_daemon_configs(tmp_json_confs);

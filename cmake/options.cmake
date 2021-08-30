@@ -73,3 +73,8 @@ if (ENABLE_SHIM_V2 STREQUAL "ON")
 	set(ENABLE_SHIM_V2 1)
 endif()
 
+option(ENABLE_METRICS "enable metrics" ON)
+if (ENABLE_METRICS STREQUAL "ON")
+    add_definitions(-DENABLE_METRICS)
+    set(ENABLE_METRICS 1)
+endif()

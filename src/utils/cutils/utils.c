@@ -1362,7 +1362,7 @@ int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_v
         *host_arch = util_strdup_s("arm64");
     } else if ((strcasecmp("armhf", uts.machine) == 0) || (strcasecmp("armel", uts.machine) == 0)) {
         *host_arch = util_strdup_s("arm");
-    } else if ((strcasecmp("mips64le", uts.machine) == 0) ||  (strcasecmp("mips64el", uts.machine) == 0)) {
+    } else if ((strcasecmp("mips64le", uts.machine) == 0) || (strcasecmp("mips64el", uts.machine) == 0)) {
         *host_arch = util_strdup_s("mips64le");
     } else {
         *host_arch = util_strdup_s(uts.machine);

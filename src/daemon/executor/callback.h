@@ -272,10 +272,19 @@ typedef struct {
     int (*prune)(const volume_prune_volume_request *request, volume_prune_volume_response **response);
 } service_volume_callback_t;
 
+#ifdef ENABLE_METRICS
+typedef struct {
+    int (*export_metrics_by_type)(const char *metric_type, char **data, int *len);
+} service_metrics_callback_t;
+#endif
+
 typedef struct {
     service_container_callback_t container;
     service_image_callback_t image;
     service_volume_callback_t volume;
+#ifdef ENABLE_METRICS
+    service_metrics_callback_t metrics;
+#endif
 } service_executor_t;
 
 int service_callback_init(void);
