@@ -1292,7 +1292,7 @@ static int isulad_server_init_service()
 #else
     INFO("Creating rest server...");
 #endif
-    if (server_common_init(args)) {
+    if (server_common_init(args, daemon_shutdown)) {
         ERROR("Failed to init service");
         goto unlock_out;
     }

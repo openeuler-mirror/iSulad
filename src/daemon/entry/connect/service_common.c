@@ -29,7 +29,7 @@
 #endif
 
 /* server common init */
-int server_common_init(const struct service_arguments *args)
+int server_common_init(const struct service_arguments *args, daemon_shutdown_cb_t shutdown_cb)
 {
     if (args == NULL || args->hosts == NULL) {
         return -1;
@@ -45,7 +45,7 @@ int server_common_init(const struct service_arguments *args)
         ERROR("Rest server dest not support multiple hosts");
         return -1;
     }
-    return rest_server_init(args->hosts[0]);
+    return rest_server_init(args->hosts[0], shutdown_cb);
 #endif
 }
 
