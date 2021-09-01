@@ -30,8 +30,15 @@ function test_server()
     local metrics_log=/tmp/metrics.log
     msg_info "${test} starting..."
 
-    #gRPC default port 10350
-    local metric_server=$(netstat -antp | grep isulad | awk '!/10350/ {print $4}')
+    check_valgrind_log
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop isulad" && return ${FAILURE}
+
+    start_isulad_with_valgrind
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start isulad" && return ${FAILURE}
+
+    # iSulad is started by valgrind, netstat cannot find the 'isulad' process name
+    # 127.0.0.0:9090
+    local metric_server=$(netstat -antp | grep 9090 | awk '{print $4}')
     [[ -z $metric_server ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to find metrics http server" && ((ret++))
 
     curl -i $metric_server/metrics/type >> $metrics_log
