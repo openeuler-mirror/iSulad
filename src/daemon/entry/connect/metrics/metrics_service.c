@@ -93,7 +93,7 @@ void *metrics_server_thrd(void *args)
     evhtp_use_dynamic_threads(g_metrics_htp_param->ev_http, NULL, NULL, 0, 0, 0, NULL);
 
     def_port = g_metrics_htp_param->port != 0 ? g_metrics_htp_param->port : METRIC_DEFAULT_PORT;
-    /* if no default port config, we will use 8080 as default metrics port */
+    /* if no default port config, we will use 9090 as default metrics port */
     if (evhtp_bind_socket(g_metrics_htp_param->ev_http, METRIC_DEFAULT_IP, def_port, BACK_LOG_SIZE) < 0) {
         ERROR("evhtp_bind_socket failed");
         goto clean_evhtp;
@@ -147,6 +147,7 @@ void metrics_service_shutdown()
     }
 
     if (g_metrics_htp_param->ev_http != NULL) {
+        evhtp_unbind_socket(g_metrics_htp_param->ev_http);
         evhtp_free(g_metrics_htp_param->ev_http);
         g_metrics_htp_param->ev_http = NULL;
     }
