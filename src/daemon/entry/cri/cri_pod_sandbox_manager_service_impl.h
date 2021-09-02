@@ -105,8 +105,10 @@ private:
     void SetSandboxStatusNetwork(const container_inspect *inspect, const std::string &podSandboxID,
                                  std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus, Errors &error);
     void GetIPs(const std::string &podSandboxID, const container_inspect *inspect,
-                const std::string &networkInterface, std::vector<std::string> &ips, Errors &error);
+                const std::string &networkInterface, std::vector<std::string> &ips,
+                const runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &error);
     auto GetIPsFromPlugin(const container_inspect *inspect, const std::string &networkInterface,
+                          const runtime::v1alpha2::PodSandboxMetadata &metadata,
                           Errors &error) -> std::vector<std::string>;
     void GetFormatIPsForMultNet(const container_inspect *inspect, const std::string &defaultInterface,
                                 const runtime::v1alpha2::PodSandboxMetadata &metadata,

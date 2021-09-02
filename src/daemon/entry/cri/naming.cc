@@ -21,6 +21,7 @@
 #include <errno.h>
 
 #include "cri_constants.h"
+#include "cri_helpers.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 
@@ -55,7 +56,6 @@ static int parseName(const std::string &name, std::vector<std::string> &items, u
 std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadata)
 {
     std::string sname;
-
     sname.append(CRI::Constants::kubePrefix);
     sname.append(CRI::Constants::nameDelimiter);
     sname.append(CRI::Constants::sandboxContainerName);
@@ -71,21 +71,34 @@ std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadat
     return sname;
 }
 
-void ParseSandboxName(const std::string &name, runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &err)
+void ParseSandboxName(const google::protobuf::Map<std::string, std::string> &annotations,
+                      runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &err)
 {
-    int ret {};
-    std::vector<std::string> items;
-    unsigned int attempt;
-
-    ret = parseName(name, items, attempt, err);
-    if (ret != 0) {
+    if (!annotations.contains(CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY)) {
+        err.Errorf("annotation don't contains the sandbox name, failed to parse it");
         return;
     }
 
-    metadata.set_name(items[2]);
-    metadata.set_namespace_(items[3]);
-    metadata.set_uid(items[4]);
-    metadata.set_attempt(attempt);
+    if (!annotations.contains(CRIHelpers::Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY)) {
+        err.Errorf("annotation don't contains the sandbox namespace, failed to parse it");
+        return;
+    }
+
+    if (!annotations.contains(CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY)) {
+        err.Errorf("annotation don't contains the sandbox uid, failed to parse it");
+        return;
+    }
+
+    if (!annotations.contains(CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY)) {
+        err.Errorf("annotation don't contains the sandbox attempt, failed to parse it");
+        return;
+    }
+
+    metadata.set_name(annotations.at(CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY));
+    metadata.set_namespace_(annotations.at(CRIHelpers::Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY));
+    metadata.set_uid(annotations.at(CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY));
+    auto sandboxAttempt = annotations.at(CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY);
+    metadata.set_attempt(static_cast<google::protobuf::uint32>(std::stoul(sandboxAttempt)));
 }
 
 std::string MakeContainerName(const runtime::v1alpha2::PodSandboxConfig &s, const runtime::v1alpha2::ContainerConfig &c)
