@@ -50,6 +50,7 @@ const std::string Constants::NETWORK_READY { "NetworkReady" };
 const std::string Constants::POD_CHECKPOINT_KEY { "cri.sandbox.isulad.checkpoint" };
 const std::string Constants::CONTAINER_TYPE_ANNOTATION_KEY { "io.kubernetes.cri.container-type" };
 const std::string Constants::CONTAINER_NAME_ANNOTATION_KEY { "io.kubernetes.cri.container-name" };
+const std::string Constants::CONTAINER_ATTEMPT_ANNOTATION_KEY { "io.kubernetes.cri.container-attempt" };
 const std::string Constants::CONTAINER_TYPE_ANNOTATION_CONTAINER { "container" };
 const std::string Constants::CONTAINER_TYPE_ANNOTATION_SANDBOX { "sandbox" };
 const std::string Constants::SANDBOX_ID_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-id" };

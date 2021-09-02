@@ -51,6 +51,7 @@ public:
     static const size_t MAX_CHECKPOINT_KEY_LEN { 250 };
     static const std::string CONTAINER_TYPE_ANNOTATION_KEY;
     static const std::string CONTAINER_NAME_ANNOTATION_KEY;
+    static const std::string CONTAINER_ATTEMPT_ANNOTATION_KEY;
     static const std::string CONTAINER_TYPE_ANNOTATION_CONTAINER;
     static const std::string CONTAINER_TYPE_ANNOTATION_SANDBOX;
     static const std::string SANDBOX_ID_ANNOTATION_KEY;
