@@ -55,6 +55,8 @@ const std::string Constants::CONTAINER_TYPE_ANNOTATION_SANDBOX { "sandbox" };
 const std::string Constants::SANDBOX_ID_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-id" };
 const std::string Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-namespace" };
 const std::string Constants::SANDBOX_NAME_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-name" };
+const std::string Constants::SANDBOX_UID_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-uid" };
+const std::string Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-attempt" };
 const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE { "pod-cidr-change" };
 const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR { "pod-cidr" };
 const std::string Constants::CNI_MUTL_NET_EXTENSION_KEY { "extension.network.kubernetes.io/cni" };

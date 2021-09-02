@@ -136,6 +136,18 @@ void PodSandboxManagerServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alph
             error.SetError("Append sandbox name into annotation failed");
             return;
         }
+        if (append_json_map_string_string(custom_config->annotations,
+                                          CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY.c_str(),
+                                          c.metadata().uid().c_str()) != 0) {
+            error.SetError("Append sandbox uid into annotation failed");
+            return;
+        }
+        if (append_json_map_string_string(custom_config->annotations,
+                                          CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY.c_str(),
+                                          std::to_string(c.metadata().attempt()).c_str()) != 0) {
+            error.SetError("Append sandbox attempt into annotation failed");
+            return;
+        }
     }
 
     if (!c.hostname().empty()) {
@@ -948,20 +960,17 @@ out:
 
 auto PodSandboxManagerServiceImpl::GetIPsFromPlugin(const container_inspect *inspect,
                                                     const std::string &networkInterface,
+                                                    const runtime::v1alpha2::PodSandboxMetadata &metadata,
                                                     Errors &error) -> std::vector<std::string>
 {
     std::vector<std::string> ret;
-    runtime::v1alpha2::PodSandboxMetadata metadata;
     std::string defaultInterface = networkInterface;
 
     if (inspect == nullptr || inspect->id == nullptr || inspect->name == nullptr) {
         error.SetError("Empty arguments");
         return ret;
     }
-    CRINaming::ParseSandboxName(inspect->name, metadata, error);
-    if (error.NotEmpty()) {
-        return ret;
-    }
+
     if (defaultInterface.empty()) {
         defaultInterface = Network::DEFAULT_NETWORK_INTERFACE_NAME;
     }
@@ -984,7 +993,8 @@ auto PodSandboxManagerServiceImpl::GetIPsFromPlugin(const container_inspect *ins
 }
 
 void PodSandboxManagerServiceImpl::GetIPs(const std::string &podSandboxID, const container_inspect *inspect,
-                                          const std::string &networkInterface, std::vector<std::string> &ips, Errors &error)
+                                          const std::string &networkInterface, std::vector<std::string> &ips,
+                                          const runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &error)
 {
     if (inspect == nullptr) {
         return;
@@ -1002,7 +1012,7 @@ void PodSandboxManagerServiceImpl::GetIPs(const std::string &podSandboxID, const
     }
 
     error.Clear();
-    auto tmpIPs = GetIPsFromPlugin(inspect, networkInterface, error);
+    auto tmpIPs = GetIPsFromPlugin(inspect, networkInterface, metadata, error);
     if (error.Empty()) {
         for (const auto &iter : tmpIPs) {
             ips.push_back(iter);
@@ -1027,7 +1037,7 @@ void PodSandboxManagerServiceImpl::SetSandboxStatusNetwork(const container_inspe
     std::vector<std::string> ips;
     size_t i;
 
-    GetIPs(podSandboxID, inspect, Network::DEFAULT_NETWORK_INTERFACE_NAME, ips, error);
+    GetIPs(podSandboxID, inspect, Network::DEFAULT_NETWORK_INTERFACE_NAME, ips, podStatus->metadata(), error);
     if (ips.size() == 0) {
         return;
     }
@@ -1063,9 +1073,16 @@ void PodSandboxManagerServiceImpl::PodSandboxStatusToGRPC(const container_inspec
         podStatus->set_state(runtime::v1alpha2::SANDBOX_NOTREADY);
     }
 
-    if (inspect->config != nullptr) {
-        CRIHelpers::ExtractLabels(inspect->config->labels, *podStatus->mutable_labels());
-        CRIHelpers::ExtractAnnotations(inspect->config->annotations, *podStatus->mutable_annotations());
+    if (inspect->config == nullptr) {
+        ERROR("Invalid container information! Must include config info");
+        return;
+    }
+
+    CRIHelpers::ExtractLabels(inspect->config->labels, *podStatus->mutable_labels());
+    CRIHelpers::ExtractAnnotations(inspect->config->annotations, *podStatus->mutable_annotations());
+    CRINaming::ParseSandboxName(podStatus->annotations(), *podStatus->mutable_metadata(), error);
+    if (error.NotEmpty()) {
+        return;
     }
 
     options = podStatus->mutable_linux()->mutable_namespaces()->mutable_options();
@@ -1079,13 +1096,6 @@ void PodSandboxManagerServiceImpl::PodSandboxStatusToGRPC(const container_inspec
     if (error.NotEmpty()) {
         ERROR("Set network status failed: %s", error.GetCMessage());
         return;
-    }
-
-    if (inspect->name != nullptr) {
-        CRINaming::ParseSandboxName(inspect->name, *podStatus->mutable_metadata(), error);
-        if (error.NotEmpty()) {
-            return;
-        }
     }
 }
 
@@ -1179,13 +1189,11 @@ void PodSandboxManagerServiceImpl::ListPodSandboxToGRPC(container_list_response 
         }
         pod->set_created_at(response->containers[i]->created);
 
-        if (response->containers[i]->name != nullptr) {
-            CRINaming::ParseSandboxName(response->containers[i]->name, *pod->mutable_metadata(), error);
-        }
-
         CRIHelpers::ExtractLabels(response->containers[i]->labels, *pod->mutable_labels());
 
         CRIHelpers::ExtractAnnotations(response->containers[i]->annotations, *pod->mutable_annotations());
+
+        CRINaming::ParseSandboxName(pod->annotations(), *pod->mutable_metadata(), error);
 
         if (filterOutReadySandboxes && pod->state() == runtime::v1alpha2::SANDBOX_READY) {
             continue;
