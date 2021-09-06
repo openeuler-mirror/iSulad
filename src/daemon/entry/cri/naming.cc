@@ -74,22 +74,22 @@ std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadat
 void ParseSandboxName(const google::protobuf::Map<std::string, std::string> &annotations,
                       runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &err)
 {
-    if (!annotations.contains(CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY)) {
+    if (annotations.count(CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY) == 0) {
         err.Errorf("annotation don't contains the sandbox name, failed to parse it");
         return;
     }
 
-    if (!annotations.contains(CRIHelpers::Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY)) {
+    if (annotations.count(CRIHelpers::Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY) == 0) {
         err.Errorf("annotation don't contains the sandbox namespace, failed to parse it");
         return;
     }
 
-    if (!annotations.contains(CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY)) {
+    if (annotations.count(CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY) == 0) {
         err.Errorf("annotation don't contains the sandbox uid, failed to parse it");
         return;
     }
 
-    if (!annotations.contains(CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY)) {
+    if (annotations.count(CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY) == 0) {
         err.Errorf("annotation don't contains the sandbox attempt, failed to parse it");
         return;
     }
