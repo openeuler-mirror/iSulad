@@ -18,40 +18,37 @@
 #include "utils.h"
 #include "cri_helpers.h"
 
-int ExecServe::Execute(lwsContext lws_ctx, const std::string &token, const std::string &suffix, int read_pipe_fd)
+int ExecServe::Execute(session_data *lws_ctx, const std::string &token)
 {
+    if (lws_ctx == nullptr) {
+        return -1;
+    }
+
     service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->container.exec == nullptr) {
-        sem_post(lws_ctx.sync_close_sem);
+        sem_post(lws_ctx->sync_close_sem);
         return -1;
     }
 
     container_exec_request *container_req = nullptr;
-    if (GetContainerRequest(token, suffix, &container_req) != 0) {
+    if (GetContainerRequest(token, lws_ctx->suffix, &container_req) != 0) {
         ERROR("Failed to get contaner request");
-        sem_post(lws_ctx.sync_close_sem);
-        return -1;
-    }
-
-    lwsContext *lws_context = new (std::nothrow)lwsContext(lws_ctx);
-    if (lws_context == nullptr) {
-        ERROR("Out of memory");
-        sem_post(lws_ctx.sync_close_sem);
+        sem_post(lws_ctx->sync_close_sem);
         return -1;
     }
 
     struct io_write_wrapper StdoutstringWriter = { 0 };
-    StdoutstringWriter.context = (void *)lws_context;
+    StdoutstringWriter.context = (void *)lws_ctx;
     StdoutstringWriter.write_func = WsWriteStdoutToClient;
     // the close function of StderrstringWriter is preferred unless StderrstringWriter is nullptr
     StdoutstringWriter.close_func = container_req->attach_stderr ? nullptr : closeWsStream;
     struct io_write_wrapper StderrstringWriter = { 0 };
-    StderrstringWriter.context = (void *)lws_context;
+    StderrstringWriter.context = (void *)lws_ctx;
     StderrstringWriter.write_func = WsWriteStderrToClient;
     StderrstringWriter.close_func = container_req->attach_stderr ? closeWsStream : nullptr;
 
     container_exec_response *container_res = nullptr;
-    int ret = cb->container.exec(container_req, &container_res, container_req->attach_stdin ? read_pipe_fd : -1,
+    int ret = cb->container.exec(container_req, &container_res, container_req->attach_stdin ? lws_ctx->pipes.at(0) : -1,
                                  container_req->attach_stdout ? &StdoutstringWriter : nullptr,
                                  container_req->attach_stderr ? &StderrstringWriter : nullptr);
     if (ret != 0) {
@@ -61,17 +58,17 @@ int ExecServe::Execute(lwsContext lws_ctx, const std::string &token, const std::
         } else {
             message = "Failed to call exec container callback. ";
         }
-        WsWriteStdoutToClient(lws_context, message.c_str(), message.length());
+        WsWriteStdoutToClient(lws_ctx, message.c_str(), message.length());
     }
     if (container_res != nullptr && container_res->exit_code != 0) {
         std::string exit_info = "Exit code :" + std::to_string((int)container_res->exit_code) + "\n";
-        WsWriteStdoutToClient(lws_context, exit_info.c_str(), exit_info.length());
+        WsWriteStdoutToClient(lws_ctx, exit_info.c_str(), exit_info.length());
     }
 
     free_container_exec_request(container_req);
     free_container_exec_response(container_res);
 
-    closeWsConnect((void*)lws_context, nullptr);
+    closeWsConnect((void*)lws_ctx, nullptr);
 
     return ret;
 }

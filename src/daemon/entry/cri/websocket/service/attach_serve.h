@@ -33,7 +33,7 @@ public:
     AttachServe(const AttachServe &) = delete;
     AttachServe &operator=(const AttachServe &) = delete;
     virtual ~AttachServe() = default;
-    int Execute(lwsContext lws_ctx, const std::string &token, const std::string &suffix, int read_pipe_fd) override;
+    int Execute(session_data *lws_ctx, const std::string &token) override;
 private:
     int RequestFromCri(const runtime::v1alpha2::AttachRequest &grequest,
                        container_attach_request **request);

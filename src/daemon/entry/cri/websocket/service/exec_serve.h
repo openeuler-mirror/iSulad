@@ -37,7 +37,7 @@ public:
     ExecServe(const ExecServe &) = delete;
     ExecServe &operator=(const ExecServe &) = delete;
     virtual ~ExecServe() = default;
-    int Execute(lwsContext lws_ctx, const std::string &token, const std::string &suffix, int read_pipe_fd) override;
+    int Execute(session_data *lws_ctx, const std::string &token) override;
 
 private:
     int RequestFromCri(const runtime::v1alpha2::ExecRequest &grequest, const std::string &suffix,
