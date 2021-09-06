@@ -31,7 +31,7 @@
 struct lws_context *WebsocketServer::m_context = nullptr;
 std::atomic<WebsocketServer *> WebsocketServer::m_instance;
 RWMutex WebsocketServer::m_mutex;
-std::unordered_map<int, session_data> WebsocketServer::m_wsis;
+std::unordered_map<int, session_data *> WebsocketServer::m_wsis;
 
 WebsocketServer *WebsocketServer::GetInstance() noexcept
 {
@@ -47,7 +47,7 @@ WebsocketServer *WebsocketServer::GetInstance() noexcept
 WebsocketServer::WebsocketServer()
 {
     m_force_exit = 0;
-    m_wsis.clear();
+    m_wsis.reserve(SESSION_CAPABILITY);
 }
 
 WebsocketServer::~WebsocketServer()
@@ -58,11 +58,6 @@ WebsocketServer::~WebsocketServer()
 url::URLDatum WebsocketServer::GetWebsocketUrl()
 {
     return m_url;
-}
-
-std::unordered_map<int, session_data> &WebsocketServer::GetWsisData()
-{
-    return m_wsis;
 }
 
 void WebsocketServer::ReadLockAllWsSession()
@@ -160,10 +155,12 @@ void WebsocketServer::CloseAllWsSession()
 {
     WriteGuard<RWMutex> lock(m_mutex);
     for (auto it = m_wsis.begin(); it != m_wsis.end(); ++it) {
-        it->second.EraseAllMessage();
-        close(it->second.pipes.at(0));
-        close(it->second.pipes.at(1));
-        delete it->second.session_mutex;
+        it->second->EraseAllMessage();
+        close(it->second->pipes.at(0));
+        close(it->second->pipes.at(1));
+        (void)sem_destroy(it->second->sync_close_sem);
+        delete it->second->session_mutex;
+        delete it->second;
     }
     m_wsis.clear();
 }
@@ -172,24 +169,26 @@ void WebsocketServer::CloseWsSession(int socketID)
 {
     auto it = m_wsis.find(socketID);
     if (it != m_wsis.end()) {
-        it->second.CloseSession();
-        it->second.EraseAllMessage();
+        it->second->CloseSession();
+        it->second->EraseAllMessage();
         // close the pipe write endpoint first, make sure io copy thread exit,
         // otherwise epoll will trigger EOF
-        if (it->second.pipes.at(1) >= 0) {
-            close(it->second.pipes.at(1));
-            it->second.pipes.at(1) = -1;
+        if (it->second->pipes.at(1) >= 0) {
+            close(it->second->pipes.at(1));
+            it->second->pipes.at(1) = -1;
         }
-        (void)sem_wait(it->second.sync_close_sem);
-        (void)sem_destroy(it->second.sync_close_sem);
-        close(it->second.pipes.at(0));
-        delete it->second.session_mutex;
-        it->second.session_mutex = nullptr;
+        (void)sem_wait(it->second->sync_close_sem);
+        (void)sem_destroy(it->second->sync_close_sem);
+        close(it->second->pipes.at(0));
+        delete it->second->session_mutex;
+        it->second->session_mutex = nullptr;
+        delete it->second;
+        it->second = nullptr;
         m_wsis.erase(it);
     }
 }
 
-int WebsocketServer::GenerateSessionData(session_data &session, const std::string containerID) noexcept
+int WebsocketServer::GenerateSessionData(session_data *session, const std::string containerID) noexcept
 {
     char *suffix = nullptr;
     int read_pipe_fd[PIPE_FD_NUM] = {-1, -1};
@@ -215,12 +214,12 @@ int WebsocketServer::GenerateSessionData(session_data &session, const std::strin
         goto out;
     }
 
-    session.pipes = std::array<int, MAX_ARRAY_LEN> { read_pipe_fd[0], read_pipe_fd[1] };
-    session.session_mutex = buf_mutex;
-    session.sync_close_sem = sync_close_sem;
-    session.close = false;
-    session.container_id = containerID;
-    session.suffix = std::string(suffix);
+    session->pipes = std::array<int, MAX_ARRAY_LEN> { read_pipe_fd[0], read_pipe_fd[1] };
+    session->session_mutex = buf_mutex;
+    session->sync_close_sem = sync_close_sem;
+    session->close = false;
+    session->container_id = containerID;
+    session->suffix = std::string(suffix);
 
     free(suffix);
 
@@ -272,28 +271,35 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
         return -1;
     }
 
+    if (m_wsis.size() > MAX_SESSION_NUM) {
+        WARN("too many connection sessions");
+    }
+
     std::string containerID = cache->GetContainerIDByToken(vec.at(1), vec.at(2));
     if (containerID.empty()) {
         ERROR("Failed to get container id from %s request", vec.at(1).c_str());
         return -1;
     }
 
-    session_data session;
+    session_data *session = new (std::nothrow) session_data;
+    if (session == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
     if (GenerateSessionData(session, containerID) != 0) {
         ERROR("failed to fill generate session data");
         return -1;
     }
 
-    std::string suffixID = session.suffix;
-    m_wsis.insert(std::make_pair(socketID, std::move(session)));
-
-    lwsContext lwsCtx = {
-        .fd = socketID,
-        .sync_close_sem = m_wsis[socketID].sync_close_sem,
-    };
+    std::string suffixID = session->suffix;
+    auto insertRet = m_wsis.insert(std::make_pair(socketID, session));
+    if (!insertRet.second) {
+        ERROR("failed to insert session data to map");
+        return -1;
+    }
 
     std::thread streamTh([ = ]() {
-        StreamTask(&m_handler, lwsCtx, vec.at(1), vec.at(2), suffixID, m_wsis[socketID].pipes.at(0)).Run();
+        StreamTask(&m_handler, session, vec.at(1), vec.at(2)).Run();
     });
     streamTh.detach();
 
@@ -423,14 +429,14 @@ void WebsocketServer::Receive(int socketID, void *in, size_t len)
     }
 
     if (*static_cast<char *>(in) == WebsocketChannel::RESIZECHANNEL) {
-        std::string containerID = it->second.container_id;
-        std::string suffix = it->second.suffix;
+        std::string containerID = it->second->container_id;
+        std::string suffix = it->second->suffix;
         if (ResizeTerminal(socketID, (char *)in + 1, len, containerID, suffix) != 0) {
             ERROR("Failed to resize terminal tty");
             return;
         }
     } else if (*static_cast<char *>(in) == WebsocketChannel::STDINCHANNEL) {
-        if (write(m_wsis[socketID].pipes.at(1), (void *)((char *)in + 1), len - 1) < 0) {
+        if (write(m_wsis[socketID]->pipes.at(1), (void *)((char *)in + 1), len - 1) < 0) {
             ERROR("sub write over!");
             return;
         }
@@ -474,13 +480,13 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
                     return -1;
                 }
 
-                auto isSessionClosed = it->second.IsClosed();
-                while (!it->second.buffer.empty()) {
-                    unsigned char *message = it->second.FrontMessage();
+                auto isSessionClosed = it->second->IsClosed();
+                while (!it->second->buffer.empty()) {
+                    unsigned char *message = it->second->FrontMessage();
                     // send success! free it and erase for list
                     if (WebsocketServer::GetInstance()->Wswrite(wsi, (const unsigned char *)message) == 0) {
                         free(message);
-                        it->second.PopMessage();
+                        it->second->PopMessage();
                     } else {
                         // Another case ret > 0, send fail! keep message and send it again!
                         // Or maybe the client was shut down abnormally
@@ -554,7 +560,7 @@ void WebsocketServer::Wait()
 
 namespace {
 
-void DoWriteToClient(int fd, session_data *session,
+void DoWriteToClient(session_data *session,
                      const void *data, size_t len, WebsocketChannel channel)
 {
     unsigned char *buf = (unsigned char *)util_common_calloc_s(LWS_PRE + MAX_BUFFER_SIZE + 1);
@@ -576,67 +582,69 @@ void DoWriteToClient(int fd, session_data *session,
 
 ssize_t WsWriteToClient(void *context, const void *data, size_t len, WebsocketChannel channel)
 {
-    auto *lwsCtx = static_cast<lwsContext *>(context);
-    int fd = lwsCtx->fd;
-    WebsocketServer *server = WebsocketServer::GetInstance();
+    auto *lwsCtx = static_cast<session_data *>(context);
 
     // CloseWsSession wait IOCopy finished, and then delete session in m_wsis
     // So don't need rdlock m_wsis here
-    auto itor = server->GetWsisData().find(fd);
-    if (itor == server->GetWsisData().end()) {
-        ERROR("invalid session!");
+    if (lwsCtx->IsClosed()) {
         return 0;
     }
 
-    if (itor->second.IsClosed()) {
-        return 0;
-    }
-
-    DoWriteToClient(fd, &itor->second, data, len, channel);
+    DoWriteToClient(lwsCtx, data, len, channel);
     return static_cast<ssize_t>(len);
 }
 };
 
 ssize_t WsWriteStdoutToClient(void *context, const void *data, size_t len)
 {
+    if (context == nullptr) {
+        ERROR("websocket session context empty");
+        return -1;
+    }
+
     return WsWriteToClient(context, data, len, STDOUTCHANNEL);
 }
 
 ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len)
 {
+    if (context == nullptr) {
+        ERROR("websocket session context empty");
+        return -1;
+    }
+
     return WsWriteToClient(context, data, len, STDERRCHANNEL);
 }
 
 int closeWsConnect(void *context, char **err)
 {
     (void)err;
-    auto *lwsCtx = static_cast<lwsContext *>(context);
+
+    if (context == nullptr) {
+        ERROR("websocket session context empty");
+        return -1;
+    }
+
+    auto *lwsCtx = static_cast<session_data *>(context);
 
     if (lwsCtx->sync_close_sem != nullptr) {
         (void)sem_post(lwsCtx->sync_close_sem);
     }
 
-    WebsocketServer *server = WebsocketServer::GetInstance();
-    server->ReadLockAllWsSession();
-    auto it = server->GetWsisData().find(lwsCtx->fd);
-    if (it == server->GetWsisData().end()) {
-        server->UnlockAllWsSession();
-        ERROR("websocket session not exist");
-        delete lwsCtx;
-        return -1;
-    }
-    // will close websocket session on LWS_CALLBACK_SERVER_WRITEABLE polling
-    it->second.CloseSession();
-    server->UnlockAllWsSession();
+    lwsCtx->CloseSession();
 
-    delete lwsCtx;
     return 0;
 }
 
 int closeWsStream(void *context, char **err)
 {
     (void)err;
-    auto *lwsCtx = static_cast<lwsContext *>(context);
+
+    if (context == nullptr) {
+        ERROR("websocket session context empty");
+        return -1;
+    }
+
+    auto *lwsCtx = static_cast<session_data *>(context);
 
     if (lwsCtx->sync_close_sem != nullptr) {
         (void)sem_post(lwsCtx->sync_close_sem);

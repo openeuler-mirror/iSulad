@@ -42,6 +42,8 @@
 #define LWS_TIMEOUT 50
 // io copy maximum single transfer 4K, let max total buffer size: 1GB
 #define FIFO_LIST_BUFFER_MAX_LEN 262144
+#define SESSION_CAPABILITY 300
+#define MAX_SESSION_NUM 120
 
 enum WebsocketChannel {
     STDINCHANNEL = 0,
@@ -158,7 +160,6 @@ public:
     void Shutdown();
     void RegisterCallback(const std::string &path, std::shared_ptr<StreamingServeInterface> callback);
     url::URLDatum GetWebsocketUrl();
-    std::unordered_map<int, session_data> &GetWsisData();
     void SetLwsSendedFlag(int socketID, bool sended);
     void ReadLockAllWsSession();
     void UnlockAllWsSession();
@@ -176,7 +177,7 @@ private:
     int  Wswrite(struct lws *wsi, const unsigned char *message);
     inline void DumpHandshakeInfo(struct lws *wsi) noexcept;
     int RegisterStreamTask(struct lws *wsi) noexcept;
-    int GenerateSessionData(session_data &session, const std::string containerID) noexcept;
+    int GenerateSessionData(session_data *session, const std::string containerID) noexcept;
     static int Callback(struct lws *wsi, enum lws_callback_reasons reason,
                         void *user, void *in, size_t len);
     void ServiceWorkThread(int threadid);
@@ -196,7 +197,7 @@ private:
         { nullptr, nullptr, 0, 0 }
     };
     RouteCallbackRegister m_handler;
-    static std::unordered_map<int, session_data> m_wsis;
+    static std::unordered_map<int, session_data *> m_wsis;
     url::URLDatum m_url;
     int m_listenPort;
 };
