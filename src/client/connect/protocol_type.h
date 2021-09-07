@@ -679,6 +679,8 @@ struct isula_network_remove_response {
 
 void container_events_format_free(container_events_format_t *value);
 
+int isula_filters_last_parse_args(size_t last_n, struct isula_filters **flt);
+
 struct isula_filters *isula_filters_parse_args(const char **array, size_t len);
 
 void isula_filters_free(struct isula_filters *filters);

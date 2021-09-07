@@ -40,6 +40,8 @@ const char g_cmd_list_usage[] = "ps [command options]";
 struct client_arguments g_cmd_list_args = {
     .dispname = false,
     .list_all = false,
+    .list_latest = false,
+    .list_last_n = 0,
     .no_trunc = false,
 };
 
@@ -658,15 +660,32 @@ static int client_list(const struct client_arguments *args, const struct filters
     }
     request.all = args->list_all;
 
+    if (args->list_last_n > 0 || args->list_latest) {
+        size_t lastest_n = args->list_last_n;
+        if (args->list_latest) {
+            lastest_n = 1;
+        }
+
+        isula_filters_last_parse_args(lastest_n, &request.filters);
+        if (request.filters == NULL) {
+            ERROR("Failed to parse lastest n containers filters args");
+            ret = -1;
+            goto out;
+        }
+    }
+
     config = get_connect_config(args);
     ret = ops->container.list(&request, response, &config);
     if (ret) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
         goto out;
     }
-    if (response->container_num != 0)
+
+    /* ps -a need sort again, ps -l/-n is already sorted */
+    if (response->container_num != 0 && args->list_all) {
         qsort(response->container_summary, (size_t)(response->container_num),
               sizeof(struct isula_container_summary_info *), (int (*)(const void *, const void *))isula_container_cmp);
+    }
 
     if (args->dispname) {
         list_print_quiet(response->container_summary, response->container_num, &max_len);
