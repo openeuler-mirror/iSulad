@@ -784,7 +784,7 @@ static int overlay_supports_selinux(bool *supported)
         char sym_type[KALLSYMS_ITEM_MAX_LEN] = { 0 };
         char sym_name[KALLSYMS_ITEM_MAX_LEN] = { 0 };
 
-        if (sscanf(buf, "%s %s %s", sym_addr, sym_type, sym_name) != 3) {
+        if (sscanf(buf, "%99s %99s %99s", sym_addr, sym_type, sym_name) != 3) {
             ERROR("sscanf buffer failed");
             ret = -1;
             goto out;

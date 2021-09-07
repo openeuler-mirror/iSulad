@@ -246,7 +246,7 @@ static int supplement_exitcode_for_container_msg(const container_t *cont, const 
         return 0;
     }
 
-    nret = snprintf(info, sizeof(info), "exitCode=%u", exit_code);
+    nret = snprintf(info, sizeof(info), "exitCode=%d", exit_code);
     if (nret < 0 || nret >= sizeof(info)) {
         return -1;
     }

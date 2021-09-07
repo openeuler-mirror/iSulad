@@ -526,9 +526,9 @@ int oci_tag(const im_tag_request *request)
         goto out;
     }
     dest_name = oci_normalize_image_name(request->dest_name.image);
-    if (src_name == NULL) {
+    if (dest_name == NULL) {
         ret = -1;
-        ERROR("Failed to resolve source image name");
+        ERROR("Failed to resolve dest image name");
         goto out;
     }
 
