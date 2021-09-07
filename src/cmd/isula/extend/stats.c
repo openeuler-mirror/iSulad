@@ -137,6 +137,8 @@ static void stats_print(const struct isula_container_info *stats)
             if (d_sys_use > 0 && stats->online_cpus > 0) {
                 cpu_percent = ((double)d_cpu_use / d_sys_use) * stats->online_cpus * PERCENT;
             }
+
+            break;
         }
     }
 
