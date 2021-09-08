@@ -76,6 +76,35 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
+### build and install libevent
+
+```bash
+$ git clone https://gitee.com/src-openeuler/libevent.git
+$ cd libevent
+$ git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag
+$ tar -xzvf libevent-2.1.11-stable.tar.gz
+$ cd libevent-2.1.11-stable && ./autogen.sh && ./configure
+$ sudo -E make -j $(nproc) 
+$ sudo -E make install
+$ sudo -E ldconfig
+```
+
+### build and install libevhtp
+
+```bash
+$ git clone https://gitee.com/src-openeuler/libevhtp.git
+$ cd libevhtp && git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag
+$ tar -xzvf libevhtp-1.2.16.tar.gz
+$ cd libevhtp-1.2.16
+$ patch -p1 -F1 -s < ../0001-support-dynamic-threads.patch
+$ patch -p1 -F1 -s < ../0002-close-openssl.patch
+$ rm -rf build && mkdir build && cd build
+$ sudo -E cmake -D EVHTP_BUILD_SHARED=on -D EVHTP_DISABLE_SSL=on ../
+$ sudo -E make -j $(nproc)
+$ sudo -E make install
+$ sudo -E ldconfig
+```
+
 ### build and install http-parser
 ```bash
 $ git clone https://gitee.com/src-openeuler/http-parser.git
