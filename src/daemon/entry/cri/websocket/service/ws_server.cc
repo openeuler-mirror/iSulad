@@ -626,25 +626,7 @@ int closeWsConnect(void *context, char **err)
 
     auto *lwsCtx = static_cast<session_data *>(context);
 
-    if (lwsCtx->sync_close_sem != nullptr) {
-        (void)sem_post(lwsCtx->sync_close_sem);
-    }
-
     lwsCtx->CloseSession();
-
-    return 0;
-}
-
-int closeWsStream(void *context, char **err)
-{
-    (void)err;
-
-    if (context == nullptr) {
-        ERROR("websocket session context empty");
-        return -1;
-    }
-
-    auto *lwsCtx = static_cast<session_data *>(context);
 
     if (lwsCtx->sync_close_sem != nullptr) {
         (void)sem_post(lwsCtx->sync_close_sem);
