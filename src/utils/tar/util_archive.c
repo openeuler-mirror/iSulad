@@ -649,7 +649,7 @@ child_out:
 
     ret = util_wait_for_pid(pid);
     if (ret != 0) {
-        ERROR("Wait archive_untar_handler failed");
+        ERROR("Wait archive_untar_handler failed with error:%s", strerror(errno));
         fcntl(pipe_stderr[0], F_SETFL, O_NONBLOCK);
         if (read(pipe_stderr[0], errbuf, BUFSIZ) < 0) {
             ERROR("read error message from child failed");
