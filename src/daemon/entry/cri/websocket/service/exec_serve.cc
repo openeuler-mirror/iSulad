@@ -24,6 +24,8 @@ int ExecServe::Execute(session_data *lws_ctx, const std::string &token)
         return -1;
     }
 
+    prctl(PR_SET_NAME, "ExecServe");
+
     service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->container.exec == nullptr) {
         sem_post(lws_ctx->sync_close_sem);
