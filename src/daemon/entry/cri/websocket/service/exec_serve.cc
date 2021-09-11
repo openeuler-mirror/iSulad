@@ -41,11 +41,11 @@ int ExecServe::Execute(session_data *lws_ctx, const std::string &token)
     StdoutstringWriter.context = (void *)lws_ctx;
     StdoutstringWriter.write_func = WsWriteStdoutToClient;
     // the close function of StderrstringWriter is preferred unless StderrstringWriter is nullptr
-    StdoutstringWriter.close_func = container_req->attach_stderr ? nullptr : closeWsStream;
+    StdoutstringWriter.close_func = nullptr;
     struct io_write_wrapper StderrstringWriter = { 0 };
     StderrstringWriter.context = (void *)lws_ctx;
     StderrstringWriter.write_func = WsWriteStderrToClient;
-    StderrstringWriter.close_func = container_req->attach_stderr ? closeWsStream : nullptr;
+    StderrstringWriter.close_func = nullptr;
 
     container_exec_response *container_res = nullptr;
     int ret = cb->container.exec(container_req, &container_res, container_req->attach_stdin ? lws_ctx->pipes.at(0) : -1,
