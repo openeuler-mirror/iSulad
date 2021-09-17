@@ -155,6 +155,10 @@ else()
     target_link_libraries(isulad ${EVHTP_LIBRARY} ${EVENT_LIBRARY})
 endif()
 
+if (GRPC_CONNECTOR AND ENABLE_METRICS)
+    target_link_libraries(isulad ${EVHTP_LIBRARY} ${EVENT_LIBRARY})
+endif()
+
 if (ENABLE_OCI_IMAGE)
     target_link_libraries(isulad -Wl,--as-needed -lstdc++)
     target_link_libraries(isulad -Wl,--as-needed -ldevmapper)
