@@ -162,7 +162,9 @@ if (GRPC_CONNECTOR)
     find_library(CLIBCNI_LIBRARY clibcni
         HINTS ${PC_CLIBCNI_LIBDIR} ${PC_CLIBCNI_LIBRARY_DIRS})
     _CHECK(CLIBCNI_LIBRARY "CLIBCNI_LIBRARY-NOTFOUND" "libclibcni.so")
-else()
+endif()
+
+if ((NOT GRPC_CONNECTOR) OR (GRPC_CONNECTOR AND ENABLE_METRICS))
     pkg_check_modules(PC_EVENT "event>=2.1.8")
     find_path(EVENT_INCLUDE_DIR event.h
         HINTS ${PC_EVENT_INCLUDEDIR} ${PC_EVENT_INCLUDE_DIRS})
