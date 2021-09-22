@@ -13,7 +13,7 @@
    Configure the `endpoint`of `isulad`:
 
    ```json
-   "hosts" : [
+   "hosts": [
            "unix:///var/run/isulad.sock"
        ]
    ```
