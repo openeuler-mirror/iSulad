@@ -28,6 +28,9 @@ lvremove -f isulad/thinpoolmeta
 vgremove -f isulad
 pvremove -f $dev_disk
 
+# If udev do not sync in time, do remove force
+rm -rf /dev/isulad
+
 echo y | mkfs.ext4 $dev_disk
 mkdir -p /etc/lvm/profile
 touch /etc/lvm/profile/isulad-thinpool.profile
