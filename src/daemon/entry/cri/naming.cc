@@ -26,33 +26,6 @@
 #include "utils.h"
 
 namespace CRINaming {
-static int parseName(const std::string &name, std::vector<std::string> &items, unsigned int &attempt, Errors &err)
-{
-    std::istringstream f(name);
-    std::string part;
-
-    while (getline(f, part, CRI::Constants::nameDelimiterChar)) {
-        items.push_back(part);
-    }
-
-    if (items.size() != 6) {
-        err.Errorf("failed to parse the sandbox name: %s", name.c_str());
-        return -1;
-    }
-
-    if (items[0] != CRI::Constants::kubePrefix) {
-        err.Errorf("container is not managed by kubernetes: %s", name.c_str());
-        return -1;
-    }
-
-    if (util_safe_uint(items[5].c_str(), &attempt)) {
-        err.Errorf("failed to parse the sandbox name %s: %s", name.c_str(), strerror(errno));
-        return -1;
-    }
-
-    return 0;
-}
-
 std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadata)
 {
     std::string sname;
@@ -120,19 +93,21 @@ std::string MakeContainerName(const runtime::v1alpha2::PodSandboxConfig &s, cons
     return sname;
 }
 
-void ParseContainerName(const std::string &name, runtime::v1alpha2::ContainerMetadata *metadata, Errors &err)
+void ParseContainerName(const google::protobuf::Map<std::string, std::string> &annotations,
+                        runtime::v1alpha2::ContainerMetadata *metadata, Errors &err)
 {
-    int ret {};
-    std::vector<std::string> items;
-    unsigned int attempt;
-
-    ret = parseName(name, items, attempt, err);
-    if (ret != 0) {
+    if (annotations.count(CRIHelpers::Constants::CONTAINER_NAME_ANNOTATION_KEY) == 0) {
+        err.Errorf("annotation don't contains the container name, failed to parse it");
         return;
     }
+    metadata->set_name(annotations.at(CRIHelpers::Constants::CONTAINER_NAME_ANNOTATION_KEY));
 
-    metadata->set_name(items[1]);
-    metadata->set_attempt(attempt);
+    std::string containerAttempt = "0";
+    if (annotations.count(CRIHelpers::Constants::CONTAINER_ATTEMPT_ANNOTATION_KEY) != 0) {
+        containerAttempt = annotations.at(CRIHelpers::Constants::CONTAINER_ATTEMPT_ANNOTATION_KEY);
+    }
+
+    metadata->set_attempt(static_cast<google::protobuf::uint32>(std::stoul(containerAttempt)));
 }
 
 } // namespace CRINaming
