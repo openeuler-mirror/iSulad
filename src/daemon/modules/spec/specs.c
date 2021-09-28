@@ -2101,7 +2101,7 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_c
         goto out;
     }
 
-    if (host_spec->user_remap == NULL && !namespace_is_host(host_spec->userns_mode)) {
+    if (!host_spec->system_container && !namespace_is_host(host_spec->userns_mode)) {
         ret = make_userns_remap(oci_spec, conf_get_isulad_userns_remap());
         if (ret != 0) {
             ERROR("Failed to make user remap for container");
