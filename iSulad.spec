@@ -1,5 +1,5 @@
-%global _version 2.0.8
-%global _release 20201230.135951.git9aa57ef2
+%global _version 2.0.9
+%global _release 1
 %global is_systemd 1
 
 Name:      iSulad
@@ -218,6 +218,12 @@ fi
 /usr/share/bash-completion/completions/isula
 
 %changelog
+* Mon Oct 11 2020 wujing <wujing50@huawei.com> - 2.0.9-1
+- Type:sync
+- ID:NA
+- SUG:NA
+- DESC: upgrade version to 2.0.9-1
+
 * Tue Sep 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 2.0.5-20200910.140350.git72990229
 - Type:enhancement
 - ID:NA
