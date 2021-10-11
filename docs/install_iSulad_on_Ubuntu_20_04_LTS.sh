@@ -18,7 +18,6 @@ mkdir -p $BUILD_DIR
 cd $BUILD_DIR
 git clone https://gitee.com/src-openeuler/lxc.git
 cd lxc
-tar -zxf lxc-4.0.3.tar.gz
 ./apply-patches
 cd lxc-4.0.3
 ./autogen.sh

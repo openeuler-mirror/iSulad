@@ -167,25 +167,35 @@ void WebsocketServer::CloseAllWsSession()
 
 void WebsocketServer::CloseWsSession(int socketID)
 {
+    m_mutex.wrlock();
     auto it = m_wsis.find(socketID);
-    if (it != m_wsis.end()) {
-        it->second->CloseSession();
-        it->second->EraseAllMessage();
+    if (it == m_wsis.end()) {
+        m_mutex.unlock();
+        return;
+    }
+
+    auto session = it->second;
+    it->second = nullptr;
+    m_wsis.erase(it);
+    m_mutex.unlock();
+
+    std::thread([session]() {
+        prctl(PR_SET_NAME, "WSSessionGC");
+        session->CloseSession();
+        session->EraseAllMessage();
         // close the pipe write endpoint first, make sure io copy thread exit,
         // otherwise epoll will trigger EOF
-        if (it->second->pipes.at(1) >= 0) {
-            close(it->second->pipes.at(1));
-            it->second->pipes.at(1) = -1;
+        if (session->pipes.at(1) >= 0) {
+            close(session->pipes.at(1));
+            session->pipes.at(1) = -1;
         }
-        (void)sem_wait(it->second->sync_close_sem);
-        (void)sem_destroy(it->second->sync_close_sem);
-        close(it->second->pipes.at(0));
-        delete it->second->session_mutex;
-        it->second->session_mutex = nullptr;
-        delete it->second;
-        it->second = nullptr;
-        m_wsis.erase(it);
-    }
+        (void)sem_wait(session->sync_close_sem);
+        (void)sem_destroy(session->sync_close_sem);
+        close(session->pipes.at(0));
+        delete session->session_mutex;
+        session->session_mutex = nullptr;
+        delete session;
+    }).detach();
 }
 
 int WebsocketServer::GenerateSessionData(session_data *session, const std::string containerID) noexcept
@@ -508,7 +518,6 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
             }
             break;
         case LWS_CALLBACK_CLOSED: {
-                WriteGuard<RWMutex> lock(m_mutex);
                 DEBUG("connection has been closed");
                 int socketID = lws_get_socket_fd(wsi);
                 WebsocketServer::GetInstance()->CloseWsSession(socketID);
