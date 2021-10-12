@@ -1,5 +1,5 @@
 %global _version 2.0.9
-%global _release 20211012.154723.git8fbdf1be
+%global _release 20211012.172418.git89fcdfc1
 %global is_systemd 1
 
 Name:      iSulad
@@ -84,6 +84,7 @@ install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_in
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
 install -m 0640 ../src/contrib/config/daemon.json           %{buildroot}/%{_sysconfdir}/isulad/daemon.json
+install -m 0640 ../src/contrib/config/daemon_constants.json %{buildroot}/%{_sysconfdir}/isulad/daemon_constants.json
 install -m 0640 ../src/contrib/config/seccomp_default.json  %{buildroot}/%{_sysconfdir}/isulad/seccomp_default.json
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/default/isulad
@@ -214,6 +215,12 @@ fi
 %endif
 
 %changelog
+* Tue Oct 12 2021 wujing <wujing50@huawei.com> - 2.0.9-20211012.172418.git89fcdfc1
+- Type: sync from upstream
+- ID: NA
+- SUG: NA
+- DESC: pack daemon_constants.json
+
 * Tue Oct 12 2021 wujing <wujing50@huawei.com> - 2.0.9-20211012.154723.git8fbdf1be
 - Type: sync
 - ID: NA
