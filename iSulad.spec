@@ -1,5 +1,5 @@
 %global _version 2.0.9
-%global _release 1
+%global _release 2
 %global is_systemd 1
 
 Name:      iSulad
@@ -83,6 +83,7 @@ install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_in
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
 install -m 0640 ../src/contrib/config/daemon.json           %{buildroot}/%{_sysconfdir}/isulad/daemon.json
+install -m 0640 ../src/contrib/config/daemon_constants.json %{buildroot}/%{_sysconfdir}/isulad/daemon_constants.json
 install -m 0640 ../src/contrib/config/seccomp_default.json  %{buildroot}/%{_sysconfdir}/isulad/seccomp_default.json
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/default/isulad
@@ -218,6 +219,12 @@ fi
 /usr/share/bash-completion/completions/isula
 
 %changelog
+* Tue Oct 12 2020 wujing <wujing50@huawei.com> - 2.0.9-2
+- Type:sync
+- ID:NA
+- SUG:NA
+- DESC: pack daemon_constants.json
+
 * Mon Oct 11 2020 wujing <wujing50@huawei.com> - 2.0.9-1
 - Type:sync
 - ID:NA
