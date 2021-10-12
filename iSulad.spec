@@ -1,5 +1,5 @@
 %global _version 2.0.9
-%global _release 20210625.165022.git5a088d9c
+%global _release 20211012.154723.git8fbdf1be
 %global is_systemd 1
 
 Name:      iSulad
@@ -214,6 +214,12 @@ fi
 %endif
 
 %changelog
+* Tue Oct 12 2021 wujing <wujing50@huawei.com> - 2.0.9-20211012.154723.git8fbdf1be
+- Type: sync
+- ID: NA
+- SUG: NA
+- DESC: sync from openeuler
+
 * Fri Jun 25 2021 wujing <wujing50@huawei.com> - 2.0.9-20210625.165022.git5a088d9c
 - Type: update to v2.0.9
 - ID: NA
