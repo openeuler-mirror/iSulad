@@ -1480,10 +1480,12 @@ int callback_log_driver(command_option_t *option, const char *value)
     struct client_arguments *args = (struct client_arguments *)option->data;
 
     if (value == NULL) {
+        COMMAND_ERROR("log driver is NULL");
         return -1;
     }
 
     if (!check_opt_container_log_driver(value)) {
+        COMMAND_ERROR("Unsupported log driver: %s", value);
         return -1;
     }
 
