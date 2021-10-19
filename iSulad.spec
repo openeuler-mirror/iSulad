@@ -1,5 +1,5 @@
 %global _version 2.0.9
-%global _release 20210625.165022.git5a088d9c
+%global _release 20211019.121837.gitf067b3ce
 %global is_systemd 1
 
 Name:      iSulad
@@ -11,6 +11,8 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
+
+Patch0001: 0001-strip-sha256-prefix-when-decrease-hold-references.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -214,6 +216,12 @@ fi
 %endif
 
 %changelog
+* Tue Oct 19 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.9-20211019.121837.gitf067b3ce
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: strip sha256 prefix when decrease hold references
+
 * Fri Jun 25 2021 wujing <wujing50@huawei.com> - 2.0.9-20210625.165022.git5a088d9c
 - Type: update to v2.0.9
 - ID: NA
