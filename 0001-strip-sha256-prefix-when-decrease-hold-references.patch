@@ -1,0 +1,27 @@
+From 4ccd38e9e17534467eb1add9ee9ed357f2eb9dbd Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Tue, 19 Oct 2021 11:14:32 +0800
+Subject: [PATCH] strip sha256 prefix when decrease hold references
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/daemon/modules/image/oci/registry/registry.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/daemon/modules/image/oci/registry/registry.c b/src/daemon/modules/image/oci/registry/registry.c
+index cc5f680..011533f 100644
+--- a/src/daemon/modules/image/oci/registry/registry.c
++++ b/src/daemon/modules/image/oci/registry/registry.c
+@@ -1548,7 +1548,8 @@ static int fetch_all(pull_descriptor *desc)
+                     }
+                     free(desc->layer_of_hold_refs);
+                     desc->layer_of_hold_refs = util_strdup_s(list->layers[j]->id);
+-                    if (parent_chain_id != NULL && storage_dec_hold_refs(parent_chain_id) != 0) {
++                    if (parent_chain_id != NULL &&
++                        storage_dec_hold_refs(util_without_sha256_prefix(parent_chain_id)) != 0) {
+                         continue;
+                     }
+                     desc->layers[i].already_exist = true;
+-- 
+2.25.1
+
