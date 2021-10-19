@@ -1548,7 +1548,8 @@ static int fetch_all(pull_descriptor *desc)
                     }
                     free(desc->layer_of_hold_refs);
                     desc->layer_of_hold_refs = util_strdup_s(list->layers[j]->id);
-                    if (parent_chain_id != NULL && storage_dec_hold_refs(parent_chain_id) != 0) {
+                    if (parent_chain_id != NULL &&
+                        storage_dec_hold_refs(util_without_sha256_prefix(parent_chain_id)) != 0) {
                         continue;
                     }
                     desc->layers[i].already_exist = true;
