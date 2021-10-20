@@ -204,3 +204,51 @@ TEST(utils_array, test_util_array_append)
     util_free_array(array);
     array = nullptr;
 }
+
+TEST(utils_array, test_util_append_string_array)
+{
+    string_array *sarray = (string_array *)util_common_calloc_s(sizeof(string_array));
+    ASSERT_NE(sarray, nullptr);
+    int ret;
+
+    ret = util_append_string_array(sarray, "1234567890");
+    ASSERT_EQ(ret, 0);
+    ASSERT_STREQ(sarray->items[0], "1234567890");
+    ASSERT_EQ(sarray->items[1], nullptr);
+    ASSERT_EQ(sarray->len, 1);
+
+    ret = util_append_string_array(sarray, "abc");
+    ASSERT_EQ(ret, 0);
+    ret = util_append_string_array(sarray, "bcd");
+    ASSERT_EQ(ret, 0);
+    ASSERT_STREQ(sarray->items[1], "abc");
+    ASSERT_STREQ(sarray->items[2], "bcd");
+    ASSERT_EQ(sarray->len, 3);
+
+    util_free_string_array(sarray);
+    sarray = nullptr;
+}
+
+TEST(utils_array, test_util_string_array_contain)
+{
+    string_array *sarray = (string_array *)util_common_calloc_s(sizeof(string_array));
+    ASSERT_NE(sarray, nullptr);
+    int ret;
+    bool bret = false;
+
+    ret = util_append_string_array(sarray, "1234567890");
+    ASSERT_EQ(ret, 0);
+    ret = util_append_string_array(sarray, "abc");
+    ASSERT_EQ(ret, 0);
+    ret = util_append_string_array(sarray, "bcd");
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(sarray->len, 3);
+
+    bret = util_string_array_contain(sarray, "axxx");
+    ASSERT_EQ(bret, false);
+    bret = util_string_array_contain(sarray, "abc");
+    ASSERT_EQ(bret, true);
+
+    util_free_string_array(sarray);
+    sarray = nullptr;
+}
