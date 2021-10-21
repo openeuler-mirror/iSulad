@@ -804,6 +804,10 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     start_params.start_timeout = start_timeout;
     start_params.container_pidfile = pidfile;
     start_params.exit_fifo = exit_fifo;
+    start_params.image_type_oci = false;
+    if (strcmp(IMAGE_TYPE_OCI, cont->common_config->image_type) == 0) {
+        start_params.image_type_oci = true;
+    }
 
     ret = runtime_start(id, runtime, &start_params, pid_info);
     if (ret == 0) {
