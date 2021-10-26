@@ -28,14 +28,14 @@ echo "*****************Get iSulad GCOV data**************************"
 cp -r ~/build $ISULAD_COPY_PATH
 cd $ISULAD_COPY_PATH/build
 ctest
-lcov --directory . --capture --output-file coverage.info
+lcov --directory . --capture --output-file coverage.info --rc lcov_branch_coverage=1
 # Remove std/build files
-lcov --remove coverage.info '/usr/*' -o coverage.info
-lcov --remove coverage.info 'build/*' -o coverage.info
-lcov --remove coverage.info 'test/*' -o coverage.info
+lcov --remove coverage.info '/usr/*' -o coverage.info --rc lcov_branch_coverage=1
+lcov --remove coverage.info 'build/*' -o coverage.info --rc lcov_branch_coverage=1
+lcov --remove coverage.info 'test/*' -o coverage.info --rc lcov_branch_coverage=1
 
 # Generate html
-genhtml --ignore-errors source -o $GCOV_RESULT_PATH/coverage coverage.info
+genhtml --ignore-errors source -o $GCOV_RESULT_PATH/coverage coverage.info --branch-coverage --rc lcov_branch_coverage=1
 
 tar -zcf $ISULAD_SRC_PATH/isulad-gcov.tar.gz $GCOV_RESULT_PATH
 
