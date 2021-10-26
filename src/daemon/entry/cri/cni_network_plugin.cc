@@ -310,6 +310,8 @@ void CniNetworkPlugin::GetDefaultCNINetwork(const std::string &confDir, std::vec
         }
         if (strcmp(default_net_name, n_list->name) == 0) {
             WARN("Use same name of default net: %s", default_net_name);
+            free_cni_network_list_conf(n_list);
+            n_list = nullptr;
             continue;
         }
         mutlNets.push_back(std::unique_ptr<CNINetwork>(new (std::nothrow) CNINetwork(n_list->name, n_list)));
