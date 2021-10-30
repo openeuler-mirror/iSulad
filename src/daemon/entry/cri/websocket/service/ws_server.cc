@@ -282,7 +282,8 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
     }
 
     if (m_wsis.size() > MAX_SESSION_NUM) {
-        WARN("too many connection sessions");
+        ERROR("too many connection sessions");
+        return -1;
     }
 
     std::string containerID = cache->GetContainerIDByToken(vec.at(1), vec.at(2));
