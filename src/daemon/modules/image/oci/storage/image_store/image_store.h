@@ -25,7 +25,6 @@
 #include "utils_timestamp.h"
 #include "map.h"
 #include "linked_list.h"
-#include "image_type.h"
 #include "isula_libutils/imagetool_image.h"
 #include "isula_libutils/imagetool_images_list.h"
 #include "isula_libutils/imagetool_image_summary.h"
