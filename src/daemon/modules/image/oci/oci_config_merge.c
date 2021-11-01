@@ -28,9 +28,6 @@
 
 #include "utils.h"
 #include "isula_libutils/log.h"
-#include "err_msg.h"
-#include "utils_array.h"
-#include "utils_string.h"
 #include "image_spec_merge.h"
 
 static void oci_image_merge_working_dir(const char *working_dir, container_config *container_spec)
