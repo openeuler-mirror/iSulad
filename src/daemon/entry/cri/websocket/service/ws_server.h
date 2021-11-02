@@ -43,7 +43,7 @@
 // io copy maximum single transfer 4K, let max total buffer size: 1GB
 #define FIFO_LIST_BUFFER_MAX_LEN 262144
 #define SESSION_CAPABILITY 300
-#define MAX_SESSION_NUM 120
+#define MAX_SESSION_NUM 128
 
 enum WebsocketChannel {
     STDINCHANNEL = 0,
