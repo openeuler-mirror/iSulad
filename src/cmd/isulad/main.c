@@ -1197,12 +1197,6 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
         }
     }
 
-    if (set_file_owner_for_userns_remap(args->json_confs->graph, conf_get_isulad_userns_remap()) != 0) {
-        ERROR("Unable to change root directory %s owner for user remap.", args->json_confs->graph);
-        ret = -1;
-        goto out;
-    }
-
     if (mount_rootfs_mnt_dir(args->json_confs->rootfsmntdir)) {
         ERROR("Create and mount parent directory failed");
         ret = -1;
