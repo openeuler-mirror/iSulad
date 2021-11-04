@@ -29,9 +29,6 @@
 #include "command_parser.h"
 #include "connect.h"
 #include "protocol_type.h"
-#include "utils_array.h"
-#include "utils_file.h"
-#include "utils_verify.h"
 
 #define VOLUME_OPTIONS(cmdargs)                                                                                        \
     { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &((cmdargs).dispname), "Only display volume names", NULL },
