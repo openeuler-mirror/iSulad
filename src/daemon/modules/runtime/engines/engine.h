@@ -58,6 +58,7 @@ typedef struct _engine_start_request_t {
     uint32_t start_timeout;
     const char *container_pidfile;
     const char *exit_fifo;
+    bool image_type_oci;
 } engine_start_request_t;
 
 typedef struct _engine_exec_request_t {
