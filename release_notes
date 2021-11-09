@@ -1,3 +1,16 @@
+2021-11-09 gaohuatao release 2.0.10
+    - !1203 too many cri websocket will connect failed Merge pull request !1203 from zhangxiaoyu/stable-v2.0.x
+    - !1202 delete unused head file Merge pull request !1202 from gaohuatao/sta_ght
+    - !1201 disable lxc_keep wiht oci image Merge pull request !1201 from gaohuatao/sta_ght
+    - !1200 fix memory leak cause by same default network Merge pull request !1200 from haozi007/v2.0.x
+    - !1192 fix layer remain if pull quay.io/coreos/etcd:v3.3.17-arm64 twice Merge pull request !1192 from wangfengtu/remain_stable
+    - !1190 add error message for invalid log driver From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1188 pack daemon_constants.json From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+
+    dev stats:
+      - 14 files changed, 25 insertions(+), 12 deletions(-)
+      - contributors: gaohuatao, haozi007, WangFengTu, wujing, zhangxiaoyu
+
 2021-10-11 root release 2.0.9
     - cri: add session gc thread
     - doc: fix lxc compilation failure in docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
