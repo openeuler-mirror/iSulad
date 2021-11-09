@@ -1,5 +1,5 @@
-%global _version 2.0.9
-%global _release 20211019.121837.gitf067b3ce
+%global _version 2.0.10
+%global _release 1
 %global is_systemd 1
 
 Name:      iSulad
@@ -12,7 +12,6 @@ Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
-Patch0001: 0001-strip-sha256-prefix-when-decrease-hold-references.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -216,6 +215,12 @@ fi
 %endif
 
 %changelog
+* Tue Nov 09 2021 gaohuatao <gaohuatao@huawei.com> - 2.0.10-1
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: update from openeuler
+
 * Tue Oct 19 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.9-20211019.121837.gitf067b3ce
 - Type: bugfix
 - ID: NA
