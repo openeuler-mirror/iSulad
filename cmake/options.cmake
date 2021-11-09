@@ -33,7 +33,7 @@ endif()
 
 option(VERSION "set isulad version" ON)
 if (VERSION STREQUAL "ON")
-    set(ISULAD_VERSION "2.0.9")
+    set(ISULAD_VERSION "2.0.10")
 endif()
 
 option(DEBUG "set isulad gcc option" ON)
