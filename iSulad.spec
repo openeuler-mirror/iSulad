@@ -1,5 +1,5 @@
-%global _version 2.0.9
-%global _release 20211012.172418.git89fcdfc1
+%global _version 2.0.10
+%global _release 1
 %global is_systemd 1
 
 Name:      iSulad
@@ -215,6 +215,12 @@ fi
 %endif
 
 %changelog
+* Wed Nov 10 2021 wujing <wujing50@huawei.com> - 2.0.10-1
+- Type: sync from upstream
+- ID: NA
+- SUG: NA
+- DESC: upgrade to v2.0.10
+
 * Tue Oct 12 2021 wujing <wujing50@huawei.com> - 2.0.9-20211012.172418.git89fcdfc1
 - Type: sync from upstream
 - ID: NA
