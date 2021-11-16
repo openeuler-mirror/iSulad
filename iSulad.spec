@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 1
+%global _release 2
 %global is_systemd 1
 
 Name:      iSulad
@@ -10,8 +10,6 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
-ExclusiveArch:  x86_64 aarch64
-
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -215,6 +213,12 @@ fi
 %endif
 
 %changelog
+* Tue Nov 16 2021 wujing <wujing50@huawei.com> - 2.0.10-2
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: remove build platform restrictions
+
 * Tue Nov 09 2021 gaohuatao <gaohuatao@huawei.com> - 2.0.10-1
 - Type: bugfix
 - ID: NA
