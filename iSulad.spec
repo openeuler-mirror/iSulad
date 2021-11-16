@@ -1,7 +1,6 @@
 %global _version 2.0.10
-%global _release 1
+%global _release 2
 %global is_systemd 1
-%global enable_shimv2 0
 
 Name:      iSulad
 Version:   %{_version}
@@ -11,8 +10,6 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
-ExclusiveArch:  x86_64 aarch64
-
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -37,19 +34,14 @@ BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git chrpath
-%if 0%{?enable_shimv2}
 BuildRequires: lib-shim-v2 lib-shim-v2-devel
-%endif
 
-Requires:      lcr lxc clibcni
+Requires:      lcr lxc clibcni lib-shim-v2
 Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
 Requires:      libcap libselinux libwebsockets libarchive device-mapper
 Requires:      systemd
-%if 0%{?enable_shimv2}
-Requires: lib-shim-v2
-%endif
 
 %description
 This is a umbrella project for gRPC-services based Lightweight Container
@@ -61,12 +53,7 @@ Runtime Daemon, written by C.
 %build
 mkdir -p build
 cd build
-
-%if 0%{?enable_shimv2}
 %cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=ON ../
-%else
-%cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
-%endif
 %make_build
 
 %install
@@ -226,8 +213,26 @@ fi
 %endif
 
 %changelog
-* Thu Nov 11 2021 gaohuatao <gaohuatao@huawei.com> - 2.0.10-1
-- Type: sync from upstream
+* Tue Nov 16 2021 wujing <wujing50@huawei.com> - 2.0.10-2
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: remove build platform restrictions
+
+* Tue Nov 09 2021 gaohuatao <gaohuatao@huawei.com> - 2.0.10-1
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: update from openeuler
+
+* Tue Oct 19 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.9-20211019.121837.gitf067b3ce
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: strip sha256 prefix when decrease hold references
+
+* Fri Jun 25 2021 wujing <wujing50@huawei.com> - 2.0.9-20210625.165022.git5a088d9c
+- Type: update to v2.0.9
 - ID: NA
 - SUG: NA
 - DESC: update from master
@@ -268,7 +273,7 @@ fi
 - SUG: NA
 - DESC: update from master
 
-* Mon Dec 7 2020 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.7-20201207.152735.gitbc0b39f2
+* Mon Dec 7 2020 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.7-20201207.151847.gita1fce123
 - Type: update
 - ID: NA
 - SUG: NA
