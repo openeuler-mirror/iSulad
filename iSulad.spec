@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 1
+%global _release 2
 %global is_systemd 1
 
 Name:      iSulad
@@ -10,7 +10,6 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
-ExclusiveArch:  x86_64 aarch64
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -84,7 +83,6 @@ install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_in
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
 install -m 0640 ../src/contrib/config/daemon.json           %{buildroot}/%{_sysconfdir}/isulad/daemon.json
-install -m 0640 ../src/contrib/config/daemon_constants.json %{buildroot}/%{_sysconfdir}/isulad/daemon_constants.json
 install -m 0640 ../src/contrib/config/seccomp_default.json  %{buildroot}/%{_sysconfdir}/isulad/seccomp_default.json
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/default/isulad
@@ -215,23 +213,23 @@ fi
 %endif
 
 %changelog
-* Wed Nov 10 2021 wujing <wujing50@huawei.com> - 2.0.10-1
-- Type: sync from upstream
+* Tue Nov 16 2021 wujing <wujing50@huawei.com> - 2.0.10-2
+- Type: bugfix
 - ID: NA
 - SUG: NA
-- DESC: upgrade to v2.0.10
+- DESC: remove build platform restrictions
 
-* Tue Oct 12 2021 wujing <wujing50@huawei.com> - 2.0.9-20211012.172418.git89fcdfc1
-- Type: sync from upstream
+* Tue Nov 09 2021 gaohuatao <gaohuatao@huawei.com> - 2.0.10-1
+- Type: bugfix
 - ID: NA
 - SUG: NA
-- DESC: pack daemon_constants.json
+- DESC: update from openeuler
 
-* Tue Oct 12 2021 wujing <wujing50@huawei.com> - 2.0.9-20211012.154723.git8fbdf1be
-- Type: sync
+* Tue Oct 19 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.9-20211019.121837.gitf067b3ce
+- Type: bugfix
 - ID: NA
 - SUG: NA
-- DESC: sync from openeuler
+- DESC: strip sha256 prefix when decrease hold references
 
 * Fri Jun 25 2021 wujing <wujing50@huawei.com> - 2.0.9-20210625.165022.git5a088d9c
 - Type: update to v2.0.9
