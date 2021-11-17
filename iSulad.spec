@@ -1,6 +1,7 @@
 %global _version 2.0.10
-%global _release 2
+%global _release 3
 %global is_systemd 1
+%global enable_shimv2 0
 
 Name:      iSulad
 Version:   %{_version}
@@ -34,14 +35,19 @@ BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git chrpath
+%if 0%{?enable_shimv2}
 BuildRequires: lib-shim-v2 lib-shim-v2-devel
+%endif
 
-Requires:      lcr lxc clibcni lib-shim-v2
+Requires:      lcr lxc clibcni
 Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
 Requires:      libcap libselinux libwebsockets libarchive device-mapper
 Requires:      systemd
+%if 0%{?enable_shimv2}
+Requires:      lib-shim-v2
+%endif
 
 %description
 This is a umbrella project for gRPC-services based Lightweight Container
@@ -53,7 +59,11 @@ Runtime Daemon, written by C.
 %build
 mkdir -p build
 cd build
+%if 0%{?enable_shimv2}
 %cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=ON ../
+%else
+%cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
+%endif
 %make_build
 
 %install
@@ -83,6 +93,7 @@ install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_in
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
 install -m 0640 ../src/contrib/config/daemon.json           %{buildroot}/%{_sysconfdir}/isulad/daemon.json
+install -m 0440 ../src/contrib/config/daemon_constants.json %{buildroot}/%{_sysconfdir}/isulad/daemon_constants.json
 install -m 0640 ../src/contrib/config/seccomp_default.json  %{buildroot}/%{_sysconfdir}/isulad/seccomp_default.json
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/default/isulad
@@ -213,6 +224,12 @@ fi
 %endif
 
 %changelog
+* Tue Nov 16 2021 wujing <wujing50@huawei.com> - 2.0.10-3
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: add shimv2 build switch
+
 * Tue Nov 16 2021 wujing <wujing50@huawei.com> - 2.0.10-2
 - Type: bugfix
 - ID: NA
