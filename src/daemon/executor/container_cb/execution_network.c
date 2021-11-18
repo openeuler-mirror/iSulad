@@ -707,7 +707,7 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
     int ret = 0;
     int nret = 0;
     char root_path[PATH_MAX] = { 0x00 };
-    const char *userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = conf_get_isulad_userns_remap();
 
     if (runtime_root == NULL || id == NULL) {
         ERROR("empty runtime root or id");
@@ -740,6 +740,7 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
         return -1;
     }
 
+    free(userns_remap);
     return 0;
 }
 

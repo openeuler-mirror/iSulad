@@ -1157,7 +1157,7 @@ out:
     return plugins;
 }
 
-const char *conf_get_isulad_userns_remap()
+char *conf_get_isulad_userns_remap()
 {
     struct service_arguments *conf = NULL;
     char *userns_remap = NULL;
@@ -1172,7 +1172,7 @@ const char *conf_get_isulad_userns_remap()
         goto out;
     }
 
-    userns_remap = conf->json_confs->userns_remap;
+    userns_remap = util_strdup_s(conf->json_confs->userns_remap);
 
 out:
     (void)isulad_server_conf_unlock();

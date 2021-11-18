@@ -2590,7 +2590,7 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
     char *spath = NULL;
     char *tmp_path = NULL;
     char *p = NULL;
-    const char *userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = conf_get_isulad_userns_remap();
     // has mount for /dev/shm
     if (has_mount_shm(host_spec, v2_spec)) {
         return 0;
@@ -2662,6 +2662,7 @@ out:
     }
     free(spath);
     free(tmp_path);
+    free(userns_remap);
     return ret;
 }
 

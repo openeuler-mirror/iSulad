@@ -117,6 +117,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
     char *rootfsdir = NULL;
     mountinfo_t **minfos = NULL;
     mountinfo_t *info = NULL;
+    char *userns_remap = conf_get_isulad_userns_remap();
 
     if (mountdir == NULL) {
         ERROR("parent mount path is NULL");
@@ -131,7 +132,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
         goto out;
     }
 
-    if (conf_get_isulad_userns_remap() != NULL) {
+    if (userns_remap != NULL) {
         ret = chmod(rootfsdir, USER_REMAP_DIRECTORY_MODE);
         if (ret != 0) {
             ERROR("Failed to chmod mount dir '%s' for user remap", rootfsdir);
@@ -147,7 +148,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
     }
     *p = '\0';
 
-    if (conf_get_isulad_userns_remap() != NULL) {
+    if (userns_remap != NULL) {
         ret = chmod(rootfsdir, USER_REMAP_DIRECTORY_MODE);
         if (ret != 0) {
             ERROR("Failed to chmod mount dir '%s' for user remap", rootfsdir);
@@ -173,6 +174,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
 
 out:
     free(rootfsdir);
+    free(userns_remap);
     free_mounts_info(minfos);
     return ret;
 }
@@ -1158,7 +1160,7 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
                                   const char *fifo_full_path)
 {
     int ret = 0;
-    const char* userns_remap = conf_get_isulad_userns_remap();
+    char* userns_remap = conf_get_isulad_userns_remap();
 
     if (check_and_save_pid(args->json_confs->pidfile) != 0) {
         ERROR("Failed to save pid");
@@ -1210,6 +1212,7 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
     }
 
 out:
+    free(userns_remap);
     return ret;
 }
 

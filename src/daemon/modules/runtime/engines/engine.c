@@ -123,7 +123,7 @@ static int create_engine_root_path(const char *path)
     int ret = -1;
     char *tmp_path = NULL;
     char *p = NULL;
-    const char *userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = conf_get_isulad_userns_remap();
 
     if (path == NULL) {
         return ret;
@@ -163,6 +163,7 @@ static int create_engine_root_path(const char *path)
 
 out:
     free(tmp_path);
+    free(userns_remap);
     return ret;
 }
 
