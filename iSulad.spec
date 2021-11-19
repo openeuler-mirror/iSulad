@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 3
+%global _release 4
 %global is_systemd 1
 %global enable_shimv2 1
 
@@ -11,6 +11,8 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
+
+Patch0001: 0001-fix-memleak-when-use-multiple-volumes-from.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -224,6 +226,12 @@ fi
 %endif
 
 %changelog
+* Fri Nov 19 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-4
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: fix memleak when use multiple --volumes-from
+
 * Tue Nov 16 2021 wujing <wujing50@huawei.com> - 2.0.10-3
 - Type: enhancement
 - ID: NA
