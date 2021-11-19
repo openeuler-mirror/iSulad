@@ -2773,6 +2773,11 @@ static int calc_volumes_from_len(host_config *host_spec, size_t *len)
         if (cont->common_config != NULL && cont->common_config->mount_points != NULL) {
             *len += cont->common_config->mount_points->len;
         }
+
+        free(id);
+        id = NULL;
+        container_unref(cont);
+        cont = NULL;
     }
 
 out:
