@@ -83,7 +83,7 @@ install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_in
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
 install -m 0640 ../src/contrib/config/daemon.json           %{buildroot}/%{_sysconfdir}/isulad/daemon.json
-install -m 0640 ../src/contrib/config/daemon_constants.json %{buildroot}/%{_sysconfdir}/isulad/daemon_constants.json
+install -m 0440 ../src/contrib/config/daemon_constants.json %{buildroot}/%{_sysconfdir}/isulad/daemon_constants.json
 install -m 0640 ../src/contrib/config/seccomp_default.json  %{buildroot}/%{_sysconfdir}/isulad/seccomp_default.json
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/default/isulad

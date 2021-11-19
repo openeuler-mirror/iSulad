@@ -296,8 +296,8 @@ auto ContainerManagerServiceImpl::GenerateCreateContainerCustomConfig(
 
     if (containerConfig.has_metadata()) {
         if (append_json_map_string_string(custom_config->annotations,
-                                      CRIHelpers::Constants::CONTAINER_NAME_ANNOTATION_KEY.c_str(),
-                                      containerConfig.metadata().name().c_str()) != 0) {
+                                          CRIHelpers::Constants::CONTAINER_NAME_ANNOTATION_KEY.c_str(),
+                                          containerConfig.metadata().name().c_str()) != 0) {
             error.SetError("Append container name into annotation failed");
             goto cleanup;
         }
@@ -355,7 +355,10 @@ ContainerManagerServiceImpl::GenerateCreateContainerRequest(const std::string &r
     request->id = util_strdup_s(cname.c_str());
 
     if (!podSandboxRuntime.empty()) {
-        request->runtime = util_strdup_s(podSandboxRuntime.c_str());
+        request->runtime = CRIHelpers::cri_runtime_convert(podSandboxRuntime.c_str());
+        if (request->runtime == nullptr) {
+            request->runtime = util_strdup_s(podSandboxRuntime.c_str());
+        }
     }
 
     if (!containerConfig.image().image().empty()) {

@@ -32,6 +32,7 @@
 #include "path.h"
 #include "utils.h"
 #include "service_container_api.h"
+#include "isulad_config.h"
 
 namespace CRIHelpers {
 const std::string Constants::POD_NETWORK_ANNOTATION_KEY { "network.alpha.kubernetes.io/network" };
@@ -990,6 +991,44 @@ char *GenerateExecSuffix()
     }
 
     return exec_suffix;
+}
+
+char *cri_runtime_convert(const char *runtime)
+{
+    char *runtime_val = nullptr;
+    json_map_string_string *cri_shimv2_runtimes = nullptr;
+
+    if (runtime == nullptr) {
+        return nullptr;
+    }
+
+    if (isulad_server_conf_rdlock()) {
+        ERROR("Lock isulad server conf failed");
+        return nullptr;
+    }
+
+    struct service_arguments *args = conf_get_server_conf();
+    if (args == nullptr || args->json_confs == nullptr || args->json_confs->cri_runtimes == nullptr) {
+        ERROR("Cannot get cri runtime list");
+        goto out;
+    }
+
+    cri_shimv2_runtimes = args->json_confs->cri_runtimes;
+    for (size_t i = 0; i < cri_shimv2_runtimes->len; i++) {
+        if (cri_shimv2_runtimes->keys[i] == nullptr || cri_shimv2_runtimes->values[i] == nullptr) {
+            WARN("CRI runtimes key or value is null");
+            continue;
+        }
+
+        if (strcmp(runtime, cri_shimv2_runtimes->keys[i]) == 0) {
+            runtime_val = util_strdup_s(cri_shimv2_runtimes->values[i]);
+            break;
+        }
+    }
+
+out:
+    (void)isulad_server_conf_unlock();
+    return runtime_val;
 }
 
 } // namespace CRIHelpers
