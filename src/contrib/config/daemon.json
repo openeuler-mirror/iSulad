@@ -33,5 +33,8 @@
     "cni-conf-dir": "",
     "image-layer-check": false,
     "use-decrypted-key": true,
-    "insecure-skip-verify-enforce": false
+    "insecure-skip-verify-enforce": false,
+    "cri-runtimes": {
+        "kata": "io.containerd.kata.v2"
+    }
 }

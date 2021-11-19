@@ -104,7 +104,7 @@ endif()
 install(FILES src/contrib/config/daemon.json
     DESTINATION ${conf_prefix}/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
 install(FILES src/contrib/config/daemon_constants.json
-    DESTINATION ${conf_prefix}/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
+    DESTINATION ${conf_prefix}/isulad PERMISSIONS OWNER_READ GROUP_READ)
 install(FILES src/contrib/config/config.json src/contrib/config/systemcontainer_config.json
     DESTINATION ${conf_prefix}/default/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
 install(FILES src/contrib/config/seccomp_default.json
