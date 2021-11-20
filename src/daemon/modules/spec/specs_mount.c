@@ -2590,7 +2590,7 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
     char *spath = NULL;
     char *tmp_path = NULL;
     char *p = NULL;
-    char *userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = NULL;
     // has mount for /dev/shm
     if (has_mount_shm(host_spec, v2_spec)) {
         return 0;
@@ -2625,6 +2625,7 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
     }
 
     v2_spec->shm_path = spath;
+    userns_remap = conf_get_isulad_userns_remap();
 
     if (host_spec->user_remap == NULL && userns_remap != NULL) {
         // find parent directory

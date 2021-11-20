@@ -711,37 +711,44 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
 
     if (runtime_root == NULL || id == NULL) {
         ERROR("empty runtime root or id");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     nret = snprintf(root_path, PATH_MAX, "%s/%s", runtime_root, id);
     if (nret < 0 || nret >= PATH_MAX) {
         ERROR("Failed to print string");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     ret = chown_network(userns_remap, root_path, "/hostname");
     if (ret) {
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     ret = chown_network(userns_remap, root_path, "/hosts");
     if (ret) {
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     ret = merge_resolv(host_spec, root_path, "/resolv.conf");
     if (ret) {
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     ret = chown_network(userns_remap, root_path, "/resolv.conf");
     if (ret) {
-        return -1;
+        ret = -1;
+        goto out;
     }
 
+out:
     free(userns_remap);
-    return 0;
+    return ret;
 }
 
 static int merge_network_for_syscontainer(const host_config *host_spec, const char *rootfs, const char *hostname)
