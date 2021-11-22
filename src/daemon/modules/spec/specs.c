@@ -22,14 +22,14 @@
 #include <isula_libutils/defs.h>
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/oci_runtime_config_linux.h>
+#include <isula_libutils/oci_runtime_spec.h>
+#include <isula_libutils/oci_runtime_hooks.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/log.h>
 #include <limits.h>
 #include <stdint.h>
 
-#include "isula_libutils/log.h"
 #include "specs_api.h"
-#include "isula_libutils/oci_runtime_spec.h"
-#include "isula_libutils/oci_runtime_hooks.h"
-#include "isula_libutils/host_config.h"
 #include "utils.h"
 #include "isulad_config.h"
 #include "namespace.h"
@@ -1377,10 +1377,9 @@ out:
     return ret;
 }
 
-static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const char *path, const char *type)
+static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const char *ns_path, const char *type)
 {
     int ret = -1;
-    char *ns_path = NULL;
     size_t len = 0;
     size_t org_len = 0;
     size_t i = 0;
@@ -1390,11 +1389,6 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const 
     len = oci_spec->linux->namespaces_len;
     work_ns = oci_spec->linux->namespaces;
 
-    ret = get_share_namespace_path(type, path, &ns_path);
-    if (ret != 0) {
-        ERROR("Failed to get share ns type:%s path:%s", type, path);
-        goto out;
-    }
     for (i = 0; i < org_len; i++) {
         if (strcmp(type, work_ns[i]->type) == 0) {
             free(work_ns[i]->path);
@@ -1433,7 +1427,6 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const 
     }
     ret = 0;
 out:
-    free(ns_path);
     if (work_ns != NULL) {
         oci_spec->linux->namespaces = work_ns;
         oci_spec->linux->namespaces_len = len;
@@ -1443,14 +1436,55 @@ out:
 
 static int merge_share_single_namespace(const oci_runtime_spec *oci_spec, const char *path, const char *type)
 {
+    int ret = 0;
+    char *ns_path = NULL;
+
     if (path == NULL) {
         return 0;
     }
 
-    return merge_share_namespace_helper(oci_spec, path, type);
+    ret = get_share_namespace_path(type, path, &ns_path);
+    if (ret != 0) {
+        ERROR("Failed to get share ns type:%s path:%s", type, path);
+        return -1;
+    }
+
+    ret = merge_share_namespace_helper(oci_spec, ns_path, type);
+    if (ret != 0) {
+        ERROR("Failed to merge share namespace namespace helper");
+    }
+
+    free(ns_path);
+    return ret;
 }
 
-int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec)
+static int merge_share_network_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
+                                         const container_config_v2_common_config_network_settings *network_settings, const char *type)
+{
+    int ret = 0;
+    char *ns_path = NULL;
+
+    if (host_spec->network_mode == NULL) {
+        return 0;
+    }
+
+    ret = get_network_namespace_path(host_spec, network_settings, type, &ns_path);
+    if (ret != 0) {
+        ERROR("Failed to get network namespace path");
+        return -1;
+    }
+
+    ret = merge_share_namespace_helper(oci_spec, ns_path, type);
+    if (ret != 0) {
+        ERROR("Failed to merge share namespace namespace helper");
+    }
+
+    free(ns_path);
+    return ret;
+}
+
+int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
+                          const container_config_v2_common_config_network_settings *network_settings)
 {
     int ret = -1;
 
@@ -1475,7 +1509,7 @@ int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_sp
     }
 
     // network
-    if (merge_share_single_namespace(oci_spec, host_spec->network_mode, TYPE_NAMESPACE_NETWORK) != 0) {
+    if (merge_share_network_namespace(oci_spec, host_spec, network_settings, TYPE_NAMESPACE_NETWORK) != 0) {
         ret = -1;
         goto out;
     }

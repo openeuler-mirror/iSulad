@@ -42,6 +42,7 @@ const std::string Constants::CONTAINER_TYPE_LABEL_CONTAINER { "container" };
 const std::string Constants::CONTAINER_LOGPATH_LABEL_KEY { "cri.container.logpath" };
 const std::string Constants::CONTAINER_HUGETLB_ANNOTATION_KEY { "cri.container.hugetlblimit" };
 const std::string Constants::SANDBOX_ID_LABEL_KEY { "cri.sandbox.id" };
+const std::string Constants::POD_SANDBOX_KEY { "sandboxkey" };
 const std::string Constants::KUBERNETES_CONTAINER_NAME_LABEL { "io.kubernetes.container.name" };
 const std::string Constants::POD_INFRA_CONTAINER_NAME { "POD" };
 const std::string Constants::DOCKER_IMAGEID_PREFIX { "docker://" };
