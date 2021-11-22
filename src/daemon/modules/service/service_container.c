@@ -59,6 +59,8 @@
 #include "utils_string.h"
 #include "utils_verify.h"
 #include "volume_api.h"
+#include "utils_network.h"
+#include "network_namespace_api.h"
 
 #define KATA_RUNTIME "kata-runtime"
 
@@ -227,7 +229,7 @@ static int renew_oci_config(const container_t *cont, oci_runtime_spec *oci_spec)
         goto out;
     }
 
-    ret = merge_share_namespace(oci_spec, cont->hostconfig);
+    ret = merge_share_namespace(oci_spec, cont->hostconfig, cont->common_config->network_settings);
     if (ret != 0) {
         ERROR("Failed to merge share ns");
         goto out;
@@ -895,6 +897,10 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
     }
 
 set_stopped:
+    if (namespace_is_file(cont->hostconfig->network_mode) &&
+        util_umount_namespace(cont->common_config->network_settings->sandbox_key) != 0) {
+        ERROR("Failed to clean up network namespace");
+    }
     container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
     util_contain_errmsg(g_isulad_errmsg, &exit_code);
     container_state_set_stopped(cont->state, exit_code);
@@ -1083,6 +1089,13 @@ static int do_delete_container(container_t *cont)
         ERROR("You cannot remove container %s in garbage collector progress.", id);
         ret = -1;
         goto out;
+    }
+
+    // clean up mounted network namespace
+    if (cont->common_config->network_settings != NULL &&
+        util_file_exists(cont->common_config->network_settings->sandbox_key)
+        && remove_network_namespace(cont->common_config->network_settings->sandbox_key) != 0) {
+        ERROR("Failed to remove network when deleting container %s", cont->common_config->id);
     }
 
     ret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);

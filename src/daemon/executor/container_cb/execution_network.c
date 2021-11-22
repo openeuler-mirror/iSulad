@@ -34,6 +34,7 @@
 #include "err_msg.h"
 #include "utils_file.h"
 #include "utils_string.h"
+#include "network_namespace_api.h"
 
 static int write_hostname_to_file(const char *rootfs, const char *hostname)
 {

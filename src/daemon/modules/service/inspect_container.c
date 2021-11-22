@@ -31,6 +31,7 @@
 #include "container_api.h"
 #include "isulad_config.h"
 #include "err_msg.h"
+#include "namespace.h"
 
 static int dup_path_and_args(const container_t *cont, char **path, char ***args, size_t *args_len)
 {
@@ -458,6 +459,36 @@ out:
     return ret;
 }
 
+static int pack_inspect_network_settings(const container_t *cont, container_inspect *inspect)
+{
+    if (cont == NULL || cont->common_config == NULL) {
+        ERROR("Failed to get v2 common config from container");
+        return -1;
+    }
+
+    if (!namespace_is_file(cont->hostconfig->network_mode)) {
+        return 0;
+    }
+
+    if (cont->common_config->network_settings == NULL) {
+        ERROR("Failed to get network settings from container");
+        return -1;
+    }
+
+    if (inspect->network_settings == NULL) {
+        inspect->network_settings =
+            (container_inspect_network_settings *)util_common_calloc_s(sizeof(container_inspect_network_settings));
+        if (inspect->network_settings == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+
+    inspect->network_settings->sandbox_key = util_strdup_s(cont->common_config->network_settings->sandbox_key);
+
+    return 0;
+}
+
 static int merge_default_ulimit_with_ulimit(container_inspect *out_inspect)
 {
     int ret = 0;
@@ -507,6 +538,10 @@ static container_inspect *pack_inspect_data(const container_t *cont, bool with_h
 
     if (pack_inspect_general_data(cont, inspect) != 0) {
         ERROR("Failed to pack inspect general data, continue to pack other information");
+    }
+
+    if (pack_inspect_network_settings(cont, inspect) != 0) {
+        ERROR("Failed to pack inspect network settings, continue to pack other information");
     }
 
     if (pack_inspect_container_state(cont, inspect) != 0) {
