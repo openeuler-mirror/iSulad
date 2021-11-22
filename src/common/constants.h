@@ -129,6 +129,8 @@ extern "C" {
 #define EVENT_ARGS_MAX 255
 #define EVENT_EXTRA_ANNOTATION_MAX 255
 
+#define NETNS_LEN 16
+
 /* container id max length */
 #define CONTAINER_ID_MAX_LEN 64
 

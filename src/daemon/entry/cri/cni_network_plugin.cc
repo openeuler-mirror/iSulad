@@ -28,6 +28,7 @@
 #include "utils.h"
 #include "errors.h"
 #include "service_container_api.h"
+#include "network_namespace_api.h"
 
 namespace Network {
 static auto GetLoNetwork(std::vector<std::string> binDirs) -> std::unique_ptr<CNINetwork>
@@ -486,9 +487,15 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
     if (err.NotEmpty()) {
         return;
     }
-    std::string netnsPath = GetNetNS(id, err);
-    if (err.NotEmpty()) {
-        ERROR("CNI failed to retrieve network namespace path: %s", err.GetCMessage());
+
+    auto iter = annotations.find(CRIHelpers::Constants::POD_SANDBOX_KEY);
+    if (iter == annotations.end()) {
+        ERROR("Failed to find sandbox key from annotations");
+        return;
+    }
+    const std::string netnsPath = iter->second;
+    if (netnsPath.length() == 0) {
+        ERROR("Failed to get network namespace path");
         return;
     }
 
@@ -517,7 +524,6 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
             err.AppendError(tmpErr.GetMessage());
         }
     }
-
     UnlockNetworkMap(err);
 }
 
@@ -593,10 +599,21 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
     }
     Errors tmpErr;
 
-    std::string netnsPath = GetNetNS(id, err);
-    if (err.NotEmpty()) {
-        WARN("CNI failed to retrieve network namespace path: %s", err.GetCMessage());
-        err.Clear();
+    auto iter = annotations.find(CRIHelpers::Constants::POD_SANDBOX_KEY);
+    if (iter == annotations.end()) {
+        ERROR("Failed to find sandbox key from annotations");
+        return;
+    }
+    std::string netnsPath = iter->second;
+    if (netnsPath.length() == 0) {
+        ERROR("Failed to get network namespace path");
+        return;
+    }
+
+    // When netns file does not exist, netnsPath is assigned to an
+    // empty string so that lxc can handle the path properly
+    if (!util_file_exists(netnsPath.c_str())) {
+        netnsPath = "";
     }
 
     RLockNetworkMap(err);

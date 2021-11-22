@@ -39,6 +39,7 @@ public:
     static const std::string CONTAINER_LOGPATH_LABEL_KEY;
     static const std::string CONTAINER_HUGETLB_ANNOTATION_KEY;
     static const std::string SANDBOX_ID_LABEL_KEY;
+    static const std::string POD_SANDBOX_KEY;
     static const std::string KUBERNETES_CONTAINER_NAME_LABEL;
     static const std::string POD_INFRA_CONTAINER_NAME;
     // DOCKER_IMAGEID_PREFIX is the prefix of image id in container status.
