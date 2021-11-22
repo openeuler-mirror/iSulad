@@ -46,6 +46,7 @@
 #include "utils.h"
 #include "error.h"
 #include "constants.h"
+#include "namespace.h"
 #include "events_sender_api.h"
 #include "sysinfo.h"
 #include "service_container_api.h"
@@ -58,6 +59,7 @@
 #include "utils_verify.h"
 #include "selinux_label.h"
 #include "opt_log.h"
+#include "network_namespace_api.h"
 
 static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
                                       int64_t cpu_rt_period, int64_t cpu_rt_runtime);
@@ -1395,6 +1397,63 @@ out:
     return res;
 }
 
+static char *new_pod_sandbox_key(void)
+{
+    int nret = 0;
+    char random[NETNS_LEN + 1] = { 0x00 };
+    char netns[PATH_MAX] = { 0x00 };
+    const char *netns_fmt = "/var/run/netns/isulacni-%s";
+
+    nret = util_generate_random_str(random, NETNS_LEN);
+    if (nret != 0) {
+        ERROR("Failed to generate random netns");
+        return NULL;
+    }
+
+    nret = snprintf(netns, sizeof(netns), netns_fmt, random);
+    if (nret < 0 || (size_t)nret >= sizeof(netns)) {
+        ERROR("snprintf netns failed");
+        return NULL;
+    }
+
+    return util_strdup_s(netns);
+}
+
+static int generate_network_settings(const host_config *host_config, container_config_v2_common_config *v2_spec)
+{
+    container_config_v2_common_config_network_settings *settings = NULL;
+
+    if (!namespace_is_file(host_config->network_mode)) {
+        return 0;
+    }
+
+    settings = (container_config_v2_common_config_network_settings *)util_common_calloc_s(sizeof(
+                                                                                              container_config_v2_common_config_network_settings));
+    if (settings == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    settings->sandbox_key = new_pod_sandbox_key();
+    if (settings->sandbox_key == NULL) {
+        ERROR("Failed to generate sandbox key");
+        goto err_out;
+    }
+
+    if (prepare_network_namespace(settings->sandbox_key) != 0) {
+        ERROR("Failed to create network namespace");
+        goto err_out;
+    }
+
+    v2_spec->network_settings = settings;
+
+    return 0;
+
+err_out:
+    free_container_config_v2_common_config_network_settings(settings);
+    return -1;
+}
+
 static int cpurt_controller_init(const char *cgroups_path)
 {
     int ret = 0;
@@ -1564,6 +1623,12 @@ int container_create_cb(const container_create_request *request, container_creat
 
     oci_spec = generate_oci_config(host_spec, real_rootfs, v2_spec);
     if (oci_spec == NULL) {
+        cc = ISULAD_ERR_EXEC;
+        goto umount_shm;
+    }
+
+    if (generate_network_settings(host_spec, v2_spec) != 0) {
+        ERROR("Failed to generate network settings");
         cc = ISULAD_ERR_EXEC;
         goto umount_shm;
     }
