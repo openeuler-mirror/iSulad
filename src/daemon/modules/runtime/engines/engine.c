@@ -123,7 +123,7 @@ static int create_engine_root_path(const char *path)
     int ret = -1;
     char *tmp_path = NULL;
     char *p = NULL;
-    char *userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = NULL;
 
     if (path == NULL) {
         return ret;
@@ -139,6 +139,7 @@ static int create_engine_root_path(const char *path)
         goto out;
     }
 
+    userns_remap = conf_get_isulad_userns_remap();
     if (userns_remap != NULL) {
         if (set_file_owner_for_userns_remap(path, userns_remap) != 0) {
             ERROR("Unable to change directory %s owner for user remap.", path);

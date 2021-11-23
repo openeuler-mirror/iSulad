@@ -274,7 +274,7 @@ int overlay2_init(struct graphdriver *driver, const char *driver_home, const cha
     int ret = 0;
     char *link_dir = NULL;
     char *root_dir = NULL;
-    char *userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = NULL;
 
     if (driver == NULL || driver_home == NULL) {
         ERROR("Invalid input arguments");
@@ -308,6 +308,7 @@ int overlay2_init(struct graphdriver *driver, const char *driver_home, const cha
 
     rm_invalid_symlink(link_dir);
 
+    userns_remap = conf_get_isulad_userns_remap();
     if (userns_remap != NULL) {
         if (set_file_owner_for_userns_remap(link_dir, userns_remap) != 0) {
             ERROR("Unable to change directory %s owner for user remap.", link_dir);
