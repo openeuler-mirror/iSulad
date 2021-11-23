@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 4
+%global _release 5
 %global is_systemd 1
 %global enable_shimv2 0
 
@@ -12,7 +12,8 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 
-Patch0001: 0001-fix-memleak-when-use-multiple-volumes-from.patch
+Patch0001: 0001-add-self-def-runtime-for-shimv2.patch
+Patch0002: 0002-fix-memleak-when-use-multiple-volumes-from.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -226,6 +227,12 @@ fi
 %endif
 
 %changelog
+* Fri Nov 19 2021 gaohuatao <gaohuatao@huawei.com> - 2.0.10-5
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sync from upstream
+
 * Fri Nov 19 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-4
 - Type: bugfix
 - ID: NA
