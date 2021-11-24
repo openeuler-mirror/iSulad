@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 5
+%global _release 6
 %global is_systemd 1
 %global enable_shimv2 0
 
@@ -14,6 +14,7 @@ BuildRoot: {_tmppath}/iSulad-%{version}
 
 Patch0001: 0001-add-self-def-runtime-for-shimv2.patch
 Patch0002: 0002-fix-memleak-when-use-multiple-volumes-from.patch
+Patch0003: 0003-modified-the-procedure-of-running-a-pod-to-adapt-to.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -227,6 +228,12 @@ fi
 %endif
 
 %changelog
+* Tue Nov 23 2021 chengzeruizhi <chengzeruizhi@huawei.com> - 2.0.10-6
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: modify the procedure of running a pod
+
 * Fri Nov 19 2021 gaohuatao <gaohuatao@huawei.com> - 2.0.10-5
 - Type: enhancement
 - ID: NA
