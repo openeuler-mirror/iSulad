@@ -719,8 +719,12 @@ static ssize_t extract_stream_to_io_read(void *content, void *buf, size_t buf_le
     struct isulad_copy_to_container_data copy = { 0 };
 
     if (!stream->read_func(stream->reader, &copy)) {
-        ERROR("Failed to read data from stream, grpc Client may exited");
-        return -1;
+        // Call gRPC ServerReaderWriter in grpc_copy_to_container_read_function,
+        // if stream->Read returns false, it means that the transmission has ended
+        // or the gRPC connection has been disconnected. If the gRPC connection exits
+        // due to an exception, gRPC will have an internal mechanism to ensure positioning
+        INFO("Streaming completed");
+        return 0;
     }
     if (copy.data_len > buf_len) {
         free(copy.data);

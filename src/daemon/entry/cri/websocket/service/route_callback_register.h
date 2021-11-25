@@ -24,10 +24,7 @@
 #include <semaphore.h>
 #include "isula_libutils/log.h"
 
-struct lwsContext {
-    int fd;
-    sem_t *sync_close_sem;
-};
+struct session_data;
 
 class StreamingServeInterface {
 public:
@@ -35,7 +32,7 @@ public:
     StreamingServeInterface(const StreamingServeInterface &) = delete;
     StreamingServeInterface &operator=(const StreamingServeInterface &) = delete;
     virtual ~StreamingServeInterface() = default;
-    virtual int Execute(lwsContext lws_ctx, const std::string &token, const std::string &suffix, int read_pipe_fd) = 0;
+    virtual int Execute(session_data *lws_ctx, const std::string &token) = 0;
 };
 
 class RouteCallbackRegister {
@@ -49,14 +46,14 @@ public:
         return static_cast<bool>(m_registeredcallbacks.count(method));
     }
 
-    int HandleCallback(lwsContext lws_ctx, const std::string &method,
-                       const std::string &token, const std::string &suffix, int read_pipe_fd)
+    int HandleCallback(session_data *lws_ctx, const std::string &method,
+                       const std::string &token)
     {
         auto it = m_registeredcallbacks.find(method);
         if (it != m_registeredcallbacks.end()) {
             std::shared_ptr<StreamingServeInterface> callback = it->second;
             if (callback) {
-                return callback->Execute(lws_ctx, token, suffix, read_pipe_fd);
+                return callback->Execute(lws_ctx, token);
             }
         }
         ERROR("invalid method!");
@@ -75,27 +72,22 @@ private:
 
 class StreamTask {
 public:
-    StreamTask(RouteCallbackRegister *invoker, lwsContext lws_ctx,
+    StreamTask(RouteCallbackRegister *invoker, session_data *lws_ctx,
                const std::string &method,
-               const std::string &token,
-               const std::string &suffix,
-               int read_pipe_fd)
-        : m_invoker(invoker), m_lws_ctx(lws_ctx), m_method(method), m_token(token),
-          m_suffix(suffix), m_read_pipe_fd(read_pipe_fd) {}
+               const std::string &token)
+        : m_invoker(invoker), m_lws_ctx(lws_ctx), m_method(method), m_token(token) {}
     StreamTask(const StreamTask &) = delete;
     StreamTask &operator=(const StreamTask &) = delete;
     virtual ~StreamTask() = default;
     int Run()
     {
-        return m_invoker->HandleCallback(m_lws_ctx, m_method, m_token, m_suffix, m_read_pipe_fd);
+        return m_invoker->HandleCallback(m_lws_ctx, m_method, m_token);
     }
 private:
     RouteCallbackRegister *m_invoker{ nullptr };
-    lwsContext m_lws_ctx;
+    session_data *m_lws_ctx;
     std::string m_method;
     std::string m_token;
-    std::string m_suffix;
-    int m_read_pipe_fd;
 };
 
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ROUTE_CALLBACK_REGISTER_H

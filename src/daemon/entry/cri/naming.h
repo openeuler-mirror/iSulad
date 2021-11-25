@@ -26,9 +26,11 @@ std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadat
 std::string MakeContainerName(const runtime::v1alpha2::PodSandboxConfig &s,
                               const runtime::v1alpha2::ContainerConfig &c);
 
-void ParseSandboxName(const std::string &name, runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &err);
+void ParseSandboxName(const google::protobuf::Map<std::string, std::string> &annotations,
+                      runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &err);
 
-void ParseContainerName(const std::string &name, runtime::v1alpha2::ContainerMetadata *metadata, Errors &err);
+void ParseContainerName(const google::protobuf::Map<std::string, std::string> &annotations,
+                        runtime::v1alpha2::ContainerMetadata *metadata, Errors &err);
 } // namespace CRINaming
 
 #endif // DAEMON_ENTRY_CRI_NAMING_H

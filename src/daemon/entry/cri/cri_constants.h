@@ -20,6 +20,7 @@ namespace CRI {
 class Constants {
 public:
     const static std::string namespaceModeHost;
+    const static std::string namespaceModeFile;
     // sandboxname default values
     const static std::string nameDelimiter;
     constexpr static char nameDelimiterChar { '_' };

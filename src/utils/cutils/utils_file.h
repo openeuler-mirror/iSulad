@@ -36,6 +36,8 @@ bool util_file_exists(const char *f);
 
 int util_path_remove(const char *path);
 
+bool util_force_remove_file(const char *fname, int *saved_errno);
+
 ssize_t util_write_nointr(int fd, const void *buf, size_t count);
 
 ssize_t util_write_nointr_in_total(int fd, const char *buf, size_t count);

@@ -275,6 +275,29 @@ out:
     return ret;
 }
 
+bool util_force_remove_file(const char *fname, int *saved_errno)
+{
+    if (unlink(fname) == 0) {
+        return true;
+    }
+
+    WARN("Failed to delete %s: %s", fname, strerror(errno));
+    if (*saved_errno == 0) {
+        *saved_errno = errno;
+    }
+
+    if (mark_file_mutable(fname) != 0) {
+        WARN("Failed to mark file mutable");
+    }
+
+    if (unlink(fname) != 0) {
+        ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
 static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int recursive_depth, int *saved_errno,
                                       int failure)
 {

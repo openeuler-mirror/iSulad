@@ -42,6 +42,8 @@
 #define LWS_TIMEOUT 50
 // io copy maximum single transfer 4K, let max total buffer size: 1GB
 #define FIFO_LIST_BUFFER_MAX_LEN 262144
+#define SESSION_CAPABILITY 300
+#define MAX_SESSION_NUM 128
 
 enum WebsocketChannel {
     STDINCHANNEL = 0,
@@ -158,7 +160,6 @@ public:
     void Shutdown();
     void RegisterCallback(const std::string &path, std::shared_ptr<StreamingServeInterface> callback);
     url::URLDatum GetWebsocketUrl();
-    std::unordered_map<int, session_data> &GetWsisData();
     void SetLwsSendedFlag(int socketID, bool sended);
     void ReadLockAllWsSession();
     void UnlockAllWsSession();
@@ -176,14 +177,14 @@ private:
     int  Wswrite(struct lws *wsi, const unsigned char *message);
     inline void DumpHandshakeInfo(struct lws *wsi) noexcept;
     int RegisterStreamTask(struct lws *wsi) noexcept;
-    int GenerateSessionData(session_data &session, const std::string containerID) noexcept;
+    int GenerateSessionData(session_data *session, const std::string containerID) noexcept;
     static int Callback(struct lws *wsi, enum lws_callback_reasons reason,
                         void *user, void *in, size_t len);
     void ServiceWorkThread(int threadid);
     void CloseWsSession(int socketID);
     void CloseAllWsSession();
     int ResizeTerminal(int socketID, const char *jsonData, size_t len,
-        const std::string &containerID, const std::string &suffix);
+                       const std::string &containerID, const std::string &suffix);
     int parseTerminalSize(const char *jsonData, size_t len, uint16_t &width, uint16_t &height);
 
 private:
@@ -196,7 +197,7 @@ private:
         { nullptr, nullptr, 0, 0 }
     };
     RouteCallbackRegister m_handler;
-    static std::unordered_map<int, session_data> m_wsis;
+    static std::unordered_map<int, session_data *> m_wsis;
     url::URLDatum m_url;
     int m_listenPort;
 };
@@ -204,7 +205,6 @@ private:
 ssize_t WsWriteStdoutToClient(void *context, const void *data, size_t len);
 ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len);
 int closeWsConnect(void *context, char **err);
-int closeWsStream(void *context, char **err);
 
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_WS_SERVER_H
 

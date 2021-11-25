@@ -17,15 +17,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <isula_libutils/container_config_v2.h>
 #include <signal.h>
 #include <stdio.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/container_config_v2.h>
 
-#include "isula_libutils/log.h"
 #include "utils.h"
 #include "namespace.h"
 #include "container_api.h"
 #include "err_msg.h"
+#include "network_namespace_api.h"
 
 static char *parse_share_namespace_with_prefix(const char *type, const char *path)
 {
@@ -132,4 +133,85 @@ char *get_container_process_label(const char *cid)
 
 out:
     return result;
+}
+
+typedef int (*namespace_mode_check)(const host_config *host_spec,
+                                    const container_config_v2_common_config_network_settings *network_settings,
+                                    const char *type, char **dest_path);
+
+struct get_netns_path_handler {
+    char *mode;
+    namespace_mode_check handle;
+};
+
+static int handle_get_path_from_none(const host_config *host_spec,
+                                     const container_config_v2_common_config_network_settings *network_settings,
+                                     const char *type, char **dest_path)
+{
+    *dest_path = NULL;
+    return 0;
+}
+
+static int handle_get_path_from_host(const host_config *host_spec,
+                                     const container_config_v2_common_config_network_settings *network_settings,
+                                     const char *type, char **dest_path)
+{
+    *dest_path = namespace_get_host_namespace_path(host_spec->network_mode);
+    if (*dest_path == NULL) {
+        return -1;
+    }
+    return 0;
+}
+
+static int handle_get_path_from_container(const host_config *host_spec,
+                                          const container_config_v2_common_config_network_settings *network_settings, const char *type,
+                                          char **dest_path)
+{
+    *dest_path = parse_share_namespace_with_prefix(type, host_spec->network_mode);
+    if (*dest_path == NULL) {
+        return -1;
+    }
+    return 0;
+}
+
+static int handle_get_path_from_file(const host_config *host_spec,
+                                     const container_config_v2_common_config_network_settings *network_settings,
+                                     const char *type, char **dest_path)
+{
+    if (network_settings == NULL || network_settings->sandbox_key == NULL) {
+        ERROR("Invalid sandbox key for file mode network");
+        return -1;
+    }
+
+    *dest_path = util_strdup_s(network_settings->sandbox_key);
+    return 0;
+}
+
+int get_network_namespace_path(const host_config *host_spec,
+                               const container_config_v2_common_config_network_settings *network_settings,
+                               const char *type, char **dest_path)
+{
+    int index;
+    int ret = -1;
+    struct get_netns_path_handler handler_jump_table[] = {
+        { SHARE_NAMESPACE_NONE, handle_get_path_from_none },
+        { SHARE_NAMESPACE_HOST, handle_get_path_from_host },
+        { SHARE_NAMESPACE_PREFIX, handle_get_path_from_container },
+        { SHARE_NAMESPACE_FILE, handle_get_path_from_file },
+    };
+    size_t jump_table_size = sizeof(handler_jump_table) / sizeof(handler_jump_table[0]);
+    const char *network_mode = host_spec->network_mode;
+
+    if (network_mode == NULL || dest_path == NULL) {
+        return -1;
+    }
+
+    for (index = 0; index < jump_table_size; ++index) {
+        if (strncmp(network_mode, handler_jump_table[index].mode, strlen(handler_jump_table[index].mode)) == 0) {
+            ret = handler_jump_table[index].handle(host_spec, network_settings, type, dest_path);
+            return ret;
+        }
+    }
+
+    return ret;
 }

@@ -135,6 +135,7 @@ int rt_lcr_start(const char *name, const char *runtime, const rt_start_params_t 
     request.start_timeout = params->start_timeout;
     request.container_pidfile = params->container_pidfile;
     request.exit_fifo = params->exit_fifo;
+    request.image_type_oci = params->image_type_oci;
 
     if (!engine_ops->engine_start_op(&request)) {
         const char *tmpmsg = NULL;

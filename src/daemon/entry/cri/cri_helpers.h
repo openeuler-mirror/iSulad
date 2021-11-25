@@ -39,6 +39,7 @@ public:
     static const std::string CONTAINER_LOGPATH_LABEL_KEY;
     static const std::string CONTAINER_HUGETLB_ANNOTATION_KEY;
     static const std::string SANDBOX_ID_LABEL_KEY;
+    static const std::string POD_SANDBOX_KEY;
     static const std::string KUBERNETES_CONTAINER_NAME_LABEL;
     static const std::string POD_INFRA_CONTAINER_NAME;
     // DOCKER_IMAGEID_PREFIX is the prefix of image id in container status.
@@ -51,11 +52,14 @@ public:
     static const size_t MAX_CHECKPOINT_KEY_LEN { 250 };
     static const std::string CONTAINER_TYPE_ANNOTATION_KEY;
     static const std::string CONTAINER_NAME_ANNOTATION_KEY;
+    static const std::string CONTAINER_ATTEMPT_ANNOTATION_KEY;
     static const std::string CONTAINER_TYPE_ANNOTATION_CONTAINER;
     static const std::string CONTAINER_TYPE_ANNOTATION_SANDBOX;
     static const std::string SANDBOX_ID_ANNOTATION_KEY;
     static const std::string SANDBOX_NAMESPACE_ANNOTATION_KEY;
     static const std::string SANDBOX_NAME_ANNOTATION_KEY;
+    static const std::string SANDBOX_UID_ANNOTATION_KEY;
+    static const std::string SANDBOX_ATTEMPT_ANNOTATION_KEY;
 
     static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE;
     static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR;
@@ -147,6 +151,8 @@ void RemoveContainer(service_executor_t *cb, const std::string &containerID, Err
 void StopContainer(service_executor_t *cb, const std::string &containerID, int64_t timeout, Errors &error);
 
 char *GenerateExecSuffix();
+
+char *cri_runtime_convert(const char *runtime);
 }; // namespace CRIHelpers
 
 #endif // DAEMON_ENTRY_CRI_CRI_HELPERS_H

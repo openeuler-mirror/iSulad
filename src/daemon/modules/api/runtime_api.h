@@ -94,6 +94,7 @@ typedef struct _rt_start_params_t {
 
     const char *container_pidfile;
     const char *exit_fifo;
+    bool image_type_oci;
 } rt_start_params_t;
 
 typedef struct _rt_kill_params_t {

@@ -212,6 +212,9 @@ function do_install_thinpool()
     pvremove -f $dev_disk
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - pvremove failed" && ((ret++))
     
+    # If udev do not sync in time, do remove force
+    rm -rf /dev/isulad
+    
     mount | grep $dev_disk | grep /var/lib/isulad
     if [ x"$?" == x"0" ]; then
         umount /var/lib/isulad

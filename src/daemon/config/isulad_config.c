@@ -1545,6 +1545,9 @@ int merge_json_confs_into_global(struct service_arguments *args)
     args->json_confs->runtimes = tmp_json_confs->runtimes;
     tmp_json_confs->runtimes = NULL;
 
+    args->json_confs->cri_runtimes = tmp_json_confs->cri_runtimes;
+    tmp_json_confs->cri_runtimes = NULL;
+
     // Daemon storage-driver
     if (merge_storage_conf_into_global(args, tmp_json_confs)) {
         ret = -1;

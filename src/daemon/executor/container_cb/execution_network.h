@@ -29,7 +29,6 @@ extern "C" {
 int merge_network(const host_config *host_spec, const char *rootfs, const char *runtime_root,
                   const char *id, const char *hostname);
 
-
 int init_container_network_confs(const char *id, const char *rootpath, const host_config *hc,
                                  container_config_v2_common_config *common_config);
 
