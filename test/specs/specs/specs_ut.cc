@@ -19,6 +19,7 @@
 #include "mock.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "specs_api.h"
+#include "specs_namespace.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
 #include "oci_ut_common.h"
