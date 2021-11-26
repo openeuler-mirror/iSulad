@@ -47,3 +47,13 @@ char *get_container_process_label(const char *path)
     }
     return nullptr;
 }
+
+int get_network_namespace_path(const host_config *host_spec,
+                               const container_config_v2_common_config_network_settings *network_settings,
+                               const char *type, char **dest_path)
+{
+    if (g_namespace_mock != nullptr) {
+        return g_namespace_mock->GetNetworkNamespacePath(host_spec, network_settings, type, dest_path);
+    }
+    return 0;
+}
