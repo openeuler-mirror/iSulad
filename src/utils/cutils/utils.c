@@ -1299,12 +1299,11 @@ restart:
 static char *get_cpu_variant()
 {
     char *variant = NULL;
-    char *cpuinfo = NULL;
+    char cpuinfo[1024] = { 0 };
     char *start_pos = NULL;
     char *end_pos = NULL;
 
-    cpuinfo = util_read_text_file("/proc/cpuinfo");
-    if (cpuinfo == NULL) {
+    if (util_file2str("/proc/cpuinfo", cpuinfo, sizeof(cpuinfo)) < 0) {
         ERROR("read /proc/cpuinfo failed");
         return NULL;
     }
@@ -1312,7 +1311,7 @@ static char *get_cpu_variant()
     start_pos = strstr(cpuinfo, "CPU architecture");
     if (start_pos == NULL) {
         ERROR("can not found the key \"CPU architecture\" when try to get cpu variant");
-        goto out;
+        return NULL;
     }
     end_pos = strchr(start_pos, '\n');
     if (end_pos != NULL) {
@@ -1321,16 +1320,13 @@ static char *get_cpu_variant()
     start_pos = strchr(start_pos, ':');
     if (start_pos == NULL) {
         ERROR("can not found delimiter \":\" when try to get cpu variant");
-        goto out;
+        return NULL;
     }
+    start_pos += 1;	// skip char ":"
     util_trim_newline(start_pos);
     start_pos = util_trim_space(start_pos);
 
     variant = util_strings_to_lower(start_pos);
-
-out:
-    free(cpuinfo);
-    cpuinfo = NULL;
 
     return variant;
 }
