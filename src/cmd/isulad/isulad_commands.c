@@ -213,8 +213,8 @@ int parse_args(struct service_arguments *args, int argc, const char **argv)
 
     if (args->argc > 0) {
         printf("unresolved arguments: %s;\t"
-               "run `%s --help` or `%s -h` for help.\n",
-               args->argv[0], argv[0], argv[0]);
+               "run `%s --help` for help.\n",
+               args->argv[0], argv[0]);
         return -1;
     }
 
