@@ -748,6 +748,7 @@ auto PodSandboxManagerServiceImpl::ClearCniNetwork(const std::string &realSandbo
                 ERROR("Failed to umount directory %s:%s", netnsPath, strerror(errno));
             }
         }
+        free(netnsPath);
     }
     free_container_inspect(inspect_data);
     return 0;
