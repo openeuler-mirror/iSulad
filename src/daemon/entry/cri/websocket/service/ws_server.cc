@@ -191,6 +191,8 @@ void WebsocketServer::CloseWsSession(int socketID)
         }
         (void)sem_wait(session->sync_close_sem);
         (void)sem_destroy(session->sync_close_sem);
+        delete session->sync_close_sem;
+        session->sync_close_sem = nullptr;
         close(session->pipes.at(0));
         delete session->session_mutex;
         session->session_mutex = nullptr;
