@@ -1974,6 +1974,7 @@ static int create_namespaces_checker(const struct client_arguments *args)
 {
     int ret = 0;
     const char *net_mode = args->custom_conf.share_ns[NAMESPACE_NET];
+    const char *user_mode = args->custom_conf.share_ns[NAMESPACE_USER];
 
     if (args->custom_conf.share_ns[NAMESPACE_NET]) {
         if (!namespace_is_host(net_mode) && !namespace_is_container(net_mode) && !namespace_is_none(net_mode)) {
@@ -1982,6 +1983,15 @@ static int create_namespaces_checker(const struct client_arguments *args)
             goto out;
         }
     }
+
+    if (args->custom_conf.share_ns[NAMESPACE_USER]) {
+        if (!namespace_is_host(user_mode) && !namespace_is_none(user_mode)) {
+            COMMAND_ERROR("Unsupported user mode %s", user_mode);
+            ret = -1;
+            goto out;
+        }
+    }
+
 out:
     return ret;
 }

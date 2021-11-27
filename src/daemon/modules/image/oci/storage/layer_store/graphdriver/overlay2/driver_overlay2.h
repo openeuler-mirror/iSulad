@@ -33,7 +33,7 @@ struct io_read_wrapper;
 extern "C" {
 #endif
 
-int overlay2_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);
+int overlay2_init(struct graphdriver *driver, const char *driver_home, const char **options, size_t len);
 
 bool overlay2_is_quota_options(struct graphdriver *driver, const char *option);
 

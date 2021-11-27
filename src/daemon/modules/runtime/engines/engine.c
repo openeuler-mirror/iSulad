@@ -121,6 +121,9 @@ void engine_operation_free(struct engine_operation *eop)
 static int create_engine_root_path(const char *path)
 {
     int ret = -1;
+    char *tmp_path = NULL;
+    char *p = NULL;
+    char *userns_remap = NULL;
 
     if (path == NULL) {
         return ret;
@@ -130,12 +133,38 @@ static int create_engine_root_path(const char *path)
         ret = 0;
         goto out;
     }
-    ret = util_mkdir_p(path, CONFIG_DIRECTORY_MODE);
-    if (ret != 0) {
+
+    if (util_mkdir_p(path, CONFIG_DIRECTORY_MODE) != 0) {
         ERROR("Unable to create engine root path: %s", path);
+        goto out;
     }
 
+    userns_remap = conf_get_isulad_userns_remap();
+    if (userns_remap != NULL) {
+        if (set_file_owner_for_userns_remap(path, userns_remap) != 0) {
+            ERROR("Unable to change directory %s owner for user remap.", path);
+            goto out;
+        }
+
+        // find parent directory
+        tmp_path = util_strdup_s(path);
+        p = strrchr(tmp_path, '/');
+        if (p == NULL) {
+            ERROR("Failed to find parent directory for %s", tmp_path);
+            goto out;
+        }
+        *p = '\0';
+
+        if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
+            ERROR("Unable to change directory %s owner for user remap.", tmp_path);
+            goto out;
+        }
+    }
+    ret = 0;
+
 out:
+    free(tmp_path);
+    free(userns_remap);
     return ret;
 }
 
