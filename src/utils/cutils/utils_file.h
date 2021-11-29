@@ -68,6 +68,11 @@ char *util_path_dir(const char *path);
 
 char *util_add_path(const char *path, const char *name);
 
+/* notes:
+ * 1. Do not use this function to read proc file because proc file in armv8 does not
+ *    support fseek and the result of this function is nill string which is unexpected.
+ * 2. This function can only read small text file.
+ */
 char *util_read_text_file(const char *path);
 
 int64_t util_file_size(const char *filename);

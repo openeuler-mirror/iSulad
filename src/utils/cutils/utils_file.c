@@ -815,7 +815,11 @@ char *util_add_path(const char *path, const char *name)
     return new_path;
 }
 
-/* note: This function can only read small text file. */
+/* notes:
+ * 1. Do not use this function to read proc file because proc file in armv8 does not
+ *    support fseek and the result of this function is nill string which is unexpected.
+ * 2. This function can only read small text file.
+ */
 char *util_read_text_file(const char *path)
 {
     char *buf = NULL;
