@@ -20,7 +20,7 @@ Etag: "sha256:bd28e852703450d93220e6733a9f0901b92cd558911528b03fdba56156ae0a02"
       "size": 527
     },
     {
-      "digest": "sha256:134252904112f8563a17a360957d9ad192e5c1e77463e04be74e71cffd4b41ba",
+      "digest": "sha256:106429d73f57137cc587d2d4f1ad7ffb8c4cedcb564d3fb44a8769e602a4a4ec",
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "platform": {
         "architecture": "arm64",
