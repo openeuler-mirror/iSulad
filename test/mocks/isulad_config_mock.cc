@@ -170,3 +170,11 @@ isulad_daemon_constants *get_isulad_daemon_constants()
     }
     return &g_isulad_daemon_constants;
 }
+
+char *conf_get_isulad_userns_remap()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetIsuladUsernsRemap();
+    }
+    return nullptr;
+}
