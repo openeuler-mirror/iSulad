@@ -74,11 +74,20 @@ rm -rf build
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON -DENABLE_SHIM_V2=ON ..
 make -j $(nproc)
+make install
 ctest -T memcheck --output-on-failure
 if [[ $? -ne 0 ]]; then
     exit 1
 fi
 echo_success "===================RUN DT-LLT TESTCASES END========================="
+
+# build fuzz
+cd $ISULAD_COPY_PATH
+rm -rf build
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_FUZZ=ON ..
+make -j $(nproc)
 
 # build rest version
 cd $ISULAD_COPY_PATH

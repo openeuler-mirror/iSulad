@@ -86,9 +86,9 @@ IF(ENABLE_UT)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 ENDIF(ENABLE_UT)
 
-IF(ENABLE_FUZZ)
+IF(ENABLE_FUZZ AND (NOT ENABLE_UT))
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
-ENDIF(ENABLE_FUZZ)
+ENDIF(ENABLE_FUZZ AND (NOT ENABLE_UT))
 
 # install all files
 install(FILES ${CMAKE_BINARY_DIR}/conf/isulad.pc
