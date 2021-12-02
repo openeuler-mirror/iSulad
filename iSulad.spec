@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 6
+%global _release 7
 %global is_systemd 1
 %global enable_shimv2 0
 
@@ -14,7 +14,18 @@ BuildRoot: {_tmppath}/iSulad-%{version}
 
 Patch0001: 0001-add-self-def-runtime-for-shimv2.patch
 Patch0002: 0002-fix-memleak-when-use-multiple-volumes-from.patch
-Patch0003: 0003-modified-the-procedure-of-running-a-pod-to-adapt-to.patch
+Patch0003: 0003-Modified-the-procedure-of-running-a-pod-to-adapt-to-.patch
+Patch0004: 0004-add-new-function-mock-for-ut.patch
+Patch0005: 0005-delete-isulad-h-flag.patch
+Patch0006: 0006-Fix-memory-leak-in-ClearCniNetwork-when-calling-get_.patch
+Patch0007: 0007-fix-cri-libwebsockets-sync_close_sem-memory-leak.patch
+Patch0008: 0008-fix-cpu-variant-get-error.patch
+Patch0009: 0009-fix-unit-test-error-of-registry-in-armv8.patch
+Patch0010: 0010-Modified-cmakelist-of-storage_layer-and-added-a-new-.patch
+Patch0011: 0011-add-fuzz-build-in-CI.patch
+Patch0012: 0012-print-valgrind-log.patch
+Patch0013: 0013-fix-cri-version-memory-leak.patch
+Patch0014: 0014-fix-undefined-reference-in-libisulad_img.so.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -228,6 +239,12 @@ fi
 %endif
 
 %changelog
+* Thu Dec 02 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-7
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: sync patches from upstream
+
 * Tue Nov 23 2021 chengzeruizhi <chengzeruizhi@huawei.com> - 2.0.10-6
 - Type: enhancement
 - ID: NA
