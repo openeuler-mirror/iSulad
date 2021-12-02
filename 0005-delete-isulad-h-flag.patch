@@ -1,0 +1,28 @@
+From 07b81da5e3d357c34cf7f5379ba507a16617a5ed Mon Sep 17 00:00:00 2001
+From: gaohuatao <gaohuatao@huawei.com>
+Date: Sat, 27 Nov 2021 11:14:40 +0800
+Subject: [PATCH 05/14] delete isulad h flag
+
+Signed-off-by: gaohuatao <gaohuatao@huawei.com>
+---
+ src/cmd/isulad/isulad_commands.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/cmd/isulad/isulad_commands.c b/src/cmd/isulad/isulad_commands.c
+index d0ab029c..c2826c83 100644
+--- a/src/cmd/isulad/isulad_commands.c
++++ b/src/cmd/isulad/isulad_commands.c
+@@ -213,8 +213,8 @@ int parse_args(struct service_arguments *args, int argc, const char **argv)
+ 
+     if (args->argc > 0) {
+         printf("unresolved arguments: %s;\t"
+-               "run `%s --help` or `%s -h` for help.\n",
+-               args->argv[0], argv[0], argv[0]);
++               "run `%s --help` for help.\n",
++               args->argv[0], argv[0]);
+         return -1;
+     }
+ 
+-- 
+2.25.1
+
