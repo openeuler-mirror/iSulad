@@ -44,10 +44,10 @@ void RuntimeVersionerServiceImpl::Version(const std::string &apiVersion,
         } else {
             error.SetError("Failed to call version callback");
         }
-        free_container_version_response(response);
-        return;
+    } else {
+        VersionResponseToGRPC(response, versionResponse);
     }
 
-    VersionResponseToGRPC(response, versionResponse);
+    free_container_version_response(response);
 }
 } // namespace CRI
