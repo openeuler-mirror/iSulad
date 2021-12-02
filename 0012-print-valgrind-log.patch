@@ -1,0 +1,26 @@
+From cd3cda2bf3880d1e805406cba6e5c6510ef8832b Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Wed, 1 Dec 2021 10:14:33 +0800
+Subject: [PATCH 12/14] print valgrind log
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ CI/test_cases/helpers.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CI/test_cases/helpers.sh b/CI/test_cases/helpers.sh
+index 27f04749..dd1bf943 100755
+--- a/CI/test_cases/helpers.sh
++++ b/CI/test_cases/helpers.sh
+@@ -146,7 +146,7 @@ function check_valgrind_log() {
+     cat $valgrind_log | grep "are definitely lost" | grep "==$pid=="
+     if [ $? -eq 0 ];then
+         echo "Memory leak may checked by valgrind, see valgrind log file: $valgrind_log"
+-        sed -n '/definitely lost/,// p' $valgrind_log
++        cat $valgrind_log
+         exit 1
+     fi
+     return 0
+-- 
+2.25.1
+
