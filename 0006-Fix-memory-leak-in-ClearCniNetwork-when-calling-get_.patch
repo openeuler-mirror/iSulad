@@ -1,0 +1,26 @@
+From d3d44e344d2ea2213c7d595c957e8ebf0a661fd2 Mon Sep 17 00:00:00 2001
+From: chengzrz <czrzrichard@gmail.com>
+Date: Sat, 27 Nov 2021 11:31:13 +0800
+Subject: [PATCH 06/14] Fix memory leak in ClearCniNetwork when calling
+ get_sandbox_key
+
+Signed-off-by: chengzrz <czrzrichard@gmail.com>
+---
+ src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc b/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
+index eb1cd09f..0a577849 100644
+--- a/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
++++ b/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
+@@ -748,6 +748,7 @@ auto PodSandboxManagerServiceImpl::ClearCniNetwork(const std::string &realSandbo
+                 ERROR("Failed to umount directory %s:%s", netnsPath, strerror(errno));
+             }
+         }
++        free(netnsPath);
+     }
+     free_container_inspect(inspect_data);
+     return 0;
+-- 
+2.25.1
+
