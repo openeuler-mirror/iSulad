@@ -1,0 +1,32 @@
+From 3750c2f7d6c13289bbfbb278e0e09667468286d0 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Thu, 2 Dec 2021 15:24:11 +0800
+Subject: [PATCH 13/14] fix cri version memory leak
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/daemon/entry/cri/cri_runtime_versioner_service_impl.cc | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/daemon/entry/cri/cri_runtime_versioner_service_impl.cc b/src/daemon/entry/cri/cri_runtime_versioner_service_impl.cc
+index 4316b190..6c4ba515 100644
+--- a/src/daemon/entry/cri/cri_runtime_versioner_service_impl.cc
++++ b/src/daemon/entry/cri/cri_runtime_versioner_service_impl.cc
+@@ -44,10 +44,10 @@ void RuntimeVersionerServiceImpl::Version(const std::string &apiVersion,
+         } else {
+             error.SetError("Failed to call version callback");
+         }
+-        free_container_version_response(response);
+-        return;
++    } else {
++        VersionResponseToGRPC(response, versionResponse);
+     }
+ 
+-    VersionResponseToGRPC(response, versionResponse);
++    free_container_version_response(response);
+ }
+ } // namespace CRI
+\ No newline at end of file
+-- 
+2.25.1
+
