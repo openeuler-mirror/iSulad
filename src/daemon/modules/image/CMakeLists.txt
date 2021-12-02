@@ -71,6 +71,7 @@ add_library(${LIB_ISULAD_IMG} ${LIBTYPE}
     ${CMAKE_SOURCE_DIR}/src/utils/tar/isulad_tar.c
     ${CMAKE_SOURCE_DIR}/src/utils/tar/util_archive.c
     ${CMAKE_SOURCE_DIR}/src/utils/tar/util_gzip.c
+    ${CMAKE_SOURCE_DIR}/src/daemon/config/isulad_config.c
     )
 
 target_include_directories(${LIB_ISULAD_IMG} PUBLIC
