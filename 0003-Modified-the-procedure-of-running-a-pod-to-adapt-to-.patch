@@ -1,0 +1,1395 @@
+From 1b3922edcd0c254b39d57d91b9e027069cd8c82f Mon Sep 17 00:00:00 2001
+From: chengzrz <czrzrichard@gmail.com>
+Date: Mon, 22 Nov 2021 15:34:04 +0800
+Subject: [PATCH 03/14] Modified the procedure of running a pod to adapt to
+ kata 2.0
+
+Signed-off-by: chengzrz <czrzrichard@gmail.com>
+---
+ src/common/constants.h                        |   2 +
+ src/daemon/entry/cri/cni_network_plugin.cc    |  33 ++++-
+ src/daemon/entry/cri/cri_constants.cc         |   1 +
+ src/daemon/entry/cri/cri_constants.h          |   1 +
+ src/daemon/entry/cri/cri_helpers.cc           |   1 +
+ src/daemon/entry/cri/cri_helpers.h            |   1 +
+ .../cri_pod_sandbox_manager_service_impl.cc   | 128 +++++++++++-----
+ .../cri_pod_sandbox_manager_service_impl.h    |   2 +-
+ src/daemon/entry/cri/cri_security_context.cc  |   3 +
+ .../executor/container_cb/execution_create.c  |  65 +++++++++
+ .../executor/container_cb/execution_network.c |   3 +-
+ .../executor/container_cb/execution_network.h |   1 -
+ .../modules/api/network_namespace_api.h       |  35 +++++
+ src/daemon/modules/api/specs_api.h            |   4 +-
+ src/daemon/modules/container/container_unix.c |   1 +
+ .../modules/service/inspect_container.c       |  35 +++++
+ .../modules/service/network_namespace_api.c   |  80 ++++++++++
+ .../modules/service/service_container.c       |  15 +-
+ src/daemon/modules/spec/specs.c               |  64 ++++++--
+ src/daemon/modules/spec/specs_namespace.c     |  86 ++++++++++-
+ src/daemon/modules/spec/specs_namespace.h     |   5 +
+ src/utils/cutils/namespace.h                  |  18 +++
+ src/utils/cutils/utils_file.c                 |  23 +++
+ src/utils/cutils/utils_file.h                 |   2 +
+ src/utils/cutils/utils_network.c              | 138 ++++++++++++++++++
+ src/utils/cutils/utils_network.h              |  33 +++++
+ 26 files changed, 713 insertions(+), 67 deletions(-)
+ create mode 100644 src/daemon/modules/api/network_namespace_api.h
+ create mode 100644 src/daemon/modules/service/network_namespace_api.c
+ create mode 100644 src/utils/cutils/utils_network.c
+ create mode 100644 src/utils/cutils/utils_network.h
+
+diff --git a/src/common/constants.h b/src/common/constants.h
+index 94640fa5..cb6ce189 100644
+--- a/src/common/constants.h
++++ b/src/common/constants.h
+@@ -129,6 +129,8 @@ extern "C" {
+ #define EVENT_ARGS_MAX 255
+ #define EVENT_EXTRA_ANNOTATION_MAX 255
+ 
++#define NETNS_LEN 16
++
+ /* container id max length */
+ #define CONTAINER_ID_MAX_LEN 64
+ 
+diff --git a/src/daemon/entry/cri/cni_network_plugin.cc b/src/daemon/entry/cri/cni_network_plugin.cc
+index 35273c3e..ffdbeb10 100644
+--- a/src/daemon/entry/cri/cni_network_plugin.cc
++++ b/src/daemon/entry/cri/cni_network_plugin.cc
+@@ -28,6 +28,7 @@
+ #include "utils.h"
+ #include "errors.h"
+ #include "service_container_api.h"
++#include "network_namespace_api.h"
+ 
+ namespace Network {
+ static auto GetLoNetwork(std::vector<std::string> binDirs) -> std::unique_ptr<CNINetwork>
+@@ -486,9 +487,15 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name,
+     if (err.NotEmpty()) {
+         return;
+     }
+-    std::string netnsPath = GetNetNS(id, err);
+-    if (err.NotEmpty()) {
+-        ERROR("CNI failed to retrieve network namespace path: %s", err.GetCMessage());
++
++    auto iter = annotations.find(CRIHelpers::Constants::POD_SANDBOX_KEY);
++    if (iter == annotations.end()) {
++        ERROR("Failed to find sandbox key from annotations");
++        return;
++    }
++    const std::string netnsPath = iter->second;
++    if (netnsPath.length() == 0) {
++        ERROR("Failed to get network namespace path");
+         return;
+     }
+ 
+@@ -517,7 +524,6 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name,
+             err.AppendError(tmpErr.GetMessage());
+         }
+     }
+-
+     UnlockNetworkMap(err);
+ }
+ 
+@@ -593,10 +599,21 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
+     }
+     Errors tmpErr;
+ 
+-    std::string netnsPath = GetNetNS(id, err);
+-    if (err.NotEmpty()) {
+-        WARN("CNI failed to retrieve network namespace path: %s", err.GetCMessage());
+-        err.Clear();
++    auto iter = annotations.find(CRIHelpers::Constants::POD_SANDBOX_KEY);
++    if (iter == annotations.end()) {
++        ERROR("Failed to find sandbox key from annotations");
++        return;
++    }
++    std::string netnsPath = iter->second;
++    if (netnsPath.length() == 0) {
++        ERROR("Failed to get network namespace path");
++        return;
++    }
++
++    // When netns file does not exist, netnsPath is assigned to an
++    // empty string so that lxc can handle the path properly
++    if (!util_file_exists(netnsPath.c_str())) {
++        netnsPath = "";
+     }
+ 
+     RLockNetworkMap(err);
+diff --git a/src/daemon/entry/cri/cri_constants.cc b/src/daemon/entry/cri/cri_constants.cc
+index b557d56a..265e38e5 100644
+--- a/src/daemon/entry/cri/cri_constants.cc
++++ b/src/daemon/entry/cri/cri_constants.cc
+@@ -16,6 +16,7 @@
+ 
+ namespace CRI {
+ const std::string Constants::namespaceModeHost { "host" };
++const std::string Constants::namespaceModeFile { "file" };
+ const std::string Constants::nameDelimiter { "_" };
+ const std::string Constants::kubePrefix { "k8s" };
+ const std::string Constants::sandboxContainerName { "POD" };
+diff --git a/src/daemon/entry/cri/cri_constants.h b/src/daemon/entry/cri/cri_constants.h
+index 4e964714..95b82660 100644
+--- a/src/daemon/entry/cri/cri_constants.h
++++ b/src/daemon/entry/cri/cri_constants.h
+@@ -20,6 +20,7 @@ namespace CRI {
+ class Constants {
+ public:
+     const static std::string namespaceModeHost;
++    const static std::string namespaceModeFile;
+     // sandboxname default values
+     const static std::string nameDelimiter;
+     constexpr static char nameDelimiterChar { '_' };
+diff --git a/src/daemon/entry/cri/cri_helpers.cc b/src/daemon/entry/cri/cri_helpers.cc
+index f45c669f..525d65a0 100644
+--- a/src/daemon/entry/cri/cri_helpers.cc
++++ b/src/daemon/entry/cri/cri_helpers.cc
+@@ -42,6 +42,7 @@ const std::string Constants::CONTAINER_TYPE_LABEL_CONTAINER { "container" };
+ const std::string Constants::CONTAINER_LOGPATH_LABEL_KEY { "cri.container.logpath" };
+ const std::string Constants::CONTAINER_HUGETLB_ANNOTATION_KEY { "cri.container.hugetlblimit" };
+ const std::string Constants::SANDBOX_ID_LABEL_KEY { "cri.sandbox.id" };
++const std::string Constants::POD_SANDBOX_KEY { "sandboxkey" };
+ const std::string Constants::KUBERNETES_CONTAINER_NAME_LABEL { "io.kubernetes.container.name" };
+ const std::string Constants::POD_INFRA_CONTAINER_NAME { "POD" };
+ const std::string Constants::DOCKER_IMAGEID_PREFIX { "docker://" };
+diff --git a/src/daemon/entry/cri/cri_helpers.h b/src/daemon/entry/cri/cri_helpers.h
+index 9eccc1da..5c2f6517 100644
+--- a/src/daemon/entry/cri/cri_helpers.h
++++ b/src/daemon/entry/cri/cri_helpers.h
+@@ -39,6 +39,7 @@ public:
+     static const std::string CONTAINER_LOGPATH_LABEL_KEY;
+     static const std::string CONTAINER_HUGETLB_ANNOTATION_KEY;
+     static const std::string SANDBOX_ID_LABEL_KEY;
++    static const std::string POD_SANDBOX_KEY;
+     static const std::string KUBERNETES_CONTAINER_NAME_LABEL;
+     static const std::string POD_INFRA_CONTAINER_NAME;
+     // DOCKER_IMAGEID_PREFIX is the prefix of image id in container status.
+diff --git a/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc b/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
+index 0f9ef044..eb1cd09f 100644
+--- a/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
++++ b/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
+@@ -13,6 +13,8 @@
+  * Description: provide cri pod sandbox manager service implementation
+  *********************************************************************************/
+ #include "cri_pod_sandbox_manager_service_impl.h"
++
++#include <sys/mount.h>
+ #include "isula_libutils/log.h"
+ #include "isula_libutils/host_config.h"
+ #include "isula_libutils/container_config.h"
+@@ -24,7 +26,11 @@
+ #include "naming.h"
+ #include "service_container_api.h"
+ #include "cxxutils.h"
++#include "network_namespace_api.h"
+ #include "cri_image_manager_service_impl.h"
++#include "utils_network.h"
++#include "namespace.h"
++#include "constants.h"
+ 
+ namespace CRI {
+ auto PodSandboxManagerServiceImpl::EnsureSandboxImageExists(const std::string &image, Errors &error) -> bool
+@@ -49,7 +55,8 @@ auto PodSandboxManagerServiceImpl::EnsureSandboxImageExists(const std::string &i
+ }
+ 
+ void PodSandboxManagerServiceImpl::ApplySandboxLinuxOptions(const runtime::v1alpha2::LinuxPodSandboxConfig &lc,
+-                                                            host_config *hc, container_config *custom_config, Errors &error)
++                                                            host_config *hc, container_config *custom_config,
++                                                            Errors &error)
+ {
+     CRISecurity::ApplySandboxSecurityContext(lc, custom_config, hc, error);
+     if (error.NotEmpty()) {
+@@ -279,8 +286,8 @@ error_out:
+ }
+ 
+ container_create_request *PodSandboxManagerServiceImpl::GenerateSandboxCreateContainerRequest(
+-    const runtime::v1alpha2::PodSandboxConfig &config, const std::string &image,
+-    std::string &jsonCheckpoint, const std::string &runtimeHandler, Errors &error)
++    const runtime::v1alpha2::PodSandboxConfig &config, const std::string &image, std::string &jsonCheckpoint,
++    const std::string &runtimeHandler, Errors &error)
+ {
+     container_create_request *create_request = nullptr;
+     host_config *hostconfig = nullptr;
+@@ -338,7 +345,8 @@ cleanup:
+ 
+ auto PodSandboxManagerServiceImpl::CreateSandboxContainer(const runtime::v1alpha2::PodSandboxConfig &config,
+                                                           const std::string &image, std::string &jsonCheckpoint,
+-                                                          const std::string &runtimeHandler, Errors &error) -> std::string
++                                                          const std::string &runtimeHandler, Errors &error)
++-> std::string
+ {
+     std::string response_id;
+     container_create_request *create_request =
+@@ -464,16 +472,12 @@ cleanup:
+ }
+ 
+ void PodSandboxManagerServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::PodSandboxConfig &config,
+-                                                       const std::string &response_id, const std::string &jsonCheckpoint,
+-                                                       Errors &error)
++                                                       const std::string &response_id,
++                                                       const std::string &jsonCheckpoint, const container_inspect *inspect_data, Errors &error)
+ {
+     std::map<std::string, std::string> stdAnnos;
+     std::map<std::string, std::string> networkOptions;
+-
+-    container_inspect *inspect_data = CRIHelpers::InspectContainer(response_id, error, false);
+-    if (error.NotEmpty()) {
+-        return;
+-    }
++    const char* sandbox_key = get_sandbox_key(inspect_data);
+ 
+     // Setup sandbox files
+     if (config.has_dns_config() && inspect_data->resolv_conf_path != nullptr) {
+@@ -493,7 +497,10 @@ void PodSandboxManagerServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::
+     CRIHelpers::ProtobufAnnoMapToStd(config.annotations(), stdAnnos);
+     stdAnnos[CRIHelpers::Constants::POD_CHECKPOINT_KEY] = jsonCheckpoint;
+     networkOptions["UID"] = config.metadata().uid();
+-
++    if (sandbox_key == NULL) {
++        goto cleanup;
++    }
++    stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY, sandbox_key));
+     m_pluginManager->SetUpPod(config.metadata().namespace_(), config.metadata().name(),
+                               Network::DEFAULT_NETWORK_INTERFACE_NAME, response_id, stdAnnos, networkOptions, error);
+     if (error.NotEmpty()) {
+@@ -503,15 +510,16 @@ void PodSandboxManagerServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::
+     }
+ 
+ cleanup:
+-    free_container_inspect(inspect_data);
++    return;
+ }
+ 
+-
+ auto PodSandboxManagerServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config,
+                                                  const std::string &runtimeHandler, Errors &error) -> std::string
+ {
+     std::string response_id;
+     std::string jsonCheckpoint;
++    container_inspect *inspect_data = nullptr;
++    char *netnsPath = nullptr;
+ 
+     if (m_cb == nullptr || m_cb->container.create == nullptr || m_cb->container.start == nullptr) {
+         error.SetError("Unimplemented callback");
+@@ -539,13 +547,33 @@ auto PodSandboxManagerServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSan
+         error.Clear();
+     }
+ 
+-    // Step 4: Start the sandbox container.
+-    StartSandboxContainer(response_id, error);
++    // Step 4: mount network namespace when network mode is file
++    inspect_data = CRIHelpers::InspectContainer(response_id, error, true);
+     if (error.NotEmpty()) {
+         goto cleanup;
+     }
++    if (inspect_data == nullptr || inspect_data->host_config == nullptr) {
++        error.Errorf("Failed to retrieve inspect data");
++        ERROR("Failed to retrieve inspect data");
++        goto cleanup;
++    }
++    netnsPath = get_sandbox_key(inspect_data);
++    if (namespace_is_file(inspect_data->host_config->network_mode)) {
++        if (!util_file_exists(netnsPath) || util_mount_namespace(netnsPath) != 0) {
++            error.Errorf("Failed to mount network namespace");
++            ERROR("Failed to mount network namespace");
++            goto cleanup;
++        }
++    }
++
+     // Step 5: Setup networking for the sandbox.
+-    SetupSandboxNetwork(config, response_id, jsonCheckpoint, error);
++    SetupSandboxNetwork(config, response_id, jsonCheckpoint, inspect_data, error);
++    if (error.NotEmpty()) {
++        goto cleanup;
++    }
++
++    // Step 6: Start the sandbox container.
++    StartSandboxContainer(response_id, error);
+     if (error.NotEmpty()) {
+         goto cleanup;
+     }
+@@ -555,13 +583,21 @@ cleanup:
+         SetNetworkReady(response_id, true, error);
+         DEBUG("set %s ready", response_id.c_str());
+         error.Clear();
++    } else {
++        if (netnsPath != nullptr && remove_network_namespace(netnsPath) != 0) {
++            ERROR("Failed to remove network namespace");
++        }
+     }
++    free_container_inspect(inspect_data);
++    free(netnsPath);
+     return response_id;
+ }
+ 
+ auto PodSandboxManagerServiceImpl::GetRealSandboxIDToStop(const std::string &podSandboxID, bool &hostNetwork,
+-                                                          std::string &name, std::string &ns, std::string &realSandboxID,
+-                                                          std::map<std::string, std::string> &stdAnnos, Errors &error) -> int
++                                                          std::string &name, std::string &ns,
++                                                          std::string &realSandboxID,
++                                                          std::map<std::string, std::string> &stdAnnos, Errors &error)
++-> int
+ {
+     Errors statusErr;
+ 
+@@ -670,16 +706,32 @@ auto PodSandboxManagerServiceImpl::GetNetworkReady(const std::string &podSandbox
+ }
+ 
+ auto PodSandboxManagerServiceImpl::ClearCniNetwork(const std::string &realSandboxID, bool hostNetwork,
+-                                                   const std::string &ns,
+-                                                   const std::string &name, std::vector<std::string> &errlist,
++                                                   const std::string &ns, const std::string &name,
++                                                   std::vector<std::string> &errlist,
+                                                    std::map<std::string, std::string> &stdAnnos, Errors &
+                                                    /*error*/) -> int
+ {
+     Errors networkErr;
++    container_inspect* inspect_data = nullptr;
+ 
+     bool ready = GetNetworkReady(realSandboxID, networkErr);
+     if (!hostNetwork && (ready || networkErr.NotEmpty())) {
+         Errors pluginErr;
++
++        // hostNetwork has indicated network mode which render host config unnecessary
++        // so that with_host_config is set to be false.
++        inspect_data = CRIHelpers::InspectContainer(realSandboxID, pluginErr, false);
++        if (pluginErr.NotEmpty()) {
++            ERROR("Failed to inspect container");
++        }
++
++        char* netnsPath = get_sandbox_key(inspect_data);
++        if (netnsPath == nullptr) {
++            ERROR("Failed to get network namespace path");
++            return 0;
++        }
++
++        stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY, netnsPath));
+         m_pluginManager->TearDownPod(ns, name, Network::DEFAULT_NETWORK_INTERFACE_NAME, realSandboxID, stdAnnos,
+                                      pluginErr);
+         if (pluginErr.NotEmpty()) {
+@@ -691,8 +743,13 @@ auto PodSandboxManagerServiceImpl::ClearCniNetwork(const std::string &realSandbo
+             if (pluginErr.NotEmpty()) {
+                 WARN("set network ready: %s", pluginErr.GetCMessage());
+             }
++            // umount netns when cni removed network successfully
++            if (util_umount_namespace(netnsPath) != 0) {
++                ERROR("Failed to umount directory %s:%s", netnsPath, strerror(errno));
++            }
+         }
+     }
++    free_container_inspect(inspect_data);
+     return 0;
+ }
+ 
+@@ -806,7 +863,6 @@ void PodSandboxManagerServiceImpl::ClearNetworkReady(const std::string &podSandb
+     }
+ }
+ 
+-
+ int PodSandboxManagerServiceImpl::DoRemovePodSandbox(const std::string &realSandboxID, std::vector<std::string> &errors)
+ {
+     int ret = 0;
+@@ -878,8 +934,8 @@ cleanup:
+     error.SetAggregate(errors);
+ }
+ 
+-auto PodSandboxManagerServiceImpl::SharesHostNetwork(const container_inspect *inspect) ->
+-runtime::v1alpha2::NamespaceMode
++auto PodSandboxManagerServiceImpl::SharesHostNetwork(const container_inspect *inspect)
++-> runtime::v1alpha2::NamespaceMode
+ {
+     if (inspect != nullptr && inspect->host_config != nullptr && (inspect->host_config->network_mode != nullptr) &&
+         std::string(inspect->host_config->network_mode) == CRI::Constants::namespaceModeHost) {
+@@ -1032,10 +1088,9 @@ void PodSandboxManagerServiceImpl::GetIPs(const std::string &podSandboxID, const
+     error.Clear();
+ }
+ 
+-void PodSandboxManagerServiceImpl::SetSandboxStatusNetwork(const container_inspect *inspect,
+-                                                           const std::string &podSandboxID,
+-                                                           std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus,
+-                                                           Errors &error)
++void PodSandboxManagerServiceImpl::SetSandboxStatusNetwork(
++    const container_inspect *inspect, const std::string &podSandboxID,
++    std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus, Errors &error)
+ {
+     std::vector<std::string> ips;
+     size_t i;
+@@ -1052,10 +1107,9 @@ void PodSandboxManagerServiceImpl::SetSandboxStatusNetwork(const container_inspe
+     }
+ }
+ 
+-void PodSandboxManagerServiceImpl::PodSandboxStatusToGRPC(const container_inspect *inspect,
+-                                                          const std::string &podSandboxID,
+-                                                          std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus,
+-                                                          Errors &error)
++void PodSandboxManagerServiceImpl::PodSandboxStatusToGRPC(
++    const container_inspect *inspect, const std::string &podSandboxID,
++    std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus, Errors &error)
+ {
+     int64_t createdAt {};
+     runtime::v1alpha2::NamespaceOption *options { nullptr };
+@@ -1129,8 +1183,8 @@ PodSandboxManagerServiceImpl::PodSandboxStatus(const std::string &podSandboxID,
+ }
+ 
+ void PodSandboxManagerServiceImpl::ListPodSandboxFromGRPC(const runtime::v1alpha2::PodSandboxFilter *filter,
+-                                                          container_list_request **request, bool *filterOutReadySandboxes,
+-                                                          Errors &error)
++                                                          container_list_request **request,
++                                                          bool *filterOutReadySandboxes, Errors &error)
+ {
+     *request = (container_list_request *)util_common_calloc_s(sizeof(container_list_request));
+     if (*request == nullptr) {
+@@ -1175,9 +1229,9 @@ void PodSandboxManagerServiceImpl::ListPodSandboxFromGRPC(const runtime::v1alpha
+     }
+ }
+ 
+-void PodSandboxManagerServiceImpl::ListPodSandboxToGRPC(container_list_response *response,
+-                                                        std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
+-                                                        bool filterOutReadySandboxes, Errors &error)
++void PodSandboxManagerServiceImpl::ListPodSandboxToGRPC(
++    container_list_response *response, std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
++    bool filterOutReadySandboxes, Errors &error)
+ {
+     for (size_t i = 0; i < response->containers_len; i++) {
+         std::unique_ptr<runtime::v1alpha2::PodSandbox> pod(new runtime::v1alpha2::PodSandbox);
+diff --git a/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.h b/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.h
+index fa5d153c..34907fa6 100644
+--- a/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.h
++++ b/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.h
+@@ -82,7 +82,7 @@ private:
+     void SetNetworkReady(const std::string &podSandboxID, bool ready, Errors &error);
+     void StartSandboxContainer(const std::string &response_id, Errors &error);
+     void SetupSandboxNetwork(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &response_id,
+-                             const std::string &jsonCheckpoint, Errors &error);
++                             const std::string &jsonCheckpoint, const container_inspect *inspect_data, Errors &error);
+     void SetupSandboxFiles(const std::string &resolvPath, const runtime::v1alpha2::PodSandboxConfig &config,
+                            Errors &error);
+     void StopContainerHelper(const std::string &containerID, Errors &error);
+diff --git a/src/daemon/entry/cri/cri_security_context.cc b/src/daemon/entry/cri/cri_security_context.cc
+index b6a5fcdc..3ff8a0cb 100644
+--- a/src/daemon/entry/cri/cri_security_context.cc
++++ b/src/daemon/entry/cri/cri_security_context.cc
+@@ -169,6 +169,9 @@ static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::Namespace
+         hostConfig->network_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
+         free(hostConfig->uts_mode);
+         hostConfig->uts_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
++    } else {
++        free(hostConfig->network_mode);
++        hostConfig->network_mode = util_strdup_s(CRI::Constants::namespaceModeFile.c_str());
+     }
+     // Note: default networkMode is not supported
+ }
+diff --git a/src/daemon/executor/container_cb/execution_create.c b/src/daemon/executor/container_cb/execution_create.c
+index 05c0fd78..95a7d9ab 100644
+--- a/src/daemon/executor/container_cb/execution_create.c
++++ b/src/daemon/executor/container_cb/execution_create.c
+@@ -46,6 +46,7 @@
+ #include "utils.h"
+ #include "error.h"
+ #include "constants.h"
++#include "namespace.h"
+ #include "events_sender_api.h"
+ #include "sysinfo.h"
+ #include "service_container_api.h"
+@@ -58,6 +59,7 @@
+ #include "utils_verify.h"
+ #include "selinux_label.h"
+ #include "opt_log.h"
++#include "network_namespace_api.h"
+ 
+ static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
+                                       int64_t cpu_rt_period, int64_t cpu_rt_runtime);
+@@ -1395,6 +1397,63 @@ out:
+     return res;
+ }
+ 
++static char *new_pod_sandbox_key(void)
++{
++    int nret = 0;
++    char random[NETNS_LEN + 1] = { 0x00 };
++    char netns[PATH_MAX] = { 0x00 };
++    const char *netns_fmt = "/var/run/netns/isulacni-%s";
++
++    nret = util_generate_random_str(random, NETNS_LEN);
++    if (nret != 0) {
++        ERROR("Failed to generate random netns");
++        return NULL;
++    }
++
++    nret = snprintf(netns, sizeof(netns), netns_fmt, random);
++    if (nret < 0 || (size_t)nret >= sizeof(netns)) {
++        ERROR("snprintf netns failed");
++        return NULL;
++    }
++
++    return util_strdup_s(netns);
++}
++
++static int generate_network_settings(const host_config *host_config, container_config_v2_common_config *v2_spec)
++{
++    container_config_v2_common_config_network_settings *settings = NULL;
++
++    if (!namespace_is_file(host_config->network_mode)) {
++        return 0;
++    }
++
++    settings = (container_config_v2_common_config_network_settings *)util_common_calloc_s(sizeof(
++                                                                                              container_config_v2_common_config_network_settings));
++    if (settings == NULL) {
++        ERROR("Out of memory");
++        return -1;
++    }
++
++    settings->sandbox_key = new_pod_sandbox_key();
++    if (settings->sandbox_key == NULL) {
++        ERROR("Failed to generate sandbox key");
++        goto err_out;
++    }
++
++    if (prepare_network_namespace(settings->sandbox_key) != 0) {
++        ERROR("Failed to create network namespace");
++        goto err_out;
++    }
++
++    v2_spec->network_settings = settings;
++
++    return 0;
++
++err_out:
++    free_container_config_v2_common_config_network_settings(settings);
++    return -1;
++}
++
+ static int cpurt_controller_init(const char *cgroups_path)
+ {
+     int ret = 0;
+@@ -1568,6 +1627,12 @@ int container_create_cb(const container_create_request *request, container_creat
+         goto umount_shm;
+     }
+ 
++    if (generate_network_settings(host_spec, v2_spec) != 0) {
++        ERROR("Failed to generate network settings");
++        cc = ISULAD_ERR_EXEC;
++        goto umount_shm;
++    }
++
+     if (merge_config_for_syscontainer(request, host_spec, v2_spec->config, oci_spec) != 0) {
+         ERROR("Failed to merge config for syscontainer");
+         cc = ISULAD_ERR_EXEC;
+diff --git a/src/daemon/executor/container_cb/execution_network.c b/src/daemon/executor/container_cb/execution_network.c
+index 2c662bc1..5532e3fc 100644
+--- a/src/daemon/executor/container_cb/execution_network.c
++++ b/src/daemon/executor/container_cb/execution_network.c
+@@ -34,6 +34,7 @@
+ #include "err_msg.h"
+ #include "utils_file.h"
+ #include "utils_string.h"
++#include "network_namespace_api.h"
+ 
+ static int write_hostname_to_file(const char *rootfs, const char *hostname)
+ {
+@@ -1038,4 +1039,4 @@ int init_container_network_confs(const char *id, const char *rootpath, const hos
+ 
+ out:
+     return ret;
+-}
++}
+\ No newline at end of file
+diff --git a/src/daemon/executor/container_cb/execution_network.h b/src/daemon/executor/container_cb/execution_network.h
+index dee56fed..b6428b05 100644
+--- a/src/daemon/executor/container_cb/execution_network.h
++++ b/src/daemon/executor/container_cb/execution_network.h
+@@ -29,7 +29,6 @@ extern "C" {
+ int merge_network(const host_config *host_spec, const char *rootfs, const char *runtime_root,
+                   const char *id, const char *hostname);
+ 
+-
+ int init_container_network_confs(const char *id, const char *rootpath, const host_config *hc,
+                                  container_config_v2_common_config *common_config);
+ 
+diff --git a/src/daemon/modules/api/network_namespace_api.h b/src/daemon/modules/api/network_namespace_api.h
+new file mode 100644
+index 00000000..9a18b1c0
+--- /dev/null
++++ b/src/daemon/modules/api/network_namespace_api.h
+@@ -0,0 +1,35 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2021. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: chengzeruizhi
++ * Create: 2021-10-19
++ * Description: set up CRI network namespace
++ *********************************************************************************/
++
++#ifndef DAEMON_MODULES_API_NETWORK_NAMESPACE_API
++#define DAEMON_MODULES_API_NETWORK_NAMESPACE_API
++
++#include <stdbool.h>
++
++#include "container_api.h"
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++int prepare_network_namespace(const char *netns_path);
++int remove_network_namespace(const char *netns);
++char *get_sandbox_key(const container_inspect *inspect_data);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif // DAEMON_MODULES_API_NETWORK_NAMESPACE_API
+diff --git a/src/daemon/modules/api/specs_api.h b/src/daemon/modules/api/specs_api.h
+index 6c4db007..c4ad79aa 100644
+--- a/src/daemon/modules/api/specs_api.h
++++ b/src/daemon/modules/api/specs_api.h
+@@ -37,7 +37,9 @@ int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec
+ int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, char ***label_opts,
+                        size_t *label_opts_len, char **seccomp_profile);
+ 
+-int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec);
++int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
++                          const container_config_v2_common_config_network_settings *network_settings);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/src/daemon/modules/container/container_unix.c b/src/daemon/modules/container/container_unix.c
+index 1904161e..98f91ea9 100644
+--- a/src/daemon/modules/container/container_unix.c
++++ b/src/daemon/modules/container/container_unix.c
+@@ -45,6 +45,7 @@
+ #include "utils_file.h"
+ #include "utils_string.h"
+ #include "volume_api.h"
++#include "namespace.h"
+ 
+ static int parse_container_log_configs(container_t *cont);
+ 
+diff --git a/src/daemon/modules/service/inspect_container.c b/src/daemon/modules/service/inspect_container.c
+index d678f7bb..b060fe12 100644
+--- a/src/daemon/modules/service/inspect_container.c
++++ b/src/daemon/modules/service/inspect_container.c
+@@ -31,6 +31,7 @@
+ #include "container_api.h"
+ #include "isulad_config.h"
+ #include "err_msg.h"
++#include "namespace.h"
+ 
+ static int dup_path_and_args(const container_t *cont, char **path, char ***args, size_t *args_len)
+ {
+@@ -458,6 +459,36 @@ out:
+     return ret;
+ }
+ 
++static int pack_inspect_network_settings(const container_t *cont, container_inspect *inspect)
++{
++    if (cont == NULL || cont->common_config == NULL) {
++        ERROR("Failed to get v2 common config from container");
++        return -1;
++    }
++
++    if (!namespace_is_file(cont->hostconfig->network_mode)) {
++        return 0;
++    }
++
++    if (cont->common_config->network_settings == NULL) {
++        ERROR("Failed to get network settings from container");
++        return -1;
++    }
++
++    if (inspect->network_settings == NULL) {
++        inspect->network_settings =
++            (container_inspect_network_settings *)util_common_calloc_s(sizeof(container_inspect_network_settings));
++        if (inspect->network_settings == NULL) {
++            ERROR("Out of memory");
++            return -1;
++        }
++    }
++
++    inspect->network_settings->sandbox_key = util_strdup_s(cont->common_config->network_settings->sandbox_key);
++
++    return 0;
++}
++
+ static int merge_default_ulimit_with_ulimit(container_inspect *out_inspect)
+ {
+     int ret = 0;
+@@ -509,6 +540,10 @@ static container_inspect *pack_inspect_data(const container_t *cont, bool with_h
+         ERROR("Failed to pack inspect general data, continue to pack other information");
+     }
+ 
++    if (pack_inspect_network_settings(cont, inspect) != 0) {
++        ERROR("Failed to pack inspect network settings, continue to pack other information");
++    }
++
+     if (pack_inspect_container_state(cont, inspect) != 0) {
+         ERROR("Failed to pack inspect state data, continue to pack other information");
+     }
+diff --git a/src/daemon/modules/service/network_namespace_api.c b/src/daemon/modules/service/network_namespace_api.c
+new file mode 100644
+index 00000000..e28e6f74
+--- /dev/null
++++ b/src/daemon/modules/service/network_namespace_api.c
+@@ -0,0 +1,80 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2021. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: chengzeruizhi
++ * Create: 2021-10-19
++ * Description: set up CRI network namespace
++ *********************************************************************************/
++#define _GNU_SOURCE
++
++#include "network_namespace_api.h"
++
++#include <sys/mount.h>
++
++#include "utils_network.h"
++
++int prepare_network_namespace(const char *netns_path)
++{
++    if (netns_path == NULL) {
++        ERROR("Invalid netns_path");
++        return -1;
++    }
++
++    if (util_create_netns_file(netns_path) != 0) {
++        ERROR("Failed to prepare network namespace file");
++        return -1;
++    }
++
++    return 0;
++}
++
++int remove_network_namespace(const char *netns_path)
++{
++    int get_err = 0;
++
++    if (netns_path == NULL) {
++        ERROR("Invalid netns_path");
++        return -1;
++    }
++
++    if (!util_file_exists(netns_path)) {
++        WARN("Namespace file does not exist");
++        return 0;
++    }
++
++    if (umount2(netns_path, MNT_DETACH) != 0 && errno != EINVAL) {
++        ERROR("Failed to umount directory %s:%s", netns_path, strerror(errno));
++        return -1;
++    }
++
++    if (!util_force_remove_file(netns_path, &get_err)) {
++        ERROR("Failed to remove file %s, error: %s", netns_path, strerror(get_err));
++        return -1;
++    }
++
++    return 0;
++}
++
++char *get_sandbox_key(const container_inspect *inspect_data)
++{
++    char *sandbox_key = NULL;
++
++    if (inspect_data == NULL) {
++        ERROR("Invalid container");
++        return NULL;
++    }
++    if (inspect_data->network_settings == NULL) {
++        ERROR("Inspect data does not have network settings");
++        return NULL;
++    }
++    sandbox_key = util_strdup_s(inspect_data->network_settings->sandbox_key);
++
++    return sandbox_key;
++}
+\ No newline at end of file
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index 0bcfb0e9..27288f6d 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -59,6 +59,8 @@
+ #include "utils_string.h"
+ #include "utils_verify.h"
+ #include "volume_api.h"
++#include "utils_network.h"
++#include "network_namespace_api.h"
+ 
+ #define KATA_RUNTIME "kata-runtime"
+ 
+@@ -227,7 +229,7 @@ static int renew_oci_config(const container_t *cont, oci_runtime_spec *oci_spec)
+         goto out;
+     }
+ 
+-    ret = merge_share_namespace(oci_spec, cont->hostconfig);
++    ret = merge_share_namespace(oci_spec, cont->hostconfig, cont->common_config->network_settings);
+     if (ret != 0) {
+         ERROR("Failed to merge share ns");
+         goto out;
+@@ -895,6 +897,10 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
+     }
+ 
+ set_stopped:
++    if (namespace_is_file(cont->hostconfig->network_mode) &&
++        util_umount_namespace(cont->common_config->network_settings->sandbox_key) != 0) {
++        ERROR("Failed to clean up network namespace");
++    }
+     container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
+     util_contain_errmsg(g_isulad_errmsg, &exit_code);
+     container_state_set_stopped(cont->state, exit_code);
+@@ -1085,6 +1091,13 @@ static int do_delete_container(container_t *cont)
+         goto out;
+     }
+ 
++    // clean up mounted network namespace
++    if (cont->common_config->network_settings != NULL &&
++        util_file_exists(cont->common_config->network_settings->sandbox_key)
++        && remove_network_namespace(cont->common_config->network_settings->sandbox_key) != 0) {
++        ERROR("Failed to remove network when deleting container %s", cont->common_config->id);
++    }
++
+     ret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
+     if (ret < 0 || (size_t)ret >= sizeof(container_state)) {
+         ERROR("Failed to sprintf container_state");
+diff --git a/src/daemon/modules/spec/specs.c b/src/daemon/modules/spec/specs.c
+index d8d05ba0..fc53bd14 100644
+--- a/src/daemon/modules/spec/specs.c
++++ b/src/daemon/modules/spec/specs.c
+@@ -22,14 +22,14 @@
+ #include <isula_libutils/defs.h>
+ #include <isula_libutils/json_common.h>
+ #include <isula_libutils/oci_runtime_config_linux.h>
++#include <isula_libutils/oci_runtime_spec.h>
++#include <isula_libutils/oci_runtime_hooks.h>
++#include <isula_libutils/host_config.h>
++#include <isula_libutils/log.h>
+ #include <limits.h>
+ #include <stdint.h>
+ 
+-#include "isula_libutils/log.h"
+ #include "specs_api.h"
+-#include "isula_libutils/oci_runtime_spec.h"
+-#include "isula_libutils/oci_runtime_hooks.h"
+-#include "isula_libutils/host_config.h"
+ #include "utils.h"
+ #include "isulad_config.h"
+ #include "namespace.h"
+@@ -1377,10 +1377,9 @@ out:
+     return ret;
+ }
+ 
+-static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const char *path, const char *type)
++static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const char *ns_path, const char *type)
+ {
+     int ret = -1;
+-    char *ns_path = NULL;
+     size_t len = 0;
+     size_t org_len = 0;
+     size_t i = 0;
+@@ -1390,11 +1389,6 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const
+     len = oci_spec->linux->namespaces_len;
+     work_ns = oci_spec->linux->namespaces;
+ 
+-    ret = get_share_namespace_path(type, path, &ns_path);
+-    if (ret != 0) {
+-        ERROR("Failed to get share ns type:%s path:%s", type, path);
+-        goto out;
+-    }
+     for (i = 0; i < org_len; i++) {
+         if (strcmp(type, work_ns[i]->type) == 0) {
+             free(work_ns[i]->path);
+@@ -1433,7 +1427,6 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const
+     }
+     ret = 0;
+ out:
+-    free(ns_path);
+     if (work_ns != NULL) {
+         oci_spec->linux->namespaces = work_ns;
+         oci_spec->linux->namespaces_len = len;
+@@ -1443,14 +1436,55 @@ out:
+ 
+ static int merge_share_single_namespace(const oci_runtime_spec *oci_spec, const char *path, const char *type)
+ {
++    int ret = 0;
++    char *ns_path = NULL;
++
+     if (path == NULL) {
+         return 0;
+     }
+ 
+-    return merge_share_namespace_helper(oci_spec, path, type);
++    ret = get_share_namespace_path(type, path, &ns_path);
++    if (ret != 0) {
++        ERROR("Failed to get share ns type:%s path:%s", type, path);
++        return -1;
++    }
++
++    ret = merge_share_namespace_helper(oci_spec, ns_path, type);
++    if (ret != 0) {
++        ERROR("Failed to merge share namespace namespace helper");
++    }
++
++    free(ns_path);
++    return ret;
++}
++
++static int merge_share_network_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
++                                         const container_config_v2_common_config_network_settings *network_settings, const char *type)
++{
++    int ret = 0;
++    char *ns_path = NULL;
++
++    if (host_spec->network_mode == NULL) {
++        return 0;
++    }
++
++    ret = get_network_namespace_path(host_spec, network_settings, type, &ns_path);
++    if (ret != 0) {
++        ERROR("Failed to get network namespace path");
++        return -1;
++    }
++
++    ret = merge_share_namespace_helper(oci_spec, ns_path, type);
++    if (ret != 0) {
++        ERROR("Failed to merge share namespace namespace helper");
++    }
++
++    free(ns_path);
++    return ret;
+ }
+ 
+-int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec)
++int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
++                          const container_config_v2_common_config_network_settings *network_settings)
+ {
+     int ret = -1;
+ 
+@@ -1475,7 +1509,7 @@ int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_sp
+     }
+ 
+     // network
+-    if (merge_share_single_namespace(oci_spec, host_spec->network_mode, TYPE_NAMESPACE_NETWORK) != 0) {
++    if (merge_share_network_namespace(oci_spec, host_spec, network_settings, TYPE_NAMESPACE_NETWORK) != 0) {
+         ret = -1;
+         goto out;
+     }
+diff --git a/src/daemon/modules/spec/specs_namespace.c b/src/daemon/modules/spec/specs_namespace.c
+index e291f092..eea0b3ff 100644
+--- a/src/daemon/modules/spec/specs_namespace.c
++++ b/src/daemon/modules/spec/specs_namespace.c
+@@ -17,15 +17,16 @@
+ #include <string.h>
+ #include <stdlib.h>
+ #include <limits.h>
+-#include <isula_libutils/container_config_v2.h>
+ #include <signal.h>
+ #include <stdio.h>
++#include <isula_libutils/log.h>
++#include <isula_libutils/container_config_v2.h>
+ 
+-#include "isula_libutils/log.h"
+ #include "utils.h"
+ #include "namespace.h"
+ #include "container_api.h"
+ #include "err_msg.h"
++#include "network_namespace_api.h"
+ 
+ static char *parse_share_namespace_with_prefix(const char *type, const char *path)
+ {
+@@ -133,3 +134,84 @@ char *get_container_process_label(const char *cid)
+ out:
+     return result;
+ }
++
++typedef int (*namespace_mode_check)(const host_config *host_spec,
++                                    const container_config_v2_common_config_network_settings *network_settings,
++                                    const char *type, char **dest_path);
++
++struct get_netns_path_handler {
++    char *mode;
++    namespace_mode_check handle;
++};
++
++static int handle_get_path_from_none(const host_config *host_spec,
++                                     const container_config_v2_common_config_network_settings *network_settings,
++                                     const char *type, char **dest_path)
++{
++    *dest_path = NULL;
++    return 0;
++}
++
++static int handle_get_path_from_host(const host_config *host_spec,
++                                     const container_config_v2_common_config_network_settings *network_settings,
++                                     const char *type, char **dest_path)
++{
++    *dest_path = namespace_get_host_namespace_path(host_spec->network_mode);
++    if (*dest_path == NULL) {
++        return -1;
++    }
++    return 0;
++}
++
++static int handle_get_path_from_container(const host_config *host_spec,
++                                          const container_config_v2_common_config_network_settings *network_settings, const char *type,
++                                          char **dest_path)
++{
++    *dest_path = parse_share_namespace_with_prefix(type, host_spec->network_mode);
++    if (*dest_path == NULL) {
++        return -1;
++    }
++    return 0;
++}
++
++static int handle_get_path_from_file(const host_config *host_spec,
++                                     const container_config_v2_common_config_network_settings *network_settings,
++                                     const char *type, char **dest_path)
++{
++    if (network_settings == NULL || network_settings->sandbox_key == NULL) {
++        ERROR("Invalid sandbox key for file mode network");
++        return -1;
++    }
++
++    *dest_path = util_strdup_s(network_settings->sandbox_key);
++    return 0;
++}
++
++int get_network_namespace_path(const host_config *host_spec,
++                               const container_config_v2_common_config_network_settings *network_settings,
++                               const char *type, char **dest_path)
++{
++    int index;
++    int ret = -1;
++    struct get_netns_path_handler handler_jump_table[] = {
++        { SHARE_NAMESPACE_NONE, handle_get_path_from_none },
++        { SHARE_NAMESPACE_HOST, handle_get_path_from_host },
++        { SHARE_NAMESPACE_PREFIX, handle_get_path_from_container },
++        { SHARE_NAMESPACE_FILE, handle_get_path_from_file },
++    };
++    size_t jump_table_size = sizeof(handler_jump_table) / sizeof(handler_jump_table[0]);
++    const char *network_mode = host_spec->network_mode;
++
++    if (network_mode == NULL || dest_path == NULL) {
++        return -1;
++    }
++
++    for (index = 0; index < jump_table_size; ++index) {
++        if (strncmp(network_mode, handler_jump_table[index].mode, strlen(handler_jump_table[index].mode)) == 0) {
++            ret = handler_jump_table[index].handle(host_spec, network_settings, type, dest_path);
++            return ret;
++        }
++    }
++
++    return ret;
++}
+\ No newline at end of file
+diff --git a/src/daemon/modules/spec/specs_namespace.h b/src/daemon/modules/spec/specs_namespace.h
+index 526ad4e0..68e41399 100644
+--- a/src/daemon/modules/spec/specs_namespace.h
++++ b/src/daemon/modules/spec/specs_namespace.h
+@@ -17,6 +17,8 @@
+ 
+ #include <stdbool.h>
+ #include <string.h>
++#include <isula_libutils/host_config.h>
++#include <isula_libutils/container_config_v2.h>
+ 
+ #ifdef __cplusplus
+ extern "C" {
+@@ -24,6 +26,9 @@ extern "C" {
+ 
+ int get_share_namespace_path(const char *type, const char *src_path, char **dest_path);
+ char *get_container_process_label(const char *path);
++int get_network_namespace_path(const host_config *host_spec,
++                               const container_config_v2_common_config_network_settings *network_settings,
++                               const char *type, char **dest_path);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/src/utils/cutils/namespace.h b/src/utils/cutils/namespace.h
+index cf768056..26a9bb19 100644
+--- a/src/utils/cutils/namespace.h
++++ b/src/utils/cutils/namespace.h
+@@ -37,6 +37,8 @@ typedef enum {
+ #define SHARE_NAMESPACE_HOST "host"
+ #define SHARE_NAMESPACE_NONE "none"
+ #define SHARE_NAMESPACE_SHAREABLE "shareable"
++#define SHARE_NAMESPACE_BRIDGE "bridge"
++#define SHARE_NAMESPACE_FILE "file"
+ 
+ #define SHARE_NAMESPACE_PID_HOST_PATH "/proc/1/ns/pid"
+ #define SHARE_NAMESPACE_NET_HOST_PATH "/proc/1/ns/net"
+@@ -82,6 +84,22 @@ static inline bool namespace_is_container(const char *mode)
+     return false;
+ }
+ 
++static inline bool namespace_is_bridge(const char *mode)
++{
++    if (mode != NULL && strcmp(mode, SHARE_NAMESPACE_BRIDGE) == 0) {
++        return true;
++    }
++    return false;
++}
++
++static inline bool namespace_is_file(const char *mode)
++{
++    if (mode != NULL && strcmp(mode, SHARE_NAMESPACE_FILE) == 0) {
++        return true;
++    }
++    return false;
++}
++
+ static inline bool namespace_is_shareable(const char *mode)
+ {
+     if (mode != NULL && strcmp(mode, SHARE_NAMESPACE_SHAREABLE) == 0) {
+diff --git a/src/utils/cutils/utils_file.c b/src/utils/cutils/utils_file.c
+index 302e4e32..f4fa4ece 100644
+--- a/src/utils/cutils/utils_file.c
++++ b/src/utils/cutils/utils_file.c
+@@ -275,6 +275,29 @@ out:
+     return ret;
+ }
+ 
++bool util_force_remove_file(const char *fname, int *saved_errno)
++{
++    if (unlink(fname) == 0) {
++        return true;
++    }
++
++    WARN("Failed to delete %s: %s", fname, strerror(errno));
++    if (*saved_errno == 0) {
++        *saved_errno = errno;
++    }
++
++    if (mark_file_mutable(fname) != 0) {
++        WARN("Failed to mark file mutable");
++    }
++
++    if (unlink(fname) != 0) {
++        ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
++        return false;
++    }
++
++    return true;
++}
++
+ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int recursive_depth, int *saved_errno,
+                                       int failure)
+ {
+diff --git a/src/utils/cutils/utils_file.h b/src/utils/cutils/utils_file.h
+index 125f43a3..a7fbbb6b 100644
+--- a/src/utils/cutils/utils_file.h
++++ b/src/utils/cutils/utils_file.h
+@@ -36,6 +36,8 @@ bool util_file_exists(const char *f);
+ 
+ int util_path_remove(const char *path);
+ 
++bool util_force_remove_file(const char *fname, int *saved_errno);
++
+ ssize_t util_write_nointr(int fd, const void *buf, size_t count);
+ 
+ ssize_t util_write_nointr_in_total(int fd, const char *buf, size_t count);
+diff --git a/src/utils/cutils/utils_network.c b/src/utils/cutils/utils_network.c
+new file mode 100644
+index 00000000..a5d77c93
+--- /dev/null
++++ b/src/utils/cutils/utils_network.c
+@@ -0,0 +1,138 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2021. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: chengzeruizhi
++ * Create: 2021-11-17
++ * Description: provide common network functions
++ ********************************************************************************/
++
++#define _GNU_SOURCE
++
++#include "utils_network.h"
++
++#include <unistd.h>
++#include <sched.h>
++#include <stdlib.h>
++#include <pthread.h>
++#include <sys/mount.h>
++#include <linux/fs.h>
++#include <syscall.h>
++#include <isula_libutils/log.h>
++#include <fcntl.h>
++
++#include "utils_fs.h"
++#include "utils_file.h"
++#include "constants.h"
++
++int util_create_netns_file(const char *netns_path)
++{
++    int ret = 0;
++    int fd = -1;
++    char *netns_dir = NULL;
++
++    if (util_file_exists(netns_path)) {
++        ERROR("Namespace file %s exists", netns_path);
++        return -1;
++    }
++    netns_dir = util_path_dir(netns_path);
++    if (netns_dir == NULL) {
++        ERROR("Failed to get path dir for %s", netns_path);
++        return -1;
++    }
++    if (!util_dir_exists(netns_dir) && util_mkdir_p(netns_dir, DEFAULT_HIGHEST_DIRECTORY_MODE) != 0) {
++        ERROR("Failed to create directory for %s", netns_path);
++        ret = -1;
++        goto out;
++    }
++
++    fd = util_open(netns_path, O_RDWR | O_CREAT | O_TRUNC, DEFAULT_SECURE_FILE_MODE);
++    if (fd < 0) {
++        ERROR("Failed to create namespace file: %s", netns_path);
++        ret = -1;
++        goto out;
++    }
++    close(fd);
++
++out:
++    free(netns_dir);
++    return ret;
++}
++
++static void mount_netns(void *netns_path)
++{
++    int failure = EXIT_FAILURE;
++    int success = EXIT_SUCCESS;
++    char fullpath[PATH_MAX] = { 0x00 };
++    int ret = 0;
++
++    if (unshare(CLONE_NEWNET) != 0) {
++        pthread_exit((void *)&failure);
++    }
++
++    ret = snprintf(fullpath, sizeof(fullpath), "/proc/%d/task/%ld/ns/net", getpid(), (long int)syscall(__NR_gettid));
++    if (ret < 0 || (size_t)ret >= sizeof(fullpath)) {
++        pthread_exit((void *)&failure);
++    }
++
++    if (util_mount(fullpath, (char *)netns_path, "none", "bind") != 0) {
++        pthread_exit((void *)&failure);
++    }
++    pthread_exit((void *)&success);
++}
++
++// this function mounts netns path to /proc/%d/task/%d/ns/net
++int util_mount_namespace(const char *netns_path)
++{
++    pthread_t newns_thread = 0;
++    int ret = 0;
++    void *status = NULL;
++
++    ret = pthread_create(&newns_thread, NULL, (void *)&mount_netns, (void *)netns_path);
++    if (ret != 0) {
++        ERROR("Failed to create thread");
++        return -1;
++    }
++
++    ret = pthread_join(newns_thread, &status);
++    if (ret != 0) {
++        ERROR("Failed to join thread");
++        return -1;
++    } else {
++        if (*(int *)status != 0) {
++            ERROR("Failed to initialize network namespace");
++            return -1;
++        }
++    }
++    return 0;
++}
++
++int util_umount_namespace(const char *netns_path)
++{
++    int i = 0;
++    if (netns_path == NULL) {
++        WARN("Invalid path to umount");
++    }
++
++    for (i = 0; i < 50; i++) {
++        if (umount2(netns_path, MNT_DETACH) < 0) {
++            switch (errno) {
++                case EBUSY:
++                    usleep(50);
++                    continue;
++                case EINVAL:
++                    return 0;
++                default:
++                    continue;
++            }
++        }
++    }
++    ERROR("Failed to umount target %s", netns_path);
++    return -1;
++}
+diff --git a/src/utils/cutils/utils_network.h b/src/utils/cutils/utils_network.h
+new file mode 100644
+index 00000000..6ec912d8
+--- /dev/null
++++ b/src/utils/cutils/utils_network.h
+@@ -0,0 +1,33 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2021. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: chengzeruizhi
++ * Create: 2021-11-17
++ * Description: provide common network functions
++ ********************************************************************************/
++
++#ifndef UTILS_CUTILS_UTILS_NETWORK_H
++#define UTILS_CUTILS_UTILS_NETWORK_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++int util_create_netns_file(const char *netns_path);
++
++int util_mount_namespace(const char *netns_path);
++
++int util_umount_namespace(const char *netns_path);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif // UTILS_CUTILS_UTILS_NETWORK_H
+\ No newline at end of file
+-- 
+2.25.1
+
