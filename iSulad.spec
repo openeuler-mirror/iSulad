@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 7
+%global _release 9
 %global is_systemd 1
 %global enable_shimv2 1
 
@@ -26,6 +26,7 @@ Patch0011: 0011-add-fuzz-build-in-CI.patch
 Patch0012: 0012-print-valgrind-log.patch
 Patch0013: 0013-fix-cri-version-memory-leak.patch
 Patch0014: 0014-fix-undefined-reference-in-libisulad_img.so.patch
+Patch0015: 0015-fix-undefined-reference-to-service_arguments_free-in.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -44,7 +45,12 @@ Requires(preun): chkconfig
 Requires(preun): initscripts
 %endif
 
-BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel clibcni-devel
+%define lcrver 2.0.6
+%define clibcniver 2.0.6
+
+
+BuildRequires: lcr-devel >= %{lcrver} clibcni-devel >= %{clibcniver}
+BuildRequires: cmake gcc-c++ yajl-devel lxc lxc-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
@@ -54,8 +60,9 @@ BuildRequires: systemd-devel git chrpath
 BuildRequires: lib-shim-v2 lib-shim-v2-devel
 %endif
 
-Requires:      lcr lxc clibcni
-Requires:      grpc protobuf
+
+Requires:      clibcni >= %{clibcniver} lcr >= %{lcrver}
+Requires:      grpc protobuf lxc
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
 Requires:      libcap libselinux libwebsockets libarchive device-mapper
@@ -239,6 +246,18 @@ fi
 %endif
 
 %changelog
+* Mon Dec 06 2021 gaohuatao <gaohuatao@huawei.com> - 2.0.10-9
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: specify version
+
+* Thu Dec 03 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-8
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: fix undefined reference to `service_arguments_free' in libisulad_img.so
+
 * Thu Dec 02 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-7
 - Type: bugfix
 - ID: NA
