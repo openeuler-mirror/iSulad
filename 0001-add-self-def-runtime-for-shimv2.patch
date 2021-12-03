@@ -1,7 +1,7 @@
 From 717a0c83e3032c2255b257531cfd160b98cd8180 Mon Sep 17 00:00:00 2001
 From: gaohuatao <gaohuatao@huawei.com>
 Date: Tue, 16 Nov 2021 11:30:03 +0800
-Subject: [PATCH] add self def runtime for shimv2
+Subject: [PATCH 01/14] add self def runtime for shimv2
 
 Signed-off-by: gaohuatao <gaohuatao@huawei.com>
 ---
@@ -181,5 +181,5 @@ index 8801bea6..0f9ef044 100644
  
      create_request->image = util_strdup_s(image.c_str());
 -- 
-2.20.1
+2.25.1
 
