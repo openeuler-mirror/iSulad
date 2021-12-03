@@ -177,7 +177,8 @@ static int append_container_by_directory(const char *container_dir)
     c = storage_rootfs_parse_file(container_path, NULL, &err);
     if (c == NULL) {
         ERROR("Failed to parse container path: %s", err);
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     if (do_append_container(c) != 0) {
