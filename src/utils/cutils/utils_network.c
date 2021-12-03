@@ -65,26 +65,34 @@ out:
     return ret;
 }
 
-static void mount_netns(void *netns_path)
+static void* mount_netns(void *netns_path)
 {
-    int failure = EXIT_FAILURE;
-    int success = EXIT_SUCCESS;
+    int *ecode = (int *)malloc(sizeof(int));
     char fullpath[PATH_MAX] = { 0x00 };
     int ret = 0;
 
     if (unshare(CLONE_NEWNET) != 0) {
-        pthread_exit((void *)&failure);
+        ERROR("Failed to unshare");
+        goto err_out;
     }
 
     ret = snprintf(fullpath, sizeof(fullpath), "/proc/%d/task/%ld/ns/net", getpid(), (long int)syscall(__NR_gettid));
     if (ret < 0 || (size_t)ret >= sizeof(fullpath)) {
-        pthread_exit((void *)&failure);
+        ERROR("Failed to get full path");
+        goto err_out;
     }
 
     if (util_mount(fullpath, (char *)netns_path, "none", "bind") != 0) {
-        pthread_exit((void *)&failure);
+        ERROR("Failed to mount %s", fullpath);
+        goto err_out;
     }
-    pthread_exit((void *)&success);
+
+    *ecode = EXIT_SUCCESS;
+    pthread_exit((void *)ecode);
+
+err_out:
+    *ecode = EXIT_FAILURE;
+    pthread_exit((void *)ecode);
 }
 
 // this function mounts netns path to /proc/%d/task/%d/ns/net
@@ -103,14 +111,25 @@ int util_mount_namespace(const char *netns_path)
     ret = pthread_join(newns_thread, &status);
     if (ret != 0) {
         ERROR("Failed to join thread");
-        return -1;
-    } else {
-        if (*(int *)status != 0) {
-            ERROR("Failed to initialize network namespace");
-            return -1;
-        }
+        ret = -1;
+        goto out;
     }
-    return 0;
+
+    if (status == NULL) {
+        ERROR("Failed set exit status");
+        return -1;
+    }
+
+    if (*(int *)status != 0) {
+        ERROR("Failed to initialize network namespace, status code is %d", *(int *)status);
+        ret = -1;
+    } else {
+        ret = 0;
+    }
+
+out:
+    free(status);
+    return ret;
 }
 
 int util_umount_namespace(const char *netns_path)

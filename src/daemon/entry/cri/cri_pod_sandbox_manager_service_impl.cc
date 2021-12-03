@@ -477,7 +477,7 @@ void PodSandboxManagerServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::
 {
     std::map<std::string, std::string> stdAnnos;
     std::map<std::string, std::string> networkOptions;
-    const char* sandbox_key = get_sandbox_key(inspect_data);
+    char* sandbox_key = get_sandbox_key(inspect_data);
 
     // Setup sandbox files
     if (config.has_dns_config() && inspect_data->resolv_conf_path != nullptr) {
@@ -510,6 +510,7 @@ void PodSandboxManagerServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::
     }
 
 cleanup:
+    free(sandbox_key);
     return;
 }
 
