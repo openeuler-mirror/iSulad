@@ -2980,7 +2980,8 @@ static int append_image_by_directory(const char *image_dir)
     im = storage_image_parse_file(image_path, NULL, &err);
     if (im == NULL) {
         ERROR("Failed to parse images path: %s", err);
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     ret = strip_default_hostname(im);
