@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2019-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -8,8 +8,8 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: lifeng
- * Create: 2018-11-08
+ * Author: wujing
+ * Create: 2019-01-02
  * Description: provide websocket server functions
  ******************************************************************************/
 
@@ -19,34 +19,132 @@
 #include <future>
 #include <utility>
 #include <sys/resource.h>
+#include <isula_libutils/log.h>
 #include "cxxutils.h"
-#include "isula_libutils/log.h"
 #include "utils.h"
 #include "request_cache.h"
 #include "constants.h"
 #include "isulad_config.h"
 #include "callback.h"
 #include "cri_helpers.h"
+#include "isula_libutils/cri_terminal_size.h"
 
 struct lws_context *WebsocketServer::m_context = nullptr;
 std::atomic<WebsocketServer *> WebsocketServer::m_instance;
 RWMutex WebsocketServer::m_mutex;
-std::unordered_map<int, session_data *> WebsocketServer::m_wsis;
+std::unordered_map<int, SessionData *> WebsocketServer::m_wsis;
+
+namespace {
+const int MAX_BUF_LEN = 256;
+const int MAX_HTTP_HEADER_POOL = 8;
+// io copy maximum single transfer 4K, let max total buffer size: 1GB
+const int FIFO_LIST_BUFFER_MAX_LEN = 262144;
+const int SESSION_CAPABILITY = 300;
+const int MAX_SESSION_NUM = 128;
+}; // namespace
+
+enum WebsocketChannel { STDINCHANNEL = 0, STDOUTCHANNEL, STDERRCHANNEL, ERRORCHANNEL, RESIZECHANNEL };
+
+unsigned char *SessionData::FrontMessage()
+{
+    unsigned char *message = nullptr;
+
+    if (sessionMutex == nullptr) {
+        return nullptr;
+    }
+
+    sessionMutex->lock();
+    message = buffer.front();
+    sessionMutex->unlock();
+
+    return message;
+}
+
+void SessionData::PopMessage()
+{
+    if (sessionMutex == nullptr) {
+        return;
+    }
+
+    sessionMutex->lock();
+    buffer.pop_front();
+    sessionMutex->unlock();
+}
+
+int SessionData::PushMessage(unsigned char *message)
+{
+    if (sessionMutex == nullptr) {
+        return -1;
+    }
+
+    sessionMutex->lock();
+
+    // In extreme scenarios, websocket data cannot be processed,
+    // ignore the data coming in later to prevent iSulad from getting stuck
+    if (close || buffer.size() >= FIFO_LIST_BUFFER_MAX_LEN) {
+        free(message);
+        sessionMutex->unlock();
+        return -1;
+    }
+
+    buffer.push_back(message);
+    sessionMutex->unlock();
+    return 0;
+}
+
+bool SessionData::IsClosed()
+{
+    bool c = false;
+
+    if (sessionMutex == nullptr) {
+        return true;
+    }
+
+    sessionMutex->lock();
+    c = close;
+    sessionMutex->unlock();
+
+    return c;
+}
+
+void SessionData::CloseSession()
+{
+    if (sessionMutex == nullptr) {
+        return;
+    }
+
+    sessionMutex->lock();
+    close = true;
+    sessionMutex->unlock();
+}
+
+void SessionData::EraseAllMessage()
+{
+    if (sessionMutex == nullptr) {
+        return;
+    }
+
+    sessionMutex->lock();
+    for (auto iter = buffer.begin(); iter != buffer.end();) {
+        free(*iter);
+        *iter = NULL;
+        iter = buffer.erase(iter);
+    }
+    sessionMutex->unlock();
+}
 
 WebsocketServer *WebsocketServer::GetInstance() noexcept
 {
     static std::once_flag flag;
 
-    std::call_once(flag, [] {
-        m_instance = new WebsocketServer;
-    });
+    std::call_once(flag, [] { m_instance = new WebsocketServer; });
 
     return m_instance;
 }
 
 WebsocketServer::WebsocketServer()
 {
-    m_force_exit = 0;
+    m_forceExit = 0;
     m_wsis.reserve(SESSION_CAPABILITY);
 }
 
@@ -60,19 +158,9 @@ url::URLDatum WebsocketServer::GetWebsocketUrl()
     return m_url;
 }
 
-void WebsocketServer::ReadLockAllWsSession()
-{
-    m_mutex.rdlock();
-}
-
-void WebsocketServer::UnlockAllWsSession()
-{
-    m_mutex.unlock();
-}
-
 void WebsocketServer::Shutdown()
 {
-    m_force_exit = 1;
+    m_forceExit = 1;
     lws_cancel_service(m_context);
 }
 
@@ -99,15 +187,12 @@ void WebsocketServer::EmitLog(int level, const char *line)
 
 int WebsocketServer::CreateContext()
 {
-    int limited;
-    struct lws_context_creation_info info;
-    struct rlimit oldLimit, newLimit;
-    const size_t WS_ULIMIT_FDS = 1024;
+    const size_t WS_ULIMIT_FDS { 1024 };
 
     m_url.SetScheme("ws");
     m_url.SetHost("localhost:" + std::to_string(m_listenPort));
 
-    (void)memset(&info, 0, sizeof(info));
+    lws_context_creation_info info { 0x00 };
     lws_set_log_level(LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_DEBUG, WebsocketServer::EmitLog);
 
     info.port = m_listenPort;
@@ -125,9 +210,10 @@ int WebsocketServer::CreateContext()
      * belowing lws_create_context limit the fds of websocket to RLIMIT_NOFILE,
      * and malloced memory according to it. To reduce memory, we recover it to 1024 before create m_context.
     */
+    rlimit oldLimit, newLimit;
     newLimit.rlim_cur = WS_ULIMIT_FDS;
     newLimit.rlim_max = WS_ULIMIT_FDS;
-    limited = prlimit(0, RLIMIT_NOFILE, &newLimit, &oldLimit);
+    int limited = prlimit(0, RLIMIT_NOFILE, &newLimit, &oldLimit);
     if (limited != 0) {
         WARN("Can not set ulimit of RLIMIT_NOFILE: %s", strerror(errno));
     }
@@ -145,8 +231,7 @@ int WebsocketServer::CreateContext()
     return 0;
 }
 
-void WebsocketServer::RegisterCallback(const std::string &path,
-                                       std::shared_ptr<StreamingServeInterface> callback)
+void WebsocketServer::RegisterCallback(const std::string &path, std::shared_ptr<StreamingServeInterface> callback)
 {
     m_handler.RegisterCallback(path, callback);
 }
@@ -158,8 +243,8 @@ void WebsocketServer::CloseAllWsSession()
         it->second->EraseAllMessage();
         close(it->second->pipes.at(0));
         close(it->second->pipes.at(1));
-        (void)sem_destroy(it->second->sync_close_sem);
-        delete it->second->session_mutex;
+        (void)sem_destroy(it->second->syncCloseSem);
+        delete it->second->sessionMutex;
         delete it->second;
     }
     m_wsis.clear();
@@ -189,23 +274,23 @@ void WebsocketServer::CloseWsSession(int socketID)
             close(session->pipes.at(1));
             session->pipes.at(1) = -1;
         }
-        (void)sem_wait(session->sync_close_sem);
-        (void)sem_destroy(session->sync_close_sem);
-        delete session->sync_close_sem;
-        session->sync_close_sem = nullptr;
+        (void)sem_wait(session->syncCloseSem);
+        (void)sem_destroy(session->syncCloseSem);
+        delete session->syncCloseSem;
+        session->syncCloseSem = nullptr;
         close(session->pipes.at(0));
-        delete session->session_mutex;
-        session->session_mutex = nullptr;
+        delete session->sessionMutex;
+        session->sessionMutex = nullptr;
         delete session;
     }).detach();
 }
 
-int WebsocketServer::GenerateSessionData(session_data *session, const std::string containerID) noexcept
+int WebsocketServer::GenerateSessionData(SessionData *session, const std::string containerID) noexcept
 {
     char *suffix = nullptr;
-    int read_pipe_fd[PIPE_FD_NUM] = {-1, -1};
-    std::mutex *buf_mutex = nullptr;
-    sem_t *sync_close_sem = nullptr;
+    int readPipeFd[2] = { -1, -1 };
+    std::mutex *bufMutex = nullptr;
+    sem_t *syncCloseSem = nullptr;
 
     suffix = CRIHelpers::GenerateExecSuffix();
     if (suffix == nullptr) {
@@ -213,24 +298,24 @@ int WebsocketServer::GenerateSessionData(session_data *session, const std::strin
         return -1;
     }
 
-    if (InitRWPipe(read_pipe_fd) < 0) {
+    if (InitRWPipe(readPipeFd) < 0) {
         ERROR("failed to init read/write pipe!");
         goto out;
     }
 
-    buf_mutex = new std::mutex;
-    sync_close_sem = new sem_t;
+    bufMutex = new std::mutex;
+    syncCloseSem = new sem_t;
 
-    if (sem_init(sync_close_sem, 0, 0) != 0) {
+    if (sem_init(syncCloseSem, 0, 0) != 0) {
         ERROR("Semaphore initialization failed");
         goto out;
     }
 
-    session->pipes = std::array<int, MAX_ARRAY_LEN> { read_pipe_fd[0], read_pipe_fd[1] };
-    session->session_mutex = buf_mutex;
-    session->sync_close_sem = sync_close_sem;
+    session->pipes = std::array<int, MAX_ARRAY_LEN> { readPipeFd[0], readPipeFd[1] };
+    session->sessionMutex = bufMutex;
+    session->syncCloseSem = syncCloseSem;
     session->close = false;
-    session->container_id = containerID;
+    session->containerID = containerID;
     session->suffix = std::string(suffix);
 
     free(suffix);
@@ -241,17 +326,17 @@ out:
     if (suffix != nullptr) {
         free(suffix);
     }
-    if (read_pipe_fd[1] >= 0) {
-        close(read_pipe_fd[1]);
+    if (readPipeFd[1] >= 0) {
+        close(readPipeFd[1]);
     }
-    if (read_pipe_fd[0] >= 0) {
-        close(read_pipe_fd[0]);
+    if (readPipeFd[0] >= 0) {
+        close(readPipeFd[0]);
     }
-    if (buf_mutex != nullptr) {
-        delete buf_mutex;
+    if (bufMutex != nullptr) {
+        delete bufMutex;
     }
-    if (sync_close_sem) {
-        delete sync_close_sem;
+    if (syncCloseSem) {
+        delete syncCloseSem;
     }
 
     return -1;
@@ -269,10 +354,9 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
     buf[sizeof(buf) - 1] = '\0';
     // format: "/cri/" + method + "/" + token + "/" + arg(container=cmd)
     auto vec = CXXUtils::Split(buf + 1, '/');
-    RequestCache *cache = RequestCache::GetInstance();
-    if (vec.size() < MIN_VEC_SIZE ||
-        !m_handler.IsValidMethod(vec.at(1)) ||
-        !cache->IsValidToken(vec.at(2))) {
+    auto *cache = RequestCache::GetInstance();
+    // buffer contains at least 3 parts: cri, method, token
+    if (vec.size() < 3 || !m_handler.IsValidMethod(vec.at(1)) || !cache->IsValidToken(vec.at(2))) {
         ERROR("invalid url(%s): incorrect format!", buf);
         return -1;
     }
@@ -288,13 +372,13 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
         return -1;
     }
 
-    std::string containerID = cache->GetContainerIDByToken(vec.at(1), vec.at(2));
+    auto containerID = cache->GetContainerIDByToken(vec.at(2));
     if (containerID.empty()) {
         ERROR("Failed to get container id from %s request", vec.at(1).c_str());
         return -1;
     }
 
-    session_data *session = new (std::nothrow) session_data;
+    auto *session = new (std::nothrow) SessionData;
     if (session == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -304,7 +388,7 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
         return -1;
     }
 
-    std::string suffixID = session->suffix;
+    auto suffixID = session->suffix;
     auto insertRet = m_wsis.insert(std::make_pair(socketID, session));
     if (!insertRet.second) {
         ERROR("failed to insert session data to map");
@@ -351,8 +435,8 @@ int WebsocketServer::Wswrite(struct lws *wsi, const unsigned char *message)
         if (strlen((const char *)(&message[LWS_PRE + 1])) == 0) {
             return 0;
         }
-        int n = lws_write(wsi, (unsigned char *)(&message[LWS_PRE]),
-                          strlen((const char *)(&message[LWS_PRE + 1])) + 1, LWS_WRITE_TEXT);
+        auto n = lws_write(wsi, (unsigned char *)(&message[LWS_PRE]), strlen((const char *)(&message[LWS_PRE + 1])) + 1,
+                           LWS_WRITE_TEXT);
         if (n < 0) {
             ERROR("ERROR %d writing to socket, hanging up", n);
             return -1;
@@ -362,21 +446,18 @@ int WebsocketServer::Wswrite(struct lws *wsi, const unsigned char *message)
     return 0;
 }
 
-int WebsocketServer::parseTerminalSize(const char *jsonData, size_t len, uint16_t &width, uint16_t &height)
+int WebsocketServer::ParseTerminalSize(const char *jsonData, size_t len, uint16_t &width, uint16_t &height)
 {
-    int ret = 0;
-    parser_error err = nullptr;
-    cri_terminal_size *terminalSize = nullptr;
-
     if (jsonData == nullptr || len == 0) {
         return -1;
     }
 
     // No terminator is included in json data, and len contains a character occupied by channal
     std::string jsonDataStr { jsonData, len - 1 };
-
+    parser_error err = nullptr;
+    int ret = 0;
     // parse json data. eg: {"Width":xx,"Height":xx}
-    terminalSize = cri_terminal_size_parse_data(jsonDataStr.c_str(), nullptr, &err);
+    cri_terminal_size *terminalSize = cri_terminal_size_parse_data(jsonDataStr.c_str(), nullptr, &err);
     if (terminalSize == nullptr) {
         ERROR("Failed to parse json: %s", err);
         ret = -1;
@@ -391,29 +472,22 @@ int WebsocketServer::parseTerminalSize(const char *jsonData, size_t len, uint16_
     return ret;
 }
 
-int WebsocketServer::ResizeTerminal(
-    int socketID, const char *jsonData, size_t len,
-    const std::string &containerID,
-    const std::string &suffix)
+int WebsocketServer::ResizeTerminal(int socketID, const char *jsonData, size_t len, const std::string &containerID,
+                                    const std::string &suffix)
 {
-    int ret;
-    service_executor_t *cb = nullptr;
-    struct isulad_container_resize_request *req = nullptr;
-    struct isulad_container_resize_response *res = nullptr;
-    uint16_t width = 0;
-    uint16_t height = 0;
-
-    cb = get_service_executor();
+    auto *cb = get_service_executor();
     if (cb == nullptr || cb->container.resize == nullptr) {
         return -1;
     }
 
-    if (parseTerminalSize(jsonData, len, width, height) != 0) {
+    uint16_t width = 0;
+    uint16_t height = 0;
+    if (ParseTerminalSize(jsonData, len, width, height) != 0) {
         return -1;
     }
 
-    req = (struct isulad_container_resize_request *)util_common_calloc_s(
-              sizeof(struct isulad_container_resize_request));
+    auto *req = static_cast<isulad_container_resize_request *>(
+                    util_common_calloc_s(sizeof(struct isulad_container_resize_request)));
     if (req == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -424,11 +498,11 @@ int WebsocketServer::ResizeTerminal(
     req->height = height;
     req->width = width;
 
-    ret = cb->container.resize(req, &res);
+    struct isulad_container_resize_response *res = nullptr;
+    int ret = cb->container.resize(req, &res);
 
     isulad_container_resize_request_free(req);
     isulad_container_resize_response_free(res);
-
 
     return ret;
 }
@@ -442,9 +516,7 @@ void WebsocketServer::Receive(int socketID, void *in, size_t len)
     }
 
     if (*static_cast<char *>(in) == WebsocketChannel::RESIZECHANNEL) {
-        std::string containerID = it->second->container_id;
-        std::string suffix = it->second->suffix;
-        if (ResizeTerminal(socketID, (char *)in + 1, len, containerID, suffix) != 0) {
+        if (ResizeTerminal(socketID, (char *)in + 1, len, it->second->containerID, it->second->suffix) != 0) {
             ERROR("Failed to resize terminal tty");
             return;
         }
@@ -459,8 +531,7 @@ void WebsocketServer::Receive(int socketID, void *in, size_t len)
     }
 }
 
-int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
-                              void *user, void *in, size_t len)
+int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
     switch (reason) {
         case LWS_CALLBACK_HTTP:
@@ -493,11 +564,11 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
                     return -1;
                 }
 
-                auto isSessionClosed = it->second->IsClosed();
+                auto sessionClosed = it->second->IsClosed();
                 while (!it->second->buffer.empty()) {
-                    unsigned char *message = it->second->FrontMessage();
+                    auto *message = it->second->FrontMessage();
                     // send success! free it and erase for list
-                    if (WebsocketServer::GetInstance()->Wswrite(wsi, (const unsigned char *)message) == 0) {
+                    if (WebsocketServer::GetInstance()->Wswrite(wsi, const_cast<const unsigned char *>(message)) == 0) {
                         free(message);
                         it->second->PopMessage();
                     } else {
@@ -508,7 +579,7 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
                 }
 
                 // avoid: push message to buffer and set closed true
-                if (isSessionClosed) {
+                if (sessionClosed) {
                     DEBUG("websocket session disconnected");
                     return -1;
                 }
@@ -517,7 +588,7 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
             break;
         case LWS_CALLBACK_RECEIVE: {
                 ReadGuard<RWMutex> lock(m_mutex);
-                WebsocketServer::GetInstance()->Receive(lws_get_socket_fd(wsi), (char *)in, len);
+                WebsocketServer::GetInstance()->Receive(lws_get_socket_fd(wsi), static_cast<char *>(in), len);
             }
             break;
         case LWS_CALLBACK_CLOSED: {
@@ -538,7 +609,7 @@ void WebsocketServer::ServiceWorkThread(int threadid)
 
     prctl(PR_SET_NAME, "WebsocketServer");
 
-    while (n >= 0 && !m_force_exit) {
+    while (n >= 0 && !m_forceExit) {
         n = lws_service(m_context, 0);
     }
 }
@@ -553,16 +624,17 @@ void WebsocketServer::Start(Errors &err)
 
     if (CreateContext() < 0) {
         err.SetError("Websocket server start failed! please check your network status"
-                     "(eg: port " + std::to_string(m_listenPort) + " is occupied)");
+                     "(eg: port " +
+                     std::to_string(m_listenPort) + " is occupied)");
         return;
     }
-    m_pthread_service = std::thread(&WebsocketServer::ServiceWorkThread, this, 0);
+    m_pthreadService = std::thread(&WebsocketServer::ServiceWorkThread, this, 0);
 }
 
 void WebsocketServer::Wait()
 {
-    if (m_pthread_service.joinable()) {
-        m_pthread_service.join();
+    if (m_pthreadService.joinable()) {
+        m_pthreadService.join();
     }
 
     CloseAllWsSession();
@@ -571,19 +643,17 @@ void WebsocketServer::Wait()
 }
 
 namespace {
-
-void DoWriteToClient(session_data *session,
-                     const void *data, size_t len, WebsocketChannel channel)
+void DoWriteToClient(SessionData *session, const void *data, size_t len, WebsocketChannel channel)
 {
-    unsigned char *buf = (unsigned char *)util_common_calloc_s(LWS_PRE + MAX_BUFFER_SIZE + 1);
+    auto *buf = static_cast<unsigned char *>(util_common_calloc_s(LWS_PRE + MAX_BUFFER_SIZE + 1));
     if (buf == nullptr) {
         ERROR("Out of memory");
         return;
     }
     // Determine if it is standard output channel or error channel
-    buf[LWS_PRE] = channel;
+    buf[LWS_PRE] = static_cast<int>(channel);
 
-    (void)memcpy(&buf[LWS_PRE + 1], (void *)data, len);
+    (void)memcpy(&buf[LWS_PRE + 1], const_cast<void *>(data), len);
 
     // push back to message list
     if (session->PushMessage(buf) != 0) {
@@ -594,7 +664,7 @@ void DoWriteToClient(session_data *session,
 
 ssize_t WsWriteToClient(void *context, const void *data, size_t len, WebsocketChannel channel)
 {
-    auto *lwsCtx = static_cast<session_data *>(context);
+    auto *lwsCtx = static_cast<SessionData *>(context);
 
     // CloseWsSession wait IOCopy finished, and then delete session in m_wsis
     // So don't need rdlock m_wsis here
@@ -605,7 +675,7 @@ ssize_t WsWriteToClient(void *context, const void *data, size_t len, WebsocketCh
     DoWriteToClient(lwsCtx, data, len, channel);
     return static_cast<ssize_t>(len);
 }
-};
+}; // namespace
 
 ssize_t WsWriteStdoutToClient(void *context, const void *data, size_t len)
 {
@@ -636,12 +706,12 @@ int closeWsConnect(void *context, char **err)
         return -1;
     }
 
-    auto *lwsCtx = static_cast<session_data *>(context);
+    auto *lwsCtx = static_cast<SessionData *>(context);
 
     lwsCtx->CloseSession();
 
-    if (lwsCtx->sync_close_sem != nullptr) {
-        (void)sem_post(lwsCtx->sync_close_sem);
+    if (lwsCtx->syncCloseSem != nullptr) {
+        (void)sem_post(lwsCtx->syncCloseSem);
     }
 
     return 0;

@@ -22,7 +22,7 @@
 
 void websocket_server_init(Errors &err)
 {
-    WebsocketServer *server = WebsocketServer::GetInstance();
+    auto *server = WebsocketServer::GetInstance();
     server->RegisterCallback(std::string("exec"), std::make_shared<ExecServe>());
     server->RegisterCallback(std::string("attach"), std::make_shared<AttachServe>());
     server->Start(err);
@@ -30,13 +30,13 @@ void websocket_server_init(Errors &err)
 
 void websocket_server_wait(void)
 {
-    WebsocketServer *server = WebsocketServer::GetInstance();
+    auto *server = WebsocketServer::GetInstance();
     server->Wait();
 }
 
 void websocket_server_shutdown(void)
 {
-    WebsocketServer *server = WebsocketServer::GetInstance();
+    auto *server = WebsocketServer::GetInstance();
     server->Shutdown();
 }
 
