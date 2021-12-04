@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2019-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -23,44 +23,28 @@
 #include <chrono>
 #include <typeinfo>
 #include <google/protobuf/message.h>
-#include "api.pb.h"
 
 struct CacheEntry {
     std::string token;
-    std::vector<runtime::v1alpha2::ExecRequest>  execRequest;
-    std::vector<runtime::v1alpha2::AttachRequest>  attachRequest;
+    std::string containerID;
+    ::google::protobuf::Message *req;
     std::chrono::system_clock::time_point expireTime;
 
-    void SetValue(const std::string &t,
-                  const runtime::v1alpha2::ExecRequest *execReq,
-                  const runtime::v1alpha2::AttachRequest *attachReq,
-                  std::chrono::system_clock::time_point et)
-    {
-        token = t;
-        if (execReq != nullptr) {
-            execRequest.push_back(*execReq);
-        } else if (attachReq != nullptr) {
-            attachRequest.push_back(*attachReq);
-        }
-        expireTime = et;
-    }
+    void SetValue(const std::string &t, const std::string &id, ::google::protobuf::Message *request,
+                  std::chrono::system_clock::time_point et);
 };
 
 class RequestCache {
 public:
     static RequestCache *GetInstance() noexcept;
-    std::string InsertExecRequest(const runtime::v1alpha2::ExecRequest &req);
-    std::string InsertAttachRequest(const runtime::v1alpha2::AttachRequest &req);
-    runtime::v1alpha2::ExecRequest ConsumeExecRequest(const std::string &token);
-    runtime::v1alpha2::AttachRequest ConsumeAttachRequest(const std::string &token);
-    std::string GetContainerIDByToken(const std::string &method, const std::string &token);
+    std::string InsertRequest(const std::string &containerID, ::google::protobuf::Message *req);
+    ::google::protobuf::Message *ConsumeRequest(const std::string &token);
+    std::string GetContainerIDByToken(const std::string &token);
     bool IsValidToken(const std::string &token);
 
 private:
     void GarbageCollection();
     std::string UniqueToken();
-    std::string GetExecContainerIDByToken(const std::string &token);
-    std::string GetAttachContainerIDByToken(const std::string &token);
 
 private:
     RequestCache() = default;

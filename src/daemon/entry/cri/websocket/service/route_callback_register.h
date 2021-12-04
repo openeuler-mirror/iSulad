@@ -22,9 +22,9 @@
 #include <map>
 #include <unistd.h>
 #include <semaphore.h>
-#include "isula_libutils/log.h"
+#include "request_cache.h"
 
-struct session_data;
+struct SessionData;
 
 class StreamingServeInterface {
 public:
@@ -32,7 +32,14 @@ public:
     StreamingServeInterface(const StreamingServeInterface &) = delete;
     StreamingServeInterface &operator=(const StreamingServeInterface &) = delete;
     virtual ~StreamingServeInterface() = default;
-    virtual int Execute(session_data *lws_ctx, const std::string &token) = 0;
+    int Execute(SessionData *lwsCtx, const std::string &token);
+
+protected:
+    virtual void SetServeThreadName() = 0;
+    virtual int SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) = 0;
+    virtual int ExecuteStreamCommand(SessionData *lwsCtx) = 0;
+    virtual void ErrorHandler(int ret, SessionData *lwsCtx) = 0;
+    virtual void CloseConnect(SessionData *lwsCtx) = 0;
 };
 
 class RouteCallbackRegister {
@@ -41,30 +48,10 @@ public:
     RouteCallbackRegister(const RouteCallbackRegister &) = delete;
     RouteCallbackRegister &operator=(const RouteCallbackRegister &) = delete;
     virtual ~RouteCallbackRegister() = default;
-    bool IsValidMethod(const std::string &method)
-    {
-        return static_cast<bool>(m_registeredcallbacks.count(method));
-    }
 
-    int HandleCallback(session_data *lws_ctx, const std::string &method,
-                       const std::string &token)
-    {
-        auto it = m_registeredcallbacks.find(method);
-        if (it != m_registeredcallbacks.end()) {
-            std::shared_ptr<StreamingServeInterface> callback = it->second;
-            if (callback) {
-                return callback->Execute(lws_ctx, token);
-            }
-        }
-        ERROR("invalid method!");
-        return -1;
-    }
-    void RegisterCallback(const std::string &path,
-                          std::shared_ptr<StreamingServeInterface> callback)
-    {
-        m_registeredcallbacks.insert(std::pair<std::string,
-                                     std::shared_ptr<StreamingServeInterface>>(path, callback));
-    }
+    bool IsValidMethod(const std::string &method);
+    int HandleCallback(SessionData *lwsCtx, const std::string &method, const std::string &token);
+    void RegisterCallback(const std::string &path, std::shared_ptr<StreamingServeInterface> callback);
 
 private:
     std::map<std::string, std::shared_ptr<StreamingServeInterface>> m_registeredcallbacks;
@@ -72,24 +59,24 @@ private:
 
 class StreamTask {
 public:
-    StreamTask(RouteCallbackRegister *invoker, session_data *lws_ctx,
-               const std::string &method,
+    StreamTask(RouteCallbackRegister *invoker, SessionData *lwsCtx, const std::string &method,
                const std::string &token)
-        : m_invoker(invoker), m_lws_ctx(lws_ctx), m_method(method), m_token(token) {}
+        : m_invoker(invoker)
+        , m_lwsCtx(lwsCtx)
+        , m_method(method)
+        , m_token(token)
+    {
+    }
     StreamTask(const StreamTask &) = delete;
     StreamTask &operator=(const StreamTask &) = delete;
     virtual ~StreamTask() = default;
-    int Run()
-    {
-        return m_invoker->HandleCallback(m_lws_ctx, m_method, m_token);
-    }
+    int Run();
+
 private:
-    RouteCallbackRegister *m_invoker{ nullptr };
-    session_data *m_lws_ctx;
+    RouteCallbackRegister *m_invoker { nullptr };
+    SessionData *m_lwsCtx;
     std::string m_method;
     std::string m_token;
 };
 
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ROUTE_CALLBACK_REGISTER_H
-
-

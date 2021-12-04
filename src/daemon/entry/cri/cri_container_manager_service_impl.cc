@@ -376,7 +376,8 @@ ContainerManagerServiceImpl::GenerateCreateContainerRequest(const std::string &r
         hostconfig->cgroup_parent = util_strdup_s(podSandboxConfig.linux().cgroup_parent().c_str());
     }
 
-    custom_config = GenerateCreateContainerCustomConfig(cname, realPodSandboxID, containerConfig, podSandboxConfig, error);
+    custom_config =
+        GenerateCreateContainerCustomConfig(cname, realPodSandboxID, containerConfig, podSandboxConfig, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
@@ -409,11 +410,10 @@ cleanup:
     return request;
 }
 
-std::string ContainerManagerServiceImpl::CreateContainer(
-    const std::string &podSandboxID,
-    const runtime::v1alpha2::ContainerConfig &containerConfig,
-    const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-    Errors &error)
+std::string ContainerManagerServiceImpl::CreateContainer(const std::string &podSandboxID,
+                                                         const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                                         const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                                         Errors &error)
 {
     std::string response_id;
     std::string podSandboxRuntime;
@@ -1305,10 +1305,16 @@ void ContainerManagerServiceImpl::Exec(const runtime::v1alpha2::ExecRequest &req
     if (ValidateExecRequest(req, error) != 0) {
         return;
     }
+    auto execReq = new (std::nothrow) runtime::v1alpha2::ExecRequest(req);
+    if (execReq == nullptr) {
+        error.SetError("out of memory");
+        return;
+    }
     RequestCache *cache = RequestCache::GetInstance();
-    std::string token = cache->InsertExecRequest(req);
+    std::string token = cache->InsertRequest(req.container_id(), execReq);
     if (token.empty()) {
         error.SetError("failed to get a unique token!");
+        delete execReq;
         return;
     }
     std::string url = BuildURL("exec", token);
@@ -1350,10 +1356,16 @@ void ContainerManagerServiceImpl::Attach(const runtime::v1alpha2::AttachRequest 
         error.SetError("Empty attach response arguments");
         return;
     }
+    auto attachReq = new (std::nothrow) runtime::v1alpha2::AttachRequest(req);
+    if (attachReq == nullptr) {
+        error.SetError("out of memory");
+        return;
+    }
     RequestCache *cache = RequestCache::GetInstance();
-    std::string token = cache->InsertAttachRequest(req);
+    std::string token = cache->InsertRequest(req.container_id(), attachReq);
     if (token.empty()) {
         error.SetError("failed to get a unique token!");
+        delete attachReq;
         return;
     }
     std::string url = BuildURL("attach", token);
