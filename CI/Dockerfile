@@ -89,7 +89,8 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			e2fsprogs \
 			lcov \
 			libasan \
-			lvm2
+			lvm2 \
+			tcpdump
 
 RUN yum clean all && \
     (cd /lib/systemd/system/sysinit.target.wants/; for i in *; \
