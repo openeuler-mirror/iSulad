@@ -25,7 +25,7 @@
 #include "connect.h"
 
 const char g_cmd_pull_desc[] = "Pull an image or a repository from a registry";
-const char g_cmd_pull_usage[] = "pull [OPTIONS] NAME[:TAG|@DIGEST]";
+const char g_cmd_pull_usage[] = "pull [OPTIONS] NAME[:TAG]";
 
 struct client_arguments g_cmd_pull_args = {};
 
