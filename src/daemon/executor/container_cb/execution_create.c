@@ -1421,6 +1421,11 @@ static char *new_pod_sandbox_key(void)
 
 static int generate_network_settings(const host_config *host_config, container_config_v2_common_config *v2_spec)
 {
+    if (host_config == NULL || v2_spec == NULL) {
+        ERROR("Invalid input");
+        return -1;
+    }
+
     container_config_v2_common_config_network_settings *settings = NULL;
 
     if (!namespace_is_file(host_config->network_mode)) {
