@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2019-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -20,28 +20,27 @@
 #include <string>
 #include <chrono>
 #include <thread>
-#include <grpc++/grpc++.h>
-#include "api.grpc.pb.h"
-#include "container.grpc.pb.h"
 
 #include "route_callback_register.h"
-#include "isula_libutils/log.h"
-#include "callback.h"
-#include "ws_server.h"
-#include "request_cache.h"
-#include "api.pb.h"
+#include "isula_libutils/container_exec_request.h"
+#include "isula_libutils/container_exec_response.h"
 
 class ExecServe : public StreamingServeInterface {
 public:
     ExecServe() = default;
     ExecServe(const ExecServe &) = delete;
     ExecServe &operator=(const ExecServe &) = delete;
-    virtual ~ExecServe() = default;
-    int Execute(session_data *lws_ctx, const std::string &token) override;
+    virtual ~ExecServe();
 
 private:
-    int RequestFromCri(const runtime::v1alpha2::ExecRequest &grequest, const std::string &suffix,
-                       container_exec_request **request);
-    int GetContainerRequest(const std::string &token, const std::string &suffix, container_exec_request **request);
+    virtual void SetServeThreadName() override;
+    virtual int SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) override;
+    virtual int ExecuteStreamCommand(SessionData *lwsCtx) override;
+    virtual void ErrorHandler(int ret, SessionData *lwsCtx) override;
+    virtual void CloseConnect(SessionData *lwsCtx) override;
+
+private:
+    container_exec_request *m_request { nullptr };
+    container_exec_response *m_response { nullptr };
 };
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_EXEC_SERVE_H
