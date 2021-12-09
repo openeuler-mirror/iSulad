@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 10
+%global _release 11
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -28,6 +28,12 @@ Patch0012: 0012-print-valgrind-log.patch
 Patch0013: 0013-fix-cri-version-memory-leak.patch
 Patch0014: 0014-fix-undefined-reference-in-libisulad_img.so.patch
 Patch0015: 0015-fix-undefined-reference-to-service_arguments_free-in.patch
+Patch0016: 0016-fix-mem-leak.patch
+Patch0017: 0017-isula-pull-does-not-support-format-name-digest.patch
+Patch0018: 0018-Fixed-dangerous-memory-operations.patch
+Patch0019: 0019-add-pull-request-gateway-checker-for-build-and-ut.patch
+Patch0020: 0020-Optimize-websocket-streaming-service-code.patch
+Patch0021: 0021-Fixed-a-bug-that-occurs-when-starting-container-in-h.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -252,6 +258,12 @@ fi
 %endif
 
 %changelog
+* Thu Dec 09 2021 chengzeruizhi <chengzeruizhi@huawei.com> - 2.0.10-11
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: fixed a bug that occurs when starting a container in host mode
+
 * Thu Dec 09 2021 wangfengtu <wagnfengtu@huawei.com> - 2.0.10-10
 - Type: bugfix
 - ID: NA

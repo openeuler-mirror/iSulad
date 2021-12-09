@@ -1,0 +1,97 @@
+From 5a9ab3c983158c8848868e92d5a06fbd7bfc9141 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Mon, 6 Dec 2021 09:26:40 +0000
+Subject: [PATCH] add pull request gateway checker for build and ut
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ CI/pr-gateway.sh | 77 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 77 insertions(+)
+ create mode 100755 CI/pr-gateway.sh
+
+diff --git a/CI/pr-gateway.sh b/CI/pr-gateway.sh
+new file mode 100755
+index 00000000..c38059b9
+--- /dev/null
++++ b/CI/pr-gateway.sh
+@@ -0,0 +1,77 @@
++#!/bin/bash
++#######################################################################
++##- @Copyright (C) Huawei Technologies., Ltd. 2021. All rights reserved.
++# - iSulad licensed under the Mulan PSL v2.
++# - You can use this software according to the terms and conditions of the Mulan PSL v2.
++# - You may obtain a copy of Mulan PSL v2 at:
++# -     http://license.coscl.org.cn/MulanPSL2
++# - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++# - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++# - PURPOSE.
++# - See the Mulan PSL v2 for more details.
++##- @Description:provide gateway checker for pull request of iSulad
++##- @Author: haozi007
++##- @Create: 2021-12-06
++#######################################################################
++tbranch="master"
++if [ $# -eq 1 ]; then
++    tbranch=$1
++fi
++
++dnf install -y gtest-devel gmock-devel diffutils cmake gcc-c++ yajl-devel patch make libtool libevent-devel libevhtp-devel grpc grpc-plugins grpc-devel protobuf-devel libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel http-parser-devel libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel systemd-devel git chrpath
++
++# dnf install -y cargo rust rust-packaging
++
++cd ~
++
++rm -rf lxc
++git clone https://gitee.com/src-openeuler/lxc.git
++pushd lxc
++rm -rf lxc-4.0.3
++./apply-patches || exit 1
++pushd lxc-4.0.3
++./autogen.sh && ./configure || exit 1
++make -j $(nproc) || exit 1
++make install
++popd
++popd
++
++ldconfig
++rm -rf lcr
++git clone https://gitee.com/openeuler/lcr.git
++pushd lcr
++git checkout ${tbranch}
++rm -rf build
++mkdir build
++pushd build
++cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE ../ || exit 1
++make -j $(nproc) || exit 1
++make install
++popd
++popd
++
++ldconfig
++rm -rf clibcni
++git clone https://gitee.com/openeuler/clibcni.git
++pushd clibcni
++git checkout ${tbranch}
++rm -rf build
++mkdir build
++pushd build
++cmake -DDEBUG=ON ../ || exit 1
++make -j $(nproc) || exit 1
++make install
++popd
++popd
++
++ldconfig
++pushd iSulad
++rm -rf build
++mkdir build
++pushd build
++cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=OFF ../ || exit 1
++#cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=ON ../ || exit 1
++make -j $(nproc) || exit 1
++ctest -V
++popd
++popd
+-- 
+2.25.1
+
