@@ -1,7 +1,8 @@
 %global _version 2.0.10
-%global _release 9
+%global _release 10
 %global is_systemd 1
 %global enable_shimv2 1
+%global is_embedded 1
 
 Name:      iSulad
 Version:   %{_version}
@@ -45,13 +46,18 @@ Requires(preun): chkconfig
 Requires(preun): initscripts
 %endif
 
+%if 0%{?is_embedded}
+BuildRequires: sqlite-devel
+Requires: sqlite
+%endif
+
 %define lcrver 2.0.6
 %define clibcniver 2.0.6
 
 BuildRequires: lcr-devel >= %{lcrver} clibcni-devel >= %{clibcniver}
 BuildRequires: cmake gcc-c++ yajl-devel lxc lxc-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
-BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel
+BuildRequires: libcurl libcurl-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git chrpath
@@ -63,7 +69,7 @@ BuildRequires: lib-shim-v2 lib-shim-v2-devel
 Requires:      clibcni >= %{clibcniver} lcr >= %{lcrver}
 Requires:      grpc protobuf lxc
 Requires:      libcurl
-Requires:      sqlite http-parser libseccomp
+Requires:      http-parser libseccomp
 Requires:      libcap libselinux libwebsockets libarchive device-mapper
 Requires:      systemd
 %if 0%{?enable_shimv2}
@@ -245,13 +251,19 @@ fi
 %endif
 
 %changelog
+* Thu Dec 09 2021 wangfengtu <wagnfengtu@huawei.com> - 2.0.10-10
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: remove dependance of sqlite
+
 * Mon Dec 06 2021 gaohuatao <gaohuatao@huawei.com> - 2.0.10-9
 - Type: bugfix
 - ID: NA
 - SUG: NA
 - DESC: specify version
 
-* Thu Dec 03 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-8
+* Fri Dec 03 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-8
 - Type: bugfix
 - ID: NA
 - SUG: NA
