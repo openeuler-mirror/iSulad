@@ -156,7 +156,7 @@ static int handle_get_path_from_host(const host_config *host_spec,
                                      const container_config_v2_common_config_network_settings *network_settings,
                                      const char *type, char **dest_path)
 {
-    *dest_path = namespace_get_host_namespace_path(host_spec->network_mode);
+    *dest_path = namespace_get_host_namespace_path(type);
     if (*dest_path == NULL) {
         return -1;
     }
@@ -209,6 +209,9 @@ int get_network_namespace_path(const host_config *host_spec,
     for (index = 0; index < jump_table_size; ++index) {
         if (strncmp(network_mode, handler_jump_table[index].mode, strlen(handler_jump_table[index].mode)) == 0) {
             ret = handler_jump_table[index].handle(host_spec, network_settings, type, dest_path);
+            if (ret != 0) {
+                ERROR("Failed to get ns path, network mode is %s, type is %s", network_mode, type);
+            }
             return ret;
         }
     }
