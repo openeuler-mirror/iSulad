@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -8,86 +8,78 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: lifeng
+ * Author: wujing
  * Create: 2018-11-08
  * Description: provide container attach functions
  ******************************************************************************/
 
 #include "attach_serve.h"
+#include "api.pb.h"
+#include "ws_server.h"
+#include "isula_libutils/log.h"
+#include "callback.h"
 #include "utils.h"
 
-int AttachServe::Execute(session_data *lws_ctx, const std::string &token)
+AttachServe::~AttachServe()
 {
-    if (lws_ctx == nullptr) {
-        return -1;
-    }
+    free_container_attach_request(m_request);
+    free_container_attach_response(m_response);
+}
 
+void AttachServe::SetServeThreadName()
+{
     prctl(PR_SET_NAME, "AttachServe");
-
-    service_executor_t *cb = get_service_executor();
-    if (cb == nullptr || cb->container.attach == nullptr) {
-        sem_post(lws_ctx->sync_close_sem);
-        return -1;
-    }
-
-    container_attach_request *container_req = nullptr;
-    if (GetContainerRequest(token, &container_req) != 0) {
-        ERROR("Failed to get contaner request");
-        sem_post(lws_ctx->sync_close_sem);
-        return -1;
-    }
-
-    struct io_write_wrapper stringWriter = { 0 };
-    stringWriter.context = (void *)(lws_ctx);
-    stringWriter.write_func = WsWriteStdoutToClient;
-    stringWriter.close_func = closeWsConnect;
-    container_req->attach_stderr = false;
-
-    container_attach_response *container_res = nullptr;
-    int ret = cb->container.attach(container_req, &container_res, container_req->attach_stdin ? lws_ctx->pipes.at(0) : -1,
-                                   container_req->attach_stdout ? &stringWriter : nullptr, nullptr);
-    if (ret != 0) {
-        ERROR("Failed to attach container: %s", container_req->container_id);
-        sem_post(lws_ctx->sync_close_sem);
-    }
-
-    free_container_attach_request(container_req);
-    free_container_attach_response(container_res);
-
-    return ret;
 }
 
-int AttachServe::GetContainerRequest(const std::string &token, container_attach_request **container_req)
+int AttachServe::SetContainerStreamRequest(::google::protobuf::Message *request, const std::string &suffix)
 {
-    RequestCache *cache = RequestCache::GetInstance();
-    auto request = cache->ConsumeAttachRequest(token);
+    auto *grequest = dynamic_cast<runtime::v1alpha2::AttachRequest *>(request);
 
-    int ret = RequestFromCri(request, container_req);
-    if (ret != 0) {
-        ERROR("Failed to transform grpc request!");
-    }
-
-    return ret;
-}
-
-int AttachServe::RequestFromCri(const runtime::v1alpha2::AttachRequest &grequest, container_attach_request **request)
-{
-    container_attach_request *tmpreq = nullptr;
-
-    tmpreq = (container_attach_request *)util_common_calloc_s(sizeof(container_attach_request));
-    if (tmpreq == nullptr) {
+    m_request = static_cast<container_attach_request *>(util_common_calloc_s(sizeof(container_attach_request)));
+    if (m_request == nullptr) {
         ERROR("Out of memory");
         return -1;
     }
 
-    if (!grequest.container_id().empty()) {
-        tmpreq->container_id = util_strdup_s(grequest.container_id().c_str());
+    if (!grequest->container_id().empty()) {
+        m_request->container_id = util_strdup_s(grequest->container_id().c_str());
     }
-    tmpreq->attach_stdin = grequest.stdin();
-    tmpreq->attach_stdout = grequest.stdout();
-    tmpreq->attach_stderr = grequest.stderr();
-
-    *request = tmpreq;
+    m_request->attach_stdin = grequest->stdin();
+    m_request->attach_stdout = grequest->stdout();
+    m_request->attach_stderr = grequest->stderr();
 
     return 0;
+}
+
+int AttachServe::ExecuteStreamCommand(SessionData *lwsCtx)
+{
+    auto *cb = get_service_executor();
+    if (cb == nullptr || cb->container.attach == nullptr) {
+        ERROR("Failed to get attach service executor");
+        sem_post(lwsCtx->syncCloseSem);
+        return -1;
+    }
+
+    struct io_write_wrapper stringWriter = { 0 };
+    stringWriter.context = (void *)(lwsCtx);
+    stringWriter.write_func = WsWriteStdoutToClient;
+    stringWriter.close_func = closeWsConnect;
+    m_request->attach_stderr = false;
+
+    return cb->container.attach(m_request, &m_response, m_request->attach_stdin ? lwsCtx->pipes.at(0) : -1,
+                                m_request->attach_stdout ? &stringWriter : nullptr, nullptr);
+}
+
+void AttachServe::ErrorHandler(int ret, SessionData *lwsCtx)
+{
+    if (ret == 0) {
+        return;
+    }
+    ERROR("Failed to attach container: %s", m_request->container_id);
+    sem_post(lwsCtx->syncCloseSem);
+}
+
+void AttachServe::CloseConnect(SessionData *lwsCtx)
+{
+    (void)lwsCtx;
 }

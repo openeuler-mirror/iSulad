@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2019-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -17,27 +17,27 @@
 #define DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ATTACH_SERVE_H
 
 #include "route_callback_register.h"
-#include <chrono>
 #include <string>
-#include <thread>
-#include "ws_server.h"
-
-#include "api.pb.h"
-#include "isula_libutils/log.h"
-#include "callback.h"
-#include "request_cache.h"
+#include "isula_libutils/container_attach_request.h"
+#include "isula_libutils/container_attach_response.h"
 
 class AttachServe : public StreamingServeInterface {
 public:
     AttachServe() = default;
     AttachServe(const AttachServe &) = delete;
     AttachServe &operator=(const AttachServe &) = delete;
-    virtual ~AttachServe() = default;
-    int Execute(session_data *lws_ctx, const std::string &token) override;
+    virtual ~AttachServe();
+
 private:
-    int RequestFromCri(const runtime::v1alpha2::AttachRequest &grequest,
-                       container_attach_request **request);
-    int GetContainerRequest(const std::string &token, container_attach_request **container_req);
+    virtual void SetServeThreadName() override;
+    virtual int SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) override;
+    virtual int ExecuteStreamCommand(SessionData *lwsCtx) override;
+    virtual void ErrorHandler(int ret, SessionData *lwsCtx) override;
+    virtual void CloseConnect(SessionData *lwsCtx) override;
+
+private:
+    container_attach_request *m_request { nullptr };
+    container_attach_response *m_response { nullptr };
 };
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ATTACH_SERVE_H
 

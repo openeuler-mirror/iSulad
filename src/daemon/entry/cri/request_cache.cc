@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2019-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -8,8 +8,8 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: tanyifeng
- * Create: 2017-11-22
+ * Author: wujing
+ * Create: 2019-01-02
  * Description: provide request cache function definition
  *********************************************************************************/
 #include "request_cache.h"
@@ -19,15 +19,25 @@
 #include <thread>
 #include <mutex>
 #include <cmath>
-#include "isula_libutils/log.h"
+#include <isula_libutils/log.h>
 #include "utils.h"
 #include "utils_base64.h"
 
 std::atomic<RequestCache *> RequestCache::m_instance;
 std::mutex RequestCache::m_mutex;
+
+void CacheEntry::SetValue(const std::string &t, const std::string &id, ::google::protobuf::Message *request,
+                          std::chrono::system_clock::time_point et)
+{
+    token = t;
+    containerID = id;
+    req = request;
+    expireTime = et;
+}
+
 RequestCache *RequestCache::GetInstance() noexcept
 {
-    RequestCache *cache = m_instance.load(std::memory_order_relaxed);
+    auto *cache = m_instance.load(std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_acquire);
     if (cache == nullptr) {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -41,7 +51,7 @@ RequestCache *RequestCache::GetInstance() noexcept
     return cache;
 }
 
-std::string RequestCache::InsertExecRequest(const runtime::v1alpha2::ExecRequest &req)
+std::string RequestCache::InsertRequest(const std::string &containerID, ::google::protobuf::Message *req)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     // Remove expired entries.
@@ -53,25 +63,7 @@ std::string RequestCache::InsertExecRequest(const runtime::v1alpha2::ExecRequest
     }
     auto token = UniqueToken();
     CacheEntry tmp;
-    tmp.SetValue(token, &req, nullptr, std::chrono::system_clock::now() + std::chrono::minutes(1));
-    m_ll.push_front(tmp);
-    m_tokens.insert(std::make_pair(token, tmp));
-    return token;
-}
-
-std::string RequestCache::InsertAttachRequest(const runtime::v1alpha2::AttachRequest &req)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    // Remove expired entries.
-    GarbageCollection();
-    // If the cache is full, reject the request.
-    if (m_ll.size() == MaxInFlight) {
-        ERROR("too many cache in flight!");
-        return "";
-    }
-    auto token = UniqueToken();
-    CacheEntry tmp;
-    tmp.SetValue(token, nullptr, &req, std::chrono::system_clock::now() + std::chrono::minutes(1));
+    tmp.SetValue(token, containerID, req, std::chrono::system_clock::now() + std::chrono::minutes(1));
     m_ll.push_front(tmp);
     m_tokens.insert(std::make_pair(token, tmp));
     return token;
@@ -81,9 +73,13 @@ void RequestCache::GarbageCollection()
 {
     auto now = std::chrono::system_clock::now();
     while (!m_ll.empty()) {
-        CacheEntry oldest = m_ll.back();
+        auto oldest = m_ll.back();
         if (now < oldest.expireTime) {
             return;
+        }
+        if (oldest.req != nullptr) {
+            delete oldest.req;
+            oldest.req = nullptr;
         }
         m_ll.pop_back();
         m_tokens.erase(oldest.token);
@@ -103,15 +99,15 @@ std::string RequestCache::UniqueToken()
             continue;
         }
 
-        char *b64_encode_buf = nullptr;
-        if (util_base64_encode((unsigned char *)rawToken, strlen(rawToken), &b64_encode_buf) < 0) {
+        char *b64EncodeBuf = nullptr;
+        if (util_base64_encode((unsigned char *)rawToken, strlen(rawToken), &b64EncodeBuf) < 0) {
             ERROR("Encode raw token to base64 failed");
             continue;
         }
 
-        std::string token(b64_encode_buf);
-        free(b64_encode_buf);
-        b64_encode_buf = nullptr;
+        std::string token(b64EncodeBuf);
+        free(b64EncodeBuf);
+        b64EncodeBuf = nullptr;
         if (token.length() != TokenLen) {
             continue;
         }
@@ -133,13 +129,13 @@ bool RequestCache::IsValidToken(const std::string &token)
 }
 
 // Consume the token (remove it from the cache) and return the cached request, if found.
-runtime::v1alpha2::ExecRequest RequestCache::ConsumeExecRequest(const std::string &token)
+::google::protobuf::Message *RequestCache::ConsumeRequest(const std::string &token)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    if (m_tokens.count(token) == 0 || m_tokens[token].execRequest.size() == 0) {
+    if (m_tokens.count(token) == 0) {
         ERROR("Invalid token");
-        return runtime::v1alpha2::ExecRequest();
+        return nullptr;
     }
 
     CacheEntry ele = m_tokens[token];
@@ -151,69 +147,20 @@ runtime::v1alpha2::ExecRequest RequestCache::ConsumeExecRequest(const std::strin
     }
     m_tokens.erase(token);
     if (std::chrono::system_clock::now() > ele.expireTime) {
-        return runtime::v1alpha2::ExecRequest();
+        return nullptr;
     }
 
-    return ele.execRequest.at(0);
+    return ele.req;
 }
 
-runtime::v1alpha2::AttachRequest RequestCache::ConsumeAttachRequest(const std::string &token)
+std::string RequestCache::GetContainerIDByToken(const std::string &token)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    if (m_tokens.count(token) == 0 || m_tokens[token].attachRequest.size() == 0) {
-        ERROR("Invalid token");
-        return runtime::v1alpha2::AttachRequest();
-    }
-
-    CacheEntry ele = m_tokens[token];
-    for (auto it = m_ll.begin(); it != m_ll.end(); it++) {
-        if (it->token == token) {
-            m_ll.erase(it);
-            break;
-        }
-    }
-    m_tokens.erase(token);
-    if (std::chrono::system_clock::now() > ele.expireTime) {
-        return runtime::v1alpha2::AttachRequest();
-    }
-
-    return ele.attachRequest.at(0);
-}
-
-std::string RequestCache::GetExecContainerIDByToken(const std::string &token)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    if (m_tokens.count(token) == 0 || m_tokens[token].execRequest.size() == 0) {
+    if (m_tokens.count(token) == 0) {
         ERROR("Invalid token");
         return "";
     }
 
-    return m_tokens[token].execRequest.at(0).container_id();
-}
-
-std::string RequestCache::GetAttachContainerIDByToken(const std::string &token)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    if (m_tokens.count(token) == 0 || m_tokens[token].attachRequest.size() == 0) {
-        ERROR("Invalid token");
-        return "";
-    }
-
-    return m_tokens[token].attachRequest.at(0).container_id();
-}
-
-std::string RequestCache::GetContainerIDByToken(const std::string &method, const std::string &token)
-{
-    if (method == "exec") {
-        return GetExecContainerIDByToken(token);
-    } else if (method == "attach") {
-        return GetAttachContainerIDByToken(token);
-    }
-
-    ERROR("Invalid method: %s", method.c_str());
-
-    return "";
+    return m_tokens[token].containerID;
 }
