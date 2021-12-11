@@ -20,12 +20,11 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+data_path=$(realpath "$curr_path"/../data)
 source ../helpers.sh
 
-function isula_pull()
-{
-    isula rm -f `isula ps -a -q`
+function isula_pull() {
+    isula rm -f $(isula ps -a -q)
 
     isula pull busybox
     fn_check_eq "$?" "0" "isula pull busybox"
@@ -34,14 +33,13 @@ function isula_pull()
 
     # wait some time to make sure fd closed
     sleep 3
-    local fd_num1=$(ls -l /proc/$isulad_pid/fd | wc -l)
+    local fd_num1=$(ls -l /proc/"$isulad_pid"/fd | wc -l)
     [[ $fd_num1 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
-    ls -l /proc/$isulad_pid/fd
+    ls -l /proc/"$isulad_pid"/fd
 
     isula rmi busybox
 
-    for i in `seq 1 10`
-    do
+    for i in $(seq 1 10); do
         isula pull busybox &
     done
     isula pull busybox
@@ -50,9 +48,9 @@ function isula_pull()
 
     # wait some time to make sure fd closed
     sleep 3
-    local fd_num2=$(ls -l /proc/$isulad_pid/fd | wc -l)
+    local fd_num2=$(ls -l /proc/"$isulad_pid"/fd | wc -l)
     [[ $fd_num2 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
-    ls -l /proc/$isulad_pid/fd
+    ls -l /proc/"$isulad_pid"/fd
 
     # make sure fd not increase after remove and pull busybox
     [[ $fd_num1 -ne $fd_num2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fd number not right" && ((ret++))
@@ -65,7 +63,7 @@ function isula_pull()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull always failed" && ((ret++))
 
     # test --pull never option
-    isula rm -f `isula ps -a -q`
+    isula rm -f $(isula ps -a -q)
     isula rmi busybox
     isula run --rm -ti --pull never busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull never failed" && ((ret++))
@@ -109,8 +107,7 @@ function isula_pull()
     fn_check_eq "$?" "0" "start isulad with valgrind"
 }
 
-function isula_login()
-{
+function isula_login() {
     isula login -u test -p test 3laho3y3.mirror.aliyuncs.com
     fn_check_eq "$?" "0" "isula login -u test -p test 3laho3y3.mirror.aliyuncs.com"
 
@@ -123,8 +120,7 @@ function isula_login()
     fn_check_eq "$?" "0" "isula pull busybox"
 }
 
-function isula_logout()
-{
+function isula_logout() {
     isula logout 3laho3y3.mirror.aliyuncs.com
     fn_check_eq "$?" "0" "isula logout 3laho3y3.mirror.aliyuncs.com"
 
@@ -133,21 +129,20 @@ function isula_logout()
     fn_check_eq "$?" "0" "isula logout 3laho3y3.mirror.aliyuncs.com"
 }
 
-function do_test_t()
-{
+function do_test_t() {
     isula_pull
     isula_login
     isula_logout
 
-    return $TC_RET_T
+    return "$TC_RET_T"
 }
 
 ret=0
 
 do_test_t
-if [ $? -ne 0 ];then
-    cat $ISUALD_LOG
+if [ $? -ne 0 ]; then
+    cat "$ISUALD_LOG"
     let "ret=$ret + 1"
 fi
 
-show_result $ret "basic registry"
+show_result "$ret" "basic registry"

@@ -20,28 +20,26 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+data_path=$(realpath "$curr_path"/../data)
 driver="overlay2"
 source ../helpers.sh
 
-function pre_test()
-{
+function pre_test() {
     cut_output_lines isula info
     fn_check_eq "$?" "0" "check failed"
-    
-    for i in ${lines[@]};do
-	    echo $i | grep 'devicemapper'
-	    if [ $? -eq 0 ]; then
-		    driver="devicemapper"
-	    fi
+
+    for i in ${lines[@]}; do
+        echo "$i" | grep 'devicemapper'
+        if [ $? -eq 0 ]; then
+            driver="devicemapper"
+        fi
     done
 }
 
-function overlay2_status()
-{
+function overlay2_status() {
     local ret=0
     local test="isula status overlay2 test => (${FUNCNAME[@]})"
-    
+
     msg_info "${test} starting..."
 
     [[ "${lines[6]}" != "Storage Driver:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Storage Driver failed" && ((ret++))
@@ -49,14 +47,13 @@ function overlay2_status()
     [[ "${lines[8]}" != " Supports d_type:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Supports d_type failed" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
-function devicemapper_status()
-{
+function devicemapper_status() {
     local ret=0
     local test="isula status devicemapper test => (${FUNCNAME[@]})"
-    
+
     msg_info "${test} starting..."
 
     [[ "${lines[6]}" != "Storage Driver:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Storage Driver failed" && ((ret++))
@@ -79,29 +76,27 @@ function devicemapper_status()
     [[ "${lines[23]}" != " Deferred Deleted Device Count:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Deferred Deleted Enabled failed" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
-function do_test_t()
-{
+function do_test_t() {
     local ret=0
 
     pre_test
-    if [[ "$driver"x = "overlay2"x ]];then
-	    overlay2_status || ((ret++))
-    elif [[ "$driver"x = "devicemapper"x ]];then
-	    devicemapper_status || ((ret++))
+    if [[ "$driver"x = "overlay2"x ]]; then
+        overlay2_status || ((ret++))
+    elif [[ "$driver"x = "devicemapper"x ]]; then
+        devicemapper_status || ((ret++))
     else
-	    echo "error: not support $driver"
-	    ((ret++))
+        echo "error: not support $driver"
+        ((ret++))
     fi
 
-    return $ret
+    return "$ret"
 }
 
 declare -i ans=0
 
 do_test_t || ((ans++))
 
-show_result ${ans} "${curr_path}/${0}"
-
+show_result "${ans}" "${curr_path}/${0}"

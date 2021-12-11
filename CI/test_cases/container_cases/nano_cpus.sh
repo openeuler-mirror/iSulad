@@ -22,8 +22,7 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
-function test_cpu_nano_spec()
-{
+function test_cpu_nano_spec() {
     local ret=0
     local image="busybox"
     local test="container blkio nano test => (${FUNCNAME[@]})"
@@ -31,7 +30,7 @@ function test_cpu_nano_spec()
     msg_info "${test} starting..."
 
     isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return "${FAILURE}"
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
@@ -42,72 +41,72 @@ function test_cpu_nano_spec()
     isula run -itd --cpus 1.5 --cpu-quota 20000 $image /bin/sh 2>&1 | grep "Nano CPUs and CPU Quota cannot both be set"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Nano CPUs and CPU Quota cannot both be set" && ((ret++))
 
-    c_id=`isula run -itd --cpus 1.5 busybox sh`
+    c_id=$(isula run -itd --cpus 1.5 busybox sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us" | grep "150000"
+    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us" | grep "150000"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check cfs_quota_us: ${image}" && ((ret++))
 
-    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_period_us" | grep "100000"
+    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_period_us" | grep "100000"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check cfs_period_us: ${image}" && ((ret++))
 
-    isula restart -t 0 $c_id
+    isula restart -t 0 "$c_id"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to restart container: $c_id" && ((ret++))
 
-    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us" | grep "150000"
+    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us" | grep "150000"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check cfs_quota_us: ${image}" && ((ret++))
 
-    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_period_us" | grep "100000"
+    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_period_us" | grep "100000"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check cfs_period_us: ${image}" && ((ret++))
 
-    isula update --cpus 1.3 --cpu-period 20000 $c_id  2>&1 | grep "Nano CPUs and CPU Period cannot both be set"
+    isula update --cpus 1.3 --cpu-period 20000 "$c_id" 2>&1 | grep "Nano CPUs and CPU Period cannot both be set"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Nano CPUs and CPU Period cannot both be set" && ((ret++))
 
-    isula update --cpus 1.3 --cpu-quota 20000 $c_id  2>&1 | grep "Nano CPUs and CPU Quota cannot both be set"
+    isula update --cpus 1.3 --cpu-quota 20000 "$c_id" 2>&1 | grep "Nano CPUs and CPU Quota cannot both be set"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Nano CPUs and CPU Quota cannot both be set" && ((ret++))
 
-    isula update --cpu-period 20000 $c_id  2>&1 | grep "CPU Period cannot be updated as NanoCPUs has already been set"
+    isula update --cpu-period 20000 "$c_id" 2>&1 | grep "CPU Period cannot be updated as NanoCPUs has already been set"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - CPU Period cannot be updated as NanoCPUs has already been set" && ((ret++))
 
-    isula update --cpu-quota 20000 $c_id 2>&1 | grep "CPU Quota cannot be updated as NanoCPUs has already been set"
+    isula update --cpu-quota 20000 "$c_id" 2>&1 | grep "CPU Quota cannot be updated as NanoCPUs has already been set"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - CPU Quota cannot be updated as NanoCPUs has already been set" && ((ret++))
 
-    isula update --cpus 1.3 $c_id
+    isula update --cpus 1.3 "$c_id"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Failed to update cpus" && ((ret++))
 
-    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us" | grep "130000"
+    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us" | grep "130000"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check cfs_quota_us: ${image}" && ((ret++))
 
-    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_period_us" | grep "100000"
+    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_period_us" | grep "100000"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check cfs_period_us: ${image}" && ((ret++))
 
-    isula restart -t 0 $c_id
+    isula restart -t 0 "$c_id"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to restart container: $c_id" && ((ret++))
 
-    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us" | grep "130000"
+    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us" | grep "130000"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check cfs_quota_us: ${image}" && ((ret++))
 
-    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_period_us" | grep "100000"
+    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/cpu/cpu.cfs_period_us" | grep "100000"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check cfs_period_us: ${image}" && ((ret++))
 
-    isula rm -f $c_id
+    isula rm -f "$c_id"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container ${c_id}" && ((ret++))
 
-    c_id=`isula run -itd --cpu-period 20000 --cpu-quota 10000 busybox sh`
+    c_id=$(isula run -itd --cpu-period 20000 --cpu-quota 10000 busybox sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    isula update --cpus 1.4 $c_id 2>&1 | grep "Nano CPUs cannot be updated as CPU Period has already been set"
+    isula update --cpus 1.4 "$c_id" 2>&1 | grep "Nano CPUs cannot be updated as CPU Period has already been set"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Nano CPUs cannot be updated as CPU Period has already been set" && ((ret++))
 
-    isula rm -f $c_id
+    isula rm -f "$c_id"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container ${c_id}" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
 
 test_cpu_nano_spec || ((ans++))
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

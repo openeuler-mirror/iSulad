@@ -22,8 +22,7 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
-function test_stats_spec()
-{
+function test_stats_spec() {
     local ret=0
     local image="busybox"
     local test="container stats test => (${FUNCNAME[@]})"
@@ -32,7 +31,7 @@ function test_stats_spec()
     msg_info "${test} starting..."
 
     isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return "${FAILURE}"
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
@@ -44,11 +43,11 @@ function test_stats_spec()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     container_name_init=stats_inited
-    id_init=`isula create -t -n $container_name_init $image /bin/sh`
+    id_init=$(isula create -t -n $container_name_init $image /bin/sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     container_name_running=stats_running
-    id_running=`isula run -td -n $container_name_running $image /bin/sh`
+    id_running=$(isula run -td -n $container_name_running $image /bin/sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula stats --no-stream > $statslog
@@ -73,17 +72,17 @@ function test_stats_spec()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     container_name_pause=stats_paused
-    id_pause=`isula run -td -n $container_name_pause $image /bin/sh`
+    id_pause=$(isula run -td -n $container_name_pause $image /bin/sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    isula pause $id_pause
+    isula pause "$id_pause"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pause running container" && ((ret++))
 
     container_name_stop=stats_stopped
-    id_stop=`isula run -td -n $container_name_stop $image /bin/sh`
+    id_stop=$(isula run -td -n $container_name_stop $image /bin/sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    isula stop $id_stop
+    isula stop "$id_stop"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop running container" && ((ret++))
 
     isula stats --original > $statslog
@@ -92,10 +91,10 @@ function test_stats_spec()
     cat $statslog | grep "${id_init:0:12}"
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stats the inited container(should not)" && ((ret++))
 
-    cat $statslog | grep "${id_running:0:12}" | grep "running"| grep "$container_name_running"
+    cat $statslog | grep "${id_running:0:12}" | grep "running" | grep "$container_name_running"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stats running container" && ((ret++))
 
-    cat $statslog | grep "${id_pause:0:12}" | grep "paused"| grep "$container_name_pause"
+    cat $statslog | grep "${id_pause:0:12}" | grep "paused" | grep "$container_name_pause"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stats paused container" && ((ret++))
 
     cat $statslog | grep "${id_stop:0:12}"
@@ -107,16 +106,16 @@ function test_stats_spec()
     cat $statslog | grep "${id_init:0:12}" | grep "inited" | grep "$container_name_init"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stats inited container" && ((ret++))
 
-    cat $statslog | grep "${id_running:0:12}" | grep "running"| grep "$container_name_running"
+    cat $statslog | grep "${id_running:0:12}" | grep "running" | grep "$container_name_running"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stats running container" && ((ret++))
 
-    cat $statslog | grep "${id_pause:0:12}" | grep "paused"| grep "$container_name_pause"
+    cat $statslog | grep "${id_pause:0:12}" | grep "paused" | grep "$container_name_pause"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stats paused container" && ((ret++))
 
-    cat $statslog | grep "${id_stop:0:12}" | grep "exited"| grep "$container_name_stop"
+    cat $statslog | grep "${id_stop:0:12}" | grep "exited" | grep "$container_name_stop"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stats exited container" && ((ret++))
 
-    isula unpause $id_pause
+    isula unpause "$id_pause"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to unpause the paused container" && ((ret++))
 
     isula rm -f "$container_name_init" "$container_name_running" "$container_name_pause" "$container_name_stop"
@@ -124,11 +123,11 @@ function test_stats_spec()
     rm -f $statslog
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
 
 test_stats_spec || ((ans++))
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

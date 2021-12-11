@@ -20,29 +20,28 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+data_path=$(realpath "$curr_path"/../data)
 source ../helpers.sh
 
-function do_test_t()
-{
-    id=`isula run -tid  --runtime runc busybox`
+function do_test_t() {
+    id=$(isula run -tid --runtime runc busybox)
     fn_check_eq "$?" "0" "run failed"
-    testcontainer $id running
+    testcontainer "$id" running
 
-    isula exec $id sh -c 'ls -al /etc/mtab'
-    fn_check_eq "$?" "0" "/etc/mtab not exist" 
+    isula exec "$id" sh -c 'ls -al /etc/mtab'
+    fn_check_eq "$?" "0" "/etc/mtab not exist"
 
-    isula rm -f $id
+    isula rm -f "$id"
     fn_check_eq "$?" "0" "rm failed"
 
-    return $TC_RET_T
+    return "$TC_RET_T"
 }
 
 ret=0
 
 do_test_t
-if [ $? -ne 0 ];then
+if [ $? -ne 0 ]; then
     let "ret=$ret + 1"
 fi
 
-show_result $ret "creat mtab symbol link"
+show_result "$ret" "creat mtab symbol link"

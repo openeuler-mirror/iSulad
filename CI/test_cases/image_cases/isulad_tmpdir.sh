@@ -24,8 +24,7 @@ source ../helpers.sh
 busybox_image="${curr_path}/busybox.tar"
 image_name="busybox:latest"
 
-function restart_isulad()
-{
+function restart_isulad() {
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
@@ -34,25 +33,23 @@ function restart_isulad()
 
 }
 
-function load_pull_test()
-{
-    isula load -i $busybox_image
+function load_pull_test() {
+    isula load -i "$busybox_image"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${busybox_image} with" && ((ret++))
 
     isula rmi $image_name
 
     isula pull ${image_name}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image_name}" && return ${FAILURE}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image_name}" && return "${FAILURE}"
 }
 
-function test_isulad_tmpdir()
-{
+function test_isulad_tmpdir() {
     local ret=0
     local test="ISULAD_TMPDIR env test => (${FUNCNAME[@]})"
 
     msg_info "${test} starting..."
-    isula rm -f `isula ps -qa`
-    isula rmi `isula images | awk '{if (NR>1){print $3}}'`
+    isula rm -f $(isula ps -qa)
+    isula rmi $(isula images | awk '{if (NR>1){print $3}}')
 
     # The scene of ISULAD_TMPDIR dir is not exists
     export ISULAD_TMPDIR="/var/isula/tmp"
@@ -90,11 +87,11 @@ function test_isulad_tmpdir()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isulad_tmpdir not exist in /var/lib/isulad" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
 
 test_isulad_tmpdir || ((ans++))
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

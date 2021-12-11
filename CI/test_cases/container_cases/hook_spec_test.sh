@@ -22,33 +22,32 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
-test_data_path=$(realpath $curr_path/test_data)
+test_data_path=$(realpath "$curr_path"/test_data)
 
-function test_hook_spec()
-{
+function test_hook_spec() {
     local ret=0
     local image="busybox"
     local test="container hook test => (${FUNCNAME[@]})"
     msg_info "${test} starting..."
 
     isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return "${FAILURE}"
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    CONT=`isula run -itd --hook-spec ${test_data_path}/test-hookspec.json ${image}`
+    CONT=$(isula run -itd --hook-spec "${test_data_path}"/test-hookspec.json ${image})
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    isula stop -t 0 ${CONT}
+    isula stop -t 0 "${CONT}"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop ${CONT}" && ((ret++))
 
-    isula rm ${CONT}
+    isula rm "${CONT}"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm ${CONT}" && ((ret++))
 
     runlog=/tmp/hook_permission.log
     no_permission_container="test_no_permission"
-    isula run -n $no_permission_container -itd --hook-spec ${test_data_path}/no_permission.json ${image} > $runlog 2>&1
+    isula run -n $no_permission_container -itd --hook-spec "${test_data_path}"/no_permission.json ${image} > $runlog 2>&1
     [[ $? -ne 126 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check exit code container with image: ${image}" && ((ret++))
 
     cat $runlog | grep "Permission denied"
@@ -60,11 +59,11 @@ function test_hook_spec()
     rm -rf $runlog
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
 
 test_hook_spec || ((ans++))
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

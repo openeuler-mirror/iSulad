@@ -20,15 +20,14 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+data_path=$(realpath "$curr_path"/../data)
 source ../helpers.sh
 test="exec test => test_exec"
 
-function exec_workdir()
-{
+function exec_workdir() {
     local ret=0
 
-    isula rm -f `isula ps -a -q`
+    isula rm -f $(isula ps -a -q)
 
     isula run -tid -n cont_workdir busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with --workdir" && ((ret++))
@@ -36,9 +35,9 @@ function exec_workdir()
     isula exec -ti --workdir /workdir cont_workdir pwd | grep "/workdir"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - workdir is not /workdir failed" && ((ret++))
 
-    isula rm -f `isula ps -a -q`
+    isula rm -f $(isula ps -a -q)
 
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
@@ -49,4 +48,4 @@ exec_workdir || ((ans++))
 
 msg_info "${test} finished with return ${ret}..."
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

@@ -20,11 +20,10 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+data_path=$(realpath "$curr_path"/../data)
 source ../helpers.sh
 
-function do_test_t()
-{
+function do_test_t() {
     containername=test_start
     isula create -t --name $containername busybox
     fn_check_eq "$?" "0" "create failed"
@@ -41,11 +40,10 @@ function do_test_t()
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
-    return $TC_RET_T
+    return "$TC_RET_T"
 }
 
-function do_attach_local_test_t()
-{
+function do_attach_local_test_t() {
     local ret=0
     local image="busybox"
     local test="container start with --attach local test => (${FUNCNAME[@]})"
@@ -55,28 +53,27 @@ function do_attach_local_test_t()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create ${containername}" && ((ret++))
     testcontainer $containername inited
 
-    result=`isula start -a $containername`
+    result=$(isula start -a $containername)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start -a ${containername}" && ((ret++))
     testcontainer $containername exited
 
     isula rm -f $containername
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container" && ((ret++))
 
-    id=`isula create -ti busybox /bin/sh -c 'ech "hello"'`
+    id=$(isula create -ti busybox /bin/sh -c 'ech "hello"')
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create container" && ((ret++))
 
-    isula start -a $id
+    isula start -a "$id"
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start container success, not as expected:failed" && ((ret++))
 
-    isula rm -f $id
+    isula rm -f "$id"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula rm container" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
-function do_attach_remote_test_t()
-{
+function do_attach_remote_test_t() {
     local ret=0
     local image="busybox"
     local config='tcp://127.0.0.1:2890'
@@ -92,7 +89,7 @@ function do_attach_remote_test_t()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create ${containername} remote" && ((ret++))
     testcontainer $containername inited
 
-    result=`isula start -a -H "$config" $containername`
+    result=$(isula start -a -H "$config" $containername)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start -a ${containername} remote" && ((ret++))
     testcontainer $containername exited
 
@@ -116,7 +113,7 @@ function do_attach_remote_test_t()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
@@ -127,4 +124,4 @@ do_attach_local_test_t || ((ans++))
 
 do_attach_remote_test_t || ((ans++))
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

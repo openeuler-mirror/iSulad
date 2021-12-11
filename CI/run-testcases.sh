@@ -23,18 +23,16 @@ export LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH"
 export valgrind_log="/tmp/valgrind.log"
 
 mkdir -p /tmp/coredump
-ulimit  -c unlimited
+ulimit -c unlimited
 umask 0022
 echo "/tmp/coredump/core-%e-%p-%t" > /proc/sys/kernel/core_pattern
 ldconfig
 
-function echo_success()
-{
+function echo_success() {
     echo -e "\033[1;32m"$@"\033[0m"
 }
 
-function echo_error()
-{
+function echo_error() {
     echo -e "\033[1;31m"$@"\033[0m"
 }
 
@@ -42,15 +40,14 @@ function wait_isulad_running() {
     set +x
     echo "-------waiting isulad running--------"
     waitcnt=0
-    while [ 0 ]
-    do
+    while [ 0 ]; do
         isula version
-        if [ $? -eq 0 ];then
+        if [ $? -eq 0 ]; then
             break
         fi
-        waitcnt=$(($waitcnt+1))
+        waitcnt=$(($waitcnt + 1))
         maxcnt=60
-        if [ $waitcnt -gt $maxcnt ];then
+        if [ $waitcnt -gt $maxcnt ]; then
             echo "lcrd is not running more than ${maxcnt}s"
             exit 1
         fi
@@ -61,7 +58,7 @@ function wait_isulad_running() {
 }
 
 function start_isulad_with_valgrind() {
-    valgrind --fair-sched=yes --log-file=$valgrind_log --tool=memcheck --leak-check=yes -v --track-origins=yes isulad -l DEBUG >/dev/null 2>&1 &
+    valgrind --fair-sched=yes --log-file=$valgrind_log --tool=memcheck --leak-check=yes -v --track-origins=yes isulad -l DEBUG > /dev/null 2>&1 &
     wait_isulad_running
 }
 
@@ -70,10 +67,9 @@ function check_isulad_stopped() {
     curcnt=0
 
     spid=$1
-    while [ $curcnt -lt $maxtimes ]
-    do
-        ps aux | grep isulad | grep $spid
-        if [ $? -ne 0 ];then
+    while [ $curcnt -lt $maxtimes ]; do
+        ps aux | grep isulad | grep "$spid"
+        if [ $? -ne 0 ]; then
             return 0
         fi
         let "curcnt=$curcnt + 1"
@@ -83,17 +79,17 @@ function check_isulad_stopped() {
 }
 
 function check_valgrind_log() {
-    pid=`cat /var/run/isulad.pid`
-    kill -15 $pid
-    check_isulad_stopped $pid
-    if [ $? -ne 0 ];then
+    pid=$(cat /var/run/isulad.pid)
+    kill -15 "$pid"
+    check_isulad_stopped "$pid"
+    if [ $? -ne 0 ]; then
         echo "Stop lcrd with valgrind failed"
-        kill -9 $pid
+        kill -9 "$pid"
         sleep 1
     fi
 
     cat $valgrind_log | grep "are definitely lost" | grep "==$pid=="
-    if [ $? -eq 0 ];then
+    if [ $? -eq 0 ]; then
         echo "Memory leak may checked by valgrind, see valgrind log file: $valgrind_log"
         sed -n '/definitely lost/,// p' $valgrind_log
         exit 1
@@ -101,8 +97,8 @@ function check_valgrind_log() {
     return 0
 }
 
-SRCDIR=`env | grep TOPDIR | awk -F = '{print $2}'`
-cd $SRCDIR
+SRCDIR=$(env | grep TOPDIR | awk -F = '{print $2}')
+cd "$SRCDIR"
 
 set +e
 set -x
@@ -113,7 +109,7 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 env | grep IGNORE_CI
-if [ $? -eq 0 ];then
+if [ $? -eq 0 ]; then
     echo "SKIP TEST"
     check_valgrind_log
     exit 0

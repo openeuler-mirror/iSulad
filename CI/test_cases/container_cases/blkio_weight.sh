@@ -22,8 +22,7 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
-function test_blkio_weight_spec()
-{
+function test_blkio_weight_spec() {
     local ret=0
     local image="busybox"
     local test="container blkio weight test => (${FUNCNAME[@]})"
@@ -31,7 +30,7 @@ function test_blkio_weight_spec()
     msg_info "${test} starting..."
 
     isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return "${FAILURE}"
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
@@ -48,29 +47,29 @@ function test_blkio_weight_spec()
     isula run -itd --blkio-weight-device /dev/zero:-1 $image /bin/sh 2>&1 | grep "Invalid weight for device"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Invalid weight for device" && ((ret++))
 
-    c_id=`isula run -itd --blkio-weight 200  ${image} sh`
+    c_id=$(isula run -itd --blkio-weight 200 ${image} sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/blkio/blkio.weight" | grep "200"
+    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/blkio/blkio.weight" | grep "200"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container blkio.weight: 200" && ((ret++))
 
-    isula update --blkio-weight 300 $c_id
+    isula update --blkio-weight 300 "$c_id"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to update container blkio.weight" && ((ret++))
 
-    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/blkio/blkio.weight" | grep "300"
+    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/blkio/blkio.weight" | grep "300"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container blkio.weight: 300" && ((ret++))
 
-    isula rm -f $c_id
+    isula rm -f "$c_id"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container ${c_id}" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
 
-if [ -f "/sys/fs/cgroup/blkio/blkio.weight" ];then
+if [ -f "/sys/fs/cgroup/blkio/blkio.weight" ]; then
     test_blkio_weight_spec || ((ans++))
 fi
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

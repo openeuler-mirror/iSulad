@@ -17,8 +17,8 @@
 ##- @Create: 2020-03-30
 #######################################################################
 
-time_id=`date "+%s"`
-cid=`git rev-parse --short HEAD`
+time_id=$(date "+%s")
+cid=$(git rev-parse --short HEAD)
 
 # docker image constant
 images_clear_time="5"
@@ -37,43 +37,36 @@ imgname=$imgdir/disk.img
 devname=/dev/loop10
 mntdir=/home/mntdir
 
-function remove_deleted_device()
-{
-    losetup -d `losetup | grep -E "\(deleted\)$" | awk '{print $1}'` 2>/dev/null
+function remove_deleted_device() {
+    losetup -d $(losetup | grep -E "\(deleted\)$" | awk '{print $1}') 2> /dev/null
 }
 
-function listcontainers()
-{
+function listcontainers() {
     docker ps -a --filter=name="${container_prefix}" --format '{{.Names}}' | awk -F "${container_prefix}" '{print $2}'
 }
-function remove_container()
-{
+function remove_container() {
     docker rm -f "${container_prefix}${1}"
 }
 
-function listtmpdirs()
-{
+function listtmpdirs() {
     ls $tmpdir_prefix | grep ${container_prefix} | awk -F "${container_prefix}" '{print $2}'
 }
-function remove_tmpdir()
-{
+function remove_tmpdir() {
     rm -rf "$tmpdir_prefix/${container_prefix}${1}"
 }
 
-function delete_old_resources()
-{
+function delete_old_resources() {
     curtime=$1
-    maxseconds=`expr $2 \* 3600`
-    cur_tag_time=`expr $curtime + 0`
+    maxseconds=$(expr "$2" \* 3600)
+    cur_tag_time=$(expr "$curtime" + 0)
 
-    for tag in `$3`
-    do
-        tag_time=`echo $tag | awk -F '_' '{print $2}'`
-        tag_time=`expr $tag_time + 0`
+    for tag in $($3); do
+        tag_time=$(echo "$tag" | awk -F '_' '{print $2}')
+        tag_time=$(expr "$tag_time" + 0)
 
-        delta=`expr $cur_tag_time - $tag_time`
-        if [ $delta -gt $maxseconds ];then
-            $4 ${tag}
+        delta=$(expr "$cur_tag_time" - "$tag_time")
+        if [ "$delta" -gt "$maxseconds" ]; then
+            $4 "${tag}"
         fi
     done
 }
