@@ -20,14 +20,13 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+data_path=$(realpath "$curr_path"/../data)
 source ../helpers.sh
 
-function do_test_t()
-{
+function do_test_t() {
     containername=test_basic_run
     containername2=container_to_join
-    isula run --name $containername  -td busybox
+    isula run --name $containername -td busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
@@ -117,11 +116,10 @@ function do_test_t()
     isula rm $containername2
     fn_check_eq "$?" "0" "rm failed"
 
-    return $TC_RET_T
+    return "$TC_RET_T"
 }
 
-function do_run_remote_test_t()
-{
+function do_run_remote_test_t() {
     local ret=0
     local image="busybox"
     local config='tcp://127.0.0.1:2890'
@@ -154,7 +152,7 @@ function do_run_remote_test_t()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
@@ -163,4 +161,4 @@ do_test_t || ((ans++))
 
 do_run_remote_test_t || ((ans++))
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

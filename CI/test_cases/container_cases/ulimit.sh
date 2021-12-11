@@ -20,11 +20,10 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+data_path=$(realpath "$curr_path"/../data)
 source ../helpers.sh
 
-function test_ulimit()
-{
+function test_ulimit() {
     local ret=0
     local image="busybox"
     ulimitlog=/tmp/ulimit.log
@@ -70,23 +69,23 @@ function test_ulimit()
 
     isula run -td -n $container_name --ulimit nofile=20480:40960 --ulimit core=1024:2048 $image /bin/sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
-    
-    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max open files" |awk '{ print $(NF-1) }' |grep 40960
+
+    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max open files" | awk '{ print $(NF-1) }' | grep 40960
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max open files" |awk '{ print $(NF-2) }' |grep 20480
+    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max open files" | awk '{ print $(NF-2) }' | grep 20480
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max processes" |awk '{ print $(NF-1) }' |grep 8192
+    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max processes" | awk '{ print $(NF-1) }' | grep 8192
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max processes" |awk '{ print $(NF-2) }' |grep 2048
+    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max processes" | awk '{ print $(NF-2) }' | grep 2048
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max core file size" |awk '{ print $(NF-1) }' |grep 4
+    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max core file size" | awk '{ print $(NF-1) }' | grep 4
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max core file size" |awk '{ print $(NF-2) }' |grep 2
+    isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max core file size" | awk '{ print $(NF-2) }' | grep 2
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
     isula rm -f $container_name
@@ -101,11 +100,11 @@ function test_ulimit()
     rm -rf $ulimitlog
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
 
 test_ulimit || ((ans++))
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

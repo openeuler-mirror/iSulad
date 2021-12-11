@@ -24,48 +24,46 @@ source ../helpers.sh
 test="volume mount progagation test => test_volume"
 image="busybox"
 
-function cleanup_containers_and_volumes()
-{
-  isula rm -f `isula ps -a -q`
-  isula volume prune -f
+function cleanup_containers_and_volumes() {
+    isula rm -f $(isula ps -a -q)
+    isula volume prune -f
 }
 
-function test_volume_mount_default()
-{
-  local ret=0
+function test_volume_mount_default() {
+    local ret=0
 
-  mkdir -p /tmp/src
+    mkdir -p /tmp/src
 
-  #run with slave property volume in container
-  CONT=$(isula run -v /tmp/src:/tmp/dst -dit --privileged "${image}" /bin/sh)
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container by image $image failed" && ((ret++))
+    #run with slave property volume in container
+    CONT=$(isula run -v /tmp/src:/tmp/dst -dit --privileged "${image}" /bin/sh)
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container by image $image failed" && ((ret++))
 
-  #check the property from host to container
-  mkdir -p /tmp/src_private
-  mkdir -p /tmp/src/src_testCE_volume_default
-  mount --bind /tmp/src_private /tmp/src/src_testCE_volume_default
-  touch /tmp/src_private/src_privatefile
-  isula exec -it "$CONT" /bin/sh -c 'ls /tmp/dst/src_testCE_volume_default/src_privatefile || echo -n "host_pass"' > /tmp/host_property_log
-  cat /tmp/host_property_log | grep "host_pass"
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Property from host to container ""$CONT"" success ,but expect fail!" && ((ret++))
+    #check the property from host to container
+    mkdir -p /tmp/src_private
+    mkdir -p /tmp/src/src_testCE_volume_default
+    mount --bind /tmp/src_private /tmp/src/src_testCE_volume_default
+    touch /tmp/src_private/src_privatefile
+    isula exec -it "$CONT" /bin/sh -c 'ls /tmp/dst/src_testCE_volume_default/src_privatefile || echo -n "host_pass"' > /tmp/host_property_log
+    cat /tmp/host_property_log | grep "host_pass"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Property from host to container ""$CONT"" success ,but expect fail!" && ((ret++))
 
-  #check the property from container to host
-  umount /tmp/src/src_testCE_volume_default
-  isula exec -it "$CONT" /bin/sh -c 'mkdir /tmp/dst_private;mkdir /tmp/dst/dst_testCE_volume_default;mount --bind /tmp/dst_private /tmp/dst/dst_testCE_volume_default;touch /tmp/dst_private/dst_privatefile'
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - exec volume in container ""$CONT"" fail!" && ((ret++))
-  ls /tmp/src/dst_testCE_volume_default/dst_privatefile
-  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Property from container to host success ,but expect fail!" && ((ret++))
+    #check the property from container to host
+    umount /tmp/src/src_testCE_volume_default
+    isula exec -it "$CONT" /bin/sh -c 'mkdir /tmp/dst_private;mkdir /tmp/dst/dst_testCE_volume_default;mount --bind /tmp/dst_private /tmp/dst/dst_testCE_volume_default;touch /tmp/dst_private/dst_privatefile'
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - exec volume in container ""$CONT"" fail!" && ((ret++))
+    ls /tmp/src/dst_testCE_volume_default/dst_privatefile
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Property from container to host success ,but expect fail!" && ((ret++))
 
-  #cleanup
-  isula rm -f "$CONT"
-  rm -rf /tmp/host_property_log
-  umount /tmp/dst
-  umount /tmp/src
-  rm -rf /tmp/src
-  rm -rf /tmp/dst
-  rm -rf /tmp/src_private
+    #cleanup
+    isula rm -f "$CONT"
+    rm -rf /tmp/host_property_log
+    umount /tmp/dst
+    umount /tmp/src
+    rm -rf /tmp/src
+    rm -rf /tmp/dst
+    rm -rf /tmp/src_private
 
-  return ${ret}
+    return "${ret}"
 }
 
 function test_volume_mount_private() {
@@ -294,4 +292,4 @@ cleanup_containers_and_volumes
 
 msg_info "${test} finished with return ${ans}..."
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

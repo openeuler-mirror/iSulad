@@ -20,80 +20,77 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+data_path=$(realpath "$curr_path"/../data)
 source ../helpers.sh
 
-function isulad_version()
-{
+function isulad_version() {
     cut_output_lines isulad --version
     fn_check_eq "$?" "0" "check failed"
-    if ! [[ ${lines[0]} =~ Version\ [0-9]+\.[0-9]+\.[0-9]+,\ commit ]];then
+    if ! [[ ${lines[0]} =~ Version\ [0-9]+\.[0-9]+\.[0-9]+,\ commit ]]; then
         echo "isulad version error"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
 }
 
-function isula_version()
-{
+function isula_version() {
     cut_output_lines isula --version
     fn_check_eq "$?" "0" "check failed"
-    if ![[ ${lines[0]} =~ Version\ [0-9]+\.[0-9]+\.[0-9]+,\ commit ]];then
+    if ![[ ${lines[0]} =~ Version\ [0-9]+\.[0-9]+\.[0-9]+,\ commit ]]; then
         echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
 
     cut_output_lines isula version
     fn_check_eq "$?" "0" "check failed"
-    if [[ "${lines[0]}" != "Client:"* ]];then
+    if [[ "${lines[0]}" != "Client:"* ]]; then
         echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
-    if [[ "${lines[1]}" != "  Version:"* ]];then
+    if [[ "${lines[1]}" != "  Version:"* ]]; then
         echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
-    if [[ "${lines[2]}" != "  Git commit:"* ]];then
+    if [[ "${lines[2]}" != "  Git commit:"* ]]; then
         echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
-    if [[ "${lines[3]}" != "  Built:"* ]];then
+    if [[ "${lines[3]}" != "  Built:"* ]]; then
         echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
-    fi
-
-    if [[ "${lines[4]}" != "Server:"* ]];then
-        echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
-    fi
-    if [[ "${lines[5]}" != "  Version:"* ]];then
-        echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
-    fi
-    if [[ "${lines[6]}" != "  Git commit:"* ]];then
-        echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
-    fi
-    if [[ "${lines[7]}" != "  Built:"* ]];then
-        echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
 
-    if [[ "${lines[8]}" != "OCI config:"* ]];then
+    if [[ "${lines[4]}" != "Server:"* ]]; then
         echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
-    if [[ "${lines[9]}" != "  Version:"* ]];then
+    if [[ "${lines[5]}" != "  Version:"* ]]; then
         echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
-    if [[ "${lines[10]}" != "  Default file:"* ]];then
+    if [[ "${lines[6]}" != "  Git commit:"* ]]; then
         echo "isula version error"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
+    fi
+    if [[ "${lines[7]}" != "  Built:"* ]]; then
+        echo "isula version error"
+        TC_RET_T=$(($TC_RET_T + 1))
+    fi
+
+    if [[ "${lines[8]}" != "OCI config:"* ]]; then
+        echo "isula version error"
+        TC_RET_T=$(($TC_RET_T + 1))
+    fi
+    if [[ "${lines[9]}" != "  Version:"* ]]; then
+        echo "isula version error"
+        TC_RET_T=$(($TC_RET_T + 1))
+    fi
+    if [[ "${lines[10]}" != "  Default file:"* ]]; then
+        echo "isula version error"
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
 }
 
-function do_test_t()
-{
+function do_test_t() {
     isula_version
     isulad_version
 
@@ -103,8 +100,8 @@ function do_test_t()
 ret=0
 
 do_test_t
-if [ $? -ne 0 ];then
+if [ $? -ne 0 ]; then
     let "ret=$ret + 1"
 fi
 
-show_result $ret "basic version"
+show_result "$ret" "basic version"

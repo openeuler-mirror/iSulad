@@ -23,25 +23,24 @@ source ../helpers.sh
 
 cpfiles=/tmp/subcmdcp
 
-test_cp_file_from_container()
-{
+test_cp_file_from_container() {
     local ret=0
     containername=$1
     # cp from container
     dstfile=$cpfiles/passwd
     rm -rf $dstfile
-    cd $cpfiles
+    cd $cpfiles || exit
 
     isula cp nonexists:etc . 2>&1 | grep "No such container"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check noexists output" && ((ret++))
 
-    isula cp nonexists:etc $containername:$cpfiles 2>&1 | grep "copying between containers is not supported"
+    isula cp nonexists:etc "$containername":$cpfiles 2>&1 | grep "copying between containers is not supported"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check copying between containers output" && ((ret++))
 
-    isula cp $containername:etc/passwd .
+    isula cp "$containername":etc/passwd .
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    if [ ! -f $dstfile ];then
+    if [ ! -f $dstfile ]; then
         msg_err "${FUNCNAME[0]}:${LINENO} - failed to check dstfile" && ((ret++))
     fi
 
@@ -49,53 +48,52 @@ test_cp_file_from_container()
 
     dstfile=$cpfiles/passwd_renamed
     rm -rf $dstfile
-    isula cp $containername:../etc/passwd passwd_renamed
+    isula cp "$containername":../etc/passwd passwd_renamed
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    if [ ! -f $dstfile ];then
+    if [ ! -f $dstfile ]; then
         msg_err "${FUNCNAME[0]}:${LINENO} - failed to check dstfile" && ((ret++))
     fi
     rm -rf $dstfile
 
-    isula cp $containername:/etc/../etc/passwd/ $cpfiles 2>&1 | grep "Not a directory"
+    isula cp "$containername":/etc/../etc/passwd/ $cpfiles 2>&1 | grep "Not a directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp $containername:/etc/nonexists $cpfiles 2>&1 | grep "No such file or directory"
+    isula cp "$containername":/etc/nonexists $cpfiles 2>&1 | grep "No such file or directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
     dstfile=$cpfiles/etc
     rm -rf $dstfile
     touch $dstfile
-    isula cp $containername:/etc $dstfile 2>&1 | grep "cannot copy directory"
+    isula cp "$containername":/etc $dstfile 2>&1 | grep "cannot copy directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
     rm -rf $dstfile
 
-    isula cp $containername:/etc/passwd $cpfiles/nonexists/ 2>&1 | grep "no such directory"
+    isula cp "$containername":/etc/passwd $cpfiles/nonexists/ 2>&1 | grep "no such directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    return ${ret}
+    return "${ret}"
 }
 
-test_cp_dir_from_container()
-{
+test_cp_dir_from_container() {
     local ret=0
     containername=$1
     # cp from container
     dstfile=$cpfiles/etc
     rm -rf $dstfile
-    cd $cpfiles
-    isula cp $containername:etc .
+    cd $cpfiles || exit
+    isula cp "$containername":etc .
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
-    if [ ! -d $dstfile ];then
+    if [ ! -d $dstfile ]; then
         msg_err "${FUNCNAME[0]}:${LINENO} - failed to check dstfile" && ((ret++))
     fi
     rm -rf $dstfile
 
     dstfile=$cpfiles/etc_renamed
     rm -rf $dstfile
-    isula cp $containername:../etc etc_renamed
+    isula cp "$containername":../etc etc_renamed
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
-    if [ ! -d $dstfile ];then
+    if [ ! -d $dstfile ]; then
         msg_err "${FUNCNAME[0]}:${LINENO} - failed to check dstfile" && ((ret++))
     fi
     rm -rf $dstfile
@@ -103,96 +101,93 @@ test_cp_dir_from_container()
     dstfile=$cpfiles/etcfiles
     rm -rf $dstfile
     mkdir -p $dstfile
-    isula cp $containername:/etc/. etcfiles
+    isula cp "$containername":/etc/. etcfiles
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
-    if [ ! -f $dstfile/passwd ];then
+    if [ ! -f $dstfile/passwd ]; then
         msg_err "${FUNCNAME[0]}:${LINENO} - failed to check dstfile" && ((ret++))
     fi
     rm -rf $dstfile
 
-    return ${ret}
+    return "${ret}"
 }
 
-test_cp_file_to_container()
-{
+test_cp_file_to_container() {
     local ret=0
     containername=$1
     # cp from container
     dstfile=$cpfiles/passwd
-    cd /etc
+    cd /etc || exit
 
     isula cp passwd nonexists:$dstfile 2>&1 | grep "No such container"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp passwd $containername:./$cpfiles
+    isula cp passwd "$containername":./$cpfiles
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula exec $containername /bin/sh -c "ls $dstfile"
+    isula exec "$containername" /bin/sh -c "ls $dstfile"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
     dstfile=$cpfiles/passwd_renamed
-    isula cp ../../../etc/passwd $containername:../$dstfile
+    isula cp ../../../etc/passwd "$containername":../$dstfile
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula exec $containername /bin/sh -c "ls $dstfile"
+    isula exec "$containername" /bin/sh -c "ls $dstfile"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp ./passwd $containername:/etc/passwd/  2>&1 | grep "no such directory"
+    isula cp ./passwd "$containername":/etc/passwd/ 2>&1 | grep "no such directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp /etc/../etc/passwd $containername:/etc/passwd/nonexists  2>&1 | grep "extraction point is not a directory"
+    isula cp /etc/../etc/passwd "$containername":/etc/passwd/nonexists 2>&1 | grep "extraction point is not a directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp /etc/passwd $containername:$cpfiles/nonexists/ 2>&1 | grep "no such directory"
+    isula cp /etc/passwd "$containername":$cpfiles/nonexists/ 2>&1 | grep "no such directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp /etc/passwd $containername:$cpfiles/nonexists/nonexists 2>&1 | grep "No such file or directory"
+    isula cp /etc/passwd "$containername":$cpfiles/nonexists/nonexists 2>&1 | grep "No such file or directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp /etc/nonexists $containername:$cpfiles 2>&1 | grep "No such file or directory"
+    isula cp /etc/nonexists "$containername":$cpfiles 2>&1 | grep "No such file or directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
     rm -rf $dstfile
 
     dstfile=$cpfiles/etc
-    isula exec $containername /bin/sh -c "rm -rf $dstfile; touch $dstfile"
+    isula exec "$containername" /bin/sh -c "rm -rf $dstfile; touch $dstfile"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp /etc $containername:$dstfile 2>&1 | grep "cannot copy directory"
+    isula cp /etc "$containername":$dstfile 2>&1 | grep "cannot copy directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    return ${ret}
+    return "${ret}"
 }
 
-
-test_cp_dir_to_container()
-{
+test_cp_dir_to_container() {
     local ret=0
     containername=$1
     # cp from container
     dstfile=$cpfiles/etc
     cd /
-    isula cp .././etc $containername:$cpfiles
+    isula cp .././etc "$containername":$cpfiles
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula exec $containername /bin/sh -c "ls $dstfile"
+    isula exec "$containername" /bin/sh -c "ls $dstfile"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
     dstfile=$cpfiles/etc_renamed
-    isula cp ./etc $containername:$dstfile
+    isula cp ./etc "$containername":$dstfile
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula exec $containername /bin/sh -c "ls $dstfile"
+    isula exec "$containername" /bin/sh -c "ls $dstfile"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
     dstfile=$cpfiles/etcfiles
-    cd /etc
-    isula exec $containername /bin/sh -c "rm -rf $dstfile; mkdir -p $dstfile"
+    cd /etc || exit
+    isula exec "$containername" /bin/sh -c "rm -rf $dstfile; mkdir -p $dstfile"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp . $containername:$dstfile
+    isula cp . "$containername":$dstfile
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula exec $containername /bin/sh -c "ls $dstfile/passwd"
+    isula exec "$containername" /bin/sh -c "ls $dstfile/passwd"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
     # test copy dir with hardlink
@@ -200,128 +195,125 @@ test_cp_dir_to_container()
     mkdir -p $cpfiles/a/a $cpfiles/a/b
     echo "test_hardlink_a" > $cpfiles/a/a/a
     ln $cpfiles/a/a/a $cpfiles/a/b/b
-    isula cp $cpfiles/a $containername:/c
+    isula cp $cpfiles/a "$containername":/c
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula exec -ti $containername cat /c/a/a | grep "test_hardlink_a"
+    isula exec -ti "$containername" cat /c/a/a | grep "test_hardlink_a"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy hardlink a not right" && ((ret++))
 
-    isula exec -ti $containername cat /c/b/b | grep "test_hardlink_a"
+    isula exec -ti "$containername" cat /c/b/b | grep "test_hardlink_a"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy hardlink b not right" && ((ret++))
     rm -rf $cpfiles/a
 
     # test copy dir to file
     mkdir -p $cpfiles/dst
-    isula exec -ti $containername sh -c 'touch /dst'
+    isula exec -ti "$containername" sh -c 'touch /dst'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to touch file in container" && ((ret++))
 
-    isula cp $cpfiles/dst $containername:/
+    isula cp $cpfiles/dst "$containername":/
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy dir to container failed" && ((ret++))
 
-    isula exec -ti $containername stat / | grep directory
+    isula exec -ti "$containername" stat / | grep directory
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - file should be replaced to be dir" && ((ret++))
     rm -rf $cpfiles/dir
 
     # test copy current dir file
     touch $cpfiles/current
-    cd $cpfiles
-    isula cp . $containername:/current1
+    cd $cpfiles || exit
+    isula cp . "$containername":/current1
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cp current1 file" && ((ret++))
 
-    isula exec -ti $containername stat /current1
+    isula exec -ti "$containername" stat /current1
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - file current1 not exist" && ((ret++))
 
-    isula cp ./ $containername:/current2
+    isula cp ./ "$containername":/current2
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cp current2 file" && ((ret++))
 
-    isula exec -ti $containername stat /current2
+    isula exec -ti "$containername" stat /current2
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - file current2 not exist" && ((ret++))
-    cd -
+    cd - || exit
     rm -f $cpfiles/current
 
     # test copy perm
     mkdir -p $cpfiles/perm && chmod 700 $cpfiles/perm
-    isula cp $cpfiles/perm $containername:/
+    isula cp $cpfiles/perm "$containername":/
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cp dir to container" && ((ret++))
 
-    isula exec -ti $containername stat /perm | grep "Access: (0700/drwx"
+    isula exec -ti "$containername" stat /perm | grep "Access: (0700/drwx"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy perm not right" && ((ret++))
     rm -f $cpfiles/perm
 
     # test copy hardlink
     rm -rf $cpfiles/cp_dir
-    mkdir $cpfiles/cp_dir && cd $cpfiles/cp_dir && echo hello > norm_file && ln norm_file norm_file_link && cd -
-    isula cp $cpfiles/cp_dir $containername:/home/
+    mkdir $cpfiles/cp_dir && cd $cpfiles/cp_dir && echo hello > norm_file && ln norm_file norm_file_link && cd - || exit
+    isula cp $cpfiles/cp_dir "$containername":/home/
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy hardlink failed" && ((ret++))
     rm -rf $cpfiles/cp_dir
 
-    return ${ret}
+    return "${ret}"
 }
 
-test_cp_symlink_to_container()
-{
+test_cp_symlink_to_container() {
     local ret=0
     containername=$1
-    cd /tmp
+    cd /tmp || exit
     rm -rf l1
     ln -s ../..$cpfiles/linkto l1
-    isula cp l1 $containername:$cpfiles
+    isula cp l1 "$containername":$cpfiles
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula exec $containername ls -al $cpfiles | grep "l1.*../..$cpfiles/linkto"
+    isula exec "$containername" ls -al $cpfiles | grep "l1.*../..$cpfiles/linkto"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp l1 $containername:$cpfiles/l1
+    isula cp l1 "$containername":$cpfiles/l1
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula exec $containername ls -al $cpfiles | grep "linkto.*../..$cpfiles/linkto"
+    isula exec "$containername" ls -al $cpfiles | grep "linkto.*../..$cpfiles/linkto"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
     rm -rf l1
 
-    isula exec $containername /bin/sh -c "cd $cpfiles; rm -rf t1 t2 target; ln -s ./t1 t2; ln -s target t1"
+    isula exec "$containername" /bin/sh -c "cd $cpfiles; rm -rf t1 t2 target; ln -s ./t1 t2; ln -s target t1"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp /etc/passwd $containername:$cpfiles/t2
+    isula cp /etc/passwd "$containername":$cpfiles/t2
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula exec $containername /bin/sh -c "cat $cpfiles/target | grep root"
+    isula exec "$containername" /bin/sh -c "cat $cpfiles/target | grep root"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
     # test cp symlink with dir which have the same name prefix
     rm -rf $cpfiles/abc $cpfiles/a
     ln -s $cpfiles/abc $cpfiles/a
 
-    isula cp $cpfiles/a $containername:/b
+    isula cp $cpfiles/a "$containername":/b
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to copy symlink" && ((ret++))
 
-    isula exec -ti $containername readlink /b | grep "$cpfiles/abc"
+    isula exec -ti "$containername" readlink /b | grep "$cpfiles/abc"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid symlink" && ((ret++))
     rm -f $cpfiles/abc $cpfiles/a
 
-    return ${ret}
+    return "${ret}"
 }
 
-test_cp_symlink_from_container()
-{
+test_cp_symlink_from_container() {
     local ret=0
     containername=$1
-    cd $cpfiles
+    cd $cpfiles || exit
     rm -rf l1 l2
-    isula exec $containername /bin/sh -c "cd $cpfiles; rm -rf l1 l2 target; touch target; ln -s target l1; ln -s l1 l2"
+    isula exec "$containername" /bin/sh -c "cd $cpfiles; rm -rf l1 l2 target; touch target; ln -s target l1; ln -s l1 l2"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp $containername:$cpfiles/l1 .
+    isula cp "$containername":$cpfiles/l1 .
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
     ls -al . | grep "l1.*target"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    return ${ret}
+    return "${ret}"
 }
 
-function cp_test_t()
-{
+function cp_test_t() {
     local ret=0
     local image="busybox"
     local test="container cp test => (${FUNCNAME[@]})"
@@ -329,18 +321,18 @@ function cp_test_t()
     msg_info "${test} starting..."
 
     isula inspect ${image}
-    if [ x"$?" != x"0" ];then
+    if [ x"$?" != x"0" ]; then
         isula pull ${image}
-        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
+        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return "${FAILURE}"
     fi
 
     local isulad_pid=$(cat /var/run/isulad.pid)
 
     # wait some time to make sure fd closed
     sleep 3
-    local fd_num1=$(ls -l /proc/$isulad_pid/fd | wc -l)
+    local fd_num1=$(ls -l /proc/"$isulad_pid"/fd | wc -l)
     [[ $fd_num1 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
-    ls -l /proc/$isulad_pid/fd
+    ls -l /proc/"$isulad_pid"/fd
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
@@ -368,19 +360,19 @@ function cp_test_t()
 
     # wait some time to make sure fd closed
     sleep 3
-    local fd_num2=$(ls -l /proc/$isulad_pid/fd | wc -l)
+    local fd_num2=$(ls -l /proc/"$isulad_pid"/fd | wc -l)
     [[ $fd_num2 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
-    ls -l /proc/$isulad_pid/fd
+    ls -l /proc/"$isulad_pid"/fd
 
     # make sure fd not increase after test
     [[ $fd_num1 -ne $fd_num2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fd number not right" && ((ret++))
 
     echo "test end"
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
 
 cp_test_t || ((ans++))
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

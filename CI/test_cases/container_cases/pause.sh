@@ -20,11 +20,10 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+data_path=$(realpath "$curr_path"/../data)
 source ../helpers.sh
 
-function do_test_t()
-{
+function do_test_t() {
     echo "Do not support pause function now"
     return 0
     containername=test_pause
@@ -48,14 +47,14 @@ function do_test_t()
     isula rm -f $containername
     fn_check_eq "$?" "0" "rm failed"
 
-    return $TC_RET_T
+    return "$TC_RET_T"
 }
 
 ret=0
 
 do_test_t
-if [ $? -ne 0 ];then
+if [ $? -ne 0 ]; then
     let "ret=$ret + 1"
 fi
 
-show_result $ret "basic pause"
+show_result "$ret" "basic pause"

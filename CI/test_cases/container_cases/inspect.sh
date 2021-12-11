@@ -21,10 +21,9 @@
 
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
-test_data_path=$(realpath $curr_path/test_data)
+test_data_path=$(realpath "$curr_path"/test_data)
 
-function test_inspect_spec()
-{
+function test_inspect_spec() {
     local ret=0
     local image="busybox"
     local test="container inspect test => (${FUNCNAME[@]})"
@@ -32,14 +31,14 @@ function test_inspect_spec()
     msg_info "${test} starting..."
 
     isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return "${FAILURE}"
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
     containername=test_inspect
 
-    isula create --name $containername --ipc host --pid host --uts host --restart=on-failure:10 --hook-spec ${test_data_path}/test-hookspec.json --cpu-shares 100 --memory 5MB --memory-reservation 4MB --cpu-period 1000000 --cpu-quota 200000  --cpuset-cpus 1 --cpuset-mems 0 --kernel-memory 50M --pids-limit=10000 --volume /home:/root --env a=1 $image /bin/sh ls
+    isula create --name $containername --ipc host --pid host --uts host --restart=on-failure:10 --hook-spec "${test_data_path}"/test-hookspec.json --cpu-shares 100 --memory 5MB --memory-reservation 4MB --cpu-period 1000000 --cpu-quota 200000 --cpuset-cpus 1 --cpuset-mems 0 --kernel-memory 50M --pids-limit=10000 --volume /home:/root --env a=1 $image /bin/sh ls
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula inspect --format='{{json .Path}}' $containername 2>&1 | grep "/bin/sh"
@@ -103,9 +102,9 @@ function test_inspect_spec()
     isula inspect --format='{{.Image}}' $containername 2>&1 | grep "sha256:${image_id}"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
 
-    if [ -d /sys/fs/cgroup/files ];then
+    if [ -d /sys/fs/cgroup/files ]; then
         grepval="100"
-	else
+    else
         grepval="0"
     fi
     isula inspect --format='{{json .HostConfig.FilesLimit}}' $containername 2>&1 | grep "$grepval"
@@ -145,11 +144,11 @@ function test_inspect_spec()
     isula rm -f $containername
 
     msg_info "${test} finished with return ${ret}..."
-    return ${ret}
+    return "${ret}"
 }
 
 declare -i ans=0
 
 test_inspect_spec || ((ans++))
 
-show_result ${ans} "${curr_path}/${0}"
+show_result "${ans}" "${curr_path}/${0}"

@@ -20,11 +20,10 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+data_path=$(realpath "$curr_path"/../data)
 source ../helpers.sh
 
-function do_test_t()
-{
+function do_test_t() {
     containername=test_list
     containername2=test_list2
     containername3=test_list3
@@ -48,17 +47,17 @@ function do_test_t()
     # ps containers
     cut_output_lines isula ps -a
 
-    if [[ "${lines[1]}" != *"Up"*"$containername2"* ]];then
+    if [[ "${lines[1]}" != *"Up"*"$containername2"* ]]; then
         echo "test failed"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
-    if [[ "${lines[2]}" != *"Created"* ]];then
+    if [[ "${lines[2]}" != *"Created"* ]]; then
         echo "test failed"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
-    if [[ "${lines[3]}" != *"Created"* ]];then
+    if [[ "${lines[3]}" != *"Created"* ]]; then
         echo "test failed"
-        TC_RET_T=$(($TC_RET_T+1))
+        TC_RET_T=$(($TC_RET_T + 1))
     fi
 
     isula stop $containername2
@@ -73,8 +72,8 @@ function do_test_t()
 ret=0
 
 do_test_t
-if [ $? -ne 0 ];then
+if [ $? -ne 0 ]; then
     let "ret=$ret + 1"
 fi
 
-show_result $ret "basic ps"
+show_result "$ret" "basic ps"
