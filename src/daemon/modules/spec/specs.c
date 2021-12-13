@@ -1483,6 +1483,14 @@ static int merge_share_network_namespace(const oci_runtime_spec *oci_spec, const
     return ret;
 }
 
+static bool userns_remap_is_enabled(const oci_runtime_spec *oci_spec)
+{
+    if (oci_spec->linux->uid_mappings != NULL && oci_spec->linux->gid_mappings != NULL) {
+        return true;
+    }
+    return false;
+}
+
 int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
                           const container_network_settings *network_settings)
 {

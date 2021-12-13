@@ -447,7 +447,7 @@ static int get_config_net_name(const cni_net_conf_list *list, string_array *arra
         return 0;
     }
 
-    return util_append_string_array(list->name, array);
+    return util_append_string_array(array, list->name);
 }
 
 static int get_config_bridge_name(const cni_net_conf_list *list, string_array *array)
@@ -464,7 +464,7 @@ static int get_config_bridge_name(const cni_net_conf_list *list, string_array *a
         if (plugin == NULL || strcmp(plugin->type, NETWOKR_DRIVER_BRIDGE) != 0 || plugin->bridge == NULL) {
             continue;
         }
-        nret = util_append_string_array(plugin->bridge, array);
+        nret = util_append_string_array(array, plugin->bridge);
         if (nret != 0) {
             return -1;
         }
@@ -493,7 +493,7 @@ static int get_config_subnet(const cni_net_conf_list *list, string_array *array)
         if (condition) {
             continue;
         }
-        nret = util_append_string_array(plugin->ipam->ranges[0][0]->subnet, array);
+        nret = util_append_string_array(array, plugin->ipam->ranges[0][0]->subnet);
         if (nret != 0) {
             return -1;
         }
@@ -575,7 +575,7 @@ static int get_interface_name(string_array **interface_names)
         if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family != AF_PACKET) {
             continue;
         }
-        ret = util_append_string_array(ifa->ifa_name, tmp);
+        ret = util_append_string_array(tmp, ifa->ifa_name);
         if (ret != 0) {
             goto out;
         }
@@ -622,7 +622,7 @@ static int get_host_net_ip(string_array **host_net_ip)
                 ret = ECOMM;
                 goto out;
             }
-            ret = util_append_string_array(ipaddr, tmp);
+            ret = util_append_string_array(tmp, ipaddr);
             if (ret != 0) {
                 goto out;
             }
@@ -633,7 +633,7 @@ static int get_host_net_ip(string_array **host_net_ip)
                 ret = ECOMM;
                 goto out;
             }
-            ret = util_append_string_array(ipaddr, tmp);
+            ret = util_append_string_array(tmp, ipaddr);
             if (ret != 0) {
                 goto out;
             }
@@ -1286,7 +1286,7 @@ static cni_net_conf_list *conf_bridge(const network_create_request *request, str
                 continue;
             }
 
-            if (util_append_string_array(g_bridge_driver_plugins[i]->plugin, missing) != 0) {
+            if (util_append_string_array(missing, g_bridge_driver_plugins[i]->plugin) != 0) {
                 ERROR("Failed to append string %s to array", g_bridge_driver_plugins[i]->plugin);
                 goto err_out;
             }
@@ -1949,7 +1949,7 @@ int native_config_remove(const char *name, char **res_name)
     if (path == NULL) {
         WARN("Failed to get %s file path", network->conflist->list->name);
         isulad_append_error_message("Failed to get %s file path. ", network->conflist->list->name);
-    } else if (!util_remove_file(path, &get_err)) {
+    } else if (!util_force_remove_file(path, &get_err)) {
         WARN("Failed to delete %s, error: %s", path, strerror(get_err));
         isulad_append_error_message("Failed to delete %s, error: %s. ", path, strerror(get_err));
     }

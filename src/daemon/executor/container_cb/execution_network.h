@@ -34,7 +34,7 @@ int init_container_network_confs(const char *id, const char *rootpath, const hos
 
 // TODO: need to merge 
 container_network_settings *native_generate_network_settings(const host_config *host_config);
-container_network_settings *cri_generate_network_settings(const host_config *host_config)
+container_network_settings *cri_generate_network_settings(const host_config *host_config);
 
 #ifdef __cplusplus
 }

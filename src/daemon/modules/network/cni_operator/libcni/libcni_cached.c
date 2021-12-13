@@ -272,7 +272,7 @@ int cni_cache_delete(const char *cache_dir, const char *net_name, const struct r
         return -1;
     }
 
-    if (!util_remove_file(file_path, &get_err)) {
+    if (!util_force_remove_file(file_path, &get_err)) {
         ERROR("Failed to delete %s, error: %s", file_path, strerror(get_err));
     }
 

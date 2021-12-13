@@ -56,6 +56,7 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_timestamp.h"
+#include "utils_network.h"
 #include "utils_verify.h"
 #include "selinux_label.h"
 #include "opt_log.h"
@@ -1434,28 +1435,6 @@ out:
     free(mnt);
     free(root);
     return res;
-}
-
-static char *new_pod_sandbox_key(void)
-{
-    int nret = 0;
-    char random[NETNS_LEN + 1] = { 0x00 };
-    char netns[PATH_MAX] = { 0x00 };
-    const char *netns_fmt = "/var/run/netns/isulacni-%s";
-
-    nret = util_generate_random_str(random, NETNS_LEN);
-    if (nret != 0) {
-        ERROR("Failed to generate random netns");
-        return NULL;
-    }
-
-    nret = snprintf(netns, sizeof(netns), netns_fmt, random);
-    if (nret < 0 || (size_t)nret >= sizeof(netns)) {
-        ERROR("snprintf netns failed");
-        return NULL;
-    }
-
-    return util_strdup_s(netns);
 }
 
 static int cpurt_controller_init(const char *cgroups_path)

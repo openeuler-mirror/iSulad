@@ -28,8 +28,6 @@ public:
     MOCK_METHOD4(GetNetworkNamespacePath, int(const host_config *host_spec,
                                               const container_network_settings *network_settings, const char *type, char **dest_path));
     MOCK_METHOD1(GetContainerProcessLabel, char *(const char *path));
-    MOCK_METHOD4(GetNetworkNamespacePath, int(const host_config *,
-                                              const container_config_v2_common_config_network_settings *, const char *, char **));
 };
 
 void MockNamespace_SetMock(MockNamespace *mock);

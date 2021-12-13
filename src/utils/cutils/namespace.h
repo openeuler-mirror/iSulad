@@ -108,14 +108,6 @@ static inline bool namespace_is_shareable(const char *mode)
     return false;
 }
 
-static inline bool namespace_is_bridge(const char *mode)
-{
-    if (mode != NULL && strcmp(mode, SHARE_NAMESPACE_BRIDGE) == 0) {
-        return true;
-    }
-    return false;
-}
-
 char *namespace_get_connected_container(const char *mode);
 char *namespace_get_host_namespace_path(const char *type);
 

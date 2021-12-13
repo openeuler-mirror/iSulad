@@ -1102,7 +1102,6 @@ static bool verify_bridge_config(const char **bridges, const size_t len)
 
 static char *new_sandbox_key(void)
 {
-#define NETNS_LEN 12
     int nret = 0;
     char random[NETNS_LEN + 1] = { 0x00 };
     char netns[PATH_MAX] = { 0x00 };
@@ -1211,12 +1210,33 @@ err_out:
     return NULL;
 }
 
+static char *new_pod_sandbox_key(void)
+{
+    int nret = 0;
+    char random[NETNS_LEN + 1] = { 0x00 };
+    char netns[PATH_MAX] = { 0x00 };
+    const char *netns_fmt = "/var/run/netns/isulacni-%s";
+
+    nret = util_generate_random_str(random, NETNS_LEN);
+    if (nret != 0) {
+        ERROR("Failed to generate random netns");
+        return NULL;
+    }
+
+    nret = snprintf(netns, sizeof(netns), netns_fmt, random);
+    if (nret < 0 || (size_t)nret >= sizeof(netns)) {
+        ERROR("snprintf netns failed");
+        return NULL;
+    }
+
+    return util_strdup_s(netns);
+}
 
 container_network_settings *cri_generate_network_settings(const host_config *host_config)
 {
     if (host_config == NULL) {
         ERROR("Invalid input");
-        return -1;
+        return NULL;
     }
 
     container_network_settings *settings = NULL;

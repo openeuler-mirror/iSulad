@@ -115,7 +115,7 @@ int prepare_network_namespace(const bool post_prepare_network, const int pid, co
     return 0;
 
 err_out:
-    if (!util_remove_file(netns_path, &get_err)) {
+    if (!util_force_remove_file(netns_path, &get_err)) {
         ERROR("Failed to remove file %s, error: %s", netns_path, strerror(get_err));
     }
 

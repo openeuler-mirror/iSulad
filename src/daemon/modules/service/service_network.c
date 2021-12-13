@@ -801,7 +801,7 @@ static int append_hosts_content(const char *hostname, defs_map_string_object_net
         goto out;
     }
 
-    ret = util_append_string_array(tmp_str, hosts);
+    ret = util_append_string_array(hosts, tmp_str);
     if (ret != 0) {
         ERROR("Failed to append hosts string array");;
         goto out;
@@ -839,7 +839,7 @@ static int append_dns_content(const char *hostname, defs_map_string_object_netwo
         goto out;
     }
 
-    ret = util_append_string_array(tmp_str, dns);
+    ret = util_append_string_array(dns, tmp_str);
     if (ret != 0) {
         ERROR("Failed to append dns string array");
         goto out;
@@ -1092,7 +1092,7 @@ static int drop_file_content(const char *line, const char *hostname, const map_t
     }
 
 append_out:
-    ret = util_append_string_array(line, array);
+    ret = util_append_string_array(array, line);
     if (ret != 0) {
         ERROR("Failed to append string array");
     }

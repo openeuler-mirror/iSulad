@@ -306,7 +306,7 @@ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int 
             failure = 1;
         }
     } else {
-        failure = util_remove_file(fname, saved_errno) ? 0 : 1;
+        failure = util_force_remove_file(fname, saved_errno) ? 0 : 1;
     }
 
     return failure;

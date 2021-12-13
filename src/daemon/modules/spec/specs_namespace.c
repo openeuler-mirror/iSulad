@@ -115,45 +115,6 @@ int get_share_namespace_path(const char *type, const char *src_path, char **dest
     return ret;
 }
 
-int get_network_namespace_path(const host_config *host_spec, const container_network_settings *network_settings,
-                               const char *type, char **dest_path)
-{
-    int ret = 0;
-    const char *network_mode = host_spec->network_mode;
-
-    if (network_mode == NULL || dest_path == NULL) {
-        return -1;
-    }
-
-    if (namespace_is_none(network_mode)) {
-        *dest_path = NULL;
-    } else if (namespace_is_host(network_mode)) {
-        *dest_path = namespace_get_host_namespace_path(network_mode);
-        if (*dest_path == NULL) {
-            ret = -1;
-        }
-    } else if (namespace_is_container(network_mode)) {
-        *dest_path = parse_share_namespace_with_prefix(type, network_mode);
-        if (*dest_path == NULL) {
-            ret = -1;
-        }
-    } else if (namespace_is_bridge(network_mode)) {
-        if (host_spec->system_container || util_post_setup_network(host_spec->user_remap)) {
-            *dest_path = NULL;
-            return 0;
-        }
-
-        if (network_settings == NULL || network_settings->sandbox_key == NULL) {
-            ERROR("Invalid sandbox key for bridge network");
-            return -1;
-        }
-
-        *dest_path = util_strdup_s(network_settings->sandbox_key);
-    }
-
-    return ret;
-}
-
 char *get_container_process_label(const char *cid)
 {
     char *result = NULL;
@@ -176,7 +137,7 @@ out:
 }
 
 typedef int (*namespace_mode_check)(const host_config *host_spec,
-                                    const container_config_v2_common_config_network_settings *network_settings,
+                                    const container_network_settings *network_settings,
                                     const char *type, char **dest_path);
 
 struct get_netns_path_handler {
@@ -185,7 +146,7 @@ struct get_netns_path_handler {
 };
 
 static int handle_get_path_from_none(const host_config *host_spec,
-                                     const container_config_v2_common_config_network_settings *network_settings,
+                                     const container_network_settings *network_settings,
                                      const char *type, char **dest_path)
 {
     *dest_path = NULL;
@@ -193,7 +154,7 @@ static int handle_get_path_from_none(const host_config *host_spec,
 }
 
 static int handle_get_path_from_host(const host_config *host_spec,
-                                     const container_config_v2_common_config_network_settings *network_settings,
+                                     const container_network_settings *network_settings,
                                      const char *type, char **dest_path)
 {
     *dest_path = namespace_get_host_namespace_path(type);
@@ -204,7 +165,7 @@ static int handle_get_path_from_host(const host_config *host_spec,
 }
 
 static int handle_get_path_from_container(const host_config *host_spec,
-                                          const container_config_v2_common_config_network_settings *network_settings, const char *type,
+                                          const container_network_settings *network_settings, const char *type,
                                           char **dest_path)
 {
     *dest_path = parse_share_namespace_with_prefix(type, host_spec->network_mode);
@@ -215,7 +176,7 @@ static int handle_get_path_from_container(const host_config *host_spec,
 }
 
 static int handle_get_path_from_file(const host_config *host_spec,
-                                     const container_config_v2_common_config_network_settings *network_settings,
+                                     const container_network_settings *network_settings,
                                      const char *type, char **dest_path)
 {
     if (network_settings == NULL || network_settings->sandbox_key == NULL) {
@@ -227,8 +188,27 @@ static int handle_get_path_from_file(const host_config *host_spec,
     return 0;
 }
 
+static int handle_get_path_from_bridge(const host_config *host_spec,
+                                     const container_network_settings *network_settings,
+                                     const char *type, char **dest_path)
+{
+
+    if (host_spec->system_container || util_post_setup_network(host_spec->user_remap)) {
+        *dest_path = NULL;
+        return 0;
+    }
+
+    if (network_settings == NULL || network_settings->sandbox_key == NULL) {
+        ERROR("Invalid sandbox key for bridge network");
+        return -1;
+    }
+
+    *dest_path = util_strdup_s(network_settings->sandbox_key);
+    return 0;
+}
+
 int get_network_namespace_path(const host_config *host_spec,
-                               const container_config_v2_common_config_network_settings *network_settings,
+                               const container_network_settings *network_settings,
                                const char *type, char **dest_path)
 {
     int index;
@@ -238,6 +218,7 @@ int get_network_namespace_path(const host_config *host_spec,
         { SHARE_NAMESPACE_HOST, handle_get_path_from_host },
         { SHARE_NAMESPACE_PREFIX, handle_get_path_from_container },
         { SHARE_NAMESPACE_FILE, handle_get_path_from_file },
+        { SHARE_NAMESPACE_BRIDGE, handle_get_path_from_bridge },
     };
     size_t jump_table_size = sizeof(handler_jump_table) / sizeof(handler_jump_table[0]);
     const char *network_mode = host_spec->network_mode;
