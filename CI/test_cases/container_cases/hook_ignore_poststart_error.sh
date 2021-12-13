@@ -22,29 +22,31 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
-test_data_path=$(realpath "$curr_path"/test_data)
+test_data_path=$(realpath $curr_path/test_data)
 
-function test_hook_ignore_poststart_error_spec() {
+function test_hook_ignore_poststart_error_spec()
+{
     local ret=0
     local image="busybox"
     local test="container hook test => (${FUNCNAME[@]})"
     CONT=test_hook_spec
-    cp "${test_data_path}"/poststart.sh /tmp/
+    cp ${test_data_path}/poststart.sh /tmp/
 
     msg_info "${test} starting..."
 
     isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return "${FAILURE}"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    isula run -n $CONT -itd --hook-spec "${test_data_path}"/oci_hook_poststart_check.json ${image} &
+    isula run -n $CONT -itd --hook-spec ${test_data_path}/oci_hook_poststart_check.json ${image} &
 
-    for a in $(seq 20); do
-        bpid=$(ps aux | grep "poststart.sh" | grep -v grep | awk '{print $2}')
-        if [ "x" != "x$bpid" ]; then
-            kill -9 "$bpid"
+    for a in `seq 20`
+    do
+        bpid=`ps aux | grep "poststart.sh" | grep -v grep | awk '{print $2}'`
+        if [ "x" != "x$bpid" ];then
+            kill -9 $bpid
             break
         else
             sleep .5
@@ -52,8 +54,8 @@ function test_hook_ignore_poststart_error_spec() {
         fi
     done
 
-    status=$(isula inspect -f '{{json .State.Status}}' $CONT)
-    if [ "$status" == "\"running\"" ]; then
+    status=`isula inspect -f '{{json .State.Status}}' $CONT`
+    if [ "$status" == "\"running\"" ];then
         echo "get right status"
     else
         echo "expect $CONT running, but get $status"
@@ -67,11 +69,11 @@ function test_hook_ignore_poststart_error_spec() {
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm ${CONT}" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return "${ret}"
+    return ${ret}
 }
 
 declare -i ans=0
 
 test_hook_ignore_poststart_error_spec || ((ans++))
 
-show_result "${ans}" "${curr_path}/${0}"
+show_result ${ans} "${curr_path}/${0}"

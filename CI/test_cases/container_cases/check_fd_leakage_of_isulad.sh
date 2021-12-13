@@ -19,26 +19,27 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath "$curr_path"/../data)
+data_path=$(realpath $curr_path/../data)
 source ../helpers.sh
 
 connect="grpc"
 
-function do_test_t_grpc() {
-    if [ $connect != "grpc" ]; then
+function do_test_t_grpc()
+{
+    if [ $connect != "grpc" ];then
         echo "this test is designed for grpc version"
         return 0
     fi
     sleep 1
     containername=test_fds
-    isulad_pid=$(cat /var/run/isulad.pid)
-    precount=$(ls /proc/"$isulad_pid"/fd | wc -l)
+    isulad_pid=`cat /var/run/isulad.pid`
+    precount=`ls /proc/$isulad_pid/fd | wc -l`
     isula create -t --name $containername busybox
     fn_check_eq "$?" "0" "create failed"
     testcontainer $containername inited
 
     sleep 1
-    curcount=$(ls /proc/"$isulad_pid"/fd | wc -l)
+    curcount=`ls /proc/$isulad_pid/fd | wc -l`
     fn_check_eq "$precount" "$curcount" "test failed"
 
     isula start $containername
@@ -50,41 +51,42 @@ function do_test_t_grpc() {
     testcontainer $containername exited
 
     sleep 1
-    curcount=$(ls /proc/"$isulad_pid"/fd | wc -l)
+    curcount=`ls /proc/$isulad_pid/fd | wc -l`
     fn_check_eq "$precount" "$curcount" "test failed"
 
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
     sleep 1
-    curcount=$(ls /proc/"$isulad_pid"/fd | wc -l)
+    curcount=`ls /proc/$isulad_pid/fd | wc -l`
     fn_check_eq "$precount" "$curcount" "test failed"
 
-    return "$TC_RET_T"
+    return $TC_RET_T
 }
 
-function do_test_t_rest() {
-    if [ $connect != "rest" ]; then
+function do_test_t_rest()
+{
+    if [ $connect != "rest" ];then
         echo "this test is designed for rest version"
         return 0
     fi
     sleep 1
     delta_rest="5"
     containername=test_fds
-    isulad_pid=$(cat /var/run/isulad.pid)
-    precount=$(ls /proc/"$isulad_pid"/fd | wc -l)
+    isulad_pid=`cat /var/run/isulad.pid`
+    precount=`ls /proc/$isulad_pid/fd | wc -l`
 
     isula create -t --name $containername busybox
     fn_check_eq "$?" "0" "create failed"
     testcontainer $containername inited
 
     sleep 1
-    curcount=$(ls /proc/"$isulad_pid"/fd | wc -l)
+    curcount=`ls /proc/$isulad_pid/fd | wc -l`
     delta=$((10#$curcount - 10#$precount))
     echo "delta fd is $delta"
-    if [ $delta -ne 0 ] && [ $delta -ne $delta_rest ]; then
+    if [ $delta -ne 0 ] && [ $delta -ne $delta_rest ];then
         echo "test failed"
-        TC_RET_T=$(($TC_RET_T + 1))
+        TC_RET_T=$(($TC_RET_T+1))
     fi
 
     isula start $containername
@@ -96,24 +98,24 @@ function do_test_t_rest() {
     testcontainer $containername exited
 
     sleep 1
-    curcount=$(ls /proc/"$isulad_pid"/fd | wc -l)
+    curcount=`ls /proc/$isulad_pid/fd | wc -l`
     delta=$((10#$curcount - 10#$precount))
     echo "delta fd is $delta"
-    if [ $delta -ne 0 ] && [ $delta -ne $delta_rest ]; then
+    if [ $delta -ne 0 ] && [ $delta -ne $delta_rest ];then
         echo "test failed"
-        TC_RET_T=$(($TC_RET_T + 1))
+        TC_RET_T=$(($TC_RET_T+1))
     fi
 
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
     sleep 1
-    curcount=$(ls /proc/"$isulad_pid"/fd | wc -l)
+    curcount=`ls /proc/$isulad_pid/fd | wc -l`
     delta=$((10#$curcount - 10#$precount))
     echo "delta fd is $delta"
-    if [ $delta -ne 0 ] && [ $delta -ne $delta_rest ]; then
+    if [ $delta -ne 0 ] && [ $delta -ne $delta_rest ];then
         echo "test failed"
-        TC_RET_T=$(($TC_RET_T + 1))
+        TC_RET_T=$(($TC_RET_T+1))
     fi
 
     return $TC_RET_T
@@ -123,8 +125,8 @@ ret=0
 
 do_test_t_grpc
 do_test_t_rest
-if [ $? -ne 0 ]; then
+if [ $? -ne 0 ];then
     let "ret=$ret + 1"
 fi
 
-show_result "$ret" "basic check fd leak"
+show_result $ret "basic check fd leak"

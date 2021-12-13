@@ -21,21 +21,22 @@ resultpass=/tmp/ciresult.0
 resultfail=/tmp/ciresult.1
 umask 0022
 
-if [ "$subcmd" == "run" ]; then
-    rm -rf $resultfail $resultpass "$logfile"
-    $testcase > "$logfile" 2>&1
-    if [ $? -eq 0 ]; then
+if [ "x$subcmd" == "xrun" ];then
+    rm -rf $resultfail $resultpass $logfile
+    $testcase > $logfile 2>&1
+    if [ $? -eq 0 ];then
         touch $resultpass
     else
         touch $resultfail
     fi
-elif [ "$subcmd" == "get" ]; then
+elif [ "x$subcmd" == "xget" ];then
     set +x
-    while true; do
-        if [ -e $resultfail ]; then
+    while true
+    do
+        if [ -e $resultfail ];then
             exit 1
         fi
-        if [ -e $resultpass ]; then
+        if [ -e $resultpass ];then
             exit 0
         fi
         sleep 2

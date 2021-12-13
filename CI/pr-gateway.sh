@@ -22,56 +22,56 @@ dnf install -y gtest-devel gmock-devel diffutils cmake gcc-c++ yajl-devel patch 
 
 # dnf install -y cargo rust rust-packaging
 
-cd ~ || exit
+cd ~
 
 rm -rf lxc
 git clone https://gitee.com/src-openeuler/lxc.git
-pushd lxc || exit
+pushd lxc
 rm -rf lxc-4.0.3
 ./apply-patches || exit 1
-pushd lxc-4.0.3 || exit
+pushd lxc-4.0.3
 ./autogen.sh && ./configure || exit 1
 make -j $(nproc) || exit 1
 make install
-popd || exit
-popd || exit
+popd
+popd
 
 ldconfig
 rm -rf lcr
 git clone https://gitee.com/openeuler/lcr.git
-pushd lcr || exit
-git checkout "${tbranch}"
+pushd lcr
+git checkout ${tbranch}
 rm -rf build
 mkdir build
-pushd build || exit
+pushd build
 cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE ../ || exit 1
 make -j $(nproc) || exit 1
 make install
-popd || exit
-popd || exit
+popd
+popd
 
 ldconfig
 rm -rf clibcni
 git clone https://gitee.com/openeuler/clibcni.git
-pushd clibcni || exit
-git checkout "${tbranch}"
+pushd clibcni
+git checkout ${tbranch}
 rm -rf build
 mkdir build
-pushd build || exit
+pushd build
 cmake -DDEBUG=ON ../ || exit 1
 make -j $(nproc) || exit 1
 make install
-popd || exit
-popd || exit
+popd
+popd
 
 ldconfig
-pushd iSulad || exit
+pushd iSulad
 rm -rf build
 mkdir build
-pushd build || exit
+pushd build
 cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=OFF ../ || exit 1
 #cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=ON ../ || exit 1
 make -j $(nproc) || exit 1
 ctest -V
-popd || exit
-popd || exit
+popd
+popd

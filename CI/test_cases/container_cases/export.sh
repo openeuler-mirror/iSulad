@@ -22,38 +22,39 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
-function test_image_export() {
-    local ret=0
-    local image="busybox"
-    local test="export container test => (${FUNCNAME[@]})"
+function test_image_export()
+{
+  local ret=0
+  local image="busybox"
+  local test="export container test => (${FUNCNAME[@]})"
 
-    msg_info "${test} starting..."
+  msg_info "${test} starting..."
 
-    isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return "${FAILURE}"
+  isula pull ${image}
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
 
-    isula images | grep busybox
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
+  isula images | grep busybox
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    CONT=$(isula run -itd busybox)
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
+  CONT=`isula run -itd busybox`
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    isula export -o export.tar "${CONT}"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to export ${CONT}" && ((ret++))
+  isula export -o export.tar ${CONT}
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to export ${CONT}" && ((ret++))
 
-    rm -f export.tar
+  rm -f export.tar
 
-    isula export -o nonexistdir/export.tar "${CONT}"
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - export to nonexist directory success" && ((ret++))
+  isula export -o nonexistdir/export.tar ${CONT}
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - export to nonexist directory success" && ((ret++))
 
-    isula rm -f "${CONT}"
+  isula rm -f ${CONT}
 
-    msg_info "${test} finished with return ${ret}..."
-    return "${ret}"
+  msg_info "${test} finished with return ${ret}..."
+  return ${ret}
 }
 
 declare -i ans=0
 
 test_image_export || ((ans++))
 
-show_result "${ans}" "${curr_path}/${0}"
+show_result ${ans} "${curr_path}/${0}"

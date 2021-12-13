@@ -26,22 +26,22 @@ dmsetup remove_all
 lvremove -f isulad/thinpool
 lvremove -f isulad/thinpoolmeta
 vgremove -f isulad
-pvremove -f "$dev_disk"
+pvremove -f $dev_disk
 
 # If udev do not sync in time, do remove force
 rm -rf /dev/isulad
 
-echo y | mkfs.ext4 "$dev_disk"
+echo y | mkfs.ext4 $dev_disk
 mkdir -p /etc/lvm/profile
 touch /etc/lvm/profile/isulad-thinpool.profile
-cat > /etc/lvm/profile/isulad-thinpool.profile << EOF
+cat > /etc/lvm/profile/isulad-thinpool.profile <<EOF
 activation {
 thin_pool_autoextend_threshold=80
 thin_pool_autoextend_percent=20
 }
 EOF
-pvcreate -y "$dev_disk"
-vgcreate isulad "$dev_disk"
+pvcreate -y $dev_disk
+vgcreate isulad $dev_disk
 echo y | lvcreate --wipesignatures y -n thinpool isulad -l 80%VG
 echo y | lvcreate --wipesignatures y -n thinpoolmeta isulad -l 1%VG
 lvconvert -y --zero n -c 512K --thinpool isulad/thinpool --poolmetadata isulad/thinpoolmeta
@@ -51,3 +51,5 @@ lvs -o+seg_monitor
 sed -i 's/\"storage\-driver\"\: \"overlay2\"/\"storage\-driver\"\: \"devicemapper\"/g' $isulad_daemon_file
 sed -i '/    \"storage-opts\"\: \[/{n;d}' $isulad_daemon_file
 sed -i '/    \"storage-opts\"\: \[/a\    \"dm\.thinpooldev\=\/dev\/mapper\/isulad\-thinpool\",\n    \"dm\.fs\=ext4\"\,\n    \"dm\.min\_free\_space\=10\%\"' $isulad_daemon_file
+
+

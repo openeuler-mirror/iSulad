@@ -22,7 +22,8 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
-function test_blkio_iops_spec() {
+function test_blkio_iops_spec()
+{
     local ret=0
     local image="busybox"
     local test="container blkio iops test => (${FUNCNAME[@]})"
@@ -30,7 +31,7 @@ function test_blkio_iops_spec() {
     msg_info "${test} starting..."
 
     isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return "${FAILURE}"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
@@ -44,30 +45,30 @@ function test_blkio_iops_spec() {
     isula run -itd --device-write-iops /dev/loop0:2b $image /bin/sh 2>&1 | grep "Number must be unsigned 64 bytes integer"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check Number must be unsigned 64 bytes integer" && ((ret++))
 
-    c_id=$(isula run -itd --device-read-iops /dev/loop0:123 --device-read-iops /dev/zero:111 --device-write-iops /dev/loop0:567 --device-write-iops /dev/zero:321 busybox sh)
+    c_id=`isula run -itd --device-read-iops /dev/loop0:123 --device-read-iops /dev/zero:111 --device-write-iops /dev/loop0:567 --device-write-iops /dev/zero:321 busybox sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/blkio/blkio.throttle.read_iops_device" | grep "7:0 123"
+    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/blkio/blkio.throttle.read_iops_device" | grep "7:0 123"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
 
-    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/blkio/blkio.throttle.read_iops_device" | grep "1:5 111"
+    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/blkio/blkio.throttle.read_iops_device" | grep "1:5 111"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
 
-    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/blkio/blkio.throttle.write_iops_device" | grep "7:0 567"
+    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/blkio/blkio.throttle.write_iops_device" | grep "7:0 567"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
 
-    isula exec -it "$c_id" sh -c "cat /sys/fs/cgroup/blkio/blkio.throttle.write_iops_device" | grep "1:5 321"
+    isula exec -it $c_id sh -c "cat /sys/fs/cgroup/blkio/blkio.throttle.write_iops_device" | grep "1:5 321"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
 
-    isula rm -f "$c_id"
+    isula rm -f $c_id
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container ${c_id}" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return "${ret}"
+    return ${ret}
 }
 
 declare -i ans=0
 
 test_blkio_iops_spec || ((ans++))
 
-show_result "${ans}" "${curr_path}/${0}"
+show_result ${ans} "${curr_path}/${0}"

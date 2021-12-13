@@ -22,7 +22,8 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
-function test_mem() {
+function test_mem()
+{
     local ret=0
     local test="container stats test => (${FUNCNAME[@]})"
     local metrics_log=/tmp/metrics.log
@@ -30,10 +31,10 @@ function test_mem() {
     msg_info "${test} starting..."
 
     check_valgrind_log
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop isulad" && return "${FAILURE}"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop isulad" && return ${FAILURE}
 
     start_isulad_with_valgrind
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start isulad" && return "${FAILURE}"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start isulad" && return ${FAILURE}
 
     # iSulad is started by valgrind, netstat cannot find the 'isulad' process name
     # 127.0.0.0:9090
@@ -43,32 +44,32 @@ function test_mem() {
     local cont_id=$(isula create -t $image | cut -b 1-4)
     [[ -z $cont_id ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create cont with img $image" && ((ret++))
 
-    isula start "$cont_id"
+    isula start $cont_id
     fn_check_eq "$?" "0" "start failed"
-
+  
     #mem info (get base cpu info)
-    curl -i "$metric_server"/metrics/type/mem_cpu >> $metrics_log
+    curl -i $metric_server/metrics/type/mem_cpu >> $metrics_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run curl" && ((ret++))
 
-    cat $metrics_log | grep "isula_container_mem_stat" | grep "$cont_id"
+    cat $metrics_log | grep "isula_container_mem_stat" | grep $cont_id
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to get mem metrics info" && ((ret++))
 
     #cpu info
-    curl -i "$metric_server"/metrics/type/cpu >> $metrics_log
+    curl -i $metric_server/metrics/type/cpu >> $metrics_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run curl" && ((ret++))
 
-    cat $metrics_log | grep "isula_container_cpu_stat" | grep "$cont_id"
+    cat $metrics_log | grep "isula_container_cpu_stat" | grep $cont_id
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to get cpu metrics info" && ((ret++))
 
-    isula stop "$cont_id"
-    isula rm "$cont_id"
+    isula stop $cont_id
+    isula rm $cont_id
     #rm -rf $metrics_log
     msg_info "${test} finished with return ${ret}..."
-    return "${ret}"
+    return ${ret}
 }
 
 declare -i ans=0
 
 test_mem || ((ans++))
 
-show_result "${ans}" "${curr_path}/${0}"
+show_result ${ans} "${curr_path}/${0}"

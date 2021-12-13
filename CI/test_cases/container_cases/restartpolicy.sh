@@ -20,19 +20,20 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath "$curr_path"/../data)
+data_path=$(realpath $curr_path/../data)
 source ../helpers.sh
 
-function do_test_on_failure() {
+function do_test_on_failure()
+{
     containername=test_rp_on_failure
-    isula run --name $containername -td --restart on-failure:3 busybox /bin/sh -c "exit 2"
+    isula run  --name $containername  -td --restart on-failure:3  busybox /bin/sh -c "exit 2"
     fn_check_eq "$?" "0" "run failed"
 
     sleep 8
-    count=$(isula inspect --format='{{json .RestartCount}}' $containername)
-    if [[ $count != "3" ]]; then
+    count=`isula inspect --format='{{json .RestartCount}}' $containername`
+    if [[ $count != "3"  ]];then
         echo "expect 3 but get $count"
-        TC_RET_T=$(($TC_RET_T + 1))
+        TC_RET_T=$(($TC_RET_T+1))
     fi
     testcontainer $containername exited
 
@@ -40,16 +41,17 @@ function do_test_on_failure() {
     fn_check_eq "$?" "0" "rm failed"
 }
 
-function do_test_unless_stopped() {
+function do_test_unless_stopped()
+{
     containername=test_rp_unless_stopped
-    isula run --name $containername -td --restart unless-stopped busybox /bin/sh -c "exit 2"
+    isula run  --name $containername  -td --restart unless-stopped  busybox /bin/sh -c "exit 2"
     fn_check_eq "$?" "0" "run failed"
 
     sleep 8
-    count=$(isula inspect --format='{{json .RestartCount}}' $containername)
-    if [[ $count == "0" ]]; then
+    count=`isula inspect --format='{{json .RestartCount}}' $containername`
+    if [[ $count == "0"  ]];then
         echo "expect not 0 but get $count"
-        TC_RET_T=$(($TC_RET_T + 1))
+        TC_RET_T=$(($TC_RET_T+1))
     fi
 
     isula stop $containername
@@ -59,13 +61,14 @@ function do_test_unless_stopped() {
     fn_check_eq "$?" "0" "rm failed"
 }
 
-function do_test_unless_stopped_kill() {
+function do_test_unless_stopped_kill()
+{
     containername=test_rp_unless_stopped
-    isula run --name $containername -td --restart unless-stopped busybox /bin/sh
+    isula run  --name $containername  -td --restart unless-stopped  busybox /bin/sh
     fn_check_eq "$?" "0" "run failed"
 
-    cpid=$(isula inspect -f '{{json .State.Pid}}' $containername)
-    kill -9 "$cpid"
+    cpid=`isula inspect -f '{{json .State.Pid}}' $containername`
+    kill -9 $cpid
     sleep 8
     testcontainer $containername running
 
@@ -84,13 +87,14 @@ function do_test_unless_stopped_kill() {
     fn_check_eq "$?" "0" "rm failed"
 }
 
-function do_test_always_cancel() {
+function do_test_always_cancel()
+{
     containername=test_rp_always_cancel
-    isula run --name $containername -td --restart always busybox
+    isula run  --name $containername  -td --restart always busybox
     testcontainer $containername running
 
-    cpid=$(isula inspect -f '{{json .State.Pid}}' $containername)
-    kill -9 "$cpid"
+    cpid=`isula inspect -f '{{json .State.Pid}}' $containername`
+    kill -9 $cpid
     sleep 8
     testcontainer $containername running
 
@@ -102,7 +106,8 @@ function do_test_always_cancel() {
     fn_check_eq "$?" "0" "rm failed"
 }
 
-function do_test_t() {
+function do_test_t()
+{
     do_test_on_failure
     do_test_always_cancel
     do_test_unless_stopped
@@ -114,8 +119,8 @@ function do_test_t() {
 ret=0
 
 do_test_t
-if [ $? -ne 0 ]; then
+if [ $? -ne 0 ];then
     let "ret=$ret + 1"
 fi
 
-show_result "$ret" "basic restartpolicy"
+show_result $ret "basic restartpolicy"

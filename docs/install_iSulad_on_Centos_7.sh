@@ -1,5 +1,6 @@
 #！/bin/bash
 
+
 set -x
 set -e
 
@@ -9,7 +10,7 @@ yum install -y patch automake autoconf libtool cmake make libcap libcap-devel li
 # export LDFLAGS
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH
-echo "/usr/local/lib" >> /etc/ld.so.conf
+  echo "/usr/local/lib" >> /etc/ld.so.conf
 
 BUILD_DIR=/tmp/build_isulad
 
