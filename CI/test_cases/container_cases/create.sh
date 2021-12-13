@@ -21,7 +21,8 @@
 
 source ../helpers.sh
 
-function do_test_t() {
+function do_test_t()
+{
     containername=test_create
     isula run -itd --name $containername busybox
     fn_check_eq "$?" "0" "create failed"
@@ -33,47 +34,47 @@ function do_test_t() {
     isula inspect $containername
     fn_check_ne "$?" "0" "inspect should fail"
 
-    containerid=$(isula run -itd --name $containername --cpu-shares 1024 busybox)
+    containerid=`isula run -itd --name $containername  --cpu-shares 1024 busybox`
     fn_check_eq "$?" "0" "create failed"
 
-    cat "$LCR_ROOT_PATH/$containerid/config" | grep "cpu.shares = 1024"
-    fn_check_eq "$?" "0" "create failed"
-
-    isula rm -f $containername
-    fn_check_eq "$?" "0" "rm failed"
-
-    containerid=$(isula run -itd --name $containername --cpu-quota 50000 busybox)
-    fn_check_eq "$?" "0" "create failed"
-
-    cat "$LCR_ROOT_PATH/$containerid/config" | grep "cpu.cfs_quota_us = 50000"
+    cat "$LCR_ROOT_PATH/$containerid/config"  | grep "cpu.shares = 1024"
     fn_check_eq "$?" "0" "create failed"
 
     isula rm -f $containername
     fn_check_eq "$?" "0" "rm failed"
 
-    containerid=$(isula run -itd --name $containername --cpuset-cpus 0-1 busybox)
+    containerid=`isula run -itd --name $containername  --cpu-quota 50000 busybox`
     fn_check_eq "$?" "0" "create failed"
 
-    cat "$LCR_ROOT_PATH/$containerid/config" | grep "cpuset.cpus = 0-1"
+    cat "$LCR_ROOT_PATH/$containerid/config"  | grep "cpu.cfs_quota_us = 50000"
     fn_check_eq "$?" "0" "create failed"
 
     isula rm -f $containername
     fn_check_eq "$?" "0" "rm failed"
 
-    containerid=$(isula run -itd --name $containername --memory 1000000000 busybox)
+    containerid=`isula run -itd --name $containername  --cpuset-cpus 0-1 busybox`
     fn_check_eq "$?" "0" "create failed"
 
-    cat "$LCR_ROOT_PATH/$containerid/config" | grep "memory.limit_in_bytes = 1000000000"
+    cat "$LCR_ROOT_PATH/$containerid/config"  | grep "cpuset.cpus = 0-1"
+    fn_check_eq "$?" "0" "create failed"
+
+    isula rm -f $containername
+    fn_check_eq "$?" "0" "rm failed"
+
+    containerid=`isula run -itd --name $containername  --memory 1000000000 busybox`
+    fn_check_eq "$?" "0" "create failed"
+
+    cat "$LCR_ROOT_PATH/$containerid/config"  | grep "memory.limit_in_bytes = 1000000000"
     fn_check_eq "$?" "0" "create failed"
 
     isula rm -f $containername
     fn_check_eq "$?" "0" "rm failed"
 
     # validate --label
-    containerid=$(isula run -itd --name $containername --label "iSulad=lcrd" busybox)
+    containerid=`isula run -itd --name $containername  --label "iSulad=lcrd" busybox`
     fn_check_eq "$?" "0" "create failed"
 
-    isula inspect -f "{{.Config.Labels}}" "${containerid}" | grep iSulad | grep lcrd
+    isula inspect -f "{{.Config.Labels}}" ${containerid} | grep iSulad | grep lcrd
     fn_check_eq "$?" "0" " failed to set meta data on a container"
 
     isula rm -f $containername
@@ -81,13 +82,13 @@ function do_test_t() {
 
     # validate --label-file
     echo "iSulad=lcrd\n   abc=kkk" > ./label_file
-    containerid=$(isula run -itd --name $containername --label-file ./label_file busybox)
+    containerid=`isula run -itd --name $containername  --label-file ./label_file busybox`
     fn_check_eq "$?" "0" "create failed"
 
-    isula inspect -f "{{.Config.Labels}}" "${containerid}" | grep iSulad | grep lcrd
+    isula inspect -f "{{.Config.Labels}}" ${containerid} | grep iSulad | grep lcrd
     fn_check_eq "$?" "0" "failed to read in a line delimited file of labels and set meta data on a container"
 
-    isula inspect -f "{{.Config.Labels}}" "${containerid}" | grep abc | grep kkk
+    isula inspect -f "{{.Config.Labels}}" ${containerid} | grep abc | grep kkk
     fn_check_eq "$?" "0" "failed to read in a line delimited file of labels and set meta data on a container"
 
     rm -f ./label_file
@@ -96,29 +97,29 @@ function do_test_t() {
     fn_check_eq "$?" "0" "rm failed"
 
     # validate --dns --dns-search --dns-opt
-    containerid=$(isula run -itd --name $containername --dns 8.8.8.8 --dns-opt debug --dns-search example.com busybox)
+    containerid=`isula run -itd --name $containername --dns 8.8.8.8 --dns-opt debug --dns-search example.com busybox`
     fn_check_eq "$?" "0" "create failed"
 
-    isula exec -it "${containerid}" cat /etc/resolv.conf | grep "nameserver 8.8.8.8"
+    isula exec -it ${containerid} cat /etc/resolv.conf | grep "nameserver 8.8.8.8"
     fn_check_eq "$?" "0" "failed to set custom DNS servers"
 
-    isula exec -it "${containerid}" cat /etc/resolv.conf | grep "search" | grep "example.com"
+    isula exec -it ${containerid} cat /etc/resolv.conf | grep "search" | grep "example.com"
     fn_check_eq "$?" "0" "failed to set custom DNS search domains"
 
-    isula exec -it "${containerid}" cat /etc/resolv.conf | grep "options" | grep "debug"
+    isula exec -it ${containerid} cat /etc/resolv.conf | grep "options" | grep "debug"
     fn_check_eq "$?" "0" "failed to set DNS options"
 
     isula rm -f $containername
     fn_check_eq "$?" "0" "rm failed"
 
-    return "$TC_RET_T"
+    return $TC_RET_T
 }
 
 ret=0
 
 do_test_t
-if [ $? -ne 0 ]; then
+if [ $? -ne 0 ];then
     let "ret=$ret + 1"
 fi
 
-show_result "$ret" "basic create"
+show_result $ret "basic create"

@@ -24,59 +24,64 @@ source ../helpers.sh
 single_image="${curr_path}/busybox.tar"
 mult_image="${curr_path}/mult_image.tar"
 
-function test_image_load() {
-    local ret=0
-    local test="isula load image test => (${FUNCNAME[@]})"
+function test_image_load()
+{
+  local ret=0
+  local test="isula load image test => (${FUNCNAME[@]})"
 
-    msg_info "${test} starting..."
+  msg_info "${test} starting..."
+  
+  # file is not exist, expect fail
+  isula load -i xxx.tar
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - image tar file not exist test failed" && ((ret++))
 
-    # file is not exist, expect fail
-    isula load -i xxx.tar
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - image tar file not exist test failed" && ((ret++))
 
-    # single image without --tag
-    isula load -i "$single_image"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${single_image}" && ((ret++))
+  # single image without --tag
+  isula load -i $single_image
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${single_image}" && ((ret++))
 
-    isula images | grep busybox
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: busybox" && ((ret++))
+  isula images | grep busybox
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: busybox" && ((ret++))
 
-    id=$(isula inspect -f '{{.image.id}}' busybox)
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image busybox" && ((ret++))
+  id=`isula inspect -f '{{.image.id}}' busybox`
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image busybox" && ((ret++))
 
-    # single image with --tag
-    isula load -i "$single_image" --tag "kitty"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${single_image} with --tag kitty" && ((ret++))
+  # single image with --tag
+  isula load -i $single_image --tag "kitty"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${single_image} with --tag kitty" && ((ret++))
 
-    isula images | grep kitty
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: kitty" && ((ret++))
+  isula images | grep kitty 
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: kitty" && ((ret++))
 
-    isula rmi "$id"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image ${id}" && ((ret++))
+  isula rmi $id
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image ${id}" && ((ret++))
 
-    # multi images without --tag
-    isula load -i "$mult_image"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${mult_image}" && ((ret++))
 
-    ubuntu_id=$(isula inspect -f '{{.image.id}}' ubuntu)
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image: ubuntu" && ((ret++))
+  # multi images without --tag
+  isula load -i $mult_image
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${mult_image}" && ((ret++))
 
-    busybox_id=$(isula inspect -f '{{.image.id}}' busybox)
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image: busybox" && ((ret++))
+  ubuntu_id=`isula inspect -f '{{.image.id}}' ubuntu`
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image: ubuntu" && ((ret++))
 
-    isula rmi "$ubuntu_id" "$busybox_id"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image ${ubuntu_id} and ${busybox_id}" && ((ret++))
+  busybox_id=`isula inspect -f '{{.image.id}}' busybox`
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image: busybox" && ((ret++))
 
-    # multi images with --tag
-    isula load -i "$mult_image" --tag "correct_tag_name"
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load multi images :${mult_image} with --tag correct_tag_name not get fail" && ((ret++))
+  isula rmi $ubuntu_id $busybox_id
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image ${ubuntu_id} and ${busybox_id}" && ((ret++))
 
-    msg_info "${test} finished with return ${ret}..."
-    return "${ret}"
+  # multi images with --tag
+  isula load -i $mult_image --tag "correct_tag_name"
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load multi images :${mult_image} with --tag correct_tag_name not get fail" && ((ret++))
+
+
+  msg_info "${test} finished with return ${ret}..."
+  return ${ret}
 }
 
 declare -i ans=0
 
 test_image_load || ((ans++))
 
-show_result "${ans}" "${curr_path}/${0}"
+show_result ${ans} "${curr_path}/${0}"
+

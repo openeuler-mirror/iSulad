@@ -22,7 +22,8 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
-function test_bind_special_dir() {
+function test_bind_special_dir()
+{
     local ret=0
     local image="busybox"
     local test="container bind special directory test => (${FUNCNAME[@]})"
@@ -30,26 +31,26 @@ function test_bind_special_dir() {
     msg_info "${test} starting..."
 
     isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return "${FAILURE}"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    c_id=$(isula run -itd -v -itd -v /sys/fs:/sys/fs:rw,rshared -v /proc:/proc -v /dev:/dev:ro -v /dev/pts:/dev/pts:rw busybox sh)
+    c_id=`isula run -itd -v -itd -v /sys/fs:/sys/fs:rw,rshared -v /proc:/proc -v /dev:/dev:ro -v /dev/pts:/dev/pts:rw busybox sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    isula exec -it "$c_id" sh -c "ls -al /sys/fs" | grep "cgroup"
+    isula exec -it $c_id sh -c "ls -al /sys/fs" | grep "cgroup"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
 
-    isula rm -f "$c_id"
+    isula rm -f $c_id
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container ${c_id}" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return "${ret}"
+    return ${ret}
 }
 
 declare -i ans=0
 
 test_bind_special_dir || ((ans++))
 
-show_result "${ans}" "${curr_path}/${0}"
+show_result ${ans} "${curr_path}/${0}"

@@ -20,15 +20,17 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath "$curr_path"/../data)
+data_path=$(realpath $curr_path/../data)
 source ../helpers.sh
 
-function isulad_help() {
+function isulad_help()
+{
     isulad --help
     fn_check_eq "$?" "0" "test failed"
 }
 
-function isula_help() {
+function isula_help()
+{
     isula
     fn_check_eq "$?" "0" "test failed"
 
@@ -36,7 +38,8 @@ function isula_help() {
     fn_check_eq "$?" "0" "test failed"
 }
 
-function isula_subcmd_help() {
+function isula_subcmd_help()
+{
     isula create --help
     fn_check_eq "$?" "0" "test failed"
 
@@ -62,19 +65,20 @@ function isula_subcmd_help() {
     fn_check_ne "$?" "0" "test failed"
 }
 
-function do_test_t() {
+function do_test_t()
+{
     isulad_help
     isula_help
     isula_subcmd_help
 
-    return "$TC_RET_T"
+    return $TC_RET_T
 }
 
 ret=0
 
 do_test_t
-if [ $? -ne 0 ]; then
+if [ $? -ne 0 ];then
     let "ret=$ret + 1"
 fi
 
-show_result "$ret" "basic help"
+show_result $ret "basic help"

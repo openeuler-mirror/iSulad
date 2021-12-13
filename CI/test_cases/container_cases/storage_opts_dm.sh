@@ -20,15 +20,16 @@
 #######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath "$curr_path"/../data)
+data_path=$(realpath $curr_path/../data)
 source ../helpers.sh
 image_busybox="busybox"
 
-function do_pre() {
+function do_pre()
+{
     local ret=0
 
-    isula rm -f $(isula ps -qa)
-    isula rmi $(isula images | awk 'NR>1{print $3}')
+    isula rm -f `isula ps -qa`
+    isula rmi `isula images | awk 'NR>1{print $3}'`
 
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
@@ -46,10 +47,11 @@ function do_pre() {
     start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
-    return "$ret"
+    return $ret
 }
 
-function do_test() {
+function do_test()
+{
     local ret=0
 
     local test="devicemapper dm.mkfsarg and dm.mountopt params test => (${FUNCNAME[@]})"
@@ -57,31 +59,32 @@ function do_test() {
 
     isula pull $image_busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image_busybox}" && ((ret++))
-
-    id=$(isula run -tid $image_busybox)
+    
+    id=`isula run -tid $image_busybox`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container failed" && ((ret++))
 
-    dm=$(ls /dev/mapper/ | grep "$id")
-    block_size=$(tune2fs -l /dev/mapper/"$dm" | grep 'Block size' | awk '{print $3}')
+    dm=`ls /dev/mapper/ | grep $id`
+    block_size=`tune2fs -l /dev/mapper/$dm | grep 'Block size' | awk '{print $3}'`
     [[ $block_size -ne 1024 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get dm block size:${block_size} value not as expected value:1024" && ((ret++))
 
-    inode_size=$(tune2fs -l /dev/mapper/"$dm" | grep 'Inode size' | awk '{print $3}')
+    inode_size=`tune2fs -l /dev/mapper/$dm | grep 'Inode size' | awk '{print $3}'`
     [[ $inode_size -ne 128 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get dm inode size:${inode_size} value not as expected value:128" && ((ret++))
 
-    mnt_opt=$(mount | grep "$id" | grep discard)
+    mnt_opt=`mount | grep $id | grep discard`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get container mount discard failed" && ((ret++))
 
-    isula rm -f "$id"
+    isula rm -f $id
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm container id:$id failed" && ((ret++))
 
     isula rmi $image_busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rmi image:$image_busybox failed" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
-    return "${ret}"
+    return ${ret}
 }
 
-function do_post() {
+function do_post()
+{
     local ret=0
 
     check_valgrind_log
@@ -96,16 +99,16 @@ function do_post() {
     start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
-    return "${ret}"
+    return ${ret}
 }
 
 declare -i ans=0
 
 driver_name=$(isula info | grep "Storage Driver" | cut -d " " -f3)
-if [[ "$driver_name" == "devicemapper" ]]; then
+if [[ "x$driver_name" == "xdevicemapper" ]]; then
     do_pre || ((ans++))
     do_test || ((ans++))
     do_post || ((ans++))
 fi
 
-show_result "${ans}" "${curr_path}/${0}"
+show_result ${ans} "${curr_path}/${0}"

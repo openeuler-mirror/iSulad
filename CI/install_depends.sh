@@ -16,8 +16,8 @@
 set -xe
 umask 0022
 
-builddir=$(env | grep BUILDDIR | awk -F '=' '{print $2}')
-if [ "$builddir" == "" ]; then
+builddir=`env | grep BUILDDIR | awk -F '=' '{print $2}'`
+if [ "x$builddir" == "x" ];then
     builddir=/usr/local
 fi
 
@@ -35,19 +35,21 @@ mkdir -p ${builddir}/lib/pkgconfig
 mkdir -p ${builddir}/systemd/system
 
 #install crictl
-function make_crictl() {
+function make_crictl()
+{
     cd ~
     git clone https://gitee.com/duguhaotian/cri-tools.git
     go version
     cd cri-tools
     git checkout v1.18.0
-    make -j "$nproc"
+    make -j $nproc
     echo "make cri-tools: $?"
     cp ./_output/crictl ${builddir}/bin/
 }
 
 #install cni plugins
-function make_cni_plugins() {
+function make_cni_plugins()
+{
     local CNI_PLUGINS_COMMIT=b93d284d18dfc8ba93265fa0aa859c7e92df411b
     cd ~
     git clone https://gitee.com/duguhaotian/plugins.git
@@ -58,16 +60,17 @@ function make_cni_plugins() {
     cp bin/* ${builddir}/cni/bin/
 }
 
-function check_make_status() {
+function check_make_status()
+{
     set +e
     script_cmd="$1"
     log_file="$2"
-    ${script_cmd} > "${log_file}" 2>&1
-    if [ $? -ne 0 ]; then
-        cat "${log_file}"
+    ${script_cmd} >${log_file} 2>&1
+    if [ $? -ne 0 ];then
+        cat ${log_file}
         touch ${buildstatus}
     fi
-    rm -f "$2"
+    rm -f $2
     set -e
 }
 
@@ -82,8 +85,9 @@ cd lxc
 tar xf lxc-4.0.3.tar.gz
 cd lxc-4.0.3
 mv ../*.patch .
-for var in $(ls 0*.patch | sort -n); do
-    patch -p1 < "${var}"
+for var in $(ls 0*.patch | sort -n)
+do
+    patch -p1 < ${var}
 done
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/lxc/start.c
 ./autogen.sh
@@ -107,19 +111,19 @@ ldconfig
 
 # install runc
 cd ~
-if [ -d ./runc ]; then
-    rm -rf ./runc
+if [ -d ./runc ];then
+	rm -rf ./runc
 fi
 git clone https://gitee.com/src-openeuler/runc.git
 cd runc
 git checkout -q origin/openEuler-20.03-LTS
 ./apply-patch
 mkdir -p .gopath/src/github.com/opencontainers
-export GOPATH=$(pwd)/.gopath
-if [ -L .gopath/src/github.com/opencontainers/runc ]; then
-    echo "Link exist"
+export GOPATH=`pwd`/.gopath
+if [ -L .gopath/src/github.com/opencontainers/runc ];then
+	echo "Link exist"
 else
-    ln -sf $(pwd) .gopath/src/github.com/opencontainers/runc
+	ln -sf `pwd` .gopath/src/github.com/opencontainers/runc
 fi
 
 cd .gopath/src/github.com/opencontainers/runc
@@ -128,7 +132,7 @@ make -j $(nproc)
 cd -
 
 # install lib-shim-v2
-source "$HOME"/.cargo/env
+source $HOME/.cargo/env
 cd ~
 git clone https://gitee.com/src-openeuler/lib-shim-v2.git
 cd lib-shim-v2
@@ -152,7 +156,7 @@ git clone https://gitee.com/openeuler/clibcni.git
 cd clibcni
 mkdir -p build
 cd build
-cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} ../
+cmake  -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} ../
 make -j $(nproc)
 make install
 cd -
@@ -167,10 +171,11 @@ cp cricli /usr/local/bin
 cd -
 
 wait
-if [ -e ${buildstatus} ]; then
-    for i in ${buildlogs[@]}; do
-        if [ -e "${i}" ]; then
-            cat "$i"
+if [ -e ${buildstatus} ];then
+    for i in ${buildlogs[@]}
+    do
+        if [ -e ${$i} ];then
+            cat $i
         fi
     done
     exit 1
