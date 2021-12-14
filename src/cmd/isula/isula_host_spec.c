@@ -201,6 +201,7 @@ static int pack_host_network_dns(host_config *dstconfig, const isula_host_config
     return 0;
 }
 
+#ifdef ENABLE_NATIVE_NETWORK
 static int pack_host_network_bridge(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     /* bridge */
@@ -212,6 +213,7 @@ static int pack_host_network_bridge(host_config *dstconfig, const isula_host_con
 
     return 0;
 }
+#endif
 
 static int pack_host_config_network(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
@@ -227,7 +229,9 @@ static int pack_host_config_network(host_config *dstconfig, const isula_host_con
         goto out;
     }
 
+#ifdef ENABLE_NATIVE_NETWORK
     ret = pack_host_network_bridge(dstconfig, srcconfig);
+#endif
 
 out:
     return ret;
@@ -1708,8 +1712,10 @@ int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigs
     /* cgroup parent */
     check_and_strdup_s(&dstconfig->cgroup_parent, srcconfig->cgroup_parent);
 
+#ifdef ENABLE_NATIVE_NETWORK
     check_and_strdup_s(&dstconfig->ip, srcconfig->ip);
     check_and_strdup_s(&dstconfig->mac_address, srcconfig->mac_address);
+#endif
 
     if (!parse_restart_policy(srcconfig->restart_policy, &dstconfig->restart_policy)) {
         ERROR("Invalid restart policy");
@@ -1726,9 +1732,13 @@ int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigs
         }
     }
 
+#ifdef ENABLE_NATIVE_NETWORK
     dstconfig->port_bindings = srcconfig->port_bindings;
+#endif
     *hostconfigstr = host_config_generate_json(dstconfig, &ctx, &err);
+#ifdef ENABLE_NATIVE_NETWORK
     dstconfig->port_bindings = NULL;
+#endif
     if (*hostconfigstr == NULL) {
         COMMAND_ERROR("Failed to generate hostconfig json:%s", err);
         ret = -1;
@@ -1825,16 +1835,6 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
     free(hostconfig->network_mode);
     hostconfig->network_mode = NULL;
 
-    util_free_array_by_len(hostconfig->bridge_network, hostconfig->bridge_network_len);
-    hostconfig->bridge_network = NULL;
-    hostconfig->bridge_network_len = 0;
-
-    free(hostconfig->ip);
-    hostconfig->ip = NULL;
-
-    free(hostconfig->mac_address);
-    hostconfig->mac_address = NULL;
-
     free(hostconfig->ipc_mode);
     hostconfig->ipc_mode = NULL;
 
@@ -1914,8 +1914,20 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
     container_cgroup_resources_free(hostconfig->cr);
     hostconfig->cr = NULL;
 
+#ifdef ENABLE_NATIVE_NETWORK
+    util_free_array_by_len(hostconfig->bridge_network, hostconfig->bridge_network_len);
+    hostconfig->bridge_network = NULL;
+    hostconfig->bridge_network_len = 0;
+
+    free(hostconfig->ip);
+    hostconfig->ip = NULL;
+
+    free(hostconfig->mac_address);
+    hostconfig->mac_address = NULL;
+    
     free_defs_map_string_object_port_bindings(hostconfig->port_bindings);
     hostconfig->port_bindings = NULL;
+#endif
 
     free(hostconfig);
 }

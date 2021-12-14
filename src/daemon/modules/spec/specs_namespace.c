@@ -188,6 +188,7 @@ static int handle_get_path_from_file(const host_config *host_spec,
     return 0;
 }
 
+#ifdef ENABLE_NATIVE_NETWORK
 static int handle_get_path_from_bridge(const host_config *host_spec,
                                      const container_network_settings *network_settings,
                                      const char *type, char **dest_path)
@@ -206,6 +207,7 @@ static int handle_get_path_from_bridge(const host_config *host_spec,
     *dest_path = util_strdup_s(network_settings->sandbox_key);
     return 0;
 }
+#endif
 
 int get_network_namespace_path(const host_config *host_spec,
                                const container_network_settings *network_settings,
@@ -218,7 +220,9 @@ int get_network_namespace_path(const host_config *host_spec,
         { SHARE_NAMESPACE_HOST, handle_get_path_from_host },
         { SHARE_NAMESPACE_PREFIX, handle_get_path_from_container },
         { SHARE_NAMESPACE_FILE, handle_get_path_from_file },
+#ifdef ENABLE_NATIVE_NETWORK
         { SHARE_NAMESPACE_BRIDGE, handle_get_path_from_bridge },
+#endif
     };
     size_t jump_table_size = sizeof(handler_jump_table) / sizeof(handler_jump_table[0]);
     const char *network_mode = host_spec->network_mode;

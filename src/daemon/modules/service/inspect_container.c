@@ -32,7 +32,9 @@
 #include "isulad_config.h"
 #include "err_msg.h"
 #include "namespace.h"
+#ifdef ENABLE_NATIVE_NETWORK
 #include "utils_port.h"
+#endif
 
 static int dup_path_and_args(const container_t *cont, char **path, char ***args, size_t *args_len)
 {
@@ -497,6 +499,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_NATIVE_NETWORK
 static int do_split_cni_portmapping(const cni_inner_port_mapping *cni_port_mapping, char **key,
                                     network_port_binding_host_element **element)
 {
@@ -674,6 +677,7 @@ out:
     free_defs_map_string_object_port_bindings(result);
     return ret;
 }
+#endif
 
 static int pack_inspect_network_settings(const container_t *cont, container_inspect *inspect)
 {
@@ -701,6 +705,7 @@ static int pack_inspect_network_settings(const container_t *cont, container_insp
         goto out;
     }
 
+#ifdef ENABLE_NATIVE_NETWORK
     // change cni port mapping to map (string --> array)
     if (do_transform_cni_to_map(inspect->network_settings) != 0) {
         ret = -1;
@@ -716,6 +721,7 @@ static int pack_inspect_network_settings(const container_t *cont, container_insp
         free_defs_map_string_object_networks(inspect->network_settings->networks);
         inspect->network_settings->networks = NULL;
     }
+#endif
 
 out:
     free(jerr);

@@ -2,7 +2,11 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} topsrcs)
 
 add_subdirectory(cni_operator)
 add_subdirectory(cri)
+
+
+if (ENABLE_NATIVE_NETWORK)
 add_subdirectory(native)
+endif()
 
 set(NETWORK_SRCS
     ${topsrcs}

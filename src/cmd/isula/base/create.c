@@ -46,7 +46,9 @@
 #include "isula_host_spec.h"
 #include "utils_mount_spec.h"
 #include "utils_network.h"
+#ifdef ENABLE_NATIVE_NETWORK
 #include "utils_port.h"
+#endif
 
 const char g_cmd_create_desc[] = "Create a new container";
 const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
@@ -1094,8 +1096,10 @@ static void request_pack_host_namespaces(const struct client_arguments *args, is
 
     if (!bridge_network_mode(args->custom_conf.share_ns[NAMESPACE_NET])) {
         hostconfig->network_mode = util_strdup_s(args->custom_conf.share_ns[NAMESPACE_NET]);
+#ifdef ENABLE_NATIVE_NETWORK
     } else {
         hostconfig->network_mode = util_strdup_s(SHARE_NAMESPACE_BRIDGE);
+#endif
     }
 }
 
@@ -1114,6 +1118,7 @@ inline static int request_pack_host_security(const struct client_arguments *args
     return 0;
 }
 
+#ifdef ENABLE_NATIVE_NETWORK
 static int request_pack_host_network(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     int ret = 0;
@@ -1145,6 +1150,7 @@ static int request_pack_host_network(const struct client_arguments *args, isula_
     util_free_array_by_len(bridge_network, bridge_network_len);
     return ret;
 }
+#endif
 
 static isula_host_config_t *request_pack_host_config(const struct client_arguments *args)
 {
@@ -1268,11 +1274,13 @@ static isula_host_config_t *request_pack_host_config(const struct client_argumen
         goto error_out;
     }
 
+#ifdef ENABLE_NATIVE_NETWORK
     if (request_pack_host_network(args, hostconfig) != 0) {
         goto error_out;
     }
 
     hostconfig->publish_all = args->custom_conf.publish_all;
+#endif
 
     return hostconfig;
 
@@ -1371,6 +1379,7 @@ static bool valid_pull_option(const char *pull)
     return false;
 }
 
+#ifdef ENABLE_NATIVE_NETWORK
 static int pack_custom_network_expose(isula_container_config_t *container_spec, const map_t *expose_m)
 {
     int ret = 0;
@@ -1440,6 +1449,7 @@ static int pack_custom_network_publish(isula_host_config_t *host_spec, const map
 
     return util_copy_port_binding_from_custom_map(&(host_spec->port_bindings), port_binding_m);
 }
+#endif
 
 /*
  * Create a create request message and call RPC
@@ -1451,8 +1461,10 @@ int client_create(struct client_arguments *args)
     struct isula_create_response *response = NULL;
     isula_container_config_t *container_spec = NULL;
     isula_host_config_t *host_spec = NULL;
+#ifdef ENABLE_NATIVE_NETWORK
     map_t *expose_m = NULL;
     map_t *port_binding_m = NULL;
+#endif
 
     request = util_common_calloc_s(sizeof(struct isula_create_request));
     if (request == NULL) {
@@ -1466,6 +1478,7 @@ int client_create(struct client_arguments *args)
     request->runtime = util_strdup_s(args->runtime);
     request->image = util_strdup_s(args->image_name);
 
+#ifdef ENABLE_NATIVE_NETWORK
     // parse --publish param to custom map
     if (args->custom_conf.publish != NULL) {
         ret = util_parse_port_specs((const char **)args->custom_conf.publish, &expose_m, &port_binding_m);
@@ -1483,6 +1496,7 @@ int client_create(struct client_arguments *args)
             goto out;
         }
     }
+#endif
 
     container_spec = request_pack_custom_conf(args);
     if (container_spec == NULL) {
@@ -1490,10 +1504,12 @@ int client_create(struct client_arguments *args)
         goto out;
     }
 
+#ifdef ENABLE_NATIVE_NETWORK
     if (pack_custom_network_expose(container_spec, expose_m) != 0) {
         ret = EINVALIDARGS;
         goto out;
     }
+#endif
 
     if (generate_container_config(container_spec, &request->container_spec_json) != 0) {
         ret = EINVALIDARGS;
@@ -1506,12 +1522,14 @@ int client_create(struct client_arguments *args)
         goto out;
     }
 
+#ifdef ENABLE_NATIVE_NETWORK
     if (pack_custom_network_publish(host_spec, port_binding_m) != 0) {
         ret = EINVALIDARGS;
         goto out;
     }
 
     host_spec->publish_all = args->custom_conf.publish_all;
+#endif
 
     if (generate_hostconfig(host_spec, &request->host_spec_json) != 0) {
         ret = EINVALIDARGS;
@@ -1537,8 +1555,11 @@ out:
     isula_container_config_free(container_spec);
     isula_create_response_free(response);
     isula_create_request_free(request);
+#ifdef ENABLE_NATIVE_NETWORK
     map_free(expose_m);
     map_free(port_binding_m);
+#endif
+
     return ret;
 }
 
@@ -1715,6 +1736,9 @@ int cmd_create_main(int argc, const char **argv)
     g_cmd_create_args.subcommand = argv[1];
     struct command_option options[] = { LOG_OPTIONS(lconf) CREATE_OPTIONS(g_cmd_create_args) CREATE_EXTEND_OPTIONS(
             g_cmd_create_args) COMMON_OPTIONS(g_cmd_create_args)
+    #ifdef ENABLE_NATIVE_NETWORK
+    CREATE_NETWORK_OPTIONS(g_cmd_create_args)
+    #endif
     };
 
     isula_libutils_default_log_config(argv[0], &lconf);
@@ -2023,7 +2047,9 @@ out:
 static int create_check_network(const struct client_arguments *args)
 {
     size_t len, i;
+#ifdef ENABLE_NATIVE_NETWORK
     const char *net_mode = args->custom_conf.share_ns[NAMESPACE_NET];
+#endif
 
     len = util_array_len((const char **)(args->custom_conf.extra_hosts));
     for (i = 0; i < len; i++) {
@@ -2054,6 +2080,7 @@ static int create_check_network(const struct client_arguments *args)
         }
     }
 
+#ifdef ENABLE_NATIVE_NETWORK
     // check static IP and MAC address
     if (args->custom_conf.ip != NULL || args->custom_conf.mac_address != NULL) {
         if (net_mode == NULL || !bridge_network_mode(net_mode)) {
@@ -2075,6 +2102,7 @@ static int create_check_network(const struct client_arguments *args)
         COMMAND_ERROR("Invalid MAC address '%s'", args->custom_conf.mac_address);
         return EINVALIDARGS;
     }
+#endif
 
     return 0;
 }
@@ -2156,7 +2184,6 @@ out:
 static int create_namespaces_checker(const struct client_arguments *args)
 {
     int ret = 0;
-    int max_bridge_len = 0;
     const char *net_mode = args->custom_conf.share_ns[NAMESPACE_NET];
     const char *user_mode = args->custom_conf.share_ns[NAMESPACE_USER];
 
@@ -2172,12 +2199,17 @@ static int create_namespaces_checker(const struct client_arguments *args)
         }
     }
 
-    max_bridge_len = (MAX_NETWORK_NAME_LEN + 1) * MAX_NETWORK_CONFIG_FILE_COUNT - 1;
-    if (strnlen(net_mode, max_bridge_len + 1) > max_bridge_len) {
-        COMMAND_ERROR("Network mode \"%s\" is too long", net_mode);
-        ret = -1;
-        goto out;
+#ifdef ENABLE_NATIVE_NETWORK
+    {
+        int max_bridge_len = (MAX_NETWORK_NAME_LEN + 1) * MAX_NETWORK_CONFIG_FILE_COUNT - 1;
+        if (strnlen(net_mode, max_bridge_len + 1) > max_bridge_len) {
+            COMMAND_ERROR("Network mode \"%s\" is too long", net_mode);
+            ret = -1;
+            goto out;
+        }
     }
+#endif
+
 out:
     return ret;
 }

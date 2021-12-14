@@ -25,7 +25,9 @@
 #ifdef ENABLE_METRICS
 #include "rest_metrics_service.h"
 #endif
+#ifdef ENABLE_NATIVE_NETWORK
 #include "rest_network_service.h"
+#endif
 
 #define REST_PTHREAD_NUM 100
 #define BACKLOG 2048
@@ -74,9 +76,11 @@ static int rest_register_handler(evhtp_t *g_htp)
     }
 #endif
 
+#ifdef ENABLE_NATIVE_NETWORK
     if (rest_register_network_handler(g_htp) != 0) {
         return -1;
     }
+#endif
 
     return 0;
 }

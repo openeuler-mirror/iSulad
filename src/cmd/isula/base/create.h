@@ -260,20 +260,6 @@ extern "C" {
       &(cmdargs).custom_conf.share_ns[NAMESPACE_NET],                                                                                                     \
       "Connect a container to a network",                                                                                                                 \
       NULL },                                                                                                                                             \
-    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
-      false,                                                                                                                                              \
-      "network",                                                                                                                                          \
-      0,                                                                                                                                                  \
-      &(cmdargs).custom_conf.share_ns[NAMESPACE_NET],                                                                                                     \
-      "Connect a container to a network",                                                                                                                 \
-      NULL },                                                                                                                                             \
-    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
-      false,                                                                                                                                              \
-      "ip",                                                                                                                                               \
-      0,                                                                                                                                                  \
-      &(cmdargs).custom_conf.ip,                                                                                                                          \
-      "Specify a static IP address for container (e.g. 192.168.21.9)",                                                                                    \
-      NULL },                                                                                                                                             \
     { CMD_OPT_TYPE_STRING_DUP, false, "pid", 0, &(cmdargs).custom_conf.share_ns[NAMESPACE_PID],                                                           \
       "PID namespace to use",  NULL },                                                                                                                    \
     { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
@@ -505,6 +491,23 @@ extern "C" {
       0,                                                                                                                                                  \
       &(cmdargs).custom_conf.share_ns[NAMESPACE_USER],                                                                                                    \
       "Set the usernamespace mode for the container when `userns-remap` option is enabled.",                                                              \
+      NULL },
+
+#ifdef ENABLE_NATIVE_NETWORK
+#define CREATE_NETWORK_OPTIONS(cmdargs)                                                                                                                    \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
+      false,                                                                                                                                              \
+      "network",                                                                                                                                          \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.share_ns[NAMESPACE_NET],                                                                                                     \
+      "Connect a container to a network",                                                                                                                 \
+      NULL },                                                                                                                                             \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
+      false,                                                                                                                                              \
+      "ip",                                                                                                                                               \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.ip,                                                                                                                          \
+      "Specify a static IP address for container (e.g. 192.168.21.9)",                                                                                    \
       NULL },                                                                                                                                             \
     { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
       false,                                                                                                                                              \
@@ -527,6 +530,7 @@ extern "C" {
       &(cmdargs).custom_conf.publish_all,                                                                                                                 \
       "Publish all exposed ports to random ports",                                                                                                        \
       NULL },
+#endif
 
 #define CREATE_EXTEND_OPTIONS(cmdargs)          \
     { CMD_OPT_TYPE_BOOL,                        \

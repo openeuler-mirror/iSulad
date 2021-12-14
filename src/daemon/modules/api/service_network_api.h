@@ -30,9 +30,6 @@ int remove_network(container_t *cont);
 
 bool network_store_container_list_add(container_t *cont);
 
-int cni_update_container_networks_info(const network_api_result_list *result, const char *id, const char* netns_path,
-                                       container_network_settings *network_settings);
-
 void set_container_skip_remove_network(container_t *cont);
 
 void reset_container_skip_remove_network(container_t *cont);

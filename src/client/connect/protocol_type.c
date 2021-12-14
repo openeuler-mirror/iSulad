@@ -1389,6 +1389,7 @@ void isula_prune_volume_response_free(struct isula_prune_volume_response *respon
     return;
 }
 
+#ifdef ENABLE_NATIVE_NETWORK
 /* isula network create request free */
 void isula_network_create_request_free(struct isula_network_create_request *request)
 {
@@ -1533,3 +1534,4 @@ void isula_network_remove_response_free(struct isula_network_remove_response *re
 
     free(response);
 }
+#endif

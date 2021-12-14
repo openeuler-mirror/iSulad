@@ -20,7 +20,10 @@
 #include <stdio.h>
 #include "isula_libutils/json_common.h"
 #include "isula_libutils/mount_spec.h"
+
+#ifdef ENABLE_NATIVE_NETWORK
 #include "isula_libutils/defs.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,13 +60,6 @@ typedef struct isula_host_config {
     size_t group_add_len;
 
     char *network_mode;
-
-    char **bridge_network;
-    size_t bridge_network_len;
-
-    char *ip;
-
-    char *mac_address;
 
     char *ipc_mode;
 
@@ -156,8 +152,15 @@ typedef struct isula_host_config {
     char **security;
     size_t security_len;
 
+#ifdef ENABLE_NATIVE_NETWORK
+    char **bridge_network;
+    size_t bridge_network_len;
+    char *ip;
+    char *mac_address;
+
     bool publish_all;
     defs_map_string_object_port_bindings *port_bindings;
+#endif
 } isula_host_config_t;
 
 int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigstr);

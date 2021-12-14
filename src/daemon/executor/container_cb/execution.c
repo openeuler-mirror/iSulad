@@ -55,10 +55,12 @@
 #include "event_type.h"
 #include "utils_timestamp.h"
 #include "utils_verify.h"
+#ifdef ENABLE_NATIVE_NETWORK
 #include "utils_network.h"
 #include "service_network_api.h"
 
 #define STOP_TIMEOUT 10
+#endif
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
 {
@@ -477,11 +479,16 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
     const char *console_fifos[3] = { NULL, NULL, NULL };
     const char *id = cont->common_config->id;
 
+#ifdef ENABLE_NATIVE_NETWORK
     // skip remove network when restarting container
     set_container_skip_remove_network(cont);
+#endif
 
     ret = stop_container(cont, timeout, false, true);
+
+#ifdef ENABLE_NATIVE_NETWORK
     reset_container_skip_remove_network(cont);
+#endif
 
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
@@ -881,7 +888,6 @@ pack_response:
     isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
-
 
 static void pack_update_network_settings_response(container_update_network_settings_response *response, uint32_t cc,
                                                   const char *id)

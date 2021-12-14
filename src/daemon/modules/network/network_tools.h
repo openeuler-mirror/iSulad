@@ -15,6 +15,7 @@
 #ifndef NETWORK_MODULE_TOOLS_H
 #define NETWORK_MODULE_TOOLS_H
 
+#include <isula_libutils/container_network_settings.h>
 #include "network_api.h"
 #include "libcni_result_type.h"
 
@@ -26,6 +27,9 @@ bool network_api_result_list_append(struct network_api_result *result, network_a
 
 struct network_api_result *network_parse_to_api_result(const char *name, const char *interface,
                                                        const struct cni_opt_result *cni_result);
+
+int cni_update_container_networks_info(const network_api_result_list *result, const char *id, const char* netns_path,
+                                       container_network_settings *network_settings);
 
 #ifdef __cplusplus
 }

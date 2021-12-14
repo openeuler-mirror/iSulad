@@ -268,6 +268,7 @@ void client_arguments_free(struct client_arguments *args)
     free(custom_conf->stop_signal);
     custom_conf->stop_signal = NULL;
 
+#ifdef ENABLE_NATIVE_NETWORK
     free(custom_conf->driver);
     custom_conf->driver = NULL;
 
@@ -294,6 +295,7 @@ void client_arguments_free(struct client_arguments *args)
 
     util_free_array(custom_conf->publish);
     custom_conf->publish = NULL;
+#endif
 }
 
 /* print common help */

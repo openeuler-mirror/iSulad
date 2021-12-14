@@ -26,11 +26,15 @@ extern "C" {
 
 int remove_network_namespace(const char *netns);
 
+#ifdef ENABLE_NATIVE_NETWORK
 int prepare_network_namespace(const bool post_prepare_network, const int pid, const char *netns_path);
+#endif
 
 // TODO: need to merge
 char *get_sandbox_key(const container_inspect *inspect_data);
+#ifdef ENABLE_NATIVE_NETWORK
 char *get_netns_path(const char *sandbox_key, const bool attach);
+#endif
 
 #ifdef __cplusplus
 }

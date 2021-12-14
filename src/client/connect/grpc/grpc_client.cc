@@ -17,7 +17,10 @@
 #include "grpc_containers_client.h"
 #include "grpc_images_client.h"
 #include "grpc_volumes_client.h"
+
+#ifdef ENABLE_NATIVE_NETWORK
 #include "grpc_network_client.h"
+#endif
 
 int grpc_ops_init(isula_connect_ops *ops)
 {
@@ -34,9 +37,12 @@ int grpc_ops_init(isula_connect_ops *ops)
     if (grpc_volumes_client_ops_init(ops) != 0) {
         return -1;
     }
+
+#ifdef ENABLE_NATIVE_NETWORK
     if (grpc_network_client_ops_init(ops)) {
         return -1;
     }
+#endif
 
     return 0;
 }

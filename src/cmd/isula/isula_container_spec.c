@@ -327,7 +327,6 @@ out:
 static int pack_container_custom_config(container_config *container_spec, const isula_container_config_t *custom_conf)
 {
     int ret = -1;
-    size_t i = 0;
 
     if (container_spec == NULL || custom_conf == NULL) {
         return ret;
@@ -377,6 +376,7 @@ static int pack_container_custom_config(container_config *container_spec, const 
         container_spec->stop_signal = util_strdup_s(custom_conf->stop_signal);
     }
 
+#ifdef ENABLE_NATIVE_NETWORK
     if (custom_conf->expose != NULL && custom_conf->expose->len != 0) {
         container_spec->exposed_ports = util_common_calloc_s(sizeof(defs_map_string_object));
         if (container_spec->exposed_ports == NULL) {
@@ -396,11 +396,12 @@ static int pack_container_custom_config(container_config *container_spec, const 
             ret = -1;
             goto out;
         }
-        for (i = 0; i < custom_conf->expose->len; i++) {
+        for (size_t i = 0; i < custom_conf->expose->len; i++) {
             container_spec->exposed_ports->keys[i] = util_strdup_s(custom_conf->expose->keys[i]);
         }
         container_spec->exposed_ports->len = custom_conf->expose->len;
     }
+#endif
 
 out:
     return ret;
@@ -480,8 +481,10 @@ void isula_container_config_free(isula_container_config_t *config)
     free(config->stop_signal);
     config->stop_signal = NULL;
 
+#ifdef ENABLE_NATIVE_NETWORK
     free_defs_map_string_object(config->expose);
     config->expose = NULL;
+#endif
 
     free(config);
 }
