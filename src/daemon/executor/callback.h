@@ -85,6 +85,7 @@
 #include "isula_libutils/volume_remove_volume_response.h"
 #include "isula_libutils/volume_prune_volume_request.h"
 #include "isula_libutils/volume_prune_volume_response.h"
+#ifdef ENABLE_NATIVE_NETWORK
 #include "isula_libutils/network_create_request.h"
 #include "isula_libutils/network_create_response.h"
 #include "isula_libutils/network_inspect_request.h"
@@ -93,6 +94,7 @@
 #include "isula_libutils/network_list_response.h"
 #include "isula_libutils/network_remove_request.h"
 #include "isula_libutils/network_remove_response.h"
+#endif
 #include "isula_libutils/container_update_network_settings_request.h"
 #include "isula_libutils/container_update_network_settings_response.h"
 
@@ -292,6 +294,7 @@ typedef struct {
 } service_metrics_callback_t;
 #endif
 
+#ifdef ENABLE_NATIVE_NETWORK
 typedef struct {
     int (*create)(const network_create_request *request, network_create_response **response);
 
@@ -301,6 +304,7 @@ typedef struct {
 
     int (*remove)(const network_remove_request *request, network_remove_response **response);
 } service_network_callback_t;
+#endif
 
 typedef struct {
     service_container_callback_t container;
@@ -309,7 +313,9 @@ typedef struct {
 #ifdef ENABLE_METRICS
     service_metrics_callback_t metrics;
 #endif
+#ifdef ENABLE_NATIVE_NETWORK
     service_network_callback_t network;
+#endif
 } service_executor_t;
 
 int service_callback_init(void);

@@ -25,7 +25,9 @@
 #include "grpc_volumes_service.h"
 #include "runtime_runtime_service.h"
 #include "runtime_image_service.h"
+#ifdef ENABLE_NATIVE_NETWORK
 #include "grpc_network_service.h"
+#endif
 #include "isula_libutils/log.h"
 #include "network_plugin.h"
 #include "errors.h"
@@ -75,7 +77,9 @@ public:
         m_builder.RegisterService(&m_volumeService);
         m_builder.RegisterService(&m_runtimeRuntimeService);
         m_builder.RegisterService(&m_runtimeImageService);
+#ifdef ENABLE_NATIVE_NETWORK
         m_builder.RegisterService(&m_networkService);
+#endif
 
         // Finally assemble the server.
         m_server = m_builder.BuildAndStart();
@@ -188,7 +192,9 @@ private:
     VolumeServiceImpl m_volumeService;
     RuntimeRuntimeServiceImpl m_runtimeRuntimeService;
     RuntimeImageServiceImpl m_runtimeImageService;
+#ifdef ENABLE_NATIVE_NETWORK
     NetworkServiceImpl m_networkService;
+#endif
     ServerBuilder m_builder;
     std::vector<std::string> m_tcpPath;
     std::vector<std::string> m_socketPath;

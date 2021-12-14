@@ -619,6 +619,7 @@ struct isula_prune_volume_response {
     char *errmsg;
 };
 
+#ifdef ENABLE_NATIVE_NETWORK
 struct isula_network_create_request {
     char *name;
     char *driver;
@@ -674,6 +675,7 @@ struct isula_network_remove_response {
     uint32_t server_errono;
     char *errmsg;
 };
+#endif
 
 void container_events_format_free(container_events_format_t *value);
 
@@ -828,6 +830,7 @@ void isula_remove_volume_response_free(struct isula_remove_volume_response *resp
 
 void isula_prune_volume_response_free(struct isula_prune_volume_response *response);
 
+#ifdef ENABLE_NATIVE_NETWORK
 void isula_network_create_request_free(struct isula_network_create_request *request);
 
 void isula_network_create_response_free(struct isula_network_create_response *response);
@@ -845,6 +848,7 @@ void isula_network_list_response_free(struct isula_network_list_response *respon
 void isula_network_remove_request_free(struct isula_network_remove_request *request);
 
 void isula_network_remove_response_free(struct isula_network_remove_response *response);
+#endif
 
 #ifdef __cplusplus
 }

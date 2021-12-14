@@ -71,7 +71,9 @@
 #include "utils_verify.h"
 #include "volume_api.h"
 #include "opt_log.h"
+#ifdef ENABLE_NETWORK
 #include "network_api.h"
+#endif
 
 sem_t g_daemon_shutdown_sem;
 sem_t g_daemon_wait_shutdown_sem;
@@ -258,7 +260,9 @@ static void daemon_shutdown()
 
     umount_daemon_mntpoint();
 
+#ifdef ENABLE_NETWORK
     network_module_exit();
+#endif
 
     clean_residual_files();
 
@@ -1238,11 +1242,13 @@ static int isulad_server_init_common()
         goto out;
     }
 
+#ifdef ENABLE_NETWORK
     if (!network_module_init(args->json_confs->network_plugin, NULL, args->json_confs->cni_conf_dir,
                              args->json_confs->cni_bin_dir)) {
         ERROR("Failed to init network module");
         goto out;
     }
+#endif
 
     if (containers_store_init()) {
         ERROR("Failed to init containers store");

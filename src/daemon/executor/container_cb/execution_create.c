@@ -1611,10 +1611,13 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_shm;
     }
 
-    if (util_native_network_checker(host_spec->network_mode, host_spec->system_container)) {
+    if (namespace_is_file(host_spec->network_mode)){
         network_settings = native_generate_network_settings(host_spec);
-    } else if (namespace_is_file(host_spec->network_mode)) {
+#ifdef ENABLE_NATIVE_NETWORK
+    // TODO: maybe can merge
+    } else if (util_native_network_checker(host_spec->network_mode, host_spec->system_container)) {
         network_settings = cri_generate_network_settings(host_spec);
+#endif
     } else {
         network_settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
     }

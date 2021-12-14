@@ -15,6 +15,7 @@
 #ifndef DAEMON_ENTRY_CONNECT_GRPC_GRPC_NETWORK_SERVICE_H
 #define DAEMON_ENTRY_CONNECT_GRPC_GRPC_NETWORK_SERVICE_H
 
+#ifdef ENABLE_NATIVE_NETWORK
 #include <grpc++/grpc++.h>
 #include "callback.h"
 #include "network.grpc.pb.h"
@@ -78,5 +79,7 @@ private:
 
     void remove_response_to_grpc(const network_remove_response *response, NetworkRemoveResponse *gresponse);
 };
+
+#endif
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_NETWORK_SERVICE_H

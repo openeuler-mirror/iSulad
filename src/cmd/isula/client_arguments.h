@@ -217,6 +217,7 @@ struct custom_configs {
     /* Signal to stop a container */
     char *stop_signal;
 
+#ifdef ENABLE_NATIVE_NETWORK
     /* network driver */
     char *driver;
 
@@ -237,6 +238,7 @@ struct custom_configs {
 
     /* publish a container's port to the host */
     char **publish;
+#endif
 };
 
 struct args_cgroup_resources {
@@ -381,6 +383,7 @@ struct client_arguments {
     do_resize_call_back_t resize_cb;
     struct winsize s_pre_wsz;
 
+#ifdef ENABLE_NATIVE_NETWORK
     // network
     char *network_name;
 
@@ -392,6 +395,7 @@ struct client_arguments {
 
     // port command
     char *port;
+#endif
 };
 
 #define LOG_OPTIONS(log) { CMD_OPT_TYPE_BOOL_FALSE, false, "debug", 'D', &(log).quiet, "Enable debug mode", NULL },
