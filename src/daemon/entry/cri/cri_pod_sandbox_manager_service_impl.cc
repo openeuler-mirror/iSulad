@@ -585,8 +585,8 @@ auto PodSandboxManagerServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSan
     netnsPath = get_sandbox_key(inspect_data);
     if (namespace_is_file(inspect_data->host_config->network_mode)) {
         if (!util_file_exists(netnsPath) || util_mount_namespace(netnsPath) != 0) {
-            error.Errorf("Failed to mount network namespace");
-            ERROR("Failed to mount network namespace");
+            error.Errorf("Failed to mount network namespace: %s", netnsPath);
+            ERROR("Failed to mount network namespace: %s", netnsPath);
             goto cleanup;
         }
     }
