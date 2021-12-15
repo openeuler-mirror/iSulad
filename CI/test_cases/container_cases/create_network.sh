@@ -24,6 +24,11 @@ source ../helpers.sh
 ipv6="2000::1:2345:3456:ab34"
 ipv4="127.0.0.1"
 
+if [ ${enable_native_network} -ne 0 ]; then
+    msg_info "${test} disable native network, just ignore test." 
+    exit 0
+fi
+
 function test_network_param()
 {
     local ret=0

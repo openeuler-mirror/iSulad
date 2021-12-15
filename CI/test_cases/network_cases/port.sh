@@ -21,6 +21,11 @@
 curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
+if [ ${enable_native_network} -ne 0 ]; then
+    msg_info "${test} disable native network, just ignore test." 
+    exit 0
+fi
+
 function do_check_network_setting_ports()
 {
     if [ "x$2" != "x" ]; then

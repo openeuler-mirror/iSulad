@@ -23,6 +23,11 @@ curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/../data)
 source ../helpers.sh
 
+if [ ${enable_native_network} -ne 0 ]; then
+    msg_info "${test} disable native network, just ignore test." 
+    exit 0
+fi
+
 function test_network_help()
 {
     local ret=0

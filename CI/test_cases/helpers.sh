@@ -26,6 +26,8 @@ ISUALD_LOG="/var/lib/isulad/isulad.log"
 ISULAD_ROOT_PATH="/var/lib/isulad"
 ISULAD_RUN_ROOT_PATH="/var/run/isulad"
 
+enable_native_network=0
+
 declare -r -i FAILURE=1
 
 function is_overlay_driver() {
@@ -304,6 +306,7 @@ function do_pretest() {
     msg_info "#### do pretest #####"
     isula ps -a
     isula network ls
+    enable_native_network=$?
     msg_info "#####################"
 }
 

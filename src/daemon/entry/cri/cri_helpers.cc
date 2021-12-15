@@ -1070,7 +1070,7 @@ bool ParseQuantitySuffix(const std::string &suffixStr, int64_t &base, int64_t &e
         return true;
     }
     iter = binHandler.find(suffixStr);
-    if (iter != dexHandler.end()) {
+    if (iter != binHandler.end()) {
         base = 2;
         exponent = iter->second;
         return true;
@@ -1122,18 +1122,18 @@ int64_t ParseBinaryQuantity(bool positive, const std::string &numStr, const std:
     // result = integer part + demon part
     tmp_denom *= mult;
     work = static_cast<int64_t>(tmp_denom);
-    if (positive) {
+    if (positive && tmp_denom != static_cast<double>(work)) {
         if (work < INT64_MAX) {
             work += 1;
         }
-    } else {
-        work -= 1;
     }
-    if (result > INT64_MAX - work) {
+
+    if (work > 0 && result > INT64_MAX - work) {
         result = INT64_MAX;
     } else {
         result += work;
     }
+
     if (!positive) {
         result *= -1;
     }
@@ -1199,7 +1199,7 @@ int64_t ParseDecimalQuantity(bool positive, const std::string &numStr, const std
         }
     }
 
-    if (result > INT64_MAX - work) {
+    if (work > 0 && result > INT64_MAX - work) {
         result = INT64_MAX;
     } else {
         result += work;

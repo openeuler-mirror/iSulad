@@ -156,7 +156,7 @@ static void GetExtensionCNIArgs(const std::map<std::string, std::string> &annota
     // get cni multinetwork extension
     auto iter = annotations.find(CRIHelpers::Constants::CNI_MUTL_NET_EXTENSION_KEY);
     if (iter != annotations.end()) {
-        if (!CheckCNIArgValue(iter->second)) {
+        if (iter->second.find(';') != std::string::npos) {
             WARN("Ignore: invalid multinetwork cni args: %s", iter->second.c_str());
         } else {
             args[CRIHelpers::Constants::CNI_MUTL_NET_EXTENSION_ARGS_KEY] = iter->second;
@@ -172,8 +172,8 @@ static void GetExtensionCNIArgs(const std::map<std::string, std::string> &annota
             continue;
         }
         auto strs = CXXUtils::Split(work.second, '=');
-        iter = annotations.find(work.first);
-        if (iter != annotations.end()) {
+        iter = args.find(strs[0]);
+        if (iter != args.end()) {
             WARN("Ignore: Same key cni args: %s", work.first.c_str());
             continue;
         }
@@ -623,6 +623,11 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
             err.SetError(g_isulad_errmsg);
         } else {
             err.Errorf("setup cni for container: %s failed", id.c_str());
+        }
+        // rollback all network plane
+        // if mutl-networks, one network plane failed, cause to left network can not be delete.
+        if (network_module_detach(config, NETWOKR_API_TYPE_CRI) != 0) {
+            WARN("rollback all network for: %s failed", id.c_str());
         }
     }
 

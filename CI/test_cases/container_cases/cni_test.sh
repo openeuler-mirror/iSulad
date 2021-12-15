@@ -305,7 +305,7 @@ function check_rollback()
 function check_annotation_valid_bandwidth()
 {
     rm bandwidth.json
-    cp ${data_path}/mock-sandbox.json bandwidth.json
+    cp ${data_path}/mock_sandbox.json bandwidth.json
     sed -i "s#ingressholder#$1#g" bandwidth.json
     sed -i "s#engressholder#$3#g" bandwidth.json
     sid=`crictl runp bandwidth.json`
@@ -316,13 +316,15 @@ function check_annotation_valid_bandwidth()
 
     basepath=/tmp/cnilogs/
 
-    cat ${basepath}/${sid}.netconf  | grep "ingressRate\":$3"
+    ls ${basepath} | grep ${sid}
+
+    cat ${basepath}/${sid}_eth0.netconf  | grep "ingressRate\":$2"
     if [ $? -ne 0 ];then
         msg_err "lost extension for mutl network args"
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    cat ${basepath}/${sid}.netconf  | grep "egressRate\":$4"
+    cat ${basepath}/${sid}_eth0.netconf  | grep "egressRate\":$4"
     if [ $? -ne 0 ];then
         msg_err "lost extension for mutl network args"
         TC_RET_T=$(($TC_RET_T+1))
@@ -346,7 +348,7 @@ function check_annotation_valid_bandwidth()
 function check_annotation_invalid_bandwidth()
 {
     rm bandwidth.json
-    cp ${data_path}/mock-sandbox.json bandwidth.json
+    cp ${data_path}/mock_sandbox.json bandwidth.json
     sed -i "s#ingressholder#$1#g" bandwidth.json
     sed -i "s#engressholder#$3#g" bandwidth.json
 
@@ -389,7 +391,7 @@ function check_annotation()
     check_annotation_valid_bandwidth "10.24k" "10240" "-1.024k" "-1024"
     check_annotation_valid_bandwidth "1024m" "2" "-1024m" "-1"
     check_annotation_valid_bandwidth "1.000001Ki" "1025" "-1.00001Ki" "-1024"
-    check_annotation_valid_bandwidth "0.1Mi" "104858" "-0.01" "-10485"
+    check_annotation_valid_bandwidth "0.1Mi" "104858" "-0.01Mi" "-10485"
     check_annotation_valid_bandwidth "1.00001e2" "101" "-1.0001e2" "-100"
 
     return $TC_RET_T
