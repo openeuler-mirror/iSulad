@@ -31,7 +31,7 @@ if(ENABLE_NATIVE_NETWORK)
 add_subdirectory(network)
 list(APPEND local_cmd_isula_srcs ${ISULA_NETWORK_SRCS})
 list(APPEND local_cmd_isula_incs ${CMAKE_CURRENT_SOURCE_DIR}/network)
-endif(ENABLE_NATIVE_NETWORK)
+endif()
 
 set(CMD_ISULA_SRCS ${local_cmd_isula_srcs} PARENT_SCOPE)
 set(CMD_ISULA_INCS ${local_cmd_isula_incs} PARENT_SCOPE)

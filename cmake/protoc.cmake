@@ -9,7 +9,7 @@ set(IMAGE_SERVICE_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/image_client)
 
 if (ENABLE_NATIVE_NETWORK)
 set(NETWORK_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/network)
-endif(ENABLE_NATIVE_NETWORK)
+endif()
 
 if (GRPC_CONNECTOR)
     message("---------------Generate GRPC proto-----------------------")
@@ -83,6 +83,6 @@ if (GRPC_CONNECTOR)
             message("Parse network.proto plugin failed: ")
             message(FATAL_ERROR ${network_err})
         endif()
-    endif(ENABLE_NATIVE_NETWORK)
+    endif()
 endif()
 

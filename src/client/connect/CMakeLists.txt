@@ -28,7 +28,7 @@ if (GRPC_CONNECTOR)
         aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/network CONNECT_API_NETWORK)
         list(APPEND local_client_connect_srcs ${CONNECT_API_NETWORK})
         list(APPEND local_client_connect_incs ${CMAKE_BINARY_DIR}/grpc/src/api/services/network)
-    endif(ENABLE_NATIVE_NETWORK)
+    endif()
     
 else()
     add_subdirectory(rest)

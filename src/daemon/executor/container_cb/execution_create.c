@@ -40,7 +40,9 @@
 #include "specs_api.h"
 #include "verify.h"
 #include "container_api.h"
+#ifdef ENABLE_NETWORK
 #include "execution_network.h"
+#endif
 #include "plugin_api.h"
 #include "image_api.h"
 #include "utils.h"
@@ -1567,11 +1569,13 @@ int container_create_cb(const container_create_request *request, container_creat
         goto clean_container_root_dir;
     }
 
+#ifdef ENABLE_NETWORK
     if (init_container_network_confs(id, runtime_root, host_spec, v2_spec) != 0) {
         ERROR("Init Network files failed");
         cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;
     }
+#endif
 
     ret = do_image_create_container_roofs_layer(id, image_type, image_name, v2_spec->mount_label, request->rootfs,
                                                 host_spec->storage_opt, &real_rootfs);
@@ -1611,6 +1615,7 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_shm;
     }
 
+#ifdef ENABLE_NETWORK
     if (namespace_is_file(host_spec->network_mode)){
         network_settings = native_generate_network_settings(host_spec);
 #ifdef ENABLE_NATIVE_NETWORK
@@ -1626,6 +1631,7 @@ int container_create_cb(const container_create_request *request, container_creat
         cc = ISULAD_ERR_EXEC;
         goto umount_shm;
     }
+#endif
 
     if (merge_config_for_syscontainer(request, host_spec, v2_spec->config, oci_spec) != 0) {
         ERROR("Failed to merge config for syscontainer");
@@ -1633,11 +1639,13 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_shm;
     }
 
+#ifdef ENABLE_NETWORK
     if (merge_network(host_spec, request->rootfs, runtime_root, id, container_spec->hostname) != 0) {
         ERROR("Failed to merge network config");
         cc = ISULAD_ERR_EXEC;
         goto umount_shm;
     }
+#endif
 
     /* modify oci_spec by plugin. */
     if (plugin_event_container_pre_create(id, oci_spec) != 0) {
