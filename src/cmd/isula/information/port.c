@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -86,21 +86,32 @@ out:
     return json;
 }
 
-static int do_port(const struct client_arguments *args, struct network_port *n_port)
+static container_inspect *get_container_info(const struct client_arguments *args)
 {
     char *info_str = NULL;
     parser_error jerr = NULL;
     container_inspect *c_info = NULL;
-    int ret = 0;
-    size_t i;
 
     info_str = do_inspect_container(args);
     if (info_str == NULL) {
         COMMAND_ERROR("do inspect container: %s failed", args->name);
-        return CONTAINER_PORT_ERR;
+        return NULL;
     }
 
     c_info = container_inspect_parse_data(info_str, NULL, &jerr);
+    
+    free(jerr);
+    free(info_str);
+    return c_info;
+}
+
+static int do_port(const struct client_arguments *args, struct network_port *n_port)
+{
+    container_inspect *c_info = NULL;
+    int ret = 0;
+    size_t i;
+
+    c_info = get_container_info(args);
     if (c_info == NULL) {
         return CONTAINER_PORT_ERR;
     }
@@ -147,6 +158,7 @@ static struct network_port *parse_user_ports(const char *port)
         return NULL;
     }
     parts_len = util_array_len((const char **)parts);
+    // invalid port format check in next step
     if (parts_len == 2 && parts[1] != NULL) {
         work_port = parts[0];
         work_proto = parts[1];

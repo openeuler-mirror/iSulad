@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -61,9 +61,6 @@ int network_remove(const struct client_arguments *args)
 out:
     isula_network_remove_response_free(response);
     return ret;
-
-
-    return 0;
 }
 
 int cmd_network_remove_main(int argc, const char **argv)

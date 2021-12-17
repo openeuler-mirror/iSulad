@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -25,9 +25,7 @@
 
 int NetworkServiceImpl::create_request_from_grpc(const NetworkCreateRequest *grequest, network_create_request **request)
 {
-    network_create_request *tmpreq = nullptr;
-
-    tmpreq = static_cast<network_create_request *>(util_common_calloc_s(sizeof(network_create_request)));
+    auto *tmpreq = static_cast<network_create_request *>(util_common_calloc_s(sizeof(network_create_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -65,7 +63,6 @@ void NetworkServiceImpl::create_response_to_grpc(const network_create_response *
     if (response->name != nullptr) {
         gresponse->set_name(response->name);
     }
-    return;
 }
 
 Status NetworkServiceImpl::Create(ServerContext *context, const NetworkCreateRequest *request,
@@ -104,8 +101,7 @@ Status NetworkServiceImpl::Create(ServerContext *context, const NetworkCreateReq
 int NetworkServiceImpl::inspect_request_from_grpc(const NetworkInspectRequest *grequest,
                                                   network_inspect_request **request)
 {
-    network_inspect_request *tmpreq = static_cast<network_inspect_request *>(util_common_calloc_s(
-                                                                                 sizeof(network_inspect_request)));
+    auto *tmpreq = static_cast<network_inspect_request *>(util_common_calloc_s(sizeof(network_inspect_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -134,8 +130,6 @@ void NetworkServiceImpl::inspect_response_to_grpc(const network_inspect_response
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-
-    return;
 }
 
 Status NetworkServiceImpl::Inspect(ServerContext *context, const NetworkInspectRequest *request,
@@ -175,14 +169,13 @@ Status NetworkServiceImpl::Inspect(ServerContext *context, const NetworkInspectR
 int NetworkServiceImpl::list_request_from_grpc(const NetworkListRequest *grequest, network_list_request **request)
 {
     size_t len = 0;
-    network_list_request *tmpreq = static_cast<network_list_request *>(util_common_calloc_s(
-                                                                           sizeof(network_list_request)));
+    auto *tmpreq = static_cast<network_list_request *>(util_common_calloc_s(sizeof(network_list_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
     }
 
-    len = (size_t)grequest->filters_size();
+    len = static_cast<size_t>(grequest->filters_size());
     if (len == 0) {
         *request = tmpreq;
         return 0;
@@ -260,7 +253,6 @@ void NetworkServiceImpl::list_response_to_grpc(const network_list_response *resp
             network->add_plugins(response->networks[i]->plugins[j]);
         }
     }
-    return;
 }
 
 Status NetworkServiceImpl::List(ServerContext *context, const NetworkListRequest *request, NetworkListResponse *reply)
@@ -297,8 +289,7 @@ Status NetworkServiceImpl::List(ServerContext *context, const NetworkListRequest
 
 int NetworkServiceImpl::remove_request_from_grpc(const NetworkRemoveRequest *grequest, network_remove_request **request)
 {
-    network_remove_request *tmpreq = static_cast<network_remove_request *>(util_common_calloc_s(sizeof(
-                                                                                                    network_remove_request)));
+    auto *tmpreq = static_cast<network_remove_request *>(util_common_calloc_s(sizeof(network_remove_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -326,7 +317,6 @@ void NetworkServiceImpl::remove_response_to_grpc(const network_remove_response *
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    return;
 }
 
 Status NetworkServiceImpl::Remove(ServerContext *context, const NetworkRemoveRequest *request,

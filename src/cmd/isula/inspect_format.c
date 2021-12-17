@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -84,15 +84,17 @@ static yajl_val json_object(yajl_val element, char *key)
 
 static yajl_val json_array(yajl_val element, char *key)
 {
-    if (element == NULL || key == NULL) {
-        return NULL;
-    }
     size_t i = 0;
     size_t size = 0;
     yajl_val node = NULL;
     yajl_val value = NULL;
     char *top_key = key;
     char *next_context = NULL;
+
+    if (element == NULL || key == NULL) {
+        return NULL;
+    }
+
     if (YAJL_GET_ARRAY(element) != NULL) {
         size = YAJL_GET_ARRAY(element)->len;
     }

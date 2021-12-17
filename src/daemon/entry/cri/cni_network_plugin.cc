@@ -65,9 +65,10 @@ void CniNetworkPlugin::PlatformInit(Errors &error)
 {
     char *tpath { nullptr };
     char *serr { nullptr };
-    tpath = look_path(const_cast<char *>("nsenter"), &serr);
+    tpath = look_path(std::string("nsenter").c_str(), &serr);
     if (tpath == nullptr) {
         error.SetError(serr);
+        free(serr);
         return;
     }
     m_nsenterPath = tpath;
@@ -185,23 +186,23 @@ static void PrepareAdaptorArgs(const std::string &podName, const std::string &po
                                const std::map<std::string, std::string> &annotations, const std::map<std::string, std::string> &options,
                                network_api_conf *config, Errors &err)
 {
-    size_t workLen;
-    std::map<std::string, std::string> cniArgs;
-
     auto iter = options.find("UID");
     std::string podUID { "" };
     if (iter != options.end()) {
         podUID = iter->second;
     }
 
-    cniArgs["K8S_POD_UID"] = podUID;
-    cniArgs["IgnoreUnknown"] = "1";
-    cniArgs["K8S_POD_NAMESPACE"] = podNs;
-    cniArgs["K8S_POD_NAME"] = podName;
-    cniArgs["K8S_POD_INFRA_CONTAINER_ID"] = podSandboxID;
+    auto cniArgs = std::map<std::string, std::string>{
+        {"K8S_POD_UID", podUID},
+        {"IgnoreUnknown", "1"},
+        {"K8S_POD_NAMESPACE", podNs},
+        {"K8S_POD_NAME", podName},
+        {"K8S_POD_INFRA_CONTAINER_ID", podSandboxID},
+    };
 
     GetExtensionCNIArgs(annotations, cniArgs);
-    workLen = cniArgs.size();
+
+    size_t workLen = cniArgs.size();
 
     config->args = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
     if (config->args == nullptr) {
@@ -243,7 +244,7 @@ static void PrepareAdaptorAttachNetworks(const std::map<std::string, std::string
     if (networks == nullptr) {
         goto free_out;
     }
-    config->extral_nets = (struct attach_net_conf **)util_smart_calloc_s(sizeof(struct attach_net_conf *), networks->len);
+    config->extral_nets = static_cast<struct attach_net_conf **>(util_smart_calloc_s(sizeof(struct attach_net_conf *), networks->len));
     if (config->extral_nets == nullptr) {
         ERROR("Out of memory");
         err.SetError("Prepare Adaptor Attach Networks failed");
@@ -254,7 +255,7 @@ static void PrepareAdaptorAttachNetworks(const std::map<std::string, std::string
         if (networks->items[i] == nullptr || networks->items[i]->name == nullptr || networks->items[i]->interface == nullptr) {
             continue;
         }
-        config->extral_nets[i] = (struct attach_net_conf *)util_common_calloc_s(sizeof(struct attach_net_conf));
+        config->extral_nets[i] = static_cast<struct attach_net_conf *>(util_common_calloc_s(sizeof(struct attach_net_conf)));
         if (config->extral_nets[i] == nullptr) {
             ERROR("Out of memory");
             err.SetError("Prepare Adaptor Attach Networks failed");
@@ -296,8 +297,7 @@ static void InsertPortmappingIntoAdaptorAnnotations(const std::map<std::string, 
     parser_error jerr = nullptr;
     char *tmpVal = nullptr;
     size_t i = 0;
-    cni_anno_port_mappings_container *cni_pms = (cni_anno_port_mappings_container *)util_common_calloc_s(sizeof(
-                                                                                                             cni_anno_port_mappings_container));
+    auto *cni_pms = (cni_anno_port_mappings_container *)util_common_calloc_s(sizeof(cni_anno_port_mappings_container));
     if (cni_pms == nullptr) {
         ERROR("Out of memory");
         err.SetError("Out of memory");

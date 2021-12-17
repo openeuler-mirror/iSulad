@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -72,7 +72,6 @@ static void evhtp_send_network_create_repsponse(evhtp_request_t *req, network_cr
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest network create cb */
@@ -176,7 +175,6 @@ static void evhtp_send_network_inspect_repsponse(evhtp_request_t *req, network_i
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest network inspect cb */
@@ -213,8 +211,6 @@ static void rest_network_inspect_cb(evhtp_request_t *req, void *arg)
 out:
     free_network_inspect_request(request);
     free_network_inspect_response(response);
-
-    return;
 }
 
 static int network_list_request_from_rest(evhtp_request_t *req, network_list_request **request)
@@ -266,7 +262,6 @@ static void evhtp_send_network_list_repsponse(evhtp_request_t *req, network_list
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest network list cb */
@@ -368,7 +363,6 @@ static void evhtp_send_network_remove_repsponse(evhtp_request_t *req, network_re
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest network remove cb */
