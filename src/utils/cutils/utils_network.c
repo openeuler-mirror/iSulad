@@ -724,7 +724,6 @@ static void generate_ip_string(const uint8_t *ip, int e0, int e1, char **result)
             skip = false;
         }
     }
-    return;
 }
 
 static inline bool check_clibcni_util_uint8_join_args(const char *sep, const uint8_t *parts, size_t len)

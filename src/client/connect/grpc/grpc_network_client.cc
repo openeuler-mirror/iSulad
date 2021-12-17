@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2021. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -21,10 +21,7 @@
 using namespace network;
 
 using grpc::ClientContext;
-using grpc::ClientReader;
-using grpc::ClientReaderWriter;
 using grpc::Status;
-using grpc::StatusCode;
 
 class NetworkCreate : public
     ClientBase<NetworkService, NetworkService::Stub, isula_network_create_request, NetworkCreateRequest,
@@ -197,8 +194,6 @@ private:
     auto get_network_info_from_grpc(isula_network_list_response *response, NetworkListResponse *gresponse,
                                     int index) -> int
     {
-        int plugin_num = 0;
-
         response->network_info[index] =
             static_cast<struct isula_network_info *>(util_common_calloc_s(sizeof(struct isula_network_info)));
         if (response->network_info[index] == nullptr) {
@@ -215,7 +210,7 @@ private:
         response->network_info[index]->version = !in.version().empty() ? util_strdup_s(in.version().c_str())
                                                  : nullptr;
 
-        plugin_num = in.plugins_size();
+        int plugin_num = in.plugins_size();
         if (plugin_num <= 0) {
             response->network_info[index]->plugin_num = 0;
             response->network_info[index]->plugins = nullptr;

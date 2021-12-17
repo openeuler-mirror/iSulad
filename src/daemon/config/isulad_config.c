@@ -1206,6 +1206,7 @@ char *conf_get_cni_conf_dir()
 /* conf get cni binary dir */
 int conf_get_cni_bin_dir(char ***dst)
 {
+    int ret = 0;
     char **dir = NULL;
     const char *default_bin_dir = "/opt/cni/bin";
     struct service_arguments *conf = NULL;
@@ -1222,14 +1223,18 @@ int conf_get_cni_bin_dir(char ***dst)
         dir = util_string_split(conf->json_confs->cni_bin_dir, ';');
         if (dir == NULL) {
             ERROR("String split failed");
-            return -1;
+            ret = -1;
         }
     }
 
     if (isulad_server_conf_unlock() != 0) {
         ERROR("BUG conf_unlock failed");
         util_free_array(dir);
-        return -1;
+        ret = -1;
+    }
+
+    if (ret != 0) {
+        return ret;
     }
 
     *dst = dir;

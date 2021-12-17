@@ -19,7 +19,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "isula_libutils/json_common.h"
+#ifdef ENABLE_NATIVE_NETWORK
 #include "isula_libutils/defs.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
