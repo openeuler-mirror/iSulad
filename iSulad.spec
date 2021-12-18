@@ -1,4 +1,4 @@
-%global _version 2.0.10
+%global _version 2.1.0
 %global _release 1
 %global is_systemd 1
 
@@ -8,7 +8,7 @@ Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v2
 URL:       isulad
-Source:    iSulad-2.0.tar.gz
+Source:    iSulad-2.1.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
