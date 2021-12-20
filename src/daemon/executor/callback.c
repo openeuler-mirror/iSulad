@@ -22,6 +22,9 @@
 #ifdef ENABLE_METRICS
 #include "metrics_cb.h"
 #endif
+#ifdef ENABLE_NATIVE_NETWORK
+#include "network_cb.h"
+#endif
 
 service_executor_t g_isulad_service_executor;
 
@@ -162,6 +165,9 @@ int service_callback_init(void)
     volume_callback_init(&g_isulad_service_executor.volume);
 #ifdef ENABLE_METRICS
     metrics_callback_init(&g_isulad_service_executor.metrics);
+#endif
+#ifdef ENABLE_NATIVE_NETWORK
+    network_callback_init(&g_isulad_service_executor.network);
 #endif
     return 0;
 }

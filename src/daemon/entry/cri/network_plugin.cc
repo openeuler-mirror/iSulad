@@ -19,8 +19,8 @@
 #include <vector>
 #include <map>
 #include <unistd.h>
-#include <clibcni/types.h>
 
+#include "utils_network.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "sysctl_tools.h"
@@ -69,7 +69,6 @@ static std::string ParseIPFromLine(const char *line, const char *stdout_str)
 {
     char *cIP { nullptr };
     char **fields { nullptr };
-    char *strErr { nullptr };
     struct ipnet *ipnet_val {
         nullptr
     };
@@ -85,11 +84,11 @@ static std::string ParseIPFromLine(const char *line, const char *stdout_str)
         goto out;
     }
 
-    if (parse_cidr(fields[3], &ipnet_val, &strErr) != 0) {
-        ERROR("CNI failed to parse ip from output %s due to %s", stdout_str, strErr);
+    if (util_parse_cidr(fields[3], &ipnet_val) != 0) {
+        ERROR("CNI failed to parse ip from output %s", stdout_str);
         goto out;
     }
-    cIP = ip_to_string(ipnet_val->ip, ipnet_val->ip_len);
+    cIP = util_ip_to_string(ipnet_val->ip, ipnet_val->ip_len);
     if (cIP == nullptr) {
         ERROR("Out of memory");
         goto out;
@@ -98,14 +97,13 @@ static std::string ParseIPFromLine(const char *line, const char *stdout_str)
     ret = cIP;
 out:
     free(cIP);
-    free(strErr);
-    free_ipnet_type(ipnet_val);
+    util_free_ipnet(ipnet_val);
     util_free_array(fields);
     return ret;
 }
 
-static void GetOnePodIP(std::string nsenterPath, std::string netnsPath, std::string interfaceName,
-                        std::string addrType, std::vector<std::string> &ips, Errors &error)
+static void GetOnePodIP(std::string nsenterPath, std::string netnsPath, std::string interfaceName, std::string addrType,
+                        std::vector<std::string> &ips, Errors &error)
 {
     char *stderr_str { nullptr };
     char *stdout_str { nullptr };
@@ -439,7 +437,7 @@ void PluginManager::GetPodNetworkStatus(const std::string &ns, const std::string
 
 void PluginManager::SetUpPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
                              const std::string &podSandboxID, std::map<std::string, std::string> &annotations,
-                             const std::map<std::string, std::string> &options, Errors &error)
+                             const std::map<std::string, std::string> &options, std::string &network_settings_json, Errors &error)
 {
     if (m_plugin == nullptr) {
         return;
@@ -453,7 +451,7 @@ void PluginManager::SetUpPod(const std::string &ns, const std::string &name, con
     INFO("Calling network plugin %s to set up pod %s", m_plugin->Name().c_str(), fullName.c_str());
 
     Errors tmpErr;
-    m_plugin->SetUpPod(ns, name, interfaceName, podSandboxID, annotations, options, tmpErr);
+    m_plugin->SetUpPod(ns, name, interfaceName, podSandboxID, annotations, options, network_settings_json, tmpErr);
     if (tmpErr.NotEmpty()) {
         error.Errorf("NetworkPlugin %s failed to set up pod %s network: %s", m_plugin->Name().c_str(), fullName.c_str(),
                      tmpErr.GetCMessage());
@@ -537,7 +535,7 @@ std::map<int, bool> *NoopNetworkPlugin::Capabilities()
 
 void NoopNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
                                  const std::string &podSandboxID, const std::map<std::string, std::string> &annotations,
-                                 const std::map<std::string, std::string> &options, Errors &error)
+                                 const std::map<std::string, std::string> &options, std::string &network_settings_json, Errors &error)
 {
     return;
 }

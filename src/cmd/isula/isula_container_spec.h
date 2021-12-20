@@ -19,6 +19,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "isula_libutils/json_common.h"
+#ifdef ENABLE_NATIVE_NETWORK
+#include "isula_libutils/defs.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,6 +82,9 @@ typedef struct isula_container_config {
 
     char *stop_signal;
 
+#ifdef ENABLE_NATIVE_NETWORK
+    defs_map_string_object *expose;
+#endif
 } isula_container_config_t;
 
 int generate_container_config(const isula_container_config_t *custom_conf, char **container_config_str);

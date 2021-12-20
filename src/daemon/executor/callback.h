@@ -85,6 +85,19 @@
 #include "isula_libutils/volume_remove_volume_response.h"
 #include "isula_libutils/volume_prune_volume_request.h"
 #include "isula_libutils/volume_prune_volume_response.h"
+#ifdef ENABLE_NATIVE_NETWORK
+#include "isula_libutils/network_create_request.h"
+#include "isula_libutils/network_create_response.h"
+#include "isula_libutils/network_inspect_request.h"
+#include "isula_libutils/network_inspect_response.h"
+#include "isula_libutils/network_list_request.h"
+#include "isula_libutils/network_list_response.h"
+#include "isula_libutils/network_remove_request.h"
+#include "isula_libutils/network_remove_response.h"
+#endif
+#include "isula_libutils/container_update_network_settings_request.h"
+#include "isula_libutils/container_update_network_settings_response.h"
+
 #include "events_format.h"
 #include "stream_wrapper.h"
 #include "utils_timestamp.h"
@@ -244,6 +257,9 @@ typedef struct {
 
     int (*resize)(const struct isulad_container_resize_request *request,
                   struct isulad_container_resize_response **response);
+
+    int (*update_network_settings)(const container_update_network_settings_request *request,
+                                   container_update_network_settings_response **response);
 } service_container_callback_t;
 
 typedef struct {
@@ -278,12 +294,27 @@ typedef struct {
 } service_metrics_callback_t;
 #endif
 
+#ifdef ENABLE_NATIVE_NETWORK
+typedef struct {
+    int (*create)(const network_create_request *request, network_create_response **response);
+
+    int (*inspect)(const network_inspect_request *request, network_inspect_response **response);
+
+    int (*list)(const network_list_request *request, network_list_response **response);
+
+    int (*remove)(const network_remove_request *request, network_remove_response **response);
+} service_network_callback_t;
+#endif
+
 typedef struct {
     service_container_callback_t container;
     service_image_callback_t image;
     service_volume_callback_t volume;
 #ifdef ENABLE_METRICS
     service_metrics_callback_t metrics;
+#endif
+#ifdef ENABLE_NATIVE_NETWORK
+    service_network_callback_t network;
 #endif
 } service_executor_t;
 

@@ -109,11 +109,28 @@ typedef struct {
                  void *arg);
 } health_ops;
 
+#ifdef ENABLE_NATIVE_NETWORK
+typedef struct {
+    int (*create)(const struct isula_network_create_request *request, struct isula_network_create_response *response,
+                  void *arg);
+    int (*inspect)(const struct isula_network_inspect_request *request, struct isula_network_inspect_response *response,
+                   void *arg);
+    int (*list)(const struct isula_network_list_request *request, struct isula_network_list_response *response,
+                void *arg);
+    int (*remove)(const struct isula_network_remove_request *request, struct isula_network_remove_response *response,
+                  void *arg);
+} network_ops;
+#endif
+
 typedef struct {
     container_ops container;
     image_ops image;
     volume_ops volume;
     health_ops health;
+
+#ifdef ENABLE_NATIVE_NETWORK
+    network_ops network;
+#endif
 } isula_connect_ops;
 
 int connect_client_ops_init(void);

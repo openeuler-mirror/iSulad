@@ -267,6 +267,35 @@ void client_arguments_free(struct client_arguments *args)
 
     free(custom_conf->stop_signal);
     custom_conf->stop_signal = NULL;
+
+#ifdef ENABLE_NATIVE_NETWORK
+    free(custom_conf->driver);
+    custom_conf->driver = NULL;
+
+    free(args->network_name);
+    args->network_name = NULL;
+
+    free(args->driver);
+    args->driver = NULL;
+
+    free(args->gateway);
+    args->gateway = NULL;
+
+    free(args->subnet);
+    args->subnet = NULL;
+
+    free(custom_conf->ip);
+    custom_conf->ip = NULL;
+
+    free(custom_conf->mac_address);
+    custom_conf->mac_address = NULL;
+
+    util_free_array(custom_conf->expose);
+    custom_conf->expose = NULL;
+
+    util_free_array(custom_conf->publish);
+    custom_conf->publish = NULL;
+#endif
 }
 
 /* print common help */

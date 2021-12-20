@@ -92,6 +92,9 @@ typedef struct _container_t_ {
     char *image_id;
     container_config_v2_common_config *common_config;
     container_state_t *state;
+    // skip remove network when restarting
+    bool skip_remove_network;
+    container_network_settings *network_settings;
     host_config *hostconfig;
     restart_manager_t *rm;
     container_events_handler_t *handler;
@@ -136,9 +139,19 @@ void container_refinc(container_t *cont);
 
 void container_unref(container_t *cont);
 
-container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id,
-                           host_config *hostconfig, container_config_v2_common_config *common_config,
-                           container_state *state);
+container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id);
+
+int container_fill_v2_config(container_t *cont, container_config_v2_common_config *common_config);
+
+int container_fill_host_config(container_t *cont, host_config *hostconfig);
+
+int container_fill_state(container_t *cont, container_state *state);
+
+int container_fill_restart_manager(container_t *cont);
+
+int container_fill_network_settings(container_t *cont, container_network_settings *network_settings);
+
+int container_fill_log_configs(container_t *cont);
 
 container_t *container_load(const char *runtime, const char *rootpath, const char *statepath, const char *id);
 
@@ -149,6 +162,10 @@ int container_to_disk_locking(container_t *cont);
 int container_state_to_disk(const container_t *cont);
 
 int container_state_to_disk_locking(container_t *cont);
+
+int container_network_settings_to_disk(const container_t *cont);
+
+int container_network_settings_to_disk_locking(container_t *cont);
 
 void container_lock(container_t *cont);
 

@@ -121,6 +121,7 @@ int util_list_all_entries(const char *directory, char ***out);
 int util_copy_dir_recursive(char *copy_dst, char *copy_src);
 
 int set_file_owner_for_userns_remap(const char *filename, const char *userns_remap);
+
 #ifdef __cplusplus
 }
 #endif

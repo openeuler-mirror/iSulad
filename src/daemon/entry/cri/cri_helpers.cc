@@ -65,6 +65,8 @@ const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR { "pod
 const std::string Constants::CNI_MUTL_NET_EXTENSION_KEY { "extension.network.kubernetes.io/cni" };
 const std::string Constants::CNI_MUTL_NET_EXTENSION_ARGS_KEY { "CNI_MUTLINET_EXTENSION" };
 const std::string Constants::CNI_ARGS_EXTENSION_PREFIX_KEY { "extension.network.kubernetes.io/cniargs/" };
+const std::string Constants::CNI_CAPABILITIES_BANDWIDTH_INGRESS_KEY { "kubernetes.io/ingress-bandwidth" };
+const std::string Constants::CNI_CAPABILITIES_BANDWIDTH_ENGRESS_KEY { "kubernetes.io/engress-bandwidth" };
 const std::string Constants::IMAGE_NAME_ANNOTATION_KEY { "io.kubernetes.cri.image-name" };
 
 const char *InternalLabelKeys[] = { CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY.c_str(),
@@ -408,16 +410,16 @@ auto sha256(const char *val) -> std::string
     return outputBuffer;
 }
 
-auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations, size_t *len, Errors &error)
--> cri_pod_network_element **
+auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations,
+                                Errors &error) -> cri_pod_network_container *
 {
     auto iter = annotations.find(CRIHelpers::Constants::POD_NETWORK_ANNOTATION_KEY);
 
-    cri_pod_network_element **result { nullptr };
+    cri_pod_network_container *result { nullptr };
     if (iter != annotations.end()) {
         parser_error err = nullptr;
-        result = cri_pod_network_parse_data(iter->second.c_str(), nullptr, &err, len);
-        if (result == nullptr) {
+        result = cri_pod_network_container_parse_data(iter->second.c_str(), nullptr, &err);
+        if (err != nullptr) {
             error.Errorf("parse pod network json: %s failed: %s", iter->second.c_str(), err);
         }
         free(err);
@@ -1030,6 +1032,284 @@ char *cri_runtime_convert(const char *runtime)
 out:
     (void)isulad_server_conf_unlock();
     return runtime_val;
+}
+
+bool ParseQuantitySuffix(const std::string &suffixStr, int64_t &base, int64_t &exponent)
+{
+    std::map<std::string, int16_t > binHandler {
+        {"Ki", 10},
+        {"Mi", 20},
+        {"Gi", 30},
+        {"Ti", 40},
+        {"Pi", 50},
+        {"Ei", 60},
+    };
+    std::map<std::string, int16_t > dexHandler {
+        {"n", -9},
+        {"u", -6},
+        {"m", -3},
+        {"", 0},
+        {"k", 3},
+        {"M", 6},
+        {"G", 9},
+        {"T", 12},
+        {"P", 15},
+        {"E", 18}
+    };
+
+    if (suffixStr.empty()) {
+        base = 10;
+        exponent = 0;
+        return true;
+    }
+
+    auto iter = dexHandler.find(suffixStr);
+    if (iter != dexHandler.end()) {
+        base = 10;
+        exponent = iter->second;
+        return true;
+    }
+    iter = binHandler.find(suffixStr);
+    if (iter != binHandler.end()) {
+        base = 2;
+        exponent = iter->second;
+        return true;
+    }
+
+    if (suffixStr.size() <= 1) {
+        return false;
+    }
+    if (suffixStr[0] != 'E' && suffixStr[0] != 'e') {
+        return false;
+    }
+    long long tmp = 0;
+    if (util_safe_llong(suffixStr.substr(1).c_str(), &tmp) != 0) {
+        return false;
+    }
+    base = 10;
+    exponent = static_cast<int64_t>(tmp);
+    return true;
+}
+
+int64_t ParseBinaryQuantity(bool positive, const std::string &numStr, const std::string &denomStr, int64_t &exponent,
+                            Errors &error)
+{
+    int64_t result = 0;
+    int64_t mult = 1 << exponent;
+    long long tmp_num;
+    double tmp_denom;
+    int64_t work = 0;
+
+    if (util_safe_llong(numStr.c_str(), &tmp_num) != 0) {
+        if (errno != ERANGE) {
+            error.Errorf("too large binary number: %s", numStr.c_str());
+            return -1;
+        }
+        tmp_num = LONG_MAX;
+    }
+    // result = integer part
+    work = static_cast<int64_t>(tmp_num);
+    result = work * mult;
+    if (result / mult != work) {
+        error.Errorf("too large binary value: %s", numStr.c_str());
+        return -1;
+    }
+
+    if (util_safe_strtod(("0." + denomStr).c_str(), &tmp_denom) != 0) {
+        error.Errorf("invalid denom string: 0.%s", denomStr.c_str());
+        return -1;
+    }
+    // result = integer part + demon part
+    tmp_denom *= mult;
+    work = static_cast<int64_t>(tmp_denom);
+    if (positive && tmp_denom != static_cast<double>(work)) {
+        if (work < INT64_MAX) {
+            work += 1;
+        }
+    }
+
+    if (work > 0 && result > INT64_MAX - work) {
+        result = INT64_MAX;
+    } else {
+        result += work;
+    }
+
+    if (!positive) {
+        result *= -1;
+    }
+    return result;
+}
+
+int64_t ParseDecimalQuantity(bool positive, const std::string &numStr, const std::string &denomStr, int64_t &exponent,
+                             Errors &error)
+{
+    int64_t result = 0;
+    int64_t mult = 1;
+    long long tmp_num;
+    double tmp_denom;
+    int64_t work = 0;
+
+    if (util_safe_llong(numStr.c_str(), &tmp_num) != 0) {
+        if (errno != ERANGE) {
+            error.Errorf("too large decimal number: %s", numStr.c_str());
+            return -1;
+        }
+        tmp_num = LONG_MAX;
+    }
+    // result = integer part
+    work = static_cast<int64_t>(tmp_num);
+    if (exponent < 0) {
+        bool has_denom = denomStr.size() > 0 ? true : false;
+        for (int64_t i = 0; i < -exponent; i++) {
+            if (work % 10 != 0) {
+                has_denom = true;
+            }
+            work /= 10;
+        }
+        result = work;
+        result = positive ? result : -result;
+        if (has_denom &&  positive) {
+            // if denom is not null, round up
+            result = result + 1;
+        }
+        return result;
+    }
+
+    for (int64_t i = 0; i < exponent; i++) {
+        mult *= 10;
+    }
+
+    result = work * mult;
+    if (result / mult != work) {
+        error.Errorf("too large decimal value: %s", numStr.c_str());
+        return -1;
+    }
+
+    if (util_safe_strtod(("0." + denomStr).c_str(), &tmp_denom) != 0) {
+        error.Errorf("invalid denom string: 0.%s", denomStr.c_str());
+        return -1;
+    }
+    // result = integer part + demon part
+    tmp_denom *= mult;
+    work = static_cast<int64_t>(tmp_denom);
+    if (denomStr.size() > static_cast<size_t>(exponent)) {
+        // has denom part
+        if (positive && work < INT64_MAX) {
+            work += 1;
+        }
+    }
+
+    if (work > 0 && result > INT64_MAX - work) {
+        result = INT64_MAX;
+    } else {
+        result += work;
+    }
+    if (!positive) {
+        result = -result;
+    }
+    return result;
+}
+
+int64_t ParseQuantity(const std::string &str, Errors &error)
+{
+    int64_t result = 0;
+
+    if (str.empty()) {
+        error.SetError("empty quantity string");
+        return -1;
+    }
+    if (str == "0") {
+        return 0;
+    }
+    bool positive = true;
+    size_t pos = 0;
+    size_t end = str.size();
+    std::string numStr, denomStr;
+
+    switch (str[pos]) {
+        case '-':
+            positive = false;
+            pos++;
+            break;
+        case '+':
+            pos++;
+    }
+
+    // strip zeros before number
+    for (size_t i = pos; ; i++) {
+        if (i >= end) {
+            return 0;
+        }
+        if (str[i] != '0') {
+            break;
+        }
+        pos++;
+    }
+
+    // extract number
+    for (size_t i = pos; ; i++) {
+        if (i >= end) {
+            if (pos == end) {
+                break;
+            }
+            numStr = str.substr(pos, end - pos);
+            pos = end;
+            break;
+        }
+        if (str[i] >= '0' && str[i] <= '9') {
+            continue;
+        }
+        numStr = str.substr(pos, i - pos);
+        pos = i;
+        break;
+    }
+
+    if (numStr.empty()) {
+        numStr = "0";
+    }
+
+    // extract denominator
+    if (pos < end && str[pos] == '.') {
+        pos++;
+        for (size_t i = pos; ; i++) {
+            if (i >= end) {
+                if (pos == end) {
+                    break;
+                }
+                denomStr = str.substr(pos, end - pos);
+                pos = end;
+                break;
+            }
+            if (str[i] >= '0' && str[i] <= '9') {
+                continue;
+            }
+            denomStr = str.substr(pos, i - pos);
+            pos = i;
+            break;
+        }
+        // allow 1.G now, but should not future.
+    }
+
+    // extract suffix
+    int64_t base = 0;
+    int64_t exponent = 0;
+    if (!ParseQuantitySuffix(str.substr(pos), base, exponent)) {
+        ERROR("Invalid suffix: %s", str.substr(pos).c_str());
+        error.Errorf("Invalid suffix: %s", str.substr(pos).c_str());
+        return -1;
+    }
+
+    // calculate result = suffix * (num + denom)
+    if (base == 2) {
+        result = ParseBinaryQuantity(positive, numStr, denomStr, exponent, error);
+    } else {
+        result = ParseDecimalQuantity(positive, numStr, denomStr, exponent, error);
+    }
+    if (error.NotEmpty()) {
+        return -1;
+    }
+    DEBUG("parse quantity: %s to %ld", str.c_str(), result);
+    return result;
 }
 
 } // namespace CRIHelpers

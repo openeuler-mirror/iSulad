@@ -71,9 +71,8 @@
 #include "utils_verify.h"
 #include "volume_api.h"
 #include "opt_log.h"
-
-#ifdef GRPC_CONNECTOR
-#include "clibcni/api.h"
+#ifdef ENABLE_NETWORK
+#include "network_api.h"
 #endif
 
 sem_t g_daemon_shutdown_sem;
@@ -260,6 +259,10 @@ static void daemon_shutdown()
     image_module_exit();
 
     umount_daemon_mntpoint();
+
+#ifdef ENABLE_NETWORK
+    network_module_exit();
+#endif
 
     clean_residual_files();
 
@@ -1137,14 +1140,6 @@ static int isulad_server_init_log(const struct service_arguments *args, const ch
         goto out;
     }
 
-#ifdef GRPC_CONNECTOR
-    /* init clibcni log */
-    if (cni_log_init(FIFO_DRIVER, fifo_full_path, args->json_confs->log_level) != 0) {
-        ERROR("Failed to init cni log");
-        goto out;
-    }
-#endif
-
     lconf.driver = args->json_confs->log_driver;
     if (init_log_gather_thread(log_full_path, &lconf, args)) {
         ERROR("Log gather start failed");
@@ -1246,6 +1241,14 @@ static int isulad_server_init_common()
         ERROR("Failed to init image manager");
         goto out;
     }
+
+#ifdef ENABLE_NETWORK
+    if (!network_module_init(args->json_confs->network_plugin, NULL, args->json_confs->cni_conf_dir,
+                             args->json_confs->cni_bin_dir)) {
+        ERROR("Failed to init network module");
+        goto out;
+    }
+#endif
 
     if (containers_store_init()) {
         ERROR("Failed to init containers store");

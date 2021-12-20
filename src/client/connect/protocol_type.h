@@ -619,6 +619,64 @@ struct isula_prune_volume_response {
     char *errmsg;
 };
 
+#ifdef ENABLE_NATIVE_NETWORK
+struct isula_network_create_request {
+    char *name;
+    char *driver;
+    char *gateway;
+    bool internal;
+    char *subnet;
+};
+
+struct isula_network_create_response {
+    char *name;
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+
+struct isula_network_inspect_request {
+    char *name;
+};
+
+struct isula_network_inspect_response {
+    char *json;
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+
+struct isula_network_list_request {
+    struct isula_filters *filters;
+};
+
+struct isula_network_info {
+    char *name;
+    char *version;
+    int plugin_num;
+    char **plugins;
+};
+
+struct isula_network_list_response {
+    size_t network_num;
+    struct isula_network_info **network_info;
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+
+struct isula_network_remove_request {
+    char *name;
+};
+
+struct isula_network_remove_response {
+    char *name;
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+#endif
+
 void container_events_format_free(container_events_format_t *value);
 
 struct isula_filters *isula_filters_parse_args(const char **array, size_t len);
@@ -761,6 +819,7 @@ void isula_resize_request_free(struct isula_resize_request *request);
 void isula_resize_response_free(struct isula_resize_response *response);
 
 void isula_logs_request_free(struct isula_logs_request *request);
+
 void isula_logs_response_free(struct isula_logs_response *response);
 
 void isula_volume_list_free(size_t volumes_num, struct isula_volume_info *volumes);
@@ -770,6 +829,26 @@ void isula_list_volume_response_free(struct isula_list_volume_response *response
 void isula_remove_volume_response_free(struct isula_remove_volume_response *response);
 
 void isula_prune_volume_response_free(struct isula_prune_volume_response *response);
+
+#ifdef ENABLE_NATIVE_NETWORK
+void isula_network_create_request_free(struct isula_network_create_request *request);
+
+void isula_network_create_response_free(struct isula_network_create_response *response);
+
+void isula_network_inspect_request_free(struct isula_network_inspect_request *request);
+
+void isula_network_inspect_response_free(struct isula_network_inspect_response *response);
+
+void isula_network_list_request_free(struct isula_network_list_request *request);
+
+void isula_network_info_free(struct isula_network_info *info);
+
+void isula_network_list_response_free(struct isula_network_list_response *response);
+
+void isula_network_remove_request_free(struct isula_network_remove_request *request);
+
+void isula_network_remove_response_free(struct isula_network_remove_response *response);
+#endif
 
 #ifdef __cplusplus
 }

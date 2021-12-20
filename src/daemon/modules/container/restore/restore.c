@@ -32,6 +32,9 @@
 #include "image_api.h"
 #include "runtime_api.h"
 #include "service_container_api.h"
+#ifdef ENABLE_NATIVE_NETWORK
+#include "service_network_api.h"
+#endif
 #include "restartmanager.h"
 #include "constants.h"
 #include "utils.h"
@@ -449,6 +452,13 @@ static void scan_dir_to_add_store(const char *runtime, const char *rootpath, con
             ERROR("Failed add container %s to store", subdir[i]);
             goto error_load;
         }
+
+#ifdef ENABLE_NATIVE_NETWORK
+        aret = network_store_container_list_add(cont);
+        if (!aret) {
+            ERROR("Failed add container %s to native_network_store", cont->common_config->id);
+        }
+#endif
 
         continue;
 error_load:

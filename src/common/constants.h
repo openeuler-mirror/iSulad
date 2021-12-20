@@ -122,6 +122,10 @@ extern "C" {
 #define ISULAD_ENABLE_PLUGINS_SEPERATOR ","
 #define ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR ','
 
+#ifdef ENABLE_NETWORK
+#define ISULAD_CNI_NETWORK_CONF_FILE_PRE "isulacni-"
+#endif
+
 #define MAX_HOSTS 10
 
 #define OPT_MAX_LEN 255
@@ -135,6 +139,10 @@ extern "C" {
 #define CONTAINER_ID_MAX_LEN 64
 
 #define CONTAINER_EXEC_ID_MAX_LEN 64
+
+#ifdef ENABLE_NETWORK
+#define MAX_NETWORK_CONFIG_FILE_COUNT 1024
+#endif
 
 typedef enum {
     CONTAINER_STATUS_UNKNOWN = 0,

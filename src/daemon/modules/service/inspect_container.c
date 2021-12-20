@@ -32,6 +32,9 @@
 #include "isulad_config.h"
 #include "err_msg.h"
 #include "namespace.h"
+#ifdef ENABLE_NATIVE_NETWORK
+#include "utils_port.h"
+#endif
 
 static int dup_path_and_args(const container_t *cont, char **path, char ***args, size_t *args_len)
 {
@@ -459,36 +462,6 @@ out:
     return ret;
 }
 
-static int pack_inspect_network_settings(const container_t *cont, container_inspect *inspect)
-{
-    if (cont == NULL || cont->common_config == NULL) {
-        ERROR("Failed to get v2 common config from container");
-        return -1;
-    }
-
-    if (!namespace_is_file(cont->hostconfig->network_mode)) {
-        return 0;
-    }
-
-    if (cont->common_config->network_settings == NULL) {
-        ERROR("Failed to get network settings from container");
-        return -1;
-    }
-
-    if (inspect->network_settings == NULL) {
-        inspect->network_settings =
-            (container_inspect_network_settings *)util_common_calloc_s(sizeof(container_inspect_network_settings));
-        if (inspect->network_settings == NULL) {
-            ERROR("Out of memory");
-            return -1;
-        }
-    }
-
-    inspect->network_settings->sandbox_key = util_strdup_s(cont->common_config->network_settings->sandbox_key);
-
-    return 0;
-}
-
 static int merge_default_ulimit_with_ulimit(container_inspect *out_inspect)
 {
     int ret = 0;
@@ -526,6 +499,236 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_NATIVE_NETWORK
+static int do_split_cni_portmapping(const cni_inner_port_mapping *cni_port_mapping, char **key,
+                                    network_port_binding_host_element **element)
+{
+    char tmp_key[MAX_PORT_LEN] = { 0 };
+    char tmp_hport[MAX_PORT_LEN] = { 0 };
+    int nret;
+
+    nret = snprintf(tmp_key, MAX_PORT_LEN, "%d/%s", cni_port_mapping->container_port, cni_port_mapping->protocol);
+    if (nret < 0 || nret >= MAX_PORT_LEN) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    nret = snprintf(tmp_hport, MAX_PORT_LEN, "%d", cni_port_mapping->host_port);
+    if (nret < 0 || nret >= MAX_PORT_LEN) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    *element = util_common_calloc_s(sizeof(network_port_binding_host_element));
+    if (*element == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    (*element)->host_ip = util_strdup_s(cni_port_mapping->host_ip);
+    (*element)->host_port = util_strdup_s(tmp_hport);
+    *key = util_strdup_s(tmp_key);
+
+    return 0;
+}
+
+static int do_append_element_for_port_list(network_port_binding_host_element *element, network_port_binding *list)
+{
+    network_port_binding_host_element **new_items = NULL;
+
+    if (list->host_len >= MAX_MEMORY_SIZE / sizeof(network_port_binding_host_element *) - 1) {
+        ERROR("Too much memory request");
+        return -1;
+    }
+    if (util_mem_realloc((void **)&new_items, (list->host_len + 1) * sizeof(network_port_binding_host_element *),
+                         (void *)list->host, list->host_len * sizeof(network_port_binding_host_element *)) != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    new_items[list->host_len] = element;
+    list->host_len += 1;
+    list->host = new_items;
+
+    return 0;
+}
+
+static int do_expand_port_binds_map(const char *key, defs_map_string_object_port_bindings *ptr)
+{
+    int ret = 0;
+    char **new_keys = NULL;
+    defs_map_string_object_port_bindings_element **new_vals = NULL;
+
+    if (ptr->len >= MAX_MEMORY_SIZE / sizeof(char *) - 1) {
+        ERROR("Too much memory request");
+        return -1;
+    }
+    if (util_mem_realloc((void **)&new_keys, (ptr->len + 1) * sizeof(char *), (void *)ptr->keys,
+                         ptr->len * sizeof(char *)) != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    ptr->keys = new_keys;
+    if (util_mem_realloc((void **)&new_vals, (ptr->len + 1) * sizeof(defs_map_string_object_port_bindings_element *),
+                         (void *)ptr->values, ptr->len * sizeof(defs_map_string_object_port_bindings_element *)) != 0) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    ptr->values = new_vals;
+    ptr->values[ptr->len] = util_common_calloc_s(sizeof(defs_map_string_object_port_bindings_element));
+    if (ptr->values[ptr->len] == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    ptr->keys[ptr->len] = util_strdup_s(key);
+    ptr->len += 1;
+
+out:
+    return ret;
+}
+
+static int do_insert_element_for_port_bindings_map(const char *key, network_port_binding_host_element *element,
+                                                   defs_map_string_object_port_bindings *ptr)
+{
+    size_t i;
+    int ret = 0;
+
+    for (i = 0; i < ptr->len; i++) {
+        if (strcmp(key, ptr->keys[i]) == 0) {
+            break;
+        }
+    }
+    if (i == ptr->len) {
+        // expand map
+        if (do_expand_port_binds_map(key, ptr) != 0) {
+            ret = -1;
+            goto out;
+        }
+    }
+
+    if (ptr->values[i]->element == NULL) {
+        ptr->values[i]->element = util_common_calloc_s(sizeof(network_port_binding));
+    }
+    if (ptr->values[i]->element == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    ret = do_append_element_for_port_list(element, ptr->values[i]->element);
+
+out:
+    return ret;
+}
+
+static int do_transform_cni_to_map(container_network_settings *settings)
+{
+    defs_map_string_object_port_bindings *result = NULL;
+    size_t i;
+    int ret = 0;
+
+    if (settings->cni_ports_len == 0) {
+        return 0;
+    }
+    result = util_common_calloc_s(sizeof(defs_map_string_object_port_bindings));
+    if (result == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    result->keys = util_smart_calloc_s(sizeof(char *), settings->cni_ports_len);
+    if (result->keys == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    result->values = util_smart_calloc_s(sizeof(defs_map_string_object_port_bindings_element *), settings->cni_ports_len);
+    if (result->values == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < settings->cni_ports_len; i++) {
+        char *key = NULL;
+        network_port_binding_host_element *element = NULL;
+        if (do_split_cni_portmapping(settings->cni_ports[i], &key, &element) != 0) {
+            ret = -1;
+            goto out;
+        }
+        DEBUG("get port binding: %s --> %s:%s", key, element->host_ip, element->host_port);
+        ret = do_insert_element_for_port_bindings_map(key, element, result);
+        free(key);
+        if (ret != 0) {
+            free_network_port_binding_host_element(element);
+            goto out;
+        }
+    }
+
+    free_defs_map_string_object_port_bindings(settings->ports);
+    settings->ports = result;
+    result = NULL;
+    for (i = 0; i < settings->cni_ports_len; i++) {
+        free_cni_inner_port_mapping(settings->cni_ports[i]);
+        settings->cni_ports[i] = NULL;
+    }
+    free(settings->cni_ports);
+    settings->cni_ports = NULL;
+    settings->cni_ports_len = 0;
+
+out:
+    free_defs_map_string_object_port_bindings(result);
+    return ret;
+}
+#endif
+
+static int pack_inspect_network_settings(const container_t *cont, container_inspect *inspect)
+{
+    parser_error jerr = NULL;
+    char *jstr = NULL;
+    int ret = 0;
+
+    if (cont->network_settings == NULL) {
+        return 0;
+    }
+
+    jstr = container_network_settings_generate_json(cont->network_settings, NULL, &jerr);
+    if (jstr == NULL) {
+        ERROR("Generate network settings failed: %s", jerr);
+        ret = -1;
+        goto out;
+    }
+
+    free(jerr);
+    jerr = NULL;
+    inspect->network_settings = container_network_settings_parse_data(jstr, NULL, &jerr);
+    if (inspect->network_settings == NULL) {
+        ERROR("Parse network settings failed: %s", jerr);
+        ret = -1;
+        goto out;
+    }
+
+#ifdef ENABLE_NATIVE_NETWORK
+    // change cni port mapping to map (string --> array)
+    if (do_transform_cni_to_map(inspect->network_settings) != 0) {
+        ret = -1;
+        ERROR("parse cni port mapping failed");
+        goto out;
+    }
+
+    if (!container_is_running(cont->state)) {
+        // don't show network info when container is not running
+        free(inspect->network_settings->sandbox_key);
+        inspect->network_settings->sandbox_key = NULL;
+
+        free_defs_map_string_object_networks(inspect->network_settings->networks);
+        inspect->network_settings->networks = NULL;
+    }
+#endif
+
+out:
+    free(jerr);
+    free(jstr);
+    return ret;
+}
+
 static container_inspect *pack_inspect_data(const container_t *cont, bool with_host_config)
 {
     container_inspect *inspect = NULL;
@@ -541,7 +744,7 @@ static container_inspect *pack_inspect_data(const container_t *cont, bool with_h
     }
 
     if (pack_inspect_network_settings(cont, inspect) != 0) {
-        ERROR("Failed to pack inspect network settings, continue to pack other information");
+        ERROR("Failed to pack inspect network data, continue to pack other information");
     }
 
     if (pack_inspect_container_state(cont, inspect) != 0) {

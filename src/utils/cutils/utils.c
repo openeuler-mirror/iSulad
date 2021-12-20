@@ -719,7 +719,7 @@ static void close_pipes_fd(int *pipes, size_t pipe_size)
     }
 }
 
-bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char **stdout_msg, char **stderr_msg)
+bool util_raw_exec_cmd(exec_func_t cb_func, void *cb_args, exitcode_deal_func_t exitcode_cb, exec_cmd_args *cmd_args)
 {
     bool ret = false;
     char *stdout_buffer = NULL;
@@ -735,6 +735,11 @@ bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char 
     int in_fd[2] = { -1, -1 };
     pid_t pid = 0;
     int status = 0;
+
+    if (cmd_args == NULL) {
+        ERROR("empty cmd args");
+        return false;
+    }
 
     if (pipe2(in_fd, O_CLOEXEC | O_NONBLOCK) != 0) {
         ERROR("Failed to create stdin pipe");
@@ -798,7 +803,7 @@ bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char 
             COMMAND_ERROR("Failed to set process %d as group leader", getpid());
         }
 
-        cb_func(args);
+        cb_func(cb_args);
     }
 
     /* parent */
@@ -809,10 +814,10 @@ bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char 
 
     close(in_fd[0]);
     in_fd[0] = -1;
-    if (stdin_msg != NULL) {
-        size_t len = strlen(stdin_msg);
-        if (util_write_nointr(in_fd[1], stdin_msg, len) != len) {
-            WARN("Write instr: %s failed", stdin_msg);
+    if (cmd_args->stdin_msg != NULL) {
+        size_t len = strlen(cmd_args->stdin_msg);
+        if (util_write_nointr_in_total(in_fd[1], cmd_args->stdin_msg, len) != len) {
+            WARN("Write instr: %s failed", cmd_args->stdin_msg);
         }
     }
     close(in_fd[1]);
@@ -835,14 +840,29 @@ bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char 
 
     status = util_wait_for_pid_status(pid);
 
-    ret = deal_with_result_of_waitpid(status, &stderr_buffer, stderr_real_size);
+    ret = exitcode_cb(status, &stderr_buffer, stderr_real_size);
 
     close(err_fd[0]);
     close(out_fd[0]);
 out:
-    *stdout_msg = stdout_buffer;
-    *stderr_msg = stderr_buffer;
+    if (cmd_args->stdout_msg != NULL) {
+        *(cmd_args->stdout_msg) = stdout_buffer;
+        stdout_buffer = NULL;
+    }
+    free(stdout_buffer);
+    *(cmd_args->stderr_msg) = stderr_buffer;
     return ret;
+}
+
+bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char **stdout_msg, char **stderr_msg)
+{
+    exec_cmd_args c_args = { 0 };
+
+    c_args.stdin_msg = stdin_msg;
+    c_args.stdout_msg = stdout_msg;
+    c_args.stderr_msg = stderr_msg;
+
+    return util_raw_exec_cmd(cb_func, args, deal_with_result_of_waitpid, &c_args);
 }
 
 char **util_get_backtrace(void)

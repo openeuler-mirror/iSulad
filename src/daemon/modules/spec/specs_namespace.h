@@ -19,6 +19,7 @@
 #include <string.h>
 #include <isula_libutils/host_config.h>
 #include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/container_network_settings.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,7 +28,7 @@ extern "C" {
 int get_share_namespace_path(const char *type, const char *src_path, char **dest_path);
 char *get_container_process_label(const char *path);
 int get_network_namespace_path(const host_config *host_spec,
-                               const container_config_v2_common_config_network_settings *network_settings,
+                               const container_network_settings *network_settings,
                                const char *type, char **dest_path);
 
 #ifdef __cplusplus

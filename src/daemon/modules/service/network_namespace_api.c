@@ -20,21 +20,6 @@
 
 #include "utils_network.h"
 
-int prepare_network_namespace(const char *netns_path)
-{
-    if (netns_path == NULL) {
-        ERROR("Invalid netns_path");
-        return -1;
-    }
-
-    if (util_create_netns_file(netns_path) != 0) {
-        ERROR("Failed to prepare network namespace file");
-        return -1;
-    }
-
-    return 0;
-}
-
 int remove_network_namespace(const char *netns_path)
 {
     int get_err = 0;

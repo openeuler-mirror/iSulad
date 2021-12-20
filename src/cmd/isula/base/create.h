@@ -493,8 +493,47 @@ extern "C" {
       "Set the usernamespace mode for the container when `userns-remap` option is enabled.",                                                              \
       NULL },
 
-#define CREATE_EXTEND_OPTIONS(cmdargs)        \
-    { CMD_OPT_TYPE_BOOL,                      \
+#ifdef ENABLE_NATIVE_NETWORK
+#define CREATE_NETWORK_OPTIONS(cmdargs)                                                                                                                    \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
+      false,                                                                                                                                              \
+      "network",                                                                                                                                          \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.share_ns[NAMESPACE_NET],                                                                                                     \
+      "Connect a container to a network",                                                                                                                 \
+      NULL },                                                                                                                                             \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
+      false,                                                                                                                                              \
+      "ip",                                                                                                                                               \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.ip,                                                                                                                          \
+      "Specify a static IP address for container (e.g. 192.168.21.9)",                                                                                    \
+      NULL },                                                                                                                                             \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
+      false,                                                                                                                                              \
+      "expose",                                                                                                                                           \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.expose,                                                                                                                      \
+      "Expose a port or a range of ports",                                                                                                                \
+      command_append_array },                                                                                                                             \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
+      false,                                                                                                                                              \
+      "publish",                                                                                                                                          \
+      'p',                                                                                                                                                \
+      &(cmdargs).custom_conf.publish,                                                                                                                     \
+      "Publish a container's port(s) to host",                                                                                                            \
+      command_append_array },                                                                                                                             \
+    { CMD_OPT_TYPE_BOOL,                                                                                                                            \
+      false,                                                                                                                                              \
+      "publish-all",                                                                                                                                      \
+      'P',                                                                                                                                                \
+      &(cmdargs).custom_conf.publish_all,                                                                                                                 \
+      "Publish all exposed ports to random ports",                                                                                                        \
+      NULL },
+#endif
+
+#define CREATE_EXTEND_OPTIONS(cmdargs)          \
+    { CMD_OPT_TYPE_BOOL,                        \
         false,                                  \
         "interactive",                          \
         'i',                                    \

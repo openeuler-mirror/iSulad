@@ -1,4 +1,4 @@
-%global _version 2.0.10
+%global _version 2.1.0
 %global _release 1
 %global is_systemd 1
 
@@ -8,7 +8,7 @@ Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v2
 URL:       isulad
-Source:    iSulad-2.0.tar.gz
+Source:    iSulad-2.1.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
@@ -29,14 +29,14 @@ Requires(preun): chkconfig
 Requires(preun): initscripts
 %endif
 
-BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel clibcni-devel
+BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 
-Requires:      lcr lxc clibcni
+Requires:      lcr lxc
 Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp

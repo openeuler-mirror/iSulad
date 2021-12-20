@@ -55,6 +55,10 @@
 #include "remove.h"
 #include "prune.h"
 #include "list.h"
+#ifdef ENABLE_NATIVE_NETWORK
+#include "network.h"
+#include "port.h"
+#endif
 
 // The list of our supported commands
 struct command g_commands[] = {
@@ -200,7 +204,17 @@ struct command g_commands[] = {
         "volume", true, cmd_volume_main, g_cmd_volume_desc, NULL, NULL
     },
 #endif
-    { NULL, false, NULL, NULL, NULL, NULL } // End of the list
+#ifdef ENABLE_NATIVE_NETWORK
+    {
+        // `network` sub-command
+        "network", true, cmd_network_main, g_cmd_network_desc, NULL, NULL
+    },
+    {
+        // `port` sub-command
+        "port", false, cmd_port_main, g_cmd_port_desc, NULL, NULL
+    },
+#endif
+    { NULL, NULL, NULL, NULL, NULL } // End of the list
 };
 
 static int set_locale()

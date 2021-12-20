@@ -50,3 +50,15 @@ set(MODULES_INCS
     ${local_modules_incs}
     PARENT_SCOPE
     )
+
+if(ENABLE_NETWORK)
+    add_subdirectory(network)
+    set(DAEMON_NETWORK_SRCS
+        ${NETWORK_SRCS}
+        PARENT_SCOPE
+        )
+    set(DAEMON_NETWORK_INCS
+        ${NETWORK_INCS}
+        PARENT_SCOPE
+        )
+endif()

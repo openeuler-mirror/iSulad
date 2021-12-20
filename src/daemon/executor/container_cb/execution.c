@@ -55,6 +55,12 @@
 #include "event_type.h"
 #include "utils_timestamp.h"
 #include "utils_verify.h"
+#ifdef ENABLE_NATIVE_NETWORK
+#include "utils_network.h"
+#include "service_network_api.h"
+
+#define STOP_TIMEOUT 10
+#endif
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
 {
@@ -473,7 +479,17 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
     const char *console_fifos[3] = { NULL, NULL, NULL };
     const char *id = cont->common_config->id;
 
+#ifdef ENABLE_NATIVE_NETWORK
+    // skip remove network when restarting container
+    set_container_skip_remove_network(cont);
+#endif
+
     ret = stop_container(cont, timeout, false, true);
+
+#ifdef ENABLE_NATIVE_NETWORK
+    reset_container_skip_remove_network(cont);
+#endif
+
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
@@ -498,6 +514,7 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
         cc = ISULAD_ERR_EXEC;
         goto out;
     }
+
 out:
     container_state_reset_starting(cont->state);
     return cc;
@@ -872,6 +889,105 @@ pack_response:
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
+static void pack_update_network_settings_response(container_update_network_settings_response *response, uint32_t cc,
+                                                  const char *id)
+{
+    if (response == NULL) {
+        return;
+    }
+    response->cc = cc;
+    response->errmsg = util_strdup_s(g_isulad_errmsg);
+    DAEMON_CLEAR_ERRMSG();
+    response->id = util_strdup_s(id);
+}
+
+static int update_container_network_setting_lock(container_t *cont, const char *setting_json)
+{
+    int ret = 0;
+    parser_error err = NULL;
+
+    container_lock(cont);
+    free_container_network_settings(cont->network_settings);
+    cont->network_settings = container_network_settings_parse_data(setting_json, NULL, &err);
+    if (cont->network_settings == NULL) {
+        ERROR("Parse network settings failed: %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (container_network_settings_to_disk(cont) != 0) {
+        ERROR("Failed to save container '%s' network settings", cont->common_config->id);
+        ret = -1;
+    }
+
+out:
+    container_unlock(cont);
+    free(err);
+    return ret;
+}
+
+static int container_update_network_settings_cb(const container_update_network_settings_request *request,
+                                                container_update_network_settings_response **response)
+{
+    uint32_t cc = ISULAD_SUCCESS;
+    const char *name = NULL;
+    const char *id = NULL;
+    container_t *cont = NULL;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid NULL input");
+        return -1;
+    }
+
+    if (!util_valid_str(request->setting_json)) {
+        DEBUG("Network setting is empty, no need to do anythin");
+        return 0;
+    }
+
+    DAEMON_CLEAR_ERRMSG();
+    *response = util_common_calloc_s(sizeof(container_update_network_settings_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = ISULAD_ERR_MEMOUT;
+        goto pack_response;
+    }
+
+    name = request->id;
+    if (!util_valid_container_id_or_name(name)) {
+        ERROR("Invalid container name %s", name);
+        isulad_set_error_message("Invalid container name %s", name);
+        cc = ISULAD_ERR_INPUT;
+        goto pack_response;
+    }
+
+    cont = containers_store_get(name);
+    if (cont == NULL) {
+        ERROR("No such container:%s", name);
+        isulad_set_error_message("No such container:%s", name);
+        cc = ISULAD_ERR_EXEC;
+        goto pack_response;
+    }
+
+    id = cont->common_config->id;
+    isula_libutils_set_log_prefix(id);
+
+    EVENT("Event: {Object: %s, Type: Updating netorksettings}", id);
+
+    if (update_container_network_setting_lock(cont, request->setting_json) != 0) {
+        ERROR("Updated network settings to disk error");
+        cc = ISULAD_ERR_EXEC;
+        goto pack_response;
+    }
+
+    EVENT("Event: {Object: %s, Type: Updated netorksettings}", id);
+
+pack_response:
+    pack_update_network_settings_response(*response, cc, id);
+    container_unref(cont);
+    isula_libutils_free_log_prefix();
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
+}
+
 void container_callback_init(service_container_callback_t *cb)
 {
     cb->get_id = container_get_id_cb;
@@ -882,6 +998,7 @@ void container_callback_init(service_container_callback_t *cb)
     cb->restart = container_restart_cb;
     cb->kill = container_kill_cb;
     cb->remove = container_delete_cb;
+    cb->update_network_settings = container_update_network_settings_cb;
 
     container_information_callback_init(cb);
     container_stream_callback_init(cb);

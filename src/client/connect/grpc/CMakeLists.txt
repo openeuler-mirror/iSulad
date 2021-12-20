@@ -1,9 +1,11 @@
-if (GRPC_CONNECTOR)
-    set(CLIENT_GRPC_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/grpc_client.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/grpc_containers_client.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/grpc_images_client.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/grpc_volumes_client.cc
-        PARENT_SCOPE
-        )
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} local_client_grpc_srcs)
+
+if(NOT ENABLE_NATIVE_NETWORK)
+    list(REMOVE_ITEM local_client_grpc_srcs "${CMAKE_CURRENT_SOURCE_DIR}/grpc_network_client.cc")
 endif()
+
+
+set(CLIENT_GRPC_SRCS
+    ${local_client_grpc_srcs}
+    PARENT_SCOPE
+    )

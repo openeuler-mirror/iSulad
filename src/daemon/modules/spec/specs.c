@@ -1458,8 +1458,8 @@ static int merge_share_single_namespace(const oci_runtime_spec *oci_spec, const 
     return ret;
 }
 
-static int merge_share_network_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
-                                         const container_config_v2_common_config_network_settings *network_settings, const char *type)
+static int merge_share_network_namespace(const oci_runtime_spec *oci_spec, const host_config *host_spec,
+                                         const container_network_settings *network_settings, const char *type)
 {
     int ret = 0;
     char *ns_path = NULL;
@@ -1492,7 +1492,7 @@ static bool userns_remap_is_enabled(const oci_runtime_spec *oci_spec)
 }
 
 int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
-                          const container_config_v2_common_config_network_settings *network_settings)
+                          const container_network_settings *network_settings)
 {
     int ret = -1;
 

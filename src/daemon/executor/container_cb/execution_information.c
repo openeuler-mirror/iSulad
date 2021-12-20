@@ -853,12 +853,18 @@ pack_response:
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
+/*
+ * RETURN VALUE:
+ * 0: inspect success
+ * -1: no such container with "id"
+ * -2: have the container with "id", but failed to inspect due to other reasons
+*/
 static int inspect_container_helper(const char *id, int timeout, char **container_json)
 {
     int ret = 0;
     container_inspect *inspect = NULL;
     parser_error err = NULL;
-    struct parser_context ctx = { OPT_GEN_KAY_VALUE | OPT_GEN_SIMPLIFY, 0 };
+    struct parser_context ctx = { OPT_GEN_KEY_VALUE | OPT_GEN_SIMPLIFY, 0 };
 
     inspect = inspect_container(id, timeout, true);
     if (inspect == NULL) {

@@ -306,21 +306,7 @@ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int 
             failure = 1;
         }
     } else {
-        if (unlink(fname) < 0) {
-            ERROR("Failed to delete %s: %s", fname, strerror(errno));
-            if (*saved_errno == 0) {
-                *saved_errno = errno;
-            }
-
-            if (mark_file_mutable(fname) != 0) {
-                ERROR("Failed to mark file mutable");
-            }
-
-            if (unlink(fname) < 0) {
-                ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
-                failure = 1;
-            }
-        }
+        failure = util_force_remove_file(fname, saved_errno) ? 0 : 1;
     }
 
     return failure;
@@ -914,7 +900,7 @@ int util_scan_subdirs(const char *directory, subdir_callback_t cb, void *context
 
     direntp = readdir(dir);
     for (; direntp != NULL; direntp = readdir(dir)) {
-        if (strncmp(direntp->d_name, ".", PATH_MAX) == 0 || strncmp(direntp->d_name, "..", PATH_MAX) == 0) {
+        if (strcmp(direntp->d_name, ".") == 0 || strcmp(direntp->d_name, "..") == 0) {
             continue;
         }
 

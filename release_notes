@@ -1,3 +1,314 @@
+2021-12-20 root release 2.1.0
+    - update isulad version to 2.1.0
+    - fix invalid time of license
+    - adapt to merge network into lcr master
+    - !1254 fix network code problem Merge pull request !1254 from zhangxiaoyu/dev-network
+    - support disable native network ci tests
+    - ensure isulad with disable native network is working
+    - remove clibcni dependence and fix cmake error
+    - !1252 isolation native network Merge pull request !1252 from haozi007/dev-network
+    - fix compiler error
+    - donot set 0.0.0.0 to cni portmapping
+    - check publish host port is inused
+    - network: fix residual network issue and make remove containers quickly
+    - add  port range number check
+    - network: fix some issues
+    - network: modify testcase about reducing ipv6 address
+    - network: bugfix for create container and set ipv6 address
+    - ensure write all data into stdin
+    - fill container log configs after common config setted
+    - network: modify network testcase
+    - network: new network namspece, and prepare network beforce container runtime start
+    - network: add setup network failed testcase
+    - network: detach network if attach network failed
+    - network: modify network cleanup testcase
+    - network: add dnsname testcase, and add muli-container pkill testcase
+    - network: add dnsname plugin
+    - add CI to inspect pod ip
+    - add testcase for bandwidth and iprange
+    - support ipranges and bandwidth caps
+    - network: add container network cleanup testcase
+    - network: clean useless iptables rule
+    - modify cri network to get ip from inspect
+    - add testcase for default hostname of container
+    - use max 12 chars of container id as hostname of container
+    - network: add CI testcase to develop code coverage
+    - network: add network remove rest client
+    - network: adjust max network config file count
+    - use valid inspect_parse_filter cause by rename
+    - network: add native network store to record connected containers
+    - fix invalid free map search result
+    - network: add testcase and remove unused code
+    - network: set cni plugin exec err msg
+    - use cached cni configs
+    - improve gcov of network module
+    - network: refactor container new
+    - modify CI create_network to test ip parse
+    - network: move network settings out of config v2
+    - network: add run container with ipv6 testcase
+    - delete unused code
+    - clean network resources at exit
+    - improve testcase of port
+    - network: bridge network cannot support mac and fix mac address error
+    - add --publish ip addr parse
+    - add testcases for port subcommand
+    - adapt CI test of create --publish
+    - create --publish port range to single illegal
+    - finish testcase for port
+    - finish inspect network setting data of port mappings
+    - create --expose -p -P resolve memory leak
+    - add create net port map CI test
+    - optimize network port mapping process
+    - network: reduce specified subnet when network create
+    - support portmapping for network
+    - add publish and expose params for create
+    - network: add container network test
+    - network: teardown network when stop container
+    - network: setup network in start container
+    - fill network settings for inspect
+    - add testcase for port command
+    - add port subcommand for isula
+    - network: unique container network bridge
+    - add utils for network port
+    - add attach and detach for native network
+    - network: add native_store in network config
+    - use struct cni_network_list_con replace cni_net_conf_list
+    - fix error cause by rebase master branch
+    - use cni struct replace conflist string
+    - refactor directory tree of network
+    - network: add network options in isula create cmd
+    - ignore error if inspect network is null
+    - libcni: refact directory
+    - support empty driver of network
+    - refactor network config
+    - fix errors
+    - libcni: refact libcni_api.c/h
+    - network: add container inspect network info
+    - adapt network settings json schema
+    - add debug info for invalid cni config
+    - libcni: refact libcni_conf.c/hx
+    - ignore error of cni config file
+    - simplify cni operator
+    - libcni: refact libcni_types.c/h and libcni_verify.c/h
+    - network: refact network directory
+    - fix wrong copy of string array
+    - ignore empty cni config error
+    - use unify api for network
+    - delete unused var
+    - add cni_args annotation key define
+    - network: modify CI testcase, network inspect --format
+    - add port mapping and bandwidth parse from annoation
+    - fix memory leak
+    - finish cni adaptor
+    - add isula client attach network interface
+    - network: modify network conflist json and adapt to array of array
+    - update conf file manual
+    - add inotify event to watch cni conf
+    - network: add network remove testcase
+    - network: add network remove command
+    - adapt to new liboci spec
+    - network: add cni manager annotation batch processing
+    - network: modify network subcommand
+    - network: cni_bin_dir support multiple directories in network create
+    - network: add network list CI testcase
+    - network: add network list
+    - remove unuse arguments for parse_cidr
+    - network: find subnet in private scope
+    - network: add network inspect CI testcase
+    - network: add network inspect
+    - add cni net manager
+    - network: move network create daemon major code to modules/network
+    - network: add network create CI testcase
+    - network: add network create daemon callback
+    - network: add network create grpc/rest
+    - network: add network create client command
+    - remove clibcni from cmake
+    - network: support cache
+    - network: remove unneccessary arguments
+    - cni: bugfix in parse_cidr() and generate_ip_string()
+    - network: fix coredump
+    - update cni spec to 0.4.0
+    - network: use utils from libutils
+    - network: merge clibcni into iSulad
+    - !1250 revert scripts format Merge pull request !1250 from JingWoo/CRI2021
+    - !1248 support script format Merge pull request !1248 from JingWoo/CRI2021
+    - !1247 Modified run.sh to test different namespace modes From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1245 Fixed a bug that occurs when starting a container in host mode From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1239 Optimize websocket streaming service code From: @jingwoo Reviewed-by: Signed-off-by:
+    - !1242 add pull request gateway checker for build and ut From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1240 isula pull does not support format name@digest From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1233  fix dangerous memory operation From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by:
+    - !1225 add docker file for build isulad base on openeuler 21:03 docker image From: @duguhaotian Reviewed-by: Signed-off-by:
+    - !1237 fix mem leak From: @gaohuatao Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1235 fix undefined reference to `service_arguments_free' in libisulad_img.so From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1231 fix undefined reference in libisulad_img.so From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1229 fix cri version memory leak From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1226 print valgrind log From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1222 add fuzz build in CI From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1218 Modified cmakelist of storage_layer and added a new mock function in isulad_config_mock to fix errors that happen when compiling with UT option turned on From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1219 fix cpu variant get error From: @wangfengtu Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1193 add string array From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1140 iSulad: Add the function of isolating the user namespaces From: @HumbleHunger Reviewed-by: Signed-off-by:
+    - !1215 Fix memory leak in ClearCniNetwork when calling get_sandbox_key From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1213 delete isulad h flag From: @gaohuatao Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1210 fix cri libwebsockets sync_close_sem memory leak From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1212 add new function mock for ut From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1199 修改runpodsandbox以优化cri的cni网络流程 From: @chengzrz Reviewed-by: Signed-off-by:
+    - !1207 fix memleak when use multiple --volumes-from From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1205 add self def runtime for shimv2 From: @gaohuatao Reviewed-by: Signed-off-by:
+    - !1197 too many cri websocket will connect failed From: @zh_xiaoyu Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1198 delete unused head file From: @gaohuatao Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1194 disable lxc_keep wiht oci image From: @gaohuatao Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1196 add branch coverage From: @wangfengtu Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1195 fix memory leak cause by same default network From: @duguhaotian Reviewed-by: @jingwoo,@jingxiaolu Signed-off-by: @jingxiaolu
+    - !1191 fix layer remain if pull quay.io/coreos/etcd:v3.3.17-arm64 twice From: @wangfengtu Reviewed-by: @gaohuatao,@duguhaotian Signed-off-by: @duguhaotian
+    - !1189 add error message for invalid log driver From: @duguhaotian Reviewed-by: @jingwoo,@jingxiaolu Signed-off-by: @jingxiaolu
+    - !1187 pack daemon_constants.json From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1170 cri: add session gc thread From: @zh_xiaoyu Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1182 cancel shimv2 runtime check error of log From: @gaohuatao Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1181 doc: fix lxc compilation failure in docs/install_iSulad_on_Ubuntu_20_04_LTS.sh From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1179 fix copy to container log processing From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1178 use LIBARCHIVE_LIBRARY to link libarchive From: @wangfengtu Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1160 CRI: Fix parse metadata of container, container name supports underscores From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1177 CI: fix devmapper deploy failed From: @gaohuatao Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1159 【轻量级 PR】：update docs/integration.md. From: @addozhang Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1173 seccomp: add clone3 to whitelist of x86 From: @gaohuatao Reviewed-by: @duguhaotian,@jingwoo Signed-off-by: @duguhaotian
+    - !1176 fix compile error From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1168 add errno msg for apply diff From: @gaohuatao Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1164 iSulad:Code optimization From: @tiamo0 Reviewed-by: @wangyueliang,@jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1167 post sem sync_close_sem in closeWsConnect only From: @zh_xiaoyu Reviewed-by: @gaohuatao,@jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1166 update docs of build guide From: @gaohuatao Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1162 cri: modify protobuf map contains method to count method From: @zh_xiaoyu Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1161 cri: set session data as lwsContext From: @zh_xiaoyu Reviewed-by: @duguhaotian,@jingwoo Signed-off-by: @duguhaotian
+    - !1158 CRI: Fix parse metadata of sandbox, sandbox name supports underscores From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1157 CI: fix metrics related testcases From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1155 Fix iSulad cannot killed by SIGTERM and SIGINT when restful used. From: @tiamo0 Reviewed-by: @duguhaotian,@jingwoo Signed-off-by: @duguhaotian
+    - !1156 metrics: unbind socket when metrics server shutdown From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1153 CRI: fixed session buffer message not output From: @zh_xiaoyu Reviewed-by: @jingwoo,@duguhaotian,@duguhaotian,@jingwoo,@duguhaotian Signed-off-by: @duguhaotian,@duguhaotian
+    - !1150 remove read lock in websocket write to client From: @zh_xiaoyu Reviewed-by: @jingwoo,@duguhaotian,@duguhaotian Signed-off-by: @duguhaotian
+    - !1124 Support export isulad's metrics. From: @tiamo0 Reviewed-by: Signed-off-by:
+    - !1151 The container command completion function is completed From: @lauk001 Reviewed-by: @jingwoo,@duguhaotian,@duguhaotian Signed-off-by: @duguhaotian,@duguhaotian
+    - !1148 fix unit test compile error From: @wangfengtu Reviewed-by: @gaohuatao,@caihaomin Signed-off-by: @caihaomin
+    - !1146 modify msg From: @gaohuatao Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian,@duguhaotian
+    - !1145 make domain name configurable From: @wangfengtu Reviewed-by: @gaohuatao,@jingwoo,@caihaomin Signed-off-by: @caihaomin
+    - !1144 add default registry transformation in CI From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1142 delete unused macro definition From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1139 make registry transformation configable From: @wangfengtu Reviewed-by: @duguhaotian,@duguhaotian Signed-off-by: @duguhaotian,@duguhaotian
+    - !1114 iSulad: add ws session close mutex From: @zh_xiaoyu Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1133 CRI: intercept the resize information string when exec resize From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1132 do not use CURL_AT_LEAST_VERSION From: @wangfengtu Reviewed-by: @duguhaotian,@gaohuatao Signed-off-by: @duguhaotian
+    - !1130 fix pull failed if some proxy respone headers From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1127 CRI: add some necessary annotations for Sandbox and container From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1126 CRI: support exec resize From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1125 CI: test default shared namespace in pod From: @jingwoo Reviewed-by: @gaohuatao,@duguhaotian Signed-off-by: @duguhaotian
+    - !1123 CRI: share uts namespace by default in pod From: @jingwoo Reviewed-by: @duguhaotian,@gaohuatao,@duguhaotian Signed-off-by: @duguhaotian,@duguhaotian
+    - !1118 CRI: apply a container name label for infra container From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1116 fix failed to pull image on mips64 platform. From: @tiamo0 Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1117 解决层镜像导入到iSulad概率性失败 From: @meilier Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1115 【轻量级 PR】：update docs/build_guide_zh.md. From: @Annlix Reviewed-by: @caihaomin Signed-off-by: @caihaomin
+    - !1112 iSulad: alloc 4KB memory for each websocket transfer From: @zh_xiaoyu Reviewed-by: @jingwoo,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1111 fix continuous increase of memory usage caused by websocket abnormal disconnection From: @jingwoo Reviewed-by: @duguhaotian,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1110 CI: compile lib-shim-v2 with local vendor From: @jingwoo Reviewed-by: @lifeng2221dd1,@gaohuatao Signed-off-by: @lifeng2221dd1
+    - !1109 delete shimv2 UT test From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1106 support shim v2 runtime From: @jingwoo Reviewed-by: @gaohuatao,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1102 fix cancel deferred remove bug From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1098 devmapper: periodically cleanup devices marked for deleted From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1100 add compile switch to support compile with low version of libcurl From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1099 suppress proxy connect headers message From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1094 fix bug of isula exec when called by crictl From: @jackey_1024 Reviewed-by: @lifeng2221dd1,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1087 support auto-resize with kata From: @holyfei Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1086 isula exec --workdir works only when runtime is lcr From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1085  fix string array initialization failure From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1084 optimize token generation From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1083 CI: fix integration_check.sh From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1082 do not check key's case when parse http header From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1080 CI: use ali registry instead of docker.io From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1078 log: adjust log level to reduce log From: @lifeng2221dd1 Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !1077 fix memory usage of stats not right when runtime is kata From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1069 completion isula images From: @yin-xiujiang Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1074 check if pull option is valid From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1073 workdir must be absolute path From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1071 isula: fix --help=xx coredump From: @zh_xiaoyu Reviewed-by: @duguhaotian,@jingwoo,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1070 fix memory leak when pulling image From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1063 CI: run the containers one by one From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !962 syslog tag support dynamic tag values From: @duguhaotian Reviewed-by: Signed-off-by:
+    - !1061 CI devicemapper add filter From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1059 CI:activate vg isulad From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1056 CI:move reinstall_thinpool to helper.sh From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1054 check return value to valid use NULL pointer From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1050 fix bugs when pulling image From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1053 devmapper: decrease log level of check dm device From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1052 CI: keep container when build failed for debug From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1051 fix coredump when poweroff From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1047 Compatible with registry URL ending in '/' From: @wangyueliang Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1049 added default completion From: @yin-xiujiang Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1048 CI: fix CI to fit run on 2 cpu 4G memory environment From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1046 bugfix bugs of isula_rt_ops From: @jackey_1024 Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1045 added autocomplete in isula command line mode. From: @yin-xiujiang Reviewed-by: @kylinyimin,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1044 Readme: add script to install iSulad on Ubuntu 20.04 LTS From: @xiyounigo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1043 update libarchive requirement to v3.4 From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1039 stats: show cpu usage normal when stats with --no-stream From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1037 fix residual IO copy thread in CRI exec operation From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1038 Readme: add script to install iSulad on Centos7 From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1036 event: fix memory leak when pack annotation failed From: @lifeng2221dd1 Reviewed-by: @duguhaotian,@jingwoo Signed-off-by: @duguhaotian
+    - !990 support cgroup v2 From: @wangfengtu Reviewed-by: Signed-off-by:
+    - !1035 add iSulad experiment in README From: @zh_xiaoyu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1034 Readme: add configure image registry address From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1023 support isula exec --workdir From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1033 【轻量级 PR】：update docs/build_guide_zh.md. From: @x-zhentao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1014 support --pull option when create/run container From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1019 Readme: add related resouces in readme From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1029 fix coredump when inspect container when daemon sets the ulimit parameters From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1028 remove unchecked layer ignore rootfs layer From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1027 ignore to create mtab when runtime is kata-runtime From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1018 devicemapper: umount when resize2fs command failed From: @gaohuatao Reviewed-by: @lifeng2221dd1,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1,@lifeng2221dd1
+    - !1016  Remove redundant code From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1013 isulad-shim: fix shim exit bug From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1015 log: adjust log level from EVENT to WARN to reduce log number From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1006 rollback setuped network if mult-network failed From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1010 fix CRI ContainerStats interface cpu/memory/writelayer timestamp error From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1009 add embedded testcases From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1005 console: client ignore stdin close event From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1008 CI:delete lxc from runc CI test From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1003 restart policy: add support unless-stopped policy From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1004 bugfix for embedded image From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !1001 cleadcode: Remove extra semicolons From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !998 modify resume task name and some log msg From: @gaohuatao Reviewed-by: Signed-off-by:
+    - !999 thread function calls DAEMON_CLEAR_ERRORMSG to prevent memory leak From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !997 name_id_index: fix restore fail to remove name index From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !996 devmapper: modify log msg From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !993 fd leak check in cp.sh should not include pull fd check From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !992 unpack: try to remove and replace dst_path while unpack From: @lifeng2221dd1 Reviewed-by: @duguhaotian,@duguhaotian Signed-off-by: @duguhaotian,@duguhaotian
+    - !988 stats: fix wrong memory usage info in stats From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !989 save health check log to disk before unhealthy From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !985 sleep some time before calculate to make sure fd closed From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !983 add container lock when clean container resource From: @zh_xiaoyu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !980 iSulad: calculate memusage with used - total_inactive_file From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !965 fix container exit health check residue and multiple health checks From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !979 Fix create env path dir if dir exist From: @zhangsong234 Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !976 spec: add verify for device cgroup access mode From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !977 init log config should before command parse From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !975 log: use the same function to init log in export/pause/resume From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !973 GC: add log container info when add into gc From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !972 ignore error if get ip failed From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !969 driver: do not set g_graphdriver to NULL From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !968 driver: do not unlock and destroy lock when clean up From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !964 adapt for sparse file when tar file From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !960 CI: add testcase for exec without pty From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !957 shim: optimize io stream From: @gaohuatao Reviewed-by: @leizhongkai,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !958 fix ramdom coredump if pull failed From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !953 fix small probability of coredump in CRI streaming services in high concurrency scenarios From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !955 image_cb: rename the function {isula_/docker_} to do_ From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !943 do not pause container when copy From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !947 judge isula load file exists From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !937 clean code: fix clean code From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !931  devmapper: fix udev wait thread resource leak From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !930 make thread detach to avoid resource leak From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+
+    dev stats:
+      - 382 files changed, 33387 insertions(+), 3865 deletions(-)
+      - contributors: haozi007, zhangxiaoyu, gaohuatao, WangFengTu, wujing, Li Feng, HumbleHunger, lifeng68, chengzrz, Tiamo0, jikui, AddoZhang, Annlix, NiGo, XiyouNiGo, holyfei, lauk001, wangyueliang, xiapin, xingweizheng, yin-xiujiang, yinxiujiang, zhangsong234, 尹秀江, 许振涛
+
 2020-12-30 lifeng release 2.0.8
     - !920 implent inspect of  multy formats From: @jackey_1024 Reviewed-by: Signed-off-by:
     - !925 utils: add close fds for utils exec cmd From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian

@@ -58,9 +58,13 @@
 #include "utils_fs.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "utils_network.h"
 #include "volume_api.h"
 #include "utils_network.h"
 #include "network_namespace_api.h"
+#ifdef ENABLE_NATIVE_NETWORK
+#include "service_network_api.h"
+#endif
 
 #define KATA_RUNTIME "kata-runtime"
 
@@ -229,7 +233,7 @@ static int renew_oci_config(const container_t *cont, oci_runtime_spec *oci_spec)
         goto out;
     }
 
-    ret = merge_share_namespace(oci_spec, cont->hostconfig, cont->common_config->network_settings);
+    ret = merge_share_namespace(oci_spec, cont->hostconfig, cont->network_settings);
     if (ret != 0) {
         ERROR("Failed to merge share ns");
         goto out;
@@ -843,6 +847,8 @@ out:
     return ret;
 }
 
+static int force_kill(container_t *cont);
+
 int start_container(container_t *cont, const char *console_fifos[], bool reset_rm)
 {
     int ret = 0;
@@ -884,23 +890,59 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
         goto out;
     }
 
+#ifdef ENABLE_NATIVE_NETWORK
+    if (!util_post_setup_network(cont->hostconfig->user_remap) && prepare_network(cont) != 0) {
+        isulad_append_error_message("Failed to prepare container network. ");
+        ERROR("Failed to prepare container network");
+        ret = -1;
+        goto out;
+    }
+#endif
+
     ret = do_start_container(cont, console_fifos, reset_rm, &pid_info);
     if (ret != 0) {
         ERROR("Runtime start container failed");
         ret = -1;
         goto set_stopped;
-    } else {
-        container_state_set_running(cont->state, &pid_info, true);
-        container_state_reset_has_been_manual_stopped(cont->state);
-        container_init_health_monitor(cont->common_config->id);
-        goto save_container;
     }
+    container_state_set_running(cont->state, &pid_info, true);
 
+#ifdef ENABLE_NATIVE_NETWORK
+    // if isolate container with a user namespace, setup network after container start
+    // otherwise the network namespace is owned by a wrong user namespace
+    if (util_post_setup_network(cont->hostconfig->user_remap) && prepare_network(cont) != 0) {
+        isulad_append_error_message("Failed to prepare container network. ");
+        ERROR("Failed to prepare container network");
+        ret = -1;
+        goto stop_container;
+    }
+#endif
+
+    container_state_reset_has_been_manual_stopped(cont->state);
+    container_init_health_monitor(cont->common_config->id);
+    goto save_container;
+
+#ifdef ENABLE_NATIVE_NETWORK
+stop_container:
+    // set AutoRemove flag to false before kill so the container won't be removed
+    cont->hostconfig->auto_remove = false;
+    if (force_kill(cont) != 0) {
+        ERROR("Failed to force kill container %s", cont->common_config->id);
+    }
+    cont->hostconfig->auto_remove = cont->hostconfig->auto_remove_bak;
+#endif
 set_stopped:
+    // TODO: merge remove cri/native network
     if (namespace_is_file(cont->hostconfig->network_mode) &&
         util_umount_namespace(cont->common_config->network_settings->sandbox_key) != 0) {
         ERROR("Failed to clean up network namespace");
     }
+#ifdef ENABLE_NATIVE_NETWORK
+    if (!util_post_setup_network(cont->hostconfig->user_remap) && remove_network(cont) != 0) {
+        ERROR("Failed to remove cont network");
+    }
+#endif
+
     container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
     util_contain_errmsg(g_isulad_errmsg, &exit_code);
     container_state_set_stopped(cont->state, exit_code);
@@ -991,6 +1033,14 @@ int clean_container_resource(const char *id, const char *runtime, pid_t pid)
         ret = -1;
         goto unlock;
     }
+
+#ifdef ENABLE_NATIVE_NETWORK
+    // ignore remove network error in gc
+    if (remove_network(cont) != 0) {
+        ERROR("Failed to remove container %s network", cont->common_config->id);
+        goto unlock;
+    }
+#endif
 
 unlock:
     container_unlock(cont);
@@ -1091,12 +1141,21 @@ static int do_delete_container(container_t *cont)
         goto out;
     }
 
+    // TODO: merge remove cri/native network
     // clean up mounted network namespace
     if (cont->common_config->network_settings != NULL &&
         util_file_exists(cont->common_config->network_settings->sandbox_key)
         && remove_network_namespace(cont->common_config->network_settings->sandbox_key) != 0) {
         ERROR("Failed to remove network when deleting container %s", cont->common_config->id);
     }
+    
+#ifdef ENABLE_NATIVE_NETWORK
+    // try to clean up network resource
+    if (cont->network_settings != NULL && util_file_exists(cont->network_settings->sandbox_key) &&
+        remove_network(cont) != 0) {
+        ERROR("Failed to remove network when delete container %s, maybe it has been cleaned up", cont->common_config->id);
+    }
+#endif
 
     ret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
     if (ret < 0 || (size_t)ret >= sizeof(container_state)) {
@@ -1188,6 +1247,7 @@ int delete_container(container_t *cont, bool force)
             ret = -1;
             goto reset_removal_progress;
         }
+
         ret = stop_container(cont, 3, force, false);
         if (ret != 0) {
             isulad_append_error_message("Could not stop running container %s, cannot remove. ", id);

@@ -1,0 +1,18 @@
+{
+    "port_mappings":[{"protocol": 1, "container_port": 80, "host_port": 8080}],
+    "metadata": {
+        "name": "test",
+        "namespace": "default",
+        "attempt": 1,
+        "uid": "hdishd83djaidwnduwk28bcsb"
+    },
+    "linux": {
+    },
+    "annotations": {
+        "extension.network.kubernetes.io/cni": "[multinetwork]",
+        "extension.network.kubernetes.io/cniargs/first": "extension=first",
+        "extension.network.kubernetes.io/cniargs/second": "extension=second",
+        "kubernetes.io/ingress-bandwidth": "ingressholder",
+        "kubernetes.io/engress-bandwidth": "engressholder"
+    }
+}

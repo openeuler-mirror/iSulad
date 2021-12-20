@@ -25,8 +25,16 @@ source ../helpers.sh
 
 function do_test_t()
 {
+    tid=`isula run -tid --name hostname busybox`
+    hostname=`isula exec -it $tid hostname`
+    fn_check_eq "$hostname" "${tid:0:12}" "default hostname is id of container"
+    isula stop -t 0 $tid
+    fn_check_eq "$?" "0" "stop failed"
+    isula rm $tid
+
     containername=test_basic_run
     containername2=container_to_join
+
     isula run --name $containername  -td busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running

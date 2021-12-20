@@ -72,7 +72,6 @@ void command_init(command_t *self, command_option_t *opts, int opts_len, int arg
 void subcommand_init(command_t *self, command_option_t *opts, int opts_len, int argc, const char **argv,
                      const char *description, const char *usage);
 
-
 int compare_options(const void *s1, const void *s2);
 
 void print_options(int options_len, const command_option_t *options);
