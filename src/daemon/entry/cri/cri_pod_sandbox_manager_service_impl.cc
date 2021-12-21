@@ -26,11 +26,9 @@
 #include "naming.h"
 #include "service_container_api.h"
 #include "cxxutils.h"
-#include "network_namespace_api.h"
+#include "network_namespace.h"
 #include "cri_image_manager_service_impl.h"
-#include "utils_network.h"
 #include "namespace.h"
-#include "constants.h"
 
 namespace CRI {
 auto PodSandboxManagerServiceImpl::EnsureSandboxImageExists(const std::string &image, Errors &error) -> bool
@@ -166,6 +164,9 @@ void PodSandboxManagerServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alph
         if (error.NotEmpty()) {
             return;
         }
+    } else {
+        free(hc->network_mode);
+        hc->network_mode = util_strdup_s(CRI::Constants::namespaceModeCNI.c_str());
     }
 
     hc->oom_score_adj = CRI::Constants::PodInfraOOMAdj;
@@ -471,48 +472,73 @@ cleanup:
     free_container_stop_response(response);
 }
 
+auto PodSandboxManagerServiceImpl::GetSandboxKey(const container_inspect *inspect_data) -> std::string
+{
+    if (inspect_data == nullptr || inspect_data->network_settings == nullptr ||
+        inspect_data->network_settings->sandbox_key == nullptr) {
+        ERROR("Inspect data does not have network settings");
+        return std::string("");
+    }
+
+    return std::string(inspect_data->network_settings->sandbox_key);
+}
+
+void PodSandboxManagerServiceImpl::GetSandboxNetworkInfo(const runtime::v1alpha2::PodSandboxConfig &config,
+                                                         const std::string &jsonCheckpoint, const container_inspect *inspect_data,
+                                                         std::string &sandboxKey, std::map<std::string, std::string> &networkOptions,
+                                                         std::map<std::string, std::string> &stdAnnos, Errors &error)
+{
+    if (config.linux().security_context().namespace_options().network() == runtime::v1alpha2::NamespaceMode::NODE) {
+        return;
+    }
+
+    if (!namespace_is_cni(inspect_data->host_config->network_mode)) {
+        error.Errorf("Network mode is neither host nor cni");
+        ERROR("Network mode is neither host nor cni");
+        return;
+    }
+
+    sandboxKey = GetSandboxKey(inspect_data);
+    if (sandboxKey.size() == 0) {
+        error.Errorf("Inspect data does not have sandbox key");
+        ERROR("Inspect data does not have sandbox key");
+        return;
+    }
+
+    CRIHelpers::ProtobufAnnoMapToStd(config.annotations(), stdAnnos);
+    stdAnnos[CRIHelpers::Constants::POD_CHECKPOINT_KEY] = jsonCheckpoint;
+    stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY, sandboxKey));
+
+    networkOptions["UID"] = config.metadata().uid();
+}
+
 void PodSandboxManagerServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::PodSandboxConfig &config,
-                                                       const std::string &response_id, const std::string &jsonCheckpoint,
-                                                       const container_inspect *inspect_data, 
+                                                       const std::string &response_id, const container_inspect *inspect_data,
+                                                       const std::map<std::string, std::string> &networkOptions,
+                                                       const std::map<std::string, std::string> &stdAnnos,
                                                        std::string &network_settings_json, Errors &error)
 {
-    std::map<std::string, std::string> stdAnnos;
-    std::map<std::string, std::string> networkOptions;
-    char* sandbox_key = get_sandbox_key(inspect_data);
-
     // Setup sandbox files
     if (config.has_dns_config() && inspect_data->resolv_conf_path != nullptr) {
         INFO("Over write resolv.conf: %s", inspect_data->resolv_conf_path);
         SetupSandboxFiles(inspect_data->resolv_conf_path, config, error);
         if (error.NotEmpty()) {
             ERROR("failed to setup sandbox files");
-            goto cleanup;
+            return;
         }
     }
     // Do not invoke network plugins if in hostNetwork mode.
     if (config.linux().security_context().namespace_options().network() == runtime::v1alpha2::NamespaceMode::NODE) {
-        goto cleanup;
+        return;
     }
 
     // Setup networking for the sandbox.
-    CRIHelpers::ProtobufAnnoMapToStd(config.annotations(), stdAnnos);
-    stdAnnos[CRIHelpers::Constants::POD_CHECKPOINT_KEY] = jsonCheckpoint;
-    networkOptions["UID"] = config.metadata().uid();
-    if (sandbox_key == NULL) {
-        goto cleanup;
-    }
-    stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY, sandbox_key));
     m_pluginManager->SetUpPod(config.metadata().namespace_(), config.metadata().name(),
                               Network::DEFAULT_NETWORK_INTERFACE_NAME, response_id, stdAnnos, networkOptions, network_settings_json, error);
     if (error.NotEmpty()) {
         ERROR("SetupPod failed: %s", error.GetCMessage());
-        StopContainerHelper(response_id, error);
-        goto cleanup;
+        return;
     }
-
-cleanup:
-    free(sandbox_key);
-    return;
 }
 
 auto PodSandboxManagerServiceImpl::GenerateUpdateNetworkSettingsReqest(const std::string &id,
@@ -540,11 +566,14 @@ auto PodSandboxManagerServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSan
 {
     std::string response_id;
     std::string jsonCheckpoint;
-    char *netnsPath = nullptr;
     std::string network_setting_json;
+    std::string netnsPath;
+    std::map<std::string, std::string> stdAnnos;
+    std::map<std::string, std::string> networkOptions;
     container_inspect *inspect_data { nullptr };
     container_update_network_settings_request *ips_request { nullptr };
     container_update_network_settings_response *ips_response { nullptr };
+    std::vector<std::string> errlist;
 
     if (m_cb == nullptr || m_cb->container.create == nullptr || m_cb->container.start == nullptr) {
         error.SetError("Unimplemented callback");
@@ -572,7 +601,7 @@ auto PodSandboxManagerServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSan
         error.Clear();
     }
 
-    // Step 4: mount network namespace when network mode is file
+    // Step 4: Inspect container
     inspect_data = CRIHelpers::InspectContainer(response_id, error, true);
     if (error.NotEmpty()) {
         goto cleanup;
@@ -582,37 +611,63 @@ auto PodSandboxManagerServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSan
         ERROR("Failed to retrieve inspect data");
         goto cleanup;
     }
-    netnsPath = get_sandbox_key(inspect_data);
-    if (namespace_is_file(inspect_data->host_config->network_mode)) {
-        if (!util_file_exists(netnsPath) || util_mount_namespace(netnsPath) != 0) {
-            error.Errorf("Failed to mount network namespace: %s", netnsPath);
-            ERROR("Failed to mount network namespace: %s", netnsPath);
+
+    // Step 5: Get networking info
+    GetSandboxNetworkInfo(config, jsonCheckpoint, inspect_data, netnsPath, networkOptions, stdAnnos, error);
+    if (error.NotEmpty()) {
+        goto cleanup;
+    }
+
+    // Step 6: Mount network namespace when network mode is cni
+    if (namespace_is_cni(inspect_data->host_config->network_mode)) {
+        if (prepare_network_namespace(netnsPath.c_str(), false, 0) != 0) {
+            error.Errorf("Failed to prepare network namespace: %s", netnsPath.c_str());
+            ERROR("Failed to prepare network namespace: %s", netnsPath.c_str());
             goto cleanup;
         }
     }
 
-    // Step 5: Setup networking for the sandbox.
-    SetupSandboxNetwork(config, response_id, jsonCheckpoint, inspect_data, network_setting_json, error);
+    // Step 7: Setup networking for the sandbox.
+    SetupSandboxNetwork(config, response_id, inspect_data, networkOptions, stdAnnos, network_setting_json, error);
     if (error.NotEmpty()) {
-        goto cleanup;
+        goto cleanup_ns;
     }
 
-    // Step 6: Start the sandbox container.
+    // Step 8: Start the sandbox container.
     StartSandboxContainer(response_id, error);
     if (error.NotEmpty()) {
-        goto cleanup;
+        goto cleanup_network;
     }
 
-    // Step 6: Save network settings json to disk
+    // Step 9: Save network settings json to disk
     ips_request = GenerateUpdateNetworkSettingsReqest(response_id, network_setting_json, error);
-    if (ips_request != nullptr) {
-        if (m_cb->container.update_network_settings(ips_request, &ips_response) != 0) {
-            if (ips_response != nullptr && ips_response->errmsg != nullptr) {
-                error.SetError(ips_response->errmsg);
-            } else {
-                error.SetError("Failed to update container network settings");
-            }
+    if (!error.NotEmpty()) {
+        if (ips_request == nullptr) {
             goto cleanup;
+        }
+
+        if (m_cb->container.update_network_settings(ips_request, &ips_response) == 0) {
+            goto cleanup;
+        }
+        if (ips_response != nullptr && ips_response->errmsg != nullptr) {
+            error.SetError(ips_response->errmsg);
+        } else {
+            error.SetError("Failed to update container network settings");
+        }
+    }
+
+cleanup_network:
+    if (ClearCniNetwork(response_id,
+                        config.linux().security_context().namespace_options().network() == runtime::v1alpha2::NamespaceMode::NODE,
+                        config.metadata().namespace_(), config.metadata().name(), errlist,
+                        stdAnnos, error) != 0) {
+        ERROR("Failed to clean cni network");
+    }
+
+cleanup_ns:
+    if (namespace_is_cni(inspect_data->host_config->network_mode)) {
+        if (remove_network_namespace(netnsPath.c_str()) != 0) {
+            ERROR("Failed to remove network namespace: %s", netnsPath.c_str());
         }
     }
 
@@ -621,13 +676,8 @@ cleanup:
         SetNetworkReady(response_id, true, error);
         DEBUG("set %s ready", response_id.c_str());
         error.Clear();
-    } else {
-        if (netnsPath != nullptr && remove_network_namespace(netnsPath) != 0) {
-            ERROR("Failed to remove network namespace");
-        }
     }
 
-    free(netnsPath);
     free_container_inspect(inspect_data);
     free_container_update_network_settings_request(ips_request);
     free_container_update_network_settings_response(ips_response);
@@ -766,8 +816,8 @@ auto PodSandboxManagerServiceImpl::ClearCniNetwork(const std::string &realSandbo
             ERROR("Failed to inspect container");
         }
 
-        char* netnsPath = get_sandbox_key(inspect_data);
-        if (netnsPath == nullptr) {
+        std::string netnsPath = GetSandboxKey(inspect_data);
+        if (netnsPath.size() == 0) {
             ERROR("Failed to get network namespace path");
             return 0;
         }
@@ -785,11 +835,10 @@ auto PodSandboxManagerServiceImpl::ClearCniNetwork(const std::string &realSandbo
                 WARN("set network ready: %s", pluginErr.GetCMessage());
             }
             // umount netns when cni removed network successfully
-            if (util_umount_namespace(netnsPath) != 0) {
-                ERROR("Failed to umount directory %s:%s", netnsPath, strerror(errno));
+            if (remove_network_namespace(netnsPath.c_str()) != 0) {
+                ERROR("Failed to umount directory %s:%s", netnsPath.c_str(), strerror(errno));
             }
         }
-        free(netnsPath);
     }
     free_container_inspect(inspect_data);
     return 0;

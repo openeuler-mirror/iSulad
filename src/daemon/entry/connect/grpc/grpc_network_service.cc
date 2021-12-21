@@ -23,6 +23,8 @@
 #include "utils.h"
 #include "error.h"
 
+using namespace network;
+
 int NetworkServiceImpl::create_request_from_grpc(const NetworkCreateRequest *grequest, network_create_request **request)
 {
     auto *tmpreq = static_cast<network_create_request *>(util_common_calloc_s(sizeof(network_create_request)));

@@ -35,7 +35,7 @@
 #include "err_msg.h"
 #include "utils_file.h"
 #include "utils_string.h"
-#include "network_namespace_api.h"
+#include "network_namespace.h"
 #include "utils_network.h"
 #include "network_api.h"
 
@@ -1074,6 +1074,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_NATIVE_NETWORK
 static bool verify_bridge_config(const char **bridges, const size_t len)
 {
     size_t i = 0;
@@ -1098,28 +1099,6 @@ static bool verify_bridge_config(const char **bridges, const size_t len)
     }
 
     return true;
-}
-
-static char *new_sandbox_key(void)
-{
-    int nret = 0;
-    char random[NETNS_LEN + 1] = { 0x00 };
-    char netns[PATH_MAX] = { 0x00 };
-    const char *netns_fmt = "/var/run/netns/isulacni-%s";
-
-    nret = util_generate_random_str(random, NETNS_LEN);
-    if (nret != 0) {
-        ERROR("Failed to generate random netns");
-        return NULL;
-    }
-
-    nret = snprintf(netns, sizeof(netns), netns_fmt, random);
-    if ((size_t)nret >= sizeof(netns) || nret < 0) {
-        ERROR("snprintf netns failed");
-        return NULL;
-    }
-
-    return util_strdup_s(netns);
 }
 
 static int generate_network_element(const char **bridges, const size_t len, defs_map_string_object_networks *networks)
@@ -1164,53 +1143,9 @@ static int generate_network_element(const char **bridges, const size_t len, defs
 
     return 0;
 }
+#endif
 
-container_network_settings *native_generate_network_settings(const host_config *host_config)
-{
-    container_network_settings *settings = NULL;
-
-    settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
-    if (settings == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    if (!util_native_network_checker(host_config->network_mode, host_config->system_container)) {
-        return settings;
-    }
-
-    if (!verify_bridge_config((const char **)host_config->bridge_network, host_config->bridge_network_len)) {
-        ERROR("Invalid bridge config");
-        goto err_out;
-    }
-
-    settings->sandbox_key = new_sandbox_key();
-    if (settings->sandbox_key == NULL) {
-        ERROR("Failed to new netns");
-        goto err_out;
-    }
-
-    settings->activation = false;
-    settings->networks = (defs_map_string_object_networks *)util_common_calloc_s(sizeof(defs_map_string_object_networks));
-    if (settings->networks == NULL) {
-        ERROR("Out of memory");
-        goto err_out;
-    }
-
-    if (generate_network_element((const char **)host_config->bridge_network, host_config->bridge_network_len,
-                                 settings->networks) != 0) {
-        ERROR("Failed to prepare network element");
-        goto err_out;
-    }
-
-    return settings;
-
-err_out:
-    free_container_network_settings(settings);
-    return NULL;
-}
-
-static char *new_pod_sandbox_key(void)
+static char *new_sandbox_key(void)
 {
     int nret = 0;
     char random[NETNS_LEN + 1] = { 0x00 };
@@ -1232,14 +1167,14 @@ static char *new_pod_sandbox_key(void)
     return util_strdup_s(netns);
 }
 
-container_network_settings *cri_generate_network_settings(const host_config *host_config)
+container_network_settings *generate_network_settings(const host_config *host_config)
 {
+    container_network_settings *settings = NULL;
+
     if (host_config == NULL) {
         ERROR("Invalid input");
         return NULL;
     }
-
-    container_network_settings *settings = NULL;
 
     settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
     if (settings == NULL) {
@@ -1247,17 +1182,38 @@ container_network_settings *cri_generate_network_settings(const host_config *hos
         return NULL;
     }
 
-    if (!namespace_is_file(host_config->network_mode)) {
+#ifdef ENABLE_NATIVE_NETWORK
+    if (util_native_network_checker(host_config->network_mode, host_config->system_container)) {
+        if (!verify_bridge_config((const char **)host_config->bridge_network, host_config->bridge_network_len)) {
+            ERROR("Invalid bridge config");
+            goto err_out;
+        }
+
+        settings->activation = false;
+        settings->networks = (defs_map_string_object_networks *)util_common_calloc_s(sizeof(defs_map_string_object_networks));
+        if (settings->networks == NULL) {
+            ERROR("Out of memory");
+            goto err_out;
+        }
+
+        if (generate_network_element((const char **)host_config->bridge_network, host_config->bridge_network_len,
+                                     settings->networks) != 0) {
+            ERROR("Failed to prepare bridge network element");
+            goto err_out;
+        }
+    } else
+#endif
+    if (!namespace_is_cni(host_config->network_mode)) {
         return settings;
     }
 
-    settings->sandbox_key = new_pod_sandbox_key();
+    settings->sandbox_key = new_sandbox_key();
     if (settings->sandbox_key == NULL) {
         ERROR("Failed to generate sandbox key");
         goto err_out;
     }
 
-    if (util_create_netns_file(settings->sandbox_key) != 0) {
+    if (create_network_namespace_file(settings->sandbox_key) != 0) {
         ERROR("Failed to create network namespace");
         goto err_out;
     }

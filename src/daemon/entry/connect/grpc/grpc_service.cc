@@ -193,7 +193,7 @@ private:
     RuntimeRuntimeServiceImpl m_runtimeRuntimeService;
     RuntimeImageServiceImpl m_runtimeImageService;
 #ifdef ENABLE_NATIVE_NETWORK
-    NetworkServiceImpl m_networkService;
+    network::NetworkServiceImpl m_networkService;
 #endif
     ServerBuilder m_builder;
     std::vector<std::string> m_tcpPath;

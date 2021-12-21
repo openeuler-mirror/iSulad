@@ -1736,9 +1736,9 @@ int cmd_create_main(int argc, const char **argv)
     g_cmd_create_args.subcommand = argv[1];
     struct command_option options[] = { LOG_OPTIONS(lconf) CREATE_OPTIONS(g_cmd_create_args) CREATE_EXTEND_OPTIONS(
             g_cmd_create_args) COMMON_OPTIONS(g_cmd_create_args)
-    #ifdef ENABLE_NATIVE_NETWORK
-    CREATE_NETWORK_OPTIONS(g_cmd_create_args)
-    #endif
+#ifdef ENABLE_NATIVE_NETWORK
+        CREATE_NETWORK_OPTIONS(g_cmd_create_args)
+#endif
     };
 
     isula_libutils_default_log_config(argv[0], &lconf);
@@ -2100,6 +2100,11 @@ static int create_check_network(const struct client_arguments *args)
 
     if (args->custom_conf.mac_address != NULL && !util_validate_mac_address(args->custom_conf.mac_address)) {
         COMMAND_ERROR("Invalid MAC address '%s'", args->custom_conf.mac_address);
+        return EINVALIDARGS;
+    }
+
+    if (bridge_network_mode(net_mode) && args->custom_conf.system_container) {
+        COMMAND_ERROR("Cannot set bridge network for system container");
         return EINVALIDARGS;
     }
 #endif

@@ -799,6 +799,11 @@ static int read_network_settings_config(const char *rootpath, const char *id,
 
     if (!util_file_exists(filename)) {
         WARN("No network settings config file of container '%s'", id);
+        *network_settings = util_common_calloc_s(sizeof(container_network_settings));
+        if (*network_settings == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
         return 0;
     }
 

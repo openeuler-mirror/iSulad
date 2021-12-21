@@ -715,9 +715,6 @@ static int pack_inspect_network_settings(const container_t *cont, container_insp
 
     if (!container_is_running(cont->state)) {
         // don't show network info when container is not running
-        free(inspect->network_settings->sandbox_key);
-        inspect->network_settings->sandbox_key = NULL;
-
         free_defs_map_string_object_networks(inspect->network_settings->networks);
         inspect->network_settings->networks = NULL;
     }

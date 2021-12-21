@@ -32,9 +32,7 @@ int merge_network(const host_config *host_spec, const char *rootfs, const char *
 int init_container_network_confs(const char *id, const char *rootpath, const host_config *hc,
                                  container_config_v2_common_config *common_config);
 
-// TODO: need to merge
-container_network_settings *native_generate_network_settings(const host_config *host_config);
-container_network_settings *cri_generate_network_settings(const host_config *host_config);
+container_network_settings *generate_network_settings(const host_config *host_config);
 
 #ifdef __cplusplus
 }

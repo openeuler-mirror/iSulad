@@ -24,9 +24,11 @@
 extern "C" {
 #endif
 
-int prepare_network(container_t *cont);
+bool validate_native_network(host_config *hostconfig, container_network_settings *network_settings);
 
-int remove_network(container_t *cont);
+int prepare_native_network(container_t *cont);
+
+int remove_native_network(container_t *cont);
 
 bool network_store_container_list_add(container_t *cont);
 
