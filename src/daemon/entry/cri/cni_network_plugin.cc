@@ -165,9 +165,10 @@ void CniNetworkPlugin::PlatformInit(Errors &error)
 {
     char *tpath { nullptr };
     char *serr { nullptr };
-    tpath = look_path(const_cast<char *>("nsenter"), &serr);
+    tpath = look_path(std::string("nsenter").c_str(), &serr);
     if (tpath == nullptr) {
         error.SetError(serr);
+        free(serr);
         return;
     }
     m_nsenterPath = tpath;
