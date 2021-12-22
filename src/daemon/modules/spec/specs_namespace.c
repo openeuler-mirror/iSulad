@@ -213,7 +213,12 @@ int get_network_namespace_path(const host_config *host_spec,
                                const container_network_settings *network_settings,
                                const char *type, char **dest_path)
 {
-    int index;
+    if (host_spec == NULL || dest_path == NULL) {
+        ERROR("Invalid input");
+        return -1;
+    }
+
+    int index = 0;
     int ret = -1;
     struct get_netns_path_handler handler_jump_table[] = {
         { SHARE_NAMESPACE_NONE, handle_get_path_from_none },
@@ -227,7 +232,8 @@ int get_network_namespace_path(const host_config *host_spec,
     size_t jump_table_size = sizeof(handler_jump_table) / sizeof(handler_jump_table[0]);
     const char *network_mode = host_spec->network_mode;
 
-    if (network_mode == NULL || dest_path == NULL) {
+    if (network_mode == NULL) {
+        ERROR("network mode does not exist");
         return -1;
     }
 
