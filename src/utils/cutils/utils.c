@@ -1354,6 +1354,7 @@ static char *get_cpu_variant()
 int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant)
 {
     int ret = 0;
+    int i = 0;
     struct utsname uts;
     char *tmp_variant = NULL;
 
@@ -1368,20 +1369,31 @@ int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_v
         goto out;
     }
 
-    *host_os = util_strings_to_lower(uts.sysname);
+    const char *arch_map[][2] = { { "i386", "386" },
+        { "x86_64", "amd64" },
+        { "x86-64", "amd64" },
+        { "aarch64", "arm64" },
+        { "armhf", "arm" },
+        { "armel", "arm" },
+        { "mips64le", "mips64le" },
+        { "mips64el", "mips64le" }
+    };
 
-    if (strcasecmp("i386", uts.machine) == 0) {
-        *host_arch = util_strdup_s("386");
-    } else if ((strcasecmp("x86_64", uts.machine) == 0) || (strcasecmp("x86-64", uts.machine) == 0)) {
-        *host_arch = util_strdup_s("amd64");
-    } else if (strcasecmp("aarch64", uts.machine) == 0) {
-        *host_arch = util_strdup_s("arm64");
-    } else if ((strcasecmp("armhf", uts.machine) == 0) || (strcasecmp("armel", uts.machine) == 0)) {
-        *host_arch = util_strdup_s("arm");
-    } else if ((strcasecmp("mips64le", uts.machine) == 0) || (strcasecmp("mips64el", uts.machine) == 0)) {
-        *host_arch = util_strdup_s("mips64le");
-    } else {
-        *host_arch = util_strdup_s(uts.machine);
+    const char *variant_map[][2] = { { "5", "v5" },
+        { "6", "v6" },
+        { "7", "v7" },
+        { "8", "v8" }
+    };
+
+    *host_os = util_strings_to_lower(uts.sysname);
+    *host_arch = util_strdup_s(uts.machine);
+
+    for (i = 0; i < sizeof(arch_map) / sizeof(arch_map[0]); ++i) {
+        if (strcasecmp(uts.machine, arch_map[i][0]) == 0) {
+            free(*host_arch);
+            *host_arch = util_strdup_s(arch_map[i][1]);
+            break;
+        }
     }
 
     if (!strcmp(*host_arch, "arm") || !strcmp(*host_arch, "arm64")) {
@@ -1395,17 +1407,13 @@ int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_v
             *host_variant = util_strdup_s("v7");
         } else if (!strcmp(*host_arch, "arm") && *host_variant != NULL) {
             tmp_variant = *host_variant;
-            *host_variant = NULL;
-            if (!strcmp(tmp_variant, "5")) {
-                *host_variant = util_strdup_s("v5");
-            } else if (!strcmp(tmp_variant, "6")) {
-                *host_variant = util_strdup_s("v6");
-            } else if (!strcmp(tmp_variant, "7")) {
-                *host_variant = util_strdup_s("v7");
-            } else if (!strcmp(tmp_variant, "8")) {
-                *host_variant = util_strdup_s("v8");
-            } else {
-                *host_variant = util_strdup_s(tmp_variant);
+            *host_variant = util_strdup_s(tmp_variant);
+            for (i = 0; i < sizeof(variant_map) / sizeof(variant_map[0]); ++i) {
+                if (!strcmp(tmp_variant, variant_map[i][0])) {
+                    free(*host_variant);
+                    *host_variant = util_strdup_s(variant_map[i][1]);
+                    break;
+                }
             }
             free(tmp_variant);
             tmp_variant = NULL;

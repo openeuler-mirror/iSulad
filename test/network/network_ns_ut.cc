@@ -59,7 +59,7 @@ TEST(network_ns_ut, test_get_network_namespace_path)
     host_config *host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
     host_spec->network_mode = (char *)"cni";
     container_network_settings *settings =
-            (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
+        (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
     settings->sandbox_key = (char *)"isulacni-1231rifj";
     char *type = nullptr;
     char *ns_path = nullptr;
@@ -72,7 +72,7 @@ TEST(network_ns_ut, test_get_network_namespace_path)
     // 2. no network mode in host spec
     host_config *host_spec1 = (host_config *)util_common_calloc_s(sizeof(host_config));
     container_network_settings *settings1 =
-            (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
+        (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
     settings1->sandbox_key = (char *)"isulacni-1231rifj";
     char *type1 = nullptr;
     char *ns_path1 = nullptr;
