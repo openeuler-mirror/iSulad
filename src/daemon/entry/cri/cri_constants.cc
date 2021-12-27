@@ -16,7 +16,7 @@
 
 namespace CRI {
 const std::string Constants::namespaceModeHost { "host" };
-const std::string Constants::namespaceModeFile { "file" };
+const std::string Constants::namespaceModeCNI { "cni" };
 const std::string Constants::nameDelimiter { "_" };
 const std::string Constants::kubePrefix { "k8s" };
 const std::string Constants::sandboxContainerName { "POD" };

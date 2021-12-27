@@ -1924,7 +1924,7 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
 
     free(hostconfig->mac_address);
     hostconfig->mac_address = NULL;
-    
+
     free_defs_map_string_object_port_bindings(hostconfig->port_bindings);
     hostconfig->port_bindings = NULL;
 #endif

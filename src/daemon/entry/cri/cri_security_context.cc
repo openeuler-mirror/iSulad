@@ -171,7 +171,7 @@ static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::Namespace
         hostConfig->uts_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
     } else {
         free(hostConfig->network_mode);
-        hostConfig->network_mode = util_strdup_s(CRI::Constants::namespaceModeFile.c_str());
+        hostConfig->network_mode = util_strdup_s(CRI::Constants::namespaceModeCNI.c_str());
     }
     // Note: default networkMode is not supported
 }

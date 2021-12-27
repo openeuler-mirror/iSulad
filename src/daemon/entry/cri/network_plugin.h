@@ -109,9 +109,6 @@ public:
                              const std::string &podSandboxID,
                              const std::map<std::string, std::string> &annotations, Errors &error) = 0;
 
-    virtual void GetPodNetworkStatus(const std::string &ns, const std::string &name, const std::string &interfaceName,
-                                     const std::string &podSandboxID, PodNetworkStatus &status, Errors &error) = 0;
-
     virtual void Status(Errors &error) = 0;
 };
 
@@ -138,9 +135,6 @@ public:
     void TearDownPod(const std::string &ns, const std::string &name, const std::string &networkPlane,
                      const std::string &podSandboxID,
                      const std::map<std::string, std::string> &annotations, Errors &error) override;
-
-    void GetPodNetworkStatus(const std::string &ns, const std::string &name, const std::string &interfaceName,
-                             const std::string &podSandboxID, PodNetworkStatus &status, Errors &error) override;
 
     void Status(Errors &error) override;
 
@@ -199,11 +193,9 @@ public:
     std::string PluginName();
     void Event(const std::string &name, std::map<std::string, std::string> &details);
     void Status(Errors &error);
-    void GetPodNetworkStatus(const std::string &ns, const std::string &name, const std::string &interfaceName,
-                             const std::string &podSandboxID, PodNetworkStatus &status, Errors &error);
     void SetUpPod(const std::string &ns, const std::string &name,
                   const std::string &interfaceName, const std::string &podSandboxID,
-                  std::map<std::string, std::string> &annotations,
+                  const std::map<std::string, std::string> &annotations,
                   const std::map<std::string, std::string> &options, std::string &network_settings_json, Errors &error);
     void TearDownPod(const std::string &ns, const std::string &name, const std::string &networkPlane,
                      const std::string &podSandboxID,

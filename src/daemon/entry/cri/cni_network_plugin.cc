@@ -32,7 +32,7 @@
 #include "errors.h"
 #include "service_container_api.h"
 #include "network_tools.h"
-#include "network_namespace_api.h"
+#include "network_namespace.h"
 #include "network_api.h"
 #include "err_msg.h"
 
@@ -192,7 +192,7 @@ static void PrepareAdaptorArgs(const std::string &podName, const std::string &po
         podUID = iter->second;
     }
 
-    auto cniArgs = std::map<std::string, std::string>{
+    auto cniArgs = std::map<std::string, std::string> {
         {"K8S_POD_UID", podUID},
         {"IgnoreUnknown", "1"},
         {"K8S_POD_NAMESPACE", podNs},
@@ -244,7 +244,8 @@ static void PrepareAdaptorAttachNetworks(const std::map<std::string, std::string
     if (networks == nullptr) {
         goto free_out;
     }
-    config->extral_nets = static_cast<struct attach_net_conf **>(util_smart_calloc_s(sizeof(struct attach_net_conf *), networks->len));
+    config->extral_nets = static_cast<struct attach_net_conf **>(util_smart_calloc_s(sizeof(struct attach_net_conf *),
+                                                                                     networks->len));
     if (config->extral_nets == nullptr) {
         ERROR("Out of memory");
         err.SetError("Prepare Adaptor Attach Networks failed");
@@ -537,7 +538,7 @@ cleanup:
     return result;
 }
 
-auto CniNetworkPlugin::GetNetworkSettingsJson(const std::string &podSandboxID, const std::string netnsPath,
+auto CniNetworkPlugin::GetNetworkSettingsJson(const std::string &podSandboxID, const std::string &netnsPath,
                                               network_api_result_list *result, Errors &err) -> std::string
 {
     std::string json;
@@ -771,53 +772,6 @@ void CheckNetworkStatus(const std::string &ns, const std::string &name, const st
 out:
     free_network_api_result_list(result);
     free_network_api_conf(config);
-}
-
-void CniNetworkPlugin::GetPodNetworkStatus(const std::string &ns, const std::string &name,
-                                           const std::string &interfaceName, const std::string &podSandboxID,
-                                           PodNetworkStatus &status, Errors &err)
-{
-    DAEMON_CLEAR_ERRMSG();
-    std::string netnsPath;
-    Errors tmpErr;
-
-    if (podSandboxID.empty()) {
-        err.SetError("Empty podsandbox ID");
-        return;
-    }
-
-    // TODO: save netns path in container_t
-    netnsPath = GetNetNS(podSandboxID, tmpErr);
-    if (tmpErr.NotEmpty()) {
-        err.Errorf("CNI failed to retrieve network namespace path: %s", tmpErr.GetCMessage());
-        return;
-    }
-    if (netnsPath.empty()) {
-        err.Errorf("Cannot find the network namespace, skipping pod network status for container %s",
-                   podSandboxID.c_str());
-        return;
-    }
-    std::vector<std::string> ips;
-
-
-    RLockNetworkMap(err);
-    CheckNetworkStatus(ns, name, m_podCidr, interfaceName, netnsPath, podSandboxID, ips, err);
-    UnlockNetworkMap(err);
-
-    if (err.Empty()) {
-        goto out;
-    }
-    WARN("Get network status by check failed: %s", err.GetCMessage());
-    err.Clear();
-
-    GetPodIP(m_nsenterPath, netnsPath, interfaceName, ips, err);
-    if (!err.Empty()) {
-        ERROR("Get ip from plugin failed: %s", err.GetCMessage());
-        return;
-    }
-out:
-    INFO("Get pod: %s network status success", podSandboxID.c_str());
-    status.SetIPs(ips);
 }
 
 void CniNetworkPlugin::RLockNetworkMap(Errors &error)

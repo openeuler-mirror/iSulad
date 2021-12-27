@@ -99,7 +99,7 @@ static container_inspect *get_container_info(const struct client_arguments *args
     }
 
     c_info = container_inspect_parse_data(info_str, NULL, &jerr);
-    
+
     free(jerr);
     free(info_str);
     return c_info;

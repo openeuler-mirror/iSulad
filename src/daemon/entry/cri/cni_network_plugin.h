@@ -62,14 +62,11 @@ public:
                      const std::string &interfaceName, const std::string &podSandboxID,
                      const std::map<std::string, std::string> &annotations, Errors &error) override;
 
-    void GetPodNetworkStatus(const std::string &ns, const std::string &name, const std::string &interfaceName,
-                             const std::string &podSandboxID, PodNetworkStatus &status, Errors &error) override;
-
     void Status(Errors &error) override;
 
 private:
     auto GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string;
-    auto GetNetworkSettingsJson(const std::string &podSandboxID, const std::string netnsPath,
+    auto GetNetworkSettingsJson(const std::string &podSandboxID, const std::string &netnsPath,
                                 network_api_result_list *result, Errors &err) -> std::string;
 
 private:

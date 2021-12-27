@@ -414,29 +414,8 @@ void PluginManager::Status(Errors &error)
     }
 }
 
-void PluginManager::GetPodNetworkStatus(const std::string &ns, const std::string &name,
-                                        const std::string &interfaceName, const std::string &podSandboxID,
-                                        PodNetworkStatus &status, Errors &error)
-{
-    std::string fullName = name + "_" + ns;
-
-    Lock(fullName, error);
-    if (error.NotEmpty()) {
-        return;
-    }
-    if (m_plugin != nullptr) {
-        Errors tmpErr;
-        m_plugin->GetPodNetworkStatus(ns, name, interfaceName, podSandboxID, status, tmpErr);
-        if (tmpErr.NotEmpty()) {
-            error.Errorf("NetworkPlugin %s failed on the status hook for pod %s: %s", m_plugin->Name().c_str(),
-                         fullName.c_str(), tmpErr.GetCMessage());
-        }
-    }
-    Unlock(fullName, error);
-}
-
 void PluginManager::SetUpPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
-                             const std::string &podSandboxID, std::map<std::string, std::string> &annotations,
+                             const std::string &podSandboxID, const std::map<std::string, std::string> &annotations,
                              const std::map<std::string, std::string> &options, std::string &network_settings_json, Errors &error)
 {
     if (m_plugin == nullptr) {
@@ -543,13 +522,6 @@ void NoopNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name,
 void NoopNetworkPlugin::TearDownPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
                                     const std::string &podSandboxID,
                                     const std::map<std::string, std::string> &annotations, Errors &error)
-{
-    return;
-}
-
-void NoopNetworkPlugin::GetPodNetworkStatus(const std::string &ns, const std::string &name,
-                                            const std::string &interfaceName, const std::string &podSandboxID,
-                                            PodNetworkStatus &status, Errors &error)
 {
     return;
 }

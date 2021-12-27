@@ -62,7 +62,7 @@
 #include "utils_verify.h"
 #include "selinux_label.h"
 #include "opt_log.h"
-#include "network_namespace_api.h"
+#include "network_namespace.h"
 
 static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
                                       int64_t cpu_rt_period, int64_t cpu_rt_runtime);
@@ -753,10 +753,12 @@ static int register_new_container(const char *id, const char *image_id, const ch
         goto out;
     }
 
+#ifdef ENABLE_NETWORK
     if (container_fill_network_settings(cont, network_settings) != 0) {
         ERROR("Failed to fill network settings");
         goto out;
     }
+#endif
 
     if (container_fill_log_configs(cont) != 0) {
         ERROR("Failed to fill container log configs");
@@ -1616,16 +1618,7 @@ int container_create_cb(const container_create_request *request, container_creat
     }
 
 #ifdef ENABLE_NETWORK
-    if (namespace_is_file(host_spec->network_mode)){
-        network_settings = cri_generate_network_settings(host_spec);
-#ifdef ENABLE_NATIVE_NETWORK
-    // TODO: maybe can merge
-    } else if (util_native_network_checker(host_spec->network_mode, host_spec->system_container)) {
-        network_settings = native_generate_network_settings(host_spec);
-#endif
-    } else {
-        network_settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
-    }
+    network_settings = generate_network_settings(host_spec);
     if (network_settings == NULL) {
         ERROR("Failed to generate network settings");
         cc = ISULAD_ERR_EXEC;

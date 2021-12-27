@@ -148,6 +148,9 @@ int cmd_run_main(int argc, const char **argv)
     g_cmd_run_args.subcommand = argv[1];
     struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_run_args) CREATE_OPTIONS(g_cmd_run_args)
         CREATE_EXTEND_OPTIONS(g_cmd_run_args) RUN_OPTIONS(g_cmd_run_args)
+#ifdef ENABLE_NATIVE_NETWORK
+        CREATE_NETWORK_OPTIONS(g_cmd_run_args)
+#endif
     };
     isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_run_desc,

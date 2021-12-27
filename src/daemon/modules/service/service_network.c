@@ -19,7 +19,7 @@
 #include <unistd.h>
 #include <isula_libutils/cni_anno_port_mappings.h>
 
-#include "network_namespace_api.h"
+#include "network_namespace.h"
 #include "utils_network.h"
 #include "utils_port.h"
 #include "err_msg.h"
@@ -28,24 +28,29 @@
 
 #define SHORT_ID_SPACE 12 + 1
 
-static bool validate_network(const defs_map_string_object_networks *networks)
+bool validate_native_network(host_config *hostconfig, container_network_settings *network_settings)
 {
-    size_t i = 0;
+    size_t i;
 
-    if (networks == NULL || networks->len == 0 || networks->keys == NULL || networks->values == NULL) {
+    if (hostconfig == NULL) {
+        ERROR("Invalid input");
         return false;
     }
 
-    for (i = 0; i < networks->len; i++) {
-        if (!util_validate_network_name(networks->keys[i])) {
-            isulad_set_error_message("Invalid network name %s", networks->keys[i]);
-            ERROR("Invalid network name %s", networks->keys[i]);
-            return false;
-        }
+    if (network_settings == NULL || network_settings->networks == NULL) {
+        ERROR("Invalid native network");
+        return false;
+    }
 
-        if (!network_module_exist(NETWOKR_API_TYPE_NATIVE, networks->keys[i])) {
-            isulad_set_error_message("Network %s not found", networks->keys[i]);
-            ERROR("Network %s not found", networks->keys[i]);
+    // skip network settings validate if native network is already active
+    if (network_settings->activation) {
+        return true;
+    }
+
+    for (i = 0; i < network_settings->networks->len; i++) {
+        if (!network_module_exist(NETWOKR_API_TYPE_NATIVE, network_settings->networks->keys[i])) {
+            isulad_set_error_message("Network %s not found", network_settings->networks->keys[i]);
+            ERROR("Network %s not found", network_settings->networks->keys[i]);
             return false;
         }
     }
@@ -114,7 +119,7 @@ out:
     return list;
 }
 
-static json_map_string_string * prepare_native_args(const container_t *cont)
+static json_map_string_string *prepare_native_args(const container_t *cont)
 {
 #define HOST_NAME_MAX_LENGTH 63
     int nret = 0;
@@ -493,6 +498,31 @@ out:
     free(cni_portmap_str);
     free_cni_anno_port_mappings_container(cni_ports);
     return ret;
+}
+
+static char *get_netns_path(const char *sandbox_key, const bool attach)
+{
+    char real_path[PATH_MAX] = { 0 };
+
+    if (sandbox_key == NULL) {
+        ERROR("Invalid sandbox_key");
+        return NULL;
+    }
+
+    if (attach) {
+        return util_strdup_s(sandbox_key);
+    }
+
+    if (realpath(sandbox_key, real_path) == NULL) {
+        WARN("Failed to get %s realpath", sandbox_key);
+        return util_strdup_s("");
+    }
+
+    if (util_detect_mounted(real_path)) {
+        return util_strdup_s(sandbox_key);
+    }
+
+    return util_strdup_s("");
 }
 
 static network_api_conf *build_adaptor_native_config(const container_t *cont, const bool attach)
@@ -1336,55 +1366,38 @@ out:
     return ret;
 }
 
-int prepare_network(container_t *cont)
+int prepare_native_network(container_t *cont)
 {
-    int ret = 0;
-    bool new_ns = false;
-    bool post_setup_network = false;
-
     if (cont == NULL) {
         ERROR("Invalid cont");
         return -1;
     }
 
-    if (!util_native_network_checker(cont->hostconfig->network_mode, cont->hostconfig->system_container)) {
-        goto out;
-    }
-
     if (cont->network_settings->activation) {
         WARN("Container %s network is active", cont->common_config->id);
-        goto out;
+        return 0;
     }
 
-    if (!validate_network(cont->network_settings->networks)) {
-        ERROR("Failed to validate network");
-        ret = -1;
-        goto out;
+    if (prepare_network_namespace(cont->network_settings->sandbox_key,
+                                  util_post_setup_network(cont->hostconfig->user_remap), cont->state->state->pid) != 0) {
+        ERROR("Failed to prepare network namespace");
+        return -1;
     }
 
-    post_setup_network = util_post_setup_network(cont->hostconfig->user_remap);
-    ret = prepare_network_namespace(post_setup_network, cont->state->state->pid, cont->network_settings->sandbox_key);
-    if (ret != 0) {
-        ERROR("Failed to new net namespace");
-        goto out;
-    }
-    new_ns = true;
-
-    ret = setup_network(cont);
-    if (ret != 0) {
+    if (setup_network(cont) != 0) {
         ERROR("Failed to setup network");
-        goto out;
+        goto err_out;
     }
 
-out:
-    if (ret != 0 && new_ns) {
-        if (remove_network_namespace(cont->network_settings->sandbox_key) != 0) {
-            ERROR("Faield to remove net ns for container %s", cont->common_config->id);
-        }
-        DEBUG("remove net namespace when rollback");
-    }
+    return 0;
 
-    return ret;
+err_out:
+    if (remove_network_namespace(cont->network_settings->sandbox_key) != 0) {
+        ERROR("Faield to remove net ns for container %s", cont->common_config->id);
+    }
+    DEBUG("remove net namespace when rollback");
+
+    return -1;
 }
 
 static int do_set_portmapping_for_teardown(const container_t *cont, network_api_conf *config)
@@ -1554,22 +1567,13 @@ out:
     return ret;
 }
 
-int remove_network(container_t *cont)
+int remove_native_network(container_t *cont)
 {
     bool failure = false;
 
     if (cont == NULL) {
         ERROR("Invalid cont");
         return -1;
-    }
-
-    if (!util_native_network_checker(cont->hostconfig->network_mode, cont->hostconfig->system_container)) {
-        goto out;
-    }
-
-    if (cont->skip_remove_network) {
-        WARN("skip remove container %s network when restarting", cont->common_config->id);
-        goto out;
     }
 
     if (teardown_network(cont) != 0) {
@@ -1582,7 +1586,6 @@ int remove_network(container_t *cont)
         failure = true;
     }
 
-out:
     return failure ? -1 : 0;
 }
 

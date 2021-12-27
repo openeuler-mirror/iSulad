@@ -13,31 +13,25 @@
  * Description: provide network namespace definition
  *********************************************************************************/
 
-#ifndef DAEMON_MODULES_API_NETWORK_NAMESPACE_API_H
-#define DAEMON_MODULES_API_NETWORK_NAMESPACE_API_H
+#ifndef UTILS_CUTILS_NETWORK_NAMESPACE_H
+#define UTILS_CUTILS_NETWORK_NAMESPACE_H
 
 #include <stdbool.h>
-
-#include "container_api.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+int prepare_network_namespace(const char *netns_path, const bool post_prepare_network, const int pid);
+
 int remove_network_namespace(const char *netns);
 
-#ifdef ENABLE_NATIVE_NETWORK
-int prepare_network_namespace(const bool post_prepare_network, const int pid, const char *netns_path);
-#endif
+int create_network_namespace_file(const char *netns_path);
 
-// TODO: need to merge
-char *get_sandbox_key(const container_inspect *inspect_data);
-#ifdef ENABLE_NATIVE_NETWORK
-char *get_netns_path(const char *sandbox_key, const bool attach);
-#endif
+int remove_network_namespace_file(const char *netns_path);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // DAEMON_MODULES_API_NETWORK_NAMESPACE_API_H
+#endif // UTILS_CUTILS_NETWORK_NAMESPACE_H

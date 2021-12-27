@@ -81,8 +81,15 @@ private:
                                     Errors &error) -> container_create_request *;
     void SetNetworkReady(const std::string &podSandboxID, bool ready, Errors &error);
     void StartSandboxContainer(const std::string &response_id, Errors &error);
-    void SetupSandboxNetwork(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &response_id,
-                             const std::string &jsonCheckpoint, const container_inspect *inspect_data, 
+    auto GetSandboxKey(const container_inspect *inspect_data) -> std::string;
+    void GetSandboxNetworkInfo(const runtime::v1alpha2::PodSandboxConfig &config,
+                               const std::string &jsonCheckpoint, const container_inspect *inspect_data,
+                               std::string &sandbox_key, std::map<std::string, std::string> &networkOptions,
+                               std::map<std::string, std::string> &stdAnnos, Errors &error);
+    void SetupSandboxNetwork(const runtime::v1alpha2::PodSandboxConfig &config,
+                             const std::string &response_id, const container_inspect *inspect_data,
+                             const std::map<std::string, std::string> &networkOptions,
+                             const std::map<std::string, std::string> &stdAnnos,
                              std::string &network_settings_json, Errors &error);
     void SetupSandboxFiles(const std::string &resolvPath, const runtime::v1alpha2::PodSandboxConfig &config,
                            Errors &error);

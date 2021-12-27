@@ -38,7 +38,7 @@ typedef enum {
 #define SHARE_NAMESPACE_NONE "none"
 #define SHARE_NAMESPACE_SHAREABLE "shareable"
 #define SHARE_NAMESPACE_BRIDGE "bridge"
-#define SHARE_NAMESPACE_FILE "file"
+#define SHARE_NAMESPACE_CNI "cni"
 
 #define SHARE_NAMESPACE_PID_HOST_PATH "/proc/1/ns/pid"
 #define SHARE_NAMESPACE_NET_HOST_PATH "/proc/1/ns/net"
@@ -92,9 +92,9 @@ static inline bool namespace_is_bridge(const char *mode)
     return false;
 }
 
-static inline bool namespace_is_file(const char *mode)
+static inline bool namespace_is_cni(const char *mode)
 {
-    if (mode != NULL && strcmp(mode, SHARE_NAMESPACE_FILE) == 0) {
+    if (mode != NULL && strcmp(mode, SHARE_NAMESPACE_CNI) == 0) {
         return true;
     }
     return false;

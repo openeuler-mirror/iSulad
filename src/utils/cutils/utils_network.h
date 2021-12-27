@@ -25,12 +25,6 @@
 extern "C" {
 #endif
 
-int util_create_netns_file(const char *netns_path);
-
-int util_mount_namespace(const char *netns_path);
-
-int util_umount_namespace(const char *netns_path);
-
 #define IPV4LEN 4
 
 #define IPV6LEN 16
