@@ -1,0 +1,29 @@
+From f321f120a7b5d987fb12fbca6942b9866a9c7400 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Tue, 21 Dec 2021 16:13:49 +0800
+Subject: [PATCH 22/23] fix memory leak in CniNetworkPlugin
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/daemon/entry/cri/cni_network_plugin.cc | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/daemon/entry/cri/cni_network_plugin.cc b/src/daemon/entry/cri/cni_network_plugin.cc
+index ffdbeb10..b86b21e8 100644
+--- a/src/daemon/entry/cri/cni_network_plugin.cc
++++ b/src/daemon/entry/cri/cni_network_plugin.cc
+@@ -165,9 +165,10 @@ void CniNetworkPlugin::PlatformInit(Errors &error)
+ {
+     char *tpath { nullptr };
+     char *serr { nullptr };
+-    tpath = look_path(const_cast<char *>("nsenter"), &serr);
++    tpath = look_path(std::string("nsenter").c_str(), &serr);
+     if (tpath == nullptr) {
+         error.SetError(serr);
++        free(serr);
+         return;
+     }
+     m_nsenterPath = tpath;
+-- 
+2.25.1
+
