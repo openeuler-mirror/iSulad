@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 11
+%global _release 12
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -34,6 +34,8 @@ Patch0018: 0018-Fixed-dangerous-memory-operations.patch
 Patch0019: 0019-add-pull-request-gateway-checker-for-build-and-ut.patch
 Patch0020: 0020-Optimize-websocket-streaming-service-code.patch
 Patch0021: 0021-Fixed-a-bug-that-occurs-when-starting-container-in-h.patch
+Patch0022: 0022-fix-memory-leak-in-CniNetworkPlugin.patch
+Patch0023: 0023-fix-codex-error.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -258,6 +260,12 @@ fi
 %endif
 
 %changelog
+* Mon Dec 27 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-12
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: sync patches from upstream
+
 * Thu Dec 09 2021 chengzeruizhi <chengzeruizhi@huawei.com> - 2.0.10-11
 - Type: bugfix
 - ID: NA
