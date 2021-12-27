@@ -256,7 +256,7 @@ static int create_manifest(import_desc *desc)
     }
     manifest->layers_len = 1;
 
-    manifest->layers[0] = util_common_calloc_s(sizeof(registry_manifest_schema2_layers_element *));
+    manifest->layers[0] = util_common_calloc_s(sizeof(registry_manifest_schema2_layers_element));
     if (manifest->layers[0] == NULL) {
         ERROR("out of memory");
         isulad_try_set_error_message("out of memory");
