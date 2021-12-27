@@ -1,0 +1,26 @@
+From 8cd3a33c5e0ded33f2e8d3d2bb41f93c298bc2c5 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Mon, 27 Dec 2021 10:07:51 +0800
+Subject: [PATCH 23/23] fix codex error
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/daemon/modules/image/oci/oci_import.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/daemon/modules/image/oci/oci_import.c b/src/daemon/modules/image/oci/oci_import.c
+index ebb555fd..ae2f547a 100644
+--- a/src/daemon/modules/image/oci/oci_import.c
++++ b/src/daemon/modules/image/oci/oci_import.c
+@@ -256,7 +256,7 @@ static int create_manifest(import_desc *desc)
+     }
+     manifest->layers_len = 1;
+ 
+-    manifest->layers[0] = util_common_calloc_s(sizeof(registry_manifest_schema2_layers_element *));
++    manifest->layers[0] = util_common_calloc_s(sizeof(registry_manifest_schema2_layers_element));
+     if (manifest->layers[0] == NULL) {
+         ERROR("out of memory");
+         isulad_try_set_error_message("out of memory");
+-- 
+2.25.1
+
