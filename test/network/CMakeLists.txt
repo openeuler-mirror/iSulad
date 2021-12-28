@@ -20,7 +20,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/service/network_namespace_api.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/network_namespace.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/volume/volume.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/volume/local.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/spec/parse_volume.c
