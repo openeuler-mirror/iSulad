@@ -30,17 +30,13 @@ public:
     ExecServe() = default;
     ExecServe(const ExecServe &) = delete;
     ExecServe &operator=(const ExecServe &) = delete;
-    virtual ~ExecServe();
+    virtual ~ExecServe() = default;
 
 private:
     virtual void SetServeThreadName() override;
-    virtual int SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) override;
-    virtual int ExecuteStreamCommand(SessionData *lwsCtx) override;
-    virtual void ErrorHandler(int ret, SessionData *lwsCtx) override;
+    virtual void *SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) override;
+    virtual int ExecuteStreamCommand(SessionData *lwsCtx, void *request) override;
     virtual void CloseConnect(SessionData *lwsCtx) override;
-
-private:
-    container_exec_request *m_request { nullptr };
-    container_exec_response *m_response { nullptr };
+    virtual void FreeRequest(void *m_request);
 };
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_EXEC_SERVE_H

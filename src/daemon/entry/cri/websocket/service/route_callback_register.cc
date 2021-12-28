@@ -32,7 +32,8 @@ int StreamingServeInterface::Execute(SessionData *lwsCtx, const std::string &tok
         return -1;
     }
 
-    if (SetContainerStreamRequest(request, lwsCtx->suffix) != 0) {
+    auto *m_request = SetContainerStreamRequest(request, lwsCtx->suffix);
+    if (m_request == nullptr) {
         ERROR("Failed to set container request");
         sem_post(lwsCtx->syncCloseSem);
         return -1;
@@ -42,11 +43,11 @@ int StreamingServeInterface::Execute(SessionData *lwsCtx, const std::string &tok
     delete request;
     request = nullptr;
 
-    int ret = ExecuteStreamCommand(lwsCtx);
-
-    ErrorHandler(ret, lwsCtx);
+    int ret = ExecuteStreamCommand(lwsCtx, m_request);
 
     CloseConnect(lwsCtx);
+
+    FreeRequest(m_request);
 
     return ret;
 }
