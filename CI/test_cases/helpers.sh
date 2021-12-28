@@ -65,6 +65,19 @@ function testcontainer() {
     fi
 }
 
+function wait_container() {
+    for i in $(seq 10); do
+         st=`isula inspect -f '{{json .State.Status}}' "$1"`
+        if [[ "${st}" =~ "$2" ]];then
+            return 0
+        fi
+        sleep 3
+    done
+
+    echo "timeout to wait $1 change to $2"
+    return 1
+}
+
 function crictl() {
     CRICTL=$(which crictl)
     "$CRICTL" -i unix:///var/run/isulad.sock -r unix:///var/run/isulad.sock "$@"
