@@ -20,25 +20,19 @@
 #include "callback.h"
 #include "utils.h"
 
-AttachServe::~AttachServe()
-{
-    free_container_attach_request(m_request);
-    free_container_attach_response(m_response);
-}
-
 void AttachServe::SetServeThreadName()
 {
     prctl(PR_SET_NAME, "AttachServe");
 }
 
-int AttachServe::SetContainerStreamRequest(::google::protobuf::Message *request, const std::string &suffix)
+void *AttachServe::SetContainerStreamRequest(::google::protobuf::Message *request, const std::string &suffix)
 {
     auto *grequest = dynamic_cast<runtime::v1alpha2::AttachRequest *>(request);
 
-    m_request = static_cast<container_attach_request *>(util_common_calloc_s(sizeof(container_attach_request)));
+    auto *m_request = static_cast<container_attach_request *>(util_common_calloc_s(sizeof(container_attach_request)));
     if (m_request == nullptr) {
         ERROR("Out of memory");
-        return -1;
+        return nullptr;
     }
 
     if (!grequest->container_id().empty()) {
@@ -48,10 +42,10 @@ int AttachServe::SetContainerStreamRequest(::google::protobuf::Message *request,
     m_request->attach_stdout = grequest->stdout();
     m_request->attach_stderr = grequest->stderr();
 
-    return 0;
+    return m_request;
 }
 
-int AttachServe::ExecuteStreamCommand(SessionData *lwsCtx)
+int AttachServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
 {
     auto *cb = get_service_executor();
     if (cb == nullptr || cb->container.attach == nullptr) {
@@ -64,22 +58,29 @@ int AttachServe::ExecuteStreamCommand(SessionData *lwsCtx)
     stringWriter.context = (void *)(lwsCtx);
     stringWriter.write_func = WsWriteStdoutToClient;
     stringWriter.close_func = closeWsConnect;
+
+    auto *m_request = static_cast<container_attach_request *>(request);
     m_request->attach_stderr = false;
 
-    return cb->container.attach(m_request, &m_response, m_request->attach_stdin ? lwsCtx->pipes.at(0) : -1,
-                                m_request->attach_stdout ? &stringWriter : nullptr, nullptr);
-}
+    container_attach_response *m_response { nullptr };
+    int ret = cb->container.attach(m_request, &m_response, m_request->attach_stdin ? lwsCtx->pipes.at(0) : -1,
+                                   m_request->attach_stdout ? &stringWriter : nullptr, nullptr);
 
-void AttachServe::ErrorHandler(int ret, SessionData *lwsCtx)
-{
-    if (ret == 0) {
-        return;
+    if (ret != 0) {
+        ERROR("Failed to attach container: %s", m_request->container_id);
+        sem_post(lwsCtx->syncCloseSem);
     }
-    ERROR("Failed to attach container: %s", m_request->container_id);
-    sem_post(lwsCtx->syncCloseSem);
+
+    free_container_attach_response(m_response);
+    return ret;
 }
 
 void AttachServe::CloseConnect(SessionData *lwsCtx)
 {
     (void)lwsCtx;
+}
+
+void AttachServe::FreeRequest(void *m_request)
+{
+    free_container_attach_request(static_cast<container_attach_request *>(m_request));
 }

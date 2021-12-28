@@ -26,18 +26,14 @@ public:
     AttachServe() = default;
     AttachServe(const AttachServe &) = delete;
     AttachServe &operator=(const AttachServe &) = delete;
-    virtual ~AttachServe();
+    virtual ~AttachServe() = default;
 
 private:
     virtual void SetServeThreadName() override;
-    virtual int SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) override;
-    virtual int ExecuteStreamCommand(SessionData *lwsCtx) override;
-    virtual void ErrorHandler(int ret, SessionData *lwsCtx) override;
+    virtual void *SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) override;
+    virtual int ExecuteStreamCommand(SessionData *lwsCtx, void *request) override;
     virtual void CloseConnect(SessionData *lwsCtx) override;
-
-private:
-    container_attach_request *m_request { nullptr };
-    container_attach_response *m_response { nullptr };
+    virtual void FreeRequest(void *m_request) override;
 };
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ATTACH_SERVE_H
 
