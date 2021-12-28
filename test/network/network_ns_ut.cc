@@ -17,22 +17,24 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <gtest/gtest.h>
-#include "network_namespace_api.h"
+#include "isula_libutils/container_inspect.h"
+#include "network_namespace.h"
 #include "specs_namespace.h"
 #include "namespace.h"
+#include "utils.h"
 
-TEST(network_ns_ut, test_namespace_is_file)
+TEST(network_ns_ut, test_namespace_is_cni)
 {
-    const char *mode1 = (const char *)"file";
-    bool res1 = namespace_is_file(mode1);
+    const char *mode1 = (const char *)"cni";
+    bool res1 = namespace_is_cni(mode1);
     EXPECT_TRUE(res1);
 
-    const char *mode2 = (const char *)"file:123456";
-    bool res2 = namespace_is_file(mode2);
+    const char *mode2 = (const char *)"cni:123456";
+    bool res2 = namespace_is_cni(mode2);
     EXPECT_FALSE(res2);
 
     char *mode3 = nullptr;
-    bool res3 = namespace_is_file(mode3);
+    bool res3 = namespace_is_cni(mode3);
     EXPECT_FALSE(res3);
 }
 
@@ -51,47 +53,11 @@ TEST(network_ns_ut, test_namespace_is_bridge)
     EXPECT_FALSE(res3);
 }
 
-TEST(network_ns_ut, test_get_sandbox_key)
-{
-    // 1. insepct is null
-    container_inspect *inspect1 = nullptr;
-    char *sandbox_key1 = get_sandbox_key(inspect1);
-    EXPECT_TRUE(sandbox_key1 == nullptr);
-    free(inspect1);
-
-    // 2. network settings is null
-    container_inspect *inspect2 = (container_inspect *)util_common_calloc_s(sizeof(container_inspect));
-    char *sandbox_key2 = get_sandbox_key(inspect2);
-    EXPECT_TRUE(sandbox_key2 == nullptr);
-    free(inspect2);
-
-    // 3. sandboxkey in network settings is null
-    container_inspect *inspect3 = (container_inspect *)util_common_calloc_s(sizeof(container_inspect));
-    container_network_settings *network_settings3 =
-            (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
-    inspect3->network_settings = network_settings3;
-    char *sandbox_key3 = get_sandbox_key(inspect3);
-    EXPECT_TRUE(sandbox_key3 == nullptr);
-    free(network_settings3);
-    free(inspect3);
-
-    // 4. normal cases
-    container_inspect *inspect4 = (container_inspect *)util_common_calloc_s(sizeof(container_inspect));
-    container_network_settings *network_settings4 =
-            (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
-    inspect4->network_settings = network_settings4;
-    network_settings4->sandbox_key = (char *)"isulacni-asdfiyq39084hrfue";
-    char *sandbox_key4 = get_sandbox_key(inspect4);
-    EXPECT_STREQ(sandbox_key4, "isulacni-asdfiyq39084hrfue");
-    free(network_settings4);
-    free(inspect4);
-}
-
 TEST(network_ns_ut, test_get_network_namespace_path)
 {
     // 1. normal cases
     host_config *host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
-    host_spec->network_mode = (char *)"file";
+    host_spec->network_mode = (char *)"cni";
     container_network_settings *settings =
             (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
     settings->sandbox_key = (char *)"isulacni-1231rifj";
