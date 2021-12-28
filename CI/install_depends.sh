@@ -35,6 +35,8 @@ mkdir -p ${builddir}/lib
 mkdir -p ${builddir}/lib/pkgconfig
 mkdir -p ${builddir}/systemd/system
 
+git config --global http.postBuffer 524288000
+
 #install crictl
 function make_crictl()
 {
@@ -51,6 +53,12 @@ function make_crictl()
 #install cni plugins
 function make_cni_plugins()
 {
+    if [ -e /usr/libexec/cni ]; then
+       rm -f ${builddir}/cni/bin/*
+       mkdir -p ${builddir}/cni/bin/
+       cp /usr/libexec/cni/* ${builddir}/cni/bin/
+       return 0
+    fi
     local CNI_PLUGINS_COMMIT=b93d284d18dfc8ba93265fa0aa859c7e92df411b
     cd ~
     git clone https://gitee.com/duguhaotian/plugins.git
@@ -104,7 +112,7 @@ do
 done
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/lxc/start.c
 ./autogen.sh
-./configure --prefix=${builddir}
+./configure --prefix=${builddir} enable_werror=no
 make -j $(nproc)
 make install
 ldconfig
@@ -127,6 +135,7 @@ cd ~
 if [ -d ./runc ];then
 	rm -rf ./runc
 fi
+go env -w GO111MODULE="off"
 git clone https://gitee.com/src-openeuler/runc.git
 cd runc
 git checkout -q origin/openEuler-20.03-LTS
@@ -147,10 +156,12 @@ cd -
 # install lib-shim-v2
 source $HOME/.cargo/env
 cd ~
+rm -rf lib-shim-v2
 git clone https://gitee.com/src-openeuler/lib-shim-v2.git
 cd lib-shim-v2
 tar xf lib-shim-v2-*
-cd lib-shim-v2-*
+dname=$(tar -tf lib-shim-v2-*.tar.gz | head -1)
+cd $dname
 mkdir .cargo
 cat >> ./.cargo/config << EOF
 [source.crates-io]
