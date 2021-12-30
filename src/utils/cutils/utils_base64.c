@@ -115,7 +115,7 @@ size_t util_base64_decode_len(const char *input, size_t len)
     size_t padding_count = 0;
 
     if (input == NULL || len < 4 || len % 4 != 0) {
-        ERROR("Invalid param for base64 decode length, length is %ld", len);
+        ERROR("Invalid param for base64 decode length, length is %zu", len);
         return -1;
     }
 

@@ -48,7 +48,15 @@ target_include_directories(libisulad_tools
     )
 
 set_target_properties(libisulad_tools PROPERTIES PREFIX "")
-target_link_libraries(libisulad_tools ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
+target_link_libraries(libisulad_tools ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBYAJL_LIBRARY} ${LIBTAR_LIBRARY} ${CRYPTO_LIBRARY})
+
+if (ENABLE_OCI_IMAGE)
+    target_link_libraries(libisulad_tools ${LIBARCHIVE_LIBRARY} ${WEBSOCKET_LIBRARY})
+endif()
+
+if (ENABLE_SELINUX)
+    target_link_libraries(libisulad_tools ${SELINUX_LIBRARY})
+endif()
 
 # get all c and header files
 list(REMOVE_DUPLICATES SHARED_INCS)
@@ -75,13 +83,18 @@ set_target_properties(libisula PROPERTIES PREFIX "")
 
 target_link_libraries(libisula
     ${LIBYAJL_LIBRARY}
-    ${SELINUX_LIBRARY}
     ${ISULA_LIBUTILS_LIBRARY}
-    ${LIBARCHIVE_LIBRARY}
     ${LIBTAR_LIBRARY}
-    ${WEBSOCKET_LIBRARY}
     ${CRYPTO_LIBRARY}
    )
+
+if (ENABLE_OCI_IMAGE)
+    target_link_libraries(libisula ${LIBARCHIVE_LIBRARY} ${WEBSOCKET_LIBRARY})
+endif()
+
+if (ENABLE_SELINUX)
+    target_link_libraries(libisula ${SELINUX_LIBRARY})
+endif()
 
 if (ENABLE_SHIM_V2)
     target_link_libraries(libisula ${LIBSHIM_V2_LIBRARY})
@@ -113,7 +126,11 @@ add_executable(isulad-shim
     ${SHARED_SRCS}
     )
 target_include_directories(isulad-shim PUBLIC ${ISULAD_SHIM_INCS} ${SHARED_INCS})
-target_link_libraries(isulad-shim libisulad_tools ${LIBYAJL_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${ZLIB_LIBRARY} ${CRYPTO_LIBRARY} -lpthread)
+target_link_libraries(isulad-shim libisulad_tools ${LIBYAJL_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBTAR_LIBRARY} ${ZLIB_LIBRARY} ${CRYPTO_LIBRARY} -lpthread)
+
+if (ENABLE_OCI_IMAGE)
+    target_link_libraries(isulad-shim ${LIBARCHIVE_LIBRARY})
+endif()
 
 # ------ build isula-shim finish -------
 
@@ -137,7 +154,15 @@ target_include_directories(isulad PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/http
     )
 
-target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
+target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${LIBTAR_LIBRARY} ${CRYPTO_LIBRARY})
+
+if (ENABLE_OCI_IMAGE)
+    target_link_libraries(isulad ${LIBARCHIVE_LIBRARY} ${WEBSOCKET_LIBRARY})
+endif()
+
+if (ENABLE_SELINUX)
+    target_link_libraries(isulad ${SELINUX_LIBRARY})
+endif()
 
 target_link_libraries(isulad -ldl ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lpthread libhttpclient)
 

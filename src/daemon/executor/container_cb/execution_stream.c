@@ -40,6 +40,7 @@
 #include <string.h>
 #include <sys/prctl.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include "isula_libutils/log.h"
 #include "io_wrapper.h"
@@ -343,6 +344,7 @@ pack_response:
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
+#ifdef ENABLE_OCI_IMAGE
 static int copy_from_container_cb_check(const struct isulad_copy_from_container_request *request,
                                         struct isulad_copy_from_container_response **response, container_t **cont)
 {
@@ -963,6 +965,7 @@ pack_response:
     free(dst_base);
     return ret;
 }
+#endif
 
 static int container_logs_cb_check(const struct isulad_logs_request *request, struct isulad_logs_response *response)
 {
@@ -1626,7 +1629,8 @@ static int container_logs_cb(const struct isulad_logs_request *request, stream_f
         goto out;
     }
 
-    EVENT("Event: {Object: %s, Content: path: %s, rotate: %d, size: %ld }", id, log_config->path, log_config->rotate,
+    EVENT("Event: {Object: %s, Content: path: %s, rotate: %d, size: %" PRId64 " }", id, log_config->path,
+          log_config->rotate,
           log_config->size);
 
     nret = check_log_config(log_config);
@@ -1670,7 +1674,9 @@ void container_stream_callback_init(service_container_callback_t *cb)
 {
     cb->attach = container_attach_cb;
     cb->exec = container_exec_cb;
+#ifdef ENABLE_OCI_IMAGE
     cb->copy_from_container = copy_from_container_cb;
     cb->copy_to_container = copy_to_container_cb;
+#endif
     cb->logs = container_logs_cb;
 }

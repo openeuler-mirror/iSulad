@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/select.h>
+#include <inttypes.h>
 
 #include "isula_libutils/log.h"
 #include "plugin_api.h"
@@ -519,7 +520,7 @@ static int pm_register_plugin(const char *name, const char *addr)
         goto failed;
     }
 
-    INFO("add activated plugin %s 0x%lx", plugin->name, plugin->manifest->watch_event);
+    INFO("add activated plugin %s 0x%" PRIx64, plugin->name, plugin->manifest->watch_event);
     return 0;
 
 failed:
@@ -854,7 +855,7 @@ bool plugin_is_watching(plugin_t *plugin, uint64_t pe)
     }
     plugin_unlock(plugin);
 
-    INFO("plugin %s watching=%s for event 0x%lx", plugin->name, (ok ? "true" : "false"), pe);
+    INFO("plugin %s watching=%s for event 0x%" PRIx64, plugin->name, (ok ? "true" : "false"), pe);
 
     return ok;
 }
@@ -885,7 +886,7 @@ static int unpack_activate_response(const struct parsed_http_message *message, v
         goto out;
     }
 
-    INFO("get resp 0x%lx", resp->watch_event);
+    INFO("get resp 0x%" PRIx64, resp->watch_event);
     manifest->init_type = resp->init_type;
     manifest->watch_event = resp->watch_event;
 
@@ -1371,7 +1372,7 @@ static int plugin_event_handle_dispath_impl(const char *cid, const char *plugins
                 ret = plugin_event_post_remove_handle(plugin, cid);
                 break;
             default:
-                ERROR("plugin event %ld not support.", pe);
+                ERROR("plugin event %" PRIu64 " not support.", pe);
                 ret = -1;
                 break;
         }
