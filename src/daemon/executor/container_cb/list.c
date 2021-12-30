@@ -620,7 +620,7 @@ static int pack_list_containers(char **idsarray, const struct list_context *ctx,
     }
 
     if (container_nums > (SIZE_MAX / sizeof(container_container *))) {
-        ERROR("Get too many containers:%ld", container_nums);
+        ERROR("Get too many containers:%zu", container_nums);
         ret = -1;
         goto out;
     }

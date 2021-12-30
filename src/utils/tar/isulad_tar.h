@@ -47,13 +47,6 @@ struct archive_tar_resource_rebase_opts {
     char *include_file;
 };
 
-/*
- * compress file.
- * param filename   :   archive file to compres.
- * return:              zero if compress success, non-zero if not.
- */
-int gzip(const char *filename, size_t len);
-
 struct archive_copy_info *copy_info_source_path(const char *path, bool follow_link, char **err);
 
 char *prepare_archive_copy(const struct archive_copy_info *srcinfo, const struct archive_copy_info *dstinfo,
