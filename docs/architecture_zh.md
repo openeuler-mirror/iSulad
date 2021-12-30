@@ -2,7 +2,7 @@
 
 ## Overview
 
-![architecture](design/arch.jpg)
+![architecture](./images/arch.jpg)
 
 iSulad是一个基于OCI标准的容器运行引擎，强调简单性、健壮性和轻量化。
 
@@ -38,4 +38,4 @@ iSulad是一个基于OCI标准的容器运行引擎，强调简单性、健壮�
 
 架构图，如下：
 
-![CNI_architecture](./design/CNI_architecture.png)
+![CNI_architecture](./images/CNI_architecture.png)
