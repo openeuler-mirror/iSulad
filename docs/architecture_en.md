@@ -2,7 +2,7 @@
 
 ## Overview
 
-![architecture](design/arch.jpg)
+![architecture](./images/arch.jpg)
 
 iSulad is an OCI-compliant container runtime engine that emphasizes simplicity, robustness, performance and lightweight. 
 
@@ -40,4 +40,4 @@ You can interact with the iSulad by invoking gRPC APIs exported by the subsystem
 
 The figure shows the architecture:
 
-![CNI_architecture](./design/CNI_architecture.png)
+![CNI_architecture](./images/CNI_architecture.png)

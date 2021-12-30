@@ -159,7 +159,7 @@ ARM machine:
 
 #### Design of testcase
 
-![design of performance test](./docs/design/performan_test_design.png)
+![design of performance test](./docs/images/performan_test_design.png)
 
 About code of test
 
