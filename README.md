@@ -122,7 +122,7 @@ For more informations on how to use `iSulad`, please refer to the [guide](https:
 
 ### Operations about native network
 
-Operations about how to use native network, please refer to the `docs/manual/native_network.md`
+Operations about how to use native network, please refer to the [native_network.md](./docs/manual/native_network.md)
 
 ### Build from source
 Build requirements for developers are listed in [build_guide](./docs/build_guide.md)
