@@ -26,11 +26,12 @@
 #include <stdio.h>
 #include <strings.h>
 #include <sys/prctl.h>
+#include <inttypes.h>
 
 #include "log_gather_api.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "isulad_tar.h"
+#include "util_gzip.h"
 #include "utils_file.h"
 
 typedef int (*log_save_t)(const void *buf, size_t count);
@@ -223,7 +224,7 @@ static int check_log_file()
         if (ret != 0) {
             COMMAND_ERROR("Rotate log file %s failed.", g_log_file);
         } else {
-            INFO("Log file large than %lu, rotate it.", g_max_size);
+            INFO("Log file large than %" PRIu64", rotate it.", g_max_size);
         }
     } else {
         ret = 0;

@@ -196,7 +196,7 @@ static bool validate_layer_path_in_host_real(size_t layer_index, char *path_in_h
     }
 
     if (!util_valid_file(real_path, fmod)) {
-        ERROR("invalid path in host %s, real path is %s, layer %ld", path_in_host, real_path, layer_index);
+        ERROR("invalid path in host %s, real path is %s, layer %zu", path_in_host, real_path, layer_index);
         if (fmod == (uint32_t)S_IFREG) {
             isulad_try_set_error_message(
                 "Invalid content in manifest: layer(except first layer) is not a regular file");
@@ -218,13 +218,13 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
     if (layer_index == 0) {
         /* layer 0 is absolute path of rootfs device  or host / */
         if (!valid_absolute_path(path_in_host)) {
-            ERROR("path in host %s not a absolute path, layer %lu", path_in_host, layer_index);
+            ERROR("path in host %s not a absolute path, layer %zu", path_in_host, layer_index);
             isulad_try_set_error_message("Invalid content in manifest: first layer path in host must be absolute path");
             return false;
         }
 
         if ((int)fmod == S_IFDIR && strcmp(path_in_host, "/") != 0) {
-            ERROR("expected / as root, got %s, layer %lu", path_in_host, layer_index);
+            ERROR("expected / as root, got %s, layer %zu", path_in_host, layer_index);
             isulad_try_set_error_message("Invalid content in manifest: first layer path in host must be /");
             return false;
         }
@@ -235,7 +235,7 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
         char parent_location[PATH_MAX] = { 0 };
         int sret = 0;
         if (!valid_relative_path(path_in_host)) {
-            ERROR("path in host %s not a relative path, layer %lu", path_in_host, layer_index);
+            ERROR("path in host %s not a relative path, layer %zu", path_in_host, layer_index);
             isulad_try_set_error_message("Invalid content in manifest:"
                                          " layer path in host(except first layer) must be relative path");
             return false;
@@ -409,7 +409,7 @@ static bool validate_image_name(char *image_name)
 static bool validate_image_layers_number(size_t layers_len)
 {
     if (layers_len > LAYER_NUM_MAX || layers_len < 1) {
-        ERROR("invalid layers number %ld maxium is %d", layers_len, LAYER_NUM_MAX);
+        ERROR("invalid layers number %zu maxium is %d", layers_len, LAYER_NUM_MAX);
         isulad_try_set_error_message("Invalid content in manifest: layer empty or max depth exceeded");
         return false;
     }

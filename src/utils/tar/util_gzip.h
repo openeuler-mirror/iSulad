@@ -28,6 +28,13 @@ int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode);
 // Decompress
 int util_gzip_d(const char *srcfile, const FILE *destfp);
 
+/*
+ * compress file.
+ * param filename:      archive file to compres.
+ * return:              zero if compress success, non-zero if not.
+ */
+int gzip(const char *filename, size_t len);
+
 #ifdef __cplusplus
 }
 #endif

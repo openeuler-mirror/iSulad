@@ -203,6 +203,7 @@ struct command g_commands[] = {
     { NULL, false, NULL, NULL, NULL, NULL } // End of the list
 };
 
+#ifdef ENABLE_OCI_IMAGE
 static int set_locale()
 {
     int ret = 0;
@@ -217,12 +218,15 @@ static int set_locale()
 out:
     return ret;
 }
+#endif
 
 int main(int argc, char **argv)
 {
+#ifdef ENABLE_OCI_IMAGE
     if (set_locale() != 0) {
         exit(ECOMMON);
     }
+#endif
 
     if (connect_client_ops_init()) {
         return ECOMMON;
