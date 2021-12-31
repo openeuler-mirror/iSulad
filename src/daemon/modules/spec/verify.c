@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <linux/oom.h>
+#include <inttypes.h>
 
 #include "constants.h"
 #include "err_msg.h"
@@ -962,8 +963,8 @@ static bool check_hugetlbs_repeated(size_t newlen, const char *pagesize,
 
     for (j = 0; j < newlen; j++) {
         if (newtlb[j] != NULL && newtlb[j]->page_size != NULL && !strcmp(newtlb[j]->page_size, pagesize)) {
-            WARN("hugetlb-limit setting of %s is repeated, former setting %lu will be replaced with %lu", pagesize,
-                 newtlb[j]->limit, hugetlb->limit);
+            WARN("hugetlb-limit setting of %s is repeated, former setting %" PRIu64 " will be replaced with %" PRIu64,
+                 pagesize, newtlb[j]->limit, hugetlb->limit);
             newtlb[j]->limit = hugetlb->limit;
             repeated = true;
             goto out;
@@ -1090,7 +1091,7 @@ static int verify_resources_device(defs_resources *resources)
 
     for (i = 0; i < resources->devices_len; i++) {
         if (!util_valid_device_mode(resources->devices[i]->access)) {
-            ERROR("Invalid device mode \"%s\" for device \"%ld %ld\"", resources->devices[i]->access,
+            ERROR("Invalid device mode \"%s\" for device \"%" PRId64" %" PRId64 "\"", resources->devices[i]->access,
                   resources->devices[i]->major, resources->devices[i]->minor);
             isulad_set_error_message("Invalid device mode \"%s\" for device \"%ld %ld\"", resources->devices[i]->access,
                                      resources->devices[i]->major, resources->devices[i]->minor);
@@ -1678,7 +1679,7 @@ static int add_hugetbl_element(host_config_hugetlbs_element ***hugetlb, size_t *
     for (j = 0; j < *len; j++) {
         if (strcmp((*hugetlb)[j]->page_size, pagesize) == 0) {
             WARN("Hostconfig: hugetlb-limit setting of %s is repeated, "
-                 "former setting %lu will be replaced with %lu",
+                 "former setting %" PRIu64 " will be replaced with %" PRIu64,
                  pagesize, (*hugetlb)[j]->limit, element->limit);
             (*hugetlb)[j]->limit = element->limit;
             goto out;

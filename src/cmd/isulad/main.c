@@ -1522,6 +1522,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_OCI_IMAGE
 static int set_locale()
 {
     int ret = 0;
@@ -1536,6 +1537,7 @@ static int set_locale()
 out:
     return ret;
 }
+#endif
 
 /*
  * Takes socket path as argument
@@ -1552,9 +1554,11 @@ int main(int argc, char **argv)
         exit(ECOMMON);
     }
 
+#ifdef ENABLE_OCI_IMAGE
     if (set_locale() != 0) {
         exit(ECOMMON);
     }
+#endif
 
     http_global_init();
 

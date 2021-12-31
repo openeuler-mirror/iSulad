@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "client_arguments.h"
 #include "utils.h"
@@ -171,10 +172,10 @@ static void stats_print_original_data(const struct isula_container_info *stats)
         short_id[SHORTIDLEN] = '\0';
     }
 
-    printf("%-16s %-10llu %-10s %-20lu %-20lu %-15u %-15lu %-15lu %-15lu %-15lu %-15lu %-15lu %-40s", short_id,
-           (unsigned long long)stats->pids_current, stats->status, stats->cpu_use_nanos, stats->cpu_system_use,
-           stats->online_cpus, stats->blkio_read, stats->blkio_write, stats->mem_used, stats->mem_limit,
-           stats->kmem_used, stats->cache, stats->name);
+    printf("%-16s %-10" PRIu64 " %-10s %-20" PRIu64 " %-20" PRIu64 " %-15u %-15" PRIu64 " %-15" PRIu64 " %-15" PRIu64
+           " %-15" PRIu64 " %-15" PRIu64 " %-15" PRIu64 " %-40s", short_id, stats->pids_current, stats->status,
+           stats->cpu_use_nanos, stats->cpu_system_use, stats->online_cpus, stats->blkio_read, stats->blkio_write,
+           stats->mem_used, stats->mem_limit, stats->kmem_used, stats->cache, stats->name);
 
     free(short_id);
 }

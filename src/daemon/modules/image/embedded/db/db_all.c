@@ -694,7 +694,7 @@ static int read_all_images_info(sqlite3_stmt *stmt, void **data)
         goto cleanup;
     }
     if ((*imagesinfo)->imagesnum > (SIZE_MAX / sizeof(struct db_image *) - 1)) {
-        ERROR("List of images is too long:%ld", (*imagesinfo)->imagesnum);
+        ERROR("List of images is too long:%zu", (*imagesinfo)->imagesnum);
         goto cleanup;
     }
     oldsize = (*imagesinfo)->imagesnum * sizeof(struct db_image *);

@@ -19,6 +19,7 @@
 #include <limits.h>
 #include <isula_libutils/host_config.h>
 #include <strings.h>
+#include <inttypes.h>
 
 #include "config.h"
 #include "isula_libutils/log.h"
@@ -250,7 +251,7 @@ static int check_args_log_conf(const struct service_arguments *args)
     /* validate max-size */
     if ((args->json_confs->log_driver && strcasecmp("file", args->json_confs->log_driver) == 0) &&
         (args->max_size < (4 * 1024))) {
-        ERROR("Max-size \"%ld\" must large than 4KB.", args->max_size);
+        ERROR("Max-size \"%" PRId64 "\" must large than 4KB.", args->max_size);
         ret = -1;
         goto out;
     }

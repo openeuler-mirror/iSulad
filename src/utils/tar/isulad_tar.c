@@ -19,8 +19,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -48,72 +46,6 @@ void free_archive_copy_info(struct archive_copy_info *info)
     free(info->rebase_name);
     info->rebase_name = NULL;
     free(info);
-}
-
-/*
- * compress file.
- * param filename:      archive file to compres.
- * return:              zero if compress success, non-zero if not.
- */
-int gzip(const char *filename, size_t len)
-{
-    int pipefd[2] = { -1, -1 };
-    int status = 0;
-    pid_t pid = 0;
-
-    if (filename == NULL) {
-        return -1;
-    }
-    if (len == 0) {
-        return -1;
-    }
-
-    if (pipe2(pipefd, O_CLOEXEC) != 0) {
-        ERROR("Failed to create pipe\n");
-        return -1;
-    }
-
-    pid = fork();
-    if (pid == -1) {
-        ERROR("Failed to fork()\n");
-        close(pipefd[0]);
-        close(pipefd[1]);
-        return -1;
-    }
-
-    if (pid == 0) {
-        // child process, dup2 pipefd[1] to stderr
-        close(pipefd[0]);
-        dup2(pipefd[1], 2);
-
-        if (!util_valid_cmd_arg(filename)) {
-            fprintf(stderr, "Invalid filename: %s\n", filename);
-            exit(EXIT_FAILURE);
-        }
-
-        execlp("gzip", "gzip", "-f", filename, NULL);
-
-        fprintf(stderr, "Failed to exec gzip");
-        exit(EXIT_FAILURE);
-    }
-
-    ssize_t size_read = 0;
-    char buffer[BUFSIZ] = { 0 };
-
-    close(pipefd[1]);
-
-    if (waitpid(pid, &status, 0) != pid) {
-        close(pipefd[0]);
-        return -1;
-    }
-
-    size_read = read(pipefd[0], buffer, BUFSIZ);
-    close(pipefd[0]);
-
-    if (size_read) {
-        ERROR("Received error:\n%s", buffer);
-    }
-    return status;
 }
 
 static int get_rebase_name(const char *path, const char *real_path, char **resolved_path, char **rebase_name)
