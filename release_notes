@@ -1,135 +1,16 @@
-2021-12-20 root release 2.1.0
-    - update isulad version to 2.1.0
-    - fix invalid time of license
-    - adapt to merge network into lcr master
-    - !1254 fix network code problem Merge pull request !1254 from zhangxiaoyu/dev-network
-    - support disable native network ci tests
-    - ensure isulad with disable native network is working
-    - remove clibcni dependence and fix cmake error
-    - !1252 isolation native network Merge pull request !1252 from haozi007/dev-network
-    - fix compiler error
-    - donot set 0.0.0.0 to cni portmapping
-    - check publish host port is inused
-    - network: fix residual network issue and make remove containers quickly
-    - add  port range number check
-    - network: fix some issues
-    - network: modify testcase about reducing ipv6 address
-    - network: bugfix for create container and set ipv6 address
-    - ensure write all data into stdin
-    - fill container log configs after common config setted
-    - network: modify network testcase
-    - network: new network namspece, and prepare network beforce container runtime start
-    - network: add setup network failed testcase
-    - network: detach network if attach network failed
-    - network: modify network cleanup testcase
-    - network: add dnsname testcase, and add muli-container pkill testcase
-    - network: add dnsname plugin
-    - add CI to inspect pod ip
-    - add testcase for bandwidth and iprange
-    - support ipranges and bandwidth caps
-    - network: add container network cleanup testcase
-    - network: clean useless iptables rule
-    - modify cri network to get ip from inspect
-    - add testcase for default hostname of container
-    - use max 12 chars of container id as hostname of container
-    - network: add CI testcase to develop code coverage
-    - network: add network remove rest client
-    - network: adjust max network config file count
-    - use valid inspect_parse_filter cause by rename
-    - network: add native network store to record connected containers
-    - fix invalid free map search result
-    - network: add testcase and remove unused code
-    - network: set cni plugin exec err msg
-    - use cached cni configs
-    - improve gcov of network module
-    - network: refactor container new
-    - modify CI create_network to test ip parse
-    - network: move network settings out of config v2
-    - network: add run container with ipv6 testcase
-    - delete unused code
-    - clean network resources at exit
-    - improve testcase of port
-    - network: bridge network cannot support mac and fix mac address error
-    - add --publish ip addr parse
-    - add testcases for port subcommand
-    - adapt CI test of create --publish
-    - create --publish port range to single illegal
-    - finish testcase for port
-    - finish inspect network setting data of port mappings
-    - create --expose -p -P resolve memory leak
-    - add create net port map CI test
-    - optimize network port mapping process
-    - network: reduce specified subnet when network create
-    - support portmapping for network
-    - add publish and expose params for create
-    - network: add container network test
-    - network: teardown network when stop container
-    - network: setup network in start container
-    - fill network settings for inspect
-    - add testcase for port command
-    - add port subcommand for isula
-    - network: unique container network bridge
-    - add utils for network port
-    - add attach and detach for native network
-    - network: add native_store in network config
-    - use struct cni_network_list_con replace cni_net_conf_list
-    - fix error cause by rebase master branch
-    - use cni struct replace conflist string
-    - refactor directory tree of network
-    - network: add network options in isula create cmd
-    - ignore error if inspect network is null
-    - libcni: refact directory
-    - support empty driver of network
-    - refactor network config
-    - fix errors
-    - libcni: refact libcni_api.c/h
-    - network: add container inspect network info
-    - adapt network settings json schema
-    - add debug info for invalid cni config
-    - libcni: refact libcni_conf.c/hx
-    - ignore error of cni config file
-    - simplify cni operator
-    - libcni: refact libcni_types.c/h and libcni_verify.c/h
-    - network: refact network directory
-    - fix wrong copy of string array
-    - ignore empty cni config error
-    - use unify api for network
-    - delete unused var
-    - add cni_args annotation key define
-    - network: modify CI testcase, network inspect --format
-    - add port mapping and bandwidth parse from annoation
-    - fix memory leak
-    - finish cni adaptor
-    - add isula client attach network interface
-    - network: modify network conflist json and adapt to array of array
-    - update conf file manual
-    - add inotify event to watch cni conf
-    - network: add network remove testcase
-    - network: add network remove command
-    - adapt to new liboci spec
-    - network: add cni manager annotation batch processing
-    - network: modify network subcommand
-    - network: cni_bin_dir support multiple directories in network create
-    - network: add network list CI testcase
-    - network: add network list
-    - remove unuse arguments for parse_cidr
-    - network: find subnet in private scope
-    - network: add network inspect CI testcase
-    - network: add network inspect
-    - add cni net manager
-    - network: move network create daemon major code to modules/network
-    - network: add network create CI testcase
-    - network: add network create daemon callback
-    - network: add network create grpc/rest
-    - network: add network create client command
-    - remove clibcni from cmake
-    - network: support cache
-    - network: remove unneccessary arguments
-    - cni: bugfix in parse_cidr() and generate_ip_string()
-    - network: fix coredump
-    - update cni spec to 0.4.0
-    - network: use utils from libutils
-    - network: merge clibcni into iSulad
+2021-12-31 root release 2.1.0
+    - !1268 modify readme Merge pull request !1268 from zhangxiaoyu/master
+    - !1266 enable NATIVE_NETWORK and add documentation Merge pull request !1266 from zhangxiaoyu/master
+    - !1264 fix compile error when building embedded image Merge pull request !1264 from wangfengtu/compile
+    - !1263 add design docs for seccomp optimization and cni-cri refactor Merge pull request !1263 from czrz/master
+    - !1261 fix multithreading exec bug Merge pull request !1261 from zhangxiaoyu/master
+    - !1257 Seccomp optimization Merge pull request !1257 from czrz/seccomp
+    - !1262 fix network ut error Merge pull request !1262 from zhangxiaoyu/dev
+    - !1256 native and cri network code improvement Merge pull request !1256 from zhangxiaoyu/master
+    - !1259 fix codex error Merge pull request !1259 from wangfengtu/fix_codex
+    - !1228 Added new CI test for CNI bridge Merge pull request !1228 from czrz/master
+    - !1251 Add cmake uninstall rule. Merge pull request !1251 from Tiamo0/master
+    - !1253 merge network branch into master Merge pull request !1253 from haozi007/dev-network
     - !1250 revert scripts format Merge pull request !1250 from JingWoo/CRI2021
     - !1248 support script format Merge pull request !1248 from JingWoo/CRI2021
     - !1247 Modified run.sh to test different namespace modes From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
@@ -306,8 +187,8 @@
     - !930 make thread detach to avoid resource leak From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
 
     dev stats:
-      - 382 files changed, 33387 insertions(+), 3865 deletions(-)
-      - contributors: haozi007, zhangxiaoyu, gaohuatao, WangFengTu, wujing, Li Feng, HumbleHunger, lifeng68, chengzrz, Tiamo0, jikui, AddoZhang, Annlix, NiGo, XiyouNiGo, holyfei, lauk001, wangyueliang, xiapin, xingweizheng, yin-xiujiang, yinxiujiang, zhangsong234, 尹秀江, 许振涛
+      - 414 files changed, 34805 insertions(+), 4089 deletions(-)
+      - contributors: zhangxiaoyu, haozi007, gaohuatao, WangFengTu, wujing, Li Feng, HumbleHunger, chengzrz, lifeng68, Tiamo0, jikui, AddoZhang, Annlix, NiGo, XiyouNiGo, holyfei, lauk001, tiamo0, wangyueliang, xiapin, xingweizheng, yin-xiujiang, yinxiujiang, zhangsong234, 尹秀江, 许振涛
 
 2020-12-30 lifeng release 2.0.8
     - !920 implent inspect of  multy formats From: @jackey_1024 Reviewed-by: Signed-off-by:
