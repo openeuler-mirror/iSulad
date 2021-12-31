@@ -13,7 +13,7 @@
 ##- @Author: haozi007
 ##- @Create: 2021-12-06
 #######################################################################
-tbranch="master"
+tbranch="stable-v2.0.x"
 if [ $# -eq 1 ]; then
     tbranch=$1
 fi
