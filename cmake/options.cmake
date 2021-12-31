@@ -79,7 +79,7 @@ if (ENABLE_METRICS STREQUAL "ON")
     set(ENABLE_METRICS 1)
 endif()
 
-option(ENABLE_NATIVE_NETWORK "enable native network" OFF)
+option(ENABLE_NATIVE_NETWORK "enable native network" ON)
 if (ENABLE_NATIVE_NETWORK STREQUAL "ON")
     add_definitions(-DENABLE_NATIVE_NETWORK)
     set(ENABLE_NATIVE_NETWORK 1)
