@@ -120,6 +120,9 @@ For more informations on how to use `iSulad`, please refer to the [guide](https:
 
     How to integrate with `kubernetes` please refer to [integration.md](./docs/integration.md)
 
+### Operations about native network
+
+Operations about how to use native network, please refer to the `docs/manual/native_network.md`
 
 ### Build from source
 Build requirements for developers are listed in [build_guide](./docs/build_guide.md)
