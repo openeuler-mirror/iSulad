@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 12
+%global _release 13
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -36,6 +36,7 @@ Patch0020: 0020-Optimize-websocket-streaming-service-code.patch
 Patch0021: 0021-Fixed-a-bug-that-occurs-when-starting-container-in-h.patch
 Patch0022: 0022-fix-memory-leak-in-CniNetworkPlugin.patch
 Patch0023: 0023-fix-codex-error.patch
+Patch0024: 0024-fix-compile-error-when-building-embedded-image.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -260,6 +261,12 @@ fi
 %endif
 
 %changelog
+* Tue Jan 4 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.10-13
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: fix compile error when building embedded image
+
 * Mon Dec 27 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-12
 - Type: bugfix
 - ID: NA
