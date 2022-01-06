@@ -100,6 +100,7 @@ ldconfig
 cd ~
 git clone https://gitee.com/openeuler/lcr.git
 cd lcr
+git checkout origin/stable-v2.0.x
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/utils.c
 mkdir -p build
 cd build
@@ -154,6 +155,7 @@ ldconfig
 cd ~
 git clone https://gitee.com/openeuler/clibcni.git
 cd clibcni
+git checkout origin/stable-v2.0.x
 mkdir -p build
 cd build
 cmake  -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} ../

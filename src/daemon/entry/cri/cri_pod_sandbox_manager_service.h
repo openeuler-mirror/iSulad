@@ -24,6 +24,8 @@
 namespace CRI {
 class PodSandboxManagerService {
 public:
+    PodSandboxManagerService() = default;
+    virtual ~PodSandboxManagerService() = default;
     virtual auto RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &runtimeHandler,
                                Errors &error) -> std::string = 0;
 

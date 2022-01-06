@@ -190,6 +190,7 @@ protected:
     auto SetMetadataInfo(ClientContext &context) -> int
     {
         // Set common name from cert.perm
+#ifdef OPENSSL_VERIFY
         char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
         int ret = get_common_name_from_tls_cert(m_certFile.c_str(), common_name_value,
                                                 ClientBaseConstants::COMMON_NAME_LEN);
@@ -199,6 +200,7 @@ protected:
         }
         context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
         context.AddMetadata("tls_mode", m_tlsMode);
+#endif
 
         return 0;
     }
