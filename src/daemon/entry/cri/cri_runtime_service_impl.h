@@ -98,7 +98,6 @@ protected:
 private:
     std::string m_podSandboxImage;
     std::shared_ptr<Network::PluginManager> m_pluginManager { nullptr };
-    service_executor_t *m_cb { nullptr };
 };
 } // namespace CRI
 #endif // DAEMON_ENTRY_CRI_CRI_RUNTIME_SERVICE_IMPL_H

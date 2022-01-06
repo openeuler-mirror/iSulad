@@ -72,7 +72,7 @@ cd $ISULAD_COPY_PATH
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/utils/cutils/utils.c
 rm -rf build
 mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON -DENABLE_SHIM_V2=ON ..
+cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON -DENABLE_SHIM_V2=ON -DENABLE_METRICS=ON ..
 make -j $(nproc)
 make install
 ctest -T memcheck --output-on-failure
@@ -106,9 +106,9 @@ rm -rf build
 mkdir build
 cd build
 if [[ ${enable_gcov} -ne 0 ]]; then
-  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=Debug -DGCOV=ON -DENABLE_EMBEDDED=ON -DENABLE_COVERAGE=ON -DENABLE_UT=ON ..
+  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=Debug -DGCOV=ON -DENABLE_EMBEDDED=ON -DENABLE_COVERAGE=ON -DENABLE_UT=ON -DENABLE_METRICS=ON ..
 else
-  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DENABLE_EMBEDDED=ON ..
+  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DENABLE_EMBEDDED=ON -DENABLE_METRICS=ON ..
 fi
 make -j $(nproc)
 make install

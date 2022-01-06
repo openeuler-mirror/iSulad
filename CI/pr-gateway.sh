@@ -64,6 +64,7 @@ make install
 popd
 popd
 
+# build iSulad with grpc
 ldconfig
 pushd iSulad
 rm -rf build
@@ -73,5 +74,38 @@ cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=OFF
 #cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=ON ../ || exit 1
 make -j $(nproc) || exit 1
 ctest -V
+popd
+popd
+
+# build iSulad with restful
+ldconfig
+pushd iSulad
+rm -rf build
+mkdir build
+pushd build
+cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DEANBLE_IMAGE_LIBARAY=OFF -DENABLE_SHIM_V2=OFF -DENABLE_GRPC=OFF  ../ || exit 1
+make -j $(nproc) || exit 1
+popd
+popd
+
+# build iSulad with least modules
+ldconfig
+pushd iSulad
+rm -rf build
+mkdir build
+pushd build
+cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DEANBLE_IMAGE_LIBARAY=OFF -DENABLE_OPENSSL_VERIFY=OFF -DENABLE_SYSTEMD_NOTIFY=OFF -DENABLE_SHIM_V2=OFF -DENABLE_GRPC=OFF -DENABLE_NATIVE_NETWORK=OFF -DDISABLE_OCI=ON ../ || exit 1
+make -j $(nproc) || exit 1
+popd
+popd
+
+# build iSulad with grpc and static library
+ldconfig
+pushd iSulad
+rm -rf build
+mkdir build
+pushd build
+cmake -DUSESHARED=OFF -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=OFF ../ || exit 1
+make -j $(nproc) || exit 1
 popd
 popd

@@ -759,8 +759,8 @@ static int container_save_network_settings_config(const container_t *cont)
     parser_error err = NULL;
     char *json_network_settings = NULL;
 
-    if (cont == NULL) {
-        return -1;
+    if (cont->network_settings == NULL) {
+        return 0;
     }
 
     json_network_settings = container_network_settings_generate_json(cont->network_settings, NULL, &err);
