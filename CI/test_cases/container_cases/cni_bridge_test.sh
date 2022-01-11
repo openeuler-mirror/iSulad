@@ -14,7 +14,10 @@
 # - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
 # - PURPOSE.
 # - See the Mulan PSL v2 for more details.
-##- @Description:CI
+##- @Description: CI test case for cni bridge feature.
+#                 It will create and start two pods, then pods ping
+#                 each other. The expected behavior is that packets can be
+#                 detected on cni0 by tcpdump. 
 ##- @Author: chengzeruizhi
 ##- @Create: 2021-11-30
 #######################################################################
