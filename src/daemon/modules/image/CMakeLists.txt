@@ -73,7 +73,7 @@ set(LIB_ISULAD_IMG_SRCS
     ${CMAKE_SOURCE_DIR}/src/daemon/config/daemon_arguments.c
     )
 
-if (ENALBE_SELINUX)
+if (ENABLE_SELINUX)
     list(APPEND LIB_ISULAD_IMG_SRCS
         ${CMAKE_SOURCE_DIR}/src/daemon/common/selinux_label.c
         )
@@ -123,7 +123,7 @@ if (ENABLE_OCI_IMAGE)
         )
 endif()
 
-if (ENALBE_SELINUX)
+if (ENABLE_SELINUX)
     target_link_libraries(${LIB_ISULAD_IMG}
         ${SELINUX_LIBRARY}
         )
