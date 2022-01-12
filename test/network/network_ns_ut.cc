@@ -23,6 +23,13 @@
 #include "namespace.h"
 #include "utils.h"
 
+// check the functionality of namespace_is_cni.
+// The tested function should handle null pointer properly and
+// it should confuse a wrong string starting with correct prefix with a true
+// correct string.
+// 1. set input srting to be: "cni", Expected return true
+// 2. set input srting to be: "cni:123456", Expected return false
+// 3. set input srting to be nullptr, Expected return false
 TEST(network_ns_ut, test_namespace_is_cni)
 {
     const char *mode1 = (const char *)"cni";
@@ -38,6 +45,13 @@ TEST(network_ns_ut, test_namespace_is_cni)
     EXPECT_FALSE(res3);
 }
 
+// check the functionality of namespace_is_bridge.
+// The tested function should handle null pointer properly and
+// it should confuse a wrong string starting with correct prefix with a true
+// correct string.
+// 1. set input srting to be: "bridge", Expected return true
+// 2. set input srting to be: "bridge:123456", Expected return false
+// 3. set input srting to be nullptr, Expected return false
 TEST(network_ns_ut, test_namespace_is_bridge)
 {
     const char *mode1 = (const char *)"bridge";
@@ -53,6 +67,11 @@ TEST(network_ns_ut, test_namespace_is_bridge)
     EXPECT_FALSE(res3);
 }
 
+// This test case checks if get_network_namespace_path can correctly
+// get netns path when network mode is cni.
+// Two conditions are taken into consideration
+// 1. set network mode to be cni, expected return 0
+// 2. set network mode to be nullptr, expected return -1
 TEST(network_ns_ut, test_get_network_namespace_path)
 {
     // 1. normal cases
