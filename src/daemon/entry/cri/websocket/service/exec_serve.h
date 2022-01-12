@@ -37,6 +37,6 @@ private:
     virtual void *SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) override;
     virtual int ExecuteStreamCommand(SessionData *lwsCtx, void *request) override;
     virtual void CloseConnect(SessionData *lwsCtx) override;
-    virtual void FreeRequest(void *m_request);
+    virtual void FreeRequest(void *m_request) override;
 };
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_EXEC_SERVE_H

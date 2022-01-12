@@ -18,7 +18,7 @@ execute_process(
 	OUTPUT_VARIABLE BUILD_DATE
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-message("-- build time: " ${BUILD_DATE})
+message("--  build time: " ${BUILD_DATE})
 add_definitions(-DISULAD_BUILD_TIME="${BUILD_DATE}")
 
 if (NOT ISULAD_ROOT_PATH)
@@ -75,8 +75,6 @@ IF(CMAKE_BUILD_TYPE STREQUAL Debug)
 ENDIF()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
-OPTION(ENABLE_UT "ut switch" OFF)
-OPTION(ENABLE_FUZZ "fuzz switch" OFF)
 IF(ENABLE_UT)
     include(CTest)
     include(Dart)

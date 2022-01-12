@@ -23,6 +23,9 @@
 namespace CRI {
 class RuntimeManagerService {
 public:
+    RuntimeManagerService() = default;
+    virtual ~RuntimeManagerService() = default;
+
     virtual void UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors &error) = 0;
 
     virtual auto Status(Errors &error) -> std::unique_ptr<runtime::v1alpha2::RuntimeStatus> = 0;

@@ -28,6 +28,8 @@ class RuntimeImageServiceImpl : public
     runtime::v1alpha2::ImageService::Service {
 public:
     RuntimeImageServiceImpl();
+    RuntimeImageServiceImpl(const RuntimeImageServiceImpl &) = delete;
+    RuntimeImageServiceImpl &operator=(const RuntimeImageServiceImpl &) = delete;
     virtual ~RuntimeImageServiceImpl() = default;
 
     grpc::Status PullImage(grpc::ServerContext *context,

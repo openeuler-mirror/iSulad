@@ -252,8 +252,8 @@ static int do_append_host_port(const char *key, const char *host_ip, int host_po
     // int -> int
     map_t *tmp = NULL;
     char *proto = NULL;
-    int container_port;
-    int *found_port;
+    int container_port = 0;
+    int *found_port = NULL;
     cni_anno_port_mappings_element *elem = NULL;
     int ret = 0;
 

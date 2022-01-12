@@ -24,6 +24,9 @@
 namespace CRI {
 class ImageManagerService {
 public:
+    ImageManagerService() = default;
+    virtual ~ImageManagerService() = default;
+
     virtual void ListImages(const runtime::v1alpha2::ImageFilter &filter,
                             std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images, Errors &error) = 0;
 

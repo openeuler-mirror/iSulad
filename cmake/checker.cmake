@@ -30,14 +30,6 @@ else()
     message("--  found linux capability.h --- no")
 endif()
 
-if (SYSTEMD_NOTIFY)
-# check systemd
-    find_path(SYSTEMD_INCLUDE_DIR systemd/sd-daemon.h)
-    _CHECK(SYSTEMD_INCLUDE_DIR "SYSTEMD_INCLUDE_DIR-NOTFOUND" "systemd/sd-daemon.h")
-    find_library(SYSTEMD_LIBRARY systemd)
-    _CHECK(SYSTEMD_LIBRARY "SYSTEMD_LIBRARY-NOTFOUND" "libsystemd.so")
-endif()
-
 # check zlib
 pkg_check_modules(PC_ZLIB "zlib>=1.2.8")
 find_path(ZLIB_INCLUDE_DIR zlib.h
@@ -55,23 +47,6 @@ _CHECK(LIBYAJL_INCLUDE_DIR "LIBYAJL_INCLUDE_DIR-NOTFOUND" "yajl/yajl_tree.h")
 find_library(LIBYAJL_LIBRARY yajl
     HINTS ${PC_LIBYAJL_LIBDIR} ${PC_LIBYAJL_LIBRARY_DIRS})
 _CHECK(LIBYAJL_LIBRARY "LIBYAJL_LIBRARY-NOTFOUND" "libyajl.so")
-
-if (ENABLE_OCI_IMAGE)
-# check libarchive
-pkg_check_modules(PC_LIBARCHIVE REQUIRED "libarchive>=3.4")
-find_path(LIBARCHIVE_INCLUDE_DIR archive.h
-	HINTS ${PC_LIBARCHIVE_INCLUDEDIR} ${PC_LIBARCHIVE_INCLUDE_DIRS})
-_CHECK(LIBARCHIVE_INCLUDE_DIR "LIBARCHIVE_INCLUDE_DIR-NOTFOUND" "archive.h")
-find_library(LIBARCHIVE_LIBRARY archive
-    HINTS ${PC_LIBARCHIVE_LIBDIR} ${PC_LIBARCHIVE_LIBRARY_DIRS})
-_CHECK(LIBARCHIVE_LIBRARY "LIBARCHIVE_LIBRARY-NOTFOUND" "libarchive.so")
-
-# check websocket
-find_path(WEBSOCKET_INCLUDE_DIR libwebsockets.h)
-_CHECK(WEBSOCKET_INCLUDE_DIR "WEBSOCKET_INCLUDE_DIR-NOTFOUND" libwebsockets.h)
-find_library(WEBSOCKET_LIBRARY websockets)
-_CHECK(WEBSOCKET_LIBRARY "WEBSOCKET_LIBRARY-NOTFOUND" "libwebsockets.so")
-endif()
 
 # check libcrypto
 pkg_check_modules(PC_CRYPTO REQUIRED "libcrypto")
@@ -91,6 +66,14 @@ _CHECK(CURL_INCLUDE_DIR "CURL_INCLUDE_DIR-NOTFOUND" "curl/curl.h")
 find_library(CURL_LIBRARY curl
 	HINTS ${PC_CURL_LIBDIR} ${PC_CURL_LIBRARY_DIRS})
 _CHECK(CURL_LIBRARY "CURL_LIBRARY-NOTFOUND" "libcurl.so")
+
+if (SYSTEMD_NOTIFY)
+    # check systemd
+    find_path(SYSTEMD_INCLUDE_DIR systemd/sd-daemon.h)
+    _CHECK(SYSTEMD_INCLUDE_DIR "SYSTEMD_INCLUDE_DIR-NOTFOUND" "systemd/sd-daemon.h")
+    find_library(SYSTEMD_LIBRARY systemd)
+    _CHECK(SYSTEMD_LIBRARY "SYSTEMD_LIBRARY-NOTFOUND" "libsystemd.so")
+endif()
 
 if (ENABLE_SELINUX)
     pkg_check_modules(PC_SELINUX "libselinux>=2.0")
@@ -124,7 +107,7 @@ if (OPENSSL_VERIFY)
     _CHECK(OPENSSL_INCLUDE_DIR "OPENSSL_INCLUDE_DIR-NOTFOUND" "openssl/x509.h")
 endif()
 
-if (GRPC_CONNECTOR OR ENABLE_OCI_IMAGE)
+if (GRPC_CONNECTOR)
     # check protobuf
     pkg_check_modules(PC_PROTOBUF "protobuf>=3.1.0")
     find_library(PROTOBUF_LIBRARY protobuf
@@ -150,11 +133,11 @@ if (GRPC_CONNECTOR OR ENABLE_OCI_IMAGE)
     # no check
     find_library(ABSL_SYNC_LIB absl_synchronization)
 
-    # check devmapper
-    find_path(DEVMAPPER_INCLUDE_DIR libdevmapper.h)
-    _CHECK(DEVMAPPER_INCLUDE_DIR "DEVMAPPER_INCLUDE_DIR-NOTFOUND" "libdevmapper.h")
-    find_library(DEVMAPPER_LIBRARY devmapper)
-    _CHECK(DEVMAPPER_LIBRARY "DEVMAPPER_LIBRARY-NOTFOUND" "libdevmapper.so")
+    # check websocket
+    find_path(WEBSOCKET_INCLUDE_DIR libwebsockets.h)
+    _CHECK(WEBSOCKET_INCLUDE_DIR "WEBSOCKET_INCLUDE_DIR-NOTFOUND" libwebsockets.h)
+    find_library(WEBSOCKET_LIBRARY websockets)
+    _CHECK(WEBSOCKET_LIBRARY "WEBSOCKET_LIBRARY-NOTFOUND" "libwebsockets.so")
 endif()
 
 if ((NOT GRPC_CONNECTOR) OR (GRPC_CONNECTOR AND ENABLE_METRICS))
@@ -173,6 +156,23 @@ if ((NOT GRPC_CONNECTOR) OR (GRPC_CONNECTOR AND ENABLE_METRICS))
     find_library(EVHTP_LIBRARY evhtp
         HINTS ${PC_EVHTP_LIBDIR} ${PC_EVHTP_LIBRARY_DIRS})
     _CHECK(EVHTP_LIBRARY "EVHTP_LIBRARY-NOTFOUND" "libevhtp.so")
+endif()
+
+if (ENABLE_OCI_IMAGE)
+    # check devmapper
+    find_path(DEVMAPPER_INCLUDE_DIR libdevmapper.h)
+    _CHECK(DEVMAPPER_INCLUDE_DIR "DEVMAPPER_INCLUDE_DIR-NOTFOUND" "libdevmapper.h")
+    find_library(DEVMAPPER_LIBRARY devmapper)
+    _CHECK(DEVMAPPER_LIBRARY "DEVMAPPER_LIBRARY-NOTFOUND" "libdevmapper.so")
+
+    # check libarchive
+    pkg_check_modules(PC_LIBARCHIVE REQUIRED "libarchive>=3.4")
+    find_path(LIBARCHIVE_INCLUDE_DIR archive.h
+        HINTS ${PC_LIBARCHIVE_INCLUDEDIR} ${PC_LIBARCHIVE_INCLUDE_DIRS})
+    _CHECK(LIBARCHIVE_INCLUDE_DIR "LIBARCHIVE_INCLUDE_DIR-NOTFOUND" "archive.h")
+    find_library(LIBARCHIVE_LIBRARY archive
+        HINTS ${PC_LIBARCHIVE_LIBDIR} ${PC_LIBARCHIVE_LIBRARY_DIRS})
+    _CHECK(LIBARCHIVE_LIBRARY "LIBARCHIVE_LIBRARY-NOTFOUND" "libarchive.so")
 endif()
 
 if (ENABLE_EMBEDDED_IMAGE)
