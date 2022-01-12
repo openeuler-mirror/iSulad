@@ -1,5 +1,5 @@
 %global _version 2.0.10
-%global _release 14
+%global _release 15
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -38,6 +38,7 @@ Patch0022: 0022-fix-memory-leak-in-CniNetworkPlugin.patch
 Patch0023: 0023-fix-codex-error.patch
 Patch0024: 0024-fix-compile-error-when-building-embedded-image.patch
 Patch0025: 0025-fix-compile-error-with-grpc-1.41.x.patch
+Patch0026: 0026-fix-compile-error-of-isula-transform.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -262,6 +263,12 @@ fi
 %endif
 
 %changelog
+* Wed Jan 12 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.10-15
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: fix compile error of isula-transform
+
 * Wed Jan 12 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.10-14
 - Type: bugfix
 - ID: NA
