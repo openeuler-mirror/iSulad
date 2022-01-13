@@ -36,10 +36,10 @@ public:
 
 protected:
     virtual void SetServeThreadName() = 0;
-    virtual int SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) = 0;
-    virtual int ExecuteStreamCommand(SessionData *lwsCtx) = 0;
-    virtual void ErrorHandler(int ret, SessionData *lwsCtx) = 0;
+    virtual void *SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) = 0;
+    virtual int ExecuteStreamCommand(SessionData *lwsCtx, void *request) = 0;
     virtual void CloseConnect(SessionData *lwsCtx) = 0;
+    virtual void FreeRequest(void *m_request) = 0;
 };
 
 class RouteCallbackRegister {

@@ -20,25 +20,19 @@
 #include "utils.h"
 #include "cri_helpers.h"
 
-ExecServe::~ExecServe()
-{
-    free_container_exec_request(m_request);
-    free_container_exec_response(m_response);
-}
-
 void ExecServe::SetServeThreadName()
 {
     prctl(PR_SET_NAME, "ExecServe");
 }
 
-int ExecServe::SetContainerStreamRequest(::google::protobuf::Message *request, const std::string &suffix)
+void *ExecServe::SetContainerStreamRequest(::google::protobuf::Message *request, const std::string &suffix)
 {
     auto *grequest = dynamic_cast<runtime::v1alpha2::ExecRequest *>(request);
 
-    m_request = static_cast<container_exec_request *>(util_common_calloc_s(sizeof(container_exec_request)));
+    auto *m_request = static_cast<container_exec_request *>(util_common_calloc_s(sizeof(container_exec_request)));
     if (m_request == nullptr) {
         ERROR("Out of memory");
-        return -1;
+        return nullptr;
     }
 
     m_request->tty = grequest->tty();
@@ -53,12 +47,12 @@ int ExecServe::SetContainerStreamRequest(::google::protobuf::Message *request, c
     if (grequest->cmd_size() > 0) {
         if (static_cast<size_t>(grequest->cmd_size()) > SIZE_MAX / sizeof(char *)) {
             ERROR("Too many arguments!");
-            return -1;
+            return nullptr;
         }
         m_request->argv = (char **)util_common_calloc_s(sizeof(char *) * grequest->cmd_size());
         if (m_request->argv == nullptr) {
             ERROR("Out of memory!");
-            return -1;
+            return nullptr;
         }
         for (int i = 0; i < grequest->cmd_size(); i++) {
             m_request->argv[i] = util_strdup_s(grequest->cmd(i).c_str());
@@ -68,10 +62,10 @@ int ExecServe::SetContainerStreamRequest(::google::protobuf::Message *request, c
 
     m_request->suffix = util_strdup_s(suffix.c_str());
 
-    return 0;
+    return m_request;
 }
 
-int ExecServe::ExecuteStreamCommand(SessionData *lwsCtx)
+int ExecServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
 {
     auto *cb = get_service_executor();
     if (cb == nullptr || cb->container.exec == nullptr) {
@@ -90,13 +84,12 @@ int ExecServe::ExecuteStreamCommand(SessionData *lwsCtx)
     StderrstringWriter.write_func = WsWriteStderrToClient;
     StderrstringWriter.close_func = nullptr;
 
-    return cb->container.exec(m_request, &m_response, m_request->attach_stdin ? lwsCtx->pipes.at(0) : -1,
-                              m_request->attach_stdout ? &StdoutstringWriter : nullptr,
-                              m_request->attach_stderr ? &StderrstringWriter : nullptr);
-}
-
-void ExecServe::ErrorHandler(int ret, SessionData *lwsCtx)
-{
+    auto *m_request = static_cast<container_exec_request *>(request);
+    container_exec_response *m_response { nullptr };
+    int ret = cb->container.exec(m_request, &m_response, m_request->attach_stdin ? lwsCtx->pipes.at(0) : -1,
+                                 m_request->attach_stdout ? &StdoutstringWriter : nullptr,
+                                 m_request->attach_stderr ? &StderrstringWriter : nullptr);
+    
     if (ret != 0) {
         std::string message;
         if (m_response != nullptr && m_response->errmsg != nullptr) {
@@ -110,9 +103,17 @@ void ExecServe::ErrorHandler(int ret, SessionData *lwsCtx)
         std::string exit_info = "Exit code :" + std::to_string((int)m_response->exit_code) + "\n";
         WsWriteStdoutToClient(lwsCtx, exit_info.c_str(), exit_info.length());
     }
+
+    free_container_exec_response(m_response);
+    return ret;
 }
 
 void ExecServe::CloseConnect(SessionData *lwsCtx)
 {
     closeWsConnect((void*)lwsCtx, nullptr);
+}
+
+void ExecServe::FreeRequest(void *m_request)
+{
+    free_container_exec_request(static_cast<container_exec_request *>(m_request));
 }
