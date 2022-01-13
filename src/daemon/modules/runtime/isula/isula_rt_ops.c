@@ -293,6 +293,14 @@ out:
         *cmd = "kata-runtime";
         return;
     }
+
+#ifdef ENABLE_GVISOR
+    if (strcmp(runtime, "runsc") == 0) {
+        *cmd = "runsc";
+        return;
+    }
+#endif
+
     if (*cmd == NULL) {
         ERROR("missing match runtime config for %s", runtime);
     }

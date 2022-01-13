@@ -1027,7 +1027,11 @@ static int merge_memory_swappiness(oci_runtime_spec *oci_spec, uint64_t *memory_
     }
 
     if (memory_swappiness == NULL) {
+#ifndef ENABLE_GVISOR
         oci_spec->linux->resources->memory->swappiness = (uint64_t)(-1);
+#else
+        oci_spec->linux->resources->memory->swappiness = 0;
+#endif
     } else {
         oci_spec->linux->resources->memory->swappiness = *memory_swappiness;
     }

@@ -122,5 +122,10 @@ if (EANBLE_IMAGE_LIBARAY STREQUAL "ON")
     set(EANBLE_IMAGE_LIBARAY 1)
 endif()
 
+option(ENABLE_GVISOR "enable gvisor" OFF)
+if (ENABLE_GVISOR)
+    add_definitions(-DENABLE_GVISOR)
+    message("${Green}--  Enable runtime gvisor${ColourReset}")
+endif()
 
 message("${BoldGreen}---- Selected options end ----${ColourReset}")
