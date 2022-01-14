@@ -64,19 +64,6 @@ make install
 popd
 popd
 
-# build iSulad with grpc
-ldconfig
-pushd iSulad
-rm -rf build
-mkdir build
-pushd build
-cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=OFF ../ || exit 1
-#cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=ON ../ || exit 1
-make -j $(nproc) || exit 1
-ctest -V
-popd
-popd
-
 # build iSulad with restful
 ldconfig
 pushd iSulad
@@ -107,5 +94,17 @@ mkdir build
 pushd build
 cmake -DUSESHARED=OFF -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=OFF ../ || exit 1
 make -j $(nproc) || exit 1
+popd
+popd
+
+# build iSulad with grpc
+ldconfig
+pushd iSulad
+rm -rf build
+mkdir build
+pushd build
+cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=OFF ../ || exit 1
+make -j $(nproc) || exit 1
+ctest -V
 popd
 popd

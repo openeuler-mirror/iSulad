@@ -107,6 +107,7 @@ RUN dnf install -y  automake \
 			runc \
 			lvm2 \
 			tcpdump \
+			systemd-udev \
 			iputils
 
 RUN yum clean all && \
