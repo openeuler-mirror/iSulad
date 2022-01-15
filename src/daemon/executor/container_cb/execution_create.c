@@ -111,6 +111,12 @@ out:
         return ret;
     }
 
+#ifdef ENABLE_GVISOR
+    if (strcmp(name, "runsc") == 0) {
+        *runtime_res = true;
+        return ret;
+    }
+#endif
     if (convert_v2_runtime(name, NULL) == 0) {
         *runtime_res = true;
     }

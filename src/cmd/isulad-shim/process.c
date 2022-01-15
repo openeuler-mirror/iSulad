@@ -951,7 +951,12 @@ static void get_runtime_cmd(process_t *p, const char *log_path, const char *pid_
     params[i++] = "json";
     if (p->state->exec && process_desc != NULL) {
         params[i++] = "exec";
+#ifdef ENABLE_GVISOR
+        /* gvisor runtime runsc do not support -d option */
+        params[i++] = "--detach";
+#else
         params[i++] = "-d";
+#endif
         params[i++] = "--process";
         params[i++] = process_desc;
     } else {

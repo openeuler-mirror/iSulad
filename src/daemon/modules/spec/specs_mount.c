@@ -2339,6 +2339,7 @@ out_free:
     return ret;
 }
 
+#ifndef ENABLE_GVISOR
 static int change_dev_shm_size(oci_runtime_spec *oci_spec, host_config *host_spec)
 {
     size_t i = 0;
@@ -2380,6 +2381,7 @@ static int change_dev_shm_size(oci_runtime_spec *oci_spec, host_config *host_spe
     ERROR("/dev/shm mount point not exist");
     return -1;
 }
+#endif
 
 static inline bool is_mount_destination_hosts(const char *destination)
 {
@@ -2670,10 +2672,13 @@ out:
 static bool add_shm_mount(defs_mount ***all_mounts, size_t *all_mounts_len, const char *shm_path)
 {
     char **options = NULL;
-    size_t options_len = 3;
+    size_t options_len = 2;
     bool ret = false;
     defs_mount *tmp_mounts = NULL;
 
+#ifndef ENABLE_GVISOR
+    options_len += 1;
+#endif
     options = util_common_calloc_s(options_len * sizeof(char *));
     if (options == NULL) {
         ERROR("Out of memory");
@@ -2681,8 +2686,12 @@ static bool add_shm_mount(defs_mount ***all_mounts, size_t *all_mounts_len, cons
     }
     options[0] = util_strdup_s("rbind");
     options[1] = util_strdup_s("rprivate");
-    // default shm size is 64MB
-    options[2] = util_strdup_s("size=65536k");
+#ifndef ENABLE_GVISOR
+    /* runsc won't distinguish this mount option, the mount operation is performed by high-lever runtime,
+     * and ignored this option for low-level runtime.
+     */
+    options[2] = util_strdup_s("size=65536k"); // default shm size is 64MB
+#endif
     /* generate mount node */
     tmp_mounts = util_common_calloc_s(sizeof(defs_mount));
     if (tmp_mounts == NULL) {
@@ -3294,6 +3303,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
         goto out;
     }
 
+#ifndef ENABLE_GVISOR
     if (!has_mount_shm(host_spec, v2_spec) && host_spec->shm_size > 0) {
         ret = change_dev_shm_size(oci_spec, host_spec);
         if (ret) {
@@ -3301,6 +3311,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
             goto out;
         }
     }
+#endif
 
 out:
     if (mounted) {
