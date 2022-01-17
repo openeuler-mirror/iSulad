@@ -236,8 +236,6 @@ void write_message(int fd, const char *level, const char *fmt, ...)
     if (nwrite != strlen(msg)) {
         return;
     }
-
-    return;
 }
 
 /* note: This function can only read small text file. */

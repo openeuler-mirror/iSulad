@@ -26,19 +26,19 @@ extern "C" {
 
 // error code
 #define SHIM_ERR_BASE (-10000)
-#define SHIM_SYS_ERR(err) (SHIM_ERR_BASE-err)
-#define SHIM_OK    0
-#define SHIM_ERR  -1
-#define SHIM_ERR_WAIT -2
-#define SHIM_ERR_NOT_REQUIRED -3
+#define SHIM_SYS_ERR(err) (SHIM_ERR_BASE - err)
+#define SHIM_OK 0
+#define SHIM_ERR (-1)
+#define SHIM_ERR_WAIT (-2)
+#define SHIM_ERR_NOT_REQUIRED (-3)
 
 #define INFO_MSG "info"
 #define WARN_MSG "warn"
 #define ERR_MSG "error"
 
-#define DEFAULT_TIMEOUT   120 // sec
-#define CONTAINER_ID_LEN  64
-#define MAX_RT_NAME_LEN   64
+#define DEFAULT_TIMEOUT 120 // sec
+#define CONTAINER_ID_LEN 64
+#define MAX_RT_NAME_LEN 64
 #define MAX_CONSOLE_SOCK_LEN 32
 
 #define MAX_RUNTIME_ARGS 20
@@ -73,4 +73,3 @@ int open_no_inherit(const char *path, int flag, mode_t mode);
 #endif
 
 #endif
-
