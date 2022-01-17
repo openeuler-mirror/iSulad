@@ -33,7 +33,7 @@ LXC_LOCK_DIR_CONTAINER="/run/lxc/lock/mount_lock"
 LXC_LOCK_DIR_HOST="/tmp/lxc_mount_dir"
 KEEP_CONTAINERS_ALIVE_DIR="/tmp/containerslock"
 TESTCASE_ASSIGN="${CIDIR}/testcase_assign"
-BASE_IMAGE=""
+BASE_IMAGE="isulad_build_env:v1"
 devmapper_script="${TOPDIR}/CI/install_devmapper.sh"
 disk=NULL
 
@@ -281,7 +281,7 @@ function make_sure_cgroup()
 
 function make_base_image()
 {
-    BASE_IMAGE=`docker build -q -f ${DockerFile} .`
+    docker build -t ${BASE_IMAGE} -f ${DockerFile} .
 }
 
 make_sure_cgroup

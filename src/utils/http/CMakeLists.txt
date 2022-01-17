@@ -22,9 +22,11 @@ target_include_directories(libhttpclient PUBLIC
 set_target_properties(libhttpclient PROPERTIES PREFIX "")
 target_link_libraries(libhttpclient ${HTTP_PARSER_LIBRARY} ${CURL_LIBRARY})
 
+set_target_properties(libhttpclient PROPERTIES LINKER_LANGUAGE "C")
+
 if (ISULAD_GCOV)
     target_link_libraries(libhttpclient -lgcov)
 endif()
 
 install(TARGETS libhttpclient 
-    LIBRARY DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+    ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)

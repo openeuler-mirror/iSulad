@@ -42,6 +42,7 @@ set(IMAGE_INCS
     PARENT_SCOPE
     )
 
+if (EANBLE_IMAGE_LIBARAY)
 # set sources and headers for libisulad_img
 set(LIB_ISULAD_IMG libisulad_img)
 
@@ -88,6 +89,7 @@ endif()
 add_library(${LIB_ISULAD_IMG} ${LIBTYPE}
     ${LIB_ISULAD_IMG_SRCS}
     )
+set_target_properties(${LIB_ISULAD_IMG} PROPERTIES LINKER_LANGUAGE "C")
 
 target_include_directories(${LIB_ISULAD_IMG} PUBLIC
     ${local_image_incs}
@@ -130,4 +132,6 @@ endif()
 target_compile_definitions(${LIB_ISULAD_IMG} PRIVATE LIB_ISULAD_IMG_SO)
 
 install(TARGETS ${LIB_ISULAD_IMG}
-    LIBRARY DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+    ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+
+endif() # EANBLE_IMAGE_LIBARAY

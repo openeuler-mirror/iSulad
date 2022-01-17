@@ -71,8 +71,9 @@ function check_last_status()
 
 	last_isulad_cpu_usage=$(ps -o %cpu -p $(cat /var/run/isulad.pid) | sed -n '2p')
 	allowable_isulad_cpu_usage=$(echo "$origin_isulad_cpu_usage*2" | bc)
-	if [[ $(echo "$allowable_isulad_cpu_usage < 80.0" | bc) -eq 1 ]]; then
-		allowable_isulad_cpu_usage=80.0
+	# adapt to fedora docker image
+	if [[ $(echo "$allowable_isulad_cpu_usage < 81.0" | bc) -eq 1 ]]; then
+		allowable_isulad_cpu_usage=81.0
 	fi
 	msg_info "allowable isulad cpu usage: $allowable_isulad_cpu_usage"
 	if [[ $(echo "$last_isulad_cpu_usage > $allowable_isulad_cpu_usage" | bc) -eq 1 ]]; then
@@ -320,7 +321,8 @@ function test_stream_with_kill_lxc_monitor()
 	sleep 3
 	pid=$(ps aux | grep "lxc monitor" | grep $CID  | awk '{print $2}')
 	kill -9 $pid
-	sleep 3
+	wait_container "$CID" "exited"
+	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to wait container: $CID exited" && ((ret++))
 
 	isula start $CID
 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start container: $CID" && ((ret++))
