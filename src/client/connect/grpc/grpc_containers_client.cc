@@ -2142,7 +2142,7 @@ public:
         // Set common name from cert.perm
         char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
         int ret = get_common_name_from_tls_cert(m_certFile.c_str(), common_name_value,
-                                            ClientBaseConstants::COMMON_NAME_LEN);
+                                                ClientBaseConstants::COMMON_NAME_LEN);
         if (ret != 0) {
             ERROR("Failed to get common name in: %s", m_certFile.c_str());
             return -1;
