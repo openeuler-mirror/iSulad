@@ -351,8 +351,6 @@ static void sem_post_inotify_io_copy(int fd, uint32_t event, void *data)
         thd->shutdown = true;
         (void)sem_post(&thd->sem_thd);
     }
-
-    return;
 }
 
 static int create_io_copy_thread(process_t *p, int std_id)
@@ -1034,7 +1032,7 @@ static void process_delete(process_t *p)
     int i = 0;
     int j;
     char log_path[PATH_MAX] = { 0 };
-    char *cwd;
+    char *cwd = NULL;
 
     cwd = getcwd(NULL, 0);
     if (cwd == NULL) {
