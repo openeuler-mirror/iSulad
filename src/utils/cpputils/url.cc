@@ -109,7 +109,7 @@ int UnescapeDealWithPercentSign(size_t &i, std::string &s, const EncodeMode &mod
         if (s.length() > 3) {
             s.erase(s.begin() + 3, s.end());
         }
-        ERROR("invalid URL escape %s", s.c_str());  // quoted
+        ERROR("invalid URL escape %s", s.c_str()); // quoted
         return -1;
     }
     char s1, s2;
@@ -123,10 +123,10 @@ int UnescapeDealWithPercentSign(size_t &i, std::string &s, const EncodeMode &mod
     }
     if (mode == EncodeMode::ENCODE_ZONE) {
         char v = static_cast<char>((static_cast<unsigned char>(s1) << 4) | static_cast<unsigned char>(s2));
-        if (std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i) + 3) != "%25" &&
-            v != ' ' && ShouldEscape(v, EncodeMode::ENCODE_HOST)) {
-            ERROR("invalid URL escape %s", std::string(s.begin() + static_cast<long>(i),
-                                                       s.begin() + static_cast<long>(i) + 3).c_str());
+        if (std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i) + 3) != "%25" && v != ' ' &&
+            ShouldEscape(v, EncodeMode::ENCODE_HOST)) {
+            ERROR("invalid URL escape %s",
+                  std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i) + 3).c_str());
             return -1;
         }
     }
@@ -153,8 +153,8 @@ int CalculatePercentNum(std::string &s, const EncodeMode &mode, bool &hasPlus)
                 }
                 break;
             default:
-                if ((mode == EncodeMode::ENCODE_HOST || mode == EncodeMode::ENCODE_ZONE) &&
-                    int(s[i]) < 0x80 && ShouldEscape(s[i], mode)) {
+                if ((mode == EncodeMode::ENCODE_HOST || mode == EncodeMode::ENCODE_ZONE) && int(s[i]) < 0x80 &&
+                    ShouldEscape(s[i], mode)) {
                     ERROR("invalid URL escape %s", std::string(s.begin() + (long)i, s.begin() + (long)i + 1).c_str());
                     return -1;
                 }
@@ -319,7 +319,7 @@ URLDatum *Parse(const std::string &rawurl)
 {
     std::string u, frag;
     Split(rawurl, "#", true, u, frag);
-    auto url = Parse(u, false);
+    auto *url = Parse(u, false);
     if (url == nullptr) {
         return nullptr;
     }
@@ -335,12 +335,11 @@ URLDatum *Parse(const std::string &rawurl)
 
 int SplitOffPossibleLeading(std::string &scheme, const std::string &rawurl, URLDatum *url, std::string &rest)
 {
-    if (Getscheme(rawurl, scheme, rest)) {
+    if (Getscheme(rawurl, scheme, rest) != 0) {
         return -1;
     }
     std::transform(scheme.begin(), scheme.end(), scheme.begin(), ::tolower);
-    if (rest.at(rest.length() - 1) == '?' &&
-        std::count(rest.begin(), rest.end(), '?') == 1) {
+    if (rest.at(rest.length() - 1) == '?' && std::count(rest.begin(), rest.end(), '?') == 1) {
         url->SetForceQuery(true);
         rest = rest.substr(0, rest.length() - 1);
     } else {
@@ -351,8 +350,8 @@ int SplitOffPossibleLeading(std::string &scheme, const std::string &rawurl, URLD
     return 0;
 }
 
-URLDatum *HandleNonBackslashPrefix(URLDatum *url, const std::string &scheme,
-                                   const std::string &rest, bool viaRequest, bool &should_ret)
+URLDatum *HandleNonBackslashPrefix(URLDatum *url, const std::string &scheme, const std::string &rest, bool viaRequest,
+                                   bool &should_ret)
 {
     if (rest.at(0) == '/') {
         return nullptr;
@@ -403,7 +402,7 @@ URLDatum *Parse(const std::string &rawurl, bool viaRequest)
         ERROR("empty url!");
         return nullptr;
     }
-    URLDatum *url = new (std::nothrow) URLDatum;
+    auto *url = new (std::nothrow) URLDatum;
     if (url == nullptr) {
         ERROR("Out of memory");
         return nullptr;
@@ -414,15 +413,15 @@ URLDatum *Parse(const std::string &rawurl, bool viaRequest)
     }
     std::string scheme = url->GetScheme();
     std::string rest;
-    if (SplitOffPossibleLeading(scheme, rawurl, url, rest)) {
+    if (SplitOffPossibleLeading(scheme, rawurl, url, rest) != 0) {
         return nullptr;
     }
     bool should_ret = false;
-    auto tmpret = HandleNonBackslashPrefix(url, scheme, rest, viaRequest, should_ret);
+    auto *tmpret = HandleNonBackslashPrefix(url, scheme, rest, viaRequest, should_ret);
     if (should_ret) {
         return tmpret;
     }
-    if (SetURLDatumInfo(url, scheme, viaRequest, rest)) {
+    if (SetURLDatumInfo(url, scheme, viaRequest, rest) != 0) {
         return nullptr;
     }
     return url;
@@ -432,13 +431,13 @@ int ParseAuthority(const std::string &authority, UserInfo **user, std::string &h
 {
     size_t i = authority.find("@");
     if (i == std::string::npos) {
-        if (ParseHost(authority, host)) {
+        if (ParseHost(authority, host) != 0) {
             *user = nullptr;
             host = "";
             return -1;
         }
     } else {
-        if (ParseHost(authority.substr(i + 1, authority.size()), host)) {
+        if (ParseHost(authority.substr(i + 1, authority.size()), host) != 0) {
             *user = nullptr;
             host = "";
             return -1;
@@ -602,7 +601,7 @@ std::string GetFullPreResolvePath(const std::string &base, const std::string &re
 void SplitFullPreResolvePath(const std::string &full, std::vector<std::string> &dst)
 {
     std::vector<std::string> src = CXXUtils::Split(full, '/');
-    for (auto elem : src) {
+    for (const auto &elem : src) {
         if (elem == ".") {
             continue;
         } else if (elem == "..") {
@@ -676,8 +675,8 @@ bool ValidUserinfo(const std::string &s)
 {
     std::string subDelims = R"(-._:~!$&'()*+,;=%@)";
     for (const auto &r : s) {
-        if (('A' <= r && r <= 'Z') || ('a' <= r && r <= 'z') ||
-            ('0' <= r && r <= '9') || (subDelims.find(r) != std::string::npos)) {
+        if (('A' <= r && r <= 'Z') || ('a' <= r && r <= 'z') || ('0' <= r && r <= '9') ||
+            (subDelims.find(r) != std::string::npos)) {
             continue;
         }
         return false;
@@ -687,11 +686,11 @@ bool ValidUserinfo(const std::string &s)
 
 std::string Values::Get(const std::string &key)
 {
-    if (v.size() == 0) {
+    if (v.empty()) {
         return "";
     }
     std::vector<std::string> vs = v[key];
-    if (vs.size() == 0) {
+    if (vs.empty()) {
         return "";
     }
     return vs[0];
@@ -731,7 +730,7 @@ std::string Values::Encode()
     for (auto k : keys) {
         std::vector<std::string> vs = v[k];
         std::string keyEscaped = QueryEscape(k);
-        for (auto elem : vs) {
+        for (const auto &elem : vs) {
             if (buf.length() > 0) {
                 buf.append("&");
             }
@@ -817,8 +816,7 @@ void URLDatum::StringOpaqueEmptyRules(std::string &buf)
     }
     if (buf.length() == 0) {
         auto i = m_path.find(":");
-        if (i != std::string::npos &&
-            path.substr(0, i).find("/") == std::string::npos) {
+        if (i != std::string::npos && path.substr(0, i).find("/") == std::string::npos) {
             buf.append("./");
         }
     }
@@ -855,7 +853,7 @@ bool URLDatum::IsAbs() const
 
 std::unique_ptr<URLDatum> URLDatum::UrlParse(const std::string &ref)
 {
-    auto refurl = Parse(ref);
+    auto *refurl = Parse(ref);
     if (refurl == nullptr) {
         return nullptr;
     }
@@ -894,8 +892,7 @@ std::unique_ptr<URLDatum> URLDatum::ResolveReference(URLDatum *ref)
     return url;
 }
 
-
-auto URLDatum::Query() ->std::map<std::string, std::vector<std::string>>
+auto URLDatum::Query() -> std::map<std::string, std::vector<std::string>>
 {
     return ParseQuery(m_rawQuery);
 }
@@ -928,6 +925,4 @@ std::string URLDatum::Port() const
 {
     return PortOnly(m_host);
 }
-}  // namespace url
-
-
+} // namespace url
