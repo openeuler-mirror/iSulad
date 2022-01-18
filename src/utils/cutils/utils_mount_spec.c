@@ -31,8 +31,8 @@
 #include "path.h"
 
 #define CACHE_ERRMSG_LEN 512
-#define CACHE_ERRMSG(errmsg, fmt, args...)              \
-    do {                                         \
+#define CACHE_ERRMSG(errmsg, fmt, args...)                     \
+    do {                                                       \
         (void)snprintf(errmsg, CACHE_ERRMSG_LEN, fmt, ##args); \
     } while (0)
 
@@ -49,8 +49,8 @@ static int parse_mount_item_type(const char *value, char *mount_str, mount_spec 
     }
 
 #ifdef ENABLE_OCI_IMAGE
-    if (strcmp(value, MOUNT_TYPE_SQUASHFS) && strcmp(value, MOUNT_TYPE_BIND) &&
-        strcmp(value, MOUNT_TYPE_VOLUME) && strcmp(value, MOUNT_TYPE_TMPFS)) {
+    if (strcmp(value, MOUNT_TYPE_SQUASHFS) != 0 && strcmp(value, MOUNT_TYPE_BIND) != 0 &&
+        strcmp(value, MOUNT_TYPE_VOLUME) != 0 && strcmp(value, MOUNT_TYPE_TMPFS) != 0) {
         CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Type must be one of squashfs/bind/volume/tmpfs",
                      mount_str);
 #else
@@ -67,7 +67,7 @@ static int parse_mount_item_type(const char *value, char *mount_str, mount_spec 
 
 static int parse_mount_item_src(const char *value, char *mount_str, mount_spec *m, char *errmsg)
 {
-    char srcpath[PATH_MAX] = {0};
+    char srcpath[PATH_MAX] = { 0 };
 
     /* If value of source is NULL, ignore it */
     if (value == NULL) {
@@ -88,7 +88,8 @@ static int parse_mount_item_src(const char *value, char *mount_str, mount_spec *
 
     if (value[0] == '/') {
         if (!util_clean_path(value, srcpath, sizeof(srcpath))) {
-            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Can't translate source path to clean path", mount_str);
+            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Can't translate source path to clean path",
+                         mount_str);
             return EINVALIDARGS;
         }
         m->source = util_strdup_s(srcpath);
@@ -119,7 +120,8 @@ static int parse_mount_item_dst(const char *value, char *mount_str, mount_spec *
     }
 
     if (!util_clean_path(value, dstpath, sizeof(dstpath))) {
-        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Can't translate destination path to clean path", mount_str);
+        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Can't translate destination path to clean path",
+                     mount_str);
         return EINVALIDARGS;
     }
 
@@ -306,7 +308,7 @@ static int parse_mount_item_nocopy(const char *value, char *mount_str, mount_spe
 
 static bool exist_readonly_mode(char *mount_str)
 {
-    char tmp_mount_str[PATH_MAX] = {0};
+    char tmp_mount_str[PATH_MAX] = { 0 };
     int sret = 0;
 
     // add "," at start and end of mount string to simplize check
@@ -332,25 +334,26 @@ static bool valid_mount_spec_mode(char *mount_str, mount_spec *m, char *errmsg)
             return false;
         }
         if (exist_readonly_mode(mount_str) && m->source == NULL) {
-            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Readonly mode must not be specified "
-                         "for anonymous volume", mount_str);
+            CACHE_ERRMSG(errmsg,
+                         "Invalid mount specification '%s'.Readonly mode must not be specified for anonymous volume",
+                         mount_str);
             return false;
         }
     }
     if (strcmp(m->type, MOUNT_TYPE_BIND) == 0 && m->volume_options != NULL) {
-        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.nocopy must not be specified for type %s",
-                     mount_str, m->type);
+        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.nocopy must not be specified for type %s", mount_str,
+                     m->type);
         return false;
     }
     if (strcmp(m->type, MOUNT_TYPE_TMPFS) == 0) {
         if (m->volume_options != NULL) {
-            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Cannot mix volume options with type %s",
-                         mount_str, m->type);
+            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Cannot mix volume options with type %s", mount_str,
+                         m->type);
             return false;
         }
         if (m->bind_options != NULL) {
-            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Cannot mix bind options with type %s",
-                         mount_str, m->type);
+            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Cannot mix bind options with type %s", mount_str,
+                         m->type);
             return false;
         }
     }
@@ -415,7 +418,6 @@ static int check_mount_spec(char *mount_str, mount_spec *m, char *errmsg)
     return 0;
 }
 
-
 static int parse_mounts_item(const char *mntkey, const char *value, char *mount_str, mount_spec *m, char *errmsg)
 {
     if (util_valid_key_type(mntkey)) {
@@ -452,7 +454,7 @@ int util_parse_mount_spec(char *mount_str, mount_spec **spec, char **errmsg_out)
     size_t items_len = 0;
     char **items = NULL;
     char **key_val = NULL;
-    char errmsg[CACHE_ERRMSG_LEN] = {0};
+    char errmsg[CACHE_ERRMSG_LEN] = { 0 };
 
     if (mount_str == NULL) {
         CACHE_ERRMSG(errmsg, "Invalid mount specification: can't be empty");
@@ -528,7 +530,7 @@ bool util_valid_mount_spec(const char *mount_str, char **errmsg)
     mount_spec *m = NULL;
 
     // if parse success, it's valid
-    ret = util_parse_mount_spec((char*)mount_str, &m, errmsg);
+    ret = util_parse_mount_spec((char *)mount_str, &m, errmsg);
     if (ret != 0) {
         goto out;
     }
@@ -538,4 +540,3 @@ out:
 
     return ret ? false : true;
 }
-

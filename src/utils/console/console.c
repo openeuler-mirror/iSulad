@@ -437,7 +437,7 @@ err_out:
 
 /* console loop copy */
 int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper *writers,
-                         transfer_channel_type *channels, size_t len)
+                         const transfer_channel_type *channels, size_t len)
 {
     int ret = 0;
     size_t i = 0;

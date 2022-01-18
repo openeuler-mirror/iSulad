@@ -15,7 +15,7 @@
 
 #include "stoppable_thread.h"
 
-StoppableThread &StoppableThread::operator=(StoppableThread &&obj)
+StoppableThread &StoppableThread::operator=(StoppableThread &&obj) noexcept
 {
     m_exit_signal = std::move(obj.m_exit_signal);
     m_future_obj = std::move(obj.m_future_obj);
@@ -24,10 +24,7 @@ StoppableThread &StoppableThread::operator=(StoppableThread &&obj)
 
 bool StoppableThread::stopRequested()
 {
-    if (m_future_obj.wait_for(std::chrono::milliseconds(0)) == std::future_status::timeout) {
-        return false;
-    }
-    return true;
+    return m_future_obj.wait_for(std::chrono::milliseconds(0)) != std::future_status::timeout;
 }
 
 void StoppableThread::stop()

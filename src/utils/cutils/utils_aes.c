@@ -95,9 +95,9 @@ size_t util_aes_decode_buf_len(size_t len)
 {
     if (len % AES_BLOCK_SIZE == 0) {
         return len;
-    } else {
-        return (len / AES_BLOCK_SIZE * AES_BLOCK_SIZE) + AES_BLOCK_SIZE;
     }
+
+    return (len / AES_BLOCK_SIZE * AES_BLOCK_SIZE) + AES_BLOCK_SIZE;
 }
 
 size_t util_aes_encode_buf_len(size_t len)

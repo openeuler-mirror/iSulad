@@ -23,12 +23,18 @@
 
 class StoppableThread {
 public:
-    StoppableThread() : m_future_obj(m_exit_signal.get_future()) {}
+    StoppableThread()
+        : m_future_obj(m_exit_signal.get_future())
+    {
+    }
 
-    explicit StoppableThread(StoppableThread &&obj) : m_exit_signal(std::move(obj.m_exit_signal)),
-        m_future_obj(std::move(obj.m_future_obj)) {}
+    explicit StoppableThread(StoppableThread &&obj) noexcept
+        : m_exit_signal(std::move(obj.m_exit_signal))
+        , m_future_obj(std::move(obj.m_future_obj))
+    {
+    }
 
-    StoppableThread &operator=(StoppableThread &&obj);
+    StoppableThread &operator=(StoppableThread &&obj) noexcept;
 
     virtual ~StoppableThread() = default;
 
@@ -49,4 +55,3 @@ private:
 };
 
 #endif // UTILS_CPPUTILS_STOPPABLE_THREAD_H
-
