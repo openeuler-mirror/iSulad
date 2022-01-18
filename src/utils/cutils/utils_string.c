@@ -795,7 +795,7 @@ bool util_has_prefix(const char *str, const char *prefix)
         return false;
     }
 
-    if (strncmp(str, prefix, strlen(prefix))) {
+    if (strncmp(str, prefix, strlen(prefix)) != 0) {
         return false;
     }
 
@@ -817,7 +817,7 @@ bool util_has_suffix(const char *str, const char *suffix)
         return false;
     }
 
-    if (strcmp(str + str_len - suffix_len, suffix)) {
+    if (strcmp(str + str_len - suffix_len, suffix) != 0) {
         return false;
     }
 

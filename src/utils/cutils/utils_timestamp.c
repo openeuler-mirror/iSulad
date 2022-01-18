@@ -178,8 +178,7 @@ bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, 
     if (tm_zone >= 0) {
         nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d+%02d:00", nanos, tm_zone);
     } else {
-        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d-%02d:00", nanos,
-                        -tm_zone);
+        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d-%02d:00", nanos, -tm_zone);
     }
 
 out:
@@ -513,7 +512,7 @@ static char *tm_get_zp(const char *tmstr)
     return zp;
 }
 
-static inline bool hasnil(const char *str, struct tm *tm, int32_t *nanos, struct types_timezone *tz)
+static inline bool hasnil(const char *str, const struct tm *tm, const int32_t *nanos, const struct types_timezone *tz)
 {
     if (str == NULL || tm == NULL || nanos == NULL || tz == NULL) {
         return true;
@@ -649,9 +648,9 @@ int64_t util_time_seconds_since(const char *in)
 
     if (result > 0) {
         return result;
-    } else {
-        return 0;
     }
+
+    return 0;
 }
 
 struct time_human_duration_rule_t {
