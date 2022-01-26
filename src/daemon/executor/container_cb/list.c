@@ -106,7 +106,7 @@ cleanup:
     return NULL;
 }
 
-static const char *accepted_ps_filter_tags[] = { "id", "label", "name", "status", NULL };
+static const char *accepted_ps_filter_tags[] = { "id", "label", "name", "status", "last_n", NULL };
 
 static int filter_by_name(const struct list_context *ctx, const map_t *map_id_name, const map_t *matches, bool idsearch)
 {
@@ -192,14 +192,159 @@ static inline void set_idsearch(size_t ids_len, bool *value)
     }
 }
 
+typedef struct {
+    void *id;
+    int64_t created;
+} container_time_id_info;
+
+/*
+* used by qsort function for comparing container create time
+*/
+static inline int container_create_time_cmp(container_time_id_info **first, container_time_id_info **second)
+{
+    return (*second)->created > (*first)->created;
+}
+
+static void free_filtered_last_list(container_time_id_info **filtered_last_list, int len)
+{
+    int i;
+    if (filtered_last_list == NULL) {
+        return;
+    }
+    for (i = 0; i < len; i++) {
+        free(filtered_last_list[i]->id);
+        free(filtered_last_list[i]);
+        filtered_last_list[i] = NULL;
+    }
+    free(filtered_last_list);
+    filtered_last_list = NULL;
+}
+
+static container_time_id_info *get_last_list_info(void *id, int64_t create_time)
+{
+    container_time_id_info *last_list_info = NULL;
+
+    last_list_info = (container_time_id_info *)util_common_calloc_s(sizeof(container_time_id_info));
+    if (last_list_info == NULL) {
+        ERROR("Failed to malloc for last_list");
+        return NULL;
+    }
+
+    last_list_info->created = create_time;
+    last_list_info->id = util_strdup_s(id);
+    if (last_list_info->id == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    return last_list_info;
+}
+
+static int append_filtered_ids(char ***filtered_ids, container_time_id_info **filtered_last_list, size_t append_num)
+{
+    size_t count = 0;
+    char **array = (char **)util_smart_calloc_s(sizeof(char *), (size_t)append_num + 1);
+    if (array == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    while (count < append_num) {
+        array[count] = util_strdup_s(filtered_last_list[count]->id);
+        count++;
+    }
+    array[count] = NULL;
+    *filtered_ids = array;
+
+    return 0;
+}
+
+static int filter_by_create_time(size_t last_num, const map_t *map_id_name, char ***filtered_ids)
+{
+    int ret = -1;
+    size_t container_num = 0;
+    size_t container_valid_num = 0;
+    size_t container_append_num = 0;
+    int64_t container_create_time = 0;
+    container_t *cont = NULL;
+    container_time_id_info **filtered_last_list = NULL;
+
+    if (map_id_name == NULL) {
+        return ret;
+    }
+
+    map_itor *itor = map_itor_new(map_id_name);
+    if (itor == NULL) {
+        ERROR("Out of memory");
+        goto cleanup;
+    }
+    container_num = map_size(map_id_name);
+    if (container_num == 0) {
+        ret = 0;
+        goto cleanup;
+    }
+    filtered_last_list =
+        (container_time_id_info **)util_smart_calloc_s(sizeof(container_time_id_info *), container_num);
+    if (filtered_last_list == NULL) {
+        ERROR("Out of memory");
+        goto cleanup;
+    }
+
+    for (; map_itor_valid(itor); map_itor_next(itor)) {
+        const char *name = map_itor_value(itor);
+        void *id = map_itor_key(itor);
+        if (id == NULL) {
+            continue;
+        }
+        cont = containers_store_get(name);
+        if (cont == NULL) {
+            ERROR("Container '%s' not exist", name);
+            continue;
+        }
+        if (cont->common_config->created != NULL &&
+            util_to_unix_nanos_from_str(cont->common_config->created, &container_create_time) != 0) {
+            ERROR("Failed to container %s created time", cont->common_config->id);
+            continue;
+        }
+        filtered_last_list[container_valid_num] = get_last_list_info(id, container_create_time);
+        if (filtered_last_list[container_valid_num] == NULL) {
+            continue;
+        }
+        container_valid_num++;
+    }
+
+    if (container_valid_num > 1) {
+        qsort(filtered_last_list, (size_t)(container_valid_num), sizeof(container_time_id_info *),
+              (int (*)(const void *, const void *))container_create_time_cmp);
+    }
+
+    container_append_num = container_valid_num;
+    if (container_append_num > last_num) {
+        container_append_num = last_num;
+    }
+
+    if (append_filtered_ids(filtered_ids, filtered_last_list, container_append_num) != 0) {
+        goto cleanup;
+    }
+    ret = 0;
+
+cleanup:
+    map_itor_free(itor);
+    container_unref(cont);
+    free_filtered_last_list(filtered_last_list, container_valid_num);
+    return ret;
+}
+
 static char **filter_by_name_id_matches(const struct list_context *ctx, const map_t *map_id_name)
 {
     int ret = 0;
-    size_t names_len, ids_len;
+    size_t last_num = 0;
+    size_t names_len, ids_len, last_len;
     bool idsearch = false;
     bool default_value = true;
     char **names = NULL;
     char **ids = NULL;
+    char **last_n = NULL;
     char **filtered_ids = NULL;
     map_t *matches = NULL;
 
@@ -208,7 +353,11 @@ static char **filter_by_name_id_matches(const struct list_context *ctx, const ma
 
     ids = filters_args_get(ctx->ps_filters, "id");
     ids_len = util_array_len((const char **)ids);
-    if (names_len == 0 && ids_len == 0) {
+
+    last_n = filters_args_get(ctx->ps_filters, "last_n");
+    last_len = util_array_len((const char **)last_n);
+
+    if (names_len == 0 && ids_len == 0 && last_len == 0) {
         if (append_ids(map_id_name, &filtered_ids) != 0) {
             goto cleanup;
         }
@@ -240,9 +389,20 @@ static char **filter_by_name_id_matches(const struct list_context *ctx, const ma
         }
     }
 
+    if (last_len > 0) {
+        last_num = atoi(ctx->list_config->filters->values[0]->keys[0]);
+    }
+    if (last_num > 0) {
+        ret = filter_by_create_time(last_num, map_id_name, &filtered_ids);
+        if (ret != 0) {
+            goto cleanup;
+        }
+    }
+
 cleanup:
     util_free_array(ids);
     util_free_array(names);
+    util_free_array(last_n);
     map_free(matches);
     return filtered_ids;
 }
@@ -562,6 +722,9 @@ static int do_add_filters(const char *filter_key, const json_map_string_bool *fi
                 ret = -1;
                 goto out;
             }
+            ctx->list_config->all = true;
+        }
+        if (strcmp(filter_key, "last_n") == 0) {
             ctx->list_config->all = true;
         }
         bret = filters_args_add(ctx->ps_filters, filter_key, filter_value->keys[j]);

@@ -32,7 +32,21 @@ extern "C" {
         'a',                                                                                                           \
         &(cmdargs).list_all,                                                                                           \
         "Display all containers (default shows just running)",                                                         \
-        NULL },                                                                                                        \
+        NULL },                                                                                                       \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                         \
+      false,                                                                                                         \
+      "last",                                                                                                         \
+      'n',                                                                                                           \
+      &(cmdargs).list_last_n,                                                                                        \
+      "Display n last created containers (includes all states)",                                                    \
+      command_convert_uint },                                                                                       \
+    { CMD_OPT_TYPE_BOOL,                                                                                             \
+      false,                                                                                                         \
+      "latest",                                                                                                       \
+      'l',                                                                                                           \
+      &(cmdargs).list_latest,                                                                                         \
+      "Display the latest created container (includes all states)",                                                   \
+      NULL },                                                                                                        \
     { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &(cmdargs).dispname, "Only display numeric IDs", NULL },       \
     { CMD_OPT_TYPE_CALLBACK,                                                                                 \
       false,                                                                                                 \

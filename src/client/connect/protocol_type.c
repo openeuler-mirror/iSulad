@@ -23,6 +23,8 @@
 #include "utils_array.h"
 #include "utils_string.h"
 
+#define VALUE_SIZE 36
+
 /* isula filters free */
 void isula_filters_free(struct isula_filters *filters)
 {
@@ -41,6 +43,53 @@ void isula_filters_free(struct isula_filters *filters)
     free(filters->values);
     filters->values = NULL;
     free(filters);
+}
+
+int isula_filters_last_parse_args(size_t last_n, struct isula_filters **flt)
+{
+    int ret = -1;
+    char value[VALUE_SIZE] = { 0 };
+    struct isula_filters *filters = NULL;
+
+    if (last_n == 0) {
+        return ret;
+    }
+
+    filters = util_common_calloc_s(sizeof(*filters));
+    if (filters == NULL) {
+        ERROR("Out of memory");
+        return ret;
+    }
+
+    filters->keys = util_common_calloc_s(sizeof(char *));
+    if (filters->keys == NULL) {
+        ERROR("Out of memory");
+        goto cleanup;
+    }
+    filters->values = util_common_calloc_s(sizeof(char *));
+    if (filters->values == NULL) {
+        ERROR("Out of memory");
+        goto cleanup;
+    }
+
+    ret = snprintf(value, VALUE_SIZE, "%ld", last_n);
+    if (ret < 0 || ret >= VALUE_SIZE) {
+        ret = -1;
+        ERROR("Sprintf lastest n containers args failed");
+        goto cleanup;
+    }
+
+    filters->values[0] = util_strdup_s(value);
+    filters->keys[0] = util_strdup_s("last_n");
+    filters->len = 1;
+
+    *flt = filters;
+    ret = 0;
+    return ret;
+
+cleanup:
+    isula_filters_free(filters);
+    return ret;
 }
 
 struct isula_filters *isula_filters_parse_args(const char **array, size_t len)
