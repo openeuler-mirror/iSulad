@@ -1,0 +1,27 @@
+iSulad License
+=================
+
+Copyright (c) Huawei Technologies Co., Ltd. and others. All rights reserved.
+SPDX-License-Identifier: MulanPSL-2.0
+
+iSulad software is licensed under the Mulan Permissive Software License，Version 2.
+
+See http://license.coscl.org.cn/MulanPSL2 for the MulanPSL-2.0 license text.
+
+See https://gitee.com/openeuler/iSulad for support or download.
+
+
+Third-party software licenses
+=============================
+iSulad embeds third-party free and open source software packages under various
+licenses.
+
+=============================
+Notice for github.com/nodejs/http-parser:
+
+See ./third-partyLICENSES/third-party/LICENSE-http-parser
+
+=============================
+Notice for github.com/kubernetes/cri-api:
+
+See ./third-party/LICENSE-cri-api
