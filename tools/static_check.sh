@@ -3,7 +3,7 @@
 # This script is the implementation portal for the iSulad project Personal level build static check.
 # set -euxo pipefail
 #######################################################################
-##- @Copyright (C) Huawei Technologies., Ltd. 2019-2020. All rights reserved.
+##- Copyright (c) Huawei Technologies Co., Ltd. 2019-2020. All rights reserved.
 # - iSulad licensed under the Mulan PSL v2.
 # - You can use this software according to the terms and conditions of the Mulan PSL v2.
 # - You may obtain a copy of Mulan PSL v2 at:
