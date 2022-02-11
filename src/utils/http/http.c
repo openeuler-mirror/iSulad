@@ -181,6 +181,14 @@ static int http_custom_options(CURL *curl_handle, const struct http_get_options 
         return -1;
     }
 
+    if (options->timeout) {
+        /* complete connection within 30 seconds */
+        curl_easy_setopt(curl_handle, CURLOPT_CONNECTTIMEOUT, 30L);
+        /* if less than 1k data is received in 30s, abort */
+        curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_LIMIT, 1024L);
+        curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_TIME, 30L);
+    }
+
     if (options->unix_socket_path) {
         curl_easy_setopt(curl_handle, CURLOPT_UNIX_SOCKET_PATH, options->unix_socket_path);
     }
@@ -421,11 +429,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     /* set URL to get here */
     curl_easy_setopt(curl_handle, CURLOPT_URL, replaced_url);
     curl_easy_setopt(curl_handle, CURLOPT_NOSIGNAL, 1L);
-    /* complete connection within 30 seconds */
-    curl_easy_setopt(curl_handle, CURLOPT_CONNECTTIMEOUT, 30L);
-    /* if less than 1k data is received in 30s, abort */
-    curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_LIMIT, 1024L);
-    curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_TIME, 30L);
+
     /* provide a buffer to store errors in */
     curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, errbuf);
     curl_easy_setopt(curl_handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
