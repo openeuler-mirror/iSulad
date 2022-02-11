@@ -609,7 +609,6 @@ static int do_subscribe(const char *name, const types_timestamp_t *since, const 
     bool regflag = false;
     int ret = 0;
     regex_t preg;
-    regmatch_t regmatch = { 0 };
     struct linked_list *it = NULL;
     struct linked_list *next = NULL;
     struct isulad_events_format *c_event = NULL;
@@ -636,7 +635,7 @@ static int do_subscribe(const char *name, const types_timestamp_t *since, const 
         regflag = get_idreg(&preg, c_event->id);
 
         if (name != NULL && regflag) {
-            if (regexec(&preg, name, 1, &regmatch, 0)) {
+            if (regexec(&preg, name, 0, NULL, 0)) {
                 continue;
             }
         }
@@ -690,7 +689,6 @@ static void events_forward(struct isulad_events_format *r)
     char *name = NULL;
     regex_t preg;
     bool regflag = false;
-    regmatch_t regmatch = { 0 };
 
     events_append(r);
     regflag = get_idreg(&preg, r->id);
@@ -711,7 +709,7 @@ static void events_forward(struct isulad_events_format *r)
         }
 
         if (name != NULL && regflag) {
-            if (regexec(&preg, name, 1, &regmatch, 0)) {
+            if (regexec(&preg, name, 0, NULL, 0)) {
                 continue;
             }
         }
