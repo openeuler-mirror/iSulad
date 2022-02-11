@@ -507,6 +507,7 @@ static int http_request_buf_options(pull_descriptor *desc, struct http_get_optio
 
     options->outputtype = HTTP_REQUEST_STRBUF;
     options->output = output_buffer;
+    options->timeout = true;
     ret = http_request(url, options, NULL, 0);
     if (ret) {
         ERROR("Failed to get http request: %s", options->errmsg);
@@ -721,6 +722,7 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
     options->show_progress = 1;
     options->progressinfo = &desc->cancel;
     options->progress_info_op = progress;
+    options->timeout = true;
 
     ret = setup_common_options(desc, options, url, custom_headers);
     if (ret != 0) {
