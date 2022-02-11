@@ -35,7 +35,6 @@ int util_reg_match(const char *patten, const char *str)
 {
     int nret = 0;
     regex_t reg;
-    regmatch_t regmatch = { 0 };
 
     if (patten == NULL || str == NULL) {
         ERROR("invalid NULL param");
@@ -47,7 +46,7 @@ int util_reg_match(const char *patten, const char *str)
         return -1;
     }
 
-    nret = regexec(&reg, str, 1, &regmatch, 0);
+    nret = regexec(&reg, str, 0, NULL, 0);
     if (nret == 0) {
         nret = 0;
         goto free_out;

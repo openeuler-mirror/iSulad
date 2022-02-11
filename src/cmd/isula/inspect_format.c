@@ -529,7 +529,6 @@ out:
 static int inspect_check(const char *json_str, const char *regex)
 {
     int status = 0;
-    regmatch_t pmatch[MATCH_NUM] = { { 0 } };
     regex_t reg;
 
     if (json_str == NULL) {
@@ -537,9 +536,9 @@ static int inspect_check(const char *json_str, const char *regex)
         return CHECK_FAILED;
     }
 
-    regcomp(&reg, regex, REG_EXTENDED);
+    regcomp(&reg, regex, REG_NOSUB | REG_EXTENDED);
 
-    status = regexec(&reg, json_str, MATCH_NUM, pmatch, 0);
+    status = regexec(&reg, json_str, 0, NULL, 0);
     regfree(&reg);
 
     if (status != 0) {
