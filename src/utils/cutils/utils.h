@@ -47,6 +47,15 @@
 extern "C" {
 #endif
 
+#ifdef __ANDROID__
+#define M_TRIM_THRESHOLD    -1
+#define M_TOP_PAD           -2
+#define M_MMAP_THRESHOLD    -3
+#define M_ARENA_TEST        -7
+int mallopt(int param, int value);
+int malloc_trim(size_t pad);
+#endif
+
 #if __WORDSIZE == 64
 // current max user memory for 64-machine is 2^47 B
 #define MAX_MEMORY_SIZE ((size_t)1 << 47)

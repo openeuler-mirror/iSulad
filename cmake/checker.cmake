@@ -54,6 +54,12 @@ find_library(CRYPTO_LIBRARY crypto
     HINTS ${PC_CRYPTO_LIBDIR} ${PC_LIBCRYPTO_LIBRARY_DIRS})
 _CHECK(CRYPTO_LIBRARY "CRYPTO_LIBRARY-NOTFOUND" "libcrypto.so")
 
+if (ANDROID)
+    # check libssl
+    find_library(LIBSSL_LIBRARY ssl)
+    _CHECK(CRYPTO_LIBRARY "LIBSSL_LIBRARY-NOTFOUND" "libssl.so")
+endif()
+
 find_path(HTTP_PARSER_INCLUDE_DIR http_parser.h)
 _CHECK(HTTP_PARSER_INCLUDE_DIR "HTTP_PARSER_INCLUDE_DIR-NOTFOUND" "http_parser.h")
 find_library(HTTP_PARSER_LIBRARY http_parser)

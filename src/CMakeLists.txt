@@ -101,7 +101,12 @@ add_executable(isula
     ${ISULA_SRCS}
     )
 target_include_directories(isula PUBLIC ${ISULA_INCS} ${SHARED_INCS})
-target_link_libraries(isula libisula ${LIBYAJL_LIBRARY} -lpthread)
+target_link_libraries(isula libisula ${LIBYAJL_LIBRARY})
+if (ANDROID)
+    target_link_libraries(isula ${LIBSSL_LIBRARY})
+else()
+    target_link_libraries(isula -lpthread)
+endif()
 # ------ build isula finish -------
 
 # ------ build isulad-shim -------
@@ -109,7 +114,12 @@ add_executable(isulad-shim
     ${ISULAD_SHIM_SRCS}
     )
 target_include_directories(isulad-shim PUBLIC ${ISULAD_SHIM_INCS} ${SHARED_INCS})
-target_link_libraries(isulad-shim libisulad_tools -lpthread)
+target_link_libraries(isulad-shim libisulad_tools)
+if (ANDROID)
+    target_link_libraries(isulad-shim ${LIBSSL_LIBRARY} ${LIBYAJL_LIBRARY})
+else()
+    target_link_libraries(isulad-shim -lpthread)
+endif()
 if (NOT GRPC_CONNECTOR)
     set_target_properties(isulad-shim PROPERTIES LINKER_LANGUAGE "C")
 endif()
@@ -174,7 +184,12 @@ else()
     set_target_properties(isulad PROPERTIES LINKER_LANGUAGE "C")
 endif()
 
-target_link_libraries(isulad libisulad_tools libhttpclient -ldl -lpthread)
+target_link_libraries(isulad libisulad_tools libhttpclient -ldl)
+if (ANDROID)
+    target_link_libraries(isulad ${LIBSSL_LIBRARY} ${LIBYAJL_LIBRARY})
+else()
+    target_link_libraries(isulad -lpthread)
+endif()
 
 if (ISULAD_GCOV)
     target_link_libraries(isula -lgcov)
