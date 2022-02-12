@@ -115,7 +115,11 @@ target_link_libraries(${LIB_ISULAD_IMG}
     ${LIBTAR_LIBRARY}
     ${CRYPTO_LIBRARY}
     ${ZLIB_LIBRARY}
-    -lpthread libhttpclient)
+    libhttpclient)
+
+if (NOT ANDROID)
+    target_link_libraries(${LIB_ISULAD_IMG} -lpthread)
+endif()
 
 if (ENABLE_OCI_IMAGE)
     target_link_libraries(${LIB_ISULAD_IMG}

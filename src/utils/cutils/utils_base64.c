@@ -17,14 +17,81 @@
 #include "utils_base64.h"
 #include <stdlib.h>
 #include <string.h>
+#ifdef __ANDROID__
+#include <base64.h>
+#else
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
 #include <openssl/ossl_typ.h>
-
+#endif
 #include "isula_libutils/log.h"
 #include "openssl/bio.h"
 #include "utils.h"
 
+#ifdef __ANDROID__
+int util_base64_encode(unsigned char *bytes, size_t len, char **out)
+{
+    uint8_t *encoded = NULL;
+    size_t encoded_size = 0;
+
+    if (bytes == NULL || len == 0 || out == NULL) {
+        ERROR("Invalid param for encoding base64");
+        return -1;
+    }
+
+    encoded_size = EVP_EncodedLength(&encoded_size, len);
+    if (encoded_size == 0) {
+        return -1;
+    }
+
+    encoded = util_common_calloc_s(encoded_size);
+    if (encoded == NULL) {
+        ERROR("out of memory, size=%zu", len);
+        return -1;
+    }
+
+    if (EVP_EncodeBlock((uint8_t *)(*out), (const uint8_t *)bytes, len) == 0) {
+        ERROR("Encode base64 failed: %s", strerror(errno));
+        free(encoded);
+        return -1;
+    }
+    *out = (char *) encoded;
+
+    return 0;
+}
+
+int util_base64_decode(const char *input, size_t len, unsigned char **out, size_t *out_len)
+{
+    size_t decoded_size = 0;
+    unsigned char *decoded = NULL;
+
+    if (input == NULL || len % 4 != 0 || out == NULL || out_len == NULL) {
+        ERROR("Invalid param for base64 decode");
+        return -1;
+    }
+
+    decoded_size = EVP_DecodedLength(&decoded_size, len);
+    if (decoded_size == 0) {
+        return -1;
+    }
+
+    decoded = util_common_calloc_s(decoded_size);
+    if (decoded == NULL) {
+        ERROR("out of memory, size=%zu", decoded_size);
+        return -1;
+    }
+
+    if (EVP_DecodeBase64((uint8_t *)decoded, &decoded_size, decoded_size, (const uint8_t *)input, len) == 0) {
+        ERROR("Decode base64 failed: %s", strerror(errno));
+        free(decoded);
+        return -1;
+    }
+
+    *out = decoded;
+
+    return 0;
+}
+#else
 int util_base64_encode(unsigned char *bytes, size_t len, char **out)
 {
     BIO *base64 = NULL;
@@ -183,3 +250,4 @@ out:
 
     return ret;
 }
+#endif
