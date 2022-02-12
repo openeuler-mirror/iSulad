@@ -193,7 +193,7 @@ static inline void set_idsearch(size_t ids_len, bool *value)
 }
 
 typedef struct {
-    void *id;
+    char *id;
     int64_t created;
 } container_time_id_info;
 
@@ -220,7 +220,7 @@ static void free_filtered_last_list(container_time_id_info **filtered_last_list,
     filtered_last_list = NULL;
 }
 
-static container_time_id_info *get_last_list_info(void *id, int64_t create_time)
+static container_time_id_info *get_last_list_info(const char *id, int64_t create_time)
 {
     container_time_id_info *last_list_info = NULL;
 
@@ -232,10 +232,6 @@ static container_time_id_info *get_last_list_info(void *id, int64_t create_time)
 
     last_list_info->created = create_time;
     last_list_info->id = util_strdup_s(id);
-    if (last_list_info->id == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
 
     return last_list_info;
 }
@@ -253,7 +249,6 @@ static int append_filtered_ids(char ***filtered_ids, container_time_id_info **fi
         array[count] = util_strdup_s(filtered_last_list[count]->id);
         count++;
     }
-    array[count] = NULL;
     *filtered_ids = array;
 
     return 0;
@@ -266,7 +261,6 @@ static int filter_by_create_time(size_t last_num, const map_t *map_id_name, char
     size_t container_valid_num = 0;
     size_t container_append_num = 0;
     int64_t container_create_time = 0;
-    container_t *cont = NULL;
     container_time_id_info **filtered_last_list = NULL;
 
     if (map_id_name == NULL) {
@@ -291,6 +285,7 @@ static int filter_by_create_time(size_t last_num, const map_t *map_id_name, char
     }
 
     for (; map_itor_valid(itor); map_itor_next(itor)) {
+        container_t *cont = NULL;
         const char *name = map_itor_value(itor);
         void *id = map_itor_key(itor);
         if (id == NULL) {
@@ -304,9 +299,11 @@ static int filter_by_create_time(size_t last_num, const map_t *map_id_name, char
         if (cont->common_config->created != NULL &&
             util_to_unix_nanos_from_str(cont->common_config->created, &container_create_time) != 0) {
             ERROR("Failed to container %s created time", cont->common_config->id);
+            container_unref(cont);
             continue;
         }
-        filtered_last_list[container_valid_num] = get_last_list_info(id, container_create_time);
+        container_unref(cont);
+        filtered_last_list[container_valid_num] = get_last_list_info((const char *)id, container_create_time);
         if (filtered_last_list[container_valid_num] == NULL) {
             continue;
         }
@@ -330,7 +327,6 @@ static int filter_by_create_time(size_t last_num, const map_t *map_id_name, char
 
 cleanup:
     map_itor_free(itor);
-    container_unref(cont);
     free_filtered_last_list(filtered_last_list, container_valid_num);
     return ret;
 }
