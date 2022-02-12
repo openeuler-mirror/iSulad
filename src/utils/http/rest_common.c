@@ -108,26 +108,32 @@ static int ops_init(struct httpclient_ops *ops)
     ops->handle = handle;
     ops->buffer_strlen_op = (buffer_strlen_t)dlsym(handle, "buffer_strlen");
     if (ops->buffer_strlen_op == NULL) {
+        COMMAND_ERROR("dlsym buffer_strlen: %s", dlerror());
         goto badcleanup;
     }
     ops->buffer_alloc_op = (buffer_alloc_t)dlsym(handle, "buffer_alloc");
     if (ops->buffer_alloc_op == NULL) {
+        COMMAND_ERROR("dlsym buffer_alloc: %s", dlerror());
         goto badcleanup;
     }
     ops->buffer_free_op = (buffer_free_t)dlsym(handle, "buffer_free");
     if (ops->buffer_free_op == NULL) {
+        COMMAND_ERROR("dlsym buffer_free: %s", dlerror());
         goto badcleanup;
     }
     ops->parse_http_op = (parse_http_t)dlsym(handle, "parse_http");
     if (ops->parse_http_op == NULL) {
+        COMMAND_ERROR("dlsym parse_http: %s", dlerror());
         goto badcleanup;
     }
     ops->http_request_op = (http_request_t)dlsym(handle, "http_request");
     if (ops->http_request_op == NULL) {
+        COMMAND_ERROR("dlsym http_request: %s", dlerror());
         goto badcleanup;
     }
     ops->free_http_get_options_op = (free_http_get_options_t)dlsym(handle, "free_http_get_options");
     if (ops->free_http_get_options_op == NULL) {
+        COMMAND_ERROR("dlsym free_http_get_options: %s", dlerror());
         goto badcleanup;
     }
 
