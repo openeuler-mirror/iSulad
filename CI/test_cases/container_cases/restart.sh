@@ -34,7 +34,7 @@ function do_test_t()
     fn_check_eq "$?" "0" "restart failed"
     testcontainer $containername running
 
-    isula stop $containername
+    isula stop -t 0 $containername
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 
