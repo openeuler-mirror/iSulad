@@ -610,7 +610,6 @@ static int validate_time_duration(const char *value)
 {
     regex_t preg;
     int status = 0;
-    regmatch_t regmatch = { 0 };
 
     if (value == NULL) {
         return -1;
@@ -621,7 +620,7 @@ static int validate_time_duration(const char *value)
         return -1;
     }
 
-    status = regexec(&preg, value, 1, &regmatch, 0);
+    status = regexec(&preg, value, 0, NULL, 0);
     regfree(&preg);
     if (status != 0) {
         ERROR("Error start-timeout value: %s\n", value);

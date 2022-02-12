@@ -47,7 +47,7 @@ function rm_running_container()
     isula rm $containername
     fn_check_ne "$?" "0" "rm should fail"
 
-    isula stop $containername
+    isula stop -t 0 $containername
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 

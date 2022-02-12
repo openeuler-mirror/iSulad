@@ -61,7 +61,7 @@ function test_mem()
     cat $metrics_log | grep "isula_container_cpu_stat" | grep $cont_id
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to get cpu metrics info" && ((ret++))
 
-    isula stop $cont_id
+    isula stop -t 0 $cont_id
     isula rm $cont_id
     #rm -rf $metrics_log
     msg_info "${test} finished with return ${ret}..."

@@ -110,13 +110,10 @@ int util_validate_absolute_path(const char *path)
     int nret = 0;
     regex_t preg;
     int status = 0;
-    regmatch_t regmatch;
 
     if (path == NULL) {
         return -1;
     }
-
-    (void)memset(&regmatch, 0, sizeof(regmatch_t));
 
     if (regcomp(&preg, "^(/[^/ ]*)+/?$", REG_NOSUB | REG_EXTENDED)) {
         ERROR("Failed to compile the regex");
@@ -124,7 +121,7 @@ int util_validate_absolute_path(const char *path)
         goto err_out;
     }
 
-    status = regexec(&preg, path, 1, &regmatch, 0);
+    status = regexec(&preg, path, 0, NULL, 0);
     regfree(&preg);
     if (status != 0) {
         nret = -1;

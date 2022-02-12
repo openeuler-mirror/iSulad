@@ -327,6 +327,7 @@ out:
 static int pack_container_custom_config(container_config *container_spec, const isula_container_config_t *custom_conf)
 {
     int ret = -1;
+    size_t i;
 
     if (container_spec == NULL || custom_conf == NULL) {
         return ret;
@@ -396,7 +397,7 @@ static int pack_container_custom_config(container_config *container_spec, const 
             ret = -1;
             goto out;
         }
-        for (size_t i = 0; i < custom_conf->expose->len; i++) {
+        for (i = 0; i < custom_conf->expose->len; i++) {
             container_spec->exposed_ports->keys[i] = util_strdup_s(custom_conf->expose->keys[i]);
         }
         container_spec->exposed_ports->len = custom_conf->expose->len;

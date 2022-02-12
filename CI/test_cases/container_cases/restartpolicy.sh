@@ -54,7 +54,7 @@ function do_test_unless_stopped()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    isula stop $containername
+    isula stop -t 0 $containername
     testcontainer $containername exited
 
     isula rm $containername
@@ -72,7 +72,7 @@ function do_test_unless_stopped_kill()
     sleep 8
     testcontainer $containername running
 
-    isula stop $containername
+    isula stop -t 0 $containername
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 
@@ -98,7 +98,7 @@ function do_test_always_cancel()
     sleep 8
     testcontainer $containername running
 
-    isula stop $containername
+    isula stop -t 0 $containername
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 

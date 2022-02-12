@@ -787,7 +787,6 @@ static int format_field_check(const char *source, const char *patten)
 #define MATCH_NUM 1
 #define CHECK_FAILED (-1)
     int status = 0;
-    regmatch_t pmatch[MATCH_NUM] = { { 0 } };
     regex_t reg;
 
     if (source == NULL) {
@@ -795,9 +794,9 @@ static int format_field_check(const char *source, const char *patten)
         return CHECK_FAILED;
     }
 
-    regcomp(&reg, patten, REG_EXTENDED);
+    regcomp(&reg, patten, REG_NOSUB | REG_EXTENDED);
 
-    status = regexec(&reg, source, MATCH_NUM, pmatch, 0);
+    status = regexec(&reg, source, 0, NULL, 0);
     regfree(&reg);
 
     if (status != 0) {
