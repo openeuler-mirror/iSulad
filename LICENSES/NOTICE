@@ -19,7 +19,7 @@ licenses.
 =============================
 Notice for github.com/nodejs/http-parser:
 
-See ./third-partyLICENSES/third-party/LICENSE-http-parser
+See ./third-party/LICENSE-http-parser
 
 =============================
 Notice for github.com/kubernetes/cri-api:
