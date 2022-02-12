@@ -46,7 +46,7 @@ function do_test_t_grpc()
     fn_check_eq "$?" "0" "start failed"
     testcontainer $containername running
 
-    isula stop $containername
+    isula stop -t 0 $containername
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 
@@ -93,7 +93,7 @@ function do_test_t_rest()
     fn_check_eq "$?" "0" "start failed"
     testcontainer $containername running
 
-    isula stop $containername
+    isula stop -t 0 $containername
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 

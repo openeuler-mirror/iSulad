@@ -95,7 +95,7 @@ function do_test_t()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    isula stop $containername
+    isula stop -t 0 $containername
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 
