@@ -191,47 +191,58 @@ static int lcr_get_container_resources_stats(const char *name, const char *engin
 static bool load_lcr_exec_ops(void *lcr_handler, struct engine_operation *eop)
 {
     eop->engine_create_op = dlsym(lcr_handler, "lcr_create");
-    if (dlerror() != NULL) {
+    if (eop->engine_create_op == NULL) {
+        ERROR("dlsym lcr_create:%s", dlerror());
         return false;
     }
     g_lcr_start_op = dlsym(lcr_handler, "lcr_start");
-    if (dlerror() != NULL) {
+    if (g_lcr_start_op == NULL) {
+        ERROR("dlsym lcr_start:%s", dlerror());
         return false;
     }
     g_lcr_update_op = dlsym(lcr_handler, "lcr_update");
-    if (dlerror() != NULL) {
+    if (g_lcr_update_op == NULL) {
+        ERROR("dlsym lcr_update:%s", dlerror());
         return false;
     }
     eop->engine_pause_op = dlsym(lcr_handler, "lcr_pause");
-    if (dlerror() != NULL) {
+    if (eop->engine_pause_op == NULL) {
+        ERROR("dlsym lcr_pause:%s", dlerror());
         return false;
     }
     eop->engine_resume_op = dlsym(lcr_handler, "lcr_resume");
-    if (dlerror() != NULL) {
+    if (eop->engine_resume_op == NULL) {
+        ERROR("dlsym lcr_resume:%s", dlerror());
         return false;
     }
     eop->engine_clean_op = dlsym(lcr_handler, "lcr_clean");
-    if (dlerror() != NULL) {
+    if (eop->engine_clean_op == NULL) {
+        ERROR("dlsym lcr_clean:%s", dlerror());
         return false;
     }
     eop->engine_delete_op = dlsym(lcr_handler, "lcr_delete");
-    if (dlerror() != NULL) {
+    if (eop->engine_delete_op == NULL) {
+        ERROR("dlsym lcr_delete:%s", dlerror());
         return false;
     }
     g_lcr_exec_op = dlsym(lcr_handler, "lcr_exec");
-    if (dlerror() != NULL) {
+    if (g_lcr_exec_op == NULL) {
+        ERROR("dlsym lcr_exec:%s", dlerror());
         return false;
     }
     eop->engine_console_op = dlsym(lcr_handler, "lcr_console");
-    if (dlerror() != NULL) {
+    if (eop->engine_console_op == NULL) {
+        ERROR("dlsym lcr_console:%s", dlerror());
         return false;
     }
     eop->engine_resize_op = dlsym(lcr_handler, "lcr_resize");
-    if (dlerror() != NULL) {
+    if (eop->engine_resize_op == NULL) {
+        ERROR("dlsym lcr_resize:%s", dlerror());
         return false;
     }
     eop->engine_exec_resize_op = dlsym(lcr_handler, "lcr_exec_resize");
-    if (dlerror() != NULL) {
+    if (eop->engine_exec_resize_op == NULL) {
+        ERROR("dlsym lcr_exec_resize:%s", dlerror());
         return false;
     }
     return true;
@@ -240,23 +251,28 @@ static bool load_lcr_exec_ops(void *lcr_handler, struct engine_operation *eop)
 static bool load_lcr_info_ops(void *lcr_handler, struct engine_operation *eop)
 {
     eop->engine_get_errmsg_op = dlsym(lcr_handler, "lcr_get_errmsg");
-    if (dlerror() != NULL) {
+    if (eop->engine_get_errmsg_op == NULL) {
+        ERROR("dlsym lcr_get_errmsg:%s", dlerror());
         return false;
     }
     eop->engine_clear_errmsg_op = dlsym(lcr_handler, "lcr_free_errmsg");
-    if (dlerror() != NULL) {
+    if (eop->engine_clear_errmsg_op == NULL) {
+        ERROR("dlsym lcr_free_errmsg:%s", dlerror());
         return false;
     }
     eop->engine_get_container_pids_op = dlsym(lcr_handler, "lcr_get_container_pids");
-    if (dlerror() != NULL) {
+    if (eop->engine_get_container_pids_op == NULL) {
+        ERROR("dlsym lcr_get_container_pids:%s", dlerror());
         return false;
     }
     g_lcr_state_op = dlsym(lcr_handler, "lcr_state");
-    if (dlerror() != NULL) {
+    if (g_lcr_state_op == NULL) {
+        ERROR("dlsym lcr_state:%s", dlerror());
         return false;
     }
     g_lcr_container_state_free_op = dlsym(lcr_handler, "lcr_container_state_free");
-    if (dlerror() != NULL) {
+    if (g_lcr_container_state_free_op == NULL) {
+        ERROR("dlsym lcr_container_state_free:%s", dlerror());
         return false;
     }
     return true;
@@ -282,8 +298,8 @@ struct engine_operation *lcr_engine_init()
     eop->engine_type = util_strdup_s("lcr");
 
     eop->engine_log_init_op = dlsym(lcr_handler, "lcr_log_init");
-    if (dlerror() != NULL) {
-        ERROR("Load lcr log_init operations failed");
+    if (eop->engine_log_init_op == NULL) {
+        ERROR("Load lcr log_init operations failed:%s", dlerror());
         goto badcleanup;
     }
 
