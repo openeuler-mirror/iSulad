@@ -641,7 +641,11 @@ out:
 
 #define MATCH_NUM 1
 #define CHECK_FAILED (-1)
+#ifdef __ANDROID__
+#define JSON_ARGS "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*(json)?[ \t\r\n\v\f]+[^ \t\r\n\v\f]+[ \t\r\n\v\f]*.*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
+#else
 #define JSON_ARGS "^\\s*\\{\\s*\\{\\s*(json)?\\s+[^\\s]+\\s*.*\\}\\s*\\}\\s*$"
+#endif
 
 static int inspect_check(const char *json_str, const char *regex)
 {
