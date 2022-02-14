@@ -5,7 +5,7 @@
 # spend time: 28
 
 #######################################################################
-##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
+##- Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
 # - iSulad licensed under the Mulan PSL v2.
 # - You can use this software according to the terms and conditions of the Mulan PSL v2.
 # - You may obtain a copy of Mulan PSL v2 at:
@@ -54,7 +54,7 @@ function do_test_unless_stopped()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    isula stop $containername
+    isula stop -t 0 $containername
     testcontainer $containername exited
 
     isula rm $containername
@@ -72,7 +72,7 @@ function do_test_unless_stopped_kill()
     sleep 8
     testcontainer $containername running
 
-    isula stop $containername
+    isula stop -t 0 $containername
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 
@@ -98,7 +98,7 @@ function do_test_always_cancel()
     sleep 8
     testcontainer $containername running
 
-    isula stop $containername
+    isula stop -t 0 $containername
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 

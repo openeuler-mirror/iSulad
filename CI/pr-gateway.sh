@@ -1,6 +1,6 @@
 #!/bin/bash
 #######################################################################
-##- @Copyright (C) Huawei Technologies., Ltd. 2021. All rights reserved.
+##- Copyright (c) Huawei Technologies Co., Ltd. 2021. All rights reserved.
 # - iSulad licensed under the Mulan PSL v2.
 # - You can use this software according to the terms and conditions of the Mulan PSL v2.
 # - You may obtain a copy of Mulan PSL v2 at:
@@ -104,7 +104,6 @@ rm -rf build
 mkdir build
 pushd build
 cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=OFF ../ || exit 1
-#cmake -DDEBUG=ON -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_SHIM_V2=ON ../ || exit 1
 make -j $(nproc) || exit 1
 ctest -V
 popd

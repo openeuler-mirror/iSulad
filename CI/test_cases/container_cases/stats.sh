@@ -5,7 +5,7 @@
 # spend time: 5
 
 #######################################################################
-##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
+##- Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
 # - iSulad licensed under the Mulan PSL v2.
 # - You can use this software according to the terms and conditions of the Mulan PSL v2.
 # - You may obtain a copy of Mulan PSL v2 at:
@@ -83,7 +83,7 @@ function test_stats_spec()
     id_stop=`isula run -td -n $container_name_stop $image /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    isula stop $id_stop
+    isula stop -t 0 $id_stop
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop running container" && ((ret++))
 
     isula stats --original > $statslog

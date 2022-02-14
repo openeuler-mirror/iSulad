@@ -34,8 +34,8 @@
 int util_reg_match(const char *patten, const char *str)
 {
     int nret = 0;
+    char buffer[EVENT_ARGS_MAX] = { 0 };
     regex_t reg;
-    regmatch_t regmatch = { 0 };
 
     if (patten == NULL || str == NULL) {
         ERROR("invalid NULL param");
@@ -43,11 +43,13 @@ int util_reg_match(const char *patten, const char *str)
     }
 
     nret = regcomp(&reg, patten, REG_EXTENDED | REG_NOSUB);
-    if (nret) {
+    if (nret != 0) {
+        regerror(nret, &reg, buffer, EVENT_ARGS_MAX);
+        ERROR("regcomp %s failed: %s", patten, buffer);
         return -1;
     }
 
-    nret = regexec(&reg, str, 1, &regmatch, 0);
+    nret = regexec(&reg, str, 0, NULL, 0);
     if (nret == 0) {
         nret = 0;
         goto free_out;

@@ -107,30 +107,17 @@ bool util_valid_signal(int sig)
 
 int util_validate_absolute_path(const char *path)
 {
+#define PATTEN_STR "^(/[^/ ]*)+/?$"
     int nret = 0;
-    regex_t preg;
-    int status = 0;
-    regmatch_t regmatch;
 
     if (path == NULL) {
         return -1;
     }
 
-    (void)memset(&regmatch, 0, sizeof(regmatch_t));
-
-    if (regcomp(&preg, "^(/[^/ ]*)+/?$", REG_NOSUB | REG_EXTENDED)) {
-        ERROR("Failed to compile the regex");
+    if (util_reg_match(PATTEN_STR, path) != 0) {
         nret = -1;
-        goto err_out;
     }
 
-    status = regexec(&preg, path, 1, &regmatch, 0);
-    regfree(&preg);
-    if (status != 0) {
-        nret = -1;
-        goto err_out;
-    }
-err_out:
     return nret;
 }
 
