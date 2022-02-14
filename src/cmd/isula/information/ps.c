@@ -787,17 +787,13 @@ static int format_field_check(const char *source, const char *patten)
 #define MATCH_NUM 1
 #define CHECK_FAILED (-1)
     int status = 0;
-    regex_t reg;
 
     if (source == NULL) {
         ERROR("Filter string is NULL.");
         return CHECK_FAILED;
     }
 
-    regcomp(&reg, patten, REG_NOSUB | REG_EXTENDED);
-
-    status = regexec(&reg, source, 0, NULL, 0);
-    regfree(&reg);
+    status = util_reg_match(patten, source);
 
     if (status != 0) {
         return CHECK_FAILED;

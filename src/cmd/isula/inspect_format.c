@@ -529,17 +529,13 @@ out:
 static int inspect_check(const char *json_str, const char *regex)
 {
     int status = 0;
-    regex_t reg;
 
     if (json_str == NULL) {
         ERROR("Filter string is NULL.");
         return CHECK_FAILED;
     }
 
-    regcomp(&reg, regex, REG_NOSUB | REG_EXTENDED);
-
-    status = regexec(&reg, json_str, 0, NULL, 0);
-    regfree(&reg);
+    status = util_reg_match(regex, json_str);
 
     if (status != 0) {
         /* Log by caller */
