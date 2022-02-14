@@ -237,8 +237,8 @@ out:
     return ret;
 }
 
-/* check kernel version */
-static bool check_kernel_version(const char *version)
+/* check kerver version greater or equal than 4.0.0 */
+static bool check_kernel_version_ge4()
 {
     struct utsname uts;
     int ret;
@@ -247,9 +247,8 @@ static bool check_kernel_version(const char *version)
     if (ret < 0) {
         WARN("Can not get kernel version: %s", strerror(errno));
     } else {
-        if (strverscmp(uts.release, version) < 0) {
-            return false;
-        }
+        /* greater or equal than 4.0.0, check first part is enough */
+        return atoi(uts.release) >= 4;
     }
     return true;
 }
@@ -274,7 +273,7 @@ static int verify_memory_kernel(const sysinfo_t *sysinfo, int64_t kernel)
         goto out;
     }
 
-    if (kernel > 0 && !check_kernel_version("4.0.0")) {
+    if (kernel > 0 && !check_kernel_version_ge4()) {
         WARN("You specified a kernel memory limit on a kernel older than 4.0. "
              "Kernel memory limits are experimental on older kernels, "
              "it won't work as expected and can cause your system to be unstable.");

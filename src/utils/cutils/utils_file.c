@@ -1611,7 +1611,7 @@ char *util_read_content_from_file(const char *path)
         return NULL;
     }
 
-    fd = open(rpath, O_RDONLY | O_CLOEXEC, FILE_MODE);
+    fd = open(rpath, O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
         return NULL;
     }

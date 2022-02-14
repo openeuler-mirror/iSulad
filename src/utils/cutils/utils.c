@@ -16,7 +16,9 @@
 #define _GNU_SOURCE
 #include "utils.h"
 #include <errno.h>
+#ifndef __ANDROID__
 #include <execinfo.h>
+#endif
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +46,18 @@
 #include "utils_regex.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+
+#ifdef __ANDROID__
+int mallopt(int param, int value)
+{
+    return 1;
+}
+
+int malloc_trim(size_t pad)
+{
+    return 1;
+}
+#endif
 
 int util_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize)
 {
@@ -847,6 +861,10 @@ out:
 
 char **util_get_backtrace(void)
 {
+#ifdef __ANDROID__
+    /* android has no backtrace */
+    return NULL;
+#else
 #define BACKTRACE_SIZE 16
     int addr_cnts;
     void *buffer[BACKTRACE_SIZE];
@@ -863,6 +881,7 @@ char **util_get_backtrace(void)
     }
 
     return syms;
+#endif
 }
 
 /* isulad: get starttime of process pid */
