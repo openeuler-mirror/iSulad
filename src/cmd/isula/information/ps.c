@@ -855,7 +855,11 @@ static bool valid_format_field(const char *field)
 
 static int append_header_item_field(const char *index, const char *prefix, const char *suffix, struct filters *ff)
 {
+#ifdef __ANDROID__
+#define SINGLE_PATTEN "{{[ \t\r\n\v\f]*\\.[0-9A-Za-z_]+[ \t\r\n\v\f]*}}"
+#else
 #define SINGLE_PATTEN "\\{\\{\\s*\\.\\w+\\s*\\}\\}"
+#endif
     int ret = 0;
     char *filter_string = NULL;
     struct filter_field *field = NULL;
@@ -938,7 +942,6 @@ out:
 
 static int get_filter_field(const char *patten, struct filters *ff)
 {
-#define SINGLE_PATTEN "\\{\\{\\s*\\.\\w+\\s*\\}\\}"
 #define DEFAULT_CONTAINER_TABLE_FORMAT          \
     "table {{.ID}}\t{{.Image}}\t{{.Command}}\t" \
     "{{.Created}}\t{{.Status}}\t{{.Ports}}\t{{.Names}}"
