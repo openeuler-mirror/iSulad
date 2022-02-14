@@ -89,8 +89,11 @@ static bool get_idreg(regex_t *preg, const char *id)
         goto error;
     }
 
-    if (regcomp(preg, regexp, REG_NOSUB | REG_EXTENDED)) {
-        ERROR("failed to compile the regex '%s'", id);
+    nret = regcomp(preg, regexp, REG_NOSUB | REG_EXTENDED);
+    if (nret != 0) {
+        char buffer[EVENT_ARGS_MAX] = { 0 };
+        regerror(nret, preg, buffer, EVENT_ARGS_MAX);
+        ERROR("failed to compile the regex '%s'", buffer);
         goto error;
     }
 

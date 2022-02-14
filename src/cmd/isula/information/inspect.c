@@ -646,19 +646,13 @@ out:
 static int inspect_check(const char *json_str, const char *regex)
 {
     int status = 0;
-    regmatch_t pmatch[MATCH_NUM] = { { 0 } };
-    regex_t reg;
 
     if (json_str == NULL) {
         ERROR("Filter string is NULL.");
         return CHECK_FAILED;
     }
 
-    regcomp(&reg, regex, REG_EXTENDED);
-
-    status = regexec(&reg, json_str, MATCH_NUM, pmatch, 0);
-    regfree(&reg);
-
+    status = util_reg_match(regex, json_str);
     if (status != 0) {
         /* Log by caller */
         return CHECK_FAILED;
