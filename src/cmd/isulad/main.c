@@ -608,20 +608,14 @@ static void update_isulad_rlimits()
 
 static int validate_time_duration(const char *value)
 {
-    regex_t preg;
+#define PATTEN_STR "^([1-9][0-9]*)+([s,m])$"
     int status = 0;
 
     if (value == NULL) {
         return -1;
     }
 
-    if (regcomp(&preg, "^([1-9][0-9]*)+([s,m])$", REG_NOSUB | REG_EXTENDED)) {
-        ERROR("Failed to compile the regex\n");
-        return -1;
-    }
-
-    status = regexec(&preg, value, 0, NULL, 0);
-    regfree(&preg);
+    status = util_reg_match(PATTEN_STR, value);
     if (status != 0) {
         ERROR("Error start-timeout value: %s\n", value);
         COMMAND_ERROR("Invalid time duration value(%s) in server conf, "

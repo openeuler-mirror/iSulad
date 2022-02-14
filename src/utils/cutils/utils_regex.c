@@ -34,6 +34,7 @@
 int util_reg_match(const char *patten, const char *str)
 {
     int nret = 0;
+    char buffer[EVENT_ARGS_MAX] = { 0 };
     regex_t reg;
 
     if (patten == NULL || str == NULL) {
@@ -42,7 +43,9 @@ int util_reg_match(const char *patten, const char *str)
     }
 
     nret = regcomp(&reg, patten, REG_EXTENDED | REG_NOSUB);
-    if (nret) {
+    if (nret != 0) {
+        regerror(nret, &reg, buffer, EVENT_ARGS_MAX);
+        ERROR("regcomp %s failed: %s", patten, buffer);
         return -1;
     }
 
