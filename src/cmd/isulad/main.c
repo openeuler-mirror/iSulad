@@ -81,7 +81,7 @@ sem_t g_daemon_wait_shutdown_sem;
 static int create_client_run_path(const char *group)
 {
     int ret = 0;
-    const char *rundir = "/var/run/isula";
+    const char *rundir = CLIENT_RUNDIR;
 
     if (group == NULL) {
         return -1;
