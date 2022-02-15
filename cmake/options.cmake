@@ -103,4 +103,10 @@ if (EANBLE_IMAGE_LIBARAY STREQUAL "ON")
     set(EANBLE_IMAGE_LIBARAY 1)
 endif()
 
+if (NOT RUNPATH)
+    set(RUNPATH "/var/run")
+endif()
+add_definitions(-DRUNPATH="${RUNPATH}")
+message("${Green}--  RUNPATH=${RUNPATH}${ColourReset}")
+
 message("${BoldGreen}---- Selected options end ----${ColourReset}")

@@ -95,6 +95,9 @@ extern "C" {
 #ifndef DEFAULT_UNIX_SOCKET
 #define DEFAULT_UNIX_SOCKET "unix:///var/run/isulad.sock"
 #endif
+#ifndef DEFAULT_PID_FILE
+#define DEFAULT_PID_FILE "/var/run/isulad.pid"
+#endif
 #ifndef DEFAULT_ROOTFS_PATH
 #define DEFAULT_ROOTFS_PATH "/dev/ram0"
 #endif
@@ -135,6 +138,9 @@ extern "C" {
 #define CONTAINER_ID_MAX_LEN 64
 
 #define CONTAINER_EXEC_ID_MAX_LEN 64
+
+/* RUNPATH is defined by -DRUNPATH=$value when execute cmake, default is "/var/run" */
+#define CLIENT_RUNDIR RUNPATH"/isula"
 
 typedef enum {
     CONTAINER_STATUS_UNKNOWN = 0,

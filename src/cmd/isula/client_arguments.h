@@ -36,8 +36,6 @@ extern "C" {
 /* max arguments can be specify in client */
 #define MAX_CLIENT_ARGS 1000
 
-#define CLIENT_RUNDIR "/var/run/isula"
-
 struct client_arguments;
 struct custom_configs;
 

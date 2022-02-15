@@ -145,7 +145,7 @@ int service_arguments_init(struct service_arguments *args)
         goto free_out;
     }
 
-    args->json_confs->pidfile = util_strdup_s("/var/run/isulad.pid");
+    args->json_confs->pidfile = util_strdup_s(DEFAULT_PID_FILE);
     args->json_confs->storage_driver = util_strdup_s("overlay2");
     args->json_confs->native_umask = util_strdup_s(UMASK_SECURE);
     args->json_confs->image_service = true;
