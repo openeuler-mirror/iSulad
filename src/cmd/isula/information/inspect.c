@@ -667,6 +667,31 @@ static int inspect_check(const char *json_str, const char *regex)
 
 static int inspect_check_format_f(const char *json_str, bool *json_format)
 {
+#ifdef __ANDROID__
+#define JSON_FORMAT_FIRST "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*(json[ \t\r\n\v\f]+)?(\\.\\w+)+[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
+#else
+#define JSON_FORMAT_FIRST "^\\s*\\{\\s*\\{\\s*(json\\s+)?(\\.\\w+)+\\s*\\}\\s*\\}\\s*$"
+#endif
+#ifdef __ANDROID__
+#define JSON_FORMAT_SECOND "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*json[ \t\r\n\v\f]+(\\.\\w+)+[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
+#else
+#define JSON_FORMAT_SECOND "^\\s*\\{\\s*\\{\\s*json\\s+(\\.\\w+)+\\s*\\}\\s*\\}\\s*$"
+#endif
+#ifdef __ANDROID__
+#define JSON_INVALID_BRACE "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*[^{}]*[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
+#else
+#define JSON_INVALID_BRACE "^\\s*\\{\\s*\\{\\s*[^{}]*\\s*\\}\\s*\\}\\s*$"
+#endif
+#ifdef __ANDROID__
+#define JSON_ARG_WRONG_NUM "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*(json)?[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
+#else
+#define JSON_ARG_WRONG_NUM "^\\s*\\{\\s*\\{\\s*(json)?\\s*\\}\\s*\\}\\s*$"
+#endif
+#ifdef __ANDROID__
+#define JSON_OUT_MODE_ERR "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*(json)?[^0-9A-Za-z_].*[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
+#else
+#define JSON_OUT_MODE_ERR "^\\s*\\{\\s*\\{\\s*(json)?\\W.*\\s*\\}\\s*\\}\\s*$"
+#endif
     int ret = 0;
 
     if (json_str == NULL) {
@@ -675,30 +700,30 @@ static int inspect_check_format_f(const char *json_str, bool *json_format)
     }
 
     /* check "{{json .xxx.xxx}}" */
-    ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*(json\\s+)?(\\.\\w+)+\\s*\\}\\s*\\}\\s*$");
+    ret = inspect_check(json_str, JSON_FORMAT_FIRST);
     if (ret == 0) {
-        if (inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*json\\s+(\\.\\w+)+\\s*\\}\\s*\\}\\s*$") == 0) {
+        if (inspect_check(json_str, JSON_FORMAT_SECOND) == 0) {
             *json_format = true;
         }
         return 0;
     }
 
     /* check "{{ ... }}" */
-    ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*[^{}]*\\s*\\}\\s*\\}\\s*$");
+    ret = inspect_check(json_str, JSON_INVALID_BRACE);
     if (ret != 0) {
         COMMAND_ERROR("Unexpected \"{\" or \"}\" in operand, should be \"{{ ... }}\".");
         goto out;
     }
 
     /* json args. */
-    ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*(json)?\\s*\\}\\s*\\}\\s*$");
+    ret = inspect_check(json_str, JSON_ARG_WRONG_NUM);
     if (ret == 0) {
         COMMAND_ERROR("Executing \"\" at <json>: wrong number of args for json: want 1 got 0.");
         goto out;
     }
 
     /* check "{{json... }}" */
-    ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*(json)?\\W.*\\s*\\}\\s*\\}\\s*$");
+    ret = inspect_check(json_str, JSON_OUT_MODE_ERR);
     if (ret != 0) {
         COMMAND_ERROR("Output mode error, E.g \"{{json ... }}\" or \"{{ ... }}\" is right.");
         goto out;
