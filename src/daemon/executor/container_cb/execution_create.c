@@ -1402,7 +1402,7 @@ static char *new_pod_sandbox_key(void)
     int nret = 0;
     char random[NETNS_LEN + 1] = { 0x00 };
     char netns[PATH_MAX] = { 0x00 };
-    const char *netns_fmt = "/var/run/netns/isulacni-%s";
+    const char *netns_fmt = RUNPATH"/netns/isulacni-%s";
 
     nret = util_generate_random_str(random, NETNS_LEN);
     if (nret != 0) {

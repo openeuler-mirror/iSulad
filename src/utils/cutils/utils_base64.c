@@ -17,13 +17,9 @@
 #include "utils_base64.h"
 #include <stdlib.h>
 #include <string.h>
-#ifdef __ANDROID__
-#include <base64.h>
-#else
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
 #include <openssl/ossl_typ.h>
-#endif
 #include "isula_libutils/log.h"
 #include "openssl/bio.h"
 #include "utils.h"
