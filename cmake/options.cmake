@@ -128,4 +128,10 @@ if (ENABLE_GVISOR)
     message("${Green}--  Enable runtime gvisor${ColourReset}")
 endif()
 
+if (NOT RUNPATH)
+    set(RUNPATH "/var/run")
+endif()
+add_definitions(-DRUNPATH="${RUNPATH}")
+message("${Green}--  RUNPATH=${RUNPATH}${ColourReset}")
+
 message("${BoldGreen}---- Selected options end ----${ColourReset}")
