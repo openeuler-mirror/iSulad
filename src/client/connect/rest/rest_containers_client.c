@@ -1733,6 +1733,155 @@ out:
     return ret;
 }
 
+/* info request to rest */
+static int info_request_to_rest(const struct isula_info_request *li_request, char **body, size_t *body_len)
+{
+    host_info_request *crequest = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error err = NULL;
+    int ret = 0;
+
+    crequest = util_common_calloc_s(sizeof(host_info_request));
+    if (crequest == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    *body = host_info_request_generate_json(crequest, &ctx, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate info request json%s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_host_info_request(crequest);
+    return ret;
+}
+
+/* unpack info response */
+static int unpack_info_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_info_response *info_response = (struct isula_info_response *)arg;
+    host_info_response *response = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        goto out;
+    }
+
+    response = host_info_response_parse_data(message->body, NULL, &err);
+    if (response == NULL) {
+        ERROR("Invalid info response:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    info_response->server_errono = response->cc;
+    if (response->version != NULL) {
+        info_response->version = util_strdup_s(response->version);
+    }
+    if (response->kversion != NULL) {
+        info_response->kversion = util_strdup_s(response->kversion);
+    }
+    if (response->os_type != NULL) {
+        info_response->os_type = util_strdup_s(response->os_type);
+    }
+    if (response->architecture != NULL) {
+        info_response->architecture = util_strdup_s(response->architecture);
+    }
+    if (response->nodename != NULL) {
+        info_response->nodename = util_strdup_s(response->nodename);
+    }
+    if (response->operating_system != NULL) {
+        info_response->operating_system = util_strdup_s(response->operating_system);
+    }
+    if (response->cgroup_driver != NULL) {
+        info_response->cgroup_driver = util_strdup_s(response->cgroup_driver);
+    }
+    if (response->logging_driver != NULL) {
+        info_response->logging_driver = util_strdup_s(response->logging_driver);
+    }
+    if (response->huge_page_size != NULL) {
+        info_response->huge_page_size = util_strdup_s(response->huge_page_size);
+    }
+    if (response->isulad_root_dir != NULL) {
+        info_response->isulad_root_dir = util_strdup_s(response->isulad_root_dir);
+    }
+    if (response->http_proxy != NULL) {
+        info_response->http_proxy = util_strdup_s(response->http_proxy);
+    }
+    if (response->https_proxy != NULL) {
+        info_response->https_proxy = util_strdup_s(response->https_proxy);
+    }
+    if (response->no_proxy != NULL) {
+        info_response->no_proxy = util_strdup_s(response->no_proxy);
+    }
+    if (response->driver_name != NULL) {
+        info_response->driver_name = util_strdup_s(response->driver_name);
+    }
+    if (response->driver_status != NULL) {
+        info_response->driver_status = util_strdup_s(response->driver_status);
+    }
+    if (response->errmsg != NULL) {
+        info_response->errmsg = util_strdup_s(response->errmsg);
+    }
+    info_response->total_mem = response->total_mem;
+    info_response->containers_num = (uint32_t)response->containers_num;
+    info_response->c_running = (uint32_t)response->c_running;
+    info_response->c_paused = (uint32_t)response->c_paused;
+    info_response->c_stopped = (uint32_t)response->c_stopped;
+    info_response->images_num = (uint32_t)response->images_num;
+    info_response->cpus = (uint32_t)response->cpus;
+
+    ret = (response->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    free(err);
+    free_host_info_response(response);
+    return ret;
+}
+
+/* rest container info */
+static int rest_container_info(const struct isula_info_request *li_request,
+                               struct isula_info_response *li_response, void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    Buffer *output = NULL;
+
+    ret = info_request_to_rest(li_request, &body, &len);
+    if (ret != 0) {
+        goto out;
+    }
+    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceInfo, body, len, &output);
+    if (ret != 0) {
+        li_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        li_response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    ret = get_response(output, unpack_info_response, (void *)li_response);
+    if (ret != 0) {
+        goto out;
+    }
+
+out:
+    buffer_free(output);
+    put_body(body);
+    return ret;
+}
+
 /* rest containers client ops init */
 int rest_containers_client_ops_init(isula_connect_ops *ops)
 {
@@ -1755,6 +1904,7 @@ int rest_containers_client_ops_init(isula_connect_ops *ops)
     ops->container.kill = &rest_container_kill;
     ops->container.version = &rest_container_version;
     ops->container.wait = &rest_container_wait;
+    ops->container.info = &rest_container_info;
 
     return 0;
 }
