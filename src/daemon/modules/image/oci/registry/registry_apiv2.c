@@ -294,17 +294,12 @@ static int parse_ping_header(pull_descriptor *desc, char *http_head)
 
     version = get_header_value(message, "Docker-Distribution-Api-Version");
     if (version == NULL) {
-        ERROR("Docker-Distribution-Api-Version not found in header, registry may can not support registry API V2");
-        ret = -1;
-        goto out;
+        WARN("Docker-Distribution-Api-Version not found in header, registry may can not support registry API V2");
     }
 
-    if (!util_strings_contains_word(version, "registry/2.0")) {
-        ERROR("Docker-Distribution-Api-Version does not contain registry/2.0, it's value is %s."
-              "Registry can not support registry API V2",
-              version);
-        ret = -1;
-        goto out;
+    if (version != NULL && !util_strings_contains_word(version, "registry/2.0")) {
+        WARN("Docker-Distribution-Api-Version does not contain registry/2.0, it's value is %s."
+             "Registry may can not support registry API V2", version);
     }
 
     ret = parse_auths(desc, message);
