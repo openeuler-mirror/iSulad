@@ -58,6 +58,7 @@ function make_cni_plugins()
        cp /usr/libexec/cni/* ${builddir}/cni/bin/
        return 0
     fi
+    go env -w GO111MODULE="off"
     local CNI_PLUGINS_COMMIT=b93d284d18dfc8ba93265fa0aa859c7e92df411b
     cd ~
     git clone https://gitee.com/duguhaotian/plugins.git
