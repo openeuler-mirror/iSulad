@@ -1,3 +1,47 @@
+2022-02-24 root release 2.0.11
+    - !1309 improve ci of stable branch Merge pull request !1309 from haozi007/stable-v2.0.x
+    - !1308 continue pulling even if no Docker-Distribution-Api-Version found Merge pull request !1308 from wangfengtu/pull_fail_stable
+    - !1305 Give a default network namespace mode when linux field is not configured Merge pull request !1305 from czrz/stable-v2.0.x
+    - !1304 disable image related command if disable oci and disable embedded Merge pull request !1304 from wangfengtu/disable_commands_stable
+    - !1302 support change RUNPATH when compile Merge pull request !1302 from wangfengtu/rundir
+    - !1299 fix lose regexec for android From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1298 sync from master branch Merge pull request !1298 from haozi007/stable-v2.0.x
+    - !1295 adapt android compile From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1293 sync from master branch From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1290 print error when dlsym failed Merge pull request !1290 from wangfengtu/dlsym_error_stable
+    - !1288 do not timeout when use restfull to connect to daemon Merge pull request !1288 from wangfengtu/timeout_stable
+    - !1273 refactor build system of iSulad Merge pull request !1273 from haozi007/stable-v2.0.x
+    - !1278 fix multithreading exec bug Merge pull request !1278 from zhangxiaoyu/stable-v2.0.x
+    - !1276 fix compile error of isula-transform Merge pull request !1276 from wangfengtu/transform-stable
+    - !1272 fix compile error with grpc 1.41.x Merge pull request !1272 from zhangxiaoyu/stable-v2.0.x
+    - !1267 【stable】fix compile error when building embedded image Merge pull request !1267 from wangfengtu/compile_stable
+    - !1260 fix codex error Merge pull request !1260 from wangfengtu/fix_codex_stable
+    - !1255 fix memory leak in CniNetworkPlugin Merge pull request !1255 from zhangxiaoyu/stable-v2.0.x
+    - !1246 Fixed a bug that occurs when starting a container in host mode Merge pull request !1246 from czrz/stable-v2.0.x
+    - !1244 Optimize websocket streaming service code Merge pull request !1244 from JingWoo/stable-v2.0.x
+    - !1243 add pull request gateway checker for build and ut From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1234 fix dangerous memory operation and memory leak Merge pull request !1234 from czrz/stable-v2.0.x
+    - !1241 isula pull does not support format name@digest Merge pull request !1241 from wangfengtu/remove_digest_stable
+    - !1238 fix mem leak Merge pull request !1238 from gaohuatao/sta_ght
+    - !1236 fix undefined reference to `service_arguments_free' in libisulad_img.so From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1232 fix undefined reference in libisulad_img.so Merge pull request !1232 from wangfengtu/undefine_stable
+    - !1230 fix cri version memory leak From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1227 print valgrind log Merge pull request !1227 from zhangxiaoyu/stable-v2.0.x
+    - !1224 add fuzz build in CI From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1221 Modified cmakelist of storage_layer and added a new mock function in isulad_config_mock to fix errors that happen when compiling with UT option turned on From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1220 fix cpu variant get error From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1217 fix cri libwebsockets sync_close_sem memory leak From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1216 Fix memory leak in ClearCniNetwork when calling get_sandbox_key From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1214 delete isulad h flag Merge pull request !1214 from gaohuatao/sta_ght
+    - !1211 add new function mock for ut From: @duguhaotian Reviewed-by: @jingwoo,@jingxiaolu Signed-off-by: @jingxiaolu
+    - !1209 Modified the procedure of running a pod to adapt to kata 2.0 From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1208 fix memleak when use multiple --volumes-from Merge pull request !1208 from wangfengtu/memleak_stable
+    - !1206 add self def runtime for shimv2 From: @gaohuatao Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+
+    dev stats:
+      - 198 files changed, 2717 insertions(+), 1232 deletions(-)
+      - contributors: WangFengTu, haozi007, zhangxiaoyu, chengzrz, SmartsYoung, gaohuatao, wujing
+
 2021-11-09 gaohuatao release 2.0.10
     - !1203 too many cri websocket will connect failed Merge pull request !1203 from zhangxiaoyu/stable-v2.0.x
     - !1202 delete unused head file Merge pull request !1202 from gaohuatao/sta_ght
