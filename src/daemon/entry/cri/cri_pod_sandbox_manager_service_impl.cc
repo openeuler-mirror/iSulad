@@ -96,6 +96,12 @@ void PodSandboxManagerServiceImpl::ApplySandboxResources(const runtime::v1alpha2
     hc->cpu_shares = CRI::Constants::DefaultSandboxCPUshares;
 }
 
+void PodSandboxManagerServiceImpl::SetHostConfigDefaultValue(host_config *hc)
+{
+    free(hc->network_mode);
+    hc->network_mode = util_strdup_s(CRI::Constants::namespaceModeCNI.c_str());
+}
+
 void PodSandboxManagerServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alpha2::PodSandboxConfig &c,
                                                            host_config *hc,
                                                            container_config *custom_config, Errors &error)
@@ -159,14 +165,13 @@ void PodSandboxManagerServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alph
         custom_config->hostname = util_strdup_s(c.hostname().c_str());
     }
 
+    SetHostConfigDefaultValue(hc);
+
     if (c.has_linux()) {
         ApplySandboxLinuxOptions(c.linux(), hc, custom_config, error);
         if (error.NotEmpty()) {
             return;
         }
-    } else {
-        free(hc->network_mode);
-        hc->network_mode = util_strdup_s(CRI::Constants::namespaceModeCNI.c_str());
     }
 
     hc->oom_score_adj = CRI::Constants::PodInfraOOMAdj;

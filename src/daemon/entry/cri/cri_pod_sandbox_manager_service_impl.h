@@ -66,6 +66,7 @@ private:
                                                const std::string &image, std::string &jsonCheckpoint,
                                                const std::string &runtimeHandler,
                                                Errors &error) -> container_create_request *;
+    void SetHostConfigDefaultValue(host_config *hc);
     void MakeSandboxIsuladConfig(const runtime::v1alpha2::PodSandboxConfig &c, host_config *hc,
                                  container_config *custom_config, Errors &error);
     void ApplySandboxLinuxOptions(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, host_config *hc,
