@@ -1,5 +1,5 @@
-%global _version 2.0.10
-%global _release 15
+%global _version 2.0.11
+%global _release 1
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -12,33 +12,6 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
-
-Patch0001: 0001-add-self-def-runtime-for-shimv2.patch
-Patch0002: 0002-fix-memleak-when-use-multiple-volumes-from.patch
-Patch0003: 0003-Modified-the-procedure-of-running-a-pod-to-adapt-to-.patch
-Patch0004: 0004-add-new-function-mock-for-ut.patch
-Patch0005: 0005-delete-isulad-h-flag.patch
-Patch0006: 0006-Fix-memory-leak-in-ClearCniNetwork-when-calling-get_.patch
-Patch0007: 0007-fix-cri-libwebsockets-sync_close_sem-memory-leak.patch
-Patch0008: 0008-fix-cpu-variant-get-error.patch
-Patch0009: 0009-fix-unit-test-error-of-registry-in-armv8.patch
-Patch0010: 0010-Modified-cmakelist-of-storage_layer-and-added-a-new-.patch
-Patch0011: 0011-add-fuzz-build-in-CI.patch
-Patch0012: 0012-print-valgrind-log.patch
-Patch0013: 0013-fix-cri-version-memory-leak.patch
-Patch0014: 0014-fix-undefined-reference-in-libisulad_img.so.patch
-Patch0015: 0015-fix-undefined-reference-to-service_arguments_free-in.patch
-Patch0016: 0016-fix-mem-leak.patch
-Patch0017: 0017-isula-pull-does-not-support-format-name-digest.patch
-Patch0018: 0018-Fixed-dangerous-memory-operations.patch
-Patch0019: 0019-add-pull-request-gateway-checker-for-build-and-ut.patch
-Patch0020: 0020-Optimize-websocket-streaming-service-code.patch
-Patch0021: 0021-Fixed-a-bug-that-occurs-when-starting-container-in-h.patch
-Patch0022: 0022-fix-memory-leak-in-CniNetworkPlugin.patch
-Patch0023: 0023-fix-codex-error.patch
-Patch0024: 0024-fix-compile-error-when-building-embedded-image.patch
-Patch0025: 0025-fix-compile-error-with-grpc-1.41.x.patch
-Patch0026: 0026-fix-compile-error-of-isula-transform.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -62,8 +35,8 @@ BuildRequires: sqlite-devel
 Requires: sqlite
 %endif
 
-%define lcrver 2.0.6
-%define clibcniver 2.0.6
+%define lcrver 2.0.7
+%define clibcniver 2.0.7
 
 BuildRequires: lcr-devel >= %{lcrver} clibcni-devel >= %{clibcniver}
 BuildRequires: cmake gcc-c++ yajl-devel lxc lxc-devel
@@ -92,7 +65,7 @@ This is a umbrella project for gRPC-services based Lightweight Container
 Runtime Daemon, written by C.
 
 %prep
-%autosetup -n %{name} -Sgit -p1
+%autosetup -n iSulad-v%{_version} -Sgit -p1
 
 %build
 mkdir -p build
@@ -262,6 +235,12 @@ fi
 %endif
 
 %changelog
+* Thu Feb 24 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.11-1
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: update version to v2.0.11
+
 * Wed Jan 12 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.10-15
 - Type: bugfix
 - ID: NA
