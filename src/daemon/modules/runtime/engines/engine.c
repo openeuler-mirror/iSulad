@@ -123,7 +123,8 @@ static int create_engine_root_path(const char *path)
     int ret = -1;
     char *tmp_path = NULL;
     char *p = NULL;
-    char *userns_remap = NULL;
+    char *userns_remap = conf_get_isulad_userns_remap();
+    mode_t mode = CONFIG_DIRECTORY_MODE;
 
     if (path == NULL) {
         return ret;
@@ -134,12 +135,15 @@ static int create_engine_root_path(const char *path)
         goto out;
     }
 
-    if (util_mkdir_p(path, CONFIG_DIRECTORY_MODE) != 0) {
+    if (userns_remap != NULL) {
+        mode = USER_REMAP_DIRECTORY_MODE;
+    }
+
+    if (util_mkdir_p(path, mode) != 0) {
         ERROR("Unable to create engine root path: %s", path);
         goto out;
     }
 
-    userns_remap = conf_get_isulad_userns_remap();
     if (userns_remap != NULL) {
         if (set_file_owner_for_userns_remap(path, userns_remap) != 0) {
             ERROR("Unable to change directory %s owner for user remap.", path);
