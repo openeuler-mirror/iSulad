@@ -304,8 +304,6 @@ static void get_next_project_id(const char *dirpath, struct pquota_control *ctrl
     if (nret) {
         ERROR("Failed to close directory %s", dirpath);
     }
-
-    return;
 }
 
 void free_pquota_control(struct pquota_control *ctrl)

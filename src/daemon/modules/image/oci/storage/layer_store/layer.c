@@ -158,7 +158,7 @@ free_out:
 int save_layer(layer_t *layer)
 {
     char *jstr = NULL;
-    parser_error jerr;
+    parser_error jerr = NULL;
     int ret = -1;
 
     if (layer == NULL || layer->layer_json_path == NULL || layer->slayer == NULL) {

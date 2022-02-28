@@ -40,7 +40,6 @@ void certs_set_dir(char *certs_dir)
     if (certs_dir != NULL) {
         g_certs_dir = util_strdup_s(certs_dir);
     }
-    return;
 }
 
 static char *corresponding_key_name(const char *cert_name)
@@ -72,7 +71,7 @@ static char *corresponding_key_name(const char *cert_name)
 
 static char *corresponding_cert_name(const char *key_name)
 {
-    char cert_name[PATH_MAX] = {0};
+    char cert_name[PATH_MAX] = { 0 };
     char *tmp_key_name = NULL;
     int sret = 0;
 
@@ -290,7 +289,7 @@ int certs_load(char *host, bool use_decrypted_key, char **ca_file, char **cert_f
 
     entry = readdir(dir);
     while (entry != 0) {
-        if (strncmp(entry->d_name, ".", PATH_MAX) == 0 || strncmp(entry->d_name, "..", PATH_MAX) == 0) {
+        if (strncmp(entry->d_name, ".", PATH_MAX - 1) == 0 || strncmp(entry->d_name, "..", PATH_MAX - 1) == 0) {
             entry = readdir(dir);
             continue;
         }
