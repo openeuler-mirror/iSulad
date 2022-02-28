@@ -2898,8 +2898,6 @@ static void strip_host_prefix(char **name)
 
     free(*name);
     *name = new_image_name;
-
-    return;
 }
 
 static int deduplicate_names(storage_image *im)

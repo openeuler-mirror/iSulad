@@ -48,8 +48,8 @@ static int check_modes(const defs_mount *m, const char *volume_str, char **valid
 
     for (i = 0; i < m->options_len; i++) {
         if (check_mode(valid_modes, valid_modes_len, m->options[i]) != 0) {
-            isulad_set_error_message("Invalid volume specification '%s',Invalid mode %s for type %s",
-                                     volume_str, m->options[i], m->type);
+            isulad_set_error_message("Invalid volume specification '%s',Invalid mode %s for type %s", volume_str,
+                                     m->options[i], m->type);
             return -1;
         }
     }
@@ -59,15 +59,15 @@ static int check_modes(const defs_mount *m, const char *volume_str, char **valid
 
 static int check_volume_opts(const char *volume_str, const defs_mount *m)
 {
-    char *valid_bind_modes[] = {"ro", "rw", "z", "Z", "private", "rprivate", "slave", "rslave", "shared", "rshared"};
-    char *valid_volume_modes[] = {"ro", "rw", "z", "Z", "nocopy"};
+    char *valid_bind_modes[] = { "ro", "rw", "z", "Z", "private", "rprivate", "slave", "rslave", "shared", "rshared" };
+    char *valid_volume_modes[] = { "ro", "rw", "z", "Z", "nocopy" };
     int ret = 0;
 
     if (strcmp(m->type, MOUNT_TYPE_BIND) == 0) {
-        ret = check_modes(m, volume_str, valid_bind_modes, sizeof(valid_bind_modes) / sizeof(char*));
+        ret = check_modes(m, volume_str, valid_bind_modes, sizeof(valid_bind_modes) / sizeof(char *));
     }
     if (strcmp(m->type, MOUNT_TYPE_VOLUME) == 0) {
-        ret = check_modes(m, volume_str, valid_volume_modes, sizeof(valid_volume_modes) / sizeof(char*));
+        ret = check_modes(m, volume_str, valid_volume_modes, sizeof(valid_volume_modes) / sizeof(char *));
     }
 
     return ret;
@@ -92,18 +92,17 @@ static int check_mount_dst(const defs_mount *m)
 
 static int check_mount_source(const defs_mount *m)
 {
-    if (strcmp(m->type, MOUNT_TYPE_VOLUME) &&
-        (m->source == NULL || m->source[0] != '/')) {
+    if (strcmp(m->type, MOUNT_TYPE_VOLUME) != 0 && (m->source == NULL || m->source[0] != '/')) {
         ERROR("Invalid source %s, type %s", m->source, m->type);
         isulad_set_error_message("Invalid source %s, type %s", m->source, m->type);
         return EINVALIDARGS;
     }
 
-    if (m->source != NULL && m->source[0] != '/' &&
-        !util_valid_volume_name(m->source)) {
+    if (m->source != NULL && m->source[0] != '/' && !util_valid_volume_name(m->source)) {
         ERROR("Invalid volume name %s, only \"%s\" are allowed", m->source, VALID_VOLUME_NAME);
         isulad_set_error_message("Invalid volume name %s, only \"%s\" are allowed. If you intended to pass "
-                                 "a host directory, use absolute path.", m->source, VALID_VOLUME_NAME);
+                                 "a host directory, use absolute path.",
+                                 m->source, VALID_VOLUME_NAME);
         return EINVALIDARGS;
     }
 
@@ -217,7 +216,7 @@ static int check_mount_element(const char *volume_str, const defs_mount *m)
         goto out;
     }
 
-    if (strcmp(m->type, MOUNT_TYPE_BIND) && strcmp(m->type, MOUNT_TYPE_VOLUME)) {
+    if (strcmp(m->type, MOUNT_TYPE_BIND) != 0 && strcmp(m->type, MOUNT_TYPE_VOLUME) != 0) {
         ERROR("invalid type %s, only support bind/volume", m->type);
         isulad_set_error_message("invalid type %s, only support bind/volume", m->type);
         ret = EINVALIDARGS;
@@ -305,7 +304,8 @@ static int get_src_dst_mode_by_volume(const char *volume, defs_mount *mount_elem
     if (mount_element->source[0] != '/' && !util_valid_volume_name(mount_element->source)) {
         ERROR("Invalid volume name %s, only \"%s\" are allowed", mount_element->source, VALID_VOLUME_NAME);
         isulad_set_error_message("Invalid volume name %s, only \"%s\" are allowed. If you intended to pass "
-                                 "a host directory, use absolute path.", mount_element->source, VALID_VOLUME_NAME);
+                                 "a host directory, use absolute path.",
+                                 mount_element->source, VALID_VOLUME_NAME);
         ret = -1;
         goto free_out;
     }
@@ -448,4 +448,3 @@ free_out:
     }
     return mount_element;
 }
-

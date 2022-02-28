@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-#define RUNTIME_NOT_IMPLEMENT_RESET -2
+#define RUNTIME_NOT_IMPLEMENT_RESET (-2)
 
 typedef enum {
     RUNTIME_CONTAINER_STATUS_UNKNOWN = 0,

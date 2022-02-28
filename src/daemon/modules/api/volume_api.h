@@ -22,18 +22,18 @@ extern "C" {
 
 #define VOLUME_DEFAULT_DRIVER_NAME "local"
 #define VOLUME_DEFAULT_NAME_LEN 64
-#define VOLUME_ERR_NOT_EXIST -2
+#define VOLUME_ERR_NOT_EXIST (-2)
 
 typedef struct {
-    struct volume * (*create)(char *name);
+    struct volume *(*create)(char *name);
 
-    struct volume * (*get)(char *name);
+    struct volume *(*get)(char *name);
 
     int (*mount)(char *name);
 
     int (*umount)(char *name);
 
-    struct volumes * (*list)(void);
+    struct volumes *(*list)(void);
 
     int (*remove)(char *name);
 } volume_driver;
@@ -64,13 +64,13 @@ int volume_init(char *root_dir);
 
 int register_driver(char *name, volume_driver *driver);
 
-struct volume * volume_create(char *driver_name, char *name, struct volume_options *opts);
+struct volume *volume_create(char *driver_name, char *name, struct volume_options *opts);
 
 int volume_mount(char *name);
 
 int volume_umount(char *name);
 
-struct volumes * volume_list(void);
+struct volumes *volume_list(void);
 
 int volume_add_ref(char *name, char *ref);
 

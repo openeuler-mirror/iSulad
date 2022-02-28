@@ -35,8 +35,6 @@ void free_challenge(challenge *c)
     free(c->cached_token);
     c->cached_token = NULL;
     c->expires_time = 0;
-
-    return;
 }
 
 void free_layer_blob(layer_blob *layer)
@@ -57,7 +55,6 @@ void free_layer_blob(layer_blob *layer)
     free(layer->file);
     layer->file = NULL;
     layer->already_exist = false;
-    return;
 }
 
 void free_pull_desc(pull_descriptor *desc)
@@ -155,6 +152,4 @@ void free_pull_desc(pull_descriptor *desc)
     }
 
     free(desc);
-
-    return;
 }

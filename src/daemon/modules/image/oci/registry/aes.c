@@ -27,7 +27,7 @@ static char *g_aeskey = DEFAULT_AUTH_AESKEY;
 void aes_set_key_dir(char *key_dir)
 {
     int sret = 0;
-    char path[PATH_MAX] = {0};
+    char path[PATH_MAX] = { 0 };
 
     if (key_dir == NULL) {
         return;
@@ -40,8 +40,6 @@ void aes_set_key_dir(char *key_dir)
     }
 
     g_aeskey = util_strdup_s(path);
-
-    return;
 }
 
 int aes_decode(unsigned char *input, size_t input_len, unsigned char **output)
@@ -63,7 +61,6 @@ int aes_decode(unsigned char *input, size_t input_len, unsigned char **output)
     }
 
 out:
-
     return ret;
 }
 
@@ -86,6 +83,5 @@ int aes_encode(unsigned char *input, size_t input_len, unsigned char **output)
     }
 
 out:
-
     return ret;
 }

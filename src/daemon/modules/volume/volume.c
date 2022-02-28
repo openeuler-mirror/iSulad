@@ -51,15 +51,15 @@ static void mutex_unlock(pthread_mutex_t *mutex)
 
 static int valid_driver(volume_driver *driver)
 {
-    if (driver->create == NULL || driver->get == NULL || driver->mount == NULL ||
-        driver->umount == NULL || driver->list == NULL || driver->remove == NULL) {
+    if (driver->create == NULL || driver->get == NULL || driver->mount == NULL || driver->umount == NULL ||
+        driver->list == NULL || driver->remove == NULL) {
         ERROR("Invalid volume driver, NULL function found");
         return -1;
     }
     return 0;
 }
 
-static volume_driver * lookup_driver(char *name)
+static volume_driver *lookup_driver(char *name)
 {
     if (name == NULL) {
         ERROR("invalid NULL volume driver name");
@@ -68,7 +68,7 @@ static volume_driver * lookup_driver(char *name)
     return map_search(g_vs.drivers, name);
 }
 
-static volume_driver * lookup_driver_by_volume_name(char *name)
+static volume_driver *lookup_driver_by_volume_name(char *name)
 {
     struct volume *vol = NULL;
     static volume_driver *driver = NULL;
@@ -100,7 +100,7 @@ out:
     return driver;
 }
 
-static volume_driver * dup_driver(volume_driver *driver)
+static volume_driver *dup_driver(volume_driver *driver)
 {
     volume_driver *d = NULL;
 
@@ -174,8 +174,7 @@ out:
 static void refs_kvfree(void *key, void *value)
 {
     free(key);
-    map_free((map_t*)value);
-    return;
+    map_free((map_t *)value);
 }
 
 static int add_name_ref(map_t *name_refs, char *name, char *ref)
@@ -210,7 +209,7 @@ static int add_name_ref(map_t *name_refs, char *name, char *ref)
     return 0;
 }
 
-static struct volume_names * empty_volume_names(size_t size)
+static struct volume_names *empty_volume_names(size_t size)
 {
     int ret = 0;
     struct volume_names *vns = NULL;
@@ -236,7 +235,7 @@ out:
     return vns;
 }
 
-static struct volume_names * get_name_refs(map_t *name_refs, char *name)
+static struct volume_names *get_name_refs(map_t *name_refs, char *name)
 {
     int ret = 0;
     map_itor *itor = NULL;
@@ -331,21 +330,21 @@ int volume_init(char *root_dir)
 
 out:
     if (ret != 0) {
-        map_free((map_t*)g_vs.drivers);
+        map_free((map_t *)g_vs.drivers);
         g_vs.drivers = NULL;
-        map_free((map_t*)g_vs.name_refs);
+        map_free((map_t *)g_vs.name_refs);
         g_vs.name_refs = NULL;
     }
 
     return ret;
 }
 
-struct volume * volume_create(char *driver_name, char *name, struct volume_options *opts)
+struct volume *volume_create(char *driver_name, char *name, struct volume_options *opts)
 {
     int ret = 0;
-    struct volume * vol = NULL;
+    struct volume *vol = NULL;
     volume_driver *driver = NULL;
-    char volume_name[VOLUME_DEFAULT_NAME_LEN + 1] = {0};
+    char volume_name[VOLUME_DEFAULT_NAME_LEN + 1] = { 0 };
 
     if (driver_name == NULL || opts == NULL || opts->ref == NULL) {
         ERROR("invalid null param for volume create");
@@ -366,7 +365,7 @@ struct volume * volume_create(char *driver_name, char *name, struct volume_optio
             ret = -1;
             goto out;
         }
-        name = (char*)volume_name;
+        name = (char *)volume_name;
     }
 
     vol = driver->create(name);
@@ -439,7 +438,7 @@ out:
     return ret;
 }
 
-static struct volumes * list_all_driver_volumes()
+static struct volumes *list_all_driver_volumes()
 {
     int ret = 0;
     volume_driver *driver = NULL;
@@ -470,7 +469,7 @@ out:
     return vols;
 }
 
-struct volumes * volume_list(void)
+struct volumes *volume_list(void)
 {
     struct volumes *vols = NULL;
 
@@ -575,7 +574,7 @@ int volume_prune(struct volume_names **pruned)
     }
 
     if (list->vols_len != 0) {
-        (*pruned)->names = util_common_calloc_s(sizeof(char*) * list->vols_len);
+        (*pruned)->names = util_common_calloc_s(sizeof(char *)*list->vols_len);
         if ((*pruned)->names == NULL) {
             ret = -1;
             goto out;
@@ -634,7 +633,6 @@ void free_volume(struct volume *vol)
     free(vol->mount_point);
     vol->mount_point = NULL;
     free(vol);
-    return;
 }
 
 void free_volumes(struct volumes *vols)
@@ -651,5 +649,4 @@ void free_volumes(struct volumes *vols)
     free(vols->vols);
     vols->vols = NULL;
     free(vols);
-    return;
 }
