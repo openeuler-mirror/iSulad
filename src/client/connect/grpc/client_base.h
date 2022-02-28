@@ -41,7 +41,7 @@ class ClientBase {
 public:
     explicit ClientBase(void *args)
     {
-        client_connect_config_t *arguments = reinterpret_cast<client_connect_config_t *>(args);
+        auto *arguments = reinterpret_cast<client_connect_config_t *>(args);
 
         std::string socket_address = arguments->socket;
         const std::string tcp_prefix = "tcp://";
@@ -207,7 +207,7 @@ protected:
 
     std::unique_ptr<sTB> stub_;
     std::string m_tlsMode { ClientBaseConstants::TLS_OFF };
-    std::string m_certFile { "" };
+    std::string m_certFile;
 
     unsigned int deadline;
 };
