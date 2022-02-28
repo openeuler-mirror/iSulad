@@ -94,7 +94,7 @@ std::string RequestCache::UniqueToken()
     for (int i {}; i < maxTries; ++i) {
         char rawToken[rawTokenSize + 1];
         (void)memset(rawToken, 0, sizeof(rawToken));
-        if (util_generate_random_str(rawToken, (size_t)rawTokenSize)) {
+        if (util_generate_random_str(rawToken, (size_t)rawTokenSize) != 0) {
             ERROR("Generate rawToken failed");
             continue;
         }
