@@ -90,7 +90,7 @@ void Errors::SetAggregate(const std::vector<std::string> &msgs)
     std::string result;
     size_t size = msgs.size();
 
-    if (!size) {
+    if (size == 0) {
         return;
     }
 

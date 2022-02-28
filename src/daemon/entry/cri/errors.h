@@ -44,7 +44,7 @@ public:
 
 private:
     std::string m_message;
-    int m_code;
+    int m_code{0};
 };
 
 #endif // DAEMON_ENTRY_CRI_ERRORS_H

@@ -27,7 +27,7 @@
 #include "cri_runtime_service.h"
 
 namespace Network {
-static void run_modprobe(void *args)
+static void run_modprobe(void * /*args*/)
 {
     execlp("modprobe", "modprobe", "br-netfilter", nullptr);
 }
@@ -190,7 +190,7 @@ void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std
                        std::string hairpinMode, std::string nonMasqueradeCIDR, int mtu,
                        std::shared_ptr<NetworkPlugin> *result, Errors &err)
 {
-    std::string allErr { "" };
+    std::string allErr;
 
     if (networkPluginName.empty()) {
         DEBUG("network plugin name empty");
@@ -233,7 +233,6 @@ void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std
     }
 
     pluginMap.clear();
-    return;
 }
 
 const std::string &NetworkPluginConf::GetDockershimRootDirectory() const
@@ -485,8 +484,8 @@ unlock:
     Unlock(fullName, error);
 }
 
-void NoopNetworkPlugin::Init(const std::string &hairpinMode,
-                             const std::string &nonMasqueradeCIDR, int mtu, Errors &error)
+void NoopNetworkPlugin::Init(const std::string &hairpinMode, const std::string &nonMasqueradeCIDR, int mtu,
+                             Errors &error)
 {
     char *stderr_str { nullptr };
     char *stdout_str { nullptr };
