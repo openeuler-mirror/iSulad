@@ -1026,7 +1026,7 @@ static int get_request_image_info(const container_create_request *request, char 
     }
 
     // Do not use none image because none image has no config.
-    if (strcmp(request->image, "none") && strcmp(request->image, "none:latest")) {
+    if (strcmp(request->image, "none") != 0 && strcmp(request->image, "none:latest") != 0) {
         *image_name = util_strdup_s(request->image);
     }
 

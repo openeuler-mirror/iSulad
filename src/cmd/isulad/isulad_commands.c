@@ -360,7 +360,7 @@ static int check_args_auth_plugin(const struct service_arguments *args)
     int ret = 0;
 
     if (args->json_confs->authorization_plugin != NULL) {
-        if (strcmp(args->json_confs->authorization_plugin, AUTH_PLUGIN)) {
+        if (strcmp(args->json_confs->authorization_plugin, AUTH_PLUGIN) != 0) {
             COMMAND_ERROR("Invalid authorization plugin '%s'", args->json_confs->authorization_plugin);
             ERROR("Invalid authorization plugin '%s'", args->json_confs->authorization_plugin);
             ret = -1;
