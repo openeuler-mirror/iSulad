@@ -715,7 +715,8 @@ out:
 }
 
 static int register_new_container(const char *id, const char *image_id, const char *runtime, host_config *host_spec,
-                                  container_config_v2_common_config *v2_spec, container_network_settings *network_settings)
+                                  container_config_v2_common_config *v2_spec,
+                                  container_network_settings *network_settings)
 {
     int ret = -1;
     bool registered = false;
@@ -922,7 +923,7 @@ static int create_container_root_dir(const char *id, const char *runtime_root)
     int nret;
     char container_root[PATH_MAX] = { 0x00 };
     mode_t mask = umask(S_IWOTH);
-    char* userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = conf_get_isulad_userns_remap();
 
     nret = snprintf(container_root, sizeof(container_root), "%s/%s", runtime_root, id);
     if ((size_t)nret >= sizeof(container_root) || nret < 0) {
@@ -1035,7 +1036,7 @@ static int get_request_image_info(const container_create_request *request, char 
     }
 
     // Do not use none image because none image has no config.
-    if (strcmp(request->image, "none") && strcmp(request->image, "none:latest")) {
+    if (strcmp(request->image, "none") != 0 && strcmp(request->image, "none:latest") != 0) {
         *image_name = util_strdup_s(request->image);
     }
 
