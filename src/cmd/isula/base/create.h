@@ -484,6 +484,13 @@ extern "C" {
       0,                                                                                                                                                  \
       &(cmdargs).custom_conf.stop_signal,                                                                                                                 \
       "Signal to stop a container (default \"SIGTERM\")",                                                                                                 \
+      NULL },                                                                                                                                             \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
+      false,                                                                                                                                              \
+      "userns",                                                                                                                                           \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.share_ns[NAMESPACE_USER],                                                                                                    \
+      "Set the usernamespace mode for the container when `userns-remap` option is enabled.",                                                              \
       NULL },
 
 #define CREATE_EXTEND_OPTIONS(cmdargs)        \

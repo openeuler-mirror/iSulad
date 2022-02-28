@@ -117,6 +117,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
     char *rootfsdir = NULL;
     mountinfo_t **minfos = NULL;
     mountinfo_t *info = NULL;
+    char *userns_remap = conf_get_isulad_userns_remap();
 
     if (mountdir == NULL) {
         ERROR("parent mount path is NULL");
@@ -131,6 +132,14 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
         goto out;
     }
 
+    if (userns_remap != NULL) {
+        ret = chmod(rootfsdir, USER_REMAP_DIRECTORY_MODE);
+        if (ret != 0) {
+            ERROR("Failed to chmod mount dir '%s' for user remap", rootfsdir);
+            goto out;
+        }
+    }
+
     // find parent directory
     p = strrchr(rootfsdir, '/');
     if (p == NULL) {
@@ -138,6 +147,14 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
         goto out;
     }
     *p = '\0';
+
+    if (userns_remap != NULL) {
+        ret = chmod(rootfsdir, USER_REMAP_DIRECTORY_MODE);
+        if (ret != 0) {
+            ERROR("Failed to chmod mount dir '%s' for user remap", rootfsdir);
+            goto out;
+        }
+    }
 
     minfos = getmountsinfo();
     if (minfos == NULL) {
@@ -157,6 +174,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
 
 out:
     free(rootfsdir);
+    free(userns_remap);
     free_mounts_info(minfos);
     return ret;
 }
@@ -658,6 +676,38 @@ out:
     return ret;
 }
 
+static int update_graph_for_userns_remap(struct service_arguments *args)
+{
+    int ret = 0;
+    int nret = 0;
+    char graph[PATH_MAX] = { 0 };
+    uid_t host_uid = 0;
+    gid_t host_gid = 0;
+    unsigned int size = 0;
+
+    if (args->json_confs->userns_remap == NULL) {
+        goto out;
+    }
+
+    if (util_parse_user_remap(args->json_confs->userns_remap, &host_uid, &host_gid, &size)) {
+        ERROR("Failed to split string '%s'.", args->json_confs->userns_remap);
+        ret = -1;
+        goto out;
+    }
+
+    nret = snprintf(graph, sizeof(graph), "%s/%d.%d", args->json_confs->graph, host_uid, host_gid);
+    if (nret < 0 || (size_t)nret >= sizeof(graph)) {
+        ERROR("Path is too long");
+        ret = -1;
+        goto out;
+    }
+
+    free(args->json_confs->graph);
+    args->json_confs->graph = util_strdup_s(graph);
+
+out:
+    return ret;
+}
 // update values for options after flag parsing is complete
 static int update_tls_options(struct service_arguments *args)
 {
@@ -901,6 +951,11 @@ static int update_server_args(struct service_arguments *args)
 {
     int ret = 0;
 
+    if (update_graph_for_userns_remap(args) != 0) {
+        ret = -1;
+        goto out;
+    }
+
     if (update_tls_options(args)) {
         ret = -1;
         goto out;
@@ -1098,6 +1153,8 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
                                   const char *fifo_full_path)
 {
     int ret = 0;
+    char* userns_remap = conf_get_isulad_userns_remap();
+    mode_t mode = CONFIG_DIRECTORY_MODE;
 
     if (check_and_save_pid(args->json_confs->pidfile) != 0) {
         ERROR("Failed to save pid");
@@ -1116,10 +1173,23 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
         goto out;
     }
 
-    if (util_mkdir_p(args->json_confs->graph, CONFIG_DIRECTORY_MODE) != 0) {
+    if (userns_remap != NULL) {
+        mode = USER_REMAP_DIRECTORY_MODE;
+    }
+
+    ret = util_mkdir_p(args->json_confs->graph, mode);
+    if (ret != 0) {
         ERROR("Unable to create root directory %s.", args->json_confs->graph);
         ret = -1;
         goto out;
+    }
+
+    if (userns_remap != NULL) {
+        if (set_file_owner_for_userns_remap(args->json_confs->graph, userns_remap) != 0) {
+            ERROR("Unable to change root directory %s owner for user remap.", args->json_confs->graph);
+            ret = -1;
+            goto out;
+        }
     }
 
     if (mount_rootfs_mnt_dir(args->json_confs->rootfsmntdir)) {
@@ -1135,6 +1205,7 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
     }
 
 out:
+    free(userns_remap);
     return ret;
 }
 

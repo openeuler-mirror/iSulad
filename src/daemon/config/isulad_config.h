@@ -56,6 +56,7 @@ int conf_get_container_log_opts(isulad_daemon_configs_container_log **opts);
 char *conf_get_isulad_log_file();
 char *conf_get_engine_log_file();
 char *conf_get_enable_plugins();
+char *conf_get_isulad_userns_remap();
 int32_t conf_get_websocket_server_listening_port();
 
 int save_args_to_conf(struct service_arguments *args);

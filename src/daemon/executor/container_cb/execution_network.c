@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "isula_libutils/log.h"
+#include "isulad_config.h"
 #include "utils.h"
 #include "container_api.h"
 #include "namespace.h"
@@ -707,24 +708,48 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
     int ret = 0;
     int nret = 0;
     char root_path[PATH_MAX] = { 0x00 };
+    char *userns_remap = conf_get_isulad_userns_remap();
 
     if (runtime_root == NULL || id == NULL) {
         ERROR("empty runtime root or id");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     nret = snprintf(root_path, PATH_MAX, "%s/%s", runtime_root, id);
     if (nret < 0 || nret >= PATH_MAX) {
         ERROR("Failed to print string");
-        return -1;
+        ret = -1;
+        goto out;
+    }
+
+    ret = chown_network(userns_remap, root_path, "/hostname");
+    if (ret) {
+        ret = -1;
+        goto out;
+    }
+
+    ret = chown_network(userns_remap, root_path, "/hosts");
+    if (ret) {
+        ret = -1;
+        goto out;
     }
 
     ret = merge_resolv(host_spec, root_path, "/resolv.conf");
     if (ret) {
-        return -1;
+        ret = -1;
+        goto out;
     }
 
-    return 0;
+    ret = chown_network(userns_remap, root_path, "/resolv.conf");
+    if (ret) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(userns_remap);
+    return ret;
 }
 
 static int merge_network_for_syscontainer(const host_config *host_spec, const char *rootfs, const char *hostname)

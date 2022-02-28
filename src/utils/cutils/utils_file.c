@@ -2096,3 +2096,28 @@ out:
 
     return ret;
 }
+
+int set_file_owner_for_userns_remap(const char *filename, const char *userns_remap)
+{
+    int ret = 0;
+    uid_t host_uid = 0;
+    gid_t host_gid = 0;
+    unsigned int size = 0;
+
+    if (filename == NULL || userns_remap == NULL) {
+        goto out;
+    }
+
+    if (util_parse_user_remap(userns_remap, &host_uid, &host_gid, &size)) {
+        ERROR("Failed to split string '%s'.", userns_remap);
+        ret = -1;
+        goto out;
+    }
+    if (chown(filename, host_uid, host_gid) != 0) {
+        ERROR("Failed to chown host path '%s'.", filename);
+        ret = -1;
+    }
+
+out:
+    return ret;
+}
