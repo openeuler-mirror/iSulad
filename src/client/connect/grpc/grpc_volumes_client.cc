@@ -27,10 +27,10 @@ using grpc::ClientContext;
 using grpc::Status;
 
 class VolumeList : public ClientBase<VolumeService, VolumeService::Stub, isula_list_volume_request, ListVolumeRequest,
-                                     isula_list_volume_response, ListVolumeResponse> {
+    isula_list_volume_response, ListVolumeResponse> {
 public:
     explicit VolumeList(void *args)
-            : ClientBase(args)
+        : ClientBase(args)
     {
     }
     ~VolumeList() = default;
@@ -58,7 +58,7 @@ public:
             return -1;
         }
         auto *volumes = static_cast<struct isula_volume_info *>(
-                util_smart_calloc_s(sizeof(struct isula_volume_info), static_cast<size_t>(num)));
+                            util_smart_calloc_s(sizeof(struct isula_volume_info), static_cast<size_t>(num)));
         if (volumes == nullptr) {
             ERROR("out of memory");
             response->cc = ISULAD_ERR_MEMOUT;
@@ -90,10 +90,10 @@ public:
 };
 
 class VolumeRemove : public ClientBase<VolumeService, VolumeService::Stub, isula_remove_volume_request,
-                                       RemoveVolumeRequest, isula_remove_volume_response, RemoveVolumeResponse> {
+    RemoveVolumeRequest, isula_remove_volume_response, RemoveVolumeResponse> {
 public:
     explicit VolumeRemove(void *args)
-            : ClientBase(args)
+        : ClientBase(args)
     {
     }
     ~VolumeRemove() = default;
@@ -135,17 +135,17 @@ public:
     }
 
     auto grpc_call(ClientContext *context, const RemoveVolumeRequest &req, RemoveVolumeResponse *reply)
-            -> Status override
+    -> Status override
     {
         return stub_->Remove(context, req, reply);
     }
 };
 
 class VolumePrune : public ClientBase<VolumeService, VolumeService::Stub, isula_prune_volume_request,
-                                      PruneVolumeRequest, isula_prune_volume_response, PruneVolumeResponse> {
+    PruneVolumeRequest, isula_prune_volume_response, PruneVolumeResponse> {
 public:
     explicit VolumePrune(void *args)
-            : ClientBase(args)
+        : ClientBase(args)
     {
     }
     ~VolumePrune() = default;
