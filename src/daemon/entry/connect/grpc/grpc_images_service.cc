@@ -29,8 +29,7 @@ int ImagesServiceImpl::image_list_request_from_grpc(const ListImagesRequest *gre
                                                     image_list_images_request **request)
 {
     size_t len = 0;
-    image_list_images_request *tmpreq =
-        (image_list_images_request *)util_common_calloc_s(sizeof(image_list_images_request));
+    auto *tmpreq = (image_list_images_request *)util_common_calloc_s(sizeof(image_list_images_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -63,7 +62,7 @@ int ImagesServiceImpl::image_list_request_from_grpc(const ListImagesRequest *gre
         goto cleanup;
     }
 
-    for (auto &iter : grequest->filters()) {
+    for (const auto &iter : grequest->filters()) {
         tmpreq->filters->values[tmpreq->filters->len] =
             (json_map_string_bool *)util_common_calloc_s(sizeof(json_map_string_bool));
         if (tmpreq->filters->values[tmpreq->filters->len] == nullptr) {
@@ -71,7 +70,7 @@ int ImagesServiceImpl::image_list_request_from_grpc(const ListImagesRequest *gre
             goto cleanup;
         }
         if (append_json_map_string_bool(tmpreq->filters->values[tmpreq->filters->len],
-                                        iter.second.empty() ? "" : iter.second.c_str(), true)) {
+                                        iter.second.empty() ? "" : iter.second.c_str(), true) != 0) {
             free(tmpreq->filters->values[tmpreq->filters->len]);
             tmpreq->filters->values[tmpreq->filters->len] = nullptr;
             ERROR("Append failed");
@@ -129,15 +128,12 @@ void ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *
         target->set_size(response->images[i]->target->size);
         image->set_allocated_target(target);
     }
-
-    return;
 }
 
 int ImagesServiceImpl::image_remove_request_from_grpc(const DeleteImageRequest *grequest,
                                                       image_delete_image_request **request)
 {
-    image_delete_image_request *tmpreq =
-        (image_delete_image_request *)util_common_calloc_s(sizeof(image_delete_image_request));
+    auto *tmpreq = (image_delete_image_request *)util_common_calloc_s(sizeof(image_delete_image_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -154,7 +150,7 @@ int ImagesServiceImpl::image_remove_request_from_grpc(const DeleteImageRequest *
 
 int ImagesServiceImpl::image_tag_request_from_grpc(const TagImageRequest *grequest, image_tag_image_request **request)
 {
-    image_tag_image_request *tmpreq = (image_tag_image_request *)util_common_calloc_s(sizeof(image_tag_image_request));
+    auto *tmpreq = (image_tag_image_request *)util_common_calloc_s(sizeof(image_tag_image_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -193,8 +189,7 @@ int ImagesServiceImpl::image_import_request_from_grpc(const ImportRequest *grequ
 int ImagesServiceImpl::image_load_request_from_grpc(const LoadImageRequest *grequest,
                                                     image_load_image_request **request)
 {
-    image_load_image_request *tmpreq =
-        (image_load_image_request *)util_common_calloc_s(sizeof(image_load_image_request));
+    auto *tmpreq = (image_load_image_request *)util_common_calloc_s(sizeof(image_load_image_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -216,7 +211,7 @@ int ImagesServiceImpl::image_load_request_from_grpc(const LoadImageRequest *greq
 
 int ImagesServiceImpl::inspect_request_from_grpc(const InspectImageRequest *grequest, image_inspect_request **request)
 {
-    image_inspect_request *tmpreq = (image_inspect_request *)util_common_calloc_s(sizeof(image_inspect_request));
+    auto *tmpreq = (image_inspect_request *)util_common_calloc_s(sizeof(image_inspect_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -352,7 +347,6 @@ void ImagesServiceImpl::import_response_to_grpc(const image_import_response *res
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    return;
 }
 
 Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *request, ImportResponse *reply)
@@ -449,7 +443,7 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
 
 int ImagesServiceImpl::image_login_request_from_grpc(const LoginRequest *grequest, image_login_request **request)
 {
-    image_login_request *tmpreq = (image_login_request *)util_common_calloc_s(sizeof(image_login_request));
+    auto *tmpreq = (image_login_request *)util_common_calloc_s(sizeof(image_login_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -474,7 +468,7 @@ int ImagesServiceImpl::image_login_request_from_grpc(const LoginRequest *greques
 
 int ImagesServiceImpl::image_logout_request_from_grpc(const LogoutRequest *grequest, image_logout_request **request)
 {
-    image_logout_request *tmpreq = (image_logout_request *)util_common_calloc_s(sizeof(image_logout_request));
+    auto *tmpreq = (image_logout_request *)util_common_calloc_s(sizeof(image_logout_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;

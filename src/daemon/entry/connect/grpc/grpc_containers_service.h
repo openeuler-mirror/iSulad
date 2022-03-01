@@ -112,11 +112,12 @@ private:
             gresponse->set_cc(ISULAD_ERR_MEMOUT);
             return;
         }
+
         gresponse->set_cc(response->cc);
+
         if (response->errmsg != nullptr) {
             gresponse->set_errmsg(response->errmsg);
         }
-        return;
     }
 
     int version_request_from_grpc(const VersionRequest *grequest, container_version_request **request);

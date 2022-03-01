@@ -20,12 +20,12 @@
 
 namespace AuthorizationPluginConfig {
 std::string auth_plugin = "";
-};
+} // namespace AuthorizationPluginConfig
 
 namespace GrpcServerTlsAuth {
 Status auth(ServerContext *context, std::string action)
 {
-    const std::multimap<grpc::string_ref, grpc::string_ref> init_metadata = context->client_metadata();
+    const std::multimap<grpc::string_ref, grpc::string_ref> &init_metadata = context->client_metadata();
     auto tls_mode_kv = init_metadata.find("tls_mode");
     if (tls_mode_kv == init_metadata.end()) {
         return Status(StatusCode::UNKNOWN, "unknown error");
@@ -58,4 +58,3 @@ Status auth(ServerContext *context, std::string action)
     return Status::OK;
 }
 } // namespace GrpcServerTlsAuth
-

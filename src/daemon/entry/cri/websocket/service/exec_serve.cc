@@ -89,7 +89,7 @@ int ExecServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
     int ret = cb->container.exec(m_request, &m_response, m_request->attach_stdin ? lwsCtx->pipes.at(0) : -1,
                                  m_request->attach_stdout ? &StdoutstringWriter : nullptr,
                                  m_request->attach_stderr ? &StderrstringWriter : nullptr);
-    
+
     if (ret != 0) {
         std::string message;
         if (m_response != nullptr && m_response->errmsg != nullptr) {

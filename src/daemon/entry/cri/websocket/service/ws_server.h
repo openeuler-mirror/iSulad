@@ -33,7 +33,7 @@ namespace {
 const int MAX_ECHO_PAYLOAD = 4096;
 const int MAX_ARRAY_LEN = 2;
 const int MAX_PROTOCOL_NUM = 2;
-};
+} // namespace
 
 struct SessionData {
     std::array<int, MAX_ARRAY_LEN> pipes;
@@ -72,23 +72,22 @@ private:
 
     int CreateContext();
     inline void Receive(int socketID, void *in, size_t len);
-    int  Wswrite(struct lws *wsi, const unsigned char *message);
+    int Wswrite(struct lws *wsi, const unsigned char *message);
     inline void DumpHandshakeInfo(struct lws *wsi) noexcept;
     int RegisterStreamTask(struct lws *wsi) noexcept;
     int GenerateSessionData(SessionData *session, const std::string containerID) noexcept;
     void ServiceWorkThread(int threadid);
     void CloseWsSession(int socketID);
     void CloseAllWsSession();
-    int ResizeTerminal(int socketID, const char *jsonData, size_t len,
-                       const std::string &containerID, const std::string &suffix);
+    int ResizeTerminal(int socketID, const char *jsonData, size_t len, const std::string &containerID,
+                       const std::string &suffix);
     int ParseTerminalSize(const char *jsonData, size_t len, uint16_t &width, uint16_t &height);
 
 private:
     // redirect libwebsockets logs to iSulad
     static void EmitLog(int level, const char *line);
     // libwebsockets Callback function
-    static int Callback(struct lws *wsi, enum lws_callback_reasons reason,
-                        void *user, void *in, size_t len);
+    static int Callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
 
 private:
     static std::atomic<WebsocketServer *> m_instance;
@@ -96,8 +95,12 @@ private:
     static struct lws_context *m_context;
     volatile int m_forceExit = 0;
     std::thread m_pthreadService;
-    const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = {
-        { "channel.k8s.io", Callback, 0, MAX_ECHO_PAYLOAD, },
+    const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = { {
+            "channel.k8s.io",
+            Callback,
+            0,
+            MAX_ECHO_PAYLOAD,
+        },
         { nullptr, nullptr, 0, 0 }
     };
     RouteCallbackRegister m_handler;
@@ -111,4 +114,3 @@ ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len);
 int closeWsConnect(void *context, char **err);
 
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_WS_SERVER_H
-
