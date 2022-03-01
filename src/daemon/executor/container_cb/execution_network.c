@@ -1203,6 +1203,7 @@ container_network_settings *generate_network_settings(const host_config *host_co
         }
     } else
 #endif
+
     if (!namespace_is_cni(host_config->network_mode)) {
         return settings;
     }

@@ -173,8 +173,7 @@ static int insert_matched_id(char **ids, map_t *matches, void *value, size_t ids
     for (i = 0; i < ids_len; i++) {
         container_t *cont = containers_store_get_by_prefix(ids[i]);
         if (cont != NULL) {
-            bool inserted;
-            inserted = map_insert(matches, cont->common_config->id, value);
+            bool inserted = map_insert(matches, cont->common_config->id, value);
             container_unref(cont);
             if (!inserted) {
                 ERROR("Insert map failed: %s", ids[i]);
@@ -484,8 +483,6 @@ static void dup_container_labels(const map_t *map_labels, const container_config
             ERROR("Failed to dup container %s labels", common_config->id);
         }
     }
-
-    return;
 }
 
 static void dup_container_annotations(const container_config_v2_common_config *common_config,
@@ -501,8 +498,6 @@ static void dup_container_annotations(const container_config_v2_common_config *c
     if (ret != 0) {
         ERROR("Failed to dup container %s annotations", common_config->id);
     }
-
-    return;
 }
 
 static void dup_container_created_time(const container_config_v2_common_config *common_config,
@@ -512,8 +507,6 @@ static void dup_container_created_time(const container_config_v2_common_config *
         util_to_unix_nanos_from_str(common_config->created, &isuladinfo->created) != 0) {
         ERROR("Failed to dup container %s created time", common_config->id);
     }
-
-    return;
 }
 
 static void dup_container_image_ref(const container_config_v2_common_config *common_config,
@@ -524,8 +517,6 @@ static void dup_container_image_ref(const container_config_v2_common_config *com
     }
 
     isuladinfo->image_ref = util_strdup_s(common_config->config->image_ref);
-
-    return;
 }
 
 static int convert_common_config_info(const map_t *map_labels, const container_config_v2_common_config *common_config,
