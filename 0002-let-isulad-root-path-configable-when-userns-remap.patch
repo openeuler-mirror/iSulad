@@ -1,0 +1,93 @@
+From 479c9aa76830236abb135558b57363f8226dba2e Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Sat, 26 Feb 2022 08:55:51 +0800
+Subject: [PATCH 2/2] let isulad root path configable when userns-remap
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/cmd/isulad/main.c                       | 16 ++++++++--------
+ src/daemon/modules/runtime/engines/engine.c | 10 +++++++---
+ 2 files changed, 15 insertions(+), 11 deletions(-)
+
+diff --git a/src/cmd/isulad/main.c b/src/cmd/isulad/main.c
+index b6132e12..b4e25988 100644
+--- a/src/cmd/isulad/main.c
++++ b/src/cmd/isulad/main.c
+@@ -695,7 +695,7 @@ static int update_graph_for_userns_remap(struct service_arguments *args)
+         goto out;
+     }
+ 
+-    nret = snprintf(graph, sizeof(graph), "%s/%d.%d", ISULAD_ROOT_PATH, host_uid, host_gid);
++    nret = snprintf(graph, sizeof(graph), "%s/%d.%d", args->json_confs->graph, host_uid, host_gid);
+     if (nret < 0 || (size_t)nret >= sizeof(graph)) {
+         ERROR("Path is too long");
+         ret = -1;
+@@ -1154,6 +1154,7 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
+ {
+     int ret = 0;
+     char* userns_remap = conf_get_isulad_userns_remap();
++    mode_t mode = CONFIG_DIRECTORY_MODE;
+ 
+     if (check_and_save_pid(args->json_confs->pidfile) != 0) {
+         ERROR("Failed to save pid");
+@@ -1172,19 +1173,18 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
+         goto out;
+     }
+ 
+-    if (util_mkdir_p(args->json_confs->graph, CONFIG_DIRECTORY_MODE) != 0) {
++    if (userns_remap != NULL) {
++        mode = USER_REMAP_DIRECTORY_MODE;
++    }
++
++    ret = util_mkdir_p(args->json_confs->graph, mode);
++    if (ret != 0) {
+         ERROR("Unable to create root directory %s.", args->json_confs->graph);
+         ret = -1;
+         goto out;
+     }
+ 
+     if (userns_remap != NULL) {
+-        if (chmod(ISULAD_ROOT_PATH, USER_REMAP_DIRECTORY_MODE) != 0) {
+-            ERROR("Failed to chmod isulad root dir '%s' for user remap", ISULAD_ROOT_PATH);
+-            ret = -1;
+-            goto out;
+-        }
+-
+         if (set_file_owner_for_userns_remap(args->json_confs->graph, userns_remap) != 0) {
+             ERROR("Unable to change root directory %s owner for user remap.", args->json_confs->graph);
+             ret = -1;
+diff --git a/src/daemon/modules/runtime/engines/engine.c b/src/daemon/modules/runtime/engines/engine.c
+index ff010dff..648711eb 100644
+--- a/src/daemon/modules/runtime/engines/engine.c
++++ b/src/daemon/modules/runtime/engines/engine.c
+@@ -123,7 +123,8 @@ static int create_engine_root_path(const char *path)
+     int ret = -1;
+     char *tmp_path = NULL;
+     char *p = NULL;
+-    char *userns_remap = NULL;
++    char *userns_remap = conf_get_isulad_userns_remap();
++    mode_t mode = CONFIG_DIRECTORY_MODE;
+ 
+     if (path == NULL) {
+         return ret;
+@@ -134,12 +135,15 @@ static int create_engine_root_path(const char *path)
+         goto out;
+     }
+ 
+-    if (util_mkdir_p(path, CONFIG_DIRECTORY_MODE) != 0) {
++    if (userns_remap != NULL) {
++        mode = USER_REMAP_DIRECTORY_MODE;
++    }
++
++    if (util_mkdir_p(path, mode) != 0) {
+         ERROR("Unable to create engine root path: %s", path);
+         goto out;
+     }
+ 
+-    userns_remap = conf_get_isulad_userns_remap();
+     if (userns_remap != NULL) {
+         if (set_file_owner_for_userns_remap(path, userns_remap) != 0) {
+             ERROR("Unable to change directory %s owner for user remap.", path);
+-- 
+2.25.1
+
