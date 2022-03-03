@@ -47,6 +47,8 @@
 #include "isula_libutils/container_wait_response.h"
 #include "isula_libutils/host_info_request.h"
 #include "isula_libutils/host_info_response.h"
+#include "isula_libutils/container_export_request.h"
+#include "isula_libutils/container_export_response.h"
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
@@ -68,6 +70,7 @@
 #define ContainerServiceResume "/ContainerService/Resume"
 #define ContainerServiceWait "/ContainerService/Wait"
 #define ContainerServiceInfo "/ContainerService/Info"
+#define ContainerServiceExport "/ContainerService/Export"
 
 /* "/ContainerService/Kill",
 "/ContainerService/Delete",

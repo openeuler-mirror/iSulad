@@ -1885,6 +1885,101 @@ out:
     return ret;
 }
 
+/* export request to rest */
+static int export_request_to_rest(const struct isula_export_request *le_request, char **body, size_t *body_len)
+{
+    container_export_request *crequest = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error err = NULL;
+    int ret = 0;
+
+    crequest = util_common_calloc_s(sizeof(container_export_request));
+    if (crequest == NULL) {
+        ERROR("Out of memory");
+	return -1;
+    }
+
+    crequest->id = util_strdup_s(le_request->name);
+    crequest->file = util_strdup_s(le_request->file);
+
+    *body = container_export_request_generate_json(crequest, &ctx, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate export request json, err: %s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_container_export_request(crequest);
+    return ret;
+}
+
+/* unpack export response */
+static int unpack_export_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_export_response *export_response = (struct isula_export_response *)arg;
+    container_export_response *response = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+	ERROR("Responsed status code is not correct");
+        return -1;
+    }
+
+    response = container_export_response_parse_data(message->body, NULL, &err);
+    if (response == NULL) {
+        ERROR("Invalid export response:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    export_response->server_errono = response->cc;
+    export_response->errmsg = util_strdup_s(response->errmsg);
+    ret = (response->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    free(err);
+    free_container_export_response(response);
+    return ret;
+}
+
+/* rest container export */
+static int rest_container_export(const struct isula_export_request *le_request,
+                                 struct isula_export_response *le_response, void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    Buffer *output = NULL;
+
+    ret = export_request_to_rest(le_request, &body, &len);
+    if (ret != 0) {
+	ERROR("Failed to convert request to restful format");
+        goto out;
+    }
+    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceExport, body, len, &output);
+    if (ret != 0) {
+        le_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        le_response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    ret = get_response(output, unpack_export_response, (void *)le_response);
+
+out:
+    buffer_free(output);
+    put_body(body);
+    return ret;
+}
+
 /* rest containers client ops init */
 int rest_containers_client_ops_init(isula_connect_ops *ops)
 {
@@ -1908,6 +2003,7 @@ int rest_containers_client_ops_init(isula_connect_ops *ops)
     ops->container.version = &rest_container_version;
     ops->container.wait = &rest_container_wait;
     ops->container.info = &rest_container_info;
+    ops->container.export_rootfs = &rest_container_export;
 
     return 0;
 }
