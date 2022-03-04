@@ -1262,8 +1262,7 @@ static int cgroup2_enable_all()
 
     controllers_str = util_read_content_from_file(CGROUP2_CONTROLLERS_PATH);
     if (controllers_str == NULL || strlen(controllers_str) == 0 || strcmp(controllers_str, "\n") == 0) {
-        ERROR("read cgroup controllers failed");
-        ret = -1;
+        WARN("no cgroup controller found");
         goto out;
     }
 
