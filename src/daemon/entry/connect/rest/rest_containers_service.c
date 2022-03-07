@@ -70,6 +70,20 @@ static int info_request_check(void *req)
     return 0;
 }
 
+/* export request check */
+static int export_request_check(void *req)
+{
+    int ret = 0;
+
+    container_export_request *req_export = (container_export_request *)req;
+    if (req_export->id == NULL) {
+        ERROR("Container name required!");
+        ret = -1;
+    }
+
+    return ret;
+}
+
 /* stop request check */
 static int stop_request_check(void *req)
 {
@@ -298,6 +312,11 @@ static struct rest_handle_st g_rest_handle[] = {
         .name = ContainerServiceInfo,
         .request_parse_data = (void *)host_info_request_parse_data,
         .request_check = info_request_check,
+    },
+    {
+        .name = ContainerServiceExport,
+        .request_parse_data = (void *)container_export_request_parse_data,
+        .request_check = export_request_check,
     },
 };
 
@@ -1125,6 +1144,71 @@ out:
     free_container_list_response(cresponse);
 }
 
+/* evhtp send export response */
+static void evhtp_send_export_response(evhtp_request_t *req, container_export_response *response, int rescode)
+{
+    parser_error err = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    char *resp_str = NULL;
+
+    if (response == NULL) {
+        ERROR("Responded information is null");
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        goto out;
+    }
+
+    resp_str = container_export_response_generate_json(response, &ctx, &err);
+    if (resp_str == NULL) {
+        ERROR("Failed to generate export request json, err: %s", err);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        goto out;
+    }
+
+    evhtp_send_response(req, resp_str, rescode);
+
+out:
+    free(err);
+    free(resp_str);
+    return;
+}
+
+/* rest export cb */
+static void rest_export_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    container_export_request *crequest = NULL;
+    container_export_response *cresponse = NULL;
+
+    // only deal with post request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+	ERROR("Only deal with post request");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    cb = get_service_executor();
+    if (cb == NULL || cb->container.export_rootfs == NULL) {
+        ERROR("Unimplemented callback: export()");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceExport);
+    if (tret < 0) {
+        ERROR("Bad request");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->container.export_rootfs(crequest, &cresponse);
+    evhtp_send_export_response(req, cresponse, RESTFUL_RES_OK);
+
+out:
+    free_container_export_request(crequest);
+    free_container_export_response(cresponse);
+}
+
 /* rest register containers handler */
 int rest_register_containers_handler(evhtp_t *htp)
 {
@@ -1179,6 +1263,10 @@ int rest_register_containers_handler(evhtp_t *htp)
     }
     if (evhtp_set_cb(htp, ContainerServiceInfo, rest_info_cb, NULL) == NULL) {
         ERROR("Failed to register info callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServiceExport, rest_export_cb, NULL) == NULL) {
+        ERROR("Failed to register export callback");
         return -1;
     }
     return 0;
