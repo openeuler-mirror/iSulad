@@ -50,20 +50,6 @@ make install
 popd
 popd
 
-ldconfig
-rm -rf clibcni
-git clone https://gitee.com/openeuler/clibcni.git
-pushd clibcni
-git checkout ${tbranch}
-rm -rf build
-mkdir build
-pushd build
-cmake -DDEBUG=ON ../ || exit 1
-make -j $(nproc) || exit 1
-make install
-popd
-popd
-
 # build iSulad with restful
 ldconfig
 pushd iSulad

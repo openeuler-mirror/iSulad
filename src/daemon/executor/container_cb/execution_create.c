@@ -40,9 +40,7 @@
 #include "specs_api.h"
 #include "verify.h"
 #include "container_api.h"
-#ifdef ENABLE_NETWORK
 #include "execution_network.h"
-#endif
 #include "plugin_api.h"
 #include "image_api.h"
 #include "utils.h"
@@ -1578,13 +1576,11 @@ int container_create_cb(const container_create_request *request, container_creat
         goto clean_container_root_dir;
     }
 
-#ifdef ENABLE_NETWORK
     if (init_container_network_confs(id, runtime_root, host_spec, v2_spec) != 0) {
         ERROR("Init Network files failed");
         cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;
     }
-#endif
 
     ret = do_image_create_container_roofs_layer(id, image_type, image_name, v2_spec->mount_label, request->rootfs,
                                                 host_spec->storage_opt, &real_rootfs);
@@ -1624,14 +1620,12 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_shm;
     }
 
-#ifdef ENABLE_NETWORK
     network_settings = generate_network_settings(host_spec);
     if (network_settings == NULL) {
         ERROR("Failed to generate network settings");
         cc = ISULAD_ERR_EXEC;
         goto umount_shm;
     }
-#endif
 
     if (merge_config_for_syscontainer(request, host_spec, v2_spec->config, oci_spec) != 0) {
         ERROR("Failed to merge config for syscontainer");
