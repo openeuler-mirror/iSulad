@@ -1639,13 +1639,12 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_shm;
     }
 
-#ifdef ENABLE_NETWORK
+    // merge hostname, resolv.conf, hosts, required for all container
     if (merge_network(host_spec, request->rootfs, runtime_root, id, container_spec->hostname) != 0) {
         ERROR("Failed to merge network config");
         cc = ISULAD_ERR_EXEC;
         goto umount_shm;
     }
-#endif
 
     /* modify oci_spec by plugin. */
     if (plugin_event_container_pre_create(id, oci_spec) != 0) {
