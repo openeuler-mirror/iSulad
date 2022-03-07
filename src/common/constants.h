@@ -64,7 +64,7 @@ extern "C" {
 
 #define DEFAULT_HIGHEST_DIRECTORY_MODE 0755
 
-#define ISULAD_CONFIG "/etc/isulad"
+#define ISULAD_CONFIG SYSCONFDIR_PREFIX"/etc/isulad"
 
 #define ISULAD_DAEMON_JSON_CONF_FILE ISULAD_CONFIG "/daemon.json"
 #define ISULAD_DAEMON_CONSTANTS_JSON_CONF_FILE ISULAD_CONFIG "/daemon_constants.json"
@@ -102,13 +102,13 @@ extern "C" {
 #define DEFAULT_ROOTFS_PATH "/dev/ram0"
 #endif
 #ifndef OCICONFIG_PATH
-#define OCICONFIG_PATH "/etc/default/isulad/config.json"
+#define OCICONFIG_PATH SYSCONFDIR_PREFIX"/etc/default/isulad/config.json"
 #endif
 #ifndef OCI_SYSTEM_CONTAINER_CONFIG_PATH
-#define OCI_SYSTEM_CONTAINER_CONFIG_PATH "/etc/default/isulad/systemcontainer_config.json"
+#define OCI_SYSTEM_CONTAINER_CONFIG_PATH SYSCONFDIR_PREFIX"/etc/default/isulad/systemcontainer_config.json"
 #endif
 #ifndef SECCOMP_DEFAULT_PATH
-#define SECCOMP_DEFAULT_PATH "/etc/isulad/seccomp_default.json"
+#define SECCOMP_DEFAULT_PATH SYSCONFDIR_PREFIX"/etc/isulad/seccomp_default.json"
 #endif
 #ifndef OCI_VERSION
 #define OCI_VERSION "1.0.1"
