@@ -43,7 +43,6 @@ char *conf_get_routine_statedir(const char *runtime);
 char *conf_get_isulad_rootdir();
 char *conf_get_isulad_statedir();
 char *conf_get_isulad_mount_rootfs();
-char *conf_get_isulad_engine();
 char *conf_get_isulad_loglevel();
 char *conf_get_isulad_logdriver();
 int conf_get_daemon_log_config(char **loglevel, char **logdriver, char **engine_log_path);

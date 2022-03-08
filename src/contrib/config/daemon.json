@@ -3,7 +3,6 @@
     "default-runtime": "lcr",
     "graph": "/var/lib/isulad",
     "state": "/var/run/isulad",
-    "engine": "lcr",
     "log-level": "ERROR",
     "pidfile": "/var/run/isulad.pid",
     "log-opts": {

@@ -88,8 +88,6 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       &(cmdargs)->json_confs->start_timeout,                                                                      \
       "timeout duration for waiting on a container to start before it is killed",                                 \
       NULL },                                                                                                     \
-    { CMD_OPT_TYPE_STRING_DUP, false, "engine", 'e', &(cmdargs)->json_confs->engine,                              \
-      "Select backend engine", NULL },                                                                            \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
       "log-level",                                                                                                \

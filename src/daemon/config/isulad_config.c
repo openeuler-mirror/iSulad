@@ -591,28 +591,6 @@ out:
     return cgroup_parent;
 }
 
-/* conf get isulad engine */
-char *conf_get_isulad_engine()
-{
-    char *engine = NULL;
-    struct service_arguments *conf = NULL;
-
-    if (isulad_server_conf_rdlock() != 0) {
-        return NULL;
-    }
-
-    conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->engine == NULL) {
-        goto out;
-    }
-
-    engine = util_strdup_s(conf->json_confs->engine);
-
-out:
-    (void)isulad_server_conf_unlock();
-    return engine;
-}
-
 /* conf get isulad loglevel */
 char *conf_get_isulad_loglevel()
 {
@@ -1591,7 +1569,6 @@ int merge_json_confs_into_global(struct service_arguments *args)
 
     override_string_value(&args->json_confs->pidfile, &tmp_json_confs->pidfile);
     // iSulad runtime execution options
-    override_string_value(&args->json_confs->engine, &tmp_json_confs->engine);
     override_string_value(&args->json_confs->hook_spec, &tmp_json_confs->hook_spec);
     override_string_value(&args->json_confs->enable_plugins, &tmp_json_confs->enable_plugins);
     override_string_value(&args->json_confs->userns_remap, &tmp_json_confs->userns_remap);

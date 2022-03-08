@@ -108,7 +108,6 @@ int service_arguments_init(struct service_arguments *args)
     if (args->json_confs == NULL) {
         goto free_out;
     }
-    args->json_confs->engine = util_strdup_s("lcr");
     args->json_confs->group = util_strdup_s("isula");
     args->json_confs->graph = util_strdup_s(ISULAD_ROOT_PATH);
     args->json_confs->state = util_strdup_s(ISULAD_STATE_PATH);
