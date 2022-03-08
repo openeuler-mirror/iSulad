@@ -219,6 +219,30 @@ out:
     return ret;
 }
 
+/* pause request check */
+static int pause_request_check(void *req)
+{
+    container_pause_request *req_pause = (container_pause_request *)req;
+    if (req_pause->id == NULL) {
+        ERROR("Container name required: pause()");
+        return -1;
+    }
+
+    return 0;
+}
+
+/* resume request check */
+static int resume_request_check(void *req)
+{
+    container_resume_request *req_resume = (container_resume_request *)req;
+    if (req_resume->id == NULL) {
+        ERROR("Container name required: resume()");
+        return -1;
+    }
+
+    return 0;
+}
+
 /* evhtp send create repsponse */
 static void evhtp_send_create_repsponse(evhtp_request_t *req, container_create_response *response, int rescode)
 {
@@ -317,6 +341,16 @@ static struct rest_handle_st g_rest_handle[] = {
         .name = ContainerServiceExport,
         .request_parse_data = (void *)container_export_request_parse_data,
         .request_check = export_request_check,
+    },
+    {
+        .name = ContainerServicePause,
+        .request_parse_data = (void *)container_pause_request_parse_data,
+        .request_check = pause_request_check,
+    },
+    {
+        .name = ContainerServiceResume,
+        .request_parse_data = (void *)container_resume_request_parse_data,
+        .request_check = resume_request_check,
     },
 };
 
@@ -1182,7 +1216,7 @@ static void rest_export_cb(evhtp_request_t *req, void *arg)
 
     // only deal with post request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-	ERROR("Only deal with post request");
+        ERROR("Only deal with post request");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
@@ -1207,6 +1241,136 @@ static void rest_export_cb(evhtp_request_t *req, void *arg)
 out:
     free_container_export_request(crequest);
     free_container_export_response(cresponse);
+}
+
+/* evhtp send pause response */
+static void evhtp_send_pause_response(evhtp_request_t *req, container_pause_response *response, int rescode)
+{
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error err = NULL;
+    char *resp_str = NULL;
+
+    if (response == NULL) {
+        ERROR("Responded information is null: pause()");
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        return;
+    }
+
+    resp_str = container_pause_response_generate_json(response, &ctx, &err);
+    if (resp_str == NULL) {
+        ERROR("Failed to generate pause request json, err: %s", err);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        goto out;
+    }
+
+    evhtp_send_response(req, resp_str, rescode);
+
+out:
+    free(resp_str);
+    free(err);
+    return;
+}
+
+/* rest pause cb */
+static void rest_pause_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    container_pause_request *crequest = NULL;
+    container_pause_response *cresponse = NULL;
+
+    // only deal with post request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        ERROR("Only deal with post request: pause()");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    cb = get_service_executor();
+    if (cb == NULL || cb->container.pause == NULL) {
+        ERROR("Unimplemented callback: pause()");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = action_request_from_rest(req, (void **)&crequest, ContainerServicePause);
+    if (tret < 0) {
+        ERROR("Bad request: pause()");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->container.pause(crequest, &cresponse);
+    evhtp_send_pause_response(req, cresponse, RESTFUL_RES_OK);
+
+out:
+    free_container_pause_response(cresponse);
+    free_container_pause_request(crequest);
+}
+
+/* evhtp send resume response */
+static void evhtp_send_resume_response(evhtp_request_t *req, container_resume_response *response, int rescode)
+{
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error err = NULL;
+    char *resp_str = NULL;
+
+    if (response == NULL) {
+        ERROR("Responded information is null: resume()");
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        return;
+    }
+
+    resp_str = container_resume_response_generate_json(response, &ctx, &err);
+    if (resp_str == NULL) {
+        ERROR("Failed to generate resume request json, err: %s", err);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        goto out;
+    }
+
+    evhtp_send_response(req, resp_str, rescode);
+
+out:
+    free(resp_str);
+    free(err);
+    return;
+}
+
+/* rest resume cb */
+static void rest_resume_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    container_resume_request *crequest = NULL;
+    container_resume_response *cresponse = NULL;
+
+    // only deal with post request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        ERROR("Only deal with post request: resume()");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    cb = get_service_executor();
+    if (cb == NULL || cb->container.resume == NULL) {
+        ERROR("Unimplemented callback: resume()");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceResume);
+    if (tret < 0) {
+        ERROR("Bad request: resume()");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->container.resume(crequest, &cresponse);
+    evhtp_send_resume_response(req, cresponse, RESTFUL_RES_OK);
+
+out:
+    free_container_resume_response(cresponse);
+    free_container_resume_request(crequest);
 }
 
 /* rest register containers handler */
@@ -1267,6 +1431,14 @@ int rest_register_containers_handler(evhtp_t *htp)
     }
     if (evhtp_set_cb(htp, ContainerServiceExport, rest_export_cb, NULL) == NULL) {
         ERROR("Failed to register export callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServicePause, rest_pause_cb, NULL) == NULL) {
+        ERROR("Failed to register pause callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServiceResume, rest_resume_cb, NULL) == NULL) {
+        ERROR("Failed to register resume callback");
         return -1;
     }
     return 0;
