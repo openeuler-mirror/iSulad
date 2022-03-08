@@ -109,4 +109,10 @@ endif()
 add_definitions(-DRUNPATH="${RUNPATH}")
 message("${Green}--  RUNPATH=${RUNPATH}${ColourReset}")
 
+if (NOT SYSCONFDIR_PREFIX)
+    set(SYSCONFDIR_PREFIX "")
+endif()
+add_definitions(-DSYSCONFDIR_PREFIX="${SYSCONFDIR_PREFIX}")
+message("${Green}--  SYSCONFDIR_PREFIX=${SYSCONFDIR_PREFIX}${ColourReset}")
+
 message("${BoldGreen}---- Selected options end ----${ColourReset}")
