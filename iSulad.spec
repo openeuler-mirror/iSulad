@@ -1,5 +1,5 @@
 %global _version 2.0.11
-%global _release 3
+%global _release 4
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -20,6 +20,7 @@ Patch0002: 0002-let-isulad-root-path-configable-when-userns-remap.patch
 Provides:       libhttpclient.so()(64bit)
 Provides:       libisula.so()(64bit)
 Provides:       libisulad_img.so()(64bit)
+Provides:       libisulad_tools.so()(64bit)
 %endif
 
 %if 0%{?is_systemd}
@@ -241,6 +242,12 @@ fi
 %endif
 
 %changelog
+* Wed Mar 09 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.11-4
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: add provides of libisulad_tools.so
+
 * Thu Mar 03 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.11-3
 - Type: enhancement
 - ID: NA
