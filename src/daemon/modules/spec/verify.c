@@ -46,6 +46,7 @@
 #include "utils_convert.h"
 #include "utils_file.h"
 #include "utils_verify.h"
+#include "isulad_config.h"
 
 /* verify hook timeout */
 static int verify_hook_timeout(int t)
@@ -1488,6 +1489,12 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
     int ret = 0;
     size_t i;
     defs_mount *iter = NULL;
+    char *userns_remap = conf_get_isulad_userns_remap();
+    mode_t mode = CONFIG_DIRECTORY_MODE;
+
+    if (userns_remap != NULL) {
+        mode = USER_REMAP_DIRECTORY_MODE;
+    }
 
     for (i = 0; i < len; ++i) {
         iter = *(mounts + i);
@@ -1495,7 +1502,7 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
             continue;
         }
 
-        if (!util_file_exists(iter->source) && util_mkdir_p(iter->source, CONFIG_DIRECTORY_MODE)) {
+        if (!util_file_exists(iter->source) && util_mkdir_p_userns_remap(iter->source, mode, userns_remap)) {
             ERROR("Failed to create directory '%s': %s", iter->source, strerror(errno));
             isulad_try_set_error_message("Failed to create directory '%s': %s", iter->source, strerror(errno));
             ret = -1;
@@ -1504,6 +1511,7 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
     }
 
 out:
+    free(userns_remap);
     return ret;
 }
 
