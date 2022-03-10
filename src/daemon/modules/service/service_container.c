@@ -1111,12 +1111,6 @@ static int do_delete_container(container_t *cont)
         goto out;
     }
 
-    if (im_remove_container_rootfs(cont->common_config->image_type, id)) {
-        ERROR("Failed to remove rootfs for container %s", id);
-        ret = -1;
-        goto out;
-    }
-
     umount_share_shm(cont);
 
     umount_host_channel(cont->hostconfig->host_channel);
@@ -1125,6 +1119,12 @@ static int do_delete_container(container_t *cont)
     cleanup_mounts_by_id(id, rootpath);
 
     if (do_runtime_rm_helper(id, runtime, rootpath) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (im_remove_container_rootfs(cont->common_config->image_type, id)) {
+        ERROR("Failed to remove rootfs for container %s", id);
         ret = -1;
         goto out;
     }
