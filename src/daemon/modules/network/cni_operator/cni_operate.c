@@ -177,7 +177,7 @@ out:
 
 static int ip_ranges_inject(const char *value, struct runtime_conf *rt)
 {
-    int ret = -1;
+    int ret = 0;
     parser_error err = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     cni_ip_ranges_array_container *ip_ranges = NULL;
@@ -188,9 +188,14 @@ static int ip_ranges_inject(const char *value, struct runtime_conf *rt)
     }
 
     ip_ranges = cni_ip_ranges_array_container_parse_data(value, &ctx, &err);
-    if (ip_ranges == NULL) {
+    if (err != NULL) {
         ERROR("Failed to parse ip ranges data from value:%s, err:%s", value, err);
         ret = -1;
+        goto out;
+    }
+
+    if (ip_ranges == NULL) {
+        DEBUG("Empty ip ranges: %s", value);
         goto out;
     }
 
