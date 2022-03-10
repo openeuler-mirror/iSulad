@@ -363,6 +363,7 @@ static struct volume * volume_create_nolock(char *name)
 {
     struct volume *v = NULL;
     int ret = 0;
+    char *userns_remap = NULL;
 
     v = map_search(g_volumes->vols_by_name, name);
     if (v != NULL) {
@@ -381,12 +382,20 @@ static struct volume * volume_create_nolock(char *name)
         goto out;
     }
 
+    userns_remap = conf_get_isulad_userns_remap();
+    if (set_file_owner_for_userns_remap(v->path, userns_remap) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", v->path);
+        ret = -1;
+        goto out;
+    }
+
     if (!map_insert(g_volumes->vols_by_name, v->name, v)) {
         ERROR("failed to insert volume %s", v->name);
         goto out;
     }
 
 out:
+    free(userns_remap);
     if (ret != 0) {
         (void)util_recursive_rmdir(v->path, 0);
         free_volume(v);

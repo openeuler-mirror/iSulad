@@ -829,29 +829,46 @@ static int prepare_host_channel(const host_config_host_channel *host_channel, co
     unsigned int host_uid = 0;
     unsigned int host_gid = 0;
     unsigned int size = 0;
+    mode_t mode = HOST_PATH_MODE;
+    char *daemon_userns_remap = conf_get_isulad_userns_remap();
+    const char *userns_remap = daemon_userns_remap != NULL ? daemon_userns_remap : user_remap;
+    int ret = 0;
 
     if (host_channel == NULL) {
-        return 0;
+        goto out;
     }
     if (util_dir_exists(host_channel->path_on_host)) {
         ERROR("Host path '%s' already exist", host_channel->path_on_host);
-        return -1;
+        ret = -1;
+        goto out;
     }
-    if (util_mkdir_p(host_channel->path_on_host, HOST_PATH_MODE)) {
+
+    if (daemon_userns_remap != NULL) {
+        mode = HOST_PATH_MODE_USERNS_REMAP;
+    }
+
+    if (util_mkdir_p_userns_remap(host_channel->path_on_host, mode, userns_remap)) {
         ERROR("Failed to create host path '%s'.", host_channel->path_on_host);
-        return -1;
+        ret = -1;
+        goto out;
     }
-    if (user_remap != NULL) {
-        if (util_parse_user_remap(user_remap, &host_uid, &host_gid, &size)) {
-            ERROR("Failed to split string '%s'.", user_remap);
-            return -1;
+    if (userns_remap != NULL) {
+        if (util_parse_user_remap(userns_remap, &host_uid, &host_gid, &size)) {
+            ERROR("Failed to split string '%s'.", userns_remap);
+            ret = -1;
+            goto out;
         }
         if (chown(host_channel->path_on_host, host_uid, host_gid) != 0) {
             ERROR("Failed to chown host path '%s'.", host_channel->path_on_host);
-            return -1;
+            ret = -1;
+            goto out;
         }
     }
-    return 0;
+
+out:
+    free(daemon_userns_remap);
+
+    return ret;
 }
 
 static void umount_shm_by_configs(host_config *host_spec, container_config_v2_common_config *v2_spec)

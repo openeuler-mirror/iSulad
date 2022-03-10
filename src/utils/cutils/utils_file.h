@@ -44,6 +44,8 @@ ssize_t util_write_nointr_in_total(int fd, const char *buf, size_t count);
 
 ssize_t util_read_nointr(int fd, void *buf, size_t count);
 
+int util_mkdir_p_userns_remap(const char *dir, mode_t mode, const char *userns_remap);
+
 int util_mkdir_p(const char *dir, mode_t mode);
 
 int util_recursive_rmdir(const char *dirpath, int recursive_depth);
