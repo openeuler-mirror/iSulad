@@ -21,7 +21,7 @@
 #include "utils.h"
 
 #define UNIX_PATH_MAX 128
-#define MAX_BODY_SIZE 8192
+#define MAX_BODY_SIZE (128 * 1024)
 
 /* get body */
 int get_body(const evhtp_request_t *req, size_t *size_out, char **record_out)
