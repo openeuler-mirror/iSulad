@@ -2104,6 +2104,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_USERNS_REMAP
 int set_file_owner_for_userns_remap(const char *filename, const char *userns_remap)
 {
     int ret = 0;
@@ -2128,3 +2129,4 @@ int set_file_owner_for_userns_remap(const char *filename, const char *userns_rem
 out:
     return ret;
 }
+#endif

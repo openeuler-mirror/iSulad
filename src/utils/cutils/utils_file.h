@@ -122,7 +122,9 @@ int util_list_all_entries(const char *directory, char ***out);
 //       2. If fifo or socket exist in source, this function will return failure.
 int util_copy_dir_recursive(char *copy_dst, char *copy_src);
 
+#ifdef ENABLE_USERNS_REMAP
 int set_file_owner_for_userns_remap(const char *filename, const char *userns_remap);
+#endif
 
 #ifdef __cplusplus
 }

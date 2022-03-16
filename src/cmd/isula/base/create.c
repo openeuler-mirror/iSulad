@@ -2188,35 +2188,35 @@ out:
 
 static int create_namespaces_checker(const struct client_arguments *args)
 {
-    int ret = 0;
     const char *net_mode = args->custom_conf.share_ns[NAMESPACE_NET];
+#ifdef ENABLE_USERNS_REMAP
     const char *user_mode = args->custom_conf.share_ns[NAMESPACE_USER];
+#endif
 
     if (net_mode == NULL || !bridge_network_mode(net_mode)) {
         return 0;
     }
 
+#ifdef ENABLE_USERNS_REMAP
     if (args->custom_conf.share_ns[NAMESPACE_USER]) {
         if (!namespace_is_host(user_mode) && !namespace_is_none(user_mode)) {
             COMMAND_ERROR("Unsupported user mode %s", user_mode);
-            ret = -1;
-            goto out;
+            return -1;
         }
     }
+#endif
 
 #ifdef ENABLE_NATIVE_NETWORK
     {
         int max_bridge_len = (MAX_NETWORK_NAME_LEN + 1) * MAX_NETWORK_CONFIG_FILE_COUNT - 1;
         if (strnlen(net_mode, max_bridge_len + 1) > max_bridge_len) {
             COMMAND_ERROR("Network mode \"%s\" is too long", net_mode);
-            ret = -1;
-            goto out;
+            return -1;
         }
     }
 #endif
 
-out:
-    return ret;
+    return 0;
 }
 
 static int create_check_user_remap(const struct client_arguments *args)
