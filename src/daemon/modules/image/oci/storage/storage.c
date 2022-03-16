@@ -29,7 +29,9 @@
 #include "utils.h"
 #include "utils_images.h"
 #include "isula_libutils/log.h"
+#ifdef ENABLE_USERNS_REMAP
 #include "isulad_config.h"
+#endif
 #include "layer_store.h"
 #include "image_store.h"
 #include "rootfs_store.h"
@@ -940,7 +942,9 @@ static int check_module_init_opt(struct storage_module_init_options *opts)
 static int make_storage_directory(struct storage_module_init_options *opts)
 {
     int ret = 0;
+#ifdef ENABLE_USERNS_REMAP
     char* userns_remap = conf_get_isulad_userns_remap();
+#endif
 
     if (util_mkdir_p(opts->storage_root, IMAGE_STORE_PATH_MODE) != 0) {
         SYSERROR("Failed to make %s", opts->storage_root);
@@ -948,11 +952,13 @@ static int make_storage_directory(struct storage_module_init_options *opts)
         goto out;
     }
 
+#ifdef ENABLE_USERNS_REMAP
     if (set_file_owner_for_userns_remap(opts->storage_root, userns_remap) != 0) {
         ERROR("Unable to change directory %s owner for user remap.", opts->storage_root);
         ret = -1;
         goto out;
     }
+#endif
 
     if (util_mkdir_p(opts->storage_run_root, IMAGE_STORE_PATH_MODE) != 0) {
         SYSERROR("Failed to make %s", opts->storage_run_root);
@@ -961,7 +967,9 @@ static int make_storage_directory(struct storage_module_init_options *opts)
     }
 
 out:
+#ifdef ENABLE_USERNS_REMAP
     free(userns_remap);
+#endif
     return ret;
 }
 

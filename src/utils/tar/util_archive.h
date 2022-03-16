@@ -41,8 +41,10 @@ typedef enum {
 struct archive_options {
     whiteout_format_type whiteout_format;
 
+#ifdef ENABLE_USERNS_REMAP
     uid_t uid;
     gid_t gid;
+#endif
     // rename archive entry's name from src_base to dst_base
     const char *src_base;
     const char *dst_base;

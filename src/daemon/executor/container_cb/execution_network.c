@@ -26,7 +26,9 @@
 #include <string.h>
 
 #include "isula_libutils/log.h"
+#ifdef ENABLE_USERNS_REMAP
 #include "isulad_config.h"
+#endif
 #include "utils.h"
 #include "container_api.h"
 #include "namespace.h"
@@ -708,7 +710,9 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
     int ret = 0;
     int nret = 0;
     char root_path[PATH_MAX] = { 0x00 };
+#ifdef ENABLE_USERNS_REMAP
     char *userns_remap = conf_get_isulad_userns_remap();
+#endif
 
     if (runtime_root == NULL || id == NULL) {
         ERROR("empty runtime root or id");
@@ -723,6 +727,7 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
         goto out;
     }
 
+#ifdef ENABLE_USERNS_REMAP
     ret = chown_network(userns_remap, root_path, "/hostname");
     if (ret) {
         ret = -1;
@@ -734,6 +739,7 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
         ret = -1;
         goto out;
     }
+#endif
 
     ret = merge_resolv(host_spec, root_path, "/resolv.conf");
     if (ret) {
@@ -741,14 +747,18 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
         goto out;
     }
 
+#ifdef ENABLE_USERNS_REMAP
     ret = chown_network(userns_remap, root_path, "/resolv.conf");
     if (ret) {
         ret = -1;
         goto out;
     }
+#endif
 
 out:
+#ifdef ENABLE_USERNS_REMAP
     free(userns_remap);
+#endif
     return ret;
 }
 
