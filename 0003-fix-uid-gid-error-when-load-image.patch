@@ -1,0 +1,28 @@
+From bb80d2ee9612ae4a80d4ee6d78a44410c2a63370 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Thu, 17 Mar 2022 10:41:19 +0800
+Subject: [PATCH] fix uid/gid error when load image
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/utils/tar/util_archive.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/utils/tar/util_archive.c b/src/utils/tar/util_archive.c
+index afb84a37..5d6ae717 100644
+--- a/src/utils/tar/util_archive.c
++++ b/src/utils/tar/util_archive.c
+@@ -524,8 +524,8 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const struct a
+ 
+         try_to_replace_exited_dst(dst_path, entry);
+ 
+-        archive_entry_set_uid(entry, options->uid);
+-        archive_entry_set_gid(entry, options->gid);
++        archive_entry_set_uid(entry, archive_entry_uid(entry) + options->uid);
++        archive_entry_set_gid(entry, archive_entry_gid(entry) + options->gid);
+ 
+         ret = archive_write_header(ext, entry);
+         if (ret != ARCHIVE_OK) {
+-- 
+2.25.1
+
