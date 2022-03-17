@@ -1,5 +1,5 @@
 %global _version 2.0.11
-%global _release 4
+%global _release 5
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -15,6 +15,7 @@ BuildRoot: {_tmppath}/iSulad-%{version}
 
 Patch0001: 0001-iSulad-Add-the-function-of-isolating-the-user-namesp.patch
 Patch0002: 0002-let-isulad-root-path-configable-when-userns-remap.patch
+Patch0003: 0003-fix-uid-gid-error-when-load-image.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -241,6 +242,12 @@ fi
 %endif
 
 %changelog
+* Thu Mar 17 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.11-5
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: fix uid/gid error when load image
+
 * Wed Mar 09 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.11-4
 - Type: bugfix
 - ID: NA
