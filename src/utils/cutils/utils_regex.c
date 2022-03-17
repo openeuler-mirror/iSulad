@@ -26,6 +26,7 @@
 #include "utils_string.h"
 
 /*
+ * do not support greedy matching, like: '(:?xx)'
  * return value:
  * -1  failed
  *  0  match
