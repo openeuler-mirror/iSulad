@@ -524,8 +524,8 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const struct a
 
         try_to_replace_exited_dst(dst_path, entry);
 
-        archive_entry_set_uid(entry, options->uid);
-        archive_entry_set_gid(entry, options->gid);
+        archive_entry_set_uid(entry, archive_entry_uid(entry) + options->uid);
+        archive_entry_set_gid(entry, archive_entry_gid(entry) + options->gid);
 
         ret = archive_write_header(ext, entry);
         if (ret != ARCHIVE_OK) {
