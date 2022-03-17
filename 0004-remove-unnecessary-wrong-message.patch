@@ -1,0 +1,52 @@
+From b8dd3ac283e66ff10f292224dc90cd90d1d422f2 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Thu, 17 Mar 2022 07:36:50 +0000
+Subject: [PATCH] remove unnecessary wrong message
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ .../modules/image/oci/storage/image_store/image_store.c   | 8 +-------
+ src/utils/cutils/utils_regex.c                            | 1 +
+ 2 files changed, 2 insertions(+), 7 deletions(-)
+
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+index 288d7bd7..727991fe 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+@@ -1999,7 +1999,6 @@ out:
+ static bool validate_digest(const char *digest)
+ {
+     bool ret = true;
+-    const char *digest_patten = "^[a-z0-9]+(?:[.+_-][a-z0-9]+)*:[a-zA-Z0-9=_-]+$";
+     const char *sha256_encode_patten = "^[a-f0-9]{64}$";
+     char *value = util_strdup_s(digest);
+     char *index = strchr(value, ':');
+@@ -2019,12 +2018,7 @@ static bool validate_digest(const char *digest)
+     encode = index;
+     // Currently only support SHA256 algorithm
+     if (strcmp(alg, "sha256") != 0) {
+-        if (util_reg_match(digest_patten, digest) != 0) {
+-            INFO("Invalid checksum digest format");
+-            ret = false;
+-            goto out;
+-        }
+-        ERROR("Unsupported digest algorithm");
++        DEBUG("Unsupported digest algorithm: %s", alg);
+         ret = false;
+         goto out;
+     }
+diff --git a/src/utils/cutils/utils_regex.c b/src/utils/cutils/utils_regex.c
+index b17ec5f3..7f7384bd 100644
+--- a/src/utils/cutils/utils_regex.c
++++ b/src/utils/cutils/utils_regex.c
+@@ -26,6 +26,7 @@
+ #include "utils_string.h"
+ 
+ /*
++ * do not support greedy matching, like: '(:?xx)'
+  * return value:
+  * -1  failed
+  *  0  match
+-- 
+2.20.1
+
