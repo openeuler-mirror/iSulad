@@ -1999,7 +1999,6 @@ out:
 static bool validate_digest(const char *digest)
 {
     bool ret = true;
-    const char *digest_patten = "^[a-z0-9]+(?:[.+_-][a-z0-9]+)*:[a-zA-Z0-9=_-]+$";
     const char *sha256_encode_patten = "^[a-f0-9]{64}$";
     char *value = util_strdup_s(digest);
     char *index = strchr(value, ':');
@@ -2019,12 +2018,7 @@ static bool validate_digest(const char *digest)
     encode = index;
     // Currently only support SHA256 algorithm
     if (strcmp(alg, "sha256") != 0) {
-        if (util_reg_match(digest_patten, digest) != 0) {
-            INFO("Invalid checksum digest format");
-            ret = false;
-            goto out;
-        }
-        ERROR("Unsupported digest algorithm");
+        DEBUG("Unsupported digest algorithm: %s", alg);
         ret = false;
         goto out;
     }
