@@ -44,6 +44,8 @@ ssize_t util_write_nointr_in_total(int fd, const char *buf, size_t count);
 
 ssize_t util_read_nointr(int fd, void *buf, size_t count);
 
+int util_mkdir_p_userns_remap(const char *dir, mode_t mode, const char *userns_remap);
+
 int util_mkdir_p(const char *dir, mode_t mode);
 
 int util_recursive_rmdir(const char *dirpath, int recursive_depth);
@@ -120,7 +122,9 @@ int util_list_all_entries(const char *directory, char ***out);
 //       2. If fifo or socket exist in source, this function will return failure.
 int util_copy_dir_recursive(char *copy_dst, char *copy_src);
 
+#ifdef ENABLE_USERNS_REMAP
 int set_file_owner_for_userns_remap(const char *filename, const char *userns_remap);
+#endif
 
 #ifdef __cplusplus
 }

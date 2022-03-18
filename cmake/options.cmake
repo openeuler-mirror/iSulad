@@ -128,6 +128,12 @@ if (ENABLE_GVISOR)
     message("${Green}--  Enable runtime gvisor${ColourReset}")
 endif()
 
+option(ENABLE_USERNS_REMAP "enable userns remap" OFF)
+if (ENABLE_USERNS_REMAP)
+    add_definitions(-DENABLE_USERNS_REMAP)
+    message("${Green}--  Enable userns remap${ColourReset}")
+endif()
+
 if (NOT RUNPATH)
     set(RUNPATH "/var/run")
 endif()

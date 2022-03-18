@@ -46,6 +46,9 @@
 #include "utils_convert.h"
 #include "utils_file.h"
 #include "utils_verify.h"
+#ifdef ENABLE_USERNS_REMAP
+#include "isulad_config.h"
+#endif
 
 /* verify hook timeout */
 static int verify_hook_timeout(int t)
@@ -1488,6 +1491,16 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
     int ret = 0;
     size_t i;
     defs_mount *iter = NULL;
+#ifdef ENABLE_USERNS_REMAP
+    char *userns_remap = conf_get_isulad_userns_remap();
+#endif
+    mode_t mode = CONFIG_DIRECTORY_MODE;
+
+#ifdef ENABLE_USERNS_REMAP
+    if (userns_remap != NULL) {
+        mode = USER_REMAP_DIRECTORY_MODE;
+    }
+#endif
 
     for (i = 0; i < len; ++i) {
         iter = *(mounts + i);
@@ -1495,7 +1508,11 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
             continue;
         }
 
-        if (!util_file_exists(iter->source) && util_mkdir_p(iter->source, CONFIG_DIRECTORY_MODE)) {
+#ifdef ENABLE_USERNS_REMAP
+        if (!util_file_exists(iter->source) && util_mkdir_p_userns_remap(iter->source, mode, userns_remap)) {
+#else
+        if (!util_file_exists(iter->source) && util_mkdir_p(iter->source, mode)) {
+#endif
             ERROR("Failed to create directory '%s': %s", iter->source, strerror(errno));
             isulad_try_set_error_message("Failed to create directory '%s': %s", iter->source, strerror(errno));
             ret = -1;
@@ -1504,6 +1521,9 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
     }
 
 out:
+#ifdef ENABLE_USERNS_REMAP
+    free(userns_remap);
+#endif
     return ret;
 }
 
@@ -2023,10 +2043,22 @@ out:
 int verify_host_config_settings(host_config *hostconfig, bool update)
 {
     int ret = 0;
+#ifdef ENABLE_USERNS_REMAP
+    char *userns_remap = conf_get_isulad_userns_remap();
+#endif
 
     if (hostconfig == NULL) {
-        return 0;
+        goto out;
     }
+
+#ifdef ENABLE_USERNS_REMAP
+    if (userns_remap != NULL && hostconfig->user_remap != NULL) {
+        ERROR("invalid --user-remap command option, daemon already configed --userns-remap");
+        isulad_set_error_message("invalid --user-remap command option, daemon already configed --userns-remap");
+        ret = -1;
+        goto out;
+    }
+#endif
 
     // restart policy
     ret = host_config_settings_restart_policy(hostconfig);
@@ -2059,6 +2091,9 @@ int verify_host_config_settings(host_config *hostconfig, bool update)
 #endif
 
 out:
+#ifdef ENABLE_USERNS_REMAP
+    free(userns_remap);
+#endif
     return ret;
 }
 

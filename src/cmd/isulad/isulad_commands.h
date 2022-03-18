@@ -49,6 +49,20 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
 #define METRICS_PORT_OPT(cmdargs)
 #endif
 
+#ifdef ENABLE_USERNS_REMAP
+#define USERNS_REMAP_OPT(cmdargs)                                                                                 \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
+        false,                                                                                                    \
+        "userns-remap",                                                                                           \
+        0,                                                                                                        \
+        &(cmdargs)->json_confs->userns_remap,                                                                     \
+        "User/Group setting for user namespaces",                                                                 \
+        NULL },                                                                                                   \
+
+#else
+#define USERNS_REMAP_OPT(cmdargs)
+#endif
+
 #define ISULAD_OPTIONS(cmdargs)                                                                                   \
     { CMD_OPT_TYPE_CALLBACK,                                                                                      \
         false,                                                                                                    \
@@ -273,18 +287,12 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       &(cmdargs)->json_confs->websocket_server_listening_port,                                                    \
       "CRI websocket streaming service listening port (default 10350)",                                           \
       command_convert_uint },                                                                                     \
+    METRICS_PORT_OPT(cmdargs)                                                                                     \
+    USERNS_REMAP_OPT(cmdargs)                                                                                     \
     { CMD_OPT_TYPE_BOOL,                                                                                          \
       false, "selinux-enabled", 0, &(cmdargs)->json_confs->selinux_enabled,                                       \
       "Enable selinux support", NULL                                                                              \
     },                                                                                                            \
-    METRICS_PORT_OPT(cmdargs)                                                                                     \
-    { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
-        false,                                                                                                      \
-        "userns-remap",                                                                                             \
-        0,                                                                                                          \
-        &(cmdargs)->json_confs->userns_remap,                                                                       \
-        "User/Group setting for user namespaces",                                                                   \
-        NULL }
 
 #ifdef __cplusplus
 }
