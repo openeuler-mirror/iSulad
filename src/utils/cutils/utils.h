@@ -69,6 +69,7 @@ int malloc_trim(size_t pad);
 #define HOST_CHANNLE_MIN_SIZE (4 * SIZE_KB)
 #define MOUNT_PROPERTIES_SIZE 128
 #define HOST_PATH_MODE 0700
+#define HOST_PATH_MODE_USERNS_REMAP 0701
 #define DEFAULT_SHM_SIZE (64 * SIZE_MB)
 
 #define ECOMMON 1

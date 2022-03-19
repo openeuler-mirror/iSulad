@@ -829,29 +829,56 @@ static int prepare_host_channel(const host_config_host_channel *host_channel, co
     unsigned int host_uid = 0;
     unsigned int host_gid = 0;
     unsigned int size = 0;
+    mode_t mode = HOST_PATH_MODE;
+    int ret = 0;
+    const char *userns_remap = user_remap;
+#ifdef ENABLE_USERNS_REMAP
+    char *daemon_userns_remap = conf_get_isulad_userns_remap();
+    if (daemon_userns_remap != NULL) {
+        userns_remap = (const char *) daemon_userns_remap;
+    }
+#endif
 
     if (host_channel == NULL) {
-        return 0;
+        goto out;
     }
     if (util_dir_exists(host_channel->path_on_host)) {
         ERROR("Host path '%s' already exist", host_channel->path_on_host);
-        return -1;
+        ret = -1;
+        goto out;
     }
-    if (util_mkdir_p(host_channel->path_on_host, HOST_PATH_MODE)) {
+
+#ifdef ENABLE_USERNS_REMAP
+    if (daemon_userns_remap != NULL) {
+        mode = HOST_PATH_MODE_USERNS_REMAP;
+    }
+
+    if (util_mkdir_p_userns_remap(host_channel->path_on_host, mode, userns_remap)) {
+#else
+    if (util_mkdir_p(host_channel->path_on_host, mode)) {
+#endif
         ERROR("Failed to create host path '%s'.", host_channel->path_on_host);
-        return -1;
+        ret = -1;
+        goto out;
     }
-    if (user_remap != NULL) {
-        if (util_parse_user_remap(user_remap, &host_uid, &host_gid, &size)) {
-            ERROR("Failed to split string '%s'.", user_remap);
-            return -1;
+    if (userns_remap != NULL) {
+        if (util_parse_user_remap(userns_remap, &host_uid, &host_gid, &size)) {
+            ERROR("Failed to split string '%s'.", userns_remap);
+            ret = -1;
+            goto out;
         }
         if (chown(host_channel->path_on_host, host_uid, host_gid) != 0) {
             ERROR("Failed to chown host path '%s'.", host_channel->path_on_host);
-            return -1;
+            ret = -1;
+            goto out;
         }
     }
-    return 0;
+
+out:
+#ifdef ENABLE_USERNS_REMAP
+    free(daemon_userns_remap);
+#endif
+    return ret;
 }
 
 static void umount_shm_by_configs(host_config *host_spec, container_config_v2_common_config *v2_spec)
@@ -880,7 +907,9 @@ static int create_container_root_dir(const char *id, const char *runtime_root)
     int nret;
     char container_root[PATH_MAX] = { 0x00 };
     mode_t mask = umask(S_IWOTH);
-    char* userns_remap = conf_get_isulad_userns_remap();
+#ifdef ENABLE_USERNS_REMAP
+    char *userns_remap = conf_get_isulad_userns_remap();
+#endif
 
     nret = snprintf(container_root, sizeof(container_root), "%s/%s", runtime_root, id);
     if ((size_t)nret >= sizeof(container_root) || nret < 0) {
@@ -895,15 +924,19 @@ static int create_container_root_dir(const char *id, const char *runtime_root)
         goto out;
     }
 
+#ifdef ENABLE_USERNS_REMAP
     if (set_file_owner_for_userns_remap(container_root, userns_remap) != 0) {
         ERROR("Unable to change directory %s owner for user remap.", container_root);
         ret = -1;
         goto out;
     }
+#endif
 
 out:
     umask(mask);
+#ifdef ENABLE_USERNS_REMAP
     free(userns_remap);
+#endif
     return ret;
 }
 

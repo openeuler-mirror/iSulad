@@ -2588,9 +2588,11 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
     int nret = 0;
     bool has_mount = false;
     char *spath = NULL;
+#ifdef ENABLE_USERNS_REMAP
     char *tmp_path = NULL;
     char *p = NULL;
     char *userns_remap = NULL;
+#endif
     // has mount for /dev/shm
     if (has_mount_shm(host_spec, v2_spec)) {
         return 0;
@@ -2625,6 +2627,7 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
     }
 
     v2_spec->shm_path = spath;
+#ifdef ENABLE_USERNS_REMAP
     userns_remap = conf_get_isulad_userns_remap();
 
     if (host_spec->user_remap == NULL && userns_remap != NULL) {
@@ -2654,6 +2657,7 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
             goto out;
         }
     }
+#endif
 
     spath = NULL;
     ret = 0;
@@ -2662,8 +2666,10 @@ out:
         (void)umount(spath);
     }
     free(spath);
+#ifdef ENABLE_USERNS_REMAP
     free(tmp_path);
     free(userns_remap);
+#endif
     return ret;
 }
 

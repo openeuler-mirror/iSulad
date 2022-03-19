@@ -1157,6 +1157,7 @@ out:
     return plugins;
 }
 
+#ifdef ENABLE_USERNS_REMAP
 char *conf_get_isulad_userns_remap()
 {
     struct service_arguments *conf = NULL;
@@ -1178,6 +1179,7 @@ out:
     (void)isulad_server_conf_unlock();
     return userns_remap;
 }
+#endif
 
 /* conf get websocket server listening port */
 int32_t conf_get_websocket_server_listening_port()
@@ -1532,7 +1534,9 @@ int merge_json_confs_into_global(struct service_arguments *args)
     override_string_value(&args->json_confs->engine, &tmp_json_confs->engine);
     override_string_value(&args->json_confs->hook_spec, &tmp_json_confs->hook_spec);
     override_string_value(&args->json_confs->enable_plugins, &tmp_json_confs->enable_plugins);
+#ifdef ENABLE_USERNS_REMAP
     override_string_value(&args->json_confs->userns_remap, &tmp_json_confs->userns_remap);
+#endif
     override_string_value(&args->json_confs->native_umask, &tmp_json_confs->native_umask);
     override_string_value(&args->json_confs->cgroup_parent, &tmp_json_confs->cgroup_parent);
     override_string_value(&args->json_confs->rootfsmntdir, &tmp_json_confs->rootfsmntdir);

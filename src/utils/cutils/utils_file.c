@@ -182,15 +182,26 @@ ssize_t util_read_nointr(int fd, void *buf, size_t count)
     return nret;
 }
 
-int util_mkdir_p(const char *dir, mode_t mode)
+int util_mkdir_p_userns_remap(const char *dir, mode_t mode, const char *userns_remap)
 {
     const char *tmp_pos = NULL;
     const char *base = NULL;
     char *cur_dir = NULL;
     int len = 0;
+    uid_t host_uid = 0;
+    gid_t host_gid = 0;
+    unsigned int size = 0;
+    int ret = 0;
 
     if (dir == NULL || strlen(dir) > PATH_MAX) {
         goto err_out;
+    }
+
+    if (userns_remap != NULL) {
+        if (util_parse_user_remap(userns_remap, &host_uid, &host_gid, &size)) {
+            ERROR("Failed to split string '%s'.", userns_remap);
+            goto err_out;
+        }
     }
 
     tmp_pos = dir;
@@ -209,8 +220,13 @@ int util_mkdir_p(const char *dir, mode_t mode)
             goto err_out;
         }
         if (*cur_dir) {
-            if (mkdir(cur_dir, mode) && (errno != EEXIST || !util_dir_exists(cur_dir))) {
+            ret = mkdir(cur_dir, mode);
+            if (ret != 0 && (errno != EEXIST || !util_dir_exists(cur_dir))) {
                 ERROR("failed to create directory '%s': %s", cur_dir, strerror(errno));
+                goto err_out;
+            }
+            if (ret == 0 && userns_remap != NULL && chown(cur_dir, host_uid, host_gid) != 0) {
+                ERROR("Failed to chown host path '%s'.", cur_dir);
                 goto err_out;
             }
         }
@@ -225,6 +241,11 @@ int util_mkdir_p(const char *dir, mode_t mode)
 err_out:
     free(cur_dir);
     return -1;
+}
+
+int util_mkdir_p(const char *dir, mode_t mode)
+{
+    return util_mkdir_p_userns_remap(dir, mode, NULL);
 }
 
 static bool check_dir_valid(const char *dirpath, int recursive_depth, int *failure)
@@ -2097,6 +2118,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_USERNS_REMAP
 int set_file_owner_for_userns_remap(const char *filename, const char *userns_remap)
 {
     int ret = 0;
@@ -2121,3 +2143,4 @@ int set_file_owner_for_userns_remap(const char *filename, const char *userns_rem
 out:
     return ret;
 }
+#endif

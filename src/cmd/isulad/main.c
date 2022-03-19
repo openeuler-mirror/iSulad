@@ -117,7 +117,9 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
     char *rootfsdir = NULL;
     mountinfo_t **minfos = NULL;
     mountinfo_t *info = NULL;
+#ifdef ENABLE_USERNS_REMAP
     char *userns_remap = conf_get_isulad_userns_remap();
+#endif
 
     if (mountdir == NULL) {
         ERROR("parent mount path is NULL");
@@ -132,6 +134,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
         goto out;
     }
 
+#ifdef ENABLE_USERNS_REMAP
     if (userns_remap != NULL) {
         ret = chmod(rootfsdir, USER_REMAP_DIRECTORY_MODE);
         if (ret != 0) {
@@ -139,6 +142,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
             goto out;
         }
     }
+#endif
 
     // find parent directory
     p = strrchr(rootfsdir, '/');
@@ -148,6 +152,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
     }
     *p = '\0';
 
+#ifdef ENABLE_USERNS_REMAP
     if (userns_remap != NULL) {
         ret = chmod(rootfsdir, USER_REMAP_DIRECTORY_MODE);
         if (ret != 0) {
@@ -155,6 +160,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
             goto out;
         }
     }
+#endif
 
     minfos = getmountsinfo();
     if (minfos == NULL) {
@@ -174,7 +180,9 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
 
 out:
     free(rootfsdir);
+#ifdef ENABLE_USERNS_REMAP
     free(userns_remap);
+#endif
     free_mounts_info(minfos);
     return ret;
 }
@@ -676,6 +684,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_USERNS_REMAP
 static int update_graph_for_userns_remap(struct service_arguments *args)
 {
     int ret = 0;
@@ -708,6 +717,8 @@ static int update_graph_for_userns_remap(struct service_arguments *args)
 out:
     return ret;
 }
+#endif
+
 // update values for options after flag parsing is complete
 static int update_tls_options(struct service_arguments *args)
 {
@@ -951,10 +962,12 @@ static int update_server_args(struct service_arguments *args)
 {
     int ret = 0;
 
+#ifdef ENABLE_USERNS_REMAP
     if (update_graph_for_userns_remap(args) != 0) {
         ret = -1;
         goto out;
     }
+#endif
 
     if (update_tls_options(args)) {
         ret = -1;
@@ -1153,7 +1166,10 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
                                   const char *fifo_full_path)
 {
     int ret = 0;
+#ifdef ENABLE_USERNS_REMAP
     char* userns_remap = conf_get_isulad_userns_remap();
+    char *isulad_root = NULL;
+#endif
     mode_t mode = CONFIG_DIRECTORY_MODE;
 
     if (check_and_save_pid(args->json_confs->pidfile) != 0) {
@@ -1173,9 +1189,11 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
         goto out;
     }
 
+#ifdef ENABLE_USERNS_REMAP
     if (userns_remap != NULL) {
         mode = USER_REMAP_DIRECTORY_MODE;
     }
+#endif
 
     ret = util_mkdir_p(args->json_confs->graph, mode);
     if (ret != 0) {
@@ -1184,13 +1202,22 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
         goto out;
     }
 
+#ifdef ENABLE_USERNS_REMAP
     if (userns_remap != NULL) {
+        isulad_root = util_path_dir(args->json_confs->graph);
+        if (chmod(isulad_root, USER_REMAP_DIRECTORY_MODE) != 0) {
+            ERROR("Failed to chmod isulad root dir '%s' for user remap", isulad_root);
+            ret = -1;
+            goto out;
+        }
+
         if (set_file_owner_for_userns_remap(args->json_confs->graph, userns_remap) != 0) {
             ERROR("Unable to change root directory %s owner for user remap.", args->json_confs->graph);
             ret = -1;
             goto out;
         }
     }
+#endif
 
     if (mount_rootfs_mnt_dir(args->json_confs->rootfsmntdir)) {
         ERROR("Create and mount parent directory failed");
@@ -1205,7 +1232,10 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
     }
 
 out:
+#ifdef ENABLE_USERNS_REMAP
+    free(isulad_root);
     free(userns_remap);
+#endif
     return ret;
 }
 
