@@ -243,6 +243,24 @@ static int resume_request_check(void *req)
     return 0;
 }
 
+/* rename request check */
+static int rename_request_check(void *req)
+{
+    container_rename_request *req_resume = (container_rename_request *)req;
+
+    if (req_resume->new_name == NULL) {
+        ERROR("Container new name required for rename()");
+        return -1;
+    }
+
+    if (req_resume->old_name == NULL) {
+        ERROR("Container old name required for rename()");
+        return -1;
+    }
+
+    return 0;
+}
+
 /* evhtp send create repsponse */
 static void evhtp_send_create_repsponse(evhtp_request_t *req, container_create_response *response, int rescode)
 {
@@ -268,7 +286,6 @@ static void evhtp_send_create_repsponse(evhtp_request_t *req, container_create_r
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 static struct rest_handle_st g_rest_handle[] = {
@@ -352,6 +369,11 @@ static struct rest_handle_st g_rest_handle[] = {
         .request_parse_data = (void *)container_resume_request_parse_data,
         .request_check = resume_request_check,
     },
+    {
+        .name = ContainerServiceRename,
+        .request_parse_data = (void *)container_rename_request_parse_data,
+        .request_check = rename_request_check,
+    },
 };
 
 static int action_request_from_rest(evhtp_request_t *req, void **request, const char *req_type)
@@ -425,7 +447,6 @@ static void evhtp_send_start_repsponse(evhtp_request_t *req, container_start_res
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* evhtp send list repsponse */
@@ -453,7 +474,6 @@ static void evhtp_send_list_repsponse(evhtp_request_t *req, container_list_respo
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* evhtp send wait repsponse */
@@ -475,7 +495,6 @@ static void evhtp_send_wait_repsponse(evhtp_request_t *req, container_wait_respo
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest create cb */
@@ -608,7 +627,6 @@ static void evhtp_send_stop_repsponse(evhtp_request_t *req, container_stop_respo
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest stop cb */
@@ -670,7 +688,6 @@ static void evhtp_send_restart_response(evhtp_request_t *req, container_restart_
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest restart cb */
@@ -727,7 +744,6 @@ static void evhtp_send_version_repsponse(evhtp_request_t *req, container_version
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest version cb */
@@ -790,7 +806,6 @@ static void evhtp_send_info_response(evhtp_request_t *req, host_info_response *r
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest info cb */
@@ -854,7 +869,6 @@ static void evhtp_send_update_repsponse(evhtp_request_t *req, container_update_r
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest update cb */
@@ -916,7 +930,6 @@ static void evhtp_send_kill_repsponse(evhtp_request_t *req, container_kill_respo
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest kill cb */
@@ -980,7 +993,6 @@ static void evhtp_send_container_inspect_repsponse(evhtp_request_t *req, contain
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest container inspect cb */
@@ -1043,7 +1055,6 @@ static void evhtp_send_exec_repsponse(evhtp_request_t *req, container_exec_respo
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest exec cb */
@@ -1105,7 +1116,6 @@ static void evhtp_send_remove_repsponse(evhtp_request_t *req, container_delete_r
 out:
     free(err);
     free(responsedata);
-    return;
 }
 
 /* rest remove cb */
@@ -1203,7 +1213,6 @@ static void evhtp_send_export_response(evhtp_request_t *req, container_export_re
 out:
     free(err);
     free(resp_str);
-    return;
 }
 
 /* rest export cb */
@@ -1268,7 +1277,6 @@ static void evhtp_send_pause_response(evhtp_request_t *req, container_pause_resp
 out:
     free(resp_str);
     free(err);
-    return;
 }
 
 /* rest pause cb */
@@ -1333,7 +1341,6 @@ static void evhtp_send_resume_response(evhtp_request_t *req, container_resume_re
 out:
     free(resp_str);
     free(err);
-    return;
 }
 
 /* rest resume cb */
@@ -1371,6 +1378,78 @@ static void rest_resume_cb(evhtp_request_t *req, void *arg)
 out:
     free_container_resume_response(cresponse);
     free_container_resume_request(crequest);
+}
+
+/* evhtp send rename response */
+static void evhtp_send_rename_response(evhtp_request_t *req, struct isulad_container_rename_response *isuladresp, int rescode)
+{
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error err = NULL;
+    char *resp_str = NULL;
+    container_rename_response cresponse = { 0 };
+
+    if (isuladresp == NULL) {
+        ERROR("Responded information is null: rename()");
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        return;
+    }
+    cresponse.cc = isuladresp->cc;
+    cresponse.errmsg = isuladresp->errmsg;
+    cresponse.id = isuladresp->id;
+
+    resp_str = container_rename_response_generate_json(&cresponse, &ctx, &err);
+    if (resp_str == NULL) {
+        ERROR("Failed to generate rename request json, err: %s", err);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        goto out;
+    }
+
+    evhtp_send_response(req, resp_str, rescode);
+
+out:
+    free(resp_str);
+    free(err);
+}
+
+/* rest rename cb */
+static void rest_rename_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    container_rename_request *crequest = NULL;
+    struct isulad_container_rename_request isuladreq = { 0 };
+    struct isulad_container_rename_response *isuladres = NULL;
+
+    // only deal with post request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        ERROR("Only deal with post request: rename()");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    cb = get_service_executor();
+    if (cb == NULL || cb->container.rename == NULL) {
+        ERROR("Unimplemented callback: rename()");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceRename);
+    if (tret < 0) {
+        ERROR("Bad request: rename()");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    // container.rename() use isuladreq as a const argument, so just use pointer to filed of crequest
+    isuladreq.new_name = crequest->new_name;
+    isuladreq.old_name = crequest->old_name;
+    (void)cb->container.rename(&isuladreq, &isuladres);
+    evhtp_send_rename_response(req, isuladres, RESTFUL_RES_OK);
+
+out:
+    isulad_container_rename_response_free(isuladres);
+    free_container_rename_request(crequest);
 }
 
 /* rest register containers handler */
@@ -1439,6 +1518,10 @@ int rest_register_containers_handler(evhtp_t *htp)
     }
     if (evhtp_set_cb(htp, ContainerServiceResume, rest_resume_cb, NULL) == NULL) {
         ERROR("Failed to register resume callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServiceRename, rest_rename_cb, NULL) == NULL) {
+        ERROR("Failed to register rename callback");
         return -1;
     }
     return 0;
