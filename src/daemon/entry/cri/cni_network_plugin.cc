@@ -411,7 +411,7 @@ bool CniNetworkPlugin::SetupMultNetworks(const std::string &ns, const std::strin
         }
         auto netIter = m_mutlNetworks.find(networks[i]->name);
         if (netIter == m_mutlNetworks.end()) {
-            err.Errorf("Cannot found user defined net: %s", networks[i]->name);
+            err.Errorf("User defined network is in conflict with default network: %s", networks[i]->name);
             goto cleanup;
         }
         if (defaultInterface == networks[i]->interface) {
@@ -550,7 +550,7 @@ void CniNetworkPlugin::TearDownMultNetworks(const std::string &ns, const std::st
         }
         auto netIter = m_mutlNetworks.find(networks[i]->name);
         if (netIter == m_mutlNetworks.end()) {
-            WARN("Cannot found user defined net: %s", networks[i]->name);
+            WARN("User defined network is in conflict with default network: %s", networks[i]->name);
             continue;
         }
         if (defaultInterface == networks[i]->interface) {
@@ -573,7 +573,7 @@ void CniNetworkPlugin::TearDownMultNetworks(const std::string &ns, const std::st
     if (defaultIdx >= 0) {
         auto netIter = m_mutlNetworks.find(networks[defaultIdx]->name);
         if (netIter == m_mutlNetworks.end()) {
-            err.Errorf("Cannot found user defined net: %s", networks[defaultIdx]->name);
+            err.Errorf("User defined network is in conflict with default network: %s", networks[defaultIdx]->name);
             goto cleanup;
         }
         useDefaultNet = (netIter->second).get();
