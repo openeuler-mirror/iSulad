@@ -197,12 +197,12 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
         tmp_idx = map_search(g_net_store.g_net_index_map, (void *)conf->extral_nets[i]->name);
         // if user defined network is default network, return error
         if (tmp_idx == NULL || *tmp_idx == 0) {
-            ERROR("Cannot found user defined net: %s", conf->extral_nets[i]->name);
+            ERROR("User defined network is in conflict with default network: %s", conf->extral_nets[i]->name);
             // do best to detach network plane of container
             if (ignore_nofound) {
                 continue;
             }
-            isulad_set_error_message("Cannot found user defined net: %s", conf->extral_nets[i]->name);
+            isulad_set_error_message("User defined network is in conflict with default network: %s", conf->extral_nets[i]->name);
             ret = -1;
             goto out;
         }
