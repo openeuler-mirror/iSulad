@@ -15,9 +15,17 @@
 #include "cri_runtime_service_impl.h"
 #include "cri_helpers.h"
 #include "isula_libutils/log.h"
-#include "cri_runtime_versioner_service_impl.h"
+#include "cri_runtime_versioner_service.h"
 
 namespace CRI {
+CRIRuntimeServiceImpl::CRIRuntimeServiceImpl(const std::string &podSandboxImage, service_executor_t *cb,
+                                             std::shared_ptr<Network::PluginManager> pluginManager)
+    : m_runtimeVersioner(new RuntimeVersionerService(cb))
+    , m_containerManager(new ContainerManagerService(cb))
+    , m_runtimeManager(new RuntimeManagerService(cb, pluginManager))
+{
+}
+
 void CRIRuntimeServiceImpl::Version(const std::string &apiVersion, runtime::v1alpha2::VersionResponse *versionResponse,
                                     Errors &error)
 {
@@ -26,8 +34,8 @@ void CRIRuntimeServiceImpl::Version(const std::string &apiVersion, runtime::v1al
 
 auto CRIRuntimeServiceImpl::CreateContainer(const std::string &podSandboxID,
                                             const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                            const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-                                            Errors &error) -> std::string
+                                            const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error)
+-> std::string
 {
     return m_containerManager->CreateContainer(podSandboxID, containerConfig, podSandboxConfig, error);
 }
@@ -48,33 +56,35 @@ void CRIRuntimeServiceImpl::RemoveContainer(const std::string &containerID, Erro
 }
 
 void CRIRuntimeServiceImpl::ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
-                                           std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers, Errors &error)
+                                           std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers,
+                                           Errors &error)
 {
     m_containerManager->ListContainers(filter, containers, error);
 }
 
-void CRIRuntimeServiceImpl::ListContainerStats(const runtime::v1alpha2::ContainerStatsFilter *filter,
-                                               std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
-                                               Errors &error)
+void CRIRuntimeServiceImpl::ListContainerStats(
+    const runtime::v1alpha2::ContainerStatsFilter *filter,
+    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
 {
     m_containerManager->ListContainerStats(filter, containerstats, error);
 }
 
-auto CRIRuntimeServiceImpl::ContainerStatus(const std::string &containerID,
-                                            Errors &error) -> std::unique_ptr<runtime::v1alpha2::ContainerStatus>
+auto CRIRuntimeServiceImpl::ContainerStatus(const std::string &containerID, Errors &error)
+-> std::unique_ptr<runtime::v1alpha2::ContainerStatus>
 {
     return m_containerManager->ContainerStatus(containerID, error);
 }
 
 void CRIRuntimeServiceImpl::UpdateContainerResources(const std::string &containerID,
-                                                     const runtime::v1alpha2::LinuxContainerResources &resources, Errors &error)
+                                                     const runtime::v1alpha2::LinuxContainerResources &resources,
+                                                     Errors &error)
 {
     m_containerManager->UpdateContainerResources(containerID, resources, error);
 }
 
 void CRIRuntimeServiceImpl::ExecSync(const std::string &containerID,
-                                     const google::protobuf::RepeatedPtrField<std::string> &cmd,
-                                     int64_t timeout, runtime::v1alpha2::ExecSyncResponse *reply, Errors &error)
+                                     const google::protobuf::RepeatedPtrField<std::string> &cmd, int64_t timeout,
+                                     runtime::v1alpha2::ExecSyncResponse *reply, Errors &error)
 {
     m_containerManager->ExecSync(containerID, cmd, timeout, reply, error);
 }
@@ -92,8 +102,7 @@ void CRIRuntimeServiceImpl::Attach(const runtime::v1alpha2::AttachRequest &req, 
 }
 
 auto CRIRuntimeServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config,
-                                          const std::string &runtimeHandler,
-                                          Errors &error) -> std::string
+                                          const std::string &runtimeHandler, Errors &error) -> std::string
 {
     return m_podSandboxManager->RunPodSandbox(config, runtimeHandler, error);
 }
@@ -108,14 +117,15 @@ void CRIRuntimeServiceImpl::RemovePodSandbox(const std::string &podSandboxID, Er
     m_podSandboxManager->RemovePodSandbox(podSandboxID, error);
 }
 
-auto CRIRuntimeServiceImpl::PodSandboxStatus(const std::string &podSandboxID,
-                                             Errors &error) -> std::unique_ptr<runtime::v1alpha2::PodSandboxStatus>
+auto CRIRuntimeServiceImpl::PodSandboxStatus(const std::string &podSandboxID, Errors &error)
+-> std::unique_ptr<runtime::v1alpha2::PodSandboxStatus>
 {
     return m_podSandboxManager->PodSandboxStatus(podSandboxID, error);
 }
 
 void CRIRuntimeServiceImpl::ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
-                                           std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods, Errors &error)
+                                           std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
+                                           Errors &error)
 {
     m_podSandboxManager->ListPodSandbox(filter, pods, error);
 }

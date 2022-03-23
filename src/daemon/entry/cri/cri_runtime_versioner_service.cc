@@ -12,13 +12,13 @@
  * Create: 2020-12-15
  * Description: provide cri runtime versioner service implementation function
  *********************************************************************************/
-#include "cri_runtime_versioner_service_impl.h"
+#include "cri_runtime_versioner_service.h"
 #include "cri_constants.h"
 #include "config.h"
 
 namespace CRI {
-void RuntimeVersionerServiceImpl::VersionResponseToGRPC(container_version_response *response,
-                                                        runtime::v1alpha2::VersionResponse *gResponse)
+void RuntimeVersionerService::VersionResponseToGRPC(container_version_response *response,
+                                                    runtime::v1alpha2::VersionResponse *gResponse)
 {
     gResponse->set_version(Constants::kubeAPIVersion);
     gResponse->set_runtime_name(Constants::iSulaRuntimeName);
@@ -26,9 +26,8 @@ void RuntimeVersionerServiceImpl::VersionResponseToGRPC(container_version_respon
     gResponse->set_runtime_api_version(VERSION);
 }
 
-void RuntimeVersionerServiceImpl::Version(const std::string &apiVersion,
-                                          runtime::v1alpha2::VersionResponse *versionResponse,
-                                          Errors &error)
+void RuntimeVersionerService::Version(const std::string &apiVersion,
+                                      runtime::v1alpha2::VersionResponse *versionResponse, Errors &error)
 {
     (void)apiVersion;
 
