@@ -1493,9 +1493,6 @@ static int do_atomic_write_file(const char *fname, const char *content, size_t c
 free_out:
     if (dst_fd >= 0) {
         close(dst_fd);
-        if (unlink(fname) != 0 && errno != ENOENT) {
-            SYSERROR("Failed to remove temp file:%s", fname);
-        }
     }
     return ret;
 }
@@ -1540,6 +1537,9 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
 
 free_out:
     free(tmp_file);
+    if (ret != 0 && unlink(tmp_file) != 0 && errno != ENOENT) {
+        SYSERROR("Failed to remove temp file:%s", tmp_file);
+    }
     return ret;
 }
 
