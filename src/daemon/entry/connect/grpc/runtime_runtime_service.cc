@@ -20,10 +20,6 @@
 #include "route_callback_register.h"
 #include "isula_libutils/log.h"
 #include "cri_runtime_service_impl.h"
-#include "cri_runtime_versioner_service_impl.h"
-#include "cri_container_manager_service_impl.h"
-#include "cri_pod_sandbox_manager_service_impl.h"
-#include "cri_runtime_manager_service_impl.h"
 #include "cri_helpers.h"
 
 using namespace CRI;
@@ -59,12 +55,7 @@ void RuntimeRuntimeServiceImpl::Init(Network::NetworkPluginConf mConf, isulad_da
 
     auto pluginManager = std::make_shared<Network::PluginManager>(chosen);
 
-    RuntimeVersionerService *runtimeVersioner = new RuntimeVersionerServiceImpl(cb);
-    ContainerManagerService *containerManager = new ContainerManagerServiceImpl(cb);
-    PodSandboxManagerService *podSandboxManager = new PodSandboxManagerServiceImpl(podSandboxImage, cb, pluginManager);
-    RuntimeManagerService *runtimeManager = new RuntimeManagerServiceImpl(cb, pluginManager);
-    std::unique_ptr<CRI::CRIRuntimeService> service(
-        new CRIRuntimeServiceImpl(runtimeVersioner, containerManager, podSandboxManager, runtimeManager));
+    std::unique_ptr<CRI::CRIRuntimeService> service(new CRIRuntimeServiceImpl(podSandboxImage, cb, pluginManager));
     rService = std::move(service);
 
     websocket_server_init(err);

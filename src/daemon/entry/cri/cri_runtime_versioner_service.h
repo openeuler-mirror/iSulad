@@ -10,24 +10,32 @@
  * See the Mulan PSL v2 for more details.
  * Author: wujing
  * Create: 2020-12-15
- * Description: provide cri runtime versioner service function definition
+ * Description: provide cri runtime versioner service implementation function
  *********************************************************************************/
 
-#ifndef DAEMON_ENTRY_CRI_RUNTIME_VERSIONER_H
-#define DAEMON_ENTRY_CRI_RUNTIME_VERSIONER_H
+#ifndef DAEMON_ENTRY_CRI_RUNTIME_VERSIONER_IMPL_H
+#define DAEMON_ENTRY_CRI_RUNTIME_VERSIONER_IMPL_H
 
 #include <string>
 #include "api.pb.h"
 #include "errors.h"
+#include "isula_libutils/container_version_response.h"
+#include "callback.h"
 
 namespace CRI {
 class RuntimeVersionerService {
 public:
-    RuntimeVersionerService() = default;
+    explicit RuntimeVersionerService(service_executor_t *cb)
+        : m_cb(cb) {};
     virtual ~RuntimeVersionerService() = default;
 
-    virtual void Version(const std::string &apiVersion, runtime::v1alpha2::VersionResponse *versionResponse,
-                         Errors &error) = 0;
+    void Version(const std::string &apiVersion, runtime::v1alpha2::VersionResponse *versionResponse, Errors &error);
+
+private:
+    void VersionResponseToGRPC(container_version_response *response, runtime::v1alpha2::VersionResponse *gResponse);
+
+private:
+    service_executor_t *m_cb { nullptr };
 };
 } // namespace CRI
 

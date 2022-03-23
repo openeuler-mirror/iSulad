@@ -12,12 +12,12 @@
  * Create: 2020-12-15
  * Description: provide cri runtime manager service function implementation
  *********************************************************************************/
-#include "cri_runtime_manager_service_impl.h"
+#include "cri_runtime_manager_service.h"
 #include "isula_libutils/log.h"
 #include "cri_helpers.h"
 
 namespace CRI {
-void RuntimeManagerServiceImpl::UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors & /*error*/)
+void RuntimeManagerService::UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors & /*error*/)
 {
     INFO("iSulad cri received runtime config: %s", config.network_config().pod_cidr().c_str());
     if (m_pluginManager != nullptr && config.has_network_config() && !(config.network_config().pod_cidr().empty())) {
@@ -28,7 +28,7 @@ void RuntimeManagerServiceImpl::UpdateRuntimeConfig(const runtime::v1alpha2::Run
     }
 }
 
-auto RuntimeManagerServiceImpl::Status(Errors &error) -> std::unique_ptr<runtime::v1alpha2::RuntimeStatus>
+auto RuntimeManagerService::Status(Errors &error) -> std::unique_ptr<runtime::v1alpha2::RuntimeStatus>
 {
     std::unique_ptr<runtime::v1alpha2::RuntimeStatus> status(new (std::nothrow) runtime::v1alpha2::RuntimeStatus);
     if (status == nullptr) {

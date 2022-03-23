@@ -25,14 +25,8 @@
 namespace CRI {
 class CRIRuntimeServiceImpl : public CRIRuntimeService {
 public:
-    CRIRuntimeServiceImpl(RuntimeVersionerService* runtimeVersioner,
-                          ContainerManagerService* containerManager,
-                          PodSandboxManagerService* podSandboxManager,
-                          RuntimeManagerService* runtimeManager) :
-        m_runtimeVersioner(runtimeVersioner),
-        m_containerManager(containerManager),
-        m_podSandboxManager(podSandboxManager),
-        m_runtimeManager(runtimeManager) {}
+    CRIRuntimeServiceImpl(const std::string &podSandboxImage, service_executor_t *cb,
+                          std::shared_ptr<Network::PluginManager> pluginManager);
     CRIRuntimeServiceImpl(const CRIRuntimeServiceImpl &) = delete;
     auto operator=(const CRIRuntimeServiceImpl &) -> CRIRuntimeServiceImpl & = delete;
     virtual ~CRIRuntimeServiceImpl() = default;
@@ -40,10 +34,9 @@ public:
     void Version(const std::string &apiVersion, runtime::v1alpha2::VersionResponse *versionResponse,
                  Errors &error) override;
 
-    auto CreateContainer(const std::string &podSandboxID,
-                         const runtime::v1alpha2::ContainerConfig &containerConfig,
-                         const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-                         Errors &error) -> std::string override;
+    auto CreateContainer(const std::string &podSandboxID, const runtime::v1alpha2::ContainerConfig &containerConfig,
+                         const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error)
+    -> std::string override;
 
     void StartContainer(const std::string &containerID, Errors &error) override;
 
@@ -58,8 +51,8 @@ public:
                             std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
                             Errors &error) override;
 
-    auto ContainerStatus(const std::string &containerID,
-                         Errors &error) -> std::unique_ptr<runtime::v1alpha2::ContainerStatus> override;
+    auto ContainerStatus(const std::string &containerID, Errors &error)
+    -> std::unique_ptr<runtime::v1alpha2::ContainerStatus> override;
 
     void ExecSync(const std::string &containerID, const google::protobuf::RepeatedPtrField<std::string> &cmd,
                   int64_t timeout, runtime::v1alpha2::ExecSyncResponse *reply, Errors &error) override;
@@ -76,8 +69,8 @@ public:
 
     void RemovePodSandbox(const std::string &podSandboxID, Errors &error) override;
 
-    auto PodSandboxStatus(const std::string &podSandboxID,
-                          Errors &error) -> std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> override;
+    auto PodSandboxStatus(const std::string &podSandboxID, Errors &error)
+    -> std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> override;
 
     void ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
                         std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods, Errors &error) override;
