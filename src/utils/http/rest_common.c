@@ -48,15 +48,6 @@ struct httpclient_ops {
 
 static struct httpclient_ops g_hc_ops;
 
-/*
- * dlclose may leak the fd which is opened by dlopen in lower version of glibc,
- * to avoid reach the fd limit when call http request multiple times,
- * we limited the max times of open libhttpclient to 3, make sure we can release memory
- * in subcmd run (include rest request of create, start, need call dlclose 2 times).
- */
-#define MAX_KEEP_OPS_CNT 3
-static int g_ops_status = 0;
-
 /* check status code */
 int check_status_code(int status_code)
 {
@@ -81,9 +72,6 @@ int check_status_code(int status_code)
 static void free_httpclient_ops(struct httpclient_ops *ops)
 {
     if (ops == NULL || ops->handle == NULL) {
-        return;
-    }
-    if (g_ops_status == MAX_KEEP_OPS_CNT) {
         return;
     }
     dlclose(ops->handle);
@@ -137,11 +125,6 @@ static int ops_init(struct httpclient_ops *ops)
         goto badcleanup;
     }
 
-    g_ops_status++;
-    if (g_ops_status > MAX_KEEP_OPS_CNT) {
-        g_ops_status = MAX_KEEP_OPS_CNT;
-    }
-
     return 0;
 badcleanup:
     ERROR("bad cleanup");
@@ -193,7 +176,6 @@ int get_response(Buffer *output, unpack_response_func_t unpack_func, void *arg)
     ret = unpack_func(msg, arg);
 
 out:
-    free_httpclient_ops(&g_hc_ops);
     if (msg != NULL) {
         if (msg->body != NULL) {
             free(msg->body);
@@ -262,7 +244,6 @@ int rest_send_requst(const char *socket, const char *url, char *request_body, si
     }
     if (init_http_client_opt()) {
         ERROR("Failed to init g_hc_ops");
-        free_httpclient_ops(&g_hc_ops);
         return -1;
     }
 
@@ -286,9 +267,6 @@ int rest_send_requst(const char *socket, const char *url, char *request_body, si
 
 out:
     g_hc_ops.free_http_get_options_op(options);
-    if (ret != 0) {
-        free_httpclient_ops(&g_hc_ops);
-    }
     return ret;
 }
 

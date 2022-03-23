@@ -162,6 +162,18 @@ out:
     return ret;
 }
 
+/* attach request check */
+static int attach_request_check(void *req)
+{
+    container_attach_request *req_attach = (container_attach_request *)req;
+    if (req_attach->container_id == NULL) {
+        ERROR("Missing container name in the attach request!");
+        return -1;
+    }
+
+    return 0;
+}
+
 /* list request check */
 static int list_request_check(void *req)
 {
@@ -328,6 +340,11 @@ static struct rest_handle_st g_rest_handle[] = {
         .name = ContainerServiceExec,
         .request_parse_data = (void *)container_exec_request_parse_data,
         .request_check = exec_request_check,
+    },
+    {
+        .name = ContainerServiceAttach,
+        .request_parse_data = (void *)container_attach_request_parse_data,
+        .request_check = attach_request_check,
     },
     {
         .name = ContainerServiceRemove,
@@ -1092,6 +1109,69 @@ out:
     free_container_exec_response(cresponse);
 }
 
+/* evhtp send attach repsponse */
+static void evhtp_send_attach_repsponse(evhtp_request_t *req, container_attach_response *response, int rescode)
+{
+    parser_error err = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    char *responsedata = NULL;
+
+    if (response == NULL) {
+        ERROR("Failed to generate attach response info");
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        goto out;
+    }
+
+    responsedata = container_attach_response_generate_json(response, &ctx, &err);
+    if (responsedata == NULL) {
+        ERROR("Failed to generate attach request json:%s", err);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        goto out;
+    }
+
+    evhtp_send_response(req, responsedata, rescode);
+
+out:
+    free(err);
+    free(responsedata);
+    return;
+}
+
+/* rest attach cb */
+static void rest_attach_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    container_attach_request *crequest = NULL;
+    container_attach_response *cresponse = NULL;
+
+    // only deal with POST request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+    cb = get_service_executor();
+    if (cb == NULL || !cb->container.attach) {
+        ERROR("Unimplemented attach callback");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceAttach);
+    if (tret < 0) {
+        ERROR("bad request");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->container.attach(crequest, &cresponse, -1, NULL, NULL);
+
+    evhtp_send_attach_repsponse(req, cresponse, RESTFUL_RES_OK);
+out:
+    free_container_attach_request(crequest);
+    free_container_attach_response(cresponse);
+}
+
 /* evhtp send remove repsponse */
 static void evhtp_send_remove_repsponse(evhtp_request_t *req, container_delete_response *response, int rescode)
 {
@@ -1381,7 +1461,8 @@ out:
 }
 
 /* evhtp send rename response */
-static void evhtp_send_rename_response(evhtp_request_t *req, struct isulad_container_rename_response *isuladresp, int rescode)
+static void evhtp_send_rename_response(evhtp_request_t *req, struct isulad_container_rename_response *isuladresp,
+                                       int rescode)
 {
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error err = NULL;
@@ -1485,6 +1566,10 @@ int rest_register_containers_handler(evhtp_t *htp)
     }
     if (evhtp_set_cb(htp, ContainerServiceExec, rest_exec_cb, NULL) == NULL) {
         ERROR("Failed to register exec callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServiceAttach, rest_attach_cb, NULL) == NULL) {
+        ERROR("Failed to register attach callback");
         return -1;
     }
     if (evhtp_set_cb(htp, ContainerServiceRemove, rest_remove_cb, NULL) == NULL) {
