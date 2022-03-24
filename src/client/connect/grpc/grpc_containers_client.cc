@@ -359,11 +359,11 @@ public:
         }
         context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
         context.AddMetadata("tls_mode", m_tlsMode);
+#endif
         context.AddMetadata("container-id", std::string(request->name));
         context.AddMetadata("attach-stdin", request->attach_stdin ? "true" : "false");
         context.AddMetadata("attach-stdout", request->attach_stdout ? "true" : "false");
         context.AddMetadata("attach-stderr", request->attach_stderr ? "true" : "false");
-#endif
         return 0;
     }
 
@@ -936,6 +936,7 @@ public:
             ret = -1;
             goto out;
         }
+        context.AddMetadata("isulad-remote-exec", json);
 #ifdef OPENSSL_VERIFY
         {
             // Set common name from cert.perm
@@ -949,7 +950,6 @@ public:
             }
             context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
             context.AddMetadata("tls_mode", m_tlsMode);
-            context.AddMetadata("isulad-remote-exec", json);
         }
 #endif
 out:
@@ -1359,11 +1359,11 @@ public:
         }
         context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
         context.AddMetadata("tls_mode", m_tlsMode);
+#endif
         context.AddMetadata("container-id", std::string(request->name));
         context.AddMetadata("attach-stdin", request->attach_stdin ? "true" : "false");
         context.AddMetadata("attach-stdout", request->attach_stdout ? "true" : "false");
         context.AddMetadata("attach-stderr", request->attach_stderr ? "true" : "false");
-#endif
         return 0;
     }
     static void get_server_trailing_metadata(ClientContext &context, isula_attach_response *response)
@@ -2064,6 +2064,7 @@ public:
             ret = -1;
             goto out;
         }
+        context.AddMetadata("isulad-copy-to-container", json);
 #ifdef OPENSSL_VERIFY
         {
             // Set common name from cert.perm
@@ -2077,7 +2078,6 @@ public:
             }
             context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
             context.AddMetadata("tls_mode", m_tlsMode);
-            context.AddMetadata("isulad-copy-to-container", json);
         }
 #endif
 
