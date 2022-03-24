@@ -1,4 +1,7 @@
 2022-03-24 root release 2.0.12
+    - update v2.0.12 release notes
+    - fix openssl-verify invalid disable metadata
+    - !1353 update version of iSulad to v2.0.12 Merge pull request !1353 from haozi007/stable-v2.0.x
     - !1350 remove temporary file only when write file failed From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
     - !1348 remove temporary file if write atomic file failed Merge pull request !1348 from wangfengtu/tmp_file_stable
     - !1346 Modify error message thrown when User defined network is default network for disambiguation Merge pull request !1346 from czrz/stable-v2.0.x
@@ -16,7 +19,7 @@
     - !1312 add restful interface isula info Merge pull request !1312 from xiaochaowang/stable-v2.0.x
 
     dev stats:
-      - 33 files changed, 1535 insertions(+), 64 deletions(-)
+      - 37 files changed, 1566 insertions(+), 72 deletions(-)
       - contributors: WangFengTu, haozi007, root, wangxiaochao, HumbleHunger, chengzrz
 
 2022-02-24 root release 2.0.11
