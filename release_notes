@@ -1,3 +1,24 @@
+2022-03-24 root release 2.0.12
+    - !1350 remove temporary file only when write file failed From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1348 remove temporary file if write atomic file failed Merge pull request !1348 from wangfengtu/tmp_file_stable
+    - !1346 Modify error message thrown when User defined network is default network for disambiguation Merge pull request !1346 from czrz/stable-v2.0.x
+    - !1344 fix bugs of userns-remap and add -DENABLE_USERNS_REMAP From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1342 remove unnecessary wrong message Merge pull request !1342 from haozi007/stable-v2.0.x
+    - !1340 fix uid/gid error when load image Merge pull request !1340 from wangfengtu/uidgid-stable
+    - !1338 enlarge rest buffer limit to support --security-opt Merge pull request !1338 from wangfengtu/security-opt-stable
+    - !1336 fixbug restful interface isula pause/unpause Merge pull request !1336 from wangfengtu/pause_stable
+    - !1334 sync from master branch Merge pull request !1334 from haozi007/stable-v2.0.x
+    - !1330 add restful interface isula export From: @xiaochaowang Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1328 add -DSYSCONFDIR_PREFIX as prefix when read config Merge pull request !1328 from wangfengtu/etc_stable
+    - !1326 fix exec --workdir take no effect when restfull Merge pull request !1326 from wangfengtu/workdir_stable
+    - !1321 do not fail even if no cgroup controller found when cgroupv2 Merge pull request !1321 from wangfengtu/no_controller_stable
+    - !1314 iSulad: Add the function of isolating the user namespaces Merge pull request !1314 from wangfengtu/userns-remap
+    - !1312 add restful interface isula info Merge pull request !1312 from xiaochaowang/stable-v2.0.x
+
+    dev stats:
+      - 33 files changed, 1535 insertions(+), 64 deletions(-)
+      - contributors: WangFengTu, haozi007, root, wangxiaochao, HumbleHunger, chengzrz
+
 2022-02-24 root release 2.0.11
     - !1309 improve ci of stable branch Merge pull request !1309 from haozi007/stable-v2.0.x
     - !1308 continue pulling even if no Docker-Distribution-Api-Version found Merge pull request !1308 from wangfengtu/pull_fail_stable
