@@ -30,48 +30,38 @@ public:
     void Init(Network::NetworkPluginConf mConf, isulad_daemon_configs *config, Errors &err);
     void Wait();
     void Shutdown();
-    grpc::Status Version(grpc::ServerContext *context,
-                         const runtime::v1alpha2::VersionRequest *request,
+    grpc::Status Version(grpc::ServerContext *context, const runtime::v1alpha2::VersionRequest *request,
                          runtime::v1alpha2::VersionResponse *reply) override;
 
-    grpc::Status CreateContainer(grpc::ServerContext *context,
-                                 const runtime::v1alpha2::CreateContainerRequest *request,
+    grpc::Status CreateContainer(grpc::ServerContext *context, const runtime::v1alpha2::CreateContainerRequest *request,
                                  runtime::v1alpha2::CreateContainerResponse *reply) override;
 
-    grpc::Status StartContainer(grpc::ServerContext *context,
-                                const runtime::v1alpha2::StartContainerRequest *request,
+    grpc::Status StartContainer(grpc::ServerContext *context, const runtime::v1alpha2::StartContainerRequest *request,
                                 runtime::v1alpha2::StartContainerResponse *reply) override;
 
-    grpc::Status StopContainer(grpc::ServerContext *context,
-                               const runtime::v1alpha2::StopContainerRequest *request,
+    grpc::Status StopContainer(grpc::ServerContext *context, const runtime::v1alpha2::StopContainerRequest *request,
                                runtime::v1alpha2::StopContainerResponse *reply) override;
 
-    grpc::Status RemoveContainer(grpc::ServerContext *context,
-                                 const runtime::v1alpha2::RemoveContainerRequest *request,
+    grpc::Status RemoveContainer(grpc::ServerContext *context, const runtime::v1alpha2::RemoveContainerRequest *request,
                                  runtime::v1alpha2::RemoveContainerResponse *reply) override;
 
-    grpc::Status ListContainers(grpc::ServerContext *context,
-                                const runtime::v1alpha2::ListContainersRequest *request,
+    grpc::Status ListContainers(grpc::ServerContext *context, const runtime::v1alpha2::ListContainersRequest *request,
                                 runtime::v1alpha2::ListContainersResponse *reply) override;
 
     grpc::Status ListContainerStats(grpc::ServerContext *context,
                                     const runtime::v1alpha2::ListContainerStatsRequest *request,
                                     runtime::v1alpha2::ListContainerStatsResponse *reply) override;
 
-    grpc::Status ContainerStatus(grpc::ServerContext *context,
-                                 const runtime::v1alpha2::ContainerStatusRequest *request,
+    grpc::Status ContainerStatus(grpc::ServerContext *context, const runtime::v1alpha2::ContainerStatusRequest *request,
                                  runtime::v1alpha2::ContainerStatusResponse *reply) override;
 
-    grpc::Status ExecSync(grpc::ServerContext *context,
-                          const runtime::v1alpha2::ExecSyncRequest *request,
+    grpc::Status ExecSync(grpc::ServerContext *context, const runtime::v1alpha2::ExecSyncRequest *request,
                           runtime::v1alpha2::ExecSyncResponse *reply) override;
 
-    grpc::Status RunPodSandbox(grpc::ServerContext *context,
-                               const runtime::v1alpha2::RunPodSandboxRequest *request,
+    grpc::Status RunPodSandbox(grpc::ServerContext *context, const runtime::v1alpha2::RunPodSandboxRequest *request,
                                runtime::v1alpha2::RunPodSandboxResponse *reply) override;
 
-    grpc::Status StopPodSandbox(grpc::ServerContext *context,
-                                const runtime::v1alpha2::StopPodSandboxRequest *request,
+    grpc::Status StopPodSandbox(grpc::ServerContext *context, const runtime::v1alpha2::StopPodSandboxRequest *request,
                                 runtime::v1alpha2::StopPodSandboxResponse *reply) override;
 
     grpc::Status RemovePodSandbox(grpc::ServerContext *context,
@@ -82,8 +72,7 @@ public:
                                   const runtime::v1alpha2::PodSandboxStatusRequest *request,
                                   runtime::v1alpha2::PodSandboxStatusResponse *reply) override;
 
-    grpc::Status ListPodSandbox(grpc::ServerContext *context,
-                                const runtime::v1alpha2::ListPodSandboxRequest *request,
+    grpc::Status ListPodSandbox(grpc::ServerContext *context, const runtime::v1alpha2::ListPodSandboxRequest *request,
                                 runtime::v1alpha2::ListPodSandboxResponse *reply) override;
 
     grpc::Status UpdateContainerResources(grpc::ServerContext *context,
@@ -104,8 +93,7 @@ public:
                         runtime::v1alpha2::StatusResponse *reply) override;
 
 private:
-    std::unique_ptr<CRI::CRIRuntimeService> rService;
+    std::unique_ptr<CRI::CRIRuntimeService> m_rService;
 };
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_RUNTIME_SERVICE_H
-
