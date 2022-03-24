@@ -22,6 +22,7 @@ CRIRuntimeServiceImpl::CRIRuntimeServiceImpl(const std::string &podSandboxImage,
                                              std::shared_ptr<Network::PluginManager> pluginManager)
     : m_runtimeVersioner(new RuntimeVersionerService(cb))
     , m_containerManager(new ContainerManagerService(cb))
+    , m_podSandboxManager(new PodSandboxManagerService(podSandboxImage, cb, pluginManager))
     , m_runtimeManager(new RuntimeManagerService(cb, pluginManager))
 {
 }
