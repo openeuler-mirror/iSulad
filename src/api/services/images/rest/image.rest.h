@@ -23,6 +23,12 @@
 #include "isula_libutils/image_delete_image_response.h"
 #include "isula_libutils/image_inspect_request.h"
 #include "isula_libutils/image_inspect_response.h"
+#include "isula_libutils/image_pull_image_request.h"
+#include "isula_libutils/image_pull_image_response.h"
+#include "isula_libutils/image_login_request.h"
+#include "isula_libutils/image_login_response.h"
+#include "isula_libutils/image_logout_request.h"
+#include "isula_libutils/image_logout_response.h"
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
@@ -32,6 +38,9 @@
 #define ImagesServiceList "/ImagesService/List"
 #define ImagesServiceDelete "/ImagesService/Delete"
 #define ImagesServiceInspect "/ImagesService/Inspect"
+#define ImagesServicePull "/ImagesService/Pull"
+#define ImagesServiceLogin "/ImagesService/Login"
+#define ImagesServiceLogout "/ImagesService/Logout"
 
 #endif
 
