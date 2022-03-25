@@ -221,6 +221,9 @@ static int attach_request_to_rest(const struct isula_attach_request *la_request,
     if (la_request->stderr != NULL) {
         crequest->stderr = util_strdup_s(la_request->stderr);
     }
+    crequest->attach_stdin = la_request->attach_stdin;
+    crequest->attach_stdout = la_request->attach_stdout;
+    crequest->attach_stderr = la_request->attach_stderr;
     *body = container_attach_request_generate_json(crequest, &ctx, &err);
     if (*body == NULL) {
         ERROR("Failed to generate attach request json:%s", err);
@@ -1899,7 +1902,7 @@ static int export_request_to_rest(const struct isula_export_request *le_request,
     crequest = util_common_calloc_s(sizeof(container_export_request));
     if (crequest == NULL) {
         ERROR("Out of memory");
-	return -1;
+        return -1;
     }
 
     crequest->id = util_strdup_s(le_request->name);
@@ -1929,7 +1932,7 @@ static int unpack_export_response(const struct parsed_http_message *message, voi
 
     ret = check_status_code(message->status_code);
     if (ret != 0) {
-	ERROR("Responsed status code is not correct");
+        ERROR("Responsed status code is not correct");
         return -1;
     }
 
@@ -1966,7 +1969,7 @@ static int rest_container_export(const struct isula_export_request *le_request,
 
     ret = export_request_to_rest(le_request, &body, &len);
     if (ret != 0) {
-	ERROR("Failed to convert request to restful format");
+        ERROR("Failed to convert request to restful format");
         goto out;
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceExport, body, len, &output);
@@ -2028,7 +2031,7 @@ static int rename_request_to_rest(const struct isula_rename_request *in_request,
     crequest = util_common_calloc_s(sizeof(container_rename_request));
     if (crequest == NULL) {
         ERROR("Out of memory");
-	return -1;
+        return -1;
     }
 
     crequest->old_name = util_strdup_s(in_request->old_name);
@@ -2048,7 +2051,8 @@ out:
     return ret;
 }
 
-int rest_container_rename(const struct isula_rename_request *in_request, struct isula_rename_response *in_response, void *arg)
+int rest_container_rename(const struct isula_rename_request *in_request, struct isula_rename_response *in_response,
+                          void *arg)
 {
     char *body = NULL;
     int ret = 0;

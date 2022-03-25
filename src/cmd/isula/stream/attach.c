@@ -36,11 +36,20 @@
 #include "command_parser.h"
 #include "connect.h"
 #include "constants.h"
+#ifndef GRPC_CONNECTOR
+#include "client_console.h"
+#endif
 
 const char g_cmd_attach_desc[] = "Attach to a running container";
 const char g_cmd_attach_usage[] = "attach [OPTIONS] CONTAINER";
 
+#ifndef GRPC_CONNECTOR
+sem_t g_attach_waitopen_sem;
+sem_t g_attach_waitexit_sem;
+#endif
+
 struct client_arguments g_cmd_attach_args = { 0 };
+
 
 static int check_tty(bool tty, struct termios *oldtios, bool *reset_tty)
 {
@@ -61,8 +70,30 @@ static int check_tty(bool tty, struct termios *oldtios, bool *reset_tty)
         INFO("the input device is not a TTY");
         return 0;
     }
+
     return 0;
 }
+
+#ifndef GRPC_CONNECTOR
+static int attach_prepare_console(bool tty, struct isula_attach_request *request,
+                                  struct command_fifo_config **attach_fifos)
+{
+    if (create_console_fifos(request->attach_stdin, request->attach_stdout, request->attach_stderr,
+                             request->name, "attach", attach_fifos)) {
+        ERROR("Container \"%s\" create console FIFO failed", request->name);
+        return -1;
+    }
+
+    (*attach_fifos)->wait_open = &g_attach_waitopen_sem;
+    (*attach_fifos)->wait_exit = &g_attach_waitexit_sem;
+    if (start_client_console_thread((*attach_fifos), tty && (isatty(0) != 0))) {
+        ERROR("Container \"%s\" start console thread failed", request->name);
+        return -1;
+    }
+
+    return 0;
+}
+#endif
 
 int inspect_container(const struct client_arguments *args, container_inspect **inspect_data)
 {
@@ -189,6 +220,19 @@ static int attach_cmd_init(int argc, const char **argv)
     }
     g_cmd_attach_args.name = util_strdup_s(g_cmd_attach_args.argv[0]);
 
+#ifndef GRPC_CONNECTOR
+    if (sem_init(&g_attach_waitopen_sem, 0, 0)) {
+        ERROR("Semaphore initialization failed");
+        return ECOMMON;
+    }
+
+    if (sem_init(&g_attach_waitexit_sem, 0, 0)) {
+        ERROR("Semaphore initialization failed");
+        sem_destroy(&g_attach_waitopen_sem);
+        return ECOMMON;
+    }
+#endif
+
     return 0;
 }
 
@@ -298,6 +342,9 @@ static int client_attach(struct client_arguments *args, uint32_t *exit_code)
     container_inspect *inspect_data = NULL;
     sem_t sem_exited;
     struct timespec ts;
+#ifndef GRPC_CONNECTOR
+    struct command_fifo_config *attach_fifos = NULL;
+#endif
 
     ops = get_connect_client_ops();
     if (ops == NULL || !ops->container.attach) {
@@ -338,6 +385,16 @@ static int client_attach(struct client_arguments *args, uint32_t *exit_code)
         goto out;
     }
 
+#ifndef GRPC_CONNECTOR
+    if (attach_prepare_console(inspect_data->config->tty, &request, &attach_fifos) != 0) {
+        ret = ECOMMON;
+        goto out;
+    }
+    request.stdin = util_strdup_s(attach_fifos->stdin_name);
+    request.stdout = util_strdup_s(attach_fifos->stdout_name);
+    request.stderr = util_strdup_s(attach_fifos->stderr_name);
+#endif
+
     config = get_connect_config(args);
     container_wait_thread(args, exit_code, &sem_exited);
     ret = ops->container.attach(&request, response, &config);
@@ -346,6 +403,10 @@ static int client_attach(struct client_arguments *args, uint32_t *exit_code)
         ret = ECOMMON;
         goto out;
     }
+
+#ifndef GRPC_CONNECTOR
+    sem_wait(&g_attach_waitexit_sem);
+#endif
 
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
         ERROR("Failed to get real time");
@@ -364,6 +425,11 @@ static int client_attach(struct client_arguments *args, uint32_t *exit_code)
         goto out;
     }
 out:
+#ifndef GRPC_CONNECTOR
+    delete_command_fifo(attach_fifos);
+    sem_destroy(&g_attach_waitopen_sem);
+    sem_destroy(&g_attach_waitexit_sem);
+#endif
     (void)sem_destroy(&sem_exited);
     free_container_inspect(inspect_data);
     isula_attach_response_free(response);
