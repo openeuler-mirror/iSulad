@@ -153,7 +153,7 @@ static int unpack_image_info_to_list_response(image_list_images_response *crespo
 /* unpack image list response */
 static int unpack_image_list_response(const struct parsed_http_message *message, void *arg)
 {
-    struct isula_list_images_response *response = arg;
+    struct isula_list_images_response *response = (struct isula_list_images_response *)arg;
     image_list_images_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -192,7 +192,7 @@ out:
 /* unpack image load response */
 static int unpack_image_load_response(const struct parsed_http_message *message, void *arg)
 {
-    struct isula_load_response *c_load_response = arg;
+    struct isula_load_response *c_load_response = (struct isula_load_response *)arg;
     image_load_image_response *load_response = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -258,7 +258,7 @@ out:
 /* unpack image delete response */
 static int unpack_image_delete_response(const struct parsed_http_message *message, void *arg)
 {
-    struct isula_rmi_response *c_rmi_response = arg;
+    struct isula_rmi_response *c_rmi_response = (struct isula_rmi_response *)arg;
     image_delete_image_response *delete_response = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -392,7 +392,7 @@ out:
 /* unpack inspect response */
 static int unpack_inspect_response(const struct parsed_http_message *message, void *arg)
 {
-    struct isula_inspect_response *response = arg;
+    struct isula_inspect_response *response = (struct isula_inspect_response *)arg;
     image_inspect_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -459,6 +459,305 @@ out:
     return ret;
 }
 
+/* image pull request to rest */
+static int image_pull_request_to_rest(const struct isula_pull_request *request, char **body, size_t *body_len)
+{
+    image_pull_image_request *crequest = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    crequest = util_common_calloc_s(sizeof(image_pull_image_request));
+    if (crequest == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    crequest->image_name = util_strdup_s(request->image_name);
+
+    *body = image_pull_image_request_generate_json(crequest, NULL, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate image pull request json:%s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_image_pull_image_request(crequest);
+    return ret;
+}
+
+/* unpack image pull response */
+static int unpack_image_pull_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_pull_response *c_rmi_response = (struct isula_pull_response *)arg;
+    image_pull_image_response *pull_response = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        ERROR("Pull image check status code failed.\n");
+        goto out;
+    }
+
+    pull_response = image_pull_image_response_parse_data(message->body, NULL, &err);
+    if (pull_response == NULL) {
+        ERROR("Invalid pull image response:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    c_rmi_response->server_errono = pull_response->cc;
+    c_rmi_response->image_ref = util_strdup_s(pull_response->image_ref);
+    c_rmi_response->errmsg = util_strdup_s(pull_response->errmsg);
+
+    ret = (pull_response->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    free(err);
+    free_image_pull_image_response(pull_response);
+    return ret;
+}
+
+
+/* rest image pull */
+static int rest_image_pull(const struct isula_pull_request *request, struct isula_pull_response *response, void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    Buffer *output = NULL;
+
+    ret = image_pull_request_to_rest(request, &body, &len);
+    if (ret != 0) {
+        goto out;
+    }
+    ret = rest_send_requst(socketname, RestHttpHead ImagesServicePull, body, len, &output);
+    if (ret != 0) {
+        ERROR("Send pull request failed.");
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    ret = get_response(output, unpack_image_pull_response, (void *)response);
+    if (ret != 0) {
+        ERROR("Get pull response failed.");
+        goto out;
+    }
+
+out:
+    buffer_free(output);
+    put_body(body);
+    return ret;
+}
+
+/* unpack image login response */
+static int unpack_image_login_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_login_response *c_login_response = (struct isula_login_response *)arg;
+    image_login_response *login_response = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        goto out;
+    }
+
+    login_response = image_login_response_parse_data(message->body, NULL, &err);
+    if (login_response == NULL) {
+        ERROR("Invalid login response:%s", err);
+        ret = -1;
+        goto out;
+    }
+    c_login_response->server_errono = login_response->cc;
+    if (login_response->errmsg != NULL) {
+        c_login_response->errmsg = util_strdup_s(login_response->errmsg);
+    }
+    ret = (login_response->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    free(err);
+    free_image_login_response(login_response);
+    return ret;
+}
+
+/* image login request to rest */
+static int image_login_request_to_rest(const struct isula_login_request *request, char **body, size_t *body_len)
+{
+    image_login_request *crequest = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    crequest = util_common_calloc_s(sizeof(image_login_request));
+    if (crequest == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    crequest->username = util_strdup_s(request->username);
+    crequest->password = util_strdup_s(request->password);
+    crequest->server = util_strdup_s(request->server);
+    crequest->type = util_strdup_s(request->type);
+
+    *body = image_login_request_generate_json(crequest, NULL, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate image login request json:%s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_image_login_request(crequest);
+    return ret;
+}
+
+/* rest image login*/
+static int rest_image_login(const struct isula_login_request *request, struct isula_login_response *response, void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    Buffer *output = NULL;
+
+    ret = image_login_request_to_rest(request, &body, &len);
+    if (ret != 0) {
+        ERROR("Build login request failed.");
+        goto out;
+    }
+    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceLogin, body, len, &output);
+    if (ret != 0) {
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
+        ERROR("Send login request failed.");
+        goto out;
+    }
+    ret = get_response(output, unpack_image_login_response, (void *)response);
+    if (ret != 0) {
+        ERROR("Get login response failed.");
+        goto out;
+    }
+
+out:
+    if (output != NULL) {
+        buffer_free(output);
+    }
+    put_body(body);
+    return ret;
+}
+
+/* unpack image logout response */
+static int unpack_image_logout_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_logout_response *c_logout_response = (struct isula_logout_response *)arg;
+    image_logout_response *logout_response = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        goto out;
+    }
+
+    logout_response = image_logout_response_parse_data(message->body, NULL, &err);
+    if (logout_response == NULL) {
+        ERROR("Invalid logout image response:%s", err);
+        ret = -1;
+        goto out;
+    }
+    c_logout_response->server_errono = logout_response->cc;
+    c_logout_response->errmsg = util_strdup_s(logout_response->errmsg);
+    ret = (logout_response->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    free(err);
+    free_image_logout_response(logout_response);
+    return ret;
+}
+
+/* image login request to rest */
+static int image_logout_request_to_rest(const struct isula_logout_request *request, char **body, size_t *body_len)
+{
+    image_logout_request *crequest = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    crequest = util_common_calloc_s(sizeof(image_logout_request));
+    if (crequest == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (request->server != NULL) {
+        crequest->server = util_strdup_s(request->server);
+    }
+    if (request->type != NULL) {
+        crequest->type = util_strdup_s(request->type);
+    }
+    *body = image_logout_request_generate_json(crequest, NULL, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate image logout request json:%s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_image_logout_request(crequest);
+    return ret;
+}
+
+/* rest image login*/
+static int rest_image_logout(const struct isula_logout_request *request, struct isula_logout_response *response, void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    Buffer *output = NULL;
+
+    ret = image_logout_request_to_rest(request, &body, &len);
+    if (ret != 0) {
+        goto out;
+    }
+    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceLogout, body, len, &output);
+    if (ret != 0) {
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    ret = get_response(output, unpack_image_logout_response, (void *)response);
+    if (ret != 0) {
+        goto out;
+    }
+
+out:
+    if (output != NULL) {
+        buffer_free(output);
+    }
+    put_body(body);
+    return ret;
+}
+
 /* rest images client ops init */
 int rest_images_client_ops_init(isula_connect_ops *ops)
 {
@@ -470,6 +769,9 @@ int rest_images_client_ops_init(isula_connect_ops *ops)
     ops->image.remove = &rest_image_remove;
     ops->image.load = &rest_image_load;
     ops->image.inspect = &rest_image_inspect;
+    ops->image.pull= &rest_image_pull;
+    ops->image.login= &rest_image_login;
+    ops->image.logout= &rest_image_logout;
 
     return 0;
 }
