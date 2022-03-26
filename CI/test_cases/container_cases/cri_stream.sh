@@ -104,6 +104,11 @@ function test_cri_attach
     nohup cricli attach -i ${cid} &
     pid=$!
     sleep 2
+
+    ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI attach operation" && ((ret++))
+
+
     kill -9 $pid
     sleep 2
 
