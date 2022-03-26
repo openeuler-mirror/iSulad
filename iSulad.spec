@@ -1,5 +1,5 @@
-%global _version 2.0.11
-%global _release 6
+%global _version 2.0.12
+%global _release 1
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -12,11 +12,6 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
-
-Patch0001: 0001-iSulad-Add-the-function-of-isolating-the-user-namesp.patch
-Patch0002: 0002-let-isulad-root-path-configable-when-userns-remap.patch
-Patch0003: 0003-fix-uid-gid-error-when-load-image.patch
-Patch0004: 0004-remove-unnecessary-wrong-message.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -243,6 +238,12 @@ fi
 %endif
 
 %changelog
+* Fri Mar 25 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.12-1
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: update version to v2.0.12
+
 * Thu Mar 17 2022 haozi007 <liuhao27@huawei.com> - 2.0.11-6
 - Type: bugfix
 - ID: NA
