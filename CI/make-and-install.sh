@@ -39,8 +39,8 @@ export CPLUS_INCLUDE_PATH=/usr/local/include:${builddir}/include:$CPLUS_INCLUDE_
 export PATH=${builddir}/bin:$PATH
 
 ISULAD_SRC_PATH=`env | grep TOPDIR | awk -F '=' '{print $2}'`
-export ISULAD_COPY_PATH=~/iSulad
-export LCR_SRC_PATH=~/lcr/
+export ISULAD_COPY_PATH=$HOME/iSulad
+export LCR_SRC_PATH=$HOME/lcr/
 
 export valgrind_log="/tmp/valgrind.log"
 export PATH=$PATH:/usr/local/go/bin
@@ -76,9 +76,6 @@ cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON -DENABLE_SHIM_V2=ON -DENABLE_METRI
 make -j $(nproc)
 make install
 ctest -T memcheck --output-on-failure
-if [[ $? -ne 0 ]]; then
-    exit 1
-fi
 echo_success "===================RUN DT-LLT TESTCASES END========================="
 
 # build fuzz

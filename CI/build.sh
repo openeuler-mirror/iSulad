@@ -33,7 +33,6 @@ LXC_LOCK_DIR_CONTAINER="/run/lxc/lock/mount_lock"
 LXC_LOCK_DIR_HOST="/tmp/lxc_mount_dir"
 KEEP_CONTAINERS_ALIVE_DIR="/tmp/containerslock"
 TESTCASE_ASSIGN="${CIDIR}/testcase_assign"
-BASE_IMAGE="isulad_build_env:v1"
 devmapper_script="${TOPDIR}/CI/install_devmapper.sh"
 disk=NULL
 
@@ -47,13 +46,15 @@ rm -rf ${TESTCASE_ASSIGN}_*
 # ./CI/build.sh
 
 declare -a modules
-container_nums=0
+declare -g container_nums=0
+declare -g distros=centos
 
 function usage() {
     echo "Usage: $0 [options]"
     echo "Continuous integration (CI) script for isulad/lcr project"
     echo "Options:"
     echo "    -m, --module        Execute scripts related to the specified module"
+    echo "    -l, --distros       Linux distribution environment to be tested"
     echo "    -n, --container-num Multiple containers execute scripts in parallel"
     echo "    -g, --enable-gcov   Enable gcov for code coverage analysis"
     echo "    -i, --ignore-ci     Not running testcase"
@@ -66,13 +67,14 @@ function err() {
     echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
 }
 
-args=`getopt -o m:n:g:i:d:h --long module:,container-num:,enable-gcov:,ignore-ci:,disk:,help -- "$@"`
+args=`getopt -o m:l:n:g:i:d:h --long module:,distros:,container-num:,enable-gcov:,ignore-ci:,disk:,help -- "$@"`
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 eval set -- "$args"
 
 while true; do
     case "$1" in
         -m|--module)        modules=${2} ; modules=(${modules// / }) ; shift 2 ;;
+        -l|--distros)       distros=${2} ; shift 2 ;;
         -n|--container-num) container_nums=${2} ; shift 2 ;;
         -g|--enable-gcov)   enable_gcov=${2} ; shift 2 ;;
         -i|--ignore-ci)     ignore_ci=${2} ; shift 2 ;;
@@ -86,6 +88,8 @@ done
 if [[ "x${enable_gcov}" == "xON" ]]; then
   container_nums=1
 fi
+
+BASE_IMAGE="isulad_build_env:${distros}"
 
 declare -A scripts
 pwd
@@ -259,7 +263,7 @@ function echo_error()
     echo -e "\033[1;31m"$@"\033[0m"
 }
 
-DockerFile=./CI/Dockerfile
+DockerFile="./CI/Dockerfile-${distros}"
 ProcsFile=/sys/fs/cgroup/cpuset/docker/cgroup.clone_children
 function make_sure_cgroup()
 {
@@ -316,8 +320,8 @@ function exec_script() {
     contname="${1}"
     # keep -i so testcases which read stdin can success
     docker exec -itd -e TOPDIR=$src_code_dir -e TESTCASE_FLOCK=/tmp/runflag/${CONTAINER_NAME}.flock -e TESTCASE_SCRIPTS_LOG=/tmp/runflag/${CONTAINER_NAME}.scripts.log \
-     -e TESTCASE_RUNFLAG=/tmp/runflag/${CONTAINER_NAME}.runflag -e TESTCASE_CONTNAME=${contname} ${contname} ${testcase_test} run ${2} ${log_path}
-    docker exec ${1} $testcase_test get
+     -e TESTCASE_RUNFLAG=/tmp/runflag/${CONTAINER_NAME}.runflag -e TESTCASE_CONTNAME=${contname} ${contname} bash ${testcase_test} run ${2} ${log_path}
+    docker exec ${1} bash $testcase_test get
     if [[ $? -ne 0 ]]; then
         rm -rf ${CIDIR}/${CONTAINER_NAME}.runflag
         docker exec ${contname} cat ${log_path}
@@ -336,12 +340,12 @@ containers+=(${copycontainer})
 mkdir -p ${tmpdir}
 touch $CIDIR/${CONTAINER_NAME}.runflag
 
-docker run -tid -v /sys/fs/cgroup:/sys/fs/cgroup --tmpfs /tmp:exec,mode=777 --tmpfs /run:exec,mode=777 --name ${copycontainer} -v ${cptemp}:${cptemp} $env_gcov $env_ignore_ci -v ${CIDIR}:/tmp/runflag -v /lib/modules:/lib/modules -v $testcases_data_dir:$testcase_data -v $LXC_LOCK_DIR_HOST:$LXC_LOCK_DIR_CONTAINER -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  --privileged -e login_username=$login_username -e login_passwd=$login_passwd --sysctl net.ipv6.conf.all.disable_ipv6=0 $BASE_IMAGE 
+docker run -tid -v /sys/fs/cgroup:/sys/fs/cgroup --tmpfs /tmp:exec,mode=777 --tmpfs /run:exec,mode=777 --name ${copycontainer} -v ${cptemp}:${cptemp} $env_gcov $env_ignore_ci -v ${CIDIR}:/tmp/runflag -v /lib/modules:/lib/modules -v $testcases_data_dir:$testcase_data -v $LXC_LOCK_DIR_HOST:$LXC_LOCK_DIR_CONTAINER -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  --privileged -e login_username=$login_username -e login_passwd=$login_passwd --sysctl net.ipv6.conf.all.disable_ipv6=0 $BASE_IMAGE /bin/bash
 docker cp ${CIDIR}/testcase_assign_R1 ${copycontainer}:/root
 echo_success "Run container ${copycontainer} success"
 
 # make and install in rest container
-docker exec -e TOPDIR=${src_code_dir} -e BUILDDIR=${cptemp} ${copycontainer} ${make_script}
+docker exec -e TOPDIR=${src_code_dir} -e BUILDDIR=${cptemp} ${copycontainer} bash ${make_script}
 if [ $? -ne 0 ];then
     echo_error "Make and install failed in container ${copycontainer}"
     rm -rf ${cptemp}
@@ -355,7 +359,7 @@ do
     tmpdir="${tmpdir_prefix}/${CONTAINER_NAME}_${suffix}"
     mkdir -p ${tmpdir}
     containers+=(${CONTAINER_NAME}_${suffix})
-    docker run -tid -v /sys/fs/cgroup:/sys/fs/cgroup --tmpfs /tmp:exec,mode=777 --tmpfs /run:exec,mode=777 --name ${CONTAINER_NAME}_${suffix} -v ${cptemp}:${cptemp} $env_gcov $env_ignore_ci -v ${CIDIR}:/tmp/runflag -v /lib/modules:/lib/modules -v $testcases_data_dir:$testcase_data -v $LXC_LOCK_DIR_HOST:$LXC_LOCK_DIR_CONTAINER -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  -v=/dev:/dev --privileged -e login_username=$login_username -e login_passwd=$login_passwd --sysctl net.ipv6.conf.all.disable_ipv6=0 $BASE_IMAGE
+    docker run -tid -v /sys/fs/cgroup:/sys/fs/cgroup --tmpfs /tmp:exec,mode=777 --tmpfs /run:exec,mode=777 --name ${CONTAINER_NAME}_${suffix} -v ${cptemp}:${cptemp} $env_gcov $env_ignore_ci -v ${CIDIR}:/tmp/runflag -v /lib/modules:/lib/modules -v $testcases_data_dir:$testcase_data -v $LXC_LOCK_DIR_HOST:$LXC_LOCK_DIR_CONTAINER -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  -v=/dev:/dev --privileged -e login_username=$login_username -e login_passwd=$login_passwd --sysctl net.ipv6.conf.all.disable_ipv6=0 $BASE_IMAGE /bin/bash
     docker cp ${CIDIR}/testcase_assign_${suffix} ${CONTAINER_NAME}_${suffix}:/root
     echo_success "Run container ${CONTAINER_NAME}_${suffix} success"
 done
@@ -371,7 +375,7 @@ if [[ "x$disk" != "xNULL" ]] && [[ "x${enable_gcov}" != "xON" ]] ; then
     docker run -tid -v /sys/fs/cgroup:/sys/fs/cgroup --tmpfs /tmp:exec,mode=777 --tmpfs /run:exec,mode=777 --name ${devmappercontainer} -v ${cptemp}:${cptemp} $env_gcov $env_ignore_ci \
     -v ${CIDIR}:/tmp/runflag -v /lib/modules:/lib/modules -v $testcases_data_dir:$testcase_data -v $LXC_LOCK_DIR_HOST:$LXC_LOCK_DIR_CONTAINER \
     -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  -v=/dev:/dev --privileged -e login_username=$login_username -e login_passwd=$login_passwd \
-    --sysctl net.ipv6.conf.all.disable_ipv6=0 $BASE_IMAGE
+    --sysctl net.ipv6.conf.all.disable_ipv6=0 $BASE_IMAGE /bin/bash
 
     for index in $(seq 1 ${CONTAINER_INDEX})
     do
@@ -454,7 +458,7 @@ if [[ "x${enable_gcov}" == "xON" ]]; then
   rm -rf ${tmpdir}/build
   docker cp ${containers[1]}:/root/iSulad/build ${tmpdir}
   docker cp ${tmpdir}/build ${containers[0]}:/root
-  docker exec -e TOPDIR=${src_code_dir} ${containers[0]} ${gcov_script}
+  docker exec -e TOPDIR=${src_code_dir} ${containers[0]} bash ${gcov_script}
   echo "iSulad GCOV html generated"
   tar xf ./isulad-gcov.tar.gz
   rm -rf /var/www/html/isulad-gcov

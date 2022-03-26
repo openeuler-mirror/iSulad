@@ -1,5 +1,5 @@
 #######################################################################
-##- Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
+##- Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
 # - lcr licensed under the Mulan PSL v2.
 # - You can use this software according to the terms and conditions of the Mulan PSL v2.
 # - You may obtain a copy of Mulan PSL v2 at:
@@ -9,8 +9,8 @@
 # - PURPOSE.
 # - See the Mulan PSL v2 for more details.
 ##- @Description: prepare compile container environment
-##- @Author: haozi007
-##- @Create: 2021-12-31
+##- @Author: wujing
+##- @Create: 2022-03-25
 #######################################################################
 # This file describes the isulad compile container image.
 #
@@ -20,57 +20,39 @@
 #		--build-arg https_proxy=YOUR_HTTPS_PROXY_IF_NEEDED \
 #		-t YOUR_IMAGE_NAME -f ./Dockerfile .
 
-FROM fedora:35
-MAINTAINER haozi007 <liuhao27@huawei.com>
 
-# if set proxy, need add no_proxy
-# ENV no_proxy=127.0.0.1
-# if you run CI in intranet, you need set proxy
-# ENV http_proxy=http://proxy.com
-# ENV https_proxy=http://proxy.com
+FROM	ubuntu:20.04
+MAINTAINER WuJing <wujing50@huawei.com>
+
+ENV TZ=Asia/Shanghai
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
     echo "nameserver 8.8.4.4" >> /etc/resolv.conf && \
     echo "search localdomain" >> /etc/resolv.conf
 
 # Install dependency package
-RUN dnf clean all && dnf makecache && dnf swap -y fakesystemd systemd && \
-        dnf update -y
-
-RUN dnf install -y  automake \
+RUN apt update -y && apt upgrade -y && \
+	apt install -y  automake \
 			autoconf \
 			libtool \
 			make \
-			cmake \
-			grpc-devel \
-			grpc-plugins \
-			libevent-devel \
-			libwebsockets-devel \
-			http-parser-devel \
-			gtest-devel \
-			gmock-devel \
-			libarchive-devel \
-			which \
 			gdb \
 			strace \
-			rpm-build \
+			libcap-dev \
+			libxslt-dev  \
 			graphviz \
-			libcap \
-			libcap-devel \
-			libxslt  \
-			docbook2X \
-			libselinux \
-			libselinux-devel \
-			container-selinux \
-			libseccomp \
-			libseccomp-devel \
-			yajl-devel \
+			docbook2x \
+			libselinux-dev \
+			libseccomp-dev \
+			libyajl-dev \
 			git \
 			dnsmasq \
-			libcgroup \
+			libcgroup-dev \
 			rsync \
 			iptables \
-			iproute \
+			iproute2 \
 			net-tools \
 			unzip \
 			tar \
@@ -78,51 +60,42 @@ RUN dnf install -y  automake \
 			cppcheck \
 			python3 \
 			python3-pip \
-			device-mapper-devel \
-			xz-devel \
-			libtar \
-			libtar-devel \
-			libcurl-devel \
-			zlib-devel \
-			glibc-headers \
-			openssl-devel \
+			libdevmapper-dev \
+			xz-utils \
+			libtar-dev \
+			libcurl4-openssl-dev \
+			zlib1g-dev \
+			openssl \
 			gcc \
-			gcc-c++ \
-			hostname \
-			sqlite-devel \
-			gpgme \
-			gpgme-devel \
+			g++ \
+			libsqlite3-dev \
+			libgpgme-dev \
 			expect \
-			systemd-devel \
-			systemd-libs \
-			go \
+			libsystemd-dev \
+			golang \
 			bc \
-			procps-ng \
 			valgrind \
 			e2fsprogs \
 			lcov \
-			libasan \
-			langpacks-en \
-			containernetworking-plugins \
-			runc \
+			libasan6 \
 			lvm2 \
-			tcpdump \
-			systemd-udev \
-			iputils
+			locales \
+			language-pack-en \
+			curl \
+			cmake \
+			libhttp-parser-dev \
+			libprotobuf-dev \
+			libgrpc-dev \
+			libgrpc++-dev \
+			protobuf-compiler-grpc \
+			libevent-dev \
+			libwebsockets-dev \
+			libgmock-dev \
+			libgtest-dev \
+			libarchive-dev \
+			tcpdump
 
-RUN yum clean all && \
-    (cd /lib/systemd/system/sysinit.target.wants/; for i in *; \
-    do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
-    rm -f /lib/systemd/system/multi-user.target.wants/*;\
-    rm -f /etc/systemd/system/*.wants/*;\
-    rm -f /lib/systemd/system/local-fs.target.wants/*; \
-    rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
-    rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
-    rm -f /lib/systemd/system/basic.target.wants/*;\
-    rm -f /lib/systemd/system/anaconda.target.wants/*;
-
-# disalbe sslverify
-RUN git config --global http.sslverify false
+RUN apt autoremove -y
 
 RUN echo "export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> /etc/bashrc && \
     echo "export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH" >> /etc/bashrc && \
@@ -130,6 +103,10 @@ RUN echo "export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> /
     echo "/usr/local/lib" >> /etc/ld.so.conf
 
 	
+# disalbe sslverify
+RUN git config --global http.sslverify false
+
+# install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # configure rust
@@ -157,5 +134,4 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
         ldconfig
 
 VOLUME [ "/sys/fs/cgroup" ]
-CMD ["/usr/sbin/init"]
-WORKDIR /root
+CMD ["/bin/bash"]
