@@ -1603,6 +1603,9 @@ static int exec_request_to_rest(const struct isula_exec_request *le_request, cha
     crequest->attach_stdout = le_request->attach_stdout;
     crequest->attach_stderr = le_request->attach_stderr;
 
+    if (le_request->user != NULL) {
+        crequest->user = util_strdup_s(le_request->user);
+    }
     if (le_request->workdir != NULL) {
         crequest->workdir = util_strdup_s(le_request->workdir);
     }
