@@ -23,7 +23,7 @@ umask 0022
 
 if [ "x$subcmd" == "xrun" ];then
     rm -rf $resultfail $resultpass $logfile
-    $testcase > $logfile 2>&1
+    bash $testcase > $logfile 2>&1
     if [ $? -eq 0 ];then
         touch $resultpass
     else

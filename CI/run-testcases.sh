@@ -28,13 +28,11 @@ umask 0022
 echo "/tmp/coredump/core-%e-%p-%t" > /proc/sys/kernel/core_pattern
 ldconfig
 
-function echo_success()
-{
+function echo_success() {
     echo -e "\033[1;32m"$@"\033[0m"
 }
 
-function echo_error()
-{
+function echo_error() {
     echo -e "\033[1;31m"$@"\033[0m"
 }
 
