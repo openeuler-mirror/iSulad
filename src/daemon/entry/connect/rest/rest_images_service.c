@@ -408,6 +408,312 @@ out:
     free_image_inspect_response(cresponse);
 }
 
+/* image pull request check */
+static int image_pull_request_check(image_pull_image_request *req)
+{
+    int ret = 0;
+
+    if (req->image_name == NULL) {
+        DEBUG("recive NULL Request image name");
+        return -1;
+    }
+
+    return ret;
+}
+
+/* image pull request from rest */
+static int image_pull_request_from_rest(evhtp_request_t *req, image_pull_image_request **crequest)
+{
+    parser_error err = NULL;
+    int ret = 0;
+    char *body = NULL;
+    size_t body_len;
+
+    if (get_body(req, &body_len, &body) != 0) {
+        ERROR("Failed to get body");
+        return -1;
+    }
+
+    *crequest = image_pull_image_request_parse_data(body, NULL, &err);
+    if (*crequest == NULL) {
+        ERROR("Invalid pull request body:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (image_pull_request_check(*crequest) < 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    put_body(body);
+    free(err);
+    return ret;
+}
+
+/* evhtp send image pull repsponse */
+static void evhtp_send_image_pull_repsponse(evhtp_request_t *req, image_pull_image_response *response, int rescode)
+{
+    parser_error err = NULL;
+    char *responsedata = NULL;
+
+    responsedata = image_pull_image_response_generate_json(response, NULL, &err);
+    if (responsedata != NULL) {
+        evhtp_send_response(req, responsedata, rescode);
+        goto out;
+    }
+
+    ERROR("Pull: failed to generate request json:%s", err);
+    evhtp_send_reply(req, RESTFUL_RES_ERROR);
+
+out:
+    free(responsedata);
+    free(err);
+    return;
+}
+
+/* rest image pull cb */
+static void rest_image_pull_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    image_pull_image_request *crequest = NULL;
+    image_pull_image_response *cresponse = NULL;
+
+    // only deal with POST request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+    cb = get_service_executor();
+    if (cb == NULL || cb->image.pull == NULL) {
+        ERROR("Unimplemented pull callback");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = image_pull_request_from_rest(req, &crequest);
+    if (tret < 0) {
+        ERROR("Bad request");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->image.pull(crequest, &cresponse);
+
+    evhtp_send_image_pull_repsponse(req, cresponse, RESTFUL_RES_OK);
+
+out:
+    free_image_pull_image_request(crequest);
+    free_image_pull_image_response(cresponse);
+}
+
+/* image login request check */
+static int image_login_request_check(image_login_request *req)
+{
+    if (req->username == NULL) {
+        DEBUG("Missing username in the request");
+        return -1;
+    }
+    if (req->password == NULL) {
+        DEBUG("Missing password in the request");
+        return -1;
+    }
+    if (req->server == NULL) {
+        DEBUG("Missing server in the request");
+        return -1;
+    }
+    if (req->type == NULL) {
+        DEBUG("Missing type in the request");
+        return -1;
+    }
+
+    return 0;
+}
+
+/* image pull request from rest */
+static int image_login_request_from_rest(evhtp_request_t *req, image_login_request **crequest)
+{
+    parser_error err = NULL;
+    int ret = 0;
+    char *body = NULL;
+    size_t body_len;
+
+    if (get_body(req, &body_len, &body) != 0) {
+        ERROR("Failed to get body");
+        return -1;
+    }
+
+    *crequest = image_login_request_parse_data(body, NULL, &err);
+    if (*crequest == NULL) {
+        ERROR("Invalid login request body:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (image_login_request_check(*crequest) < 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    put_body(body);
+    free(err);
+    return ret;
+}
+
+/* evhtp send image pull repsponse */
+static void evhtp_send_image_login_repsponse(evhtp_request_t *req, image_login_response *response, int rescode)
+{
+    parser_error err = NULL;
+    char *responsedata = NULL;
+
+    responsedata = image_login_response_generate_json(response, NULL, &err);
+    if (responsedata != NULL) {
+        evhtp_send_response(req, responsedata, rescode);
+        goto out;
+    }
+
+    ERROR("Login: failed to generate request json:%s", err);
+    evhtp_send_reply(req, RESTFUL_RES_ERROR);
+
+out:
+    free(responsedata);
+    free(err);
+    return;
+}
+
+/* rest image login cb */
+static void rest_image_login_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    image_login_request *crequest = NULL;
+    image_login_response *cresponse = NULL;
+
+    // only deal with POST request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+    cb = get_service_executor();
+    if (cb == NULL || cb->image.login == NULL) {
+        ERROR("Unimplemented callback");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = image_login_request_from_rest(req, &crequest);
+    if (tret < 0) {
+        ERROR("Bad request");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->image.login(crequest, &cresponse);
+
+    evhtp_send_image_login_repsponse(req, cresponse, RESTFUL_RES_OK);
+
+out:
+    free_image_login_request(crequest);
+    free_image_login_response(cresponse);
+}
+
+/* image logout request check */
+static int image_logout_request_check(image_logout_request *req)
+{
+    return 0;
+}
+
+/* image pull request from rest */
+static int image_logout_request_from_rest(evhtp_request_t *req, image_logout_request **crequest)
+{
+    parser_error err = NULL;
+    int ret = 0;
+    char *body = NULL;
+    size_t body_len;
+
+    if (get_body(req, &body_len, &body) != 0) {
+        ERROR("Failed to get body");
+        return -1;
+    }
+
+    *crequest = image_logout_request_parse_data(body, NULL, &err);
+    if (*crequest == NULL) {
+        ERROR("Invalid create request body:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (image_logout_request_check(*crequest) < 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    put_body(body);
+    free(err);
+    return ret;
+}
+
+/* evhtp send image logout repsponse */
+static void evhtp_send_image_logout_repsponse(evhtp_request_t *req, image_logout_response *response, int rescode)
+{
+    parser_error err = NULL;
+    char *responsedata = NULL;
+
+    responsedata = image_logout_response_generate_json(response, NULL, &err);
+    if (responsedata != NULL) {
+        evhtp_send_response(req, responsedata, rescode);
+        goto out;
+    }
+
+    ERROR("Logout: failed to generate request json:%s", err);
+    evhtp_send_reply(req, RESTFUL_RES_ERROR);
+
+out:
+    free(responsedata);
+    free(err);
+    return;
+}
+
+/* rest image logout cb */
+static void rest_image_logout_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    image_logout_request *crequest = NULL;
+    image_logout_response *cresponse = NULL;
+
+    // only deal with POST request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+    cb = get_service_executor();
+    if (cb == NULL || cb->image.logout == NULL) {
+        ERROR("Unimplemented logout callback");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = image_logout_request_from_rest(req, &crequest);
+    if (tret < 0) {
+        ERROR("Bad request");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->image.logout(crequest, &cresponse);
+
+    evhtp_send_image_logout_repsponse(req, cresponse, RESTFUL_RES_OK);
+
+out:
+    free_image_logout_request(crequest);
+    free_image_logout_response(cresponse);
+}
+
 /* rest register images handler */
 int rest_register_images_handler(evhtp_t *htp)
 {
@@ -422,12 +728,27 @@ int rest_register_images_handler(evhtp_t *htp)
     }
 
     if (evhtp_set_cb(htp, ImagesServiceDelete, rest_image_delete_cb, NULL) == NULL) {
-        ERROR("Failed to register image list callback");
+        ERROR("Failed to register image delete callback");
         return -1;
     }
 
     if (evhtp_set_cb(htp, ImagesServiceInspect, rest_image_inspect_cb, NULL) == NULL) {
         ERROR("Failed to register image inspect callback");
+        return -1;
+    }
+
+    if (evhtp_set_cb(htp, ImagesServicePull, rest_image_pull_cb, NULL) == NULL) {
+        ERROR("Failed to register image pull callback");
+        return -1;
+    }
+
+    if (evhtp_set_cb(htp, ImagesServiceLogin, rest_image_login_cb, NULL) == NULL) {
+        ERROR("Failed to register image login callback");
+        return -1;
+    }
+
+    if (evhtp_set_cb(htp, ImagesServiceLogout, rest_image_logout_cb, NULL) == NULL) {
+        ERROR("Failed to register image logout callback");
         return -1;
     }
 

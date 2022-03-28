@@ -32,6 +32,8 @@
 #include <isula_libutils/image_logout_response.h>
 #include <isula_libutils/image_tag_image_request.h>
 #include <isula_libutils/image_tag_image_response.h>
+#include <isula_libutils/image_pull_image_request.h>
+#include <isula_libutils/image_pull_image_response.h>
 #include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/imagetool_images_list.h>
 #include <isula_libutils/json_common.h>
@@ -67,7 +69,7 @@ static int do_import_image(const char *file, const char *tag, char **id)
 
     request = util_common_calloc_s(sizeof(im_import_request));
     if (request == NULL) {
-        ERROR("Memory out");
+        ERROR("Out of memory");
         ret = -1;
         goto out;
     }
@@ -154,7 +156,7 @@ static int do_load_image(const char *file, const char *tag, const char *type)
 
     request = util_common_calloc_s(sizeof(im_load_request));
     if (request == NULL) {
-        ERROR("Memory out");
+        ERROR("Out of memory");
         ret = -1;
         goto out;
     }
@@ -241,7 +243,7 @@ static int do_login(const char *username, const char *password, const char *serv
 
     request = util_common_calloc_s(sizeof(im_login_request));
     if (request == NULL) {
-        ERROR("Memory out");
+        ERROR("Out of memory");
         ret = -1;
         goto out;
     }
@@ -299,6 +301,7 @@ static int login_cb(const image_login_request *request, image_login_response **r
 
     EVENT("Image Event: {Object: %s, Type: Logined}", request->server);
     (void)isulad_monitor_send_image_event(request->server, IM_LOGIN);
+
 out:
 
     if (response != NULL && *response != NULL) {
@@ -320,7 +323,7 @@ static int do_logout(const char *server, const char *type)
 
     request = util_common_calloc_s(sizeof(im_logout_request));
     if (request == NULL) {
-        ERROR("Memory out");
+        ERROR("Out of memory");
         ret = -1;
         goto out;
     }
@@ -376,6 +379,7 @@ static int logout_cb(const image_logout_request *request, image_logout_response 
 
     EVENT("Image Event: {Object: %s, Type: Logouted}", request->server);
     (void)isulad_monitor_send_image_event(request->server, IM_LOGOUT);
+
 out:
 
     if (response != NULL && *response != NULL) {
@@ -1024,6 +1028,80 @@ pack_response:
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
+int pull_request_from_rest(const image_pull_image_request *request, im_pull_request **im_req)
+{
+    *im_req = util_common_calloc_s(sizeof(im_pull_request));
+    if (*im_req == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    (*im_req)->image = util_strdup_s(request->image_name);
+
+    return 0;
+}
+
+/* image pull cb */
+static int image_pull_cb(const image_pull_image_request *request, image_pull_image_response **response)
+{
+    int ret = -1;
+    char *image_ref = NULL;
+    im_pull_request *im_req = NULL;
+    im_pull_response *im_rsp = NULL;
+    uint32_t cc = ISULAD_SUCCESS;
+
+    DAEMON_CLEAR_ERRMSG();
+
+    if (request == NULL || request->image_name == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    image_ref = request->image_name;
+
+    *response = util_common_calloc_s(sizeof(image_pull_image_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = ISULAD_ERR_MEMOUT;
+        goto out;
+    }
+
+    if (!util_valid_image_name(image_ref)) {
+        ERROR("Invalid image name %s", image_ref);
+        cc = ISULAD_ERR_INPUT;
+        isulad_try_set_error_message("Invalid image name:%s", image_ref);
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Pulling}", image_ref);
+    ret = pull_request_from_rest(request,  &im_req);
+    if (ret != 0) {
+        goto out;
+    }
+
+    im_req->type = util_strdup_s(IMAGE_TYPE_OCI);
+    ret = im_pull_image(im_req, &im_rsp);
+    if (ret != 0) {
+        cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Pulled}", image_ref);
+
+out:
+    if (*response != NULL) {
+        (*response)->image_ref = util_strdup_s(im_rsp->image_ref);
+        (*response)->cc = cc;
+        (*response)->errmsg = util_strdup_s(im_rsp->errmsg);
+    }
+
+    free_im_pull_request(im_req);
+    free_im_pull_response(im_rsp);
+
+    return (ret < 0) ? ECOMMON : ret;
+}
+
+
 /* image callback init */
 void image_callback_init(service_image_callback_t *cb)
 {
@@ -1040,4 +1118,5 @@ void image_callback_init(service_image_callback_t *cb)
     cb->login = login_cb;
     cb->logout = logout_cb;
     cb->tag = image_tag_cb;
+    cb->pull = image_pull_cb;
 }
