@@ -15,6 +15,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map/rb_tree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cpputils/cxxutils.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/selinux_label.c
@@ -46,6 +47,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cpputils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/services/execution/manager
