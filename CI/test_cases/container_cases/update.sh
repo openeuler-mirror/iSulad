@@ -99,16 +99,20 @@ function do_test_t()
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 
-    isula update --kernel-memory 2000000000 $containername
-    fn_check_eq "$?" "0" "update failed"
+    main=$(uname -r | awk -F . '{print $1}')
+    minor=$(uname -r | awk -F . '{print $2}')
+    if [[ ${main} -lt 5 ]] || [[ ${main} -eq 5 ]] && [[ ${minor} -lt 11 ]]; then
+      isula update --kernel-memory 2000000000 $containername
+      fn_check_eq "$?" "0" "update failed"
 
-    isula start $containername
-    fn_check_eq "$?" "0" "start failed"
-    tmp=`isula exec $containername cat /sys/fs/cgroup/memory/memory.kmem.limit_in_bytes`
-    value=$(($tmp - 2000000000))
-    if [[ $value -lt -10000 || $value -gt 10000 ]]; then
-        echo "Failed to check running reservation memory"
-        TC_RET_T=$(($TC_RET_T+1))
+      isula start $containername
+      fn_check_eq "$?" "0" "start failed"
+      tmp=`isula exec $containername cat /sys/fs/cgroup/memory/memory.kmem.limit_in_bytes`
+      value=$(($tmp - 2000000000))
+      if [[ $value -lt -10000 || $value -gt 10000 ]]; then
+          echo "Failed to check running reservation memory"
+          TC_RET_T=$(($TC_RET_T+1))
+      fi
     fi
 
     isula rm -f $containername
