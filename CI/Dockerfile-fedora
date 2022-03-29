@@ -34,8 +34,7 @@ RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
     echo "search localdomain" >> /etc/resolv.conf
 
 # Install dependency package
-RUN dnf clean all && dnf makecache && dnf swap -y fakesystemd systemd && \
-        dnf update -y
+RUN dnf update -y && dnf install -y systemd && dnf clean all
 
 RUN dnf install -y  automake \
 			autoconf \
