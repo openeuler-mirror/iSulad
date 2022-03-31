@@ -70,7 +70,6 @@ int ExecServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
     auto *cb = get_service_executor();
     if (cb == nullptr || cb->container.exec == nullptr) {
         ERROR("Failed to get exec service executor");
-        sem_post(lwsCtx->syncCloseSem);
         return -1;
     }
 
