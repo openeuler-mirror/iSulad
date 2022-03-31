@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -19,6 +19,46 @@
 #include "isula_libutils/log.h"
 #include "callback.h"
 #include "utils.h"
+
+typedef ssize_t (*AttachWriter)(void *context, const void *data, size_t len);
+struct AttachContext {
+    SessionData *lwsCtx;
+    sem_t *sem;
+    AttachWriter attachWriter;
+};
+
+ssize_t AttachWriteToClient(void *context, const void *data, size_t len)
+{
+    if (context == nullptr) {
+        ERROR("attach context empty");
+        return -1;
+    }
+
+    auto *attachCtx = static_cast<AttachContext *>(context);
+    if (attachCtx->attachWriter == nullptr) {
+        ERROR("attach context writer empty");
+        return -1;
+    }
+
+    return attachCtx->attachWriter((void *)(attachCtx->lwsCtx), data, len);
+}
+
+int AttachConnectClosed(void *context, char **err)
+{
+    (void)err;
+
+    if (context == nullptr) {
+        ERROR("attach context empty");
+        return -1;
+    }
+
+    auto *attachCtx = static_cast<AttachContext *>(context);
+    if (attachCtx->sem != nullptr) {
+        (void)sem_post(attachCtx->sem);
+    }
+
+    return 0;
+}
 
 void AttachServe::SetServeThreadName()
 {
@@ -50,34 +90,66 @@ int AttachServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
     auto *cb = get_service_executor();
     if (cb == nullptr || cb->container.attach == nullptr) {
         ERROR("Failed to get attach service executor");
-        sem_post(lwsCtx->syncCloseSem);
         return -1;
     }
 
-    struct io_write_wrapper stringWriter = { 0 };
-    stringWriter.context = (void *)(lwsCtx);
-    stringWriter.write_func = WsWriteStdoutToClient;
-    stringWriter.close_func = closeWsConnect;
-
     auto *m_request = static_cast<container_attach_request *>(request);
-    m_request->attach_stderr = false;
+
+    sem_t attachSem;
+    if (sem_init(&attachSem, 0, 0) != 0) {
+        ERROR("Semaphore initialization failed");
+        return -1;
+    }
+
+    struct AttachContext stdoutContext = { 0 };
+    stdoutContext.lwsCtx = lwsCtx;
+    stdoutContext.sem = &attachSem;
+    stdoutContext.attachWriter = WsWriteStdoutToClient;
+
+    struct io_write_wrapper stdoutstringWriter = { 0 };
+    stdoutstringWriter.context = static_cast<void *>(&stdoutContext);
+    stdoutstringWriter.write_func = AttachWriteToClient;
+    // the close function of StderrstringWriter is preferred unless StderrstringWriter is nullptr
+    stdoutstringWriter.close_func = m_request->attach_stderr ? nullptr : AttachConnectClosed;
+
+    struct AttachContext stderrContext = { 0 };
+    stderrContext.lwsCtx = lwsCtx;
+    stderrContext.sem = &attachSem;
+    stderrContext.attachWriter = WsWriteStderrToClient;
+
+    struct io_write_wrapper stderrstringWriter = { 0 };
+    stderrstringWriter.context = static_cast<void *>(&stderrContext);
+    stderrstringWriter.write_func = AttachWriteToClient;
+    stderrstringWriter.close_func = m_request->attach_stderr ? AttachConnectClosed : nullptr;
 
     container_attach_response *m_response { nullptr };
     int ret = cb->container.attach(m_request, &m_response, m_request->attach_stdin ? lwsCtx->pipes.at(0) : -1,
-                                   m_request->attach_stdout ? &stringWriter : nullptr, nullptr);
+                                   m_request->attach_stdout ? &stdoutstringWriter : nullptr,
+                                   m_request->attach_stderr ? &stderrstringWriter : nullptr);
 
     if (ret != 0) {
+        // join io copy thread in attach callback
         ERROR("Failed to attach container: %s", m_request->container_id);
-        sem_post(lwsCtx->syncCloseSem);
+
+        std::string message;
+        if (m_response != nullptr && m_response->errmsg != nullptr) {
+            message = m_response->errmsg;
+        } else {
+            message = "Failed to call attach container callback. ";
+        }
+        WsWriteStdoutToClient(lwsCtx, message.c_str(), message.length());
+    } else {
+        (void)sem_wait(&attachSem);
     }
 
+    (void)sem_destroy(&attachSem);
     free_container_attach_response(m_response);
     return ret;
 }
 
 void AttachServe::CloseConnect(SessionData *lwsCtx)
 {
-    (void)lwsCtx;
+    closeWsConnect((void*)lwsCtx, nullptr);
 }
 
 void AttachServe::FreeRequest(void *m_request)
