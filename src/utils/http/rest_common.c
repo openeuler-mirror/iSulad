@@ -68,6 +68,26 @@ int check_status_code(int status_code)
     return -1;
 }
 
+#ifdef ISULAD_STATIC_LIB
+/* ops init */
+static int ops_init(struct httpclient_ops *ops)
+{
+    if (ops == NULL) {
+        return -1;
+    }
+
+    ops->handle = NULL;
+    ops->buffer_strlen_op = (buffer_strlen_t)buffer_strlen;
+    ops->buffer_alloc_op = (buffer_alloc_t)buffer_alloc;
+    ops->buffer_free_op = (buffer_free_t)buffer_free;
+    ops->parse_http_op = (parse_http_t)parse_http;
+    ops->http_request_op = (http_request_t)http_request;
+    ops->free_http_get_options_op = (free_http_get_options_t)free_http_get_options;
+
+    return 0;
+}
+
+#else
 /* free httpclient ops */
 static void free_httpclient_ops(struct httpclient_ops *ops)
 {
@@ -132,6 +152,7 @@ badcleanup:
 out:
     return ret;
 }
+#endif
 
 /* get response */
 int get_response(Buffer *output, unpack_response_func_t unpack_func, void *arg)
@@ -146,7 +167,7 @@ int get_response(Buffer *output, unpack_response_func_t unpack_func, void *arg)
         return -1;
     }
 
-    if (g_hc_ops.handle == NULL || g_hc_ops.parse_http_op == NULL || g_hc_ops.buffer_strlen_op == NULL) {
+    if (g_hc_ops.parse_http_op == NULL || g_hc_ops.buffer_strlen_op == NULL) {
         ERROR("http client ops is null");
         return -1;
     }
@@ -188,9 +209,10 @@ out:
 
 static int init_http_client_opt()
 {
-    if (g_hc_ops.handle == NULL && ops_init(&g_hc_ops) != 0) {
+    if (g_hc_ops.http_request_op == NULL && ops_init(&g_hc_ops) != 0) {
         return -1;
     }
+
     if (g_hc_ops.http_request_op == NULL || g_hc_ops.buffer_alloc_op == NULL ||
         g_hc_ops.free_http_get_options_op == NULL) {
         return -1;
