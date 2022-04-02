@@ -22,6 +22,8 @@ else ()
     set(LIBTYPE "STATIC")
     message("${Green}--  Build static library${ColourReset}")
     set(INSTALL_TYPE ARCHIVE)
+    add_definitions(-DISULAD_STATIC_LIB)
+    set(ISULAD_STATIC_LIB 1)
 endif()
 
 option(ENABLE_GRPC "Use grpc as connector" ON)
