@@ -181,7 +181,7 @@ cd ~
 git clone https://gitee.com/jingwoo/cricli.git
 cd cricli
 make -j $(nproc)
-cp cricli /usr/bin
+cp cricli ${builddir}/bin
 cd -
 
 wait

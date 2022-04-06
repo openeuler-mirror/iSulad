@@ -24,7 +24,7 @@ function set_up()
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop isulad" && return ${FAILURE}
 
-    start_isulad_with_valgrind
+    start_isulad_without_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start isulad" && return ${FAILURE}
 
     isula load -i ${pause_img_path}/pause.tar
@@ -136,7 +136,7 @@ function tear_down()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm sandbox" && ((ret++))
 
     cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
-    check_valgrind_log
+    stop_isulad_without_valgrind
     start_isulad_with_valgrind
 
     return ${ret}
