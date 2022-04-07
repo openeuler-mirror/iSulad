@@ -33,6 +33,7 @@
 #include "path.h"
 #include "utils_convert.h"
 #include "utils_file.h"
+#include "utils_pwgr.h"
 
 #define MINUID 0
 #define MAXUID (((1LL << 31) - 1))
@@ -88,7 +89,11 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
     struct passwd *pwbufp = NULL;
 
     if (f_passwd != NULL) {
+#ifdef __ANDROID__
+        errval = util_getpwent_r(f_passwd, &pw, buf, sizeof(buf), &pwbufp);
+#else
         errval = fgetpwent_r(f_passwd, &pw, buf, sizeof(buf), &pwbufp);
+#endif
 
         while (errval == 0 && pwbufp != NULL) {
             userfound = b_user_found(user, pwbufp);
@@ -102,7 +107,11 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
                 *matched_username = util_strdup_s(pwbufp->pw_name);
                 break;
             }
+#ifdef __ANDROID__
+            errval = util_getpwent_r(f_passwd, &pw, buf, sizeof(buf), &pwbufp);
+#else
             errval = fgetpwent_r(f_passwd, &pw, buf, sizeof(buf), &pwbufp);
+#endif
         }
     }
 
@@ -212,14 +221,22 @@ static int do_proc_by_froup(FILE *f_group, const char *group, defs_process_user 
         return 0;
     }
 
+#ifdef __ANDROID__
+    errval = util_getgrent_r(f_group, &grp, buf, sizeof(buf), &gbufp);
+#else
     errval = fgetgrent_r(f_group, &grp, buf, sizeof(buf), &gbufp);
+#endif
     while (errval == 0 && gbufp != NULL) {
         // Treat numeric group as valid GID
         if (group == NULL) {
             if (search_group_list(gbufp, matched_username, puser) != 0) {
                 return -1;
             }
+#ifdef __ANDROID__
+            errval = util_getgrent_r(f_group, &grp, buf, sizeof(buf), &gbufp);
+#else
             errval = fgetgrent_r(f_group, &grp, buf, sizeof(buf), &gbufp);
+#endif
             continue;
         }
 
@@ -229,7 +246,11 @@ static int do_proc_by_froup(FILE *f_group, const char *group, defs_process_user 
             puser->gid = gbufp->gr_gid;
             *groupcnt = 1;
         }
+#ifdef __ANDROID__
+        errval = util_getgrent_r(f_group, &grp, buf, sizeof(buf), &gbufp);
+#else
         errval = fgetgrent_r(f_group, &grp, buf, sizeof(buf), &gbufp);
+#endif
     }
 
     return 0;
@@ -363,7 +384,11 @@ static int get_additional_groups(char **additional_groups, size_t additional_gro
     struct group *gbufp = NULL;
     struct group *groups = NULL;
 
+#ifdef __ANDROID__
+    while (f_group != NULL && util_getgrent_r(f_group, &grp, buf, sizeof(buf), &gbufp) == 0) {
+#else
     while (f_group != NULL && fgetgrent_r(f_group, &grp, buf, sizeof(buf), &gbufp) == 0) {
+#endif
         for (i = 0; i < additional_groups_len; i++) {
             if (!group_matched(additional_groups[i], gbufp)) {
                 continue;

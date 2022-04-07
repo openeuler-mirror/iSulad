@@ -1,0 +1,11 @@
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+bin:x:-1:1:bin:/bin:/sbin/nologin
+uidonly:x:1::bin:/bin:/sbin/nologin
+::::1:1:bin:/bin:/sbin/nologin
+
+#npt:*:66:77::/etc/ntp:/sbin/nologin
+npt:*:66:77::/etc/ntp:/sbin/nologin
+npt:*:66:77::/etc/ntp:/sbin/nologin:some:extra:context:added
++npt:*::::/etc/ntp:/sbin/nologin
+-npt:*::::/etc/ntp:/sbin/nologin
