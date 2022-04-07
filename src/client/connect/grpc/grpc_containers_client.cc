@@ -1238,12 +1238,8 @@ private:
         response->container_summary[index]->exit_code = in.exit_code();
         response->container_summary[index]->restart_count = static_cast<uint32_t>(in.restartcount());
         response->container_summary[index]->created = static_cast<int64_t>(in.created());
-        std::string healthState;
-        if (!in.health_state().empty()) {
-            healthState = "(" + in.health_state() + ")";
-        }
-        response->container_summary[index]->health_state = !healthState.empty() ? util_strdup_s(healthState.c_str()) :
-                                                           nullptr;
+        response->container_summary[index]->health_state =
+		!in.health_state().empty() ? util_strdup_s(in.health_state().c_str()) : nullptr;
         response->container_num++;
 
         return 0;
