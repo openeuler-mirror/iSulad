@@ -428,6 +428,8 @@ static int unpack_container_info_for_list_response(container_list_response *cres
         summary_info[i]->exit_code = cresponse->containers[i]->exit_code;
         summary_info[i]->restart_count = (unsigned int)cresponse->containers[i]->restartcount;
         summary_info[i]->created = cresponse->containers[i]->created;
+        summary_info[i]->health_state = cresponse->containers[i]->health_state ?
+                                        util_strdup_s(cresponse->containers[i]->health_state) : NULL;
     }
 
     return 0;
