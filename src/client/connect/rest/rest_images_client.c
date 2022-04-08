@@ -726,7 +726,8 @@ out:
 }
 
 /* rest image login*/
-static int rest_image_logout(const struct isula_logout_request *request, struct isula_logout_response *response, void *arg)
+static int rest_image_logout(const struct isula_logout_request *request, struct isula_logout_response *response,
+                             void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -758,6 +759,105 @@ out:
     return ret;
 }
 
+/* image tag request to rest */
+static int image_tag_request_to_rest(const struct isula_tag_request *request, char **body, size_t *body_len)
+{
+    image_tag_image_request *crequest = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    crequest = util_common_calloc_s(sizeof(image_tag_image_request));
+    if (crequest == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    crequest->src_name = util_strdup_s(request->src_name);
+    crequest->dest_name = util_strdup_s(request->dest_name);
+
+    *body = image_tag_image_request_generate_json(crequest, NULL, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate image tag request json:%s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_image_tag_image_request(crequest);
+    return ret;
+}
+
+/* unpack image tag response */
+static int unpack_image_tag_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_tag_response *c_tag_response = (struct isula_tag_response *)arg;
+    image_tag_image_response *tag_response = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        ERROR("Tag image check status code failed.\n");
+        goto out;
+    }
+
+    tag_response = image_tag_image_response_parse_data(message->body, NULL, &err);
+    if (tag_response == NULL) {
+        ERROR("Invalid tag image response:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    c_tag_response->server_errono = tag_response->cc;
+    c_tag_response->errmsg = util_strdup_s(tag_response->errmsg);
+
+    ret = (tag_response->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    free(err);
+    free_image_tag_image_response(tag_response);
+    return ret;
+}
+
+
+/* rest image tag */
+static int rest_image_tag(const struct isula_tag_request *request, struct isula_tag_response *response, void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    Buffer *output = NULL;
+
+    ret = image_tag_request_to_rest(request, &body, &len);
+    if (ret != 0) {
+        goto out;
+    }
+    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceTag, body, len, &output);
+    if (ret != 0) {
+        ERROR("Send tag request failed.");
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    ret = get_response(output, unpack_image_tag_response, (void *)response);
+    if (ret != 0) {
+        ERROR("Get tag response failed.");
+        goto out;
+    }
+
+out:
+    buffer_free(output);
+    put_body(body);
+    return ret;
+}
+
 /* rest images client ops init */
 int rest_images_client_ops_init(isula_connect_ops *ops)
 {
@@ -769,9 +869,10 @@ int rest_images_client_ops_init(isula_connect_ops *ops)
     ops->image.remove = &rest_image_remove;
     ops->image.load = &rest_image_load;
     ops->image.inspect = &rest_image_inspect;
-    ops->image.pull= &rest_image_pull;
-    ops->image.login= &rest_image_login;
-    ops->image.logout= &rest_image_logout;
+    ops->image.pull = &rest_image_pull;
+    ops->image.login = &rest_image_login;
+    ops->image.logout = &rest_image_logout;
+    ops->image.tag = &rest_image_tag;
 
     return 0;
 }
