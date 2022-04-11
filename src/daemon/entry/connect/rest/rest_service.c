@@ -175,6 +175,13 @@ void rest_server_wait(void)
 /* rest server shutdown */
 void rest_server_shutdown(void)
 {
+    struct timeval tv = { 0 } ;
+
+    tv.tv_usec = 100;
+    if (event_base_loopexit(g_evbase, &tv) != 0) {
+        WARN("shutdwon rest server failed");
+    }
+
     if (g_socketpath != NULL) {
         if (unlink(g_socketpath + strlen(UNIX_SOCKET_PREFIX)) < 0 && errno != ENOENT) {
             ERROR("Failed to remove '%s':%s", g_socketpath, strerror(errno));
