@@ -29,6 +29,8 @@
 #include "isula_libutils/image_login_response.h"
 #include "isula_libutils/image_logout_request.h"
 #include "isula_libutils/image_logout_response.h"
+#include "isula_libutils/image_tag_image_request.h"
+#include "isula_libutils/image_tag_image_response.h"
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
@@ -41,6 +43,7 @@
 #define ImagesServicePull "/ImagesService/Pull"
 #define ImagesServiceLogin "/ImagesService/Login"
 #define ImagesServiceLogout "/ImagesService/Logout"
+#define ImagesServiceTag "/ImagesService/Tag"
 
 #endif
 
