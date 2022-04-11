@@ -1239,7 +1239,7 @@ private:
         response->container_summary[index]->restart_count = static_cast<uint32_t>(in.restartcount());
         response->container_summary[index]->created = static_cast<int64_t>(in.created());
         response->container_summary[index]->health_state =
-		!in.health_state().empty() ? util_strdup_s(in.health_state().c_str()) : nullptr;
+            !in.health_state().empty() ? util_strdup_s(in.health_state().c_str()) : nullptr;
         response->container_num++;
 
         return 0;
