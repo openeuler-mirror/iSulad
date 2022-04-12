@@ -332,6 +332,9 @@ static int add_shutdown_signal_handler()
         return -1;
     }
 
+    // ensure SIGCHLD not be ignore, otherwise waitpid() will failed
+    signal(SIGCHLD, SIG_DFL);
+
     sa.sa_handler = sigint_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;

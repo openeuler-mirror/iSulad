@@ -942,7 +942,7 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName, const std
             goto free_out;
         }
         for (const auto &portMapping : portMappings) {
-            if ((portMapping.GetHostPort() != nullptr) && *(portMapping.GetHostPort()) <= 0) {
+            if ((portMapping.GetHostPort() == nullptr) || *(portMapping.GetHostPort()) <= 0) {
                 continue;
             }
             rt->p_mapping[rt->p_mapping_len] =
