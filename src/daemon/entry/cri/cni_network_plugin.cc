@@ -306,6 +306,11 @@ static void InsertPortmappingIntoAdaptorAnnotations(const std::map<std::string, 
     }
     cni_pms->items = (cni_anno_port_mappings_element **)util_smart_calloc_s(sizeof(cni_anno_port_mappings_element *),
                                                                             checkpoint.GetData()->GetPortMappings().size());
+    if (cni_pms->items == nullptr) {
+        ERROR("Out of memory");
+        err.SetError("Out of memory");
+        goto free_out;
+    }
 
     for (const auto &pm : checkpoint.GetData()->GetPortMappings()) {
         cni_anno_port_mappings_element *elem = (cni_anno_port_mappings_element *)util_common_calloc_s(sizeof(
@@ -315,9 +320,11 @@ static void InsertPortmappingIntoAdaptorAnnotations(const std::map<std::string, 
             err.SetError("Out of memory");
             goto free_out;
         }
-        if (pm.GetHostPort() != nullptr && *pm.GetHostPort() > 0) {
-            elem->host_port = *pm.GetHostPort();
+        if (pm.GetHostPort() == nullptr || *pm.GetHostPort() <= 0) {
+            continue;
         }
+        elem->host_port = *pm.GetHostPort();
+
         if (pm.GetContainerPort() != nullptr) {
             elem->container_port = *pm.GetContainerPort();
         }
