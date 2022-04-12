@@ -13,6 +13,12 @@
 			"subArchitectures": [
 				"SCMP_ARCH_ARM"
 			]
+		},
+		{
+			"architecture": "SCMP_ARCH_RISCV64",
+			"subArchitectures": [
+				"SCMP_ARCH_RISCV"
+			]
 		}
 	],
 	"syscalls": [
