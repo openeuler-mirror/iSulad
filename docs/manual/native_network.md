@@ -171,3 +171,103 @@ cni0
 $ isula network ls
 NAME                 VERSION         PLUGIN
 ```
+
+## isula network create
+
+### Description
+
+Create a native network.
+
+isulad will create a network configuration file that conforms to the cni standard and store it in the `cni-conf-dir` directory.
+
+### Usage
+
+```bash
+isula network create [OPTIONS] [NETWORK]
+```
+
+### Options
+
+| Options | Description |
+| - | - |
+| -d, --driver | Driver to manager the network (default "bridge"), and only support bridge mode |
+| --gateway | IPv4 or IPv6 gateway for the subnet. When specifying the gateway parameter, you must specify the subnet parameter. If no gateway is specified, the first IP in the subnet is used as the gateway |
+| --internal | Restrict external access from this network |
+| --subnet | Subnet in CIDR format |
+
+## isula network inspect
+
+### Description
+
+Query one or more native networks that have been created.
+
+### Usage
+
+```bash
+isula network inspect [OPTIONS] NETWORK [NETWORK...]
+```
+
+### Options
+
+| Options | Description |
+| - | - |
+| -f, --format | Format the output using the given go template |
+
+## isula network ls
+
+### Description
+
+List all created native networks.
+
+### Usage
+
+```bash
+isula network ls [OPTIONS]
+```
+
+### Options
+
+| Options | Description |
+| - | - |
+| -f, --filter | Filter output based on conditions provided (specify string matching name or plugin) |
+| -q, --quiet | Only display network names |
+
+## isula network rm
+
+### Description
+
+Deleting one or more native networks that have been created, and it will also delete the corresponding bridge devices and network configuration files.
+
+### Usage
+
+```bash
+isula network rm [OPTIONS] NETWORK [NETWORK...]
+```
+
+### Options
+
+None
+
+## isula create/run
+
+### Description
+
+Add the corresponding network parameters, add network capabilities to the container when creating/starting the container.
+
+### Usage
+
+```bash
+isula run [OPTIONS] ROOTFS|IMAGE [COMMAND] [ARG...]
+```
+
+### Options
+
+Show only network-related parameters.
+
+| Options | Description |
+| - | - |
+| --expose | Expose a port or a range of ports |
+| --net, --network | Connect a container to a network |
+| -p, --publish | Publish a container's port(s) to host with format `<hostport>:<container port>` |
+| -P, --publish-all | Publish all exposed ports to random ports |
+

@@ -171,3 +171,100 @@ cni0
 $ isula network ls
 NAME                 VERSION         PLUGIN
 ```
+
+## isula network create
+
+### 描述
+
+用于创建一个native网络，isulad会创建一个符合cni标准的网络配置文件，并存放在`cni-conf-dir`目录下
+
+### 用法
+
+```bash
+isula network create [OPTIONS] [NETWORK]
+```
+
+### 参数
+
+| 参数 | 说明 |
+| - | - |
+| -d, --driver | 网络驱动，默认值为bridge桥接模式，目前仅支持bridge模式 |
+| --gateway | 子网的ipv4或者ipv6网关，指定gateway参数必须指定subnet参数，如果不指定gateway，则使用子网段中的第一个IP作为网关 |
+| --internal | 使用该网络的容器，限制其与外部的网络交互 |
+| --subnet | 符合CIDR格式的子网段 |
+
+## isula network inspect
+
+### 描述
+
+用于查询一个或多个已经创建的native网络
+
+### 用法
+
+```bash
+isula network inspect [OPTIONS] NETWORK [NETWORK...]
+```
+
+### 参数
+
+| 参数 | 说明 |
+| - | - |
+| -f, --format | 使用模板格式化输出 |
+
+## isula network ls
+
+### 描述
+
+用于列出所有已经创建的native网络
+
+### 用法
+
+```bash
+isula network ls [OPTIONS]
+```
+
+### 参数
+
+| 参数 | 说明 |
+| - | - |
+| -f, --filter | 指定筛选条件 |
+| -q, --quiet | 仅输出网络名字 |
+
+## isula network rm
+
+### 描述
+
+删除已经创建的一个或多个native网络，同时会删除对应的网桥设备，以及网络配置文件。
+
+### 用法
+
+```bash
+isula network rm [OPTIONS] NETWORK [NETWORK...]
+```
+
+### 参数
+
+无
+
+## isula create/run
+
+### 描述
+
+添加了相对应的网络参数，在创建/启动容器时，为容器添加网络能力。
+
+### 用法
+
+```bash
+isula run [OPTIONS] ROOTFS|IMAGE [COMMAND] [ARG...]
+```
+
+### 参数
+
+仅展示与网络相关的参数
+
+| 参数 | 说明 |
+| - | - |
+| --expose | 暴露容器端口 |
+| --net, --network | 加入网络 |
+| -p, --publish | 将主机端口映射到容器端口，格式为`<hostport>:<container port>` |
+| -P, --publish-all | 将所有的exposed端口映射到主机上的随机端口 |
