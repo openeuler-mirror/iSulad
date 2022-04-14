@@ -320,6 +320,7 @@ static char *seccomp_trans_arch_for_docker(const char *arch)
         { "SCMP_ARCH_S390X", "s390x" },
         { "SCMP_ARCH_PARISC", "parisc" },
         { "SCMP_ARCH_PARISC64", "parisc64" },
+        { "SCMP_ARCH_RISCV64", "riscv64" },
         { "SCMP_ARCH_ALL", "all" }
     };
     for (i = 0; i < sizeof(arch_map) / sizeof(arch_map[0]); i++) {
