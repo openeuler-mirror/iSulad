@@ -1,3 +1,22 @@
+2022-04-18 root release 2.0.13
+    - !1389 sync from master branch From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1386 sync from master branch Merge pull request !1386 from haozi007/stable-v2.0.x
+    - !1385 add isula tag restful mode Merge pull request !1385 from zhangxiaoyu/stable-v2.0.x
+    - !1384 add errno infomation when archive failed Merge pull request !1384 from wangfengtu/archive_msg_stable
+    - !1381 fix no status of health check when restfull Merge pull request !1381 from wangfengtu/health_state_stable
+    - !1379 fix wrong use of DST(Daylight Saving Time) and timezone Merge pull request !1379 from wangfengtu/fix_dst_stable
+    - !1376 fix cricli command not found and run cri stream test without valgrind Merge pull request !1376 from zhangxiaoyu/stable-v2.0.x
+    - !1371 fix cricli command not found in CI test Merge pull request !1371 from zhangxiaoyu/stable-v2.0.x
+    - !1368 Add restful interface isula pull/login/logout Merge pull request !1368 from zhangxiaoyu/stable-v2.0.x
+    - !1367 fix cri attach coredump Merge pull request !1367 from zhangxiaoyu/stable-v2.0.x
+    - !1361 support isula attach when restfull Merge pull request !1361 from wangfengtu/attach_stable
+    - !1360 fix user take no effect when restfull Merge pull request !1360 from wangfengtu/user_stable
+    - !1358 support rename subcommand in restful mode Merge pull request !1358 from haozi007/stable-v2.0.x
+
+    dev stats:
+      - 21 files changed, 1446 insertions(+), 119 deletions(-)
+      - contributors: WangFengTu, haozi007, zhangxiaoyu, yanshui.li
+
 2022-03-24 root release 2.0.12
     - update v2.0.12 release notes
     - fix openssl-verify invalid disable metadata
