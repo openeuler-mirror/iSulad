@@ -95,38 +95,53 @@ void http_global_cleanup(void)
     curl_global_cleanup();
 }
 
+static int http_get_header_common(const unsigned int flag, const char *key, const char *value,
+                                  struct curl_slist **chunk)
+{
+    int nret = 0;
+    size_t len = 0;
+    char *header = NULL;
+
+    if (flag == 0 || key == NULL || value == NULL) {
+        return 0;
+    }
+
+    // format   key: value
+    if (strlen(value) > (SIZE_MAX - strlen(key)) - 3) {
+        ERROR("Invalid authorization option");
+        return -1;
+    }
+
+    // key + ": " + value + '\0'
+    len = strlen(key) + strlen(value) + 3;
+    header = util_common_calloc_s(len);
+    if (header == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    nret = snprintf(header, len, "%s: %s", key, value);
+    if (nret < 0 || (size_t)nret >= len) {
+        ERROR("Failed to print string");
+    } else {
+        *chunk = curl_slist_append(*chunk, header);
+    }
+
+    free(header);
+    return nret == 0 ? 0 : -1;
+}
+
 struct curl_slist *http_get_chunk_header(const struct http_get_options *options)
 {
     int ret = 0;
-    int nret;
-    size_t len = 0;
+    int i;
     struct curl_slist *chunk = NULL;
-    char *header = NULL;
     char **custom_headers = NULL;
-    int i = 0;
 
-    if (options->with_header_auth && options->authorization) {
-        if (strlen(options->authorization) > (SIZE_MAX - strlen("Authorization: ")) - 1) {
-            ERROR("Invalid authorization option");
-            ret = -1;
-            goto out;
-        }
-        len = strlen(options->authorization) + strlen("Authorization: ") + 1;
-        header = util_common_calloc_s(len);
-        if (header == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        nret = snprintf(header, len, "Authorization: %s", options->authorization);
-        if (nret < 0 || (size_t)nret >= len) {
-            ERROR("Failed to print string");
-            ret = -1;
-            goto out;
-        }
-        chunk = curl_slist_append(chunk, header);
-        free(header);
-        header = NULL;
+    ret = http_get_header_common(options->with_header_auth, "Authorization", options->authorization,
+                                 &chunk);
+    if (ret != 0) {
+        goto out;
     }
 
     if (options->with_header_json) {
@@ -140,47 +155,47 @@ struct curl_slist *http_get_chunk_header(const struct http_get_options *options)
         chunk = curl_slist_append(chunk, custom_headers[i]);
     }
 
-    if (options->with_header_accept && options->accepts) {
-        if (strlen(options->accepts) > (SIZE_MAX - strlen("Accept: ")) - 1) {
-            ERROR("Invalid accepts option");
-            ret = -1;
-            goto out;
-        }
-        len = strlen(options->accepts) + strlen("Accept: ") + 1;
-        header = util_common_calloc_s(len);
-        if (header == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        nret = snprintf(header, len, "Accept: %s", options->accepts);
-        if (nret < 0 || (size_t)nret >= len) {
-            ERROR("Failed to print string");
-            ret = -1;
-            goto out;
-        }
-        chunk = curl_slist_append(chunk, header);
-        free(header);
-        header = NULL;
+    ret = http_get_header_common(options->with_header_accept, "Accept", options->accepts,
+                                 &chunk);
+    if (ret != 0) {
+        goto out;
     }
+
 out:
-    if (ret) {
+    if (ret != 0) {
         curl_slist_free_all(chunk);
         chunk = NULL;
     }
-    free(header);
 
     return chunk;
 }
 
-static int http_custom_options(CURL *curl_handle, const struct http_get_options *options)
+static void http_custom_ssl_options(CURL *curl_handle, const struct http_get_options *options)
 {
-    int ret = 0;
-
-    if (curl_handle == NULL || options == NULL) {
-        return -1;
+    if (options->ssl_verify_peer) {
+        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 1L);
+    } else {
+        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    }
+    if (options->ssl_verify_host) {
+        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, 2L);
+    } else {
+        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, 0L);
     }
 
+    if (options->ca_file != NULL) {
+        curl_easy_setopt(curl_handle, CURLOPT_CAINFO, options->ca_file);
+    }
+    if (options->cert_file != NULL) {
+        curl_easy_setopt(curl_handle, CURLOPT_SSLCERT, options->cert_file);
+    }
+    if (options->key_file != NULL) {
+        curl_easy_setopt(curl_handle, CURLOPT_SSLKEY, options->key_file);
+    }
+}
+
+static void http_custom_general_options(CURL *curl_handle, const struct http_get_options *options)
+{
     if (options->timeout) {
         /* complete connection within 30 seconds */
         curl_easy_setopt(curl_handle, CURLOPT_CONNECTTIMEOUT, 30L);
@@ -222,29 +237,18 @@ static int http_custom_options(CURL *curl_handle, const struct http_get_options 
     if (options->debug) {
         curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
     }
+}
 
-    if (options->ssl_verify_peer) {
-        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 1L);
-    } else {
-        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0L);
-    }
-    if (options->ssl_verify_host) {
-        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, 2L);
-    } else {
-        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, 0L);
+static int http_custom_options(CURL *curl_handle, const struct http_get_options *options)
+{
+    if (curl_handle == NULL || options == NULL) {
+        return -1;
     }
 
-    if (options->ca_file != NULL) {
-        curl_easy_setopt(curl_handle, CURLOPT_CAINFO, options->ca_file);
-    }
-    if (options->cert_file != NULL) {
-        curl_easy_setopt(curl_handle, CURLOPT_SSLCERT, options->cert_file);
-    }
-    if (options->key_file != NULL) {
-        curl_easy_setopt(curl_handle, CURLOPT_SSLKEY, options->key_file);
-    }
+    http_custom_general_options(curl_handle, options);
+    http_custom_ssl_options(curl_handle, options);
 
-    return ret;
+    return 0;
 }
 
 static void close_file(FILE *pagefile)
