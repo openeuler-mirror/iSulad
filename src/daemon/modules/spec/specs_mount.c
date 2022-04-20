@@ -580,7 +580,7 @@ out:
 static int append_tmpfs_option_size(defs_mount *m, size_t size)
 {
     int nret = 0;
-    char kvbuf[MOUNT_PROPERTIES_SIZE] = {0};
+    char kvbuf[MOUNT_PROPERTIES_SIZE] = { 0 };
 
     if (size == 0) {
         return 0;
@@ -604,7 +604,7 @@ static int append_tmpfs_option_size(defs_mount *m, size_t size)
 static int append_tmpfs_option_mode(defs_mount *m, uint32_t mode)
 {
     int nret = 0;
-    char kvbuf[MOUNT_PROPERTIES_SIZE] = {0};
+    char kvbuf[MOUNT_PROPERTIES_SIZE] = { 0 };
 
     if (mode == 0) {
         return 0;
@@ -625,19 +625,8 @@ static int append_tmpfs_option_mode(defs_mount *m, uint32_t mode)
     return 0;
 }
 
-static defs_mount *parse_mount(mount_spec *spec)
+static int parse_basic_mount_spec_fileds(const mount_spec *spec, defs_mount *m)
 {
-    int ret = 0;
-    defs_mount *m = NULL;
-    bool has_pro = false;
-    bool has_sel = false;
-
-    m = util_common_calloc_s(sizeof(defs_mount));
-    if (m == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
     m->type = util_strdup_s(spec->type);
     if (strcmp(m->type, MOUNT_TYPE_TMPFS) == 0) {
         m->source = util_strdup_s("tmpfs");
@@ -652,58 +641,122 @@ static defs_mount *parse_mount(mount_spec *spec)
     if (spec->readonly) {
         if (util_array_append(&m->options, "ro")) {
             ERROR("append ro mode to array failed");
-            ret = -1;
-            goto out;
+            return -1;
         }
         m->options_len++;
     }
 
-    if (spec->bind_options != NULL) {
-        if (spec->bind_options->propagation != NULL) {
-            if (util_array_append(&m->options, spec->bind_options->propagation)) {
-                ERROR("append propagation to array failed");
-                ret = -1;
-                goto out;
-            }
-            m->options_len++;
-            has_pro = true;
-        }
-        if (spec->bind_options->selinux_opts != NULL) {
-            if (util_array_append(&m->options, spec->bind_options->selinux_opts)) {
-                ERROR("append selinux opts to array failed");
-                ret = -1;
-                goto out;
-            }
-            m->options_len++;
-            has_sel = true;
-        }
+    return 0;
+}
+
+static int append_spec_bind_mount_options(const mount_spec *spec, defs_mount *m, bool *has_pro, bool *has_sel)
+{
+    if (spec->bind_options == NULL) {
+        return 0;
     }
 
-    if (spec->volume_options != NULL && spec->volume_options->no_copy) {
-        if (util_array_append(&m->options, "nocopy")) {
-            ERROR("append nocopy to array failed");
-            ret = -1;
-            goto out;
+    if (spec->bind_options->propagation != NULL) {
+        if (util_array_append(&m->options, spec->bind_options->propagation)) {
+            ERROR("append propagation to array failed");
+            return -1;
         }
         m->options_len++;
+        *has_pro = true;
+    }
+    if (spec->bind_options->selinux_opts != NULL) {
+        if (util_array_append(&m->options, spec->bind_options->selinux_opts)) {
+            ERROR("append selinux opts to array failed");
+            return -1;
+        }
+        m->options_len++;
+        *has_sel = true;
     }
 
-    if (strcmp(m->type, MOUNT_TYPE_TMPFS) == 0 && spec->tmpfs_options != NULL) {
-        if (append_tmpfs_option_size(m, (size_t) spec->tmpfs_options->size_bytes) != 0) {
-            ERROR("append tmpfs option size failed");
-            ret = -1;
-            goto out;
-        }
+    return 0;
+}
 
-        if (append_tmpfs_option_mode(m, spec->tmpfs_options->mode) != 0) {
-            ERROR("append tmpfs option mode failed");
-            ret = -1;
-            goto out;
-        }
+static int append_spec_volume_options(const mount_spec *spec, defs_mount *m)
+{
+    if (spec->volume_options == NULL || !spec->volume_options->no_copy) {
+        return 0;
+    }
+
+    if (util_array_append(&m->options, "nocopy")) {
+        ERROR("append nocopy to array failed");
+        return -1;
+    }
+    m->options_len++;
+
+    return 0;
+}
+
+static int append_spec_tmpfs_options(const mount_spec *spec, defs_mount *m)
+{
+    if (strcmp(m->type, MOUNT_TYPE_TMPFS) != 0 || spec->tmpfs_options == NULL) {
+        return 0;
+    }
+
+    if (append_tmpfs_option_size(m, (size_t)spec->tmpfs_options->size_bytes) != 0) {
+        ERROR("append tmpfs option size failed");
+        return -1;
+    }
+
+    if (append_tmpfs_option_mode(m, spec->tmpfs_options->mode) != 0) {
+        ERROR("append tmpfs option mode failed");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int append_spec_mount_options(const mount_spec *spec, defs_mount *m, bool *has_pro, bool *has_sel)
+{
+    if (append_spec_bind_mount_options(spec, m, has_pro, has_sel) != 0) {
+        ERROR("Failed to append bind options in v2_spec");
+        return -1;
+    }
+
+    if (append_spec_volume_options(spec, m) != 0) {
+        ERROR("Failed to append volume options in v2_spec");
+        return -1;
+    }
+
+    if (append_spec_tmpfs_options(spec, m) != 0) {
+        ERROR("Failed to append tmpfs options in v2_spec");
+        return -1;
+    }
+
+    return 0;
+}
+
+static defs_mount *parse_mount(const mount_spec *spec)
+{
+    int ret = 0;
+    defs_mount *m = NULL;
+    bool has_pro = false;
+    bool has_sel = false;
+
+    m = util_common_calloc_s(sizeof(defs_mount));
+    if (m == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    ret = parse_basic_mount_spec_fileds(spec, m);
+    if (ret != 0) {
+        ERROR("Failed to parse basic mount fileds in v2_spec");
+        goto out;
+    }
+
+    ret = append_spec_mount_options(spec, m, &has_pro, &has_sel);
+    if (ret != 0) {
+        ERROR("Failed to append spec mount options");
+        goto out;
     }
 
     ret = append_default_mount_options(m, true, has_pro, has_sel);
     if (ret != 0) {
+        ERROR("Failed to append default mount options");
         goto out;
     }
 
@@ -2857,8 +2910,7 @@ static void add_mount(defs_mount **merged_mounts, size_t *merged_mounts_len, def
     *merged_mounts_len += 1;
 }
 
-static int add_embedded_layers(container_config *container_spec, defs_mount **merged_mounts,
-                               size_t *merged_mounts_len)
+static int add_embedded_layers(container_config *container_spec, defs_mount **merged_mounts, size_t *merged_mounts_len)
 {
     int ret = 0;
     size_t i = 0;
@@ -2976,7 +3028,7 @@ out:
 
 static char *get_valid_tmpfs_dst_path(char *tmpfs)
 {
-    char dstpath[PATH_MAX] = {0};
+    char dstpath[PATH_MAX] = { 0 };
 
     if (tmpfs == NULL) {
         return NULL;
