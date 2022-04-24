@@ -134,11 +134,11 @@ struct command g_commands[] = {
         "rmi", false, cmd_rmi_main, g_cmd_rmi_desc, NULL, &g_cmd_rmi_args
     },
 #endif
-#ifdef ENABLE_OCI_IMAGE
     {
         // `wait` sub-command
         "wait", false, cmd_wait_main, g_cmd_wait_desc, NULL, &g_cmd_wait_args
     },
+#ifdef ENABLE_OCI_IMAGE
     {
         // `logs` sub-command
         "logs", false, cmd_logs_main, g_cmd_logs_desc, NULL, &g_cmd_logs_args
