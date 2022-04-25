@@ -1,4 +1,4 @@
-%global _version 2.0.12
+%global _version 2.0.13
 %global _release 1
 %global is_systemd 1
 %global enable_shimv2 1
@@ -238,6 +238,12 @@ fi
 %endif
 
 %changelog
+* Mon Apr 18 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.13-1
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: update version to v2.0.13
+
 * Fri Mar 25 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.12-1
 - Type: bugfix
 - ID: NA
