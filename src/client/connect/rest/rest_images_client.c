@@ -858,6 +858,112 @@ out:
     return ret;
 }
 
+/* image import request to rest */
+static int image_import_request_to_rest(const struct isula_import_request *request, char **body, size_t *body_len)
+{
+    image_import_request *crequest = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    crequest = util_common_calloc_s(sizeof(image_import_request));
+    if (crequest == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    crequest->file = util_strdup_s(request->file);
+    crequest->tag = util_strdup_s(request->tag);
+
+    *body = image_import_request_generate_json(crequest, NULL, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate image import request json:%s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_image_import_request(crequest);
+
+    return ret;
+}
+
+/* unpack image import response */
+static int unpack_image_import_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_import_response *c_import_response = (struct isula_import_response *)arg;
+    image_import_response *import_response = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        ERROR("Tag image check status code failed.\n");
+        goto out;
+    }
+
+    import_response = image_import_response_parse_data(message->body, NULL, &err);
+    if (import_response == NULL) {
+        ERROR("Invalid import image response:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    c_import_response->server_errono = import_response->cc;
+    c_import_response->errmsg = util_strdup_s(import_response->errmsg);
+    c_import_response->id = util_strdup_s(import_response->id);
+
+    ret = (import_response->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    free(err);
+    free_image_import_response(import_response);
+
+    return ret;
+}
+
+/* rest image import */
+static int rest_image_import(const struct isula_import_request *request, struct isula_import_response *response,
+                             void *arg)
+{
+ 
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    char *body = NULL;
+    Buffer *output = NULL;
+    int ret = 0;
+    size_t len = 0;
+
+    ret = image_import_request_to_rest(request, &body, &len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceImport, body, len, &output);
+    if (ret != 0) {
+        ERROR("Send import request failed.");
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+
+    ret = get_response(output, unpack_image_import_response, (void *)response);
+    if (ret != 0) {
+        ERROR("Get import response failed.");
+        goto out;
+    }
+
+out:
+    buffer_free(output);
+    put_body(body);
+
+    return ret;
+}
+
+
 /* rest images client ops init */
 int rest_images_client_ops_init(isula_connect_ops *ops)
 {
@@ -873,6 +979,7 @@ int rest_images_client_ops_init(isula_connect_ops *ops)
     ops->image.login = &rest_image_login;
     ops->image.logout = &rest_image_logout;
     ops->image.tag = &rest_image_tag;
+    ops->image.import = &rest_image_import;
 
     return 0;
 }
