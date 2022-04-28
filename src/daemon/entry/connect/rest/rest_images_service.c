@@ -797,6 +797,90 @@ out:
     free_image_tag_image_response(cresponse);
 }
 
+/* image import request from rest */
+static int image_import_request_from_rest(evhtp_request_t *req, image_import_request **crequest)
+{
+    int ret = 0;
+    size_t body_len;
+    char *body = NULL;
+    parser_error err = NULL;
+
+    if (get_body(req, &body_len, &body) != 0) {
+        ERROR("Failed to get body");
+        return -1;
+    }
+
+    *crequest = image_import_request_parse_data(body, NULL, &err);
+    if (*crequest == NULL) {
+        ERROR("Invalid import request body:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    put_body(body);
+    free(err);
+
+    return ret;
+}
+
+/* evhtp send image import repsponse */
+static void evhtp_send_image_import_repsponse(evhtp_request_t *req, image_import_response *response, int rescode)
+{
+    parser_error err = NULL;
+    char *response_data = NULL;
+
+    response_data = image_import_response_generate_json(response, NULL, &err);
+    if (response_data != NULL) {
+        evhtp_send_response(req, response_data, rescode);
+        goto out;
+    }
+
+    ERROR("Import: failed to generate request json:%s", err);
+    evhtp_send_reply(req, RESTFUL_RES_ERROR);
+
+out:
+    free(response_data);
+    free(err);
+}
+
+/* rest image import cb */
+static void rest_image_import_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    image_import_request *crequest =  NULL;
+    image_import_response *cresponse = NULL;
+
+    // only deal with POST request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    cb = get_service_executor();
+    if (cb == NULL || cb->image.import == NULL) {
+        ERROR("Unimplemented import callback");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = image_import_request_from_rest(req, &crequest);
+    if (tret < 0) {
+        ERROR("Bad request");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->image.import(crequest, &cresponse);
+    evhtp_send_image_import_repsponse(req, cresponse, RESTFUL_RES_OK);
+
+out:
+    free_image_import_request(crequest);
+    free_image_import_response(cresponse);
+}
+
+
 /* rest register images handler */
 int rest_register_images_handler(evhtp_t *htp)
 {
@@ -836,6 +920,11 @@ int rest_register_images_handler(evhtp_t *htp)
     }
 
     if (evhtp_set_cb(htp, ImagesServiceTag, rest_image_tag_cb, NULL) == NULL) {
+        ERROR("Failed to register image logout callback");
+        return -1;
+    }
+
+    if (evhtp_set_cb(htp, ImagesServiceImport, rest_image_import_cb, NULL) == NULL) {
         ERROR("Failed to register image logout callback");
         return -1;
     }
