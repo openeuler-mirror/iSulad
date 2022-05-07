@@ -1,7 +1,7 @@
 From b58453982016f9a2f707b51ad54f12583aa21929 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Wed, 20 Apr 2022 10:52:30 +0800
-Subject: [PATCH 2/3] refactor mount parse in spec module
+Subject: [PATCH 2/5] refactor mount parse in spec module
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
@@ -231,5 +231,5 @@ index 5644b21e..c89f077f 100644
      if (tmpfs == NULL) {
          return NULL;
 -- 
-2.25.1
+2.32.0 (Apple Git-132)
 
