@@ -1,0 +1,8 @@
+root:x:0:
+#bin:x:1:
+
+-adm:x:4:
++adm:x:4:
+adm:x:4:a,list,of,users
+adm:x:4:are,split,by,comma
+adm:x:4:root,john, boob,jason
