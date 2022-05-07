@@ -1,5 +1,5 @@
 %global _version 2.0.13
-%global _release 3
+%global _release 4
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -18,6 +18,7 @@ Patch0002:  0002-refactor-mount-parse-in-spec-module.patch
 Patch0003:  0003-support-isula-wait-even-if-it-s-not-oci-image.patch
 Patch0004:  0004-add-isula-import-restful-mode.patch
 Patch0005:  0005-Adapt-to-bionic-libc-parser-for-passwd-and-group-obj.patch
+Patch0006:  0006-Adapt-to-bionic-libc-improve-lcov-coverage.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -244,6 +245,12 @@ fi
 %endif
 
 %changelog
+* Mon May 10 2022 hejunjie<hejunjie10@huawei.com> - 2.0.13-4
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: bionic adaptation, increase lcov coverage
+
 * Mon May 5 2022 hejunjie<hejunjie10@huawei.com> - 2.0.13-3
 - Type: enhancement
 - ID: NA
