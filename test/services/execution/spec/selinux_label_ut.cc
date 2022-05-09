@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include "namespace_mock.h"
 #include "utils.h"
+#include "cxxutils.h"
 
 using namespace std;
 
@@ -40,6 +41,34 @@ protected:
     }
 };
 
+std::string get_lxc_context_filed(const std::string &filed)
+{
+    ifstream in("/etc/selinux/targeted/contexts/lxc_contexts");
+    string line;
+    while (getline(in, line)) {
+        stringstream ss(line);
+        string tmp;
+        while (getline(ss, tmp)) {
+            auto configs = CXXUtils::Split(tmp, '=');
+            if (configs.size() != 2) {
+                return "";
+            }
+            if (configs.at(0).substr(0, filed.size()) != filed) {
+                continue;
+            }
+
+            auto elements = CXXUtils::Split(configs.at(1), ':');
+            if (elements.size() < 3) {
+                return "";
+            }
+
+            return elements.at(2);
+        }
+    }
+
+    return "";
+}
+
 TEST_F(SELinuxLabelUnitTest, test_init_label_normal)
 {
     const char *disable_label[] = { "disable" };
@@ -48,17 +77,22 @@ TEST_F(SELinuxLabelUnitTest, test_init_label_normal)
     const char *type_label[] = { "type:faketype" };
     const char *level_label[] = { "level:s0:c1,c2" };
     const char *full_label[] = { "user:fakeuser", "level:s0:c1,c2", "type:faketype", "role:fakerole" };
+    std::string process_context = get_lxc_context_filed("process");
+    std::string file_context = get_lxc_context_filed("file");
 
     std::vector<std::tuple<const char **, size_t, int, std::string, std::string>> normal {
         std::make_tuple(disable_label, 1, 0, "", ""),
-        std::make_tuple(user_label, 1, 0, "fakeuser:system_r:container_t:s0", "fakeuser:object_r:container_file_t:s0"),
-        std::make_tuple(role_label, 1, 0, "system_u:fakerole:container_t:s0", "system_u:object_r:container_file_t:s0"),
-        std::make_tuple(type_label, 1, 0, "system_u:system_r:faketype:s0", "system_u:object_r:container_file_t:s0"),
-        std::make_tuple(level_label, 1, 0, "system_u:system_r:container_t:s0:c1,c2",
-                        "system_u:object_r:container_file_t:s0:c1,c2"),
+        std::make_tuple(user_label, 1, 0, "fakeuser:system_r:" + process_context + ":s0",
+                        "fakeuser:object_r:" + file_context + ":s0"),
+        std::make_tuple(role_label, 1, 0, "system_u:fakerole:" + process_context + ":s0",
+                        "system_u:object_r:" + file_context + ":s0"),
+        std::make_tuple(type_label, 1, 0, "system_u:system_r:faketype:s0", "system_u:object_r:" + file_context + ":s0"),
+        std::make_tuple(level_label, 1, 0, "system_u:system_r:" + process_context + ":s0:c1,c2",
+                        "system_u:object_r:" + file_context + ":s0:c1,c2"),
         std::make_tuple(full_label, 4, 0, "fakeuser:fakerole:faketype:s0:c1,c2",
-                        "fakeuser:object_r:container_file_t:s0:c1,c2"),
-        std::make_tuple(nullptr, 0, 0, "system_u:system_r:container_t:s0", "system_u:object_r:container_file_t:s0"),
+                        "fakeuser:object_r:" + file_context + ":s0:c1,c2"),
+        std::make_tuple(nullptr, 0, 0, "system_u:system_r:" + process_context + ":s0",
+                        "system_u:object_r:" + file_context + ":s0"),
     };
 
     if (!is_selinux_enabled()) {
