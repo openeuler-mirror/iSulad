@@ -2,6 +2,10 @@
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} local_cutils_srcs)
 add_subdirectory(map)
 
+if (NOT ANDROID)
+    list(REMOVE_ITEM local_cutils_srcs "${CMAKE_CURRENT_SOURCE_DIR}/utils_pwgr.c")
+endif()
+
 set(CUTILS_SRCS
     ${local_cutils_srcs}
     ${MAP_SRCS}
