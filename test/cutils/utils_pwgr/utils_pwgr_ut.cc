@@ -24,6 +24,7 @@ TEST(utils_pwgr, test_getpwent_r)
 
     struct passwd pw;
     struct passwd *ppw = nullptr;
+    struct passwd *ppw_alter = &pw;
     char buf[BUFSIZ];
 
     std::vector<std::tuple<std::string, std::string, int, int, std::string, std::string, std::string>> testcase = {
@@ -35,6 +36,17 @@ TEST(utils_pwgr, test_getpwent_r)
         std::make_tuple("+npt", "*", 0, 0, "", "/etc/ntp", "/sbin/nologin"),
         std::make_tuple("-npt", "*", 0, 0, "", "/etc/ntp", "/sbin/nologin")
     };
+
+    ASSERT_EQ(util_getpwent_r(NULL, &pw, buf, sizeof(buf), &ppw), -1);
+    ASSERT_EQ(util_getpwent_r(f_pw, &pw, NULL, 0, &ppw), -1);
+    ASSERT_EQ(util_getpwent_r(f_pw, &pw, NULL, 1, &ppw), -1);
+    ASSERT_EQ(util_getpwent_r(f_pw, &pw, buf, sizeof(buf), &ppw_alter), -1);
+
+    while (!feof(f_pw)) {
+        (void)getc(f_pw);
+    }
+    ASSERT_EQ(util_getpwent_r(f_pw, &pw, buf, sizeof(buf), &ppw), ENOENT);
+    rewind(f_pw);
 
     for (const auto &elem : testcase) {
         ASSERT_EQ(util_getpwent_r(f_pw, &pw, buf, sizeof(buf), &ppw), 0);
@@ -61,6 +73,7 @@ TEST(utils_pwgr, test_getgrent_r)
 
     struct group gr{0};
     struct group *pgr = nullptr;
+    struct group *pgr_alter = &gr;
     char buf[BUFSIZ];
     size_t i = 0;
     size_t j = 0;
@@ -79,6 +92,17 @@ TEST(utils_pwgr, test_getgrent_r)
         std::make_tuple("adm", "x", 4),
         std::make_tuple("adm", "x", 4),
     };
+
+    ASSERT_EQ(util_getgrent_r(NULL, &gr, buf, sizeof(buf), &pgr), -1);
+    ASSERT_EQ(util_getgrent_r(f_gr, &gr, NULL, 0, &pgr), -1);
+    ASSERT_EQ(util_getgrent_r(f_gr, &gr, NULL, 1, &pgr), -1);
+    ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr_alter), -1);
+
+    while (!feof(f_gr)) {
+        (void)getc(f_gr);
+    }
+    ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr), ENOENT);
+    rewind(f_gr);
 
     for (; i < string_list.size(); ++i) {
         ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr), 0);
