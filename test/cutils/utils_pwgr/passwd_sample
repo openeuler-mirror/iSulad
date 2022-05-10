@@ -3,6 +3,7 @@ bin:x:1:1:bin:/bin:/sbin/nologin
 bin:x:-1:1:bin:/bin:/sbin/nologin
 uidonly:x:1::bin:/bin:/sbin/nologin
 ::::1:1:bin:/bin:/sbin/nologin
+root:x:
 
 #npt:*:66:77::/etc/ntp:/sbin/nologin
 npt:*:66:77::/etc/ntp:/sbin/nologin
