@@ -103,8 +103,6 @@ auto IsContainerNotFoundError(const std::string &err) -> bool;
 
 auto IsImageNotFoundError(const std::string &err) -> bool;
 
-auto sha256(const char *val) -> std::string;
-
 auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations,
                                 Errors &error) -> cri_pod_network_container *;
 

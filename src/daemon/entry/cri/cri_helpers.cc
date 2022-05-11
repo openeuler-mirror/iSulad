@@ -33,6 +33,7 @@
 #include "utils.h"
 #include "service_container_api.h"
 #include "isulad_config.h"
+#include "sha256.h"
 
 namespace CRIHelpers {
 const std::string Constants::POD_NETWORK_ANNOTATION_KEY { "network.alpha.kubernetes.io/network" };
@@ -386,30 +387,6 @@ auto IsImageNotFoundError(const std::string &err) -> bool
     return err.find("No such image:") != std::string::npos;
 }
 
-auto sha256(const char *val) -> std::string
-{
-    if (val == nullptr) {
-        return "";
-    }
-
-    SHA256_CTX ctx;
-    SHA256_Init(&ctx);
-    SHA256_Update(&ctx, val, strlen(val));
-    unsigned char hash[SHA256_DIGEST_LENGTH] = { 0 };
-    SHA256_Final(hash, &ctx);
-
-    char outputBuffer[(SHA256_DIGEST_LENGTH * 2) + 1] { 0 };
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        int ret = snprintf(outputBuffer + (i * 2), 3, "%02x", (unsigned int)hash[i]);
-        if (ret >= 3 || ret < 0) {
-            return "";
-        }
-    }
-    outputBuffer[SHA256_DIGEST_LENGTH * 2] = 0;
-
-    return outputBuffer;
-}
-
 auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations,
                                 Errors &error) -> cri_pod_network_container *
 {
@@ -663,6 +640,7 @@ auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> s
     };
     parser_error err { nullptr };
     char *jsonStr { nullptr };
+    char *digest { nullptr };
     std::string result;
 
     checkpoint.CheckpointToCStruct(&criCheckpoint, error);
@@ -676,7 +654,14 @@ auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> s
         error.Errorf("Generate cri checkpoint json failed: %s", err);
         goto out;
     }
-    checkpoint.SetCheckSum(CRIHelpers::sha256(jsonStr));
+
+    digest = sha256_digest_str(jsonStr);
+    if (digest == nullptr) {
+        error.Errorf("Failed to calculate digest");
+        goto out;
+    }
+
+    checkpoint.SetCheckSum(digest);
     if (checkpoint.GetCheckSum().empty()) {
         error.SetError("checksum is empty");
         goto out;
@@ -692,6 +677,7 @@ auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> s
 
     result = jsonStr;
 out:
+    free(digest);
     free(err);
     free(jsonStr);
     free_cri_checkpoint(criCheckpoint);
@@ -708,6 +694,7 @@ void GetCheckpoint(const std::string &jsonCheckPoint, CRI::PodSandboxCheckpoint 
     std::string tmpChecksum;
     char *jsonStr { nullptr };
     char *storeChecksum { nullptr };
+    char *digest { nullptr };
 
     criCheckpoint = cri_checkpoint_parse_data(jsonCheckPoint.c_str(), &ctx, &err);
     if (criCheckpoint == nullptr) {
@@ -726,7 +713,12 @@ void GetCheckpoint(const std::string &jsonCheckPoint, CRI::PodSandboxCheckpoint 
         goto out;
     }
 
-    if (tmpChecksum != CRIHelpers::sha256(jsonStr)) {
+    digest = sha256_digest_str(jsonStr);
+    if (digest == nullptr) {
+        error.Errorf("Failed to calculate digest");
+        goto out;
+    }
+    if (tmpChecksum != digest) {
         ERROR("Checksum of checkpoint is not valid");
         error.SetError("checkpoint is corrupted");
         goto out;
@@ -734,6 +726,7 @@ void GetCheckpoint(const std::string &jsonCheckPoint, CRI::PodSandboxCheckpoint 
 
     checkpoint.CStructToCheckpoint(criCheckpoint, error);
 out:
+    free(digest);
     free(jsonStr);
     free(err);
     free_cri_checkpoint(criCheckpoint);

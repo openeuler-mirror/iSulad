@@ -22,6 +22,7 @@
 #include <atomic>
 #include <memory>
 #include <list>
+#include <array>
 #include <thread>
 #include <libwebsockets.h>
 #include "route_callback_register.h"
