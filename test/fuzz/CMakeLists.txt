@@ -20,6 +20,8 @@ SET(EXE1 im_config_image_exist_fuzz)
 SET(EXE2 im_get_image_count_fuzz)
 SET(EXE3 test_volume_mount_spec_fuzz)
 SET(EXE4 test_volume_parse_volume_fuzz)
+SET(EXE5 test_pw_obj_parser_fuzz)
+SET(EXE6 test_gr_obj_parser_fuzz)
 add_executable(${EXE0}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/isulad_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/daemon_arguments.c
@@ -66,6 +68,36 @@ add_executable(${EXE4}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/daemon_arguments.c
     test_volume_parse_volume_fuzz.cc
     )
+add_executable(${EXE5}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_string.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_array.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_convert.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_verify.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_regex.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_pwgr.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
+    test_pw_obj_parser_fuzz.cc
+    )
+add_executable(${EXE6}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_string.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_array.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_convert.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_verify.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_regex.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_pwgr.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
+    test_gr_obj_parser_fuzz.cc
+    )
 
 SET(IMAGE_FUZZ_INCLUDE_DIRS
     ${GTEST_INCLUDE_DIR}
@@ -107,6 +139,14 @@ target_include_directories(${EXE4} PUBLIC
     ${IMAGE_FUZZ_INCLUDE_DIRS}
     )
 
+target_include_directories(${EXE5} PUBLIC
+    ${IMAGE_FUZZ_INCLUDE_DIRS}
+)
+
+target_include_directories(${EXE6} PUBLIC
+    ${IMAGE_FUZZ_INCLUDE_DIRS}
+)
+
 set_target_properties(${EXE0} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${EXE0} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
 target_link_libraries(${EXE0} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lisulad_img -lgcov)
@@ -126,3 +166,11 @@ target_link_libraries(${EXE3} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY
 set_target_properties(${EXE4} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${EXE4} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
 target_link_libraries(${EXE4} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
+
+set_target_properties(${EXE5} PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(${EXE5} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
+target_link_libraries(${EXE5} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
+
+set_target_properties(${EXE6} PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(${EXE6} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
+target_link_libraries(${EXE6} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
