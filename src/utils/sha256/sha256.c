@@ -21,6 +21,10 @@
 #include <string.h>
 #include <errno.h>
 #include <openssl/sha.h>
+#if OPENSSL_VERSION_MAJOR >= 3
+#include <openssl/evp.h>
+#include <openssl/err.h>
+#endif
 
 #include "isula_libutils/log.h"
 #include "utils.h"
@@ -61,7 +65,9 @@ static bool stream_check_error(void *stream, bool isgzip)
 
 char *sha256_digest_str(const char *val)
 {
+#if OPENSSL_VERSION_MAJOR < 3
     SHA256_CTX ctx;
+#endif
     unsigned char hash[SHA256_DIGEST_LENGTH] = { 0x00 };
     char output_buffer[(SHA256_DIGEST_LENGTH * 2) + 1] = { 0x00 };
     int i = 0;
@@ -70,9 +76,13 @@ char *sha256_digest_str(const char *val)
         return NULL;
     }
 
+#if OPENSSL_VERSION_MAJOR >= 3
+    SHA256((const unsigned char *)val, strlen(val), hash);
+#else
     SHA256_Init(&ctx);
     SHA256_Update(&ctx, val, strlen(val));
     SHA256_Final(hash, &ctx);
+#endif
 
     for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         int ret = snprintf(output_buffer + (i * 2), 3, "%02x", (unsigned int)hash[i]);
@@ -87,8 +97,15 @@ char *sha256_digest_str(const char *val)
 
 char *sha256_digest_file(const char *filename, bool isgzip)
 {
+#if OPENSSL_VERSION_MAJOR >= 3
+    EVP_MD_CTX *ctx = NULL;
+    EVP_MD *sha256 = NULL;
+    unsigned char *outdigest = NULL;
+    unsigned int len = 0;
+#else
     SHA256_CTX ctx;
     unsigned char hash[SHA256_DIGEST_LENGTH] = { 0x00 };
+#endif
     char output_buffer[(SHA256_DIGEST_LENGTH * 2) + 1] = { 0x00 };
     int i = 0;
     char *buffer = NULL;
@@ -117,7 +134,30 @@ char *sha256_digest_file(const char *filename, bool isgzip)
         return NULL;
     }
 
+#if OPENSSL_VERSION_MAJOR >= 3
+    ctx = EVP_MD_CTX_new();
+    if (ctx == NULL) {
+        ERROR("Failed to create a context for the digest operation");
+        ERR_print_errors_fp(stderr);
+        ret = -1;
+        goto out;
+    }
+    sha256 = EVP_MD_fetch(NULL, "SHA256", NULL);
+    if (sha256 == NULL) {
+        ERROR("Failed to fetch the SHA256 algorithm implementation for doing the digest");
+        ERR_print_errors_fp(stderr);
+        ret = -1;
+        goto out;
+    }
+    if (!EVP_DigestInit_ex(ctx, sha256, NULL)) {
+        ERROR("Failed to initialise the digest operation");
+        ERR_print_errors_fp(stderr);
+        ret = -1;
+        goto out;
+    }
+#else
     SHA256_Init(&ctx);
+#endif
 
     while (true) {
         if (isgzip) {
@@ -134,7 +174,16 @@ char *sha256_digest_file(const char *filename, bool isgzip)
         }
 
         if (n > 0) {
+#if OPENSSL_VERSION_MAJOR >= 3
+            if (!EVP_DigestUpdate(ctx, (unsigned char *)buffer, n)) {
+                ERROR("Failed to pass the message to be digested");
+                ERR_print_errors_fp(stderr);
+                ret = -1;
+                goto out;
+            }
+#else
             SHA256_Update(&ctx, buffer, n);
+#endif
         }
 
         if (stream_check_eof(stream, isgzip)) {
@@ -142,6 +191,30 @@ char *sha256_digest_file(const char *filename, bool isgzip)
         }
     }
 
+#if OPENSSL_VERSION_MAJOR >= 3
+    outdigest = OPENSSL_malloc(EVP_MD_get_size(sha256));
+    if (outdigest == NULL) {
+        ERROR("Failed to allocate the output buffer");
+        ERR_print_errors_fp(stderr);
+        ret = -1;
+        goto out;
+    }
+    if (!EVP_DigestFinal_ex(ctx, outdigest, &len)) {
+        ERROR("Failed to calculate the digest itself");
+        ERR_print_errors_fp(stderr);
+        ret = -1;
+        goto out;
+    }
+    for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        int sret = snprintf(output_buffer + (i * 2), 3, "%02x", (unsigned int)outdigest[i]);
+        if (sret >= 3 || sret < 0) {
+            ERROR("snprintf failed when calc sha256 from file %s, result is %d", filename, sret);
+            return NULL;
+        }
+    }
+
+    output_buffer[SHA256_DIGEST_LENGTH * 2] = '\0';
+#else
     SHA256_Final(hash, &ctx);
 
     for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
@@ -152,8 +225,14 @@ char *sha256_digest_file(const char *filename, bool isgzip)
         }
     }
     output_buffer[SHA256_DIGEST_LENGTH * 2] = '\0';
+#endif
 
 out:
+#if OPENSSL_VERSION_MAJOR >= 3
+    OPENSSL_free(outdigest);
+    EVP_MD_free(sha256);
+    EVP_MD_CTX_free(ctx);
+#endif
     if (isgzip) {
         gzclose((gzFile)stream);
     } else {
