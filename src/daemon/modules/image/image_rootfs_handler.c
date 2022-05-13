@@ -84,7 +84,7 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
     int uret = -1;
     bool userfound = false;
     long long n_user = 0;
-    char buf[BUFSIZ];
+    char buf[BUFSIZ] = { 0 };
     struct passwd pw;
     struct passwd *pwbufp = NULL;
 
