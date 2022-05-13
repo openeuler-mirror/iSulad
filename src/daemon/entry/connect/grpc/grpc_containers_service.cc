@@ -99,8 +99,8 @@ bool grpc_add_initial_metadata(void *context, const char *header, const char *va
 
 bool grpc_event_write_function(void *writer, void *data)
 {
-    struct isulad_events_format *event = (struct isulad_events_format *)data;
-    ServerWriter<Event> *gwriter = (ServerWriter<Event> *)writer;
+    auto *event = (struct isulad_events_format *)data;
+    auto *gwriter = (ServerWriter<Event> *)writer;
     Event gevent;
     if (event_to_grpc(event, &gevent) != 0) {
         return false;
@@ -110,8 +110,8 @@ bool grpc_event_write_function(void *writer, void *data)
 
 bool grpc_copy_from_container_write_function(void *writer, void *data)
 {
-    struct isulad_copy_from_container_response *copy = (struct isulad_copy_from_container_response *)data;
-    ServerWriter<CopyFromContainerResponse> *gwriter = (ServerWriter<CopyFromContainerResponse> *)writer;
+    auto *copy = (struct isulad_copy_from_container_response *)data;
+    auto *gwriter = (ServerWriter<CopyFromContainerResponse> *)writer;
     CopyFromContainerResponse gcopy;
     copy_from_container_response_to_grpc(copy, &gcopy);
     return gwriter->Write(gcopy);
@@ -137,9 +137,8 @@ static bool copy_to_container_data_from_grpc(struct isulad_copy_to_container_dat
 
 bool grpc_copy_to_container_read_function(void *reader, void *data)
 {
-    struct isulad_copy_to_container_data *copy = (struct isulad_copy_to_container_data *)data;
-    ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *stream =
-        (ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *)reader;
+    auto *copy = (struct isulad_copy_to_container_data *)data;
+    auto *stream = (ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *)reader;
     CopyToContainerRequest gcopy;
     if (!stream->Read(&gcopy)) {
         return false;
@@ -287,7 +286,7 @@ ssize_t WriteStartResponseToRemoteClient(void *context, const void *data, size_t
         return 0;
     }
 
-    struct RemoteStartContext *ctx = (struct RemoteStartContext *)context;
+    auto *ctx = (struct RemoteStartContext *)context;
     RemoteStartResponse response;
     if (ctx->isStdout) {
         response.set_stdout((char *)data, len);
@@ -306,7 +305,7 @@ int grpc_start_stream_close(void *context, char **err)
 {
     int ret = 0;
     (void)err;
-    struct RemoteStartContext *ctx = (struct RemoteStartContext *)context;
+    auto *ctx = (struct RemoteStartContext *)context;
     RemoteStartResponse finish_response;
     finish_response.set_finish(true);
     if (!ctx->stream->Write(finish_response)) {
@@ -374,7 +373,7 @@ Status ContainerServiceImpl::RemoteStart(ServerContext *context,
             if (request.finish()) {
                 break;
             }
-            std::string command = request.stdin();
+            const std::string &command = request.stdin();
             if (write(read_pipe_fd[1], (void *)(command.c_str()), command.length()) < 0) {
                 ERROR("sub write over!");
                 break;
@@ -593,7 +592,7 @@ ssize_t WriteExecStdoutResponseToRemoteClient(void *context, const void *data, s
     if (context == nullptr || data == nullptr || len == 0) {
         return 0;
     }
-    auto stream = static_cast<ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *>(context);
+    auto *stream = static_cast<ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *>(context);
     RemoteExecResponse response;
     response.set_stdout((char *)data, len);
     if (!stream->Write(response)) {
@@ -608,7 +607,7 @@ ssize_t WriteExecStderrResponseToRemoteClient(void *context, const void *data, s
     if (context == nullptr || data == nullptr || len == 0) {
         return 0;
     }
-    auto stream = static_cast<ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *>(context);
+    auto *stream = static_cast<ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *>(context);
     RemoteExecResponse response;
     response.set_stderr((char *)data, len);
     if (!stream->Write(response)) {
@@ -809,7 +808,7 @@ ssize_t WriteAttachResponseToRemoteClient(void *context, const void *data, size_
     if (context == nullptr || data == nullptr || len == 0) {
         return 0;
     }
-    struct AttachContext *ctx = (struct AttachContext *)context;
+    auto *ctx = (struct AttachContext *)context;
     AttachResponse response;
     if (ctx->isStdout) {
         response.set_stdout((char *)data, len);
@@ -828,7 +827,7 @@ int grpc_attach_stream_close(void *context, char **err)
 {
     int ret = 0;
     (void)err;
-    struct AttachContext *ctx = (struct AttachContext *)context;
+    auto *ctx = (struct AttachContext *)context;
     AttachResponse finish_response;
     finish_response.set_finish(true);
     if (!ctx->stream->Write(finish_response)) {
@@ -1372,8 +1371,8 @@ int ContainerServiceImpl::logs_request_from_grpc(const LogsRequest *grequest, st
 
 bool grpc_logs_write_function(void *writer, void *data)
 {
-    logger_json_file *log = static_cast<logger_json_file *>(data);
-    ServerWriter<LogsResponse> *gwriter = static_cast<ServerWriter<LogsResponse> *>(writer);
+    auto *log = static_cast<logger_json_file *>(data);
+    auto *gwriter = static_cast<ServerWriter<LogsResponse> *>(writer);
     LogsResponse gresponse;
     log_to_grpc(log, &gresponse);
     return gwriter->Write(gresponse);
