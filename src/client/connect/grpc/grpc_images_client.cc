@@ -81,8 +81,8 @@ public:
         for (i = 0; i < num; i++) {
             const Image &image = gresponse->images(i);
             if (image.has_target()) {
-                const char *media_type =
-                    !image.target().media_type().empty() ? image.target().media_type().c_str() : "-";
+                const char *media_type = !image.target().media_type().empty() ? image.target().media_type().c_str() :
+                                         "-";
                 images_list[i].type = util_strdup_s(media_type);
                 const char *digest = !image.target().digest().empty() ? image.target().digest().c_str() : "-";
                 images_list[i].digest = util_strdup_s(digest);
@@ -336,9 +336,9 @@ public:
     }
 };
 
-class ImagesPull : public
-    ClientBase<runtime::v1alpha2::ImageService, runtime::v1alpha2::ImageService::Stub, isula_pull_request,
-    runtime::v1alpha2::PullImageRequest, isula_pull_response, runtime::v1alpha2::PullImageResponse> {
+class ImagesPull : public ClientBase<runtime::v1alpha2::ImageService, runtime::v1alpha2::ImageService::Stub,
+    isula_pull_request, runtime::v1alpha2::PullImageRequest, isula_pull_response,
+    runtime::v1alpha2::PullImageResponse> {
 public:
     explicit ImagesPull(void *args)
         : ClientBase(args)
@@ -346,14 +346,15 @@ public:
     }
     ~ImagesPull() = default;
 
-    auto request_to_grpc(const isula_pull_request *request, runtime::v1alpha2::PullImageRequest *grequest) -> int override
+    auto request_to_grpc(const isula_pull_request *request, runtime::v1alpha2::PullImageRequest *grequest)
+    -> int override
     {
         if (request == nullptr) {
             return -1;
         }
 
         if (request->image_name != nullptr) {
-            runtime::v1alpha2::ImageSpec *image_spec = new (std::nothrow) runtime::v1alpha2::ImageSpec;
+            auto *image_spec = new (std::nothrow) runtime::v1alpha2::ImageSpec;
             if (image_spec == nullptr) {
                 return -1;
             }
@@ -364,7 +365,8 @@ public:
         return 0;
     }
 
-    auto response_from_grpc(runtime::v1alpha2::PullImageResponse *gresponse, isula_pull_response *response) -> int override
+    auto response_from_grpc(runtime::v1alpha2::PullImageResponse *gresponse, isula_pull_response *response)
+    -> int override
     {
         if (!gresponse->image_ref().empty()) {
             response->image_ref = util_strdup_s(gresponse->image_ref().c_str());
@@ -437,17 +439,20 @@ public:
         return 0;
     }
 
-    auto grpc_call(ClientContext *context, const InspectImageRequest &req, InspectImageResponse *reply) -> Status override
+    auto grpc_call(ClientContext *context, const InspectImageRequest &req, InspectImageResponse *reply)
+    -> Status override
     {
         return stub_->Inspect(context, req, reply);
     }
 };
 
-class Login : public
-    ClientBase<ImagesService, ImagesService::Stub, isula_login_request, LoginRequest,
+class Login : public ClientBase<ImagesService, ImagesService::Stub, isula_login_request, LoginRequest,
     isula_login_response, LoginResponse> {
 public:
-    explicit Login(void *args) : ClientBase(args) {}
+    explicit Login(void *args)
+        : ClientBase(args)
+    {
+    }
     ~Login() = default;
 
     auto request_to_grpc(const isula_login_request *request, LoginRequest *grequest) -> int override
@@ -511,11 +516,13 @@ public:
     }
 };
 
-class Logout : public
-    ClientBase<ImagesService, ImagesService::Stub, isula_logout_request, LogoutRequest,
+class Logout : public ClientBase<ImagesService, ImagesService::Stub, isula_logout_request, LogoutRequest,
     isula_logout_response, LogoutResponse> {
 public:
-    explicit Logout(void *args) : ClientBase(args) {}
+    explicit Logout(void *args)
+        : ClientBase(args)
+    {
+    }
     ~Logout() = default;
 
     auto request_to_grpc(const isula_logout_request *request, LogoutRequest *grequest) -> int override
