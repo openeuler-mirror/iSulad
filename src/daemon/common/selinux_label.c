@@ -171,8 +171,6 @@ static void find_selinux_fs(char **fs)
     }
     // slow path: try to find among the mounts
     find_selinux_fs_among_mounts(fs);
-
-    return;
 }
 
 static int get_state_selinuxfs(char **fs)
