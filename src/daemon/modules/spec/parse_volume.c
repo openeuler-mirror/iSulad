@@ -341,22 +341,60 @@ static int check_volume_element(const char *volume)
     return ret;
 }
 
+static int set_volume_element_options(defs_mount *mount_element, const char **modes)
+{
+    const size_t max_options_len = 4;
+    size_t options_len = 0;
+    size_t i = 0;
+    bool with_rw = false;
+    bool with_pro = false;
+    bool with_label = false;
+
+    mount_element->options = util_common_calloc_s(max_options_len * sizeof(char *));
+    if (mount_element->options == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    options_len = util_array_len((const char **)modes);
+    if (options_len > max_options_len) {
+        ERROR("Invalid volume element options");
+        return -1;
+    }
+
+    for (i = 0; i < options_len; i++) {
+        if (util_valid_rw_mode(modes[i])) {
+            with_rw = true;
+            mount_element->options[mount_element->options_len++] = util_strdup_s(modes[i]);
+        } else if (util_valid_propagation_mode(modes[i])) {
+            with_pro = true;
+            mount_element->options[mount_element->options_len++] = util_strdup_s(modes[i]);
+        } else if (util_valid_label_mode(modes[i])) {
+            with_label = true;
+            mount_element->options[mount_element->options_len++] = util_strdup_s(modes[i]);
+        } else if (util_valid_copy_mode(modes[i])) {
+            mount_element->options[mount_element->options_len++] = util_strdup_s(modes[i]);
+        }
+    }
+
+    if (append_default_mount_options(mount_element, with_rw, with_pro, with_label) != 0) {
+        ERROR("Failed to append default mount options");
+        return -1;
+    }
+
+    return 0;
+}
+
 defs_mount *parse_volume(const char *volume)
 {
     int ret = 0;
-    size_t i = 0;
-    size_t mlen = 0;
     defs_mount *mount_element = NULL;
     char **modes = NULL;
     char path[PATH_MAX] = { 0x00 };
-    char *rw = NULL;
-    char *pro = NULL;
-    char *label = NULL;
-    size_t max_options_len = 4;
-    char *nocopy = NULL;
 
     ret = check_volume_element(volume);
     if (ret != 0) {
+        ERROR("Invalid volume element");
         goto free_out;
     }
 
@@ -368,20 +406,8 @@ defs_mount *parse_volume(const char *volume)
 
     ret = get_src_dst_mode_by_volume(volume, mount_element, &modes);
     if (ret != 0) {
+        ERROR("Failed to parse volume");
         goto free_out;
-    }
-
-    mlen = util_array_len((const char **)modes);
-    for (i = 0; i < mlen; i++) {
-        if (util_valid_rw_mode(modes[i])) {
-            rw = modes[i];
-        } else if (util_valid_propagation_mode(modes[i])) {
-            pro = modes[i];
-        } else if (util_valid_label_mode(modes[i])) {
-            label = modes[i];
-        } else if (util_valid_copy_mode(modes[i])) {
-            nocopy = modes[i];
-        }
     }
 
     if (!util_clean_path(mount_element->destination, path, sizeof(path))) {
@@ -402,25 +428,6 @@ defs_mount *parse_volume(const char *volume)
         mount_element->source = util_strdup_s(path);
     }
 
-    mount_element->options = util_common_calloc_s(max_options_len * sizeof(char *));
-    if (mount_element->options == NULL) {
-        ERROR("Out of memory");
-        mount_element->options_len = 0;
-        ret = -1;
-        goto free_out;
-    }
-    if (rw != NULL) {
-        mount_element->options[mount_element->options_len++] = util_strdup_s(rw);
-    }
-    if (pro != NULL) {
-        mount_element->options[mount_element->options_len++] = util_strdup_s(pro);
-    }
-    if (label != NULL) {
-        mount_element->options[mount_element->options_len++] = util_strdup_s(label);
-    }
-    if (nocopy != NULL) {
-        mount_element->options[mount_element->options_len++] = util_strdup_s(nocopy);
-    }
     if (mount_element->source != NULL && mount_element->source[0] == '/') {
         mount_element->type = util_strdup_s(MOUNT_TYPE_BIND);
     } else {
@@ -430,13 +437,15 @@ defs_mount *parse_volume(const char *volume)
         }
     }
 
-    ret = check_mount_element(volume, mount_element);
+    ret = set_volume_element_options(mount_element, (const char **)modes);
     if (ret != 0) {
+        ERROR("Failed to set volume element options");
         goto free_out;
     }
 
-    ret = append_default_mount_options(mount_element, rw != NULL, pro != NULL, label != NULL);
+    ret = check_mount_element(volume, mount_element);
     if (ret != 0) {
+        ERROR("Invalid mount element");
         goto free_out;
     }
 
