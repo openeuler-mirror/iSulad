@@ -32,10 +32,10 @@ TEST(utils_pwgr, test_getpwent_r)
 
     std::vector<std::tuple<std::string, std::string, int, int, std::string, std::string, std::string>> testcase = {
         std::make_tuple("root", "x", 0, 0, "root", "/root", "/bin/bash"),
-        std::make_tuple("bin", "x", 1, 1, "bin", "/bin", "/sbin/nologin"),
-        std::make_tuple("uidonly", "x", 1, 0, "bin", "/bin", "/sbin/nologin"),
-        std::make_tuple("npt", "*", 66, 77, "", "/etc/ntp", "/sbin/nologin"),
-        std::make_tuple("npt", "*", 66, 77, "", "/etc/ntp", "/sbin/nologin"),
+        std::make_tuple("abin", "x", 1, 1, "bin", "/bin", "/sbin/nologin"),
+        std::make_tuple("bbin", "x", 4294967295, 1, "bin", "/bin", "/sbin/nologin"),
+        std::make_tuple("anpt", "*", 66, 77, "", "/etc/ntp", "/sbin/nologin"),
+        std::make_tuple("bnpt", "*", 66, 77, "", "/etc/ntp", "/sbin/nologin:some:extra:context:added"),
         std::make_tuple("+npt", "*", 0, 0, "", "/etc/ntp", "/sbin/nologin"),
         std::make_tuple("-npt", "*", 0, 0, "", "/etc/ntp", "/sbin/nologin")
     };
