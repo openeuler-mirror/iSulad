@@ -822,6 +822,7 @@ out:
 }
 
 #ifdef ENABLE_SELINUX
+#ifdef ENABLE_OCI_IMAGE
 static int overlay_supports_selinux(bool *supported)
 {
 #define KALLSYMS_ITEM_MAX_LEN 100
@@ -862,6 +863,7 @@ out:
     fclose(fp);
     return ret;
 }
+#endif
 
 static int configure_kernel_security_support(const struct service_arguments *args)
 {
@@ -876,6 +878,7 @@ static int configure_kernel_security_support(const struct service_arguments *arg
             return 0;
         }
 
+#ifdef ENABLE_OCI_IMAGE
         if (strcmp(args->json_confs->storage_driver, "overlay") == 0 ||
             strcmp(args->json_confs->storage_driver, "overlay2") == 0) {
             // If driver is overlay or overlay2, make sure kernel
@@ -890,6 +893,7 @@ static int configure_kernel_security_support(const struct service_arguments *arg
                      args->json_confs->storage_driver);
             }
         }
+#endif
     } else {
         selinux_set_disabled();
     }

@@ -99,6 +99,12 @@ set(conf_prefix "/etc")
 if (CMAKE_INSTALL_SYSCONFDIR)
     set(conf_prefix ${CMAKE_INSTALL_SYSCONFDIR})
 endif()
+
+if (ANDROID)
+    install(FILES src/contrib/config/container_contexts
+        DESTINATION ${conf_prefix}/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
+endif()
+
 install(FILES src/contrib/config/daemon.json
     DESTINATION ${conf_prefix}/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
 install(FILES src/contrib/config/daemon_constants.json
