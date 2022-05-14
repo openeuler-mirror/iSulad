@@ -57,6 +57,10 @@ static int hold_int(const char delim, bool required, char **src, unsigned int *d
     }
 
     res = strtoll(*src, &err_str, 0);
+    if (err_str == *src) {
+        ERROR("invalid digits string.");
+        return -1;
+    }
     if (errno == ERANGE) {
         ERROR("Parse int from string failed.");
         return -1;
@@ -158,9 +162,6 @@ static char **hold_string_list(char **line, char *buf_start, char *buf_end, cons
     char **result = NULL;
     char **walker = NULL;
 
-    if (**line == '\0') {
-        return 0;
-    }
     // For ultimate space usage, the blank area from buffer which was allocated from stack is used
     buf_start += __alignof__(char *) - 1;
     // align the starting position of the buffer to use it as a 2d array
@@ -174,7 +175,7 @@ static char **hold_string_list(char **line, char *buf_start, char *buf_end, cons
         (void)util_trim_space(*line);
         if (hold_string(',', line, walker) != 0) {
             ERROR("Parse string list error.");
-            return NULL;
+            return result;
         }
 
         if ((char *)(walker + 2) > buf_end) {
@@ -218,6 +219,10 @@ static int parse_line_gr(const char delim, char *line, size_t buflen, struct gro
     }
 
     result->gr_mem = hold_string_list(&line, freebuff, buffend, ',');
+    if (result->gr_mem == NULL) {
+        ERROR("overflow of buffer.");
+        return -1;
+    }
 
     return 0;
 }
@@ -225,8 +230,10 @@ static int parse_line_gr(const char delim, char *line, size_t buflen, struct gro
 int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t buflen, struct passwd **result)
 {
     const char delim = ':';
+    char *buff_end = NULL;
+    bool got = false;
 
-    if (stream == NULL || resbuf == NULL || buffer == NULL) {
+    if (stream == NULL || resbuf == NULL || buffer == NULL || result == NULL) {
         ERROR("Password obj, params is NULL.");
         return -1;
     }
@@ -242,28 +249,34 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
     }
 
     __fsetlocking(stream, FSETLOCKING_BYCALLER);
-    buffer[buflen - 1] = '\0';
 
     if (feof(stream)) {
         *result = NULL;
         return ENOENT;
     }
+    buff_end = buffer + buflen - 1;
 
-    while (fgets(buffer, buflen, stream) != NULL) {
+    while ((*buff_end = '\xff') && fgets(buffer, buflen, stream) != NULL) {
         (void)util_trim_space(buffer);
         if (buffer[0] == '\0' || buffer[0] == '#' || strlen(buffer) < 1) {
             continue;
         }
 
         if (parse_line_pw(delim, buffer, resbuf) == 0) {
+            got = true;
             break;
         }
 
-        if (buffer[buflen - 1] != '\0') {
+        if (*buff_end != '\xff') {
             *result = NULL;
             return ERANGE;
         }
     }
+    if (!got) {
+        *result = NULL;
+        return ERANGE;
+    }
+
     *result = resbuf;
 
     return 0;
@@ -272,8 +285,10 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
 int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buflen, struct group **result)
 {
     const char delim = ':';
+    char *buff_end = NULL;
+    bool got = false;
 
-    if (stream == NULL || resbuf == NULL || buffer == NULL) {
+    if (stream == NULL || resbuf == NULL || buffer == NULL || result == NULL) {
         ERROR("Group obj, params is NULL.");
         return -1;
     }
@@ -289,29 +304,35 @@ int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buf
     }
 
     __fsetlocking(stream, FSETLOCKING_BYCALLER);
-    buffer[buflen - 1] = '\0';
 
     if (feof(stream)) {
         *result = NULL;
         return ENOENT;
     }
+    buff_end = buffer + buflen - 1;
 
-    while (fgets(buffer, buflen, stream) != NULL) {
+    while ((*buff_end = '\xff') && fgets(buffer, buflen, stream) != NULL) {
         (void)util_trim_space(buffer);
         if (buffer[0] == '\0' || buffer[0] == '#' || strlen(buffer) < 1) {
             continue;
         }
 
         if (parse_line_gr(delim, buffer, buflen, resbuf) == 0) {
+            got = true;
             break;
         }
 
-        if (buffer[buflen - 1] != '\0') {
+        if (*buff_end != '\xff') {
             *result = NULL;
             return ERANGE;
         }
     }
-    *result = resbuf;
 
+    if (!got) {
+        *result = NULL;
+        return ERANGE;
+    }
+
+    *result = resbuf;
     return 0;
 }
