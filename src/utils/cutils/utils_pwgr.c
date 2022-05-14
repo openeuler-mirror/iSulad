@@ -29,96 +29,82 @@
 
 static int hold_int(const char delim, bool required, char **src, unsigned int *dst)
 {
-    long long res = 0;
-    char *walker = *src;
+    unsigned long long int res = 0;
     char *err_str = NULL;
 
+    // ensure *src not a empty string
     if (**src == '\0') {
         ERROR("Empty subject on given entrie is not allowed.");
         return -1;
     }
 
-    while (*walker != delim) {
-        if (*walker == '\0') {
-            break;
-        }
-        ++walker;
-    }
-
-    if (*walker == **src) {
-        if (required) { // deafult 0 while required full content but integer part is missing
-            *dst = 0;
-            *src = walker + 1;
-            return 0;
-        }
-        ERROR("Integer part is missing.");
-        ++(*src);
-        return -1;
-    }
-
-    res = strtoll(*src, &err_str, 0);
+    // covert string to long long
+    res = strtoull(*src, &err_str, 0);
+    // large digit string, return error
     if (errno == ERANGE) {
         ERROR("Parse int from string failed.");
         return -1;
     }
-    if (res < 0) {
-        ERROR("Gid uid shall not be negative.");
+
+    // **src is not a digit
+    if (err_str == *src) {
+        if (!required) {
+            ERROR("Integer part is missing.");
+            return -1;
+        }
+        // if required, just set 0
+        *dst = 0;
+    } else {
+        if (sizeof(void *) > 4 && res > UINT_MAX) { // make sure 64-bit platform behave same as 32-bit
+            res = UINT_MAX;
+        }
+        res = res & UINT_MAX;
+        *dst = (uint32_t)res;
+    }
+
+    // normal case
+    if (*err_str == delim) {
+        err_str++;
+    } else if (*err_str != '\0') {
+        ERROR("Invalid digit string.");
         return -1;
     }
 
-    if (sizeof(void *) > 4 && res > UINT_MAX) { // make sure 64-bit platform behave same as 32-bit
-        res = UINT_MAX;
-    }
-    res = res & UINT_MAX;
-    *dst = (uint32_t)res;
-    *src = err_str + 1; // update src to next valid context in line.
-
+    *src = err_str; // update src to next valid context in line.
     return 0;
 }
 
-static int hold_string(const char delim, char **src, char **dst)
+static void hold_string(const char delim, char **src, char **dst)
 {
-    if (**src == delim) { // if src point to deliminator, content parsing is skiped.
-        *dst = "";
-        *src = *src + 1;
-        return 0;
-    }
-
-    if (**src == '\0') {
-        return 0;
-    }
-
     for (*dst = *src; **src != delim; ++(*src)) {
         if (**src == '\0') {
             break;
         }
     }
+
     if (**src == delim) {
         **src = '\0';
         ++(*src);
     }
-
-    return 0;
 }
 
 static int parse_line_pw(const char delim, char *line, struct passwd *result)
 {
     int ret = 0;
     bool required = false;
+    char *walker = NULL;
 
-    ret = hold_string(delim, &line, &result->pw_name);
-    if (ret != 0) {
-        ERROR("Parse name error.");
-        return ret;
+    walker = strpbrk(line, "\n");
+    if (walker != NULL) {
+        // clear newline char
+        *walker = '\0';
     }
+
+    hold_string(delim, &line, &result->pw_name);
 
     required = (result->pw_name[0] == '+' || result->pw_name[0] == '-') ? true : false;
 
-    ret = hold_string(delim, &line, &result->pw_passwd);
-    if (ret != 0) {
-        ERROR("Parse passwd error.");
-        return ret;
-    }
+    hold_string(delim, &line, &result->pw_passwd);
 
     ret = hold_int(delim, required, &line, &result->pw_uid);
     if (ret != 0) {
@@ -126,31 +112,20 @@ static int parse_line_pw(const char delim, char *line, struct passwd *result)
         ERROR("Parse uid error.");
         return ret;
     }
+
     ret = hold_int(delim, required, &line, &result->pw_gid);
     if (ret != 0) {
         // it's ok to not provide gid
         ERROR("Parse gid error.");
-    }
-
-    ret = hold_string(delim, &line, &result->pw_gecos);
-    if (ret != 0) {
-        ERROR("Parse gecos error.");
         return ret;
     }
 
-    ret = hold_string(delim, &line, &result->pw_dir);
-    if (ret != 0) {
-        ERROR("Parse dir error.");
-        return ret;
-    }
+    hold_string(delim, &line, &result->pw_gecos);
 
-    ret = hold_string(delim, &line, &result->pw_shell);
-    if (ret != 0) {
-        ERROR("Parse shell error.");
-        return ret;
-    }
+    hold_string(delim, &line, &result->pw_dir);
 
-    return ret;
+    result->pw_shell = line;
+    return 0;
 }
 
 static char **hold_string_list(char **line, char *buf_start, char *buf_end, const char terminator)
@@ -158,9 +133,6 @@ static char **hold_string_list(char **line, char *buf_start, char *buf_end, cons
     char **result = NULL;
     char **walker = NULL;
 
-    if (**line == '\0') {
-        return 0;
-    }
     // For ultimate space usage, the blank area from buffer which was allocated from stack is used
     buf_start += __alignof__(char *) - 1;
     // align the starting position of the buffer to use it as a 2d array
@@ -171,42 +143,38 @@ static char **hold_string_list(char **line, char *buf_start, char *buf_end, cons
     walker = result;
 
     for (; walker < (char **)buf_end; ++walker) {
-        (void)util_trim_space(*line);
-        if (hold_string(',', line, walker) != 0) {
-            ERROR("Parse string list error.");
-            return NULL;
+        if (**line == '\0') {
+            return result;
         }
+
+        (void)util_trim_space(*line);
+        hold_string(',', line, walker);
 
         if ((char *)(walker + 2) > buf_end) {
             return NULL;
-        }
-
-        if (**line == '\0') {
-            return result;
         }
     }
 
     return result;
 }
 
-static int parse_line_gr(const char delim, char *line, size_t buflen, struct group *result)
+static int parse_line_gr(const char delim, char *line, char *buffend, struct group *result)
 {
     int ret = 0;
     bool rf = false;
     char *freebuff = line + 1 + strlen(line);
-    char *buffend = line + buflen;
+    char *walker = NULL;
 
-    ret = hold_string(delim, &line, &result->gr_name);
-    if (ret != 0) {
-        ERROR("Parse name error.");
-        return ret;
+    walker = strpbrk(line, "\n");
+    if (walker != NULL) {
+        // clear newline char
+        *walker = '\0';
     }
 
-    ret = hold_string(delim, &line, &result->gr_passwd);
-    if (ret != 0) {
-        ERROR("Parse gecos error.");
-        return ret;
-    }
+    hold_string(delim, &line, &result->gr_name);
+
+    hold_string(delim, &line, &result->gr_passwd);
+
     if (result->gr_name[0] == '+' || result->gr_name[0] == '-') {
         rf = true;
     }
@@ -218,6 +186,10 @@ static int parse_line_gr(const char delim, char *line, size_t buflen, struct gro
     }
 
     result->gr_mem = hold_string_list(&line, freebuff, buffend, ',');
+    if (result->gr_mem == NULL) {
+        ERROR("overflow of buffer.");
+        return -1;
+    }
 
     return 0;
 }
@@ -225,8 +197,11 @@ static int parse_line_gr(const char delim, char *line, size_t buflen, struct gro
 int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t buflen, struct passwd **result)
 {
     const char delim = ':';
+    char *buff_end = NULL;
+    char *walker = NULL;
+    bool got = false;
 
-    if (stream == NULL || resbuf == NULL || buffer == NULL) {
+    if (stream == NULL || resbuf == NULL || buffer == NULL || result == NULL) {
         ERROR("Password obj, params is NULL.");
         return -1;
     }
@@ -242,28 +217,43 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
     }
 
     __fsetlocking(stream, FSETLOCKING_BYCALLER);
-    buffer[buflen - 1] = '\0';
 
-    if (feof(stream)) {
-        *result = NULL;
-        return ENOENT;
-    }
-
-    while (fgets(buffer, buflen, stream) != NULL) {
-        (void)util_trim_space(buffer);
-        if (buffer[0] == '\0' || buffer[0] == '#' || strlen(buffer) < 1) {
-            continue;
+    buff_end = buffer + buflen - 1;
+    while (1) {
+        *buff_end = '\xff';
+        walker = fgets(buffer, buflen, stream);
+        // if get NULL string
+        if (walker == NULL) {
+            *result = NULL;
+            // reach end of file, return error
+            if (feof(stream)) {
+                return ENOENT;
+            }
+            // overflow buffer
+            return ERANGE;
         }
-
-        if (parse_line_pw(delim, buffer, resbuf) == 0) {
-            break;
-        }
-
-        if (buffer[buflen - 1] != '\0') {
+        // just overflow last char in buffer
+        if (*buff_end != '\xff') {
             *result = NULL;
             return ERANGE;
         }
+
+        (void)util_trim_space(buffer);
+        // skip comment line and empty line
+        if (walker[0] == '#' || walker[0] == '\0') {
+            continue;
+        }
+
+        if (parse_line_pw(delim, walker, resbuf) == 0) {
+            got = true;
+            break;
+        }
     }
+    if (!got) {
+        *result = NULL;
+        return ERANGE;
+    }
+
     *result = resbuf;
 
     return 0;
@@ -272,8 +262,11 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
 int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buflen, struct group **result)
 {
     const char delim = ':';
+    char *buff_end = NULL;
+    char *walker = NULL;
+    bool got = false;
 
-    if (stream == NULL || resbuf == NULL || buffer == NULL) {
+    if (stream == NULL || resbuf == NULL || buffer == NULL || result == NULL) {
         ERROR("Group obj, params is NULL.");
         return -1;
     }
@@ -289,29 +282,44 @@ int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buf
     }
 
     __fsetlocking(stream, FSETLOCKING_BYCALLER);
-    buffer[buflen - 1] = '\0';
 
-    if (feof(stream)) {
-        *result = NULL;
-        return ENOENT;
-    }
-
-    while (fgets(buffer, buflen, stream) != NULL) {
-        (void)util_trim_space(buffer);
-        if (buffer[0] == '\0' || buffer[0] == '#' || strlen(buffer) < 1) {
-            continue;
+    buff_end = buffer + buflen - 1;
+    while (1) {
+        *buff_end = '\xff';
+        walker = fgets(buffer, buflen, stream);
+        // if get NULL string
+        if (walker == NULL) {
+            *result = NULL;
+            // reach end of file, return error
+            if (feof(stream)) {
+                return ENOENT;
+            }
+            // overflow buffer
+            return ERANGE;
         }
-
-        if (parse_line_gr(delim, buffer, buflen, resbuf) == 0) {
-            break;
-        }
-
-        if (buffer[buflen - 1] != '\0') {
+        // just overflow last char in buffer
+        if (*buff_end != '\xff') {
             *result = NULL;
             return ERANGE;
         }
-    }
-    *result = resbuf;
 
+        (void)util_trim_space(walker);
+        // skip comment line and empty line
+        if (walker[0] == '#' || walker[0] == '\0') {
+            continue;
+        }
+
+        if (parse_line_gr(delim, walker, buff_end, resbuf) == 0) {
+            got = true;
+            break;
+        }
+    }
+
+    if (!got) {
+        *result = NULL;
+        return ERANGE;
+    }
+
+    *result = resbuf;
     return 0;
 }
