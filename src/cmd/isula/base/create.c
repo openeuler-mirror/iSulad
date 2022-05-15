@@ -2102,11 +2102,6 @@ static int create_check_network(const struct client_arguments *args)
         COMMAND_ERROR("Invalid MAC address '%s'", args->custom_conf.mac_address);
         return EINVALIDARGS;
     }
-
-    if (bridge_network_mode(net_mode) && args->custom_conf.system_container) {
-        COMMAND_ERROR("Cannot set bridge network for system container");
-        return EINVALIDARGS;
-    }
 #endif
 
     return 0;

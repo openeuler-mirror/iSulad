@@ -891,7 +891,7 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
     }
 
 #ifdef ENABLE_NATIVE_NETWORK
-    if (util_native_network_checker(cont->hostconfig->network_mode, cont->hostconfig->system_container)) {
+    if (util_native_network_checker(cont->hostconfig->network_mode)) {
         if (!validate_native_network(cont->hostconfig, cont->network_settings)) {
             ERROR("Invalid native network");
             ret = -1;
@@ -916,7 +916,7 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
     container_state_set_running(cont->state, &pid_info, true);
 
 #ifdef ENABLE_NATIVE_NETWORK
-    if (util_native_network_checker(cont->hostconfig->network_mode, cont->hostconfig->system_container)) {
+    if (util_native_network_checker(cont->hostconfig->network_mode)) {
         // if isolate container with a user namespace, setup network after container running
         // otherwise the network namespace is owned by a wrong user namespace
         if (util_post_setup_network(cont->hostconfig->user_remap) && prepare_native_network(cont) != 0) {
@@ -943,7 +943,7 @@ stop_container:
 #endif
 set_stopped:
 #ifdef ENABLE_NATIVE_NETWORK
-    if (util_native_network_checker(cont->hostconfig->network_mode, cont->hostconfig->system_container)) {
+    if (util_native_network_checker(cont->hostconfig->network_mode)) {
         if (!util_post_setup_network(cont->hostconfig->user_remap) && remove_native_network(cont) != 0) {
             ERROR("Failed to remove cont network");
         }
@@ -1042,7 +1042,7 @@ int clean_container_resource(const char *id, const char *runtime, pid_t pid)
     }
 
 #ifdef ENABLE_NATIVE_NETWORK
-    if (util_native_network_checker(cont->hostconfig->network_mode, cont->hostconfig->system_container)) {
+    if (util_native_network_checker(cont->hostconfig->network_mode)) {
         if (cont->skip_remove_network) {
             WARN("skip remove container %s network when restarting", cont->common_config->id);
         } else if (remove_native_network(cont) != 0) {
@@ -1120,7 +1120,7 @@ static void do_delete_network(container_t *cont)
     }
 
 #ifdef ENABLE_NATIVE_NETWORK
-    if (util_native_network_checker(cont->hostconfig->network_mode, cont->hostconfig->system_container)) {
+    if (util_native_network_checker(cont->hostconfig->network_mode)) {
         if (remove_native_network(cont) != 0) {
             WARN("Failed to remove network when delete container %s, maybe it has been cleaned up", cont->common_config->id);
         }
