@@ -193,8 +193,7 @@ static int handle_get_path_from_bridge(const host_config *host_spec,
                                        const container_network_settings *network_settings,
                                        const char *type, char **dest_path)
 {
-
-    if (host_spec->system_container || util_post_setup_network(host_spec->user_remap)) {
+    if (util_post_setup_network(host_spec->user_remap)) {
         *dest_path = NULL;
         return 0;
     }

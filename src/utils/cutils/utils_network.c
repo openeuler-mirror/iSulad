@@ -850,10 +850,10 @@ bool util_validate_network_name(const char *name)
     return true;
 }
 
-// ignore native network when network_mode != bridge or container is syscontainer
-bool util_native_network_checker(const char *network_mode, const bool system_container)
+// ignore native network when network_mode != bridge
+bool util_native_network_checker(const char *network_mode)
 {
-    return namespace_is_bridge(network_mode) && !system_container;
+    return namespace_is_bridge(network_mode);
 }
 
 bool util_post_setup_network(const char *user_remap)

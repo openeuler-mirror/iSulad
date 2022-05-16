@@ -1193,7 +1193,7 @@ container_network_settings *generate_network_settings(const host_config *host_co
     }
 
 #ifdef ENABLE_NATIVE_NETWORK
-    if (util_native_network_checker(host_config->network_mode, host_config->system_container)) {
+    if (util_native_network_checker(host_config->network_mode)) {
         if (!verify_bridge_config((const char **)host_config->bridge_network, host_config->bridge_network_len)) {
             ERROR("Invalid bridge config");
             goto err_out;
