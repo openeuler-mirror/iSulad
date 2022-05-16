@@ -1,7 +1,7 @@
-From 88596185a48394d9aea122e80a6b6cf86ac216ba Mon Sep 17 00:00:00 2001
+From ef8bec5f8c3d7b60d2d5148f3386f00c3a29ffc2 Mon Sep 17 00:00:00 2001
 From: chegJH <hejunjie10@huawei.com>
 Date: Tue, 10 May 2022 18:06:53 +0800
-Subject: [PATCH] Adapt to bionic libc, improve lcov coverage
+Subject: [PATCH 07/16] Adapt to bionic libc, improve lcov coverage
 
 Signed-off-by: chegJH <hejunjie10@huawei.com>
 ---
@@ -94,5 +94,5 @@ index 1a121f88..1ed8eaa1 100644
          ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr), 0);
          ASSERT_STREQ(gr.gr_name, std::get<0>(testcase[i]).c_str());
 -- 
-2.32.0 (Apple Git-132)
+2.20.1
 

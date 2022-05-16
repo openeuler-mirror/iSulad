@@ -1,7 +1,8 @@
 From 1d768559f42375eb3bbb3ad0de52a6b49535e40c Mon Sep 17 00:00:00 2001
 From: chegJH <hejunjie10@huawei.com>
 Date: Thu, 7 Apr 2022 17:33:06 +0800
-Subject: [PATCH 5/5] Adapt to bionic libc, parser for passwd and group object
+Subject: [PATCH 05/16] Adapt to bionic libc, parser for passwd and group
+ object
 
 Signed-off-by: chegJH <hejunjie10@huawei.com>
 ---
@@ -653,5 +654,5 @@ index 00000000..1a121f88
 +}
 \ No newline at end of file
 -- 
-2.32.0 (Apple Git-132)
+2.20.1
 
