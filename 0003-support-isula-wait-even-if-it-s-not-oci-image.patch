@@ -1,7 +1,7 @@
 From e0c13b23ddee161a6196ca2e0c970704e4bbef0e Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Sun, 24 Apr 2022 14:18:26 +0800
-Subject: [PATCH 3/5] support isula wait even if it's not oci image
+Subject: [PATCH 03/16] support isula wait even if it's not oci image
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
 ---
@@ -26,5 +26,5 @@ index 0e5b845c..2deb862c 100644
          // `logs` sub-command
          "logs", false, cmd_logs_main, g_cmd_logs_desc, NULL, &g_cmd_logs_args
 -- 
-2.32.0 (Apple Git-132)
+2.20.1
 
