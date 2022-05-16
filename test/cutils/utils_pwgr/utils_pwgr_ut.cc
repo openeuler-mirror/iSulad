@@ -44,6 +44,7 @@ TEST(utils_pwgr, test_getpwent_r)
     ASSERT_EQ(util_getpwent_r(f_pw, &pw, NULL, 0, &ppw), -1);
     ASSERT_EQ(util_getpwent_r(f_pw, &pw, invalid_buf, 1, &ppw), -1);
     ASSERT_EQ(util_getpwent_r(f_pw, &pw, buf, sizeof(buf), &ppw_alter), -1);
+    ASSERT_EQ(util_getpwent_r(f_pw, &pw, buf, sizeof(buf), NULL), -1);
 
     while (!feof(f_pw)) {
         (void)getc(f_pw);
@@ -105,6 +106,7 @@ TEST(utils_pwgr, test_getgrent_r)
     ASSERT_EQ(util_getgrent_r(f_gr, &gr, NULL, 0, &pgr), -1);
     ASSERT_EQ(util_getgrent_r(f_gr, &gr, invalid_buf, 1, &pgr), -1);
     ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr_alter), -1);
+    ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), NULL), -1);
 
     while (!feof(f_gr)) {
         (void)getc(f_gr);
