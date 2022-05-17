@@ -1,5 +1,5 @@
 %global _version 2.0.13
-%global _release 4
+%global _release 5
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -18,7 +18,17 @@ Patch0002:  0002-refactor-mount-parse-in-spec-module.patch
 Patch0003:  0003-support-isula-wait-even-if-it-s-not-oci-image.patch
 Patch0004:  0004-add-isula-import-restful-mode.patch
 Patch0005:  0005-Adapt-to-bionic-libc-parser-for-passwd-and-group-obj.patch
-Patch0006:  0006-Adapt-to-bionic-libc-improve-lcov-coverage.patch
+Patch0006:  0006-test-adapt-to-the-enabled-selinux-host-environment.patch
+Patch0007:  0007-Adapt-to-bionic-libc-improve-lcov-coverage.patch
+Patch0008:  0008-fix-cmd-isulad-shim-module-encoding-problem.patch
+Patch0009:  0009-fix-utils-module-encoding-problem.patch
+Patch0010:  0010-clean-the-gRPC-client-module-code.patch
+Patch0011:  0011-remove-redundant-code.patch
+Patch0012:  0012-fix-coding-irregularities-of-entry-module.patch
+Patch0013:  0013-fix-coding-irregularities.patch
+Patch0014:  0014-fix-ut-bug-and-arguments-check.patch
+Patch0015:  0015-refactor-util_getgrent_r-and-util_getpwent_r.patch
+Patch0016:  0016-add-check-result-argument-ut.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -246,13 +256,19 @@ fi
 %endif
 
 %changelog
-* Mon May 10 2022 hejunjie<hejunjie10@huawei.com> - 2.0.13-4
+* Mon May 16 2022 haozi007<liuhao27@huawei.com> - 2.0.13-5
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sync from upstream openEuler/iSulad
+
+* Tue May 10 2022 hejunjie<hejunjie10@huawei.com> - 2.0.13-4
 - Type: enhancement
 - ID: NA
 - SUG: NA
 - DESC: bionic adaptation, increase lcov coverage
 
-* Mon May 5 2022 hejunjie<hejunjie10@huawei.com> - 2.0.13-3
+* Thu May 5 2022 hejunjie<hejunjie10@huawei.com> - 2.0.13-3
 - Type: enhancement
 - ID: NA
 - SUG: NA
