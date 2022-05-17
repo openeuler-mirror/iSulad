@@ -66,6 +66,7 @@ extern "C" {
 
 #define ISULAD_CONFIG SYSCONFDIR_PREFIX"/etc/isulad"
 
+#define ISULAD_DAEMON_LXC_CONTEXTS ISULAD_CONFIG "/container_contexts"
 #define ISULAD_DAEMON_JSON_CONF_FILE ISULAD_CONFIG "/daemon.json"
 #define ISULAD_DAEMON_CONSTANTS_JSON_CONF_FILE ISULAD_CONFIG "/daemon_constants.json"
 

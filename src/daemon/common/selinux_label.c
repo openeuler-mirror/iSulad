@@ -592,7 +592,11 @@ static int container_label(char **process_label, char **file_label)
         return 0;
     }
 
+#ifdef __ANDROID__
+    lxc_path = ISULAD_DAEMON_LXC_CONTEXTS;
+#else
     lxc_path = selinux_lxc_contexts_path();
+#endif
     if (lxc_path == NULL) {
         ERROR("Failed to get selinux lxc contexts path");
         return -1;
