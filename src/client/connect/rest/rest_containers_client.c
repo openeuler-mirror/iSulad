@@ -1439,6 +1439,9 @@ static int unpack_remove_response(const struct parsed_http_message *message, voi
     if (cresponse->errmsg != NULL) {
         delete_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
+    if (cresponse->id != NULL) {
+        delete_response->name = util_strdup_s(cresponse->id);
+    }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
