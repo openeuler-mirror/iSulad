@@ -341,14 +341,12 @@ static int check_volume_element(const char *volume)
     return ret;
 }
 
-static int set_volume_element_options(defs_mount *mount_element, const char **modes)
+static int set_volume_element_options(defs_mount *mount_element, const char **modes, bool *with_rw,
+                                      bool *with_pro, bool *with_label)
 {
     const size_t max_options_len = 4;
     size_t options_len = 0;
     size_t i = 0;
-    bool with_rw = false;
-    bool with_pro = false;
-    bool with_label = false;
 
     mount_element->options = util_common_calloc_s(max_options_len * sizeof(char *));
     if (mount_element->options == NULL) {
@@ -364,22 +362,17 @@ static int set_volume_element_options(defs_mount *mount_element, const char **mo
 
     for (i = 0; i < options_len; i++) {
         if (util_valid_rw_mode(modes[i])) {
-            with_rw = true;
+            *with_rw = true;
             mount_element->options[mount_element->options_len++] = util_strdup_s(modes[i]);
         } else if (util_valid_propagation_mode(modes[i])) {
-            with_pro = true;
+            *with_pro = true;
             mount_element->options[mount_element->options_len++] = util_strdup_s(modes[i]);
         } else if (util_valid_label_mode(modes[i])) {
-            with_label = true;
+            *with_label = true;
             mount_element->options[mount_element->options_len++] = util_strdup_s(modes[i]);
         } else if (util_valid_copy_mode(modes[i])) {
             mount_element->options[mount_element->options_len++] = util_strdup_s(modes[i]);
         }
-    }
-
-    if (append_default_mount_options(mount_element, with_rw, with_pro, with_label) != 0) {
-        ERROR("Failed to append default mount options");
-        return -1;
     }
 
     return 0;
@@ -388,6 +381,9 @@ static int set_volume_element_options(defs_mount *mount_element, const char **mo
 defs_mount *parse_volume(const char *volume)
 {
     int ret = 0;
+    bool with_rw = false;
+    bool with_pro = false;
+    bool with_label = false;
     defs_mount *mount_element = NULL;
     char **modes = NULL;
     char path[PATH_MAX] = { 0x00 };
@@ -437,7 +433,7 @@ defs_mount *parse_volume(const char *volume)
         }
     }
 
-    ret = set_volume_element_options(mount_element, (const char **)modes);
+    ret = set_volume_element_options(mount_element, (const char **)modes, &with_rw, &with_pro, &with_label);
     if (ret != 0) {
         ERROR("Failed to set volume element options");
         goto free_out;
@@ -446,6 +442,12 @@ defs_mount *parse_volume(const char *volume)
     ret = check_mount_element(volume, mount_element);
     if (ret != 0) {
         ERROR("Invalid mount element");
+        goto free_out;
+    }
+
+    ret = append_default_mount_options(mount_element, with_rw, with_pro, with_label);
+    if (ret != 0) {
+        ERROR("Failed to append default mount options");
         goto free_out;
     }
 
