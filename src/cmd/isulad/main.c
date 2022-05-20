@@ -1185,7 +1185,7 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
         goto out;
     }
 
-    if (util_mkdir_p(args->json_confs->state, DEFAULT_SECURE_FILE_MODE) != 0) {
+    if (util_mkdir_p(args->json_confs->state, DEFAULT_SECURE_DIRECTORY_MODE) != 0) {
         ERROR("Unable to create state directory %s.", args->json_confs->state);
         ret = -1;
         goto out;
