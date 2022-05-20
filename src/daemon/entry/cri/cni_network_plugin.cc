@@ -334,6 +334,10 @@ static void InsertPortmappingIntoAdaptorAnnotations(const std::map<std::string, 
         cni_pms->items[i++] = elem;
         cni_pms->len += 1;
     }
+    
+    if(cni_pms->len <= 0)
+        return;
+
     tmpVal = cni_anno_port_mappings_container_generate_json(cni_pms, nullptr, &jerr);
     if (network_module_insert_portmapping(tmpVal, config) != 0) {
         err.SetError("add portmappings failed");
