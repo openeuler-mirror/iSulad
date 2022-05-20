@@ -1,4 +1,5 @@
 root:x:b:0:
+root:x:99999999999999999999999999999999999999:0:root:/root:/bin/bash
 root:x:0:1a:root:/root:/bin/bash
 root:x:0:a2:root:/root:/bin/bash
 root:x:0:0:root:/root:/bin/bash
