@@ -38,10 +38,10 @@ static int hold_int(const char delim, bool required, char **src, unsigned int *d
         return -1;
     }
 
+    errno = 0;
     // covert string to long long
     res = strtoull(*src, &err_str, 0);
-    // large digit string, return error
-    if (errno == ERANGE) {
+    if (errno != 0 && errno != ERANGE) {
         ERROR("Parse int from string failed.");
         return -1;
     }
