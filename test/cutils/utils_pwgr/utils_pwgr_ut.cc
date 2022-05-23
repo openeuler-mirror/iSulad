@@ -31,6 +31,7 @@ TEST(utils_pwgr, test_getpwent_r)
     char small_buf[10] = { 0 };
 
     std::vector<std::tuple<std::string, std::string, int, int, std::string, std::string, std::string>> testcase = {
+        std::make_tuple("root", "x", 4294967295, 0, "root", "/root", "/bin/bash"),
         std::make_tuple("root", "x", 0, 0, "root", "/root", "/bin/bash"),
         std::make_tuple("abin", "x", 1, 1, "bin", "/bin", "/sbin/nologin"),
         std::make_tuple("bbin", "x", 4294967295, 1, "bin", "/bin", "/sbin/nologin"),
@@ -87,7 +88,7 @@ TEST(utils_pwgr, test_getgrent_r)
     size_t i = 0;
     size_t j = 0;
     std::vector<std::vector<std::string>> string_list{
-        {}, {}, {},
+        {}, {}, {}, {},
         {"a", "list", "of", "users"},
         {"are", "split", "by", "comma"},
         {"root", "john", "boob", "jason"}
@@ -95,6 +96,7 @@ TEST(utils_pwgr, test_getgrent_r)
 
     std::vector<std::tuple<std::string, std::string, int>> testcase = {
         std::make_tuple("root", "x", 0),
+        std::make_tuple("root", "x", 4294967295),
         std::make_tuple("-adm", "x", 4),
         std::make_tuple("+adm", "x", 4),
         std::make_tuple("adm", "x", 4),

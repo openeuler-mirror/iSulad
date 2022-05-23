@@ -1,5 +1,8 @@
 root:x:a
 root:x:0:
+root:x:a1:
+root:x:9999999999999999999999999999999:
+root:x:1a:
 #bin:x:1:
 
 -adm:x:4:
