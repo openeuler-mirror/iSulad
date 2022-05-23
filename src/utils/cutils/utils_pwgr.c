@@ -38,10 +38,10 @@ static int hold_int(const char delim, bool required, char **src, unsigned int *d
         return -1;
     }
 
+    errno = 0;
     // covert string to long long
     res = strtoull(*src, &err_str, 0);
-    // large digit string, return error
-    if (errno == ERANGE) {
+    if (errno != 0 && errno != ERANGE) {
         ERROR("Parse int from string failed.");
         return -1;
     }
@@ -200,6 +200,7 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
     char *buff_end = NULL;
     char *walker = NULL;
     bool got = false;
+    int ret = 0;
 
     if (stream == NULL || resbuf == NULL || buffer == NULL || result == NULL) {
         ERROR("Password obj, params is NULL.");
@@ -207,7 +208,7 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
     }
 
     if (buflen <= 1) {
-        ERROR("Inadiquate buffer length was given.");
+        ERROR("Inadequate buffer length was given.");
         return -1;
     }
 
@@ -216,26 +217,29 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
         return -1;
     }
 
-    __fsetlocking(stream, FSETLOCKING_BYCALLER);
-
     buff_end = buffer + buflen - 1;
+    flockfile(stream);
+
     while (1) {
         *buff_end = '\xff';
-        walker = fgets(buffer, buflen, stream);
+        walker = fgets_unlocked(buffer, buflen, stream);
         // if get NULL string
         if (walker == NULL) {
             *result = NULL;
             // reach end of file, return error
             if (feof(stream)) {
-                return ENOENT;
+                ret = ENOENT;
+                goto out;
             }
             // overflow buffer
-            return ERANGE;
+            ret = ERANGE;
+            goto out;
         }
         // just overflow last char in buffer
         if (*buff_end != '\xff') {
             *result = NULL;
-            return ERANGE;
+            ret = ERANGE;
+            goto out;
         }
 
         (void)util_trim_space(buffer);
@@ -251,12 +255,15 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
     }
     if (!got) {
         *result = NULL;
-        return ERANGE;
+        ret = ERANGE;
+        goto out;
     }
 
     *result = resbuf;
-
-    return 0;
+    ret = 0;
+out:
+    funlockfile(stream);
+    return ret;
 }
 
 int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buflen, struct group **result)
@@ -265,6 +272,7 @@ int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buf
     char *buff_end = NULL;
     char *walker = NULL;
     bool got = false;
+    int ret = 0;
 
     if (stream == NULL || resbuf == NULL || buffer == NULL || result == NULL) {
         ERROR("Group obj, params is NULL.");
@@ -272,7 +280,7 @@ int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buf
     }
 
     if (buflen <= 1) {
-        ERROR("Inadiquate buffer length was given.");
+        ERROR("Inadequate buffer length was given.");
         return -1;
     }
 
@@ -281,26 +289,29 @@ int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buf
         return -1;
     }
 
-    __fsetlocking(stream, FSETLOCKING_BYCALLER);
-
+    flockfile(stream);
     buff_end = buffer + buflen - 1;
+
     while (1) {
         *buff_end = '\xff';
-        walker = fgets(buffer, buflen, stream);
+        walker = fgets_unlocked(buffer, buflen, stream);
         // if get NULL string
         if (walker == NULL) {
             *result = NULL;
             // reach end of file, return error
             if (feof(stream)) {
-                return ENOENT;
+                ret = ENOENT;
+                goto out;
             }
             // overflow buffer
-            return ERANGE;
+            ret = ERANGE;
+            goto out;
         }
         // just overflow last char in buffer
         if (*buff_end != '\xff') {
             *result = NULL;
-            return ERANGE;
+            ret = ERANGE;
+            goto out;
         }
 
         (void)util_trim_space(walker);
@@ -317,9 +328,13 @@ int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buf
 
     if (!got) {
         *result = NULL;
-        return ERANGE;
+        ret = ERANGE;
+        goto out;
     }
 
     *result = resbuf;
-    return 0;
+    ret = 0;
+out:
+    funlockfile(stream);
+    return ret;
 }

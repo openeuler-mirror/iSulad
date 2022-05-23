@@ -328,7 +328,7 @@ static int get_plugin_dir(char *plugin_dir)
         goto failed;
     }
 
-    ret = util_mkdir_p(plugin_dir, DEFAULT_SECURE_FILE_MODE);
+    ret = util_mkdir_p(plugin_dir, DEFAULT_SECURE_DIRECTORY_MODE);
     if (ret < 0) {
         goto failed;
     }
