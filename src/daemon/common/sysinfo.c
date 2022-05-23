@@ -1302,6 +1302,21 @@ out:
     return ret;
 }
 
+#ifdef __ANDROID__
+static bool cgroup2_no_controller() {
+    char *controllers_str = NULL;
+
+    controllers_str = util_read_content_from_file(CGROUP2_CONTROLLERS_PATH);
+    if (controllers_str == NULL || strlen(controllers_str) == 0 || strcmp(controllers_str, "\n") == 0) {
+        free(controllers_str);
+        return true;
+    }
+
+    free(controllers_str);
+    return false;
+}
+#endif
+
 static int make_sure_cgroup2_isulad_path_exist()
 {
     int ret = 0;
@@ -1313,6 +1328,13 @@ static int make_sure_cgroup2_isulad_path_exist()
     if (cgroup2_enable_all() != 0) {
         return -1;
     }
+
+#ifdef __ANDROID__
+    if (cgroup2_no_controller()) {
+        DEBUG("no cgroup controller found");
+        return 0;
+    }
+#endif
 
     ret = mkdir(CGROUP_ISULAD_PATH, DEFAULT_CGROUP_DIR_MODE);
     if (ret != 0 && (errno != EEXIST || !util_dir_exists(CGROUP_ISULAD_PATH))) {
