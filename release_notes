@@ -1,3 +1,25 @@
+2022-05-23 root release 2.0.14
+    - !1432 sync from master branch From: @duguhaotian Reviewed-by: @wangfengtu, @jingwoo Signed-off-by: @jingwoo
+    - !1422 sync two patches from master Merge pull request !1422 from wangfengtu/sync
+    - !1419 add check result argument ut From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1413 fix ut bug and arguments check From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1411 fix coding irregularities Merge pull request !1411 from JingWoo/My2022-stable
+    - !1410 remove redundant code Merge pull request !1410 from JingWoo/My2022-stable
+    - !1409 clean the gRPC client module code Merge pull request !1409 from JingWoo/My2022-stable
+    - !1408 fix utils module encoding problem Merge pull request !1408 from JingWoo/My2022-stable
+    - !1407 fix cmd/isulad-shim module encoding problem Merge pull request !1407 from JingWoo/My2022-stable
+    - !1405 Adapt to bionic libc, improve lcov coverage Merge pull request !1405 from chegJH/stable-v2.0.x
+    - !1403 adapt to the enabled selinux host environment Merge pull request !1403 from JingWoo/My2022-stable
+    - !1402 Adopt bionic libc, parser for passwd and group ojbect Merge pull request !1402 from chegJH/stable-v2.0.x
+    - !1400 add isula import restful mode to stable branch Merge pull request !1400 from czrz/stable-v2.0.x
+    - !1398 support isula wait even if it's not oci image From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1396 refactor mount parse in spec module Merge pull request !1396 from JingWoo/My2022-stable
+    - !1395 cleancode: http request Merge pull request !1395 from zhangxiaoyu/stable-v2.0.x
+
+    dev stats:
+      - 60 files changed, 1223 insertions(+), 358 deletions(-)
+      - contributors: wujing, haozi007, WangFengTu, chegJH, chengzrz, liyanshui, zhangxiaoyu
+
 2022-04-18 root release 2.0.13
     - !1389 sync from master branch From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
     - !1386 sync from master branch Merge pull request !1386 from haozi007/stable-v2.0.x
