@@ -1,5 +1,5 @@
 %global _version 2.0.14
-%global _release 1
+%global _release 2
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -13,6 +13,7 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 
+Patch0001:  0001-do-not-mkdir-of-isulad-if-no-controller-found.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -239,6 +240,12 @@ fi
 %endif
 
 %changelog
+* Tue May 24 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.14-2
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: do not mkdir of isulad if no controller found
+
 * Mon May 23 2022 haozi007 <liuhao27@huawei.com> - 2.0.14-1
 - Type: enhancement
 - ID: NA
