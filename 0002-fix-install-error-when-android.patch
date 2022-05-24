@@ -1,0 +1,46 @@
+From 426a282802b8b81c66e6857857a745583f816c0a Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Tue, 24 May 2022 16:51:02 +0800
+Subject: [PATCH] fix install error when android
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/common/constants.h                                  | 2 +-
+ src/contrib/config/{lxc_contexts => container_contexts} | 0
+ src/daemon/common/selinux_label.c                       | 2 +-
+ 3 files changed, 2 insertions(+), 2 deletions(-)
+ rename src/contrib/config/{lxc_contexts => container_contexts} (100%)
+
+diff --git a/src/common/constants.h b/src/common/constants.h
+index 56c88d46..60fb9abe 100644
+--- a/src/common/constants.h
++++ b/src/common/constants.h
+@@ -66,7 +66,7 @@ extern "C" {
+ 
+ #define ISULAD_CONFIG SYSCONFDIR_PREFIX"/etc/isulad"
+ 
+-#define ISULAD_DAEMON_LXC_CONTEXTS ISULAD_CONFIG "/container_contexts"
++#define ISULAD_DAEMON_CONTAINER_CONTEXTS ISULAD_CONFIG "/container_contexts"
+ #define ISULAD_DAEMON_JSON_CONF_FILE ISULAD_CONFIG "/daemon.json"
+ #define ISULAD_DAEMON_CONSTANTS_JSON_CONF_FILE ISULAD_CONFIG "/daemon_constants.json"
+ 
+diff --git a/src/contrib/config/lxc_contexts b/src/contrib/config/container_contexts
+similarity index 100%
+rename from src/contrib/config/lxc_contexts
+rename to src/contrib/config/container_contexts
+diff --git a/src/daemon/common/selinux_label.c b/src/daemon/common/selinux_label.c
+index 9efd16e9..5468111e 100644
+--- a/src/daemon/common/selinux_label.c
++++ b/src/daemon/common/selinux_label.c
+@@ -593,7 +593,7 @@ static int container_label(char **process_label, char **file_label)
+     }
+ 
+ #ifdef __ANDROID__
+-    lxc_path = ISULAD_DAEMON_LXC_CONTEXTS;
++    lxc_path = ISULAD_DAEMON_CONTAINER_CONTEXTS;
+ #else
+     lxc_path = selinux_lxc_contexts_path();
+ #endif
+-- 
+2.25.1
+
