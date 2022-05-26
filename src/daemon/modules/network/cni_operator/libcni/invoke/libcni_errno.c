@@ -14,16 +14,7 @@
  **********************************************************************************/
 #define _GNU_SOURCE
 #include "libcni_errno.h"
-#include <stdio.h>
-#include <unistd.h>
-#include <errno.h>
 #include <string.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <linux/limits.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
 
 #include "isula_libutils/log.h"
 
@@ -41,8 +32,8 @@ const char * const g_INVOKE_ERR_MSGS[] = {
 
 const char *get_invoke_err_msg(int errcode)
 {
-    if (errcode <= INK_ERR_SUCCESS) {
-        return g_INVOKE_ERR_MSGS[errcode - (INK_ERR_MIN)];
+    if (errcode > (int)INK_ERR_MIN && errcode <= (int)INK_ERR_SUCCESS) {
+        return g_INVOKE_ERR_MSGS[errcode - (int)INK_ERR_MIN];
     }
     return strerror(errcode);
 }
@@ -81,12 +72,12 @@ const char * const g_CNI_CUSTOM_ERR_MSGS[] = {
 
 const char *get_cni_err_msg(unsigned int errcode)
 {
-    if (errcode < CNI_ERR_MAX) {
+    if (errcode < (unsigned int)CNI_ERR_MAX) {
         return g_CNI_WELL_KNOWN_ERR_MSGS[errcode];
     }
 
-    if (errcode > CUSTOM_ERR_MIN && errcode < CUSTOM_ERR_MAX) {
-        return g_CNI_CUSTOM_ERR_MSGS[errcode - CUSTOM_ERR_MIN];
+    if (errcode >= (unsigned int)CUSTOM_ERR_MIN && errcode < (unsigned int)CUSTOM_ERR_MAX) {
+        return g_CNI_CUSTOM_ERR_MSGS[errcode - (unsigned int)CUSTOM_ERR_MIN];
     }
 
     return UNDEFINE_ERR;
