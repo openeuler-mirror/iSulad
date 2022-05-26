@@ -17,6 +17,8 @@
 current_dir=$(cd $(dirname $0) && pwd)
 FUZZ_OPTION="${current_dir}/corpus -dict=${current_dir}/dict/im_oci_image_exist_fuzz.dict -runs=1000000 -max_total_time=3600"
 VOLUME_FUZZ_OPTION="${current_dir}/corpus -dict=${current_dir}/dict/volume_fuzz.dict -runs=1000000 -max_total_time=3600"
+PW_FUZZ_OPTION="${current_dir}/corpus -dict=${current_dir}/dict/pw_fuzz.dict -runs=30000000 -max_total_time=10800"
+GR_FUZZ_OPTION="${current_dir}/corpus -dict=${current_dir}/dict/gr_fuzz.dict -runs=30000000 -max_total_time=10800"
 
 find /usr -name "libclang_rt.fuzzer-$(uname -m)*"
 if [ $? != 0 ];then
@@ -34,6 +36,8 @@ ${current_dir}/im_config_image_exist_fuzz ${FUZZ_OPTION} -artifact_prefix=im_con
 ${current_dir}/im_get_image_count_fuzz ${FUZZ_OPTION} -artifact_prefix=im_get_image_count_fuzz-
 ${current_dir}/test_volume_mount_spec_fuzz ${VOLUME_FUZZ_OPTION} -artifact_prefix=test_volume_mount_spec_fuzz-
 ${current_dir}/test_volume_parse_volume_fuzz ${VOLUME_FUZZ_OPTION} -artifact_prefix=test_volume_parse_volume_fuzz-
+${current_dir}/test_pw_obj_parser_fuzz ${PW_FUZZ_OPTION} -artifact_prefix=test_pw_obj_parser_fuzz-
+${current_dir}/test_gr_obj_parser_fuzz ${GR_FUZZ_OPTION} -artifact_prefix=test_gr_obj_parser_fuzz-
 
 # 查找crash文件
 
