@@ -37,5 +37,5 @@ struct oci_image_module_data *get_oci_image_data(void)
     if (g_oci_image_mock != nullptr) {
         return g_oci_image_mock->GetOciImageData();
     }
-    return { 0 };
+    return nullptr;
 }
