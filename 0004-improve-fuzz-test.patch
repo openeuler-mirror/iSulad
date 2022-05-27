@@ -1,0 +1,119 @@
+From 31a92265a6bd29dc8f98179947406f1bb56ac5a8 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Thu, 26 May 2022 13:53:09 +0100
+Subject: [PATCH 4/4] improve fuzz test
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ test/fuzz/CMakeLists.txt             | 50 ++++++++++++++--------------
+ test/fuzz/test_gr_obj_parser_fuzz.cc |  2 +-
+ test/fuzz/test_pw_obj_parser_fuzz.cc |  2 +-
+ test/mocks/oci_image_mock.cc         |  2 +-
+ 4 files changed, 28 insertions(+), 28 deletions(-)
+
+diff --git a/test/fuzz/CMakeLists.txt b/test/fuzz/CMakeLists.txt
+index 555c3813..8561b495 100644
+--- a/test/fuzz/CMakeLists.txt
++++ b/test/fuzz/CMakeLists.txt
+@@ -1,6 +1,6 @@
+ project(iSulad_UT)
+ 
+-execute_process(COMMAND bash "-c" "find /usr -name *libclang_rt.fuzzer-${CMAKE_HOST_SYSTEM_PROCESSOR}*"
++execute_process(COMMAND bash "-c" "find /usr -name *libclang_rt.fuzzer-${CMAKE_HOST_SYSTEM_PROCESSOR}* | head -1"
+     OUTPUT_VARIABLE LIB_FUZZING_ENGINE
+     OUTPUT_STRIP_TRAILING_WHITESPACE)
+ 
+@@ -69,33 +69,33 @@ add_executable(${EXE4}
+     test_volume_parse_volume_fuzz.cc
+     )
+ add_executable(${EXE5}
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_string.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_array.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_convert.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_verify.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_regex.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_pwgr.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_string.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_array.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_file.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_convert.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_verify.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_regex.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_pwgr.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256/sha256.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/map.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/rb_tree.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
+     test_pw_obj_parser_fuzz.cc
+     )
+ add_executable(${EXE6}
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_string.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_array.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_convert.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_verify.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_regex.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_pwgr.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_string.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_array.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_file.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_convert.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_verify.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_regex.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_pwgr.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256/sha256.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/map.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/rb_tree.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
+     test_gr_obj_parser_fuzz.cc
+     )
+ 
+diff --git a/test/fuzz/test_gr_obj_parser_fuzz.cc b/test/fuzz/test_gr_obj_parser_fuzz.cc
+index 01db0cf2..d43d153d 100644
+--- a/test/fuzz/test_gr_obj_parser_fuzz.cc
++++ b/test/fuzz/test_gr_obj_parser_fuzz.cc
+@@ -1,5 +1,5 @@
+ /******************************************************************************
+- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
+  * iSulad licensed under the Mulan PSL v2.
+  * You can use this software according to the terms and conditions of the Mulan PSL v2.
+  * You may obtain a copy of Mulan PSL v2 at:
+diff --git a/test/fuzz/test_pw_obj_parser_fuzz.cc b/test/fuzz/test_pw_obj_parser_fuzz.cc
+index 3a2195c6..cf09f576 100644
+--- a/test/fuzz/test_pw_obj_parser_fuzz.cc
++++ b/test/fuzz/test_pw_obj_parser_fuzz.cc
+@@ -1,5 +1,5 @@
+ /******************************************************************************
+- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
+  * iSulad licensed under the Mulan PSL v2.
+  * You can use this software according to the terms and conditions of the Mulan PSL v2.
+  * You may obtain a copy of Mulan PSL v2 at:
+diff --git a/test/mocks/oci_image_mock.cc b/test/mocks/oci_image_mock.cc
+index 8e975e3b..c333c0dd 100644
+--- a/test/mocks/oci_image_mock.cc
++++ b/test/mocks/oci_image_mock.cc
+@@ -37,5 +37,5 @@ struct oci_image_module_data *get_oci_image_data(void)
+     if (g_oci_image_mock != nullptr) {
+         return g_oci_image_mock->GetOciImageData();
+     }
+-    return { 0 };
++    return nullptr;
+ }
+-- 
+2.20.1
+
