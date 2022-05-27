@@ -1,0 +1,249 @@
+From 9ccb30fa430c7b98ecab4406dabe8498c74db8c3 Mon Sep 17 00:00:00 2001
+From: chegJH <hejunjie10@huawei.com>
+Date: Thu, 12 May 2022 16:40:41 +0800
+Subject: [PATCH 3/4] imp fuzz for pw gr parser
+
+Signed-off-by: chegJH <hejunjie10@huawei.com>
+---
+ test/fuzz/CMakeLists.txt             | 48 ++++++++++++++++++++++++++++
+ test/fuzz/dict/gr_fuzz.dict          |  4 +++
+ test/fuzz/dict/pw_fuzz.dict          |  6 ++++
+ test/fuzz/fuzz.sh                    |  4 +++
+ test/fuzz/test_gr_obj_parser_fuzz.cc | 45 ++++++++++++++++++++++++++
+ test/fuzz/test_pw_obj_parser_fuzz.cc | 46 ++++++++++++++++++++++++++
+ 6 files changed, 153 insertions(+)
+ create mode 100644 test/fuzz/dict/gr_fuzz.dict
+ create mode 100644 test/fuzz/dict/pw_fuzz.dict
+ create mode 100644 test/fuzz/test_gr_obj_parser_fuzz.cc
+ create mode 100644 test/fuzz/test_pw_obj_parser_fuzz.cc
+
+diff --git a/test/fuzz/CMakeLists.txt b/test/fuzz/CMakeLists.txt
+index 61ab47d7..555c3813 100644
+--- a/test/fuzz/CMakeLists.txt
++++ b/test/fuzz/CMakeLists.txt
+@@ -20,6 +20,8 @@ SET(EXE1 im_config_image_exist_fuzz)
+ SET(EXE2 im_get_image_count_fuzz)
+ SET(EXE3 test_volume_mount_spec_fuzz)
+ SET(EXE4 test_volume_parse_volume_fuzz)
++SET(EXE5 test_pw_obj_parser_fuzz)
++SET(EXE6 test_gr_obj_parser_fuzz)
+ add_executable(${EXE0}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/isulad_config.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/daemon_arguments.c
+@@ -66,6 +68,36 @@ add_executable(${EXE4}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/daemon_arguments.c
+     test_volume_parse_volume_fuzz.cc
+     )
++add_executable(${EXE5}
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_string.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_array.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_convert.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_verify.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_regex.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_pwgr.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
++    test_pw_obj_parser_fuzz.cc
++    )
++add_executable(${EXE6}
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_string.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_array.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_convert.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_verify.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_regex.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_pwgr.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
++    test_gr_obj_parser_fuzz.cc
++    )
+ 
+ SET(IMAGE_FUZZ_INCLUDE_DIRS
+     ${GTEST_INCLUDE_DIR}
+@@ -107,6 +139,14 @@ target_include_directories(${EXE4} PUBLIC
+     ${IMAGE_FUZZ_INCLUDE_DIRS}
+     )
+ 
++target_include_directories(${EXE5} PUBLIC
++    ${IMAGE_FUZZ_INCLUDE_DIRS}
++)
++
++target_include_directories(${EXE6} PUBLIC
++    ${IMAGE_FUZZ_INCLUDE_DIRS}
++)
++
+ set_target_properties(${EXE0} PROPERTIES LINKER_LANGUAGE CXX)
+ set_target_properties(${EXE0} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
+ target_link_libraries(${EXE0} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lisulad_img -lgcov)
+@@ -126,3 +166,11 @@ target_link_libraries(${EXE3} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY
+ set_target_properties(${EXE4} PROPERTIES LINKER_LANGUAGE CXX)
+ set_target_properties(${EXE4} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
+ target_link_libraries(${EXE4} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
++
++set_target_properties(${EXE5} PROPERTIES LINKER_LANGUAGE CXX)
++set_target_properties(${EXE5} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
++target_link_libraries(${EXE5} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
++
++set_target_properties(${EXE6} PROPERTIES LINKER_LANGUAGE CXX)
++set_target_properties(${EXE6} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
++target_link_libraries(${EXE6} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
+\ No newline at end of file
+diff --git a/test/fuzz/dict/gr_fuzz.dict b/test/fuzz/dict/gr_fuzz.dict
+new file mode 100644
+index 00000000..0f14d1c3
+--- /dev/null
++++ b/test/fuzz/dict/gr_fuzz.dict
+@@ -0,0 +1,4 @@
++"root:x:0:"
++"+adm:x:4:"
++"adm:x:4:root,john, boob,jason"
++"empty"
+\ No newline at end of file
+diff --git a/test/fuzz/dict/pw_fuzz.dict b/test/fuzz/dict/pw_fuzz.dict
+new file mode 100644
+index 00000000..0b7790a4
+--- /dev/null
++++ b/test/fuzz/dict/pw_fuzz.dict
+@@ -0,0 +1,6 @@
++"root:x:0:0:root:/root:/bin/bash"
++"bin:x:-1:1:bin:/bin:/sbin/nologin"
++"uidonly:x:1::bin:/bin:/sbin/nologin"
++"::::1:1:bin:/bin:/sbin/nologin"
++"-npt:*::::/etc/ntp:/sbin/nologin"
++"empty"
+\ No newline at end of file
+diff --git a/test/fuzz/fuzz.sh b/test/fuzz/fuzz.sh
+index 6c8ce19a..c5b55979 100755
+--- a/test/fuzz/fuzz.sh
++++ b/test/fuzz/fuzz.sh
+@@ -17,6 +17,8 @@
+ current_dir=$(cd $(dirname $0) && pwd)
+ FUZZ_OPTION="${current_dir}/corpus -dict=${current_dir}/dict/im_oci_image_exist_fuzz.dict -runs=1000000 -max_total_time=3600"
+ VOLUME_FUZZ_OPTION="${current_dir}/corpus -dict=${current_dir}/dict/volume_fuzz.dict -runs=1000000 -max_total_time=3600"
++PW_FUZZ_OPTION="${current_dir}/corpus -dict=${current_dir}/dict/pw_fuzz.dict -runs=30000000 -max_total_time=10800"
++GR_FUZZ_OPTION="${current_dir}/corpus -dict=${current_dir}/dict/gr_fuzz.dict -runs=30000000 -max_total_time=10800"
+ 
+ find /usr -name "libclang_rt.fuzzer-$(uname -m)*"
+ if [ $? != 0 ];then
+@@ -34,6 +36,8 @@ ${current_dir}/im_config_image_exist_fuzz ${FUZZ_OPTION} -artifact_prefix=im_con
+ ${current_dir}/im_get_image_count_fuzz ${FUZZ_OPTION} -artifact_prefix=im_get_image_count_fuzz-
+ ${current_dir}/test_volume_mount_spec_fuzz ${VOLUME_FUZZ_OPTION} -artifact_prefix=test_volume_mount_spec_fuzz-
+ ${current_dir}/test_volume_parse_volume_fuzz ${VOLUME_FUZZ_OPTION} -artifact_prefix=test_volume_parse_volume_fuzz-
++${current_dir}/test_pw_obj_parser_fuzz ${PW_FUZZ_OPTION} -artifact_prefix=test_pw_obj_parser_fuzz-
++${current_dir}/test_gr_obj_parser_fuzz ${GR_FUZZ_OPTION} -artifact_prefix=test_gr_obj_parser_fuzz-
+ 
+ # 查找crash文件
+ 
+diff --git a/test/fuzz/test_gr_obj_parser_fuzz.cc b/test/fuzz/test_gr_obj_parser_fuzz.cc
+new file mode 100644
+index 00000000..01db0cf2
+--- /dev/null
++++ b/test/fuzz/test_gr_obj_parser_fuzz.cc
+@@ -0,0 +1,45 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: hejunjie
++ * Create: 2022-05-12
++ * Description: provide fuzz test for parser of group object
++ ******************************************************************************/
++
++#include <cstdio>
++#include <fstream>
++#include <iostream>
++#include <sstream>
++#include <string>
++#include "utils_pwgr.h"
++
++extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
++{
++    std::string testData(reinterpret_cast<const char *>(data), size);
++    std::string fileName("grstreamfile.txt");
++    struct group gr;
++    struct group *pgr = nullptr;
++    char buf[BUFSIZ];
++
++    std::ofstream outFile(fileName);
++    outFile << testData;
++    outFile.close();
++
++    FILE *f = fopen(fileName.c_str(), "r");
++
++    if (testData == "empty") {
++        util_getgrent_r(nullptr, &gr, buf, sizeof(buf), &pgr);
++    } else {
++        util_getgrent_r(f, &gr, buf, sizeof(buf), &pgr);
++    }
++
++    fclose(f);
++    return 0;
++}
+diff --git a/test/fuzz/test_pw_obj_parser_fuzz.cc b/test/fuzz/test_pw_obj_parser_fuzz.cc
+new file mode 100644
+index 00000000..3a2195c6
+--- /dev/null
++++ b/test/fuzz/test_pw_obj_parser_fuzz.cc
+@@ -0,0 +1,46 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: hejunjie
++ * Create: 2022-05-12
++ * Description: provide fuzz test for passwd object parser
++ ******************************************************************************/
++
++#include <cstdio>
++#include <fstream>
++#include <iostream>
++#include <sstream>
++#include <string>
++#include "utils_pwgr.h"
++
++extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
++{
++    std::string testData(reinterpret_cast<const char *>(data), size);
++    std::string fileName("pwstreamfile.txt");
++    struct passwd pw;
++    struct passwd *ppw = nullptr;
++    char buf[BUFSIZ];
++
++    std::ofstream outFile(fileName);
++    outFile << testData;
++    outFile.close();
++
++    FILE *f = fopen(fileName.c_str(), "r");
++
++    if (testData == "empty") {
++        util_getpwent_r(nullptr, &pw, buf, sizeof(buf), &ppw);
++    } else {
++        util_getpwent_r(f, &pw, buf, sizeof(buf), &ppw);
++    }
++
++    fclose(f);
++    return 0;
++
++}
+-- 
+2.20.1
+
