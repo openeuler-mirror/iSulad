@@ -1,6 +1,6 @@
 project(iSulad_UT)
 
-execute_process(COMMAND bash "-c" "find /usr -name *libclang_rt.fuzzer-${CMAKE_HOST_SYSTEM_PROCESSOR}*"
+execute_process(COMMAND bash "-c" "find /usr -name *libclang_rt.fuzzer-${CMAKE_HOST_SYSTEM_PROCESSOR}* | head -1"
     OUTPUT_VARIABLE LIB_FUZZING_ENGINE
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
@@ -69,33 +69,33 @@ add_executable(${EXE4}
     test_volume_parse_volume_fuzz.cc
     )
 add_executable(${EXE5}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_string.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_array.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_convert.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_verify.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_regex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_pwgr.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_string.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_array.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_file.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_convert.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_verify.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_regex.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_pwgr.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256/sha256.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/rb_tree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
     test_pw_obj_parser_fuzz.cc
     )
 add_executable(${EXE6}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_string.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_array.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_convert.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_verify.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_regex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_pwgr.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_string.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_array.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_file.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_convert.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_verify.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_regex.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_pwgr.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256/sha256.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/rb_tree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
     test_gr_obj_parser_fuzz.cc
     )
 
