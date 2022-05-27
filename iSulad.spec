@@ -1,5 +1,5 @@
-%global _version 2.0.13
-%global _release 4
+%global _version 2.0.14
+%global _release 3
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -13,12 +13,8 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 
-Patch0001:  0001-cleancode-http-request.patch
-Patch0002:  0002-refactor-mount-parse-in-spec-module.patch
-Patch0003:  0003-support-isula-wait-even-if-it-s-not-oci-image.patch
-Patch0004:  0004-add-isula-import-restful-mode.patch
-Patch0005:  0005-Adapt-to-bionic-libc-parser-for-passwd-and-group-obj.patch
-Patch0006:  0006-Adapt-to-bionic-libc-improve-lcov-coverage.patch
+Patch0001:  0001-do-not-mkdir-of-isulad-if-no-controller-found.patch
+Patch0002:  0002-fix-install-error-when-android.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -245,13 +241,37 @@ fi
 %endif
 
 %changelog
-* Mon May 10 2022 hejunjie<hejunjie10@huawei.com> - 2.0.13-4
+* Tue May 24 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.14-3
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: fix install error when android
+
+* Tue May 24 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.14-2
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: do not mkdir of isulad if no controller found
+
+* Mon May 23 2022 haozi007 <liuhao27@huawei.com> - 2.0.14-1
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: update version to v2.0.14
+
+* Mon May 16 2022 haozi007<liuhao27@huawei.com> - 2.0.13-5
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sync from upstream openEuler/iSulad
+
+* Tue May 10 2022 hejunjie<hejunjie10@huawei.com> - 2.0.13-4
 - Type: enhancement
 - ID: NA
 - SUG: NA
 - DESC: bionic adaptation, increase lcov coverage
 
-* Mon May 5 2022 hejunjie<hejunjie10@huawei.com> - 2.0.13-3
+* Thu May 5 2022 hejunjie<hejunjie10@huawei.com> - 2.0.13-3
 - Type: enhancement
 - ID: NA
 - SUG: NA
