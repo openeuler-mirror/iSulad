@@ -142,6 +142,8 @@ extern "C" {
 
 /* RUNPATH is defined by -DRUNPATH=$value when execute cmake, default is "/var/run" */
 #define CLIENT_RUNDIR RUNPATH"/isula"
+#define SCMP_ARCH_X86_64 "SCMP_ARCH_X86_64"
+#define SCMP_ARCH_AARCH64 "SCMP_ARCH_AARCH64"
 
 typedef enum {
     CONTAINER_STATUS_UNKNOWN = 0,

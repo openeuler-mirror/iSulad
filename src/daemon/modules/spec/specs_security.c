@@ -457,43 +457,121 @@ static bool meet_filtering_rules(const docker_seccomp *seccomp, const docker_sec
     return meet_include_arch && meet_include_cap && meet_exclude_arch && meet_exclude_cap;
 }
 
-static size_t docker_seccomp_arches_count(const docker_seccomp *docker_seccomp_spec)
+static size_t docker_seccomp_arches_count(const char* seccomp_architecture, const docker_seccomp *docker_seccomp_spec)
 {
     size_t count = 0;
     size_t i = 0;
-    for (i = 0; i < docker_seccomp_spec->arch_map_len; i++) {
-        count += docker_seccomp_spec->arch_map[i]->sub_architectures_len + 1;
+
+    if (seccomp_architecture == NULL) {
+        ERROR("Invalid input seccomp architecture");
+        return -1;
     }
+
+    for (i = 0; i < docker_seccomp_spec->arch_map_len; ++i) {
+        if (docker_seccomp_spec->arch_map[i] == NULL ||  docker_seccomp_spec->arch_map[i]->architecture == NULL) {
+            continue;
+        }
+        if (strcmp(seccomp_architecture, docker_seccomp_spec->arch_map[i]->architecture) == 0) {
+            count = docker_seccomp_spec->arch_map[i]->sub_architectures_len + 1;
+            break;
+        }
+    }
+
+    if (count == 0) {
+        ERROR("seccomp architecture not found");
+        count = -1;
+    }
+
     return count;
 }
 
-static int dup_architectures_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
+static int dup_architectures_to_oci_spec(const char* seccomp_architecture, const docker_seccomp *docker_seccomp_spec,
                                          oci_runtime_config_linux_seccomp *oci_seccomp_spec)
 {
+    size_t i = 0;
+    size_t j = 0;
     size_t arch_size = 0;
 
-    arch_size = docker_seccomp_arches_count(docker_seccomp_spec);
-    if (arch_size != 0) {
-        size_t i;
-        size_t j;
-        if (arch_size > (SIZE_MAX / sizeof(char *))) {
-            return -1;
+    if (seccomp_architecture == NULL) {
+        oci_seccomp_spec->architectures_len = 0;
+        return 0;
+    }
+
+    arch_size = docker_seccomp_arches_count(seccomp_architecture, docker_seccomp_spec);
+    if (arch_size < 0) {
+        ERROR("Failed to get arches count from docker seccomp spec");
+        return -1;
+    }
+
+    oci_seccomp_spec->architectures = util_common_calloc_s(arch_size * sizeof(char *));
+    if (oci_seccomp_spec->architectures == NULL) {
+        ERROR("Failed to calloc memory for architectures in seccomp spec");
+        return -1;
+    }
+
+    for (i = 0; i < docker_seccomp_spec->arch_map_len; ++i) {
+        if (docker_seccomp_spec->arch_map[i] == NULL || docker_seccomp_spec->arch_map[i]->architecture == NULL) {
+            continue;
         }
-        oci_seccomp_spec->architectures = util_common_calloc_s(arch_size * sizeof(char *));
-        if (oci_seccomp_spec->architectures == NULL) {
-            return -1;
-        }
-        for (i = 0; i < docker_seccomp_spec->arch_map_len; i++) {
+        if (strcmp(seccomp_architecture, docker_seccomp_spec->arch_map[i]->architecture) == 0) {
             oci_seccomp_spec->architectures[oci_seccomp_spec->architectures_len++] =
                 util_strdup_s(docker_seccomp_spec->arch_map[i]->architecture);
-            for (j = 0; j < docker_seccomp_spec->arch_map[i]->sub_architectures_len; j++) {
+
+            for (j = 0; j < docker_seccomp_spec->arch_map[i]->sub_architectures_len; ++j) {
                 oci_seccomp_spec->architectures[oci_seccomp_spec->architectures_len++] =
                     util_strdup_s(docker_seccomp_spec->arch_map[i]->sub_architectures[j]);
             }
+            break;
         }
     }
 
     return 0;
+}
+
+// return 0 when normalized_arch has been properly set into seccomp spec
+static int normalized_arch_to_seccomp_arch(const char *host_arch, const docker_seccomp *docker_seccomp_spec,
+                                           oci_runtime_config_linux_seccomp *oci_seccomp_spec)
+{
+    INFO("host architecture is %s", host_arch);
+    // x86 archs
+    if (strcasecmp(host_arch, "386") == 0 || strcasecmp(host_arch, "amd64") == 0) {
+        return dup_architectures_to_oci_spec(SCMP_ARCH_X86_64, docker_seccomp_spec, oci_seccomp_spec);
+    }
+    // arm archs
+    if (strcasecmp(host_arch, "arm64") == 0 || strcasecmp(host_arch, "arm") == 0) {
+        return dup_architectures_to_oci_spec(SCMP_ARCH_AARCH64, docker_seccomp_spec, oci_seccomp_spec);
+    }
+    //other archs
+    return dup_architectures_to_oci_spec(NULL, docker_seccomp_spec, oci_seccomp_spec);
+}
+
+static int load_architectures_into_oci_spec(const docker_seccomp *docker_seccomp_spec,
+                                            oci_runtime_config_linux_seccomp *oci_seccomp_spec)
+{
+    int ret = 0;
+    char *host_os = NULL;
+    char *host_arch = NULL;
+    char *host_variant = NULL;
+
+    ret = util_normalized_host_os_arch(&host_os, &host_arch, &host_variant);
+    if (ret != 0) {
+        ERROR("get host os and arch for import failed");
+        isulad_try_set_error_message("get host os and arch for import failed");
+        goto out;
+    }
+
+    ret = normalized_arch_to_seccomp_arch(host_arch, docker_seccomp_spec, oci_seccomp_spec);
+    if (ret != 0) {
+        ERROR("transfer normalized arch to seccomp arch failed");
+        isulad_try_set_error_message("transfer normalized arch to seccomp arch failed");
+        goto out;
+    }
+
+out:
+    free(host_os);
+    free(host_arch);
+    free(host_variant);
+    return ret;
 }
 
 static int dup_syscall_args_to_oci_spec(const docker_seccomp_syscalls_element *docker_syscall,
@@ -606,7 +684,7 @@ static oci_runtime_config_linux_seccomp *trans_docker_seccomp_to_oci_format(cons
     oci_seccomp_spec->default_action = util_strdup_s(docker_seccomp_spec->default_action);
 
     // architectures
-    if (dup_architectures_to_oci_spec(docker_seccomp_spec, oci_seccomp_spec)) {
+    if (load_architectures_into_oci_spec(docker_seccomp_spec, oci_seccomp_spec)) {
         goto out;
     }
 
