@@ -94,7 +94,7 @@ static void print_version()
 }
 
 /* compare commands */
-int compare_commands(const void *s1, const void *s2)
+static int compare_commands(const void *s1, const void *s2)
 {
     return strcmp((*(const struct command *)s1).name, (*(const struct command *)s2).name);
 }

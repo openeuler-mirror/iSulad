@@ -247,6 +247,11 @@ int containers_store_list(container_t ***out, size_t *size)
     container_t **conts = NULL;
     map_itor *itor = NULL;
 
+    if (out == NULL || size == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
     if (pthread_rwlock_rdlock(&g_containers_store->rwlock) != 0) {
         ERROR("lock memory store failed");
         return -1;
