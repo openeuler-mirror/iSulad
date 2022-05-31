@@ -3255,6 +3255,11 @@ struct status *device_set_status(struct device_set *devset)
     int sem_usz = 0;
     int sem_mni = 0;
 
+    if (devset == NULL) {
+        ERROR("empty arguments");
+        return NULL;
+    }
+
     if (pthread_rwlock_wrlock(&(devset->devmapper_driver_rwlock)) != 0) {
         ERROR("lock devmapper conf failed");
         return NULL;

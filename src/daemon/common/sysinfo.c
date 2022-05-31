@@ -915,6 +915,11 @@ int find_cgroup_mountpoint_and_root(const char *subsystem, char **mountpoint, ch
     size_t length = 0;
     char *pline = NULL;
 
+    if (subsystem == NULL) {
+        ERROR("Empty subsystem");
+        return -1;
+    }
+
     fp = util_fopen("/proc/self/mountinfo", "r");
     if (fp == NULL) {
         ERROR("Failed to open \"/proc/self/mountinfo\"\n");
@@ -1564,6 +1569,10 @@ void free_mounts_info(mountinfo_t **minfos)
 mountinfo_t *find_mount_info(mountinfo_t **minfos, const char *dir)
 {
     mountinfo_t **it = NULL;
+
+    if (dir == NULL) {
+        return NULL;
+    }
 
     for (it = minfos; it && *it; it++) {
         if ((*it)->mountpoint && !strcmp((*it)->mountpoint, dir)) {

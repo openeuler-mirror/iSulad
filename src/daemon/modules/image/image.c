@@ -831,10 +831,16 @@ static int append_images_to_response(im_list_response *response, imagetool_image
 out:
     return ret;
 }
+
 int im_list_images(const im_list_request *ctx, im_list_response **response)
 {
     size_t i;
     imagetool_images_list *images_tmp = NULL;
+
+    if (response == NULL) {
+        ERROR("Empty arguments");
+        return -1;
+    }
 
     *response = util_common_calloc_s(sizeof(im_list_response));
     if (*response == NULL) {

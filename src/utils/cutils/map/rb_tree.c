@@ -133,6 +133,10 @@ void rbtree_clear(rb_tree_t *tree)
 
 void rbtree_free(rb_tree_t *tree)
 {
+    if (tree == NULL) {
+        return;
+    }
+
     rbtree_clear(tree);
     free(tree->nil);
     tree->nil = NULL;
