@@ -253,6 +253,11 @@ int console_fifo_open(const char *fifo_path, int *fdout, int flags)
 {
     int fd = 0;
 
+    if (fifo_path ==NULL || fdout == NULL) {
+        ERROR("Argument must not be NULL");
+        return -1;
+    }
+
     fd = util_open(fifo_path, flags, (mode_t)0);
     if (fd < 0) {
         ERROR("Failed to open fifo %s to send message: %s.", fifo_path, strerror(errno));
@@ -301,6 +306,11 @@ int setup_tios(int fd, struct termios *curr_tios)
 {
     struct termios tmptios;
     int ret = 0;
+
+    if (curr_tios == NULL) {
+        ERROR("Empty terminal io setting");
+        return -1;
+    }
 
     if (!isatty(fd)) {
         ERROR("Specified fd: '%d' is not a tty", fd);

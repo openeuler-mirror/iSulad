@@ -66,7 +66,7 @@ char **filters_args_get(const struct filters_args *filters, const char *field)
     map_t *field_values_map = NULL;
     map_itor *itor = NULL;
 
-    if (filters == NULL || filters->fields == NULL) {
+    if (filters == NULL || filters->fields == NULL || field == NULL) {
         return NULL;
     }
 

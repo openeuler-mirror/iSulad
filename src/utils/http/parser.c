@@ -319,6 +319,11 @@ char *get_header_value(const struct parsed_http_message *m, const char *header)
     int i = 0;
     char *ret = NULL;
 
+    if (m == NULL || header == NULL) {
+        ERROR("Empty arguments");
+        return NULL;
+    }
+
     for (i = 0; i < m->num_headers; i++) {
         if (strcasecmp(m->headers[i][0], header) == 0) {
             ret = (char *)m->headers[i][1];

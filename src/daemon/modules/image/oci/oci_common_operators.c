@@ -459,7 +459,7 @@ int oci_status_image(im_status_request *request, im_status_response *response)
     char *image_ref = NULL;
     char *resolved_name = NULL;
 
-    if (response == NULL) {
+    if (request == NULL || response == NULL) {
         ERROR("Invalid arguments");
         return -1;
     }

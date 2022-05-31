@@ -201,6 +201,10 @@ char **metadata_store_list_hashes(metadata_store_t *meta_store)
     char **hashes_array = NULL;
     map_itor *itor = NULL;
 
+    if (meta_store == NULL) {
+        return NULL;
+    }
+
     if (map_size(meta_store->map) == 0) {
         DEBUG("Metadata store hash list is empty");
         ret = true;

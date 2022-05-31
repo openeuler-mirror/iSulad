@@ -101,7 +101,6 @@ int pm_del_plugin(const plugin_t *plugin);
  */
 int pm_get_plugin(const char *name, plugin_t **rplugin);
 void pm_put_plugin(plugin_t *plugin);
-int pm_get_plugins_nolock(uint64_t pe, plugin_t ***rplugins, size_t *count);
 
 int start_plugin_manager(void);
 int plugin_event_container_pre_create(const char *cid, oci_runtime_spec *ocic);

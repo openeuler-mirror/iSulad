@@ -657,7 +657,7 @@ static int check_conf_default_ulimit(const struct service_arguments *args)
             ret = -1;
             goto out;
         }
-        if (strcmp(ptr->name, type) != 0) {
+        if (type == NULL || strcmp(ptr->name, type) != 0) {
             COMMAND_ERROR("Ulimit Name \"%s\" must same as type \"%s\" in %s", ptr->name, type,
                           ISULAD_DAEMON_JSON_CONF_FILE);
             ret = -1;
