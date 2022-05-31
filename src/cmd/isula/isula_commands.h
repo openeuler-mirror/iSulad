@@ -44,8 +44,6 @@ struct command {
 // NOTE: Command arrays must end in a command with all member is NULL
 const struct command *command_by_name(const struct command *cmds, const char * const name);
 
-int compare_commands(const void *s1, const void *s2);
-
 // Default help command if implementation doesn't prvide one
 int command_default_help(const char * const program_name, struct command *commands, int argc, const char **argv);
 

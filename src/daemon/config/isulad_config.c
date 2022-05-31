@@ -1047,6 +1047,10 @@ int conf_get_isulad_default_ulimit(host_config_ulimits_element ***ulimit)
     size_t i, ulimit_len;
     struct service_arguments *conf = NULL;
 
+    if (ulimit == NULL) {
+        return -1;
+    }
+
     if (isulad_server_conf_rdlock() != 0) {
         return -1;
     }

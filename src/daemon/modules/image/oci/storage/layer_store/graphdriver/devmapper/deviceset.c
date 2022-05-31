@@ -3091,7 +3091,7 @@ int unmount_device(const char *hash, const char *mount_path, struct device_set *
     int ret = 0;
     devmapper_device_info_t *device_info = NULL;
 
-    if (hash == NULL || mount_path == NULL) {
+    if (hash == NULL || mount_path == NULL || devset == NULL) {
         ERROR("devmapper: invalid input params to unmount device");
         return -1;
     }

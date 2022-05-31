@@ -2123,7 +2123,7 @@ int overlay2_get_layer_fs_info(const char *id, const struct graphdriver *driver,
     char *layer_dir = NULL;
     char *layer_diff = NULL;
 
-    if (id == NULL || fs_info == NULL) {
+    if (id == NULL || driver == NULL || fs_info == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }
