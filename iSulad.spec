@@ -1,5 +1,5 @@
 %global _version 2.0.14
-%global _release 4
+%global _release 5
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -17,6 +17,7 @@ Patch0001:  0001-do-not-mkdir-of-isulad-if-no-controller-found.patch
 Patch0002:  0002-fix-install-error-when-android.patch
 Patch0003:  0003-imp-fuzz-for-pw-gr-parser.patch
 Patch0004:  0004-improve-fuzz-test.patch
+Patch0005:  0005-Seccomp-optimization.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -243,6 +244,13 @@ fi
 %endif
 
 %changelog
+* Mon May 30 2022 chengzrz <chengzeruizhi@huawei.com> - 2.0.14-5
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: seccomp optimization
+
+
 * Fri May 27 2022 haozi007 <liuhao27@huawei.com> - 2.0.14-4
 - Type: enhancement
 - ID: NA
