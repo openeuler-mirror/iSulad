@@ -496,6 +496,10 @@ int make_sure_oci_spec_linux_resources(oci_runtime_spec *oci_spec)
 {
     int ret = 0;
 
+    if (oci_spec == NULL) {
+        return -1;
+    }
+
     ret = make_sure_oci_spec_linux(oci_spec);
     if (ret < 0) {
         return -1;

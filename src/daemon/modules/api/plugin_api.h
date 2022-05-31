@@ -68,7 +68,6 @@ plugin_t *plugin_new(const char *name, const char *addr);
 void plugin_get(plugin_t *plugin); /* ref++ */
 void plugin_put(plugin_t *plugin); /* ref-- */
 
-int plugin_set_activated(plugin_t *plugin, bool activated, const char *errmsg);
 int plugin_set_manifest(plugin_t *plugin, const plugin_manifest_t *manifest);
 bool plugin_is_watching(plugin_t *plugin, uint64_t pe);
 

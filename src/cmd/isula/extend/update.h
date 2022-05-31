@@ -114,7 +114,6 @@ extern const char g_cmd_update_desc[];
 extern const char g_cmd_update_usage[];
 extern struct client_arguments g_cmd_update_args;
 int cmd_update_main(int argc, const char **argv);
-int update_checker(const struct client_arguments *args);
 
 #ifdef __cplusplus
 }

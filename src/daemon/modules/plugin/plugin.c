@@ -785,7 +785,7 @@ bad:
     return NULL;
 }
 
-int plugin_set_activated(plugin_t *plugin, bool activated, const char *errmsg)
+static int plugin_set_activated(plugin_t *plugin, bool activated, const char *errmsg)
 {
     plugin_wrlock(plugin);
     plugin->activated = activated;
