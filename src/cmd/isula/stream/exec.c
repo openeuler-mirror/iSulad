@@ -49,6 +49,7 @@ static int fill_exec_request(const struct client_arguments *args, const struct c
 {
     int ret = 0;
     size_t i = 0;
+    size_t tconverted = 0;
     char *new_env = NULL;
 
     request->name = util_strdup_s(args->name);
@@ -67,12 +68,13 @@ static int fill_exec_request(const struct client_arguments *args, const struct c
     request->user = util_strdup_s(args->custom_conf.user);
     request->workdir = util_strdup_s(args->custom_conf.workdir);
 
-    if (util_dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv),
-                                  (size_t *)(&request->argc)) != 0) {
+    ret = util_dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv), &tconverted);
+    if (ret != 0 || tconverted >= INT_MAX) {
         ERROR("Failed to dup args");
         ret = -1;
         goto out;
     }
+    request->argc = (int)tconverted;
 
     /* environment variables */
     for (i = 0; i < util_array_len((const char **)(args->extra_env)); i++) {

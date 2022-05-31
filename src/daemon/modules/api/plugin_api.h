@@ -68,7 +68,6 @@ plugin_t *plugin_new(const char *name, const char *addr);
 void plugin_get(plugin_t *plugin); /* ref++ */
 void plugin_put(plugin_t *plugin); /* ref-- */
 
-int plugin_set_activated(plugin_t *plugin, bool activated, const char *errmsg);
 int plugin_set_manifest(plugin_t *plugin, const plugin_manifest_t *manifest);
 bool plugin_is_watching(plugin_t *plugin, uint64_t pe);
 
@@ -102,7 +101,6 @@ int pm_del_plugin(const plugin_t *plugin);
  */
 int pm_get_plugin(const char *name, plugin_t **rplugin);
 void pm_put_plugin(plugin_t *plugin);
-int pm_get_plugins_nolock(uint64_t pe, plugin_t ***rplugins, size_t *count);
 
 int start_plugin_manager(void);
 int plugin_event_container_pre_create(const char *cid, oci_runtime_spec *ocic);

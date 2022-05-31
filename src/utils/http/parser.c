@@ -47,7 +47,7 @@
 #include "utils.h"
 #include "isula_libutils/log.h"
 
-size_t strlncat(char *dststr, size_t size, const char *srcstr, size_t nsize)
+static size_t strlncat(char *dststr, size_t size, const char *srcstr, size_t nsize)
 {
     size_t ssize, dsize;
 
@@ -318,6 +318,11 @@ char *get_header_value(const struct parsed_http_message *m, const char *header)
 {
     int i = 0;
     char *ret = NULL;
+
+    if (m == NULL || header == NULL) {
+        ERROR("Empty arguments");
+        return NULL;
+    }
 
     for (i = 0; i < m->num_headers; i++) {
         if (strcasecmp(m->headers[i][0], header) == 0) {

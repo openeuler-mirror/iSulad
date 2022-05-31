@@ -58,22 +58,27 @@ static void get_ulimit_split_parts(const char *val, char ***parts, size_t *parts
 static int parse_soft_hard_ulimit(const char *val, char **limitvals, size_t limitvals_len, int64_t *soft, int64_t *hard)
 {
     int ret = 0;
+    long long converted = 0;
+
     // parse soft
-    ret = util_safe_llong(limitvals[0], (long long *)soft);
+    ret = util_safe_llong(limitvals[0], &converted);
     if (ret < 0) {
         COMMAND_ERROR("Invalid ulimit soft value: \"%s\", parse int64 failed: %s", val, strerror(-ret));
         ret = -1;
         goto out;
     }
+    *soft = (int64_t)converted;
 
     // parse hard if exists
     if (limitvals_len > 1) {
-        ret = util_safe_llong(limitvals[1], (long long *)hard);
+        converted = 0;
+        ret = util_safe_llong(limitvals[1], &converted);
         if (ret < 0) {
             COMMAND_ERROR("Invalid ulimit hard value: \"%s\", parse int64 failed: %s", val, strerror(-ret));
             ret = -1;
             goto out;
         }
+        *hard = (int64_t)converted;
 
         if (*soft > *hard) {
             COMMAND_ERROR("Ulimit soft limit must be less than or equal to hard limit: %lld > %lld",

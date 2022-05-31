@@ -29,8 +29,11 @@ void isulad_set_error_message(const char *format, ...)
 {
     int ret = 0;
     char errbuf[BUFSIZ + 1] = { 0 };
-
     va_list argp;
+
+    if (format == NULL) {
+        return;
+    }
     va_start(argp, format);
 
     ret = vsnprintf(errbuf, BUFSIZ, format, argp);

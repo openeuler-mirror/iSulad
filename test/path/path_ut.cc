@@ -311,6 +311,11 @@ TEST(path_ut, test_resolve_path)
     char *resolvedpath = nullptr;
     char *abspath = nullptr;
 
+    rootpath = "/home";
+    path = "/home/dir/test";
+    ASSERT_EQ(util_resolve_path(rootpath.c_str(), path.c_str(), nullptr, &abspath), -1);
+    ASSERT_EQ(util_resolve_path(rootpath.c_str(), path.c_str(), &resolvedpath, nullptr), -1);
+
     ASSERT_EQ(util_resolve_path(nullptr, nullptr, &resolvedpath, &abspath), -1);
     free(resolvedpath);
     resolvedpath = nullptr;

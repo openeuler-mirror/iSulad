@@ -602,7 +602,7 @@ static int container_label(char **process_label, char **file_label)
         return -1;
     }
 
-    file = fopen(lxc_path, "re");
+    file = util_fopen(lxc_path, "re");
     if (file == NULL) {
         ERROR("Failed to open '%s'", lxc_path);
         return -1;
@@ -780,6 +780,11 @@ int init_label(const char **label_opts, size_t label_opts_len, char **dst_proces
 
     if (!selinux_get_enable()) {
         return 0;
+    }
+
+    if (label_opts == NULL || dst_process_label == NULL || dst_mount_label == NULL) {
+        ERROR("Empty arguments");
+        return -1;
     }
 
     if (container_label(&process_label, &mount_label) != 0) {

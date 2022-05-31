@@ -462,7 +462,7 @@ Container_Status container_state_get_status(container_state_t *s)
     return status;
 }
 
-int container_dup_health_check_status(defs_health **dst, const defs_health *src)
+static int container_dup_health_check_status(defs_health **dst, const defs_health *src)
 {
     int ret = 0;
     size_t i = 0;

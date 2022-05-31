@@ -104,6 +104,11 @@ int inspect_container(const struct client_arguments *args, container_inspect **i
     isula_connect_ops *ops = NULL;
     parser_error perr = NULL;
 
+    if (inspect_data == NULL) {
+        COMMAND_ERROR("Empty inspect data");
+        return -1;
+    }
+
     inspect_response = util_common_calloc_s(sizeof(struct isula_inspect_response));
     if (inspect_response == NULL) {
         COMMAND_ERROR("Out of memory");

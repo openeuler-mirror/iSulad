@@ -227,6 +227,10 @@ int conf_get_cgroup_cpu_rt(int64_t *cpu_rt_period, int64_t *cpu_rt_runtime)
 {
     struct service_arguments *conf = NULL;
 
+    if (cpu_rt_period == NULL || cpu_rt_runtime == NULL) {
+        return -1;
+    }
+
     if (isulad_server_conf_rdlock() != 0) {
         return -1;
     }
@@ -776,6 +780,11 @@ out:
 
 int conf_get_daemon_log_config(char **loglevel, char **logdriver, char **engine_log_path)
 {
+    if (loglevel == NULL || logdriver == NULL || engine_log_path == NULL) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
     *loglevel = conf_get_isulad_loglevel();
     if (*loglevel == NULL) {
         ERROR("DoStart: Failed to get log level");
@@ -1068,6 +1077,10 @@ int conf_get_isulad_default_ulimit(host_config_ulimits_element ***ulimit)
     int ret = 0;
     size_t i, ulimit_len;
     struct service_arguments *conf = NULL;
+
+    if (ulimit == NULL) {
+        return -1;
+    }
 
     if (isulad_server_conf_rdlock() != 0) {
         return -1;

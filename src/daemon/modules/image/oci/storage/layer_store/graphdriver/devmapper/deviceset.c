@@ -3019,7 +3019,7 @@ int unmount_device(const char *hash, const char *mount_path, struct device_set *
     int ret = 0;
     devmapper_device_info_t *device_info = NULL;
 
-    if (hash == NULL || mount_path == NULL) {
+    if (hash == NULL || mount_path == NULL || devset == NULL) {
         ERROR("devmapper: invalid input params to unmount device");
         return -1;
     }
@@ -3182,6 +3182,11 @@ struct status *device_set_status(struct device_set *devset)
     uint64_t min_free_data;
     int sem_usz = 0;
     int sem_mni = 0;
+
+    if (devset == NULL) {
+        ERROR("empty arguments");
+        return NULL;
+    }
 
     if (pthread_rwlock_wrlock(&(devset->devmapper_driver_rwlock)) != 0) {
         ERROR("lock devmapper conf failed");

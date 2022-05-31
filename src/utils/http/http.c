@@ -241,7 +241,7 @@ static void http_custom_general_options(CURL *curl_handle, const struct http_get
 
 static int http_custom_options(CURL *curl_handle, const struct http_get_options *options)
 {
-    if (curl_handle == NULL || options == NULL) {
+    if (curl_handle == NULL) {
         return -1;
     }
 
@@ -412,6 +412,11 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     char *tmp = NULL;
     size_t fsize = 0;
     char *replaced_url = 0;
+
+    if (url == NULL || options == NULL) {
+        ERROR("must set url and options to use http request");
+        return -1;
+    }
 
     if (recursive_len + 1 >= MAX_REDIRCT_NUMS) {
         ERROR("reach the max redirect num");

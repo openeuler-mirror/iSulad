@@ -590,6 +590,11 @@ int util_resolve_path(const char *rootpath, const char *path, char **resolvedpat
     char tmppath[PATH_MAX] = { 0 };
     char cleanedpath[PATH_MAX] = { 0 };
 
+    if (abspath == NULL || resolvedpath == NULL || rootpath == NULL) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
     *resolvedpath = NULL;
     *abspath = NULL;
 

@@ -86,6 +86,18 @@ error_out:
     return NULL;
 }
 
+static int update_checker(const struct client_arguments *args)
+{
+    int ret = 0;
+
+    if (args->argc == 0) {
+        COMMAND_ERROR("Update requires at least 1 container names");
+        return EINVALIDARGS;
+    }
+
+    return ret;
+}
+
 static int client_update(const struct client_arguments *args)
 {
     int ret = 0;
@@ -187,18 +199,6 @@ int cmd_update_main(int argc, const char **argv)
             continue;
         }
         printf("%s\n", g_cmd_update_args.name);
-    }
-
-    return ret;
-}
-
-int update_checker(const struct client_arguments *args)
-{
-    int ret = 0;
-
-    if (args->argc == 0) {
-        COMMAND_ERROR("Update requires at least 1 container names");
-        return EINVALIDARGS;
     }
 
     return ret;

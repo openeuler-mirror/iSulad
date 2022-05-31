@@ -244,8 +244,6 @@ char *container_state_get_started_at(container_state_t *s);
 
 bool container_is_valid_state_string(const char *state);
 
-int container_dup_health_check_status(defs_health **dst, const defs_health *src);
-
 void container_update_health_monitor(const char *container_id);
 
 extern int container_supervisor_add_exit_monitor(int fd, const pid_ppid_info_t *pid_info, const char *name,
