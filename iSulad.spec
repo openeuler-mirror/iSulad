@@ -1,5 +1,5 @@
 %global _version 2.0.14
-%global _release 5
+%global _release 6
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -18,6 +18,9 @@ Patch0002:  0002-fix-install-error-when-android.patch
 Patch0003:  0003-imp-fuzz-for-pw-gr-parser.patch
 Patch0004:  0004-improve-fuzz-test.patch
 Patch0005:  0005-Seccomp-optimization.patch
+Patch0006:  0006-fix-different-type-convert.patch
+Patch0007:  0007-add-pointer-parameters-NULL-check.patch
+Patch0008:  0008-add-check-to-arguments.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -244,12 +247,17 @@ fi
 %endif
 
 %changelog
+* Tue May 31 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.14-6
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: fix different type convert and add check to arguments
+
 * Mon May 30 2022 chengzrz <chengzeruizhi@huawei.com> - 2.0.14-5
 - Type: enhancement
 - ID: NA
 - SUG: NA
 - DESC: seccomp optimization
-
 
 * Fri May 27 2022 haozi007 <liuhao27@huawei.com> - 2.0.14-4
 - Type: enhancement
