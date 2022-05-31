@@ -1,0 +1,264 @@
+From 1db2941da2eba089f3ed07c59f4925c857860023 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Tue, 31 May 2022 03:33:16 +0100
+Subject: [PATCH 6/8] fix different type convert
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/cmd/isula/isula_host_spec.c               | 23 ++++++++++++++-----
+ src/cmd/isula/stream/exec.c                   |  6 +++--
+ src/cmd/isulad/isulad_commands.c              | 11 +++++++--
+ src/cmd/options/opt_ulimit.c                  |  9 ++++++--
+ .../modules/runtime/engines/lcr/lcr_engine.c  |  2 +-
+ src/daemon/modules/spec/specs_mount.c         |  8 +++++--
+ src/utils/http/parser.c                       |  2 +-
+ 7 files changed, 45 insertions(+), 16 deletions(-)
+
+diff --git a/src/cmd/isula/isula_host_spec.c b/src/cmd/isula/isula_host_spec.c
+index 85451dd4..297f9299 100644
+--- a/src/cmd/isula/isula_host_spec.c
++++ b/src/cmd/isula/isula_host_spec.c
+@@ -516,6 +516,7 @@ static int parse_blkio_throttle_bps_device(const char *device, char **path, uint
+ {
+     int ret = 0;
+     char **split = NULL;
++    int64_t converted = 0;
+ 
+     split = util_string_split_multi(device, ':');
+     if (split == NULL || util_array_len((const char **)split) != 2) {
+@@ -530,13 +531,16 @@ static int parse_blkio_throttle_bps_device(const char *device, char **path, uint
+         goto out;
+     }
+ 
+-    if (util_parse_byte_size_string(split[1], (int64_t *)rate) != 0) {
++    ret = util_parse_byte_size_string(split[1], &converted);
++    if (ret != 0 || converted < 0) {
+         COMMAND_ERROR("invalid rate for device: %s. The correct format is <device-path>:<number>[<unit>]."
+                       " Number must be a positive integer. Unit is optional and can be kb, mb, or gb",
+                       device);
+         ret = -1;
+         goto out;
+     }
++
++    *rate = converted;
+     *path = util_strdup_s(split[0]);
+ 
+ out:
+@@ -691,6 +695,7 @@ static host_config_hugetlbs_element *pase_hugetlb_limit(const char *input)
+     char *trans_page = NULL;
+     uint64_t limit = 0;
+     uint64_t page = 0;
++    int64_t tconverted = 0;
+     host_config_hugetlbs_element *limit_element = NULL;
+ 
+     temp = util_strdup_s(input);
+@@ -704,18 +709,21 @@ static host_config_hugetlbs_element *pase_hugetlb_limit(const char *input)
+         goto free_out;
+     }
+ 
+-    ret = util_parse_byte_size_string(limit_value, (int64_t *)(&limit));
+-    if (ret != 0) {
++    ret = util_parse_byte_size_string(limit_value, &tconverted);
++    if (ret != 0 || tconverted < 0) {
+         COMMAND_ERROR("Parse limit value: %s failed:%s", limit_value, strerror(-ret));
+         goto free_out;
+     }
++    limit = (uint64_t)tconverted;
+ 
+     if (pagesize != NULL) {
+-        ret = util_parse_byte_size_string(pagesize, (int64_t *)(&page));
+-        if (ret != 0) {
++        tconverted = 0;
++        ret = util_parse_byte_size_string(pagesize, &tconverted);
++        if (ret != 0 || tconverted < 0) {
+             COMMAND_ERROR("Parse pagesize error.Invalid hugepage size: %s: %s", pagesize, strerror(-ret));
+             goto free_out;
+         }
++        page = (uint64_t)tconverted;
+ 
+         trans_page = util_human_size(page);
+         if (trans_page == NULL) {
+@@ -842,15 +850,18 @@ static bool parse_size(const char *input, const char *token, host_config_host_ch
+     uint64_t size = 0;
+     uint64_t mem_total_size = 0;
+     uint64_t mem_available_size = 0;
++    int64_t converted = 0;
+ 
+     if (strcmp(token, "") == 0) {
+         host_channel->size = 64 * SIZE_MB;
+         return true;
+     }
+-    if (util_parse_byte_size_string(token, (int64_t *)(&size))) {
++    if (util_parse_byte_size_string(token, &converted) != 0 || converted < 0) {
+         COMMAND_ERROR("Invalid size limit for host channel: %s", input);
+         return false;
+     }
++    size = (uint64_t)converted;
++
+     if (size < HOST_CHANNLE_MIN_SIZE) {
+         COMMAND_ERROR("Invalid size, larger than 4KB is allowed");
+         return false;
+diff --git a/src/cmd/isula/stream/exec.c b/src/cmd/isula/stream/exec.c
+index aa702b90..df911d0b 100644
+--- a/src/cmd/isula/stream/exec.c
++++ b/src/cmd/isula/stream/exec.c
+@@ -49,6 +49,7 @@ static int fill_exec_request(const struct client_arguments *args, const struct c
+ {
+     int ret = 0;
+     size_t i = 0;
++    size_t tconverted = 0;
+     char *new_env = NULL;
+ 
+     request->name = util_strdup_s(args->name);
+@@ -67,12 +68,13 @@ static int fill_exec_request(const struct client_arguments *args, const struct c
+     request->user = util_strdup_s(args->custom_conf.user);
+     request->workdir = util_strdup_s(args->custom_conf.workdir);
+ 
+-    if (util_dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv),
+-                                  (size_t *)(&request->argc)) != 0) {
++    ret = util_dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv), &tconverted);
++    if (ret != 0 || tconverted >= INT_MAX) {
+         ERROR("Failed to dup args");
+         ret = -1;
+         goto out;
+     }
++    request->argc = (int)tconverted;
+ 
+     /* environment variables */
+     for (i = 0; i < util_array_len((const char **)(args->extra_env)); i++) {
+diff --git a/src/cmd/isulad/isulad_commands.c b/src/cmd/isulad/isulad_commands.c
+index 2a0ccf92..f73a82e2 100644
+--- a/src/cmd/isulad/isulad_commands.c
++++ b/src/cmd/isulad/isulad_commands.c
+@@ -517,7 +517,6 @@ out:
+ static int do_merge_conf_default_ulimit_into_global(struct service_arguments *args)
+ {
+     size_t i, j, json_default_ulimit_len;
+-    isulad_daemon_configs_default_ulimits_element *ptr = NULL;
+ 
+     if (args->json_confs->default_ulimits == NULL) {
+         return 0;
+@@ -525,6 +524,9 @@ static int do_merge_conf_default_ulimit_into_global(struct service_arguments *ar
+ 
+     json_default_ulimit_len = args->json_confs->default_ulimits->len;
+     for (i = 0; i < json_default_ulimit_len; i++) {
++        isulad_daemon_configs_default_ulimits_element *ptr = NULL;
++        host_config_ulimits_element telem = { 0 };
++
+         ptr = args->json_confs->default_ulimits->values[i];
+         for (j = 0; j < args->default_ulimit_len; j++) {
+             if (strcmp(ptr->name, args->default_ulimit[j]->name) == 0) {
+@@ -532,12 +534,17 @@ static int do_merge_conf_default_ulimit_into_global(struct service_arguments *ar
+             }
+         }
+ 
++        // ulimit of name setted, just update values
+         if (j < args->default_ulimit_len) {
+             args->default_ulimit[j]->soft = ptr->soft;
+             args->default_ulimit[j]->hard = ptr->hard;
+             continue;
+         }
+-        if (ulimit_array_append(&args->default_ulimit, (host_config_ulimits_element *)ptr, args->default_ulimit_len) !=
++
++        telem.name = ptr->name;
++        telem.hard = ptr->hard;
++        telem.soft = ptr->soft;
++        if (ulimit_array_append(&args->default_ulimit, &telem, args->default_ulimit_len) !=
+             0) {
+             ERROR("merge json confs default ulimit config failed");
+             return -1;
+diff --git a/src/cmd/options/opt_ulimit.c b/src/cmd/options/opt_ulimit.c
+index 1a9c6165..b9eddf8a 100644
+--- a/src/cmd/options/opt_ulimit.c
++++ b/src/cmd/options/opt_ulimit.c
+@@ -58,22 +58,27 @@ static void get_ulimit_split_parts(const char *val, char ***parts, size_t *parts
+ static int parse_soft_hard_ulimit(const char *val, char **limitvals, size_t limitvals_len, int64_t *soft, int64_t *hard)
+ {
+     int ret = 0;
++    long long converted = 0;
++
+     // parse soft
+-    ret = util_safe_llong(limitvals[0], (long long *)soft);
++    ret = util_safe_llong(limitvals[0], &converted);
+     if (ret < 0) {
+         COMMAND_ERROR("Invalid ulimit soft value: \"%s\", parse int64 failed: %s", val, strerror(-ret));
+         ret = -1;
+         goto out;
+     }
++    *soft = (int64_t)converted;
+ 
+     // parse hard if exists
+     if (limitvals_len > 1) {
+-        ret = util_safe_llong(limitvals[1], (long long *)hard);
++        converted = 0;
++        ret = util_safe_llong(limitvals[1], &converted);
+         if (ret < 0) {
+             COMMAND_ERROR("Invalid ulimit hard value: \"%s\", parse int64 failed: %s", val, strerror(-ret));
+             ret = -1;
+             goto out;
+         }
++        *hard = (int64_t)converted;
+ 
+         if (*soft > *hard) {
+             COMMAND_ERROR("Ulimit soft limit must be less than or equal to hard limit: %lld > %lld",
+diff --git a/src/daemon/modules/runtime/engines/lcr/lcr_engine.c b/src/daemon/modules/runtime/engines/lcr/lcr_engine.c
+index 0d29e362..2ca12545 100644
+--- a/src/daemon/modules/runtime/engines/lcr/lcr_engine.c
++++ b/src/daemon/modules/runtime/engines/lcr/lcr_engine.c
+@@ -30,7 +30,7 @@
+ typedef bool (*lcr_state_op_t)(const char *name, const char *lcrpath, struct lcr_container_state *lcs);
+ typedef void (*lcr_container_state_free_t)(struct lcr_container_state *lcs);
+ typedef bool (*lcr_update_op_t)(const char *name, const char *lcrpath, struct lcr_cgroup_resources *cr);
+-typedef bool (*lcr_start_op_t)(struct lcr_start_request *request);
++typedef bool (*lcr_start_op_t)(const struct lcr_start_request *request);
+ typedef bool (*lcr_exec_op_t)(const struct lcr_exec_request *request, int *exit_code);
+ 
+ static lcr_state_op_t g_lcr_state_op = NULL;
+diff --git a/src/daemon/modules/spec/specs_mount.c b/src/daemon/modules/spec/specs_mount.c
+index c89f077f..b35061d8 100644
+--- a/src/daemon/modules/spec/specs_mount.c
++++ b/src/daemon/modules/spec/specs_mount.c
+@@ -2089,21 +2089,25 @@ static int parse_device_cgroup_rule(defs_device_cgroup *spec_dev_cgroup, const c
+     if (strcmp(file_mode[0], "*") == 0) {
+         spec_dev_cgroup->major = -1;
+     } else {
+-        if (util_safe_llong(file_mode[0], (long long *)&spec_dev_cgroup->major) != 0) {
++        long long converted = 0;
++        if (util_safe_llong(file_mode[0], &converted) != 0) {
+             ERROR("Invalid rule mode %s", file_mode[0]);
+             ret = -1;
+             goto free_out;
+         }
++        spec_dev_cgroup->major = converted;
+     }
+ 
+     if (strcmp(file_mode[1], "*") == 0) {
+         spec_dev_cgroup->minor = -1;
+     } else {
+-        if (util_safe_llong(file_mode[1], (long long *)&spec_dev_cgroup->minor) != 0) {
++        long long converted = 0;
++        if (util_safe_llong(file_mode[1], &converted) != 0) {
+             ERROR("Invalid rule mode %s", file_mode[1]);
+             ret = -1;
+             goto free_out;
+         }
++        spec_dev_cgroup->minor = (int64_t)converted;
+     }
+ 
+ free_out:
+diff --git a/src/utils/http/parser.c b/src/utils/http/parser.c
+index 5ea1677c..37475b33 100644
+--- a/src/utils/http/parser.c
++++ b/src/utils/http/parser.c
+@@ -47,7 +47,7 @@
+ #include "utils.h"
+ #include "isula_libutils/log.h"
+ 
+-size_t strlncat(char *dststr, size_t size, const char *srcstr, size_t nsize)
++static size_t strlncat(char *dststr, size_t size, const char *srcstr, size_t nsize)
+ {
+     size_t ssize, dsize;
+ 
+-- 
+2.25.1
+
