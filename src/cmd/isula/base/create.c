@@ -393,7 +393,7 @@ static int read_label_from_file(const char *path, size_t file_size, isula_contai
     if (file_size == 0) {
         return 0;
     }
-    fp = fopen(path, "re");
+    fp = util_fopen(path, "re");
     if (fp == NULL) {
         ERROR("Failed to open '%s'", path);
         return -1;
@@ -1477,12 +1477,13 @@ int callback_log_opt(command_option_t *option, const char *value)
 
 int callback_log_driver(command_option_t *option, const char *value)
 {
-    struct client_arguments *args = (struct client_arguments *)option->data;
+    struct client_arguments *args = NULL;
 
-    if (value == NULL) {
+    if (value == NULL || option == NULL) {
         COMMAND_ERROR("log driver is NULL");
         return -1;
     }
+    args = (struct client_arguments *)option->data;
 
     if (!check_opt_container_log_driver(value)) {
         COMMAND_ERROR("Unsupported log driver: %s", value);

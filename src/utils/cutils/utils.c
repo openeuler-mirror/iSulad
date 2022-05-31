@@ -1475,32 +1475,32 @@ void util_parse_user_group(const char *username, char **user, char **group, char
         return;
     }
 
-    if (username != NULL) {
-        tmp = util_strdup_s(username);
-
-        // for free tmp in caller
-        *tmp_dup = tmp;
-
-        pdot = strstr(tmp, ":");
-        if (pdot != NULL) {
-            *pdot = '\0';
-            if (pdot != tmp) {
-                // User found
-                *user = tmp;
-            }
-            if (*(pdot + 1) != '\0') {
-                // group found
-                *group = pdot + 1;
-            }
-        } else {
-            // No : found
-            if (*tmp != '\0') {
-                *user = tmp;
-            }
-        }
+    if (username == NULL) {
+        return;
     }
 
-    return;
+    tmp = util_strdup_s(username);
+
+    // for free tmp in caller
+    *tmp_dup = tmp;
+
+    pdot = strstr(tmp, ":");
+    if (pdot != NULL) {
+        *pdot = '\0';
+        if (pdot != tmp) {
+            // User found
+            *user = tmp;
+        }
+        if (*(pdot + 1) != '\0') {
+            // group found
+            *group = pdot + 1;
+        }
+    } else {
+        // No : found
+        if (*tmp != '\0') {
+            *user = tmp;
+        }
+    }
 }
 
 defs_map_string_object *dup_map_string_empty_object(defs_map_string_object *src)

@@ -760,8 +760,14 @@ plugin_t *plugin_new(const char *name, const char *addr)
     plugin_t *plugin = NULL;
     int errcode = 0;
 
+    if (name == NULL || addr == NULL) {
+        ERROR("Empty arguments");
+        return NULL;
+    }
+
     plugin = util_common_calloc_s(sizeof(plugin_t));
     if (plugin == NULL) {
+        ERROR("Out of memory");
         goto bad;
     }
 
@@ -1232,58 +1238,6 @@ int pm_get_plugin(const char *name, plugin_t **rplugin)
 void pm_put_plugin(plugin_t *plugin)
 {
     plugin_put(plugin);
-}
-
-int pm_get_plugins_nolock(uint64_t pe, plugin_t ***rplugins, size_t *count)
-{
-    int ret = 0;
-    int i = 0;
-    size_t size = 0;
-    plugin_t **plugins = NULL;
-    map_itor *itor = NULL;
-
-    size = map_size(g_plugin_manager->np);
-    if (size == 0) { /* empty */
-        return 0;
-    }
-    if (size > SIZE_MAX / sizeof(plugin_t *)) {
-        ret = -1;
-        ERROR("Invalid plugins size");
-        goto out;
-    }
-
-    plugins = util_common_calloc_s(sizeof(plugin_t *) * size);
-    if (plugins == NULL) {
-        ret = -1;
-        ERROR("Out of memory");
-        goto out;
-    }
-
-    itor = map_itor_new(g_plugin_manager->np);
-    if (itor == NULL) {
-        ret = -1;
-        ERROR("Out of memory");
-        goto out;
-    }
-
-    for (i = 0; i < (int)size && map_itor_valid(itor); i++, map_itor_next(itor)) {
-        plugins[i] = map_itor_value(itor);
-        /* plugin_put() called in pm_put_plugins() */
-        plugin_get(plugins[i]);
-    }
-
-    *rplugins = plugins;
-    *count = (size_t)i;
-
-out:
-    map_itor_free(itor);
-    itor = NULL;
-
-    if (ret < 0) {
-        UTIL_FREE_AND_SET_NULL(plugins);
-    }
-
-    return ret;
 }
 
 static void pm_np_item_free(void *key, void *val)
