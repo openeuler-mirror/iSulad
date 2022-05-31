@@ -516,6 +516,7 @@ static int parse_blkio_throttle_bps_device(const char *device, char **path, uint
 {
     int ret = 0;
     char **split = NULL;
+    int64_t converted = 0;
 
     split = util_string_split_multi(device, ':');
     if (split == NULL || util_array_len((const char **)split) != 2) {
@@ -530,13 +531,16 @@ static int parse_blkio_throttle_bps_device(const char *device, char **path, uint
         goto out;
     }
 
-    if (util_parse_byte_size_string(split[1], (int64_t *)rate) != 0) {
+    ret = util_parse_byte_size_string(split[1], &converted);
+    if (ret != 0 || converted < 0) {
         COMMAND_ERROR("invalid rate for device: %s. The correct format is <device-path>:<number>[<unit>]."
                       " Number must be a positive integer. Unit is optional and can be kb, mb, or gb",
                       device);
         ret = -1;
         goto out;
     }
+
+    *rate = converted;
     *path = util_strdup_s(split[0]);
 
 out:
@@ -691,6 +695,7 @@ static host_config_hugetlbs_element *pase_hugetlb_limit(const char *input)
     char *trans_page = NULL;
     uint64_t limit = 0;
     uint64_t page = 0;
+    int64_t tconverted = 0;
     host_config_hugetlbs_element *limit_element = NULL;
 
     temp = util_strdup_s(input);
@@ -704,18 +709,21 @@ static host_config_hugetlbs_element *pase_hugetlb_limit(const char *input)
         goto free_out;
     }
 
-    ret = util_parse_byte_size_string(limit_value, (int64_t *)(&limit));
-    if (ret != 0) {
+    ret = util_parse_byte_size_string(limit_value, &tconverted);
+    if (ret != 0 || tconverted < 0) {
         COMMAND_ERROR("Parse limit value: %s failed:%s", limit_value, strerror(-ret));
         goto free_out;
     }
+    limit = (uint64_t)tconverted;
 
     if (pagesize != NULL) {
-        ret = util_parse_byte_size_string(pagesize, (int64_t *)(&page));
-        if (ret != 0) {
+        tconverted = 0;
+        ret = util_parse_byte_size_string(pagesize, &tconverted);
+        if (ret != 0 || tconverted < 0) {
             COMMAND_ERROR("Parse pagesize error.Invalid hugepage size: %s: %s", pagesize, strerror(-ret));
             goto free_out;
         }
+        page = (uint64_t)tconverted;
 
         trans_page = util_human_size(page);
         if (trans_page == NULL) {
@@ -842,15 +850,18 @@ static bool parse_size(const char *input, const char *token, host_config_host_ch
     uint64_t size = 0;
     uint64_t mem_total_size = 0;
     uint64_t mem_available_size = 0;
+    int64_t converted = 0;
 
     if (strcmp(token, "") == 0) {
         host_channel->size = 64 * SIZE_MB;
         return true;
     }
-    if (util_parse_byte_size_string(token, (int64_t *)(&size))) {
+    if (util_parse_byte_size_string(token, &converted) != 0 || converted < 0) {
         COMMAND_ERROR("Invalid size limit for host channel: %s", input);
         return false;
     }
+    size = (uint64_t)converted;
+
     if (size < HOST_CHANNLE_MIN_SIZE) {
         COMMAND_ERROR("Invalid size, larger than 4KB is allowed");
         return false;

@@ -517,7 +517,6 @@ out:
 static int do_merge_conf_default_ulimit_into_global(struct service_arguments *args)
 {
     size_t i, j, json_default_ulimit_len;
-    isulad_daemon_configs_default_ulimits_element *ptr = NULL;
 
     if (args->json_confs->default_ulimits == NULL) {
         return 0;
@@ -525,6 +524,9 @@ static int do_merge_conf_default_ulimit_into_global(struct service_arguments *ar
 
     json_default_ulimit_len = args->json_confs->default_ulimits->len;
     for (i = 0; i < json_default_ulimit_len; i++) {
+        isulad_daemon_configs_default_ulimits_element *ptr = NULL;
+        host_config_ulimits_element telem = { 0 };
+
         ptr = args->json_confs->default_ulimits->values[i];
         for (j = 0; j < args->default_ulimit_len; j++) {
             if (strcmp(ptr->name, args->default_ulimit[j]->name) == 0) {
@@ -532,12 +534,17 @@ static int do_merge_conf_default_ulimit_into_global(struct service_arguments *ar
             }
         }
 
+        // ulimit of name setted, just update values
         if (j < args->default_ulimit_len) {
             args->default_ulimit[j]->soft = ptr->soft;
             args->default_ulimit[j]->hard = ptr->hard;
             continue;
         }
-        if (ulimit_array_append(&args->default_ulimit, (host_config_ulimits_element *)ptr, args->default_ulimit_len) !=
+
+        telem.name = ptr->name;
+        telem.hard = ptr->hard;
+        telem.soft = ptr->soft;
+        if (ulimit_array_append(&args->default_ulimit, &telem, args->default_ulimit_len) !=
             0) {
             ERROR("merge json confs default ulimit config failed");
             return -1;

@@ -2089,21 +2089,25 @@ static int parse_device_cgroup_rule(defs_device_cgroup *spec_dev_cgroup, const c
     if (strcmp(file_mode[0], "*") == 0) {
         spec_dev_cgroup->major = -1;
     } else {
-        if (util_safe_llong(file_mode[0], (long long *)&spec_dev_cgroup->major) != 0) {
+        long long converted = 0;
+        if (util_safe_llong(file_mode[0], &converted) != 0) {
             ERROR("Invalid rule mode %s", file_mode[0]);
             ret = -1;
             goto free_out;
         }
+        spec_dev_cgroup->major = converted;
     }
 
     if (strcmp(file_mode[1], "*") == 0) {
         spec_dev_cgroup->minor = -1;
     } else {
-        if (util_safe_llong(file_mode[1], (long long *)&spec_dev_cgroup->minor) != 0) {
+        long long converted = 0;
+        if (util_safe_llong(file_mode[1], &converted) != 0) {
             ERROR("Invalid rule mode %s", file_mode[1]);
             ret = -1;
             goto free_out;
         }
+        spec_dev_cgroup->minor = (int64_t)converted;
     }
 
 free_out:
