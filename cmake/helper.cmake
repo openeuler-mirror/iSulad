@@ -1,13 +1,3 @@
-# use to check result
-macro(_CHECK)
-    if (${ARGV0} STREQUAL "${ARGV1}")
-        message("ERROR: can not find " ${ARGV2} " program")
-        set(CHECKER_RESULT 1)
-    else()
-        message("--  found " ${ARGV2} " --- works")
-    endif()
-endmacro()
-
 if(NOT WIN32)
   string(ASCII 27 Esc)
   set(ColourReset "${Esc}[m")
@@ -27,3 +17,13 @@ if(NOT WIN32)
   set(BoldCyan    "${Esc}[1;36m")
   set(BoldWhite   "${Esc}[1;37m")
 endif()
+
+# use to check result
+macro(_CHECK)
+    if (${ARGV0} STREQUAL "${ARGV1}")
+        message("${BoldRed}ERROR: can not find " ${ARGV2} " program${ColourReset}")
+        set(CHECKER_RESULT 1)
+    else()
+        message("--  found " ${ARGV2} " --- works")
+    endif()
+endmacro()

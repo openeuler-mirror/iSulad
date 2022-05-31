@@ -47,7 +47,7 @@
 #include "utils.h"
 #include "isula_libutils/log.h"
 
-size_t strlncat(char *dststr, size_t size, const char *srcstr, size_t nsize)
+static size_t strlncat(char *dststr, size_t size, const char *srcstr, size_t nsize)
 {
     size_t ssize, dsize;
 
