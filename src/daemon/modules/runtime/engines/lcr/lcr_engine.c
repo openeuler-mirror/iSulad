@@ -30,7 +30,7 @@
 typedef bool (*lcr_state_op_t)(const char *name, const char *lcrpath, struct lcr_container_state *lcs);
 typedef void (*lcr_container_state_free_t)(struct lcr_container_state *lcs);
 typedef bool (*lcr_update_op_t)(const char *name, const char *lcrpath, struct lcr_cgroup_resources *cr);
-typedef bool (*lcr_start_op_t)(struct lcr_start_request *request);
+typedef bool (*lcr_start_op_t)(const struct lcr_start_request *request);
 typedef bool (*lcr_exec_op_t)(const struct lcr_exec_request *request, int *exit_code);
 
 static lcr_state_op_t g_lcr_state_op = NULL;
