@@ -782,7 +782,7 @@ int init_label(const char **label_opts, size_t label_opts_len, char **dst_proces
         return 0;
     }
 
-    if (label_opts == NULL || dst_process_label == NULL || dst_mount_label == NULL) {
+    if (dst_process_label == NULL || dst_mount_label == NULL) {
         ERROR("Empty arguments");
         return -1;
     }
