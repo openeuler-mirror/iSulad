@@ -710,7 +710,7 @@ static int update_graph_for_userns_remap(struct service_arguments *args)
         goto out;
     }
 
-    nret = snprintf(graph, sizeof(graph), "%s/%d.%d", args->json_confs->graph, host_uid, host_gid);
+    nret = snprintf(graph, sizeof(graph), "%s/%u.%u", args->json_confs->graph, host_uid, host_gid);
     if (nret < 0 || (size_t)nret >= sizeof(graph)) {
         ERROR("Path is too long");
         ret = -1;
