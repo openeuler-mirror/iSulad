@@ -1549,7 +1549,7 @@ out:
 int convert_v2_runtime(const char *runtime, char *binary)
 {
     char **parts = NULL;
-    int parts_len = 0;
+    size_t parts_len = 0;
     char buf[PATH_MAX]  = {0};
     int ret = 0;
 

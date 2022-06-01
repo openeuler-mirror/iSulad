@@ -1619,7 +1619,6 @@ static int do_check_args(const char *path)
 
 char *util_read_content_from_file(const char *path)
 {
-#define FILE_MODE 0640
     char *buf = NULL;
     char rpath[PATH_MAX + 1] = { 0 };
     int fd = -1;

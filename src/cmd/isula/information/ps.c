@@ -765,7 +765,6 @@ static int get_header_field(const char *patten, struct filters *ff)
 
 static int format_field_check(const char *source, const char *patten)
 {
-#define MATCH_NUM 1
 #define CHECK_FAILED (-1)
     int status = 0;
 

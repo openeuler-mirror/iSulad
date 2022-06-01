@@ -191,7 +191,7 @@ int get_network_namespace_path(const host_config *host_spec,
                                const container_config_v2_common_config_network_settings *network_settings,
                                const char *type, char **dest_path)
 {
-    int index;
+    size_t index = 0;
     int ret = -1;
     struct get_netns_path_handler handler_jump_table[] = {
         { SHARE_NAMESPACE_NONE, handle_get_path_from_none },
@@ -200,11 +200,13 @@ int get_network_namespace_path(const host_config *host_spec,
         { SHARE_NAMESPACE_FILE, handle_get_path_from_file },
     };
     size_t jump_table_size = sizeof(handler_jump_table) / sizeof(handler_jump_table[0]);
-    const char *network_mode = host_spec->network_mode;
+    const char *network_mode = NULL;
 
-    if (network_mode == NULL || dest_path == NULL) {
+    if (host_spec == NULL || network_mode == NULL || dest_path == NULL) {
+        ERROR("Invalid input");
         return -1;
     }
+    network_mode = host_spec->network_mode;
 
     for (index = 0; index < jump_table_size; ++index) {
         if (strncmp(network_mode, handler_jump_table[index].mode, strlen(handler_jump_table[index].mode)) == 0) {

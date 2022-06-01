@@ -27,6 +27,7 @@
 #include <isula_libutils/log.h>
 #include <fcntl.h>
 
+#include "utils.h"
 #include "utils_fs.h"
 #include "utils_file.h"
 #include "constants.h"
@@ -67,9 +68,15 @@ out:
 
 static void* mount_netns(void *netns_path)
 {
-    int *ecode = (int *)malloc(sizeof(int));
+    int *ecode = NULL;
     char fullpath[PATH_MAX] = { 0x00 };
     int ret = 0;
+
+    ecode = (int *)util_common_calloc_s(sizeof(int));
+    if (ecode == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
 
     if (unshare(CLONE_NEWNET) != 0) {
         ERROR("Failed to unshare");
@@ -102,7 +109,7 @@ int util_mount_namespace(const char *netns_path)
     int ret = 0;
     void *status = NULL;
 
-    ret = pthread_create(&newns_thread, NULL, (void *)&mount_netns, (void *)netns_path);
+    ret = pthread_create(&newns_thread, NULL, mount_netns, (void *)netns_path);
     if (ret != 0) {
         ERROR("Failed to create thread");
         return -1;

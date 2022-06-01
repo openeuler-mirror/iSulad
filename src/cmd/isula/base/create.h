@@ -414,8 +414,7 @@ extern "C" {
       "health-start-period",                                                                                                                              \
       0,                                                                                                                                                  \
       &(cmdargs).custom_conf.health_start_period,                                                                                                         \
-      "Start period for the container to initialize before starting health-retries countdown (ms|s|m|h) "                                                 \
-      "(default 0s)",                                                                                                                                     \
+      "Start period for the container to initialize before starting health-retries countdown (ms|s|m|h) (default 0s)",                                    \
       command_convert_nanoseconds },                                                                                                                      \
     { CMD_OPT_TYPE_BOOL,                                                                                                                                  \
       false,                                                                                                                                              \
