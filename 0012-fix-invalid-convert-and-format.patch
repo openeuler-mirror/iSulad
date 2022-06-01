@@ -1,0 +1,319 @@
+From 8dcad172ea0241f35cdd464029523253ada7e99f Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Wed, 1 Jun 2022 12:53:56 +0100
+Subject: [PATCH 12/13] fix invalid convert and format
+
+1. invalid convert;
+2. error print format;
+3. unuse marco;
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/cmd/isula/base/create.h                    |  3 +--
+ src/cmd/isula/information/inspect.c            |  1 -
+ src/cmd/isula/information/ps.c                 |  1 -
+ src/cmd/isulad/isulad_commands.h               |  3 +--
+ src/cmd/isulad/main.c                          |  2 +-
+ src/daemon/modules/runtime/shim/shim_rt_ops.c  | 11 ++++++-----
+ src/daemon/modules/service/service_container.c |  6 +++---
+ src/daemon/modules/spec/specs_namespace.c      |  8 +++++---
+ src/utils/cutils/utils.c                       |  2 +-
+ src/utils/cutils/utils_aes.c                   |  7 +------
+ src/utils/cutils/utils_aes.h                   |  1 -
+ src/utils/cutils/utils_file.c                  |  1 -
+ src/utils/cutils/utils_network.c               | 11 +++++++++--
+ 13 files changed, 28 insertions(+), 29 deletions(-)
+
+diff --git a/src/cmd/isula/base/create.h b/src/cmd/isula/base/create.h
+index 36c0dc9e..467fefe8 100644
+--- a/src/cmd/isula/base/create.h
++++ b/src/cmd/isula/base/create.h
+@@ -414,8 +414,7 @@ extern "C" {
+       "health-start-period",                                                                                                                              \
+       0,                                                                                                                                                  \
+       &(cmdargs).custom_conf.health_start_period,                                                                                                         \
+-      "Start period for the container to initialize before starting health-retries countdown (ms|s|m|h) "                                                 \
+-      "(default 0s)",                                                                                                                                     \
++      "Start period for the container to initialize before starting health-retries countdown (ms|s|m|h) (default 0s)",                                    \
+       command_convert_nanoseconds },                                                                                                                      \
+     { CMD_OPT_TYPE_BOOL,                                                                                                                                  \
+       false,                                                                                                                                              \
+diff --git a/src/cmd/isula/information/inspect.c b/src/cmd/isula/information/inspect.c
+index 30b228a0..5058fb95 100644
+--- a/src/cmd/isula/information/inspect.c
++++ b/src/cmd/isula/information/inspect.c
+@@ -639,7 +639,6 @@ out:
+     return ret_string;
+ }
+ 
+-#define MATCH_NUM 1
+ #define CHECK_FAILED (-1)
+ #ifdef __ANDROID__
+ #define JSON_ARGS "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*(json)?[ \t\r\n\v\f]+[^ \t\r\n\v\f]+[ \t\r\n\v\f]*.*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
+diff --git a/src/cmd/isula/information/ps.c b/src/cmd/isula/information/ps.c
+index 45296fad..74c2f94a 100644
+--- a/src/cmd/isula/information/ps.c
++++ b/src/cmd/isula/information/ps.c
+@@ -765,7 +765,6 @@ static int get_header_field(const char *patten, struct filters *ff)
+ 
+ static int format_field_check(const char *source, const char *patten)
+ {
+-#define MATCH_NUM 1
+ #define CHECK_FAILED (-1)
+     int status = 0;
+ 
+diff --git a/src/cmd/isulad/isulad_commands.h b/src/cmd/isulad/isulad_commands.h
+index e989466f..ad8ba9e5 100644
+--- a/src/cmd/isulad/isulad_commands.h
++++ b/src/cmd/isulad/isulad_commands.h
+@@ -182,8 +182,7 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
+       "pod-sandbox-image",                                                                                        \
+       0,                                                                                                          \
+       &(cmdargs)->json_confs->pod_sandbox_image,                                                                  \
+-      "The image whose network/ipc namespaces containers in each pod will use. "                                  \
+-      "(default \"pause-${machine}:3.0\")",                                                                       \
++      "The image whose network/ipc namespaces containers in each pod will use. (default \"pause-${machine}:3.0\")", \
+       NULL },                                                                                                     \
+     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
+       false,                                                                                                      \
+diff --git a/src/cmd/isulad/main.c b/src/cmd/isulad/main.c
+index 9801c245..e644b16d 100644
+--- a/src/cmd/isulad/main.c
++++ b/src/cmd/isulad/main.c
+@@ -707,7 +707,7 @@ static int update_graph_for_userns_remap(struct service_arguments *args)
+         goto out;
+     }
+ 
+-    nret = snprintf(graph, sizeof(graph), "%s/%d.%d", args->json_confs->graph, host_uid, host_gid);
++    nret = snprintf(graph, sizeof(graph), "%s/%u.%u", args->json_confs->graph, host_uid, host_gid);
+     if (nret < 0 || (size_t)nret >= sizeof(graph)) {
+         ERROR("Path is too long");
+         ret = -1;
+diff --git a/src/daemon/modules/runtime/shim/shim_rt_ops.c b/src/daemon/modules/runtime/shim/shim_rt_ops.c
+index 346e6f48..21d339e5 100644
+--- a/src/daemon/modules/runtime/shim/shim_rt_ops.c
++++ b/src/daemon/modules/runtime/shim/shim_rt_ops.c
+@@ -30,8 +30,6 @@
+ #include "err_msg.h"
+ #include "engine.h"
+ 
+-#define SHIM_LOG_SIZE ((BUFSIZ-100)/2)
+-#define PID_WAIT_TIME 120
+ #define EXIT_SIGNAL_OFFSET_X 128
+ 
+ static void copy_process(shim_client_process_state *p, defs_process *dp)
+@@ -112,7 +110,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
+     int err_fd[2] = {-1, -1};
+     int out_fd[2] = {-1, -1};
+     char exec_buff[BUFSIZ + 1] = {0};
+-    char stdout_buff[BUFSIZ + 1] = {0};
++    char stdout_buff[PATH_MAX] = {0};
+     char stderr_buff[BUFSIZ + 1] = {0};
+ 
+ 
+@@ -177,7 +175,10 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
+             (void)dprintf(exec_fd[1], "close inherited fds failed");
+         }
+ 
+-        setenv("EXIT_FIFO_DIR", exit_fifo_dir, 1);
++        if (setenv("EXIT_FIFO_DIR", exit_fifo_dir, 1) != 0) {
++            (void)dprintf(exec_fd[1], "%s: failed to set env for process %d", id, getpid());
++            exit(EXIT_FAILURE);
++        }
+ 
+         execvp(binary, (char * const *)params);
+         (void)dprintf(exec_fd[1], "exec failed: %s", strerror(errno));
+@@ -379,7 +380,7 @@ int rt_shim_rm(const char *id, const char *runtime, const rt_rm_params_t *params
+     }
+ 
+     nret = snprintf(libdir, sizeof(libdir), "%s/%s", params->rootpath, id);
+-    if (nret < 0 && nret >= sizeof(libdir)) {
++    if (nret < 0 || nret >= sizeof(libdir)) {
+         ERROR("failed to get shim workdir");
+         ret = -1;
+         goto out;
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index 64219423..c3c4fc1c 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -1233,7 +1233,7 @@ static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint
+     return 0;
+ }
+ 
+-static int container_stop_signal(container_t *cont)
++static uint32_t container_stop_signal(container_t *cont)
+ {
+     int signal = 0;
+ 
+@@ -1245,7 +1245,7 @@ static int container_stop_signal(container_t *cont)
+         signal = SIGTERM;
+     }
+ 
+-    return signal;
++    return (uint32_t)signal;
+ }
+ 
+ static int kill_with_signal(container_t *cont, uint32_t signal)
+@@ -1253,7 +1253,7 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
+     int ret = 0;
+     int nret = 0;
+     const char *id = cont->common_config->id;
+-    int stop_signal = container_stop_signal(cont);
++    uint32_t stop_signal = container_stop_signal(cont);
+     bool need_unpause = container_is_paused(cont->state);
+     rt_resume_params_t params = { 0 };
+     char annotations[EVENT_EXTRA_ANNOTATION_MAX] = { 0 };
+diff --git a/src/daemon/modules/spec/specs_namespace.c b/src/daemon/modules/spec/specs_namespace.c
+index e9f98d00..3888f556 100644
+--- a/src/daemon/modules/spec/specs_namespace.c
++++ b/src/daemon/modules/spec/specs_namespace.c
+@@ -191,7 +191,7 @@ int get_network_namespace_path(const host_config *host_spec,
+                                const container_config_v2_common_config_network_settings *network_settings,
+                                const char *type, char **dest_path)
+ {
+-    int index;
++    size_t index = 0;
+     int ret = -1;
+     struct get_netns_path_handler handler_jump_table[] = {
+         { SHARE_NAMESPACE_NONE, handle_get_path_from_none },
+@@ -200,11 +200,13 @@ int get_network_namespace_path(const host_config *host_spec,
+         { SHARE_NAMESPACE_FILE, handle_get_path_from_file },
+     };
+     size_t jump_table_size = sizeof(handler_jump_table) / sizeof(handler_jump_table[0]);
+-    const char *network_mode = host_spec->network_mode;
++    const char *network_mode = NULL;
+ 
+-    if (network_mode == NULL || dest_path == NULL) {
++    if (host_spec == NULL || network_mode == NULL || dest_path == NULL) {
++        ERROR("Invalid input");
+         return -1;
+     }
++    network_mode = host_spec->network_mode;
+ 
+     for (index = 0; index < jump_table_size; ++index) {
+         if (strncmp(network_mode, handler_jump_table[index].mode, strlen(handler_jump_table[index].mode)) == 0) {
+diff --git a/src/utils/cutils/utils.c b/src/utils/cutils/utils.c
+index 30ff629f..a47c5644 100644
+--- a/src/utils/cutils/utils.c
++++ b/src/utils/cutils/utils.c
+@@ -1549,7 +1549,7 @@ out:
+ int convert_v2_runtime(const char *runtime, char *binary)
+ {
+     char **parts = NULL;
+-    int parts_len = 0;
++    size_t parts_len = 0;
+     char buf[PATH_MAX]  = {0};
+     int ret = 0;
+ 
+diff --git a/src/utils/cutils/utils_aes.c b/src/utils/cutils/utils_aes.c
+index 5dc822a2..dec1e8bc 100644
+--- a/src/utils/cutils/utils_aes.c
++++ b/src/utils/cutils/utils_aes.c
+@@ -28,8 +28,6 @@
+ #include "openssl/evp.h"
+ #include "utils_file.h"
+ 
+-#define AES_256_CFB_IV_LEN 16
+-
+ int util_aes_key(char *key_file, bool create, unsigned char *aeskey)
+ {
+     char *key_dir = NULL;
+@@ -83,7 +81,6 @@ int util_aes_key(char *key_file, bool create, unsigned char *aeskey)
+ 
+ out:
+     free(key_dir);
+-    key_dir = NULL;
+     if (fd != 0) {
+         close(fd);
+     }
+@@ -97,7 +94,7 @@ size_t util_aes_decode_buf_len(size_t len)
+         return len;
+     }
+ 
+-    return (len / AES_BLOCK_SIZE * AES_BLOCK_SIZE) + AES_BLOCK_SIZE;
++    return (len / AES_BLOCK_SIZE) * AES_BLOCK_SIZE + AES_BLOCK_SIZE;
+ }
+ 
+ size_t util_aes_encode_buf_len(size_t len)
+@@ -179,7 +176,6 @@ int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
+ 
+ out:
+     EVP_CIPHER_CTX_free(ctx);
+-    ctx = NULL;
+     if (ret != 0) {
+         free(*out);
+         *out = NULL;
+@@ -262,7 +258,6 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
+ 
+ out:
+     EVP_CIPHER_CTX_free(ctx);
+-    ctx = NULL;
+     if (ret != 0) {
+         free(*out);
+         *out = NULL;
+diff --git a/src/utils/cutils/utils_aes.h b/src/utils/cutils/utils_aes.h
+index 2bfe3ea6..d429c9e0 100644
+--- a/src/utils/cutils/utils_aes.h
++++ b/src/utils/cutils/utils_aes.h
+@@ -17,7 +17,6 @@
+ #define UTILS_CUTILS_UTILS_AES_H
+ 
+ #include <stdbool.h>
+-#include <stddef.h>
+ #include <stdint.h>
+ #include <sys/types.h>
+ 
+diff --git a/src/utils/cutils/utils_file.c b/src/utils/cutils/utils_file.c
+index 45e4842b..00f586f1 100644
+--- a/src/utils/cutils/utils_file.c
++++ b/src/utils/cutils/utils_file.c
+@@ -1619,7 +1619,6 @@ static int do_check_args(const char *path)
+ 
+ char *util_read_content_from_file(const char *path)
+ {
+-#define FILE_MODE 0640
+     char *buf = NULL;
+     char rpath[PATH_MAX + 1] = { 0 };
+     int fd = -1;
+diff --git a/src/utils/cutils/utils_network.c b/src/utils/cutils/utils_network.c
+index 1ca901ea..5192d06f 100644
+--- a/src/utils/cutils/utils_network.c
++++ b/src/utils/cutils/utils_network.c
+@@ -27,6 +27,7 @@
+ #include <isula_libutils/log.h>
+ #include <fcntl.h>
+ 
++#include "utils.h"
+ #include "utils_fs.h"
+ #include "utils_file.h"
+ #include "constants.h"
+@@ -67,10 +68,16 @@ out:
+ 
+ static void* mount_netns(void *netns_path)
+ {
+-    int *ecode = (int *)malloc(sizeof(int));
++    int *ecode = NULL;
+     char fullpath[PATH_MAX] = { 0x00 };
+     int ret = 0;
+ 
++    ecode = (int *)util_common_calloc_s(sizeof(int));
++    if (ecode == NULL) {
++        ERROR("Out of memory");
++        return NULL;
++    }
++
+     if (unshare(CLONE_NEWNET) != 0) {
+         ERROR("Failed to unshare");
+         goto err_out;
+@@ -102,7 +109,7 @@ int util_mount_namespace(const char *netns_path)
+     int ret = 0;
+     void *status = NULL;
+ 
+-    ret = pthread_create(&newns_thread, NULL, (void *)&mount_netns, (void *)netns_path);
++    ret = pthread_create(&newns_thread, NULL, mount_netns, (void *)netns_path);
+     if (ret != 0) {
+         ERROR("Failed to create thread");
+         return -1;
+-- 
+2.25.1
+
