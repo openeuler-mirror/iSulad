@@ -1,0 +1,26 @@
+From 60715b192de2cb1b4e8fe9ce48ddf081a6d2be53 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Wed, 1 Jun 2022 09:50:03 +0800
+Subject: [PATCH 10/13] remove check parameter label_opts in init_label
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/daemon/common/selinux_label.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/daemon/common/selinux_label.c b/src/daemon/common/selinux_label.c
+index 533393a6..52422970 100644
+--- a/src/daemon/common/selinux_label.c
++++ b/src/daemon/common/selinux_label.c
+@@ -782,7 +782,7 @@ int init_label(const char **label_opts, size_t label_opts_len, char **dst_proces
+         return 0;
+     }
+ 
+-    if (label_opts == NULL || dst_process_label == NULL || dst_mount_label == NULL) {
++    if (dst_process_label == NULL || dst_mount_label == NULL) {
+         ERROR("Empty arguments");
+         return -1;
+     }
+-- 
+2.25.1
+
