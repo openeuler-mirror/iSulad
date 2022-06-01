@@ -1320,7 +1320,7 @@ static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint
     return 0;
 }
 
-static int container_stop_signal(container_t *cont)
+static uint32_t container_stop_signal(container_t *cont)
 {
     int signal = 0;
 
@@ -1332,7 +1332,7 @@ static int container_stop_signal(container_t *cont)
         signal = SIGTERM;
     }
 
-    return signal;
+    return (uint32_t)signal;
 }
 
 static int kill_with_signal(container_t *cont, uint32_t signal)
@@ -1340,7 +1340,7 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
     int ret = 0;
     int nret = 0;
     const char *id = cont->common_config->id;
-    int stop_signal = container_stop_signal(cont);
+    uint32_t stop_signal = container_stop_signal(cont);
     bool need_unpause = container_is_paused(cont->state);
     rt_resume_params_t params = { 0 };
     char annotations[EVENT_EXTRA_ANNOTATION_MAX] = { 0 };

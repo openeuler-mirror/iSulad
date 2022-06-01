@@ -217,7 +217,7 @@ int get_network_namespace_path(const host_config *host_spec,
         return -1;
     }
 
-    int index = 0;
+    size_t index = 0;
     int ret = -1;
     struct get_netns_path_handler handler_jump_table[] = {
         { SHARE_NAMESPACE_NONE, handle_get_path_from_none },
