@@ -182,8 +182,7 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       "pod-sandbox-image",                                                                                        \
       0,                                                                                                          \
       &(cmdargs)->json_confs->pod_sandbox_image,                                                                  \
-      "The image whose network/ipc namespaces containers in each pod will use. "                                  \
-      "(default \"pause-${machine}:3.0\")",                                                                       \
+      "The image whose network/ipc namespaces containers in each pod will use. (default \"pause-${machine}:3.0\")", \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \

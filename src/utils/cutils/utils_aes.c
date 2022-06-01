@@ -28,8 +28,6 @@
 #include "openssl/evp.h"
 #include "utils_file.h"
 
-#define AES_256_CFB_IV_LEN 16
-
 int util_aes_key(char *key_file, bool create, unsigned char *aeskey)
 {
     char *key_dir = NULL;
@@ -83,7 +81,6 @@ int util_aes_key(char *key_file, bool create, unsigned char *aeskey)
 
 out:
     free(key_dir);
-    key_dir = NULL;
     if (fd != 0) {
         close(fd);
     }
@@ -97,7 +94,7 @@ size_t util_aes_decode_buf_len(size_t len)
         return len;
     }
 
-    return (len / AES_BLOCK_SIZE * AES_BLOCK_SIZE) + AES_BLOCK_SIZE;
+    return (len / AES_BLOCK_SIZE) * AES_BLOCK_SIZE + AES_BLOCK_SIZE;
 }
 
 size_t util_aes_encode_buf_len(size_t len)
@@ -179,7 +176,6 @@ int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
 
 out:
     EVP_CIPHER_CTX_free(ctx);
-    ctx = NULL;
     if (ret != 0) {
         free(*out);
         *out = NULL;
@@ -262,7 +258,6 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
 
 out:
     EVP_CIPHER_CTX_free(ctx);
-    ctx = NULL;
     if (ret != 0) {
         free(*out);
         *out = NULL;

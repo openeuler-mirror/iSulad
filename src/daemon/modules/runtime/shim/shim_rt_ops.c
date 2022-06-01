@@ -30,8 +30,6 @@
 #include "err_msg.h"
 #include "engine.h"
 
-#define SHIM_LOG_SIZE ((BUFSIZ-100)/2)
-#define PID_WAIT_TIME 120
 #define EXIT_SIGNAL_OFFSET_X 128
 
 static void copy_process(shim_client_process_state *p, defs_process *dp)
@@ -112,7 +110,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
     int err_fd[2] = {-1, -1};
     int out_fd[2] = {-1, -1};
     char exec_buff[BUFSIZ + 1] = {0};
-    char stdout_buff[BUFSIZ + 1] = {0};
+    char stdout_buff[PATH_MAX] = {0};
     char stderr_buff[BUFSIZ + 1] = {0};
 
 
@@ -177,7 +175,10 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
             (void)dprintf(exec_fd[1], "close inherited fds failed");
         }
 
-        setenv("EXIT_FIFO_DIR", exit_fifo_dir, 1);
+        if (setenv("EXIT_FIFO_DIR", exit_fifo_dir, 1) != 0) {
+            (void)dprintf(exec_fd[1], "%s: failed to set env for process %d", id, getpid());
+            exit(EXIT_FAILURE);
+        }
 
         execvp(binary, (char * const *)params);
         (void)dprintf(exec_fd[1], "exec failed: %s", strerror(errno));
@@ -379,7 +380,7 @@ int rt_shim_rm(const char *id, const char *runtime, const rt_rm_params_t *params
     }
 
     nret = snprintf(libdir, sizeof(libdir), "%s/%s", params->rootpath, id);
-    if (nret < 0 && nret >= sizeof(libdir)) {
+    if (nret < 0 || nret >= sizeof(libdir)) {
         ERROR("failed to get shim workdir");
         ret = -1;
         goto out;

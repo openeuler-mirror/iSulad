@@ -639,7 +639,6 @@ out:
     return ret_string;
 }
 
-#define MATCH_NUM 1
 #define CHECK_FAILED (-1)
 #ifdef __ANDROID__
 #define JSON_ARGS "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*(json)?[ \t\r\n\v\f]+[^ \t\r\n\v\f]+[ \t\r\n\v\f]*.*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
