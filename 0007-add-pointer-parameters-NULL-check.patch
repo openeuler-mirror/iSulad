@@ -1,7 +1,7 @@
 From 17b6015d5abe3500a5a89d171af79698e57545f2 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Tue, 31 May 2022 19:35:35 +0800
-Subject: [PATCH 7/8] add pointer parameters NULL check
+Subject: [PATCH 07/13] add pointer parameters NULL check
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Signed-off-by: haozi007 <liuhao27@huawei.com>
