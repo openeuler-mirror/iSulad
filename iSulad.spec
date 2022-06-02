@@ -1,5 +1,5 @@
 %global _version 2.0.14
-%global _release 6
+%global _release 7
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -21,6 +21,11 @@ Patch0005:  0005-Seccomp-optimization.patch
 Patch0006:  0006-fix-different-type-convert.patch
 Patch0007:  0007-add-pointer-parameters-NULL-check.patch
 Patch0008:  0008-add-check-to-arguments.patch
+Patch0009:  0009-remove-static-of-strlncat.patch
+Patch0010:  0010-remove-check-parameter-label_opts-in-init_label.patch
+Patch0011:  0011-update-seccomp-to-Linux-5.10-syscall-list.patch
+Patch0012:  0012-fix-invalid-convert-and-format.patch
+Patch0013:  0013-fix-get_network_namespace_path-check.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -247,6 +252,12 @@ fi
 %endif
 
 %changelog
+* Tue May 31 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.14-7
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: fix type convert, add null pointer check, remove unuse macro
+
 * Tue May 31 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.14-6
 - Type: enhancement
 - ID: NA
