@@ -929,7 +929,7 @@ out:
 static int rest_image_import(const struct isula_import_request *request, struct isula_import_response *response,
                              void *arg)
 {
- 
+
     client_connect_config_t *connect_config = (client_connect_config_t *)arg;
     const char *socketname = (const char *)(connect_config->socket);
     char *body = NULL;
