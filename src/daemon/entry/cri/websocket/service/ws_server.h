@@ -30,8 +30,7 @@
 #include "errors.h"
 #include "read_write_lock.h"
 
-namespace
-{
+namespace {
 const int MAX_ECHO_PAYLOAD = 4096;
 const int MAX_ARRAY_LEN = 2;
 const int MAX_PROTOCOL_NUM = 2;
@@ -97,13 +96,15 @@ private:
     static struct lws_context *m_context;
     volatile int m_forceExit = 0;
     std::thread m_pthreadService;
-    const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = { {
-                                                                         "channel.k8s.io",
-                                                                         Callback,
-                                                                         0,
-                                                                         MAX_ECHO_PAYLOAD,
-                                                                 },
-                                                                 { nullptr, nullptr, 0, 0 } };
+    const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = {
+        {
+            "channel.k8s.io",
+            Callback,
+            0,
+            MAX_ECHO_PAYLOAD,
+        },
+        { nullptr, nullptr, 0, 0 }
+    };
     RouteCallbackRegister m_handler;
     static std::unordered_map<int, SessionData *> m_wsis;
     url::URLDatum m_url;

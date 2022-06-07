@@ -99,7 +99,8 @@ void PodSandboxManagerServiceImpl::ApplySandboxResources(const runtime::v1alpha2
 }
 
 
-void PodSandboxManagerServiceImpl::SetHostConfigDefaultValue(host_config *hc) {
+void PodSandboxManagerServiceImpl::SetHostConfigDefaultValue(host_config *hc)
+{
     free(hc->network_mode);
     hc->network_mode = util_strdup_s(CRI::Constants::namespaceModeFile.c_str());
 }

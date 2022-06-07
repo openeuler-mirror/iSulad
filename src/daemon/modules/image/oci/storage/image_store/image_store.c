@@ -734,6 +734,7 @@ static int image_store_append_image(const char *id, const char *searchable_diges
 {
     int ret = 0;
     size_t i = 0;
+    size_t record_name_len = 0;
     struct linked_list *item = NULL;
 
     item = util_smart_calloc_s(sizeof(struct linked_list), 1);
@@ -748,33 +749,52 @@ static int image_store_append_image(const char *id, const char *searchable_diges
     if (!map_insert(g_image_store->byid, (void *)id, (void *)img)) {
         ERROR("Failed to insert image to image store");
         ret = -1;
-        goto out;
+        goto list_err_out;
     }
 
     if (append_image_according_to_digest(g_image_store->bydigest, searchable_digest, img) != 0) {
         ERROR("Failed to insert image to image store digest index");
         ret = -1;
-        goto out;
+        goto id_err_out;
     }
 
     for (i = 0; i < img->simage->names_len; i++) {
         if (map_search(g_image_store->byname, (void *)img->simage->names[i]) != NULL) {
             ERROR("Image name is already in use : %s", img->simage->names[i]);
             ret = -1;
-            goto out;
+            goto err_out;
         }
         if (!map_insert(g_image_store->byname, (void *)img->simage->names[i], (void *)img)) {
             ERROR("Failed to insert image to image store's byname");
             ret = -1;
-            goto out;
+            goto err_out;
         }
     }
 
-out:
-    if (ret != 0) {
-        linked_list_del(item);
-        free(item);
+    return 0;
+
+err_out:
+    record_name_len = i;
+    for (i = 0; i < record_name_len; i++) {
+        if (!map_remove(g_image_store->byname, (void *)img->simage->names[i])) {
+            ERROR("Failed to remove image from image store's byname");
+        }
     }
+
+    if (remove_image_from_digest_index(img, searchable_digest) != 0) {
+        ERROR("Failed to remove image from image store digest index");
+    }
+
+id_err_out:
+    if (!map_remove(g_image_store->byid, (void *)id)) {
+        ERROR("Failed to remove image from ids map in image store");
+    }
+
+list_err_out:
+    linked_list_del(item);
+    g_image_store->images_list_len--;
+    free(item);
+
     return ret;
 }
 

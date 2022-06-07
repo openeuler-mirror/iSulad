@@ -253,7 +253,7 @@ int console_fifo_open(const char *fifo_path, int *fdout, int flags)
 {
     int fd = 0;
 
-    if (fifo_path ==NULL || fdout == NULL) {
+    if (fifo_path == NULL || fdout == NULL) {
         ERROR("Argument must not be NULL");
         return -1;
     }
