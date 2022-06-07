@@ -212,6 +212,7 @@ static bool append_layer_into_list(layer_t *l)
     return true;
 }
 
+// only delete item from list, free item->elem by caller
 static inline void delete_g_layer_list_item(struct linked_list *item)
 {
     if (item == NULL) {
@@ -220,8 +221,6 @@ static inline void delete_g_layer_list_item(struct linked_list *item)
 
     linked_list_del(item);
 
-    layer_ref_dec((layer_t *)item->elem);
-    item->elem = NULL;
     free(item);
     g_metadata.layers_list_len -= 1;
 }
