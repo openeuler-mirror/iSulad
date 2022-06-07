@@ -1308,7 +1308,8 @@ out:
 }
 
 #ifdef __ANDROID__
-static bool cgroup2_no_controller() {
+static bool cgroup2_no_controller()
+{
     char *controllers_str = NULL;
 
     controllers_str = util_read_content_from_file(CGROUP2_CONTROLLERS_PATH);

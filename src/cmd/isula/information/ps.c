@@ -923,14 +923,16 @@ static int append_non_header_item_field(const char *prefix, const char *non_fiel
         ret = -1;
         goto out;
     }
+
     field->name = non_field_string;
+    non_field_string = NULL;
     field->is_field = false;
+
     if (append_field(ff, field) != 0) {
         ERROR("Failed to append field");
         ret = -1;
         goto out;
     }
-    non_field_string = NULL;
     field = NULL;
 
 out:

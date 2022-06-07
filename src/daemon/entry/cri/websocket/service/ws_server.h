@@ -96,7 +96,8 @@ private:
     static struct lws_context *m_context;
     volatile int m_forceExit = 0;
     std::thread m_pthreadService;
-    const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = { {
+    const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = {
+        {
             "channel.k8s.io",
             Callback,
             0,
