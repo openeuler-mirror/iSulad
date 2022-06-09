@@ -154,6 +154,22 @@ typedef struct {
     char *errmsg;
 } im_pull_response;
 
+
+typedef struct {
+    char *type;
+    char *image;
+    char *auth;
+
+    char *username;;
+    char *password;
+    char *host;
+} im_search_request;
+
+typedef struct {
+    char *output;
+
+} im_search_response;
+
 typedef struct {
     char *type;
     char *image;

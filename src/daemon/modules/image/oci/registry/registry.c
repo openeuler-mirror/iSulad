@@ -1966,6 +1966,63 @@ out:
     return ret;
 }
 
+
+static int prepare_search_desc(search_descriptor *desc, registry_search_options *options)
+{
+    int ret = 0;
+    struct oci_image_module_data *oci_image_data = NULL;
+
+    oci_image_data = get_oci_image_data();
+
+    if (desc == NULL || options == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    desc->host = util_strdup_s(options->host);
+    if (desc->host == NULL) {
+        ERROR("Invalid image %s, host not found", options->image);
+        ret = -1;
+        goto out;
+    }
+
+
+   desc->image_name = util_strdup_s(options->image_name);
+    if (desc->image_name == NULL) {
+        ERROR("Invalid image %s, image name not found", options->image);
+        ret = -1;
+        goto out;
+    }
+ 
+
+
+    ret = pthread_mutex_init(&desc->challenges_mutex, NULL);
+    if (ret != 0) {
+        ERROR("Failed to init challenges mutex for pull");
+        goto out;
+    }
+    
+
+    desc->use_decrypted_key = oci_image_data->use_decrypted_key;
+    desc->skip_tls_verify = options->skip_tls_verify;
+    desc->insecure_registry = options->insecure_registry;
+
+    if (options->auth.username != NULL && options->auth.password != NULL) {
+        desc->username = util_strdup_s(options->auth.username);
+        desc->password = util_strdup_s(options->auth.password);
+    } else {
+        ret = auths_load(desc->host, &desc->username, &desc->password);
+        if (ret != 0) {
+            ERROR("Failed to load auths for host %s", desc->host);
+            isulad_try_set_error_message("Failed to load auths for host %s", desc->host);
+            goto out;
+        }
+    }
+
+out:
+    return ret;
+}
+
 static int find_rollback_layer_index(pull_descriptor *desc)
 {
     int i = 0;
@@ -2073,6 +2130,61 @@ out:
 
     return ret;
 }
+
+
+
+int  registry_search(registry_search_options *options,char **response_output )
+{
+    int ret = 0;
+    search_descriptor *desc = NULL;
+    
+    
+    if (options == NULL || options->image_name == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    desc = util_common_calloc_s(sizeof(search_descriptor));
+    if (desc == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    
+    ret = prepare_search_desc(desc, options);
+    if (ret != 0) {
+        ERROR("registry prepare failed");
+        isulad_try_set_error_message("registry prepare failed");
+        ret = -1;
+        goto out;
+    }
+
+    ret = fetch_catalog(desc);
+    if (ret != 0) {
+        ERROR("error fetching catalog %s", options->host);
+        isulad_try_set_error_message("error fetching %s", options->host);
+        ret = -1;
+        goto out;
+    }
+
+
+    ret = fetch_tags(desc,response_output);
+    if (ret != 0) {
+        ERROR("error fetching tags %s", options->host);
+        isulad_try_set_error_message("error fetching %s", options->host);
+        ret = -1;
+        goto out;
+    }
+
+out:
+   
+    free_search_desc(desc);
+    desc = NULL;
+
+    return ret;
+}
+
+
 
 static void cached_layers_kvfree(void *key, void *value)
 {
@@ -2235,6 +2347,18 @@ void free_registry_pull_options(registry_pull_options *options)
     options->image_name = NULL;
     free(options->dest_image_name);
     options->dest_image_name = NULL;
+    free(options);
+    return;
+}
+
+void free_registry_search_options(registry_search_options *options)
+{
+    if (options == NULL) {
+        return;
+    }
+    free_registry_auth(&options->auth);
+    free(options->image);
+    options->image = NULL;
     free(options);
     return;
 }
