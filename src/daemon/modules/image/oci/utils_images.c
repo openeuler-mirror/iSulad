@@ -79,6 +79,36 @@ char *oci_get_host(const char *name)
     return host;
 }
 
+
+ int oci_get_host_and_imagename(const char *image, char **host, char **image_name){
+    int ret = 0;
+    char **parts = NULL;
+
+    if (image == NULL) {
+        ERROR("Invalid NULL param");
+        ret = -1;
+        return ret;
+    }
+
+    if (strstr(image, "/") == NULL) {
+        *image_name = util_strdup_s(image);
+        util_free_array(parts);
+    } 
+    else{
+    
+    parts = util_string_split(image, '/');
+    
+        if(parts != NULL){
+            *host = util_strdup_s(parts[0]);
+            *image_name = util_strdup_s(parts[1]);
+            util_free_array(parts);
+        }
+    }
+
+    return ret;
+ }
+
+
 char *oci_default_tag(const char *name)
 {
     char temp[PATH_MAX] = { 0 };

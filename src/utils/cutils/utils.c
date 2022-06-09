@@ -287,7 +287,7 @@ char *util_strdup_s(const char *src)
     dst = strdup(src);
     if (dst == NULL) {
         abort();
-    }
+    } 
 
     return dst;
 }

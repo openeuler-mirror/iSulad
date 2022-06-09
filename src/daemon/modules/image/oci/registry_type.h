@@ -128,8 +128,34 @@ typedef struct {
     bool cond_inited;
 } pull_descriptor;
 
+
+
+typedef struct {
+char *image_name;
+char *host;
+char* last_imageName;
+
+char *username;
+char *password;
+
+bool insecure_registry;
+bool skip_tls_verify;
+char *protocol; 
+pthread_mutex_t challenges_mutex;
+challenge challenges[CHALLENGE_MAX];// This is temporary field.
+
+bool use_decrypted_key;
+bool cert_loaded;
+char *ca_file;
+char *cert_file;
+char *key_file;
+
+}search_descriptor;
+
 void free_challenge(challenge *c);
 void free_layer_blob(layer_blob *layer);
 void free_pull_desc(pull_descriptor *desc);
+
+void free_search_desc(search_descriptor *desc);
 
 #endif // DAEMON_MODULES_IMAGE_OCI_REGISTRY_TYPE_H
