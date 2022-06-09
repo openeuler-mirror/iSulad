@@ -195,10 +195,6 @@ static void remove_io_dispatch(io_thread_t *io_thd, int from, int to)
     }
     io_copy_t *ioc = io_thd->ioc;
 
-    if (pthread_mutex_lock(&(ioc->mutex))) {
-        return;
-    }
-
     fd_node_t *tmp = NULL;
     do {
         /* remove src fd */
@@ -233,7 +229,6 @@ static void remove_io_dispatch(io_thread_t *io_thd, int from, int to)
         free(tmp);
         tmp = NULL;
     }
-    pthread_mutex_unlock(&(ioc->mutex));
 }
 
 static int get_exec_winsize(const char *buf, struct winsize *wsize)
@@ -297,8 +292,14 @@ static void *do_io_copy(void *data)
             /* End of file. The remote has closed the connection */
             break;
         } else if (ioc->id != EXEC_RESIZE) {
+            if (pthread_mutex_lock(&(ioc->mutex)) != 0) {
+                continue;
+            }
+
             fd_node_t *fn = ioc->fd_to;
-            for (; fn != NULL; fn = fn->next) {
+            fd_node_t *next = fn;
+            for (; fn != NULL; fn = next) {
+                next = fn->next;
                 if (fn->is_log) {
                     shim_write_container_log_file(io_thd->terminal, ioc->id, buf, r_count);
                 } else {
@@ -309,7 +310,12 @@ static void *do_io_copy(void *data)
                     }
                 }
             }
+            pthread_mutex_unlock(&(ioc->mutex));
         } else {
+            if (pthread_mutex_lock(&(ioc->mutex)) != 0) {
+                continue;
+            }
+
             int resize_fd = ioc->fd_to->fd;
             struct winsize wsize = { 0x00 };
             if (get_exec_winsize(buf, &wsize) < 0) {
@@ -318,6 +324,7 @@ static void *do_io_copy(void *data)
             if (ioctl(resize_fd, TIOCSWINSZ, &wsize) < 0) {
                 break;
             }
+            pthread_mutex_unlock(&(ioc->mutex));
         }
 
         /*
