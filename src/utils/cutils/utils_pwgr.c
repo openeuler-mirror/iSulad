@@ -212,11 +212,6 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
         return -1;
     }
 
-    if (*result != NULL) {
-        ERROR("Result shall point to null to start.");
-        return -1;
-    }
-
     buff_end = buffer + buflen - 1;
     flockfile(stream);
 
