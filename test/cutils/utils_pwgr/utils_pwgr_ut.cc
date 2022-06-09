@@ -106,7 +106,7 @@ TEST(utils_pwgr, test_getgrent_r)
     ASSERT_EQ(util_getgrent_r(NULL, &gr, buf, sizeof(buf), &pgr), -1);
     ASSERT_EQ(util_getgrent_r(f_gr, &gr, NULL, 0, &pgr), -1);
     ASSERT_EQ(util_getgrent_r(f_gr, &gr, invalid_buf, 1, &pgr), -1);
-    ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr_alter), -1);
+    ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr_alter), 0);
     ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), NULL), -1);
 
     while (!feof(f_gr)) {
@@ -129,7 +129,6 @@ TEST(utils_pwgr, test_getgrent_r)
         }
         EXPECT_TRUE(pgr == &gr);
         gr = {0};
-        pgr = nullptr;
     }
 
     fclose(f_gr);

@@ -279,11 +279,6 @@ int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buf
         return -1;
     }
 
-    if (*result != NULL) {
-        ERROR("Result shall point to null to start.");
-        return -1;
-    }
-
     flockfile(stream);
     buff_end = buffer + buflen - 1;
 
