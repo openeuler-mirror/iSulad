@@ -123,8 +123,13 @@ TEST(utils_pwgr, test_getgrent_r)
         ASSERT_STREQ(gr.gr_passwd, std::get<1>(testcase[i]).c_str());
         ASSERT_EQ(gr.gr_gid, std::get<2>(testcase[i]));
         if (string_list[i].size()) {
-            for (j = 0; j < string_list[i].size(); ++j) {
-                EXPECT_TRUE(strcmp(gr.gr_mem[j], string_list[i][j].c_str()) == 0);
+            char **walker = gr.gr_mem;
+            j = 0;
+            // use pointer to ensure gr_mem has end null pointer
+            while (walker != NULL && *walker != NULL) {
+                EXPECT_TRUE(strcmp(*walker, string_list[i][j].c_str()) == 0);
+                walker++;
+                j++;
             }
         }
         EXPECT_TRUE(pgr == &gr);
