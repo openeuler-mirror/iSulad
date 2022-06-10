@@ -213,13 +213,18 @@ static bool append_layer_into_list(layer_t *l)
 }
 
 // only delete item from list, free item->elem by caller
-static inline void delete_g_layer_list_item(struct linked_list *item)
+static inline void delete_g_layer_list_item(struct linked_list *item, bool rm_val)
 {
     if (item == NULL) {
         return;
     }
 
     linked_list_del(item);
+
+    if (rm_val) {
+        layer_ref_dec((layer_t *)item->elem);
+        item->elem = NULL;
+    }
 
     free(item);
     g_metadata.layers_list_len -= 1;
@@ -235,7 +240,7 @@ void remove_layer_list_tail()
 
     item = g_metadata.layers_list.prev;
 
-    delete_g_layer_list_item(item);
+    delete_g_layer_list_item(item, false);
 }
 
 static bool init_from_conf(const struct storage_module_init_options *conf)
@@ -725,7 +730,7 @@ static int remove_memory_stores(const char *id)
         if (strcmp(tl->slayer->id, id) != 0) {
             continue;
         }
-        delete_g_layer_list_item(item);
+        delete_g_layer_list_item(item, true);
         break;
     }
 
