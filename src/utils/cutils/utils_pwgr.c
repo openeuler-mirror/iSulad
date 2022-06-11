@@ -144,7 +144,7 @@ static char **hold_string_list(char **line, char *buf_start, char *buf_end, cons
 
     for (; walker < (char **)buf_end; ++walker) {
         if (**line == '\0') {
-            return result;
+            goto out;
         }
 
         (void)util_trim_space(*line);
@@ -155,6 +155,8 @@ static char **hold_string_list(char **line, char *buf_start, char *buf_end, cons
         }
     }
 
+out:
+    *walker = NULL;
     return result;
 }
 
@@ -209,11 +211,6 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
 
     if (buflen <= 1) {
         ERROR("Inadequate buffer length was given.");
-        return -1;
-    }
-
-    if (*result != NULL) {
-        ERROR("Result shall point to null to start.");
         return -1;
     }
 
@@ -281,11 +278,6 @@ int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buf
 
     if (buflen <= 1) {
         ERROR("Inadequate buffer length was given.");
-        return -1;
-    }
-
-    if (*result != NULL) {
-        ERROR("Result shall point to null to start.");
         return -1;
     }
 

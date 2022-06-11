@@ -44,7 +44,7 @@ TEST(utils_pwgr, test_getpwent_r)
     ASSERT_EQ(util_getpwent_r(NULL, &pw, buf, sizeof(buf), &ppw), -1);
     ASSERT_EQ(util_getpwent_r(f_pw, &pw, NULL, 0, &ppw), -1);
     ASSERT_EQ(util_getpwent_r(f_pw, &pw, invalid_buf, 1, &ppw), -1);
-    ASSERT_EQ(util_getpwent_r(f_pw, &pw, buf, sizeof(buf), &ppw_alter), -1);
+    ASSERT_EQ(util_getpwent_r(f_pw, &pw, buf, sizeof(buf), &ppw_alter), 0);
     ASSERT_EQ(util_getpwent_r(f_pw, &pw, buf, sizeof(buf), NULL), -1);
 
     while (!feof(f_pw)) {
@@ -65,7 +65,6 @@ TEST(utils_pwgr, test_getpwent_r)
         ASSERT_STREQ(pw.pw_dir, std::get<5>(elem).c_str());
         ASSERT_STREQ(pw.pw_shell, std::get<6>(elem).c_str());
         EXPECT_TRUE(ppw == &pw);
-        ppw = nullptr;
         pw = {0};
     }
 
@@ -107,7 +106,7 @@ TEST(utils_pwgr, test_getgrent_r)
     ASSERT_EQ(util_getgrent_r(NULL, &gr, buf, sizeof(buf), &pgr), -1);
     ASSERT_EQ(util_getgrent_r(f_gr, &gr, NULL, 0, &pgr), -1);
     ASSERT_EQ(util_getgrent_r(f_gr, &gr, invalid_buf, 1, &pgr), -1);
-    ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr_alter), -1);
+    ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr_alter), 0);
     ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), NULL), -1);
 
     while (!feof(f_gr)) {
@@ -124,13 +123,17 @@ TEST(utils_pwgr, test_getgrent_r)
         ASSERT_STREQ(gr.gr_passwd, std::get<1>(testcase[i]).c_str());
         ASSERT_EQ(gr.gr_gid, std::get<2>(testcase[i]));
         if (string_list[i].size()) {
-            for (j = 0; j < string_list[i].size(); ++j) {
-                EXPECT_TRUE(strcmp(gr.gr_mem[j], string_list[i][j].c_str()) == 0);
+            char **walker = gr.gr_mem;
+            j = 0;
+            // use pointer to ensure gr_mem has end null pointer
+            while (walker != NULL && *walker != NULL) {
+                EXPECT_TRUE(strcmp(*walker, string_list[i][j].c_str()) == 0);
+                walker++;
+                j++;
             }
         }
         EXPECT_TRUE(pgr == &gr);
         gr = {0};
-        pgr = nullptr;
     }
 
     fclose(f_gr);
