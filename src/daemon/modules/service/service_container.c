@@ -43,6 +43,7 @@
 #include "events_sender_api.h"
 #include "image_api.h"
 #include "specs_api.h"
+#include "specs_mount.h"
 #include "isulad_config.h"
 #include "verify.h"
 #include "plugin_api.h"
@@ -731,6 +732,13 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     nret = im_mount_container_rootfs(cont->common_config->image_type, cont->common_config->image, id);
     if (nret != 0) {
         ERROR("Failed to mount rootfs for container %s", id);
+        ret = -1;
+        goto close_exit_fd;
+    }
+
+    nret = setup_ipc_dirs(cont->hostconfig, cont->common_config);
+    if (nret != 0) {
+        ERROR("Failed to setup ipc dirs");
         ret = -1;
         goto close_exit_fd;
     }
