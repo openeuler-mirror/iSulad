@@ -1370,24 +1370,7 @@ static char *get_cpu_variant()
     return variant;
 }
 
-int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant)
-{
-    int ret = 0;
-    int i = 0;
-    struct utsname uts;
-    char *tmp_variant = NULL;
-
-    if (host_os == NULL || host_arch == NULL || host_variant == NULL) {
-        ERROR("Invalid NULL pointer");
-        return -1;
-    }
-
-    if (uname(&uts) < 0) {
-        ERROR("Failed to read host arch and os: %s", strerror(errno));
-        ret = -1;
-        goto out;
-    }
-
+static void normalized_host_arch(char **host_arch, struct utsname uts) {
     const char *arch_map[][2] = { { "i386", "386" },
         { "x86_64", "amd64" },
         { "x86-64", "amd64" },
@@ -1397,14 +1380,8 @@ int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_v
         { "mips64le", "mips64le" },
         { "mips64el", "mips64le" }
     };
+    int i = 0;
 
-    const char *variant_map[][2] = { { "5", "v5" },
-        { "6", "v6" },
-        { "7", "v7" },
-        { "8", "v8" }
-    };
-
-    *host_os = util_strings_to_lower(uts.sysname);
     *host_arch = util_strdup_s(uts.machine);
 
     for (i = 0; i < sizeof(arch_map) / sizeof(arch_map[0]); ++i) {
@@ -1414,42 +1391,68 @@ int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_v
             break;
         }
     }
+}
 
-    if (!strcmp(*host_arch, "arm") || !strcmp(*host_arch, "arm64")) {
-        *host_variant = get_cpu_variant();
-        if (!strcmp(*host_arch, "arm64") && *host_variant != NULL &&
-            (!strcmp(*host_variant, "8") || !strcmp(*host_variant, "v8"))) {
-            free(*host_variant);
-            *host_variant = NULL;
-        }
-        if (!strcmp(*host_arch, "arm") && *host_variant == NULL) {
-            *host_variant = util_strdup_s("v7");
-        } else if (!strcmp(*host_arch, "arm") && *host_variant != NULL) {
-            tmp_variant = *host_variant;
-            *host_variant = util_strdup_s(tmp_variant);
-            for (i = 0; i < sizeof(variant_map) / sizeof(variant_map[0]); ++i) {
-                if (!strcmp(tmp_variant, variant_map[i][0])) {
-                    free(*host_variant);
-                    *host_variant = util_strdup_s(variant_map[i][1]);
-                    break;
-                }
+static void normalized_host_variant(const char *host_arch, char **host_variant) {
+    int i = 0;
+    char *tmp_variant = NULL;
+    const char *variant_map[][2] = { { "5", "v5" },
+        { "6", "v6" },
+        { "7", "v7" },
+        { "8", "v8" },
+        { "9", "v9" }
+    };
+
+    if (strcmp(host_arch, "arm") && strcmp(host_arch, "arm64")) {
+        return;
+    }
+
+    *host_variant = get_cpu_variant();
+    if (!strcmp(host_arch, "arm64") && *host_variant != NULL &&
+        (!strcmp(*host_variant, "8") || !strcmp(*host_variant, "v8"))) {
+        free(host_variant);
+        host_variant = NULL;
+    }
+
+    if (!strcmp(host_arch, "arm") && *host_variant == NULL) {
+        *host_variant = util_strdup_s("v7");
+        return;
+    }
+
+    if (!strcmp(host_arch, "arm") && *host_variant != NULL) {
+        tmp_variant = *host_variant;
+        *host_variant = util_strdup_s(tmp_variant);
+        for (i = 0; i < sizeof(variant_map) / sizeof(variant_map[0]); ++i) {
+            if (!strcmp(tmp_variant, variant_map[i][0])) {
+                free(*host_variant);
+                *host_variant = util_strdup_s(variant_map[i][1]);
+                break;
             }
-            free(tmp_variant);
-            tmp_variant = NULL;
         }
+        free(tmp_variant);
+        tmp_variant = NULL;
+    }
+}
+
+int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant)
+{
+    struct utsname uts;
+
+    if (host_os == NULL || host_arch == NULL || host_variant == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
     }
 
-out:
-    if (ret != 0) {
-        free(*host_os);
-        *host_os = NULL;
-        free(*host_arch);
-        *host_arch = NULL;
-        free(*host_variant);
-        *host_variant = NULL;
+    if (uname(&uts) < 0) {
+        ERROR("Failed to read host arch and os: %s", strerror(errno));
+        return -1;
     }
 
-    return ret;
+    *host_os = util_strings_to_lower(uts.sysname);
+    normalized_host_arch(host_arch, uts);
+    normalized_host_variant(*host_arch, host_variant);
+
+    return 0;
 }
 
 int util_read_pid_ppid_info(uint32_t pid, pid_ppid_info_t *pid_info)
