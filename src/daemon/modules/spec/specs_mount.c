@@ -49,6 +49,7 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "utils_fs.h"
 #include "image_api.h"
 #include "volume_api.h"
 #include "parse_volume.h"
@@ -2576,10 +2577,11 @@ static int chown_for_shm(const char *shm_path, const char *user_remap)
 
 static char *get_prepare_share_shm_path(const char *truntime, const char *cid)
 {
-#define SHM_MOUNT_FILE_NAME "/mounts/shm/"
+#define SHM_MOUNT_FILE_NAME "/mounts/shm"
     char *c_root_path = NULL;
     size_t slen = 0;
     char *spath = NULL;
+    char real_root_path[PATH_MAX] = { 0 };
     int nret = 0;
 
     if (truntime == NULL) {
@@ -2590,19 +2592,24 @@ static char *get_prepare_share_shm_path(const char *truntime, const char *cid)
         goto err_out;
     }
 
-    // c_root_path + "/" + cid + "/mounts/shm"
-    if (strlen(c_root_path) > (((PATH_MAX - strlen(cid)) - 1) - strlen(SHM_MOUNT_FILE_NAME)) - 1) {
+    if (realpath(c_root_path, real_root_path) == NULL) {
+        ERROR("Failed to get %s realpath", c_root_path);
+        goto err_out;
+    }
+
+    // real_root_path + "/" + cid + "/mounts/shm"
+    if (strlen(real_root_path) > (((PATH_MAX - strlen(cid)) - 1) - strlen(SHM_MOUNT_FILE_NAME)) - 1) {
         ERROR("Too large path");
         goto err_out;
     }
-    slen = strlen(c_root_path) + 1 + strlen(cid) + strlen(SHM_MOUNT_FILE_NAME) + 1;
+    slen = strlen(real_root_path) + 1 + strlen(cid) + strlen(SHM_MOUNT_FILE_NAME) + 1;
     spath = util_smart_calloc_s(sizeof(char), slen);
     if (spath == NULL) {
         ERROR("Out of memory");
         goto err_out;
     }
 
-    nret = snprintf(spath, slen, "%s/%s/mounts/shm/", c_root_path, cid);
+    nret = snprintf(spath, slen, "%s/%s/mounts/shm", real_root_path, cid);
     if (nret < 0 || nret >= slen) {
         ERROR("Sprintf failed");
         goto err_out;
@@ -2639,7 +2646,7 @@ out:
     return ret;
 }
 
-static int prepare_share_shm(host_config *host_spec, container_config_v2_common_config *v2_spec)
+int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
 #define MAX_PROPERTY_LEN 64
     char shmproperty[MAX_PROPERTY_LEN] = { 0 };
@@ -2652,14 +2659,26 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
     char *p = NULL;
     char *userns_remap = NULL;
 #endif
-    // has mount for /dev/shm
-    if (has_mount_shm(host_spec, v2_spec)) {
+
+    // ignore shm of system container
+    if (host_spec->system_container) {
+        return 0;
+    }
+    // setup shareable dirs
+    if (host_spec->ipc_mode != NULL && !namespace_is_shareable(host_spec->ipc_mode)) {
         return 0;
     }
 
     spath = get_prepare_share_shm_path(host_spec->runtime, v2_spec->id);
     if (spath == NULL) {
-        goto out;
+        return -1;
+    }
+
+    // container shm has been mounted
+    if (util_detect_mounted(spath)) {
+        DEBUG("shm path %s has been mounted", spath);
+        free(spath);
+        return 0;
     }
 
     nret = util_mkdir_p(spath, 0700);
@@ -2685,7 +2704,6 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
         goto out;
     }
 
-    v2_spec->shm_path = spath;
 #ifdef ENABLE_USERNS_REMAP
     userns_remap = conf_get_isulad_userns_remap();
 
@@ -2718,7 +2736,6 @@ static int prepare_share_shm(host_config *host_spec, container_config_v2_common_
     }
 #endif
 
-    spath = NULL;
     ret = 0;
 out:
     if (ret != 0 && has_mount) {
@@ -2786,8 +2803,22 @@ out_free:
     return ret;
 }
 
+static int set_share_shm(const host_config *host_spec, container_config_v2_common_config *v2_spec)
+{
+    char *spath = NULL;
+
+    spath = get_prepare_share_shm_path(host_spec->runtime, v2_spec->id);
+    if (spath == NULL) {
+        return -1;
+    }
+
+    v2_spec->shm_path = spath;
+
+    return 0;
+}
+
 #define SHM_MOUNT_POINT "/dev/shm"
-static int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2_spec)
+static int set_shm_path(host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
     container_t *cont = NULL;
@@ -2800,7 +2831,7 @@ static int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_con
     }
     // setup shareable dirs
     if (host_spec->ipc_mode == NULL || namespace_is_shareable(host_spec->ipc_mode)) {
-        return prepare_share_shm(host_spec, v2_spec);
+        return set_share_shm(host_spec, v2_spec);
     }
 
     if (namespace_is_container(host_spec->ipc_mode)) {
@@ -3339,6 +3370,12 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
 
     /* setup ipc dir */
     if (setup_ipc_dirs(host_spec, v2_spec) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (set_shm_path(host_spec, v2_spec) != 0) {
+        ERROR("Failed to set shm path");
         ret = -1;
         goto out;
     }
