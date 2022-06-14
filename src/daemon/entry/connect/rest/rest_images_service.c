@@ -14,6 +14,7 @@
  ******************************************************************************/
 #include "rest_images_service.h"
 #include <unistd.h>
+#include <sys/prctl.h>
 
 #include "isula_libutils/log.h"
 #include "callback.h"
@@ -276,6 +277,8 @@ static void rest_image_load_cb(evhtp_request_t *req, void *arg)
     image_load_image_request *crequest = NULL;
     image_load_image_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "ImageLoad");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -310,6 +313,8 @@ static void rest_image_list_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     image_list_images_request *crequest = NULL;
     image_list_images_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ImageList");
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -346,6 +351,8 @@ static void rest_image_delete_cb(evhtp_request_t *req, void *arg)
     image_delete_image_request *crequest = NULL;
     image_delete_image_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "ImageDelete");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -380,6 +387,8 @@ static void rest_image_inspect_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     image_inspect_request *crequest = NULL;
     image_inspect_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ImageInspect");
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -480,6 +489,8 @@ static void rest_image_pull_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     image_pull_image_request *crequest = NULL;
     image_pull_image_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ImagePull");
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -592,6 +603,8 @@ static void rest_image_login_cb(evhtp_request_t *req, void *arg)
     image_login_request *crequest = NULL;
     image_login_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "RegistryLogin");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -686,6 +699,8 @@ static void rest_image_logout_cb(evhtp_request_t *req, void *arg)
     image_logout_request *crequest = NULL;
     image_logout_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "RegistryLogout");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -769,6 +784,8 @@ static void rest_image_tag_cb(evhtp_request_t *req, void *arg)
     image_tag_image_request *crequest = NULL;
     image_tag_image_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "ImageTag");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -851,6 +868,8 @@ static void rest_image_import_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     image_import_request *crequest =  NULL;
     image_import_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ImageImport");
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
