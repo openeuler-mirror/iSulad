@@ -153,6 +153,8 @@ Status ContainerServiceImpl::Version(ServerContext *context, const VersionReques
     container_version_request *container_req = nullptr;
     container_version_response *container_res = nullptr;
 
+    prctl(PR_SET_NAME, "VersionOp");
+
     auto status = GrpcServerTlsAuth::auth(context, "docker_version");
     if (!status.ok()) {
         return status;
@@ -184,6 +186,8 @@ Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *req
     service_executor_t *cb = nullptr;
     host_info_request *container_req = nullptr;
     host_info_response *container_res = nullptr;
+
+    prctl(PR_SET_NAME, "InfoOp");
 
     auto status = GrpcServerTlsAuth::auth(context, "docker_info");
     if (!status.ok()) {
@@ -217,6 +221,8 @@ Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest 
     container_create_response *container_res = nullptr;
     container_create_request *container_req = nullptr;
 
+    prctl(PR_SET_NAME, "ContCreate");
+
     auto status = GrpcServerTlsAuth::auth(context, "container_create");
     if (!status.ok()) {
         return status;
@@ -248,6 +254,8 @@ Status ContainerServiceImpl::Start(ServerContext *context, const StartRequest *r
     service_executor_t *cb = nullptr;
     container_start_request *req = nullptr;
     container_start_response *res = nullptr;
+
+    prctl(PR_SET_NAME, "ContStart");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_start");
     if (!status.ok()) {
@@ -327,6 +335,8 @@ Status ContainerServiceImpl::RemoteStart(ServerContext *context,
     container_start_response *container_res = nullptr;
     sem_t sem;
 
+    prctl(PR_SET_NAME, "ContRStart");
+
     cb = get_service_executor();
     if (cb == nullptr || cb->container.start == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
@@ -402,6 +412,8 @@ Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *reque
     container_top_request *req = nullptr;
     container_top_response *res = nullptr;
 
+    prctl(PR_SET_NAME, "ContTop");
+
     auto status = GrpcServerTlsAuth::auth(context, "container_top");
     if (!status.ok()) {
         return status;
@@ -433,6 +445,8 @@ Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *req
     service_executor_t *cb = nullptr;
     container_stop_request *container_req = nullptr;
     container_stop_response *container_res = nullptr;
+
+    prctl(PR_SET_NAME, "ContStop");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_stop");
     if (!status.ok()) {
@@ -466,6 +480,8 @@ Status ContainerServiceImpl::Restart(ServerContext *context, const RestartReques
     container_restart_request *container_req = nullptr;
     container_restart_response *container_res = nullptr;
 
+    prctl(PR_SET_NAME, "ContRestart");
+
     auto status = GrpcServerTlsAuth::auth(context, "container_restart");
     if (!status.ok()) {
         return status;
@@ -497,6 +513,8 @@ Status ContainerServiceImpl::Kill(ServerContext *context, const KillRequest *req
     service_executor_t *cb = nullptr;
     container_kill_request *container_req = nullptr;
     container_kill_response *container_res = nullptr;
+
+    prctl(PR_SET_NAME, "ContKill");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_kill");
     if (!status.ok()) {
@@ -530,6 +548,8 @@ Status ContainerServiceImpl::Delete(ServerContext *context, const DeleteRequest 
     container_delete_request *container_req = nullptr;
     container_delete_response *container_res = nullptr;
 
+    prctl(PR_SET_NAME, "ContDelete");
+
     auto status = GrpcServerTlsAuth::auth(context, "container_delete");
     if (!status.ok()) {
         return status;
@@ -561,6 +581,8 @@ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *req
     service_executor_t *cb = nullptr;
     container_exec_request *container_req = nullptr;
     container_exec_response *container_res = nullptr;
+
+    prctl(PR_SET_NAME, "ContExec");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_exec_create");
     if (!status.ok()) {
@@ -665,6 +687,8 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
     container_exec_request *container_req = nullptr;
     container_exec_response *container_res = nullptr;
 
+    prctl(PR_SET_NAME, "ContRExec");
+
     auto status = GrpcServerTlsAuth::auth(context, "container_exec_create");
     if (!status.ok()) {
         return status;
@@ -739,6 +763,8 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
     container_inspect_request *container_req = nullptr;
     container_inspect_response *container_res = nullptr;
 
+    prctl(PR_SET_NAME, "ContInspect");
+
     Status status = GrpcServerTlsAuth::auth(context, "container_inspect");
     if (!status.ok()) {
         return status;
@@ -771,6 +797,8 @@ Status ContainerServiceImpl::List(ServerContext *context, const ListRequest *req
     service_executor_t *cb = nullptr;
     container_list_request *container_req = nullptr;
     container_list_response *container_res = nullptr;
+
+    prctl(PR_SET_NAME, "ContList");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_list");
     if (!status.ok()) {
@@ -884,6 +912,8 @@ Status ContainerServiceImpl::Attach(ServerContext *context, ServerReaderWriter<A
     sem_t sem_stderr;
     int pipefd[2] = { -1, -1 };
 
+    prctl(PR_SET_NAME, "ContAttach");
+
     auto status = AttachInit(context, &cb, &container_req, &container_res, &sem_stderr, pipefd);
     if (!status.ok()) {
         return status;
@@ -944,6 +974,8 @@ Status ContainerServiceImpl::Pause(ServerContext *context, const PauseRequest *r
     container_pause_request *container_req = nullptr;
     container_pause_response *container_res = nullptr;
 
+    prctl(PR_SET_NAME, "ContPause");
+
     auto status = GrpcServerTlsAuth::auth(context, "container_pause");
     if (!status.ok()) {
         return status;
@@ -975,6 +1007,8 @@ Status ContainerServiceImpl::Resume(ServerContext *context, const ResumeRequest 
     service_executor_t *cb = nullptr;
     container_resume_request *container_req = nullptr;
     container_resume_response *container_res = nullptr;
+
+    prctl(PR_SET_NAME, "ContResume");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_unpause");
     if (!status.ok()) {
@@ -1008,6 +1042,8 @@ Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest 
     container_export_request *container_req = nullptr;
     container_export_response *container_res = nullptr;
 
+    prctl(PR_SET_NAME, "ContExport");
+
     auto status = GrpcServerTlsAuth::auth(context, "container_export");
     if (!status.ok()) {
         return status;
@@ -1039,6 +1075,8 @@ Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest 
     service_executor_t *cb = nullptr;
     struct isulad_container_rename_request *isuladreq = nullptr;
     struct isulad_container_rename_response *isuladres = nullptr;
+
+    prctl(PR_SET_NAME, "ContRename");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_rename");
     if (!status.ok()) {
@@ -1073,6 +1111,8 @@ Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest 
     struct isulad_container_resize_request *isuladreq = nullptr;
     struct isulad_container_resize_response *isuladres = nullptr;
 
+    prctl(PR_SET_NAME, "ContResize");
+
     auto status = GrpcServerTlsAuth::auth(context, "container_resize");
     if (!status.ok()) {
         return status;
@@ -1106,6 +1146,8 @@ Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest 
     container_update_request *container_req = nullptr;
     container_update_response *container_res = nullptr;
 
+    prctl(PR_SET_NAME, "ContUpdate");
+
     auto status = GrpcServerTlsAuth::auth(context, "container_update");
     if (!status.ok()) {
         return status;
@@ -1137,6 +1179,8 @@ Status ContainerServiceImpl::Stats(ServerContext *context, const StatsRequest *r
     service_executor_t *cb = nullptr;
     container_stats_request *container_req = nullptr;
     container_stats_response *container_res = nullptr;
+
+    prctl(PR_SET_NAME, "ContStats");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_stats");
     if (!status.ok()) {
@@ -1170,6 +1214,8 @@ Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *req
     container_wait_request *container_req = nullptr;
     container_wait_response *container_res = nullptr;
 
+    prctl(PR_SET_NAME, "ContWait");
+
     auto status = GrpcServerTlsAuth::auth(context, "container_wait");
     if (!status.ok()) {
         return status;
@@ -1201,6 +1247,8 @@ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest 
     service_executor_t *cb = nullptr;
     isulad_events_request *isuladreq = nullptr;
     stream_func_wrapper stream = { 0 };
+
+    prctl(PR_SET_NAME, "ContEvents");
 
     auto status = GrpcServerTlsAuth::auth(context, "docker_events");
     if (!status.ok()) {
@@ -1237,6 +1285,8 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
     int tret;
     service_executor_t *cb = nullptr;
     isulad_copy_from_container_request *isuladreq = nullptr;
+
+    prctl(PR_SET_NAME, "ContCopyFrom");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_archive");
     if (!status.ok()) {
@@ -1279,6 +1329,8 @@ ContainerServiceImpl::CopyToContainer(ServerContext *context,
     int ret;
     service_executor_t *cb = nullptr;
     container_copy_to_request *isuladreq = nullptr;
+
+    prctl(PR_SET_NAME, "ContCopyTo");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_archive");
     if (!status.ok()) {
@@ -1386,6 +1438,8 @@ Status ContainerServiceImpl::Logs(ServerContext *context, const LogsRequest *req
     struct isulad_logs_request *isulad_request = nullptr;
     struct isulad_logs_response *isulad_response = nullptr;
     stream_func_wrapper stream = { 0 };
+
+    prctl(PR_SET_NAME, "ContLogs");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_logs");
     if (!status.ok()) {
