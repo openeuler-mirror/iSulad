@@ -41,4 +41,6 @@ bool mount_run_tmpfs(oci_runtime_spec *container, const host_config *host_spec, 
 
 int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec);
 
+int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2_spec);
+
 #endif

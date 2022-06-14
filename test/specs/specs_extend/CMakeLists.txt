@@ -13,6 +13,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_timestamp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/util_atomic.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_mount_spec.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_fs.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
