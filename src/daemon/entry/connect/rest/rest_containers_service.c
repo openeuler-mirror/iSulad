@@ -522,6 +522,8 @@ static void rest_create_cb(evhtp_request_t *req, void *arg)
     container_create_response *cresponse = NULL;
     container_create_request *crequest = NULL;
 
+    prctl(PR_SET_NAME, "ContCreate");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -557,6 +559,8 @@ static void rest_start_cb(evhtp_request_t *req, void *arg)
     container_start_response *cresponse = NULL;
     container_start_request *crequest = NULL;
 
+    prctl(PR_SET_NAME, "ContStart");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -591,6 +595,8 @@ static void rest_wait_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     container_wait_request *crequest = NULL;
     container_wait_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ContWait");
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -654,6 +660,8 @@ static void rest_stop_cb(evhtp_request_t *req, void *arg)
     container_stop_request *crequest = NULL;
     container_stop_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "ContStop");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -715,6 +723,8 @@ static void rest_restart_cb(evhtp_request_t *req, void *arg)
     container_restart_request *crequest = NULL;
     container_restart_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "ContRestart");
+
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
@@ -770,6 +780,8 @@ static void rest_version_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     container_version_request *crequest = NULL;
     container_version_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "VersionOp");
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -832,6 +844,8 @@ static void rest_info_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     host_info_request *crequest = NULL;
     host_info_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "InfoOp");
 
     // only deal with post request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -896,6 +910,8 @@ static void rest_update_cb(evhtp_request_t *req, void *arg)
     container_update_request *container_req = NULL;
     container_update_response *container_res = NULL;
 
+    prctl(PR_SET_NAME, "ContUpdate");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -956,6 +972,8 @@ static void rest_kill_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     container_kill_request *crequest = NULL;
     container_kill_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ContKill");
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -1020,6 +1038,8 @@ static void rest_container_inspect_cb(evhtp_request_t *req, void *arg)
     container_inspect_request *crequest = NULL;
     container_inspect_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "ContInspect");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -1081,6 +1101,8 @@ static void rest_exec_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     container_exec_request *crequest = NULL;
     container_exec_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ContExec");
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -1145,6 +1167,8 @@ static void rest_attach_cb(evhtp_request_t *req, void *arg)
     container_attach_request *crequest = NULL;
     container_attach_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "ContAttach");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -1206,6 +1230,8 @@ static void rest_remove_cb(evhtp_request_t *req, void *arg)
     container_delete_request *crequest = NULL;
     container_delete_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "ContRemove");
+
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -1240,6 +1266,8 @@ static void rest_list_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     container_list_request *crequest = NULL;
     container_list_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ContList");
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -1302,6 +1330,8 @@ static void rest_export_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     container_export_request *crequest = NULL;
     container_export_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ContExport");
 
     // only deal with post request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -1367,6 +1397,8 @@ static void rest_pause_cb(evhtp_request_t *req, void *arg)
     container_pause_request *crequest = NULL;
     container_pause_response *cresponse = NULL;
 
+    prctl(PR_SET_NAME, "ContPause");
+
     // only deal with post request
     if (evhtp_request_get_method(req) != htp_method_POST) {
         ERROR("Only deal with post request: pause()");
@@ -1430,6 +1462,8 @@ static void rest_resume_cb(evhtp_request_t *req, void *arg)
     service_executor_t *cb = NULL;
     container_resume_request *crequest = NULL;
     container_resume_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ContResume");
 
     // only deal with post request
     if (evhtp_request_get_method(req) != htp_method_POST) {
@@ -1500,6 +1534,8 @@ static void rest_rename_cb(evhtp_request_t *req, void *arg)
     container_rename_request *crequest = NULL;
     struct isulad_container_rename_request isuladreq = { 0 };
     struct isulad_container_rename_response *isuladres = NULL;
+
+    prctl(PR_SET_NAME, "ContRename");
 
     // only deal with post request
     if (evhtp_request_get_method(req) != htp_method_POST) {
