@@ -248,6 +248,8 @@ void ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *r
 
 Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *request, ListImagesResponse *reply)
 {
+    prctl(PR_SET_NAME, "ImageList");
+
     auto status = GrpcServerTlsAuth::auth(context, "image_list");
     if (!status.ok()) {
         return status;
@@ -277,6 +279,8 @@ Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *
 
 Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageRequest *request, DeleteImageResponse *reply)
 {
+    prctl(PR_SET_NAME, "ImageDelete");
+
     auto status = GrpcServerTlsAuth::auth(context, "image_delete");
     if (!status.ok()) {
         return status;
@@ -306,6 +310,8 @@ Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageReques
 
 Status ImagesServiceImpl::Tag(ServerContext *context, const TagImageRequest *request, TagImageResponse *reply)
 {
+    prctl(PR_SET_NAME, "ImageTag");
+
     auto status = GrpcServerTlsAuth::auth(context, "image_tag");
     if (!status.ok()) {
         return status;
@@ -351,6 +357,8 @@ void ImagesServiceImpl::import_response_to_grpc(const image_import_response *res
 
 Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *request, ImportResponse *reply)
 {
+    prctl(PR_SET_NAME, "ImageImport");
+
     auto status = GrpcServerTlsAuth::auth(context, "image_import");
     if (!status.ok()) {
         return status;
@@ -380,6 +388,8 @@ Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *re
 
 Status ImagesServiceImpl::Load(ServerContext *context, const LoadImageRequest *request, LoadImageResponse *reply)
 {
+    prctl(PR_SET_NAME, "ImageLoad");
+
     auto status = GrpcServerTlsAuth::auth(context, "image_load");
     if (!status.ok()) {
         return status;
@@ -414,6 +424,8 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
     service_executor_t *cb = nullptr;
     image_inspect_request *image_req = nullptr;
     image_inspect_response *image_res = nullptr;
+
+    prctl(PR_SET_NAME, "ImageInspect");
 
     Status status = GrpcServerTlsAuth::auth(context, "image_inspect");
     if (!status.ok()) {
@@ -487,6 +499,8 @@ int ImagesServiceImpl::image_logout_request_from_grpc(const LogoutRequest *grequ
 
 Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *request, LoginResponse *reply)
 {
+    prctl(PR_SET_NAME, "RegistryLogin");
+
     auto status = GrpcServerTlsAuth::auth(context, "login");
     if (!status.ok()) {
         return status;
@@ -516,6 +530,8 @@ Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *requ
 
 Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *request, LogoutResponse *reply)
 {
+    prctl(PR_SET_NAME, "RegistryLogout");
+
     auto status = GrpcServerTlsAuth::auth(context, "logout");
     if (!status.ok()) {
         return status;
