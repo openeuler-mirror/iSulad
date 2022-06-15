@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include "utils.h"
+#include "utils_cjson.h"
 #include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
@@ -20,8 +21,49 @@ const char g_cmd_search_usage[] = "search [OPTIONS] NAME";
 
 struct client_arguments g_cmd_search_args = {};
 
+void search_parse_print_json(const char *json)
+{
+    utils_cjson *utils_cjson_json = NULL;
+    utils_cjson *utils_cjson_name = NULL;
+    utils_cjson *utils_cjson_tags = NULL;
+    utils_cjson *utils_cjson_tags_item = NULL;
+    int tags_len = 0;
+    lengths max_len = {
+        .name_length = 30,
+        .tag_length = 10,
+    };
+
+    utils_cjson_json = utils_cjson_Parse(json);
+    utils_cjson_name = utils_cjson_GetObjectItem(utils_cjson_json, "name");
+    utils_cjson_tags = utils_cjson_GetObjectItem(utils_cjson_json, "tags");
+    tags_len = utils_cjson_GetArraySize(utils_cjson_tags);
+
+    if (tags_len == 0) {
+        COMMAND_ERROR("Search error: No such object:%s", utils_cjson_name->valuestring);
+        return;
+    }
+
+    /* print header */
+    printf("%-*s ", (int)max_len.name_length, "NAME");
+    printf("%-*s ", (int)max_len.tag_length, "TAG");
+    printf("\n");
+
+    for (int j = 0; j < tags_len; j++) {
+        utils_cjson_tags_item = utils_cjson_GetArrayItem(utils_cjson_tags, j);
+        printf("%-*s ", (int)max_len.name_length, utils_cjson_name->valuestring);
+        printf("%-*s ", (int)max_len.tag_length, utils_cjson_tags_item->valuestring);
+        printf("\n");
+    }
+
+    free(utils_cjson_json);
+    free(utils_cjson_name);
+    free(utils_cjson_tags);
+    free(utils_cjson_tags_item);
+}
+
+
 /*
- * Search an image from a registry
+ * Search an image or a repository from a registry
  */
 int client_search(const struct client_arguments *args)
 {
@@ -54,8 +96,8 @@ int client_search(const struct client_arguments *args)
         ret = ESERVERERROR;
         goto out;
     }
-
-    COMMAND_ERROR("Image searched: \"%s\"", response->image_tags_json);
+    search_parse_print_json(response->image_tags_json);
+    COMMAND_ERROR("Image \"%s\" searched", args->image_name);
 
 out:
     isula_search_response_free(response);
