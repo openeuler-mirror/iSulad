@@ -1,0 +1,274 @@
+From 7d13b23a09d397f743acdcaf606804fea5989cff Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Tue, 14 Jun 2022 18:54:02 +0800
+Subject: [PATCH 22/22] set the name of each container and image operation
+ thread for restful version
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ .../connect/rest/rest_containers_service.c    | 36 +++++++++++++++++++
+ .../entry/connect/rest/rest_images_service.c  | 19 ++++++++++
+ 2 files changed, 55 insertions(+)
+
+diff --git a/src/daemon/entry/connect/rest/rest_containers_service.c b/src/daemon/entry/connect/rest/rest_containers_service.c
+index a7c32500..9c822324 100644
+--- a/src/daemon/entry/connect/rest/rest_containers_service.c
++++ b/src/daemon/entry/connect/rest/rest_containers_service.c
+@@ -522,6 +522,8 @@ static void rest_create_cb(evhtp_request_t *req, void *arg)
+     container_create_response *cresponse = NULL;
+     container_create_request *crequest = NULL;
+ 
++    prctl(PR_SET_NAME, "ContCreate");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -557,6 +559,8 @@ static void rest_start_cb(evhtp_request_t *req, void *arg)
+     container_start_response *cresponse = NULL;
+     container_start_request *crequest = NULL;
+ 
++    prctl(PR_SET_NAME, "ContStart");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -592,6 +596,8 @@ static void rest_wait_cb(evhtp_request_t *req, void *arg)
+     container_wait_request *crequest = NULL;
+     container_wait_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContWait");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -654,6 +660,8 @@ static void rest_stop_cb(evhtp_request_t *req, void *arg)
+     container_stop_request *crequest = NULL;
+     container_stop_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContStop");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -715,6 +723,8 @@ static void rest_restart_cb(evhtp_request_t *req, void *arg)
+     container_restart_request *crequest = NULL;
+     container_restart_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContRestart");
++
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+         return;
+@@ -771,6 +781,8 @@ static void rest_version_cb(evhtp_request_t *req, void *arg)
+     container_version_request *crequest = NULL;
+     container_version_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "VersionOp");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -833,6 +845,8 @@ static void rest_info_cb(evhtp_request_t *req, void *arg)
+     host_info_request *crequest = NULL;
+     host_info_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "InfoOp");
++
+     // only deal with post request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -896,6 +910,8 @@ static void rest_update_cb(evhtp_request_t *req, void *arg)
+     container_update_request *container_req = NULL;
+     container_update_response *container_res = NULL;
+ 
++    prctl(PR_SET_NAME, "ContUpdate");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -957,6 +973,8 @@ static void rest_kill_cb(evhtp_request_t *req, void *arg)
+     container_kill_request *crequest = NULL;
+     container_kill_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContKill");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -1020,6 +1038,8 @@ static void rest_container_inspect_cb(evhtp_request_t *req, void *arg)
+     container_inspect_request *crequest = NULL;
+     container_inspect_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContInspect");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -1082,6 +1102,8 @@ static void rest_exec_cb(evhtp_request_t *req, void *arg)
+     container_exec_request *crequest = NULL;
+     container_exec_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContExec");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -1145,6 +1167,8 @@ static void rest_attach_cb(evhtp_request_t *req, void *arg)
+     container_attach_request *crequest = NULL;
+     container_attach_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContAttach");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -1206,6 +1230,8 @@ static void rest_remove_cb(evhtp_request_t *req, void *arg)
+     container_delete_request *crequest = NULL;
+     container_delete_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContRemove");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -1241,6 +1267,8 @@ static void rest_list_cb(evhtp_request_t *req, void *arg)
+     container_list_request *crequest = NULL;
+     container_list_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContList");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -1303,6 +1331,8 @@ static void rest_export_cb(evhtp_request_t *req, void *arg)
+     container_export_request *crequest = NULL;
+     container_export_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContExport");
++
+     // only deal with post request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         ERROR("Only deal with post request");
+@@ -1367,6 +1397,8 @@ static void rest_pause_cb(evhtp_request_t *req, void *arg)
+     container_pause_request *crequest = NULL;
+     container_pause_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContPause");
++
+     // only deal with post request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         ERROR("Only deal with post request: pause()");
+@@ -1431,6 +1463,8 @@ static void rest_resume_cb(evhtp_request_t *req, void *arg)
+     container_resume_request *crequest = NULL;
+     container_resume_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ContResume");
++
+     // only deal with post request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         ERROR("Only deal with post request: resume()");
+@@ -1501,6 +1535,8 @@ static void rest_rename_cb(evhtp_request_t *req, void *arg)
+     struct isulad_container_rename_request isuladreq = { 0 };
+     struct isulad_container_rename_response *isuladres = NULL;
+ 
++    prctl(PR_SET_NAME, "ContRename");
++
+     // only deal with post request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         ERROR("Only deal with post request: rename()");
+diff --git a/src/daemon/entry/connect/rest/rest_images_service.c b/src/daemon/entry/connect/rest/rest_images_service.c
+index 7107d255..bd367f29 100644
+--- a/src/daemon/entry/connect/rest/rest_images_service.c
++++ b/src/daemon/entry/connect/rest/rest_images_service.c
+@@ -14,6 +14,7 @@
+  ******************************************************************************/
+ #include "rest_images_service.h"
+ #include <unistd.h>
++#include <sys/prctl.h>
+ 
+ #include "isula_libutils/log.h"
+ #include "callback.h"
+@@ -276,6 +277,8 @@ static void rest_image_load_cb(evhtp_request_t *req, void *arg)
+     image_load_image_request *crequest = NULL;
+     image_load_image_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ImageLoad");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -311,6 +314,8 @@ static void rest_image_list_cb(evhtp_request_t *req, void *arg)
+     image_list_images_request *crequest = NULL;
+     image_list_images_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ImageList");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -346,6 +351,8 @@ static void rest_image_delete_cb(evhtp_request_t *req, void *arg)
+     image_delete_image_request *crequest = NULL;
+     image_delete_image_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ImageDelete");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -381,6 +388,8 @@ static void rest_image_inspect_cb(evhtp_request_t *req, void *arg)
+     image_inspect_request *crequest = NULL;
+     image_inspect_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ImageInspect");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -481,6 +490,8 @@ static void rest_image_pull_cb(evhtp_request_t *req, void *arg)
+     image_pull_image_request *crequest = NULL;
+     image_pull_image_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ImagePull");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -592,6 +603,8 @@ static void rest_image_login_cb(evhtp_request_t *req, void *arg)
+     image_login_request *crequest = NULL;
+     image_login_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "RegistryLogin");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -686,6 +699,8 @@ static void rest_image_logout_cb(evhtp_request_t *req, void *arg)
+     image_logout_request *crequest = NULL;
+     image_logout_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "RegistryLogout");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -769,6 +784,8 @@ static void rest_image_tag_cb(evhtp_request_t *req, void *arg)
+     image_tag_image_request *crequest = NULL;
+     image_tag_image_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ImageTag");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+@@ -852,6 +869,8 @@ static void rest_image_import_cb(evhtp_request_t *req, void *arg)
+     image_import_request *crequest =  NULL;
+     image_import_response *cresponse = NULL;
+ 
++    prctl(PR_SET_NAME, "ImageImport");
++
+     // only deal with POST request
+     if (evhtp_request_get_method(req) != htp_method_POST) {
+         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+-- 
+2.25.1
+

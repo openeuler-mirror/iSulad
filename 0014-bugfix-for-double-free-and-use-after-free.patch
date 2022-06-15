@@ -1,0 +1,227 @@
+From 7934311c1b1003021449b92900f3102ff77395e2 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Tue, 7 Jun 2022 15:19:20 +0800
+Subject: [PATCH 14/22] bugfix for double free and use after free
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/client/connect/rest/rest_images_client.c  |  2 +-
+ src/cmd/isula/information/ps.c                |  4 ++-
+ src/daemon/common/sysinfo.c                   |  3 +-
+ .../cri_pod_sandbox_manager_service_impl.cc   |  3 +-
+ .../entry/cri/websocket/service/ws_server.h   | 19 +++++-----
+ .../oci/storage/image_store/image_store.c     | 36 ++++++++++++++-----
+ .../oci/storage/layer_store/layer_store.c     |  3 +-
+ src/utils/console/console.c                   |  2 +-
+ 8 files changed, 48 insertions(+), 24 deletions(-)
+
+diff --git a/src/client/connect/rest/rest_images_client.c b/src/client/connect/rest/rest_images_client.c
+index 3deeeead..c2fc17f1 100644
+--- a/src/client/connect/rest/rest_images_client.c
++++ b/src/client/connect/rest/rest_images_client.c
+@@ -929,7 +929,7 @@ out:
+ static int rest_image_import(const struct isula_import_request *request, struct isula_import_response *response,
+                              void *arg)
+ {
+- 
++
+     client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+     const char *socketname = (const char *)(connect_config->socket);
+     char *body = NULL;
+diff --git a/src/cmd/isula/information/ps.c b/src/cmd/isula/information/ps.c
+index 74c2f94a..805cbbd6 100644
+--- a/src/cmd/isula/information/ps.c
++++ b/src/cmd/isula/information/ps.c
+@@ -904,14 +904,16 @@ static int append_non_header_item_field(const char *prefix, const char *non_fiel
+         ret = -1;
+         goto out;
+     }
++
+     field->name = non_field_string;
++    non_field_string = NULL;
+     field->is_field = false;
++
+     if (append_field(ff, field) != 0) {
+         ERROR("Failed to append field");
+         ret = -1;
+         goto out;
+     }
+-    non_field_string = NULL;
+     field = NULL;
+ 
+ out:
+diff --git a/src/daemon/common/sysinfo.c b/src/daemon/common/sysinfo.c
+index 89ca5225..d52f8767 100644
+--- a/src/daemon/common/sysinfo.c
++++ b/src/daemon/common/sysinfo.c
+@@ -1309,7 +1309,8 @@ out:
+ }
+ 
+ #ifdef __ANDROID__
+-static bool cgroup2_no_controller() {
++static bool cgroup2_no_controller()
++{
+     char *controllers_str = NULL;
+ 
+     controllers_str = util_read_content_from_file(CGROUP2_CONTROLLERS_PATH);
+diff --git a/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc b/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
+index f0c8e470..4bc9845f 100644
+--- a/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
++++ b/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
+@@ -99,7 +99,8 @@ void PodSandboxManagerServiceImpl::ApplySandboxResources(const runtime::v1alpha2
+ }
+ 
+ 
+-void PodSandboxManagerServiceImpl::SetHostConfigDefaultValue(host_config *hc) {
++void PodSandboxManagerServiceImpl::SetHostConfigDefaultValue(host_config *hc)
++{
+     free(hc->network_mode);
+     hc->network_mode = util_strdup_s(CRI::Constants::namespaceModeFile.c_str());
+ }
+diff --git a/src/daemon/entry/cri/websocket/service/ws_server.h b/src/daemon/entry/cri/websocket/service/ws_server.h
+index 4af54067..b871aabc 100644
+--- a/src/daemon/entry/cri/websocket/service/ws_server.h
++++ b/src/daemon/entry/cri/websocket/service/ws_server.h
+@@ -30,8 +30,7 @@
+ #include "errors.h"
+ #include "read_write_lock.h"
+ 
+-namespace
+-{
++namespace {
+ const int MAX_ECHO_PAYLOAD = 4096;
+ const int MAX_ARRAY_LEN = 2;
+ const int MAX_PROTOCOL_NUM = 2;
+@@ -97,13 +96,15 @@ private:
+     static struct lws_context *m_context;
+     volatile int m_forceExit = 0;
+     std::thread m_pthreadService;
+-    const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = { {
+-                                                                         "channel.k8s.io",
+-                                                                         Callback,
+-                                                                         0,
+-                                                                         MAX_ECHO_PAYLOAD,
+-                                                                 },
+-                                                                 { nullptr, nullptr, 0, 0 } };
++    const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = {
++        {
++            "channel.k8s.io",
++            Callback,
++            0,
++            MAX_ECHO_PAYLOAD,
++        },
++        { nullptr, nullptr, 0, 0 }
++    };
+     RouteCallbackRegister m_handler;
+     static std::unordered_map<int, SessionData *> m_wsis;
+     url::URLDatum m_url;
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+index 727991fe..edb28b78 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+@@ -734,6 +734,7 @@ static int image_store_append_image(const char *id, const char *searchable_diges
+ {
+     int ret = 0;
+     size_t i = 0;
++    size_t record_name_len = 0;
+     struct linked_list *item = NULL;
+ 
+     item = util_smart_calloc_s(sizeof(struct linked_list), 1);
+@@ -748,33 +749,52 @@ static int image_store_append_image(const char *id, const char *searchable_diges
+     if (!map_insert(g_image_store->byid, (void *)id, (void *)img)) {
+         ERROR("Failed to insert image to image store");
+         ret = -1;
+-        goto out;
++        goto list_err_out;
+     }
+ 
+     if (append_image_according_to_digest(g_image_store->bydigest, searchable_digest, img) != 0) {
+         ERROR("Failed to insert image to image store digest index");
+         ret = -1;
+-        goto out;
++        goto id_err_out;
+     }
+ 
+     for (i = 0; i < img->simage->names_len; i++) {
+         if (map_search(g_image_store->byname, (void *)img->simage->names[i]) != NULL) {
+             ERROR("Image name is already in use : %s", img->simage->names[i]);
+             ret = -1;
+-            goto out;
++            goto err_out;
+         }
+         if (!map_insert(g_image_store->byname, (void *)img->simage->names[i], (void *)img)) {
+             ERROR("Failed to insert image to image store's byname");
+             ret = -1;
+-            goto out;
++            goto err_out;
+         }
+     }
+ 
+-out:
+-    if (ret != 0) {
+-        linked_list_del(item);
+-        free(item);
++    return 0;
++
++err_out:
++    record_name_len = i;
++    for (i = 0; i < record_name_len; i++) {
++        if (!map_remove(g_image_store->byname, (void *)img->simage->names[i])) {
++            ERROR("Failed to remove image from image store's byname");
++        }
+     }
++
++    if (remove_image_from_digest_index(img, searchable_digest) != 0) {
++        ERROR("Failed to remove image from image store digest index");
++    }
++
++id_err_out:
++    if (!map_remove(g_image_store->byid, (void *)id)) {
++        ERROR("Failed to remove image from ids map in image store");
++    }
++
++list_err_out:
++    linked_list_del(item);
++    g_image_store->images_list_len--;
++    free(item);
++
+     return ret;
+ }
+ 
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+index a35f61ee..bb9e5b94 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+@@ -212,6 +212,7 @@ static bool append_layer_into_list(layer_t *l)
+     return true;
+ }
+ 
++// only delete item from list, free item->elem by caller
+ static inline void delete_g_layer_list_item(struct linked_list *item)
+ {
+     if (item == NULL) {
+@@ -220,8 +221,6 @@ static inline void delete_g_layer_list_item(struct linked_list *item)
+ 
+     linked_list_del(item);
+ 
+-    layer_ref_dec((layer_t *)item->elem);
+-    item->elem = NULL;
+     free(item);
+     g_metadata.layers_list_len -= 1;
+ }
+diff --git a/src/utils/console/console.c b/src/utils/console/console.c
+index 8492eb4d..b0dc7ee5 100644
+--- a/src/utils/console/console.c
++++ b/src/utils/console/console.c
+@@ -253,7 +253,7 @@ int console_fifo_open(const char *fifo_path, int *fdout, int flags)
+ {
+     int fd = 0;
+ 
+-    if (fifo_path ==NULL || fdout == NULL) {
++    if (fifo_path == NULL || fdout == NULL) {
+         ERROR("Argument must not be NULL");
+         return -1;
+     }
+-- 
+2.25.1
+
