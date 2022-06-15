@@ -1,7 +1,7 @@
 From 55a4f57232c42a9c2d36a41de5d743ee9ebbe88e Mon Sep 17 00:00:00 2001
 From: vegbir <yangjiaqi16@huawei.com>
 Date: Wed, 1 Jun 2022 13:44:37 +0800
-Subject: [PATCH 11/13] update seccomp to Linux 5.10 syscall list
+Subject: [PATCH 11/22] update seccomp to Linux 5.10 syscall list
 
 Signed-off-by: yangjiaqi <yangjiaqi16@huawei.com>
 ---
