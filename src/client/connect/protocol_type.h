@@ -474,6 +474,10 @@ struct isula_pull_request {
     char *image_name;
 };
 
+struct isula_search_request {
+    char *image_name;
+};
+
 struct isula_tag_request {
     char *src_name;
     char *dest_name;
@@ -487,6 +491,13 @@ struct isula_tag_response {
 
 struct isula_pull_response {
     char *image_ref;
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+
+struct isula_search_response {
+    char *image_tags_json;
     uint32_t cc;
     uint32_t server_errono;
     char *errmsg;
@@ -807,6 +818,9 @@ void isula_logout_response_free(struct isula_logout_response *response);
 
 void isula_pull_request_free(struct isula_pull_request *request);
 void isula_pull_response_free(struct isula_pull_response *response);
+
+void isula_search_request_free(struct isula_search_request *request);
+void isula_search_response_free(struct isula_search_response *response);
 
 void isula_export_request_free(struct isula_export_request *request);
 

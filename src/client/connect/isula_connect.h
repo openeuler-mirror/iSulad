@@ -85,6 +85,8 @@ typedef struct {
     int (*load)(const struct isula_load_request *request, struct isula_load_response *response, void *arg);
 
     int (*pull)(const struct isula_pull_request *request, struct isula_pull_response *response, void *arg);
+    
+    int (*search)(const struct isula_search_request *request, struct isula_search_response *response, void *arg);
 
     int (*inspect)(const struct isula_inspect_request *request, struct isula_inspect_response *response, void *arg);
     int (*login)(const struct isula_login_request *request, struct isula_login_response *response, void *arg);

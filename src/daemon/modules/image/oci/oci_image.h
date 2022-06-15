@@ -44,6 +44,7 @@ int oci_init(const isulad_daemon_configs *args);
 void oci_exit();
 
 int oci_pull_rf(const im_pull_request *request, im_pull_response *response);
+int oci_search_rf(const im_search_request *request, im_search_response *response);
 int oci_rmi(const im_rmi_request *request);
 int oci_get_filesystem_info(im_fs_info_response **response);
 int oci_load_image(const im_load_request *request);

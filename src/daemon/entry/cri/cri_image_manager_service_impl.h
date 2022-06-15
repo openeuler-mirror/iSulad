@@ -38,6 +38,9 @@ public:
     std::string PullImage(const runtime::v1alpha2::ImageSpec &image, const runtime::v1alpha2::AuthConfig &auth,
                           Errors &error) override;
 
+    std::string SearchImage(const runtime::v1alpha2::ImageSpec &image, const runtime::v1alpha2::AuthConfig &auth,
+                          Errors &error) override;
+
     void RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error) override;
 
     void ImageFsInfo(std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *usages, Errors &error) override;
@@ -45,6 +48,9 @@ public:
 private:
     int pull_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, const runtime::v1alpha2::AuthConfig *auth,
                                im_pull_request **request, Errors &error);
+                               
+    int search_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, const runtime::v1alpha2::AuthConfig *auth,
+                               im_search_request **request, Errors &error);
 
     int list_request_from_grpc(const runtime::v1alpha2::ImageFilter *filter, im_list_request **request, Errors &error);
 

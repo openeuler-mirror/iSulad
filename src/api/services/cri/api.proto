@@ -128,6 +128,8 @@ service ImageService {
     rpc RemoveImage(RemoveImageRequest) returns (RemoveImageResponse) {}
     // ImageFSInfo returns information of the filesystem that is used to store images.
     rpc ImageFsInfo(ImageFsInfoRequest) returns (ImageFsInfoResponse) {}
+    // SearchImage searches if repository has certain image and returns tags
+    rpc SearchImage(SearchImageRequest) returns (SearchImageResponse) {}
 }
 
 message VersionRequest {
@@ -1121,6 +1123,18 @@ message PullImageResponse {
     // Reference to the image in use. For most runtimes, this should be an
     // image ID or digest.
     string image_ref = 1;
+}
+
+message SearchImageRequest {
+    // Spec of the image.
+    ImageSpec image = 1;
+    // Authentication configuration for searching the image.
+    AuthConfig auth = 2;
+}
+
+message SearchImageResponse {
+    // Image and its tags searched in terms of json.
+    string image_tags_json = 1;
 }
 
 message RemoveImageRequest {
