@@ -1,5 +1,5 @@
 %global _version 2.0.14
-%global _release 7
+%global _release 8
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -26,6 +26,15 @@ Patch0010:  0010-remove-check-parameter-label_opts-in-init_label.patch
 Patch0011:  0011-update-seccomp-to-Linux-5.10-syscall-list.patch
 Patch0012:  0012-fix-invalid-convert-and-format.patch
 Patch0013:  0013-fix-get_network_namespace_path-check.patch
+Patch0014:  0014-bugfix-for-double-free-and-use-after-free.patch
+Patch0015:  0015-fix-isulad-shim-coredump-when-remove-ioc-fd-node.patch
+Patch0016:  0016-do-not-fail-if-pw-is-not-NULL.patch
+Patch0017:  0017-do-not-fail-if-gr-is-NULL.patch
+Patch0018:  0018-fix-memory-leak-of-remove-layer.patch
+Patch0019:  0019-add-null-terminal-at-end-of-gr-mem-list.patch
+Patch0020:  0020-fix-shm-size-set-invalid-when-reboot.patch
+Patch0021:  0021-set-the-name-of-each-container-and-image-operation-t.patch
+Patch0022:  0022-set-the-name-of-each-container-and-image-operation-t.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -253,6 +262,12 @@ fi
 %endif
 
 %changelog
+* Wed Jun 15 2022 chengzeruizhi <chengzeruizhi@huawei.com> - 2.0.14-8
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sync from upstream openeuler/iSulad
+
 * Tue May 31 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.14-7
 - Type: enhancement
 - ID: NA
