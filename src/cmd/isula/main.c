@@ -45,6 +45,7 @@
 #include "cp.h"
 #include "top.h"
 #include "pull.h"
+#include "search.h"
 #include "login.h"
 #include "logout.h"
 #include "isula_connect.h"
@@ -188,6 +189,10 @@ struct command g_commands[] = {
     {
         // `pull` sub-command
         "pull", false, cmd_pull_main, g_cmd_pull_desc, NULL, &g_cmd_pull_args
+    },
+    {
+        // `search` sub-command
+        "search", false, cmd_search_main, g_cmd_search_desc, NULL, &g_cmd_search_args
     },
     {
         // `login` sub-command

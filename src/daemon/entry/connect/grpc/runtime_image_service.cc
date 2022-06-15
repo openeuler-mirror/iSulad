@@ -47,6 +47,25 @@ grpc::Status RuntimeImageServiceImpl::PullImage(grpc::ServerContext *context,
     return grpc::Status::OK;
 }
 
+grpc::Status RuntimeImageServiceImpl::SearchImage(grpc::ServerContext *context,
+                                                const runtime::v1alpha2::SearchImageRequest *request,
+                                                runtime::v1alpha2::SearchImageResponse *reply)
+{
+    Errors error;
+
+    EVENT("Event: {Object: CRI, Type: Searching image %s}", request->image().image().c_str());
+
+    std::string image_tags_JSON = rService->SearchImage(request->image(), request->auth(), error);
+    if (!error.Empty() || image_tags_JSON.empty()) {
+        ERROR("{Object: CRI, Type: Failed to search image %s}", request->image().image().c_str());
+        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+    }
+    reply->set_image_tags_json(image_tags_JSON);
+
+    EVENT("Event: {Object: CRI, Type: Searched image %s and print tags}", request->image().image().c_str());
+    return grpc::Status::OK;
+}
+
 grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
                                                  const runtime::v1alpha2::ListImagesRequest *request,
                                                  runtime::v1alpha2::ListImagesResponse *reply)

@@ -392,6 +392,62 @@ public:
     }
 };
 
+class ImagesSearch : public ClientBase<runtime::v1alpha2::ImageService, runtime::v1alpha2::ImageService::Stub,
+    isula_search_request, runtime::v1alpha2::SearchImageRequest, isula_search_response,
+    runtime::v1alpha2::SearchImageResponse> {
+public:
+    explicit ImagesSearch(void *args)
+        : ClientBase(args)
+    {
+    }
+    ~ImagesSearch() = default;
+
+    auto request_to_grpc(const isula_search_request *request, runtime::v1alpha2::SearchImageRequest *grequest)
+    -> int override
+    {
+        if (request == nullptr) {
+            return -1;
+        }
+
+        if (request->image_name != nullptr) {
+            auto *image_spec = new (std::nothrow) runtime::v1alpha2::ImageSpec;
+            if (image_spec == nullptr) {
+                return -1;
+            }
+            image_spec->set_image(request->image_name);
+            grequest->set_allocated_image(image_spec);
+        }
+
+        return 0;
+    }
+
+    auto response_from_grpc(runtime::v1alpha2::SearchImageResponse *gresponse, isula_search_response *response)
+    -> int override
+    {
+        if (!gresponse->image_tags_json().empty()) {
+            response->image_tags_json = util_strdup_s(gresponse->image_tags_json().c_str());
+        }
+        
+        return 0;
+    }
+
+    auto check_parameter(const runtime::v1alpha2::SearchImageRequest &req) -> int override
+    {
+        if (req.image().image().empty()) {
+            ERROR("Missing image name in the request");
+            return -1;
+        }
+
+        return 0;
+    }
+
+    auto grpc_call(ClientContext *context, const runtime::v1alpha2::SearchImageRequest &req,
+                   runtime::v1alpha2::SearchImageResponse *reply) -> Status override
+    {
+        return stub_->SearchImage(context, req, reply);
+    }
+};
+
 class ImageInspect : public ClientBase<ImagesService, ImagesService::Stub, isula_inspect_request, InspectImageRequest,
     isula_inspect_response, InspectImageResponse> {
 public:
@@ -582,6 +638,7 @@ auto grpc_images_client_ops_init(isula_connect_ops *ops) -> int
     ops->image.remove = container_func<isula_rmi_request, isula_rmi_response, ImagesDelete>;
     ops->image.load = container_func<isula_load_request, isula_load_response, ImagesLoad>;
     ops->image.pull = container_func<isula_pull_request, isula_pull_response, ImagesPull>;
+    ops->image.search = container_func<isula_search_request, isula_search_response, ImagesSearch>;
     ops->image.inspect = container_func<isula_inspect_request, isula_inspect_response, ImageInspect>;
     ops->image.login = container_func<isula_login_request, isula_login_response, Login>;
     ops->image.logout = container_func<isula_logout_request, isula_logout_response, Logout>;

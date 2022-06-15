@@ -35,6 +35,9 @@ public:
     grpc::Status PullImage(grpc::ServerContext *context,
                            const runtime::v1alpha2::PullImageRequest *request,
                            runtime::v1alpha2::PullImageResponse *reply) override;
+    grpc::Status SearchImage(grpc::ServerContext *context,
+                           const runtime::v1alpha2::SearchImageRequest *request,
+                           runtime::v1alpha2::SearchImageResponse *reply) override;
     grpc::Status ListImages(grpc::ServerContext *context,
                             const runtime::v1alpha2::ListImagesRequest *request,
                             runtime::v1alpha2::ListImagesResponse *reply) override;
