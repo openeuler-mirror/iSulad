@@ -1,0 +1,51 @@
+From b4596641a08891bfec9384f87815c8e671d594d4 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Thu, 9 Jun 2022 17:07:40 +0800
+Subject: [PATCH 17/22] do not fail if gr is NULL
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/utils/cutils/utils_pwgr.c           | 5 -----
+ test/cutils/utils_pwgr/utils_pwgr_ut.cc | 3 +--
+ 2 files changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/src/utils/cutils/utils_pwgr.c b/src/utils/cutils/utils_pwgr.c
+index 6b83f787..b3aed14b 100644
+--- a/src/utils/cutils/utils_pwgr.c
++++ b/src/utils/cutils/utils_pwgr.c
+@@ -279,11 +279,6 @@ int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buf
+         return -1;
+     }
+ 
+-    if (*result != NULL) {
+-        ERROR("Result shall point to null to start.");
+-        return -1;
+-    }
+-
+     flockfile(stream);
+     buff_end = buffer + buflen - 1;
+ 
+diff --git a/test/cutils/utils_pwgr/utils_pwgr_ut.cc b/test/cutils/utils_pwgr/utils_pwgr_ut.cc
+index bf9c9f06..c289e2b9 100644
+--- a/test/cutils/utils_pwgr/utils_pwgr_ut.cc
++++ b/test/cutils/utils_pwgr/utils_pwgr_ut.cc
+@@ -106,7 +106,7 @@ TEST(utils_pwgr, test_getgrent_r)
+     ASSERT_EQ(util_getgrent_r(NULL, &gr, buf, sizeof(buf), &pgr), -1);
+     ASSERT_EQ(util_getgrent_r(f_gr, &gr, NULL, 0, &pgr), -1);
+     ASSERT_EQ(util_getgrent_r(f_gr, &gr, invalid_buf, 1, &pgr), -1);
+-    ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr_alter), -1);
++    ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr_alter), 0);
+     ASSERT_EQ(util_getgrent_r(f_gr, &gr, buf, sizeof(buf), NULL), -1);
+ 
+     while (!feof(f_gr)) {
+@@ -129,7 +129,6 @@ TEST(utils_pwgr, test_getgrent_r)
+         }
+         EXPECT_TRUE(pgr == &gr);
+         gr = {0};
+-        pgr = nullptr;
+     }
+ 
+     fclose(f_gr);
+-- 
+2.25.1
+
