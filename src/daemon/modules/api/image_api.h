@@ -162,21 +162,7 @@ typedef struct {
 
     char *username;;
     char *password;
-    char *host;
 } im_search_request;
-
-typedef struct {
-    char *output;
-
-} im_search_response;
-
-typedef struct {
-    char *type;
-    char *image;
-    char *username;
-    char *password;
-} im_search_request;
-
 typedef struct {
     char *image_tags_json;
     char *errmsg;

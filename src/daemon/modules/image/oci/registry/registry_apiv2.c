@@ -1522,7 +1522,7 @@ int fetch_catalog(search_descriptor *desc)
                 goto out;
             }
 
-        char *catalog_page = util_common_calloc_s(sizeof(char));   
+        char *catalog_page = util_common_calloc_s(sizeof(char*));   
 
         ret = search_request(desc, path, custom_headers,  &catalog_page, BODY_ONLY, &errcode);
 
