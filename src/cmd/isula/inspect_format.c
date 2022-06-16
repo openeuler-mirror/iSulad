@@ -551,12 +551,12 @@ static int inspect_check(const char *json_str, const char *regex)
 int inspect_check_format_f(const char *json_str, bool *json_format)
 {
 #ifdef __ANDROID__
-#define JSON_FORMAT_FIRST "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*(json[ \t\r\n\v\f]+)?(\\.\\w+)+[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
+#define JSON_FORMAT_FIRST "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*(json[ \t\r\n\v\f]+)?(\\.[a-zA-Z0-9_]+)+[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
 #else
 #define JSON_FORMAT_FIRST "^\\s*\\{\\s*\\{\\s*(json\\s+)?(\\.\\w+)+\\s*\\}\\s*\\}\\s*$"
 #endif
 #ifdef __ANDROID__
-#define JSON_FORMAT_SECOND "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*json[ \t\r\n\v\f]+(\\.\\w+)+[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
+#define JSON_FORMAT_SECOND "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*json[ \t\r\n\v\f]+(\\.[a-zA-Z0-9_]+)+[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"
 #else
 #define JSON_FORMAT_SECOND "^\\s*\\{\\s*\\{\\s*json\\s+(\\.\\w+)+\\s*\\}\\s*\\}\\s*$"
 #endif
