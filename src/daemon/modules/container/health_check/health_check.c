@@ -289,13 +289,15 @@ static char **health_check_cmds(const container_config *config)
     }
 
     shell_len = util_array_len((const char **)shell);
-    if (shell_len > (SIZE_MAX / sizeof(char *)) - config->healthcheck->test_len) {
-        ERROR("Invalid shell length");
+
+    if (config->healthcheck->test_len > SIZE_MAX - shell_len) {
+        ERROR("Invalid test comand length");
         goto out;
     }
-    cmd_slice = util_common_calloc_s((shell_len + config->healthcheck->test_len) * sizeof(char *));
+
+    cmd_slice = util_smart_calloc_s(sizeof(char *), (shell_len + config->healthcheck->test_len));
     if (cmd_slice == NULL) {
-        ERROR("out of memory");
+        ERROR("Out of memory");
         goto out;
     }
     for (i = 0; i < shell_len; i++) {
@@ -423,8 +425,7 @@ static int handle_increment_streak(container_t *cont, int retries)
         if (cont->common_config->config->healthcheck->exit_on_unhealthy) {
             pthread_t stop_container_tid = { 0 };
             char *container_id = util_strdup_s(cont->common_config->id);
-            if (pthread_create(&stop_container_tid, NULL, stop_container_on_unhealthy,
-                               (void *)container_id)) {
+            if (pthread_create(&stop_container_tid, NULL, stop_container_on_unhealthy, (void *)container_id)) {
                 free(container_id);
                 ERROR("Failed to create thread to exec health check");
                 ret = -1;
@@ -845,8 +846,8 @@ static void *health_check_monitor(void *arg)
             case MONITOR_IDLE:
             /* fall-through */
             default:
-                if (do_monitor_default(container_id, probe_interval, cont->health_check,
-                                       &start_timestamp, &last_timestamp) != 0) {
+                if (do_monitor_default(container_id, probe_interval, cont->health_check, &start_timestamp,
+                                       &last_timestamp) != 0) {
                     goto out;
                 }
                 break;

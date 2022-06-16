@@ -48,12 +48,7 @@ static int pack_container_custom_config_args(container_config *container_spec,
 
     /* commands */
     if ((custom_conf->cmd_len != 0 && custom_conf->cmd)) {
-        if (custom_conf->cmd_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("The length of cmd is too long!");
-            ret = -1;
-            goto out;
-        }
-        container_spec->cmd = util_common_calloc_s(custom_conf->cmd_len * sizeof(char *));
+        container_spec->cmd = util_smart_calloc_s(sizeof(char *), custom_conf->cmd_len);
         if (container_spec->cmd == NULL) {
             ret = -1;
             goto out;
@@ -76,11 +71,7 @@ static int pack_container_custom_config_array(container_config *container_spec,
 
     /* environment variables */
     if (custom_conf->env_len != 0 && custom_conf->env) {
-        if (custom_conf->env_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many environment variables");
-            return -1;
-        }
-        container_spec->env = util_common_calloc_s(custom_conf->env_len * sizeof(char *));
+        container_spec->env = util_smart_calloc_s(sizeof(char *), custom_conf->env_len);
         if (container_spec->env == NULL) {
             ret = -1;
             goto out;
@@ -202,7 +193,7 @@ static int pack_custom_with_health_check(container_config *container_spec, const
     int ret = 0;
 
     if (custom_conf->health_cmd != NULL && strlen(custom_conf->health_cmd) != 0) {
-        health_config->test = util_common_calloc_s(2 * sizeof(char *));
+        health_config->test = util_smart_calloc_s(sizeof(char *), 2);
         if (health_config->test == NULL) {
             ret = -1;
             goto out;
@@ -383,13 +374,13 @@ static int pack_container_custom_config(container_config *container_spec, const 
             ret = -1;
             goto out;
         }
-        container_spec->exposed_ports->keys = util_common_calloc_s(custom_conf->expose->len * sizeof(char*));
+        container_spec->exposed_ports->keys = util_smart_calloc_s(sizeof(char *), custom_conf->expose->len);
         if (container_spec->exposed_ports->keys == NULL) {
             ret = -1;
             goto out;
         }
-        container_spec->exposed_ports->values = util_common_calloc_s(custom_conf->expose->len * sizeof(
-                                                                         defs_map_string_object_element*));
+        container_spec->exposed_ports->values =
+            util_smart_calloc_s(sizeof(defs_map_string_object_element *), custom_conf->expose->len);
         if (container_spec->exposed_ports->values == NULL) {
             free(container_spec->exposed_ports->keys);
             container_spec->exposed_ports->keys = NULL;

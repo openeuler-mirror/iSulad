@@ -335,7 +335,7 @@ static int generate_user_string_by_uid_gid(const defs_process_user *puser, char 
     }
 
     len = strlen(uid_str) + 1 + strlen(gid_str) + 1;
-    *user = (char *)util_common_calloc_s(len * sizeof(char));
+    *user = (char *)util_smart_calloc_s(sizeof(char), len);
     if (*user == NULL) {
         ERROR("Out of memory");
         return -1;

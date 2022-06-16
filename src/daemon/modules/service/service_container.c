@@ -1130,7 +1130,8 @@ static void do_delete_network(container_t *cont)
 #ifdef ENABLE_NATIVE_NETWORK
     if (util_native_network_checker(cont->hostconfig->network_mode)) {
         if (remove_native_network(cont) != 0) {
-            WARN("Failed to remove network when delete container %s, maybe it has been cleaned up", cont->common_config->id);
+            WARN("Failed to remove network when delete container %s, maybe it has been cleaned up",
+                 cont->common_config->id);
         }
         if (remove_network_namespace_file(cont->network_settings->sandbox_key) != 0) {
             ERROR("Failed to remove network ns file when deleting container %s", cont->common_config->id);
@@ -1145,7 +1146,8 @@ static void do_delete_network(container_t *cont)
     }
 
     if (remove_network_namespace(cont->network_settings->sandbox_key) != 0) {
-        WARN("Failed to remove network ns when deleting container %s, maybe it has been cleaned up", cont->common_config->id);
+        WARN("Failed to remove network ns when deleting container %s, maybe it has been cleaned up",
+             cont->common_config->id);
     }
     if (remove_network_namespace_file(cont->network_settings->sandbox_key) != 0) {
         ERROR("Failed to remove network ns file when deleting container %s", cont->common_config->id);
@@ -1777,7 +1779,7 @@ static int dup_defs_process_user(defs_process_user *src, defs_process_user **dst
     (*dst)->gid = src->gid;
 
     if (src->additional_gids_len != 0) {
-        (*dst)->additional_gids = util_common_calloc_s(sizeof(gid_t) * src->additional_gids_len);
+        (*dst)->additional_gids = util_smart_calloc_s(sizeof(gid_t), src->additional_gids_len);
         if ((*dst)->additional_gids == NULL) {
             ERROR("Out of memory");
             ret = -1;

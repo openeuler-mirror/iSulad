@@ -202,11 +202,7 @@ void CheckpointData::CheckpointDataToCStruct(cri_checkpoint_data **data, Errors 
     }
     (*data)->host_network = m_hostNetwork;
     if (len > 0) {
-        if (len > SIZE_MAX / sizeof(cri_port_mapping *)) {
-            error.SetError("Invalid port mapping size");
-            goto out;
-        }
-        (*data)->port_mappings = (cri_port_mapping **)util_common_calloc_s(sizeof(cri_port_mapping *) * len);
+        (*data)->port_mappings = (cri_port_mapping **)util_smart_calloc_s(sizeof(cri_port_mapping *), len);
         if ((*data)->port_mappings == nullptr) {
             error.SetError("Out of memory");
             goto out;

@@ -220,7 +220,7 @@ static struct volume_names *empty_volume_names(size_t size)
         return NULL;
     }
 
-    vns->names = util_common_calloc_s(sizeof(char *) * size);
+    vns->names = util_smart_calloc_s(sizeof(char *), size);
     if (vns->names == NULL) {
         ERROR("out of memory");
         ret = -1;
@@ -574,7 +574,7 @@ int volume_prune(struct volume_names **pruned)
     }
 
     if (list->vols_len != 0) {
-        (*pruned)->names = util_common_calloc_s(sizeof(char *)*list->vols_len);
+        (*pruned)->names = util_smart_calloc_s(sizeof(char *), list->vols_len);
         if ((*pruned)->names == NULL) {
             ret = -1;
             goto out;

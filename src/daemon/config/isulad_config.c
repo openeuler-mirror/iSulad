@@ -323,7 +323,7 @@ char *conf_get_routine_rootdir(const char *runtime)
         ERROR("The size of path exceeds the limit");
         goto out;
     }
-    path = util_common_calloc_s(sizeof(char) * len);
+    path = util_smart_calloc_s(sizeof(char), len);
     if (path == NULL) {
         ERROR("Out of memory");
         goto out;
@@ -638,7 +638,7 @@ char *get_log_file_helper(const struct service_arguments *conf, const char *suff
         ERROR("The size of path exceeds the limit");
         return NULL;
     }
-    logfile = util_common_calloc_s(len * sizeof(char));
+    logfile = util_smart_calloc_s(sizeof(char), len);
     if (logfile == NULL) {
         ERROR("Out of memory");
         goto out;
@@ -738,7 +738,7 @@ char *conf_get_engine_log_file()
         ERROR("The size of path exceeds the limit");
         goto out;
     }
-    full_path = util_common_calloc_s(len * sizeof(char));
+    full_path = util_smart_calloc_s(sizeof(char), len);
     if (full_path == NULL) {
         FATAL("Out of Memory");
         goto out;
@@ -968,10 +968,7 @@ HOOKS_ELEM_DUP_DEF(poststop)
     int hooks_##item##_dup(oci_runtime_spec_hooks *dest, const oci_runtime_spec_hooks *src) \
     {                                                                                       \
         int i = 0;                                                                          \
-        if (src->item##_len > SIZE_MAX / sizeof(defs_hook *) - 1) {                         \
-            return -1;                                                                      \
-        }                                                                                   \
-        dest->item = util_common_calloc_s(sizeof(defs_hook *) * (src->item##_len + 1));     \
+        dest->item = util_smart_calloc_s(sizeof(defs_hook *), (src->item##_len + 1));       \
         if (dest->item == NULL)                                                             \
             return -1;                                                                      \
         dest->item##_len = src->item##_len;                                                 \

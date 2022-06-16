@@ -112,12 +112,12 @@ struct isula_filters *isula_filters_parse_args(const char **array, size_t len)
         return NULL;
     }
 
-    filters->keys = util_common_calloc_s(sizeof(char *) * len);
+    filters->keys = util_smart_calloc_s(sizeof(char *), len);
     if (filters->keys == NULL) {
         ERROR("Out of memory");
         goto cleanup;
     }
-    filters->values = util_common_calloc_s(sizeof(char *) * len);
+    filters->values = util_smart_calloc_s(sizeof(char *), len);
     if (filters->values == NULL) {
         free(filters->keys);
         filters->keys = NULL;

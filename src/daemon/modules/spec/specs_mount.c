@@ -376,7 +376,7 @@ static defs_mount *mount_point_to_defs_mnt(container_config_v2_common_config_mou
         return NULL;
     }
     mnt->options =
-        util_common_calloc_s(sizeof(char *) * (options_len + 3)); // +2 for readonly/propagation/selinux_relabel
+        util_smart_calloc_s(sizeof(char *), (options_len + 3)); // +2 for readonly/propagation/selinux_relabel
     if (mnt->options == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -1154,12 +1154,7 @@ static host_config_devices_element **parse_multi_devices(const char *dir_host, c
         return NULL;
     }
 
-    if (devices_len > SIZE_MAX / sizeof(host_config_devices_element *)) {
-        ERROR("Too many devices");
-        return NULL;
-    }
-
-    dev_maps = util_common_calloc_s(devices_len * sizeof(host_config_devices_element *));
+    dev_maps = util_smart_calloc_s(sizeof(host_config_devices_element *), devices_len);
     if (dev_maps == NULL) {
         ERROR("Memory out");
         return NULL;
@@ -2312,7 +2307,7 @@ static bool mount_file(defs_mount ***all_mounts, size_t *all_mounts_len, const c
     bool ret = false;
     defs_mount *tmp_mounts = NULL;
 
-    options = util_common_calloc_s(options_len * sizeof(char *));
+    options = util_smart_calloc_s(sizeof(char *), options_len);
     if (options == NULL) {
         ERROR("Out of memory");
         goto out_free;
@@ -2359,7 +2354,7 @@ static bool add_host_channel_mount(defs_mount ***all_mounts, size_t *all_mounts_
     bool ret = false;
     defs_mount *tmp_mounts = NULL;
 
-    options = util_common_calloc_s(options_len * sizeof(char *));
+    options = util_smart_calloc_s(sizeof(char *), options_len);
     if (options == NULL) {
         ERROR("Out of memory");
         goto out_free;
@@ -2759,7 +2754,7 @@ static bool add_shm_mount(defs_mount ***all_mounts, size_t *all_mounts_len, cons
 #ifndef ENABLE_GVISOR
     options_len += 1;
 #endif
-    options = util_common_calloc_s(options_len * sizeof(char *));
+    options = util_smart_calloc_s(sizeof(char *), options_len);
     if (options == NULL) {
         ERROR("Out of memory");
         goto out_free;
@@ -3271,7 +3266,7 @@ static int merge_all_fs_mounts(host_config *host_spec, container_config *contain
         return 0;
     }
 
-    merged_mounts = util_common_calloc_s(sizeof(defs_mount *) * len);
+    merged_mounts = util_smart_calloc_s(sizeof(defs_mount *), len);
     if (merged_mounts == NULL) {
         ERROR("out of memory");
         ret = -1;

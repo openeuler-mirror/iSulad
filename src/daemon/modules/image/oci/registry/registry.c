@@ -132,7 +132,7 @@ static int parse_manifest_schema1(pull_descriptor *desc)
         goto out;
     }
 
-    desc->layers = util_common_calloc_s(sizeof(layer_blob) * manifest->fs_layers_len);
+    desc->layers = util_smart_calloc_s(sizeof(layer_blob), manifest->fs_layers_len);
     if (desc->layers == NULL) {
         ERROR("out of memory");
         ret = -1;
@@ -197,7 +197,7 @@ static int parse_manifest_schema2(pull_descriptor *desc)
         goto out;
     }
 
-    desc->layers = util_common_calloc_s(sizeof(layer_blob) * manifest->layers_len);
+    desc->layers = util_smart_calloc_s(sizeof(layer_blob), manifest->layers_len);
     if (desc->layers == NULL) {
         ERROR("out of memory");
         ret = -1;
@@ -250,7 +250,7 @@ static int parse_manifest_ociv1(pull_descriptor *desc)
         goto out;
     }
 
-    desc->layers = util_common_calloc_s(sizeof(layer_blob) * manifest->layers_len);
+    desc->layers = util_smart_calloc_s(sizeof(layer_blob), manifest->layers_len);
     if (desc->layers == NULL) {
         ERROR("out of memory");
         ret = -1;
@@ -390,7 +390,7 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
     struct linked_list *node = NULL;
     char *src_file = NULL;
     thread_fetch_info *src_info = NULL;
-    file_elem *elem = {NULL};
+    file_elem *elem = { NULL };
     pull_descriptor *desc = info->desc;
 
     cache = (cached_layer *)map_search(g_shared->cached_layers, blob_digest);
@@ -430,8 +430,8 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
                 ret = -1;
                 goto out;
             }
-            src_file = ((file_elem*)elem)->file;
-            src_info = ((file_elem*)elem)->info;
+            src_file = ((file_elem *)elem)->file;
+            src_info = ((file_elem *)elem)->info;
             if (src_info == NULL) {
                 ERROR("source info is NULL, this should never happen");
                 ret = -1;
@@ -561,16 +561,16 @@ static int set_cached_info_to_desc(thread_fetch_info *info)
     }
 
     if (desc->layers[i].diff_id == NULL) {
-        ERROR("layer %zu of image %s have invalid NULL diffid, info->use=%d, info->diffid=%s",
-              i, desc->image_name, info->use, info->diffid);
+        ERROR("layer %zu of image %s have invalid NULL diffid, info->use=%d, info->diffid=%s", i, desc->image_name,
+              info->use, info->diffid);
         return -1;
     }
 
     if (desc->layers[i].chain_id == NULL) {
         desc->layers[i].chain_id = calc_chain_id(desc->parent_chain_id, desc->layers[i].diff_id);
         if (desc->layers[i].chain_id == NULL) {
-            ERROR("calc chain id failed, diff id %s, parent chain id %s",
-                  desc->layers[i].diff_id, desc->parent_chain_id);
+            ERROR("calc chain id failed, diff id %s, parent chain id %s", desc->layers[i].diff_id,
+                  desc->parent_chain_id);
             return -1;
         }
     }
@@ -1177,7 +1177,7 @@ static void notify_cached_descs(char *blob_digest)
 
     // notify all related register threads to do register
     linked_list_for_each_safe(item, &cache->file_list, next) {
-        info = ((file_elem*)item->elem)->info;
+        info = ((file_elem *)item->elem)->info;
         info->notified = true;
         register_layer_notify(info->desc);
     }
@@ -1249,7 +1249,7 @@ static int add_fetch_task(thread_fetch_info *info)
     pthread_t tid = 0;
     bool cached_layers_added = true;
     cached_layer *cache = NULL;
-    struct timespec ts = {0};
+    struct timespec ts = { 0 };
 
     mutex_lock(&g_shared->mutex);
     cache = get_cached_layer(info->blob_digest);
@@ -1406,7 +1406,7 @@ static void *register_layers_in_thread(void *arg)
     int ret = 0;
     int cond_ret = 0;
     size_t i = 0;
-    struct timespec ts = {0};
+    struct timespec ts = { 0 };
 
     ret = pthread_detach(pthread_self());
     if (ret != 0) {
@@ -1425,8 +1425,8 @@ static void *register_layers_in_thread(void *arg)
                 // here we can't just break and cleanup resources because threads are running.
                 // desc is freed if we break and then isulad crash. sleep some time
                 // instead to avoid cpu full running and then retry.
-                ERROR("condition wait for layer %zu to complete failed, ret %d, error: %s",
-                      i, cond_ret, strerror(errno));
+                ERROR("condition wait for layer %zu to complete failed, ret %d, error: %s", i, cond_ret,
+                      strerror(errno));
                 sleep(10);
                 continue;
             }
@@ -1504,14 +1504,14 @@ static int fetch_all(pull_descriptor *desc)
     char *parent_chain_id = NULL;
     struct layer_list *list = NULL;
     pthread_t tid = 0;
-    struct timespec ts = {0};
+    struct timespec ts = { 0 };
 
     if (desc == NULL) {
         ERROR("Invalid NULL param");
         return -1;
     }
 
-    infos = util_common_calloc_s(sizeof(thread_fetch_info) * desc->layers_len);
+    infos = util_smart_calloc_s(sizeof(thread_fetch_info), desc->layers_len);
     if (infos == NULL) {
         ERROR("out of memory");
         return -1;
@@ -1611,8 +1611,7 @@ static int fetch_all(pull_descriptor *desc)
             // here we can't just break and cleanup resources because threads are running.
             // desc is freed if we break and then isulad crash. sleep some time
             // instead to avoid cpu full running and then retry.
-            ERROR("condition wait for all layers to complete failed, ret %d, error: %s",
-                  cond_ret, strerror(errno));
+            ERROR("condition wait for all layers to complete failed, ret %d, error: %s", cond_ret, strerror(errno));
             sleep(10);
             continue;
         }
