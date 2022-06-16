@@ -65,9 +65,147 @@ static char *util_trim_prefice_string(char *str, const char *prefix)
     return str;
 }
 
-static int devmapper_parse_options(struct device_set *devset, const char **options, size_t options_len)
+typedef int (*devmapper_option_handle)(char *val, struct device_set *devset);
+
+struct devmapper_option_handler {
+    char *name;
+    devmapper_option_handle handle;
+};
+
+static int handle_dm_fs(char *val, struct device_set *devset)
+{
+    if (strcmp(val, "ext4") == 0) {
+        free(devset->filesystem);
+        devset->filesystem = util_strdup_s(val);
+    } else {
+        ERROR("Invalid filesystem: '%s': not supported", val);
+        isulad_set_error_message("Invalid filesystem: '%s': not supported", val);
+        return -1;
+    }
+
+    return 0;
+}
+
+static int handle_dm_thinpooldev(char *val, struct device_set *devset)
+{
+    char *tmp_val = NULL;
+
+    if (!util_valid_str(val)) {
+        ERROR("Invalid thinpool device, it must not be empty");
+        isulad_set_error_message("Invalid thinpool device, it must not be empty");
+        return -1;
+    }
+    tmp_val = util_trim_prefice_string(val, "/dev/mapper/");
+    devset->thin_pool_device = util_strdup_s(tmp_val);
+
+    return 0;
+}
+
+static int handle_dm_min_free_space(char *val, struct device_set *devset)
+{
+    long converted = 0;
+    int ret = util_parse_percent_string(val, &converted);
+
+    if (ret != 0 || converted >= 100) {
+        ERROR("Invalid min free space: '%s': %s", val, strerror(-ret));
+        isulad_set_error_message("Invalid min free space: '%s': %s", val, strerror(-ret));
+        return -1;
+    }
+    devset->min_free_space_percent = (uint32_t)converted;
+
+    return 0;
+}
+
+static int handle_dm_basesize(char *val, struct device_set *devset)
+{
+    int64_t converted = 0;
+    int ret = util_parse_byte_size_string(val, &converted);
+
+    if (ret != 0) {
+        ERROR("Invalid size: '%s': %s", val, strerror(-ret));
+        isulad_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
+        return -1;
+    }
+    if (converted <= 0) {
+        ERROR("dm.basesize is lower than zero");
+        isulad_set_error_message("dm.basesize is lower than zero");
+        return -1;
+    }
+    devset->user_base_size = true;
+    devset->base_fs_size = (uint64_t)converted;
+
+    return 0;
+}
+
+static int handle_dm_mkfsarg(char *val, struct device_set *devset)
+{
+    if (!util_valid_str(val)) {
+        ERROR("Invalid dm.mkfsarg value");
+        isulad_set_error_message("Invalid dm.mkfsarg value");
+        return -1;
+    }
+    if (util_array_append(&devset->mkfs_args, val) != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    devset->mkfs_args_len++;
+
+    return 0;
+}
+
+static int handle_dm_mountopt(char *val, struct device_set *devset)
+{
+    if (!util_valid_str(val)) {
+        ERROR("Invalid dm.mountopt or devicemapper.mountopt value");
+        isulad_set_error_message("Invalid dm.mountopt or devicemapper.mountopt value");
+        return -1;
+    }
+    devset->mount_options = util_strdup_s(val);
+
+    return 0;
+}
+
+static int devmapper_option_exact(const char *name, char *val, struct device_set *devset)
 {
     size_t i = 0;
+    bool found = false;
+
+    struct devmapper_option_handler handler_jump_table[] = {
+        { "dm.fs",                 handle_dm_fs             },
+        { "dm.thinpooldev",        handle_dm_thinpooldev    },
+        { "dm.min_free_space",     handle_dm_min_free_space },
+        { "dm.basesize",           handle_dm_basesize       },
+        { "dm.mkfsarg",            handle_dm_mkfsarg        },
+        { "dm.mountopt",           handle_dm_mountopt       },
+        { "devicemapper.mountopt", handle_dm_mountopt       },
+    };
+
+    for (i = 0; i < sizeof(handler_jump_table)/sizeof(handler_jump_table[0]); i++) {
+        if (strcmp(handler_jump_table[i].name, name) != 0) {
+            continue;
+        }
+        found = true;
+        if (handler_jump_table[i].handle(val, devset) != 0) {
+            ERROR("Failed to handle %s option with %s", name, val);
+            return -1;
+        }
+        break;
+    }
+
+    if (!found) {
+        ERROR("devicemapper: unknown option: '%s'", name);
+        isulad_set_error_message("devicemapper: unknown option: '%s'", name);
+        return -1;
+    }
+
+    return 0;
+}
+
+static int devmapper_parse_options(struct device_set *devset, const char **options, size_t options_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    char *dup_option = NULL;
 
     if (devset == NULL) {
         ERROR("Invalid input params");
@@ -75,104 +213,38 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
     }
 
     for (i = 0; options != NULL && i < options_len; i++) {
-        char *dup = NULL;
         char *val = NULL;
-        char *tmp_val = NULL;
-        int ret = 0;
-        int nret = 0;
 
-        dup = util_strdup_s(options[i]);
-        if (dup == NULL) {
+        dup_option = util_strdup_s(options[i]);
+        if (dup_option == NULL) {
             ERROR("Out of memory");
             return -1;
         }
 
-        val = strchr(dup, '=');
+        val = strchr(dup_option, '=');
         if (val == NULL) {
-            ERROR("Unable to parse key/value option: '%s'", dup);
-            isulad_set_error_message("Unable to parse key/value option: '%s'", dup);
-            free(dup);
-            return -1;
+            ERROR("Unable to parse key/value option: '%s'", dup_option);
+            isulad_set_error_message("Unable to parse key/value option: '%s'", dup_option);
+            ret = -1;
+            goto out;
         }
+
         *val = '\0';
         val++;
-        if (strcasecmp(dup, "dm.fs") == 0) {
-            if (strcmp(val, "ext4") == 0) {
-                free(devset->filesystem);
-                devset->filesystem = util_strdup_s(val);
-            } else {
-                ERROR("Invalid filesystem: '%s': not supported", val);
-                isulad_set_error_message("Invalid filesystem: '%s': not supported", val);
-                ret = -1;
-            }
-        } else if (strcasecmp(dup, "dm.thinpooldev") == 0) {
-            if (!util_valid_str(val)) {
-                ERROR("Invalid thinpool device, it must not be empty");
-                isulad_set_error_message("Invalid thinpool device, it must not be empty");
-                ret = -1;
-                goto out;
-            }
-            tmp_val = util_trim_prefice_string(val, "/dev/mapper/");
-            devset->thin_pool_device = util_strdup_s(tmp_val);
-        } else if (strcasecmp(dup, "dm.min_free_space") == 0) {
-            long converted = 0;
-            ret = util_parse_percent_string(val, &converted);
-            if (ret != 0 || converted >= 100) {
-                ERROR("Invalid min free space: '%s': %s", val, strerror(-ret));
-                isulad_set_error_message("Invalid min free space: '%s': %s", val, strerror(-ret));
-                ret = -1;
-                goto out;
-            }
-            devset->min_free_space_percent = (uint32_t)converted;
-        } else if (strcasecmp(dup, "dm.basesize") == 0) {
-            int64_t converted = 0;
-            ret = util_parse_byte_size_string(val, &converted);
-            if (ret != 0) {
-                ERROR("Invalid size: '%s': %s", val, strerror(-ret));
-                isulad_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
-                ret = -1;
-                goto out;
-            }
-            if (converted <= 0) {
-                ERROR("dm.basesize is lower than zero");
-                isulad_set_error_message("dm.basesize is lower than zero");
-                ret = -1;
-                goto out;
-            }
-            devset->user_base_size = true;
-            devset->base_fs_size = (uint64_t)converted;
-        } else if (strcasecmp(dup, "dm.mkfsarg") == 0) {
-            if (!util_valid_str(val)) {
-                ERROR("Invalid dm.mkfsarg value");
-                isulad_set_error_message("Invalid dm.mkfsarg value");
-                ret = -1;
-                goto out;
-            }
-            nret = util_array_append(&devset->mkfs_args, val);
-            if (nret != 0) {
-                ERROR("Out of memory");
-                ret = -1;
-                goto out;
-            }
-            devset->mkfs_args_len++;
-        } else if (strcasecmp(dup, "dm.mountopt") == 0 || strcasecmp(dup, "devicemapper.mountopt") == 0) {
-            if (!util_valid_str(val)) {
-                ERROR("Invalid dm.mountopt or devicemapper.mountopt value");
-                isulad_set_error_message("Invalid dm.mountopt or devicemapper.mountopt value");
-                ret = -1;
-                goto out;
-            }
-            devset->mount_options = util_strdup_s(val);
-        } else {
-            ERROR("devicemapper: unknown option: '%s'", dup);
-            isulad_set_error_message("devicemapper: unknown option: '%s'", dup);
+
+        if (devmapper_option_exact(dup_option, val, devset) != 0) {
+            ERROR("Failed to exact devmapper option: %s", dup_option);
             ret = -1;
+            goto out;
         }
+
+        free(dup_option);
+    }
+
 out:
-        free(dup);
-        if (ret != 0) {
-            return ret;
-        }
+    free(dup_option);
+    if (ret != 0) {
+        return ret;
     }
 
     return 0;
