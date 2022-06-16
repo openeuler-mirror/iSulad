@@ -16,8 +16,8 @@
 #include "command_parser.h"
 #include "connect.h"
 
-const char g_cmd_search_desc[] = "Search an image or a repository from a registry";
-const char g_cmd_search_usage[] = "search [OPTIONS] NAME";
+const char g_cmd_search_desc[] = "Search an image and return its tags from a repositroy";
+const char g_cmd_search_usage[] = "search [OPTIONS] [URL/]NAME";
 
 struct client_arguments g_cmd_search_args = {};
 
@@ -55,6 +55,8 @@ void search_parse_print_json(const char *json)
         printf("\n");
     }
 
+    printf("\nTotal %d\n", tags_len);
+    
     free(utils_cjson_json);
     free(utils_cjson_name);
     free(utils_cjson_tags);

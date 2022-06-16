@@ -120,12 +120,12 @@ static int search_image(const im_search_request *request,im_search_response *res
             ERROR("search %s failed",options->image_name);
             goto out;
         }
-         response->output = util_strdup_s(output);
+         response->image_tags_json = util_strdup_s(output);
     } else {
         registry_mirrors = oci_image_data->registry_mirrors;
         if (registry_mirrors == NULL) {
-            ERROR("Invalid image name %s, no host found", request->image);
-            isulad_try_set_error_message("Invalid image name, no host found");
+            ERROR("Invalid request for %s, no host found", request->image);
+            isulad_try_set_error_message("no host found");
             goto out;
         }
 
@@ -140,7 +140,7 @@ static int search_image(const im_search_request *request,im_search_response *res
             if (ret != 0) {
                 continue;
             }
-            response->output = util_strdup_s(output);
+            response->image_tags_json = util_strdup_s(output);
             break;
         }
         if (ret != 0) {
