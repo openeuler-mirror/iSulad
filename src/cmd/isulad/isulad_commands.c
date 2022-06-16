@@ -468,7 +468,7 @@ static int do_merge_conf_hosts_into_global(struct service_arguments *args)
 
     if (args->hosts_len == 0) {
         /* set default host */
-        args->hosts = (char **)util_common_calloc_s(sizeof(char *) * DEFAULT_HOSTS_LEN);
+        args->hosts = (char **)util_smart_calloc_s(sizeof(char *), DEFAULT_HOSTS_LEN);
         if (args->hosts == NULL) {
             ERROR("Out of memory");
             return -1;
@@ -544,8 +544,7 @@ static int do_merge_conf_default_ulimit_into_global(struct service_arguments *ar
         telem.name = ptr->name;
         telem.hard = ptr->hard;
         telem.soft = ptr->soft;
-        if (ulimit_array_append(&args->default_ulimit, &telem, args->default_ulimit_len) !=
-            0) {
+        if (ulimit_array_append(&args->default_ulimit, &telem, args->default_ulimit_len) != 0) {
             ERROR("merge json confs default ulimit config failed");
             return -1;
         }

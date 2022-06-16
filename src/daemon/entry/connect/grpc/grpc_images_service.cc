@@ -40,22 +40,17 @@ int ImagesServiceImpl::image_list_request_from_grpc(const ListImagesRequest *gre
         *request = tmpreq;
         return 0;
     }
-    if (len > SIZE_MAX / sizeof(char *)) {
-        ERROR("invalid filters size");
-        goto cleanup;
-    }
-
     tmpreq->filters = (defs_filters *)util_common_calloc_s(sizeof(defs_filters));
     if (tmpreq->filters == nullptr) {
         ERROR("Out of memory");
         goto cleanup;
     }
 
-    tmpreq->filters->keys = (char **)util_common_calloc_s(len * sizeof(char *));
+    tmpreq->filters->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
     if (tmpreq->filters->keys == nullptr) {
         goto cleanup;
     }
-    tmpreq->filters->values = (json_map_string_bool **)util_common_calloc_s(len * sizeof(json_map_string_bool *));
+    tmpreq->filters->values = (json_map_string_bool **)util_smart_calloc_s(sizeof(json_map_string_bool *), len);
     if (tmpreq->filters->values == nullptr) {
         free(tmpreq->filters->keys);
         tmpreq->filters->keys = nullptr;

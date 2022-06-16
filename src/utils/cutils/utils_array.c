@@ -72,11 +72,7 @@ int util_array_append(char ***array, const char *element)
     // let new len to len + 2 for element and null
     len = util_array_len((const char **)(*array));
 
-    if (len > SIZE_MAX / sizeof(char *) - 2) {
-        ERROR("Too many array elements!");
-        return -1;
-    }
-    new_array = util_common_calloc_s((len + 2) * sizeof(char *));
+    new_array = util_smart_calloc_s(sizeof(char *), (len + 2));
     if (new_array == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -92,8 +88,7 @@ int util_array_append(char ***array, const char *element)
     return 0;
 }
 
-int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
-                    size_t increment)
+int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size, size_t increment)
 {
     size_t add_capacity;
     char **add_array = NULL;
@@ -102,7 +97,7 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
         return -1;
     }
 
-    if (((*orig_array) == NULL)  || ((*orig_capacity) == 0)) {
+    if (((*orig_array) == NULL) || ((*orig_capacity) == 0)) {
         UTIL_FREE_AND_SET_NULL(*orig_array);
         *orig_capacity = 0;
     }
@@ -112,10 +107,7 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
         add_capacity += increment;
     }
     if (add_capacity != *orig_capacity) {
-        if (add_capacity > SIZE_MAX / sizeof(void *)) {
-            return -1;
-        }
-        add_array = util_common_calloc_s(add_capacity * sizeof(void *));
+        add_array = util_smart_calloc_s(sizeof(void *), add_capacity);
         if (add_array == NULL) {
             return -1;
         }

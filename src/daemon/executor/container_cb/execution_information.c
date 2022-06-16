@@ -483,12 +483,8 @@ int parse_output(char **title, char ***process, size_t *process_len, const char 
 
     pid_num = get_pid_num(*title);
     stime = get_stime(*title);
-    if (util_array_len((const char **)tmp) > SIZE_MAX / sizeof(char *)) {
-        ERROR("Invalid array length");
-        ret = -1;
-        goto out;
-    }
-    *process = util_common_calloc_s(util_array_len((const char **)tmp) * sizeof(char *));
+
+    *process = util_smart_calloc_s(sizeof(char *), util_array_len((const char **)tmp));
     if (*process == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -604,15 +600,9 @@ static int get_pids(const char *name, const char *runtime, const char *rootpath,
         goto out;
     }
 
-    if (out->pids_len > SIZE_MAX / sizeof(pid_t)) {
-        ERROR("list too many pids");
-        ret = -1;
-        goto out;
-    }
-
     if (out->pids_len != 0) {
         pid_t *tmp = NULL;
-        tmp = util_common_calloc_s(sizeof(pid_t) * out->pids_len);
+        tmp = util_smart_calloc_s(sizeof(pid_t), out->pids_len);
         if (tmp == NULL) {
             ERROR("Memory out");
             ret = -1;
@@ -814,12 +804,7 @@ static int container_top_cb(container_top_request *request, container_top_respon
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
-    if (process_len > SIZE_MAX / sizeof(char *)) {
-        ERROR("invalid processe size");
-        cc = ISULAD_ERR_EXEC;
-        goto pack_response;
-    }
-    (*response)->processes = util_common_calloc_s(process_len * sizeof(char *));
+    (*response)->processes = util_smart_calloc_s(sizeof(char *), process_len);
     if ((*response)->processes == NULL) {
         ERROR("Out of memory");
         cc = ISULAD_ERR_EXEC;

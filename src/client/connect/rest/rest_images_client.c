@@ -122,9 +122,9 @@ static int unpack_image_info_to_list_response(image_list_images_response *crespo
     }
 
     num = cresponse->images_len;
-    if (num > 0 && (num < (SIZE_MAX / sizeof(struct isula_image_info)))) {
+    if (num > 0) {
         size_t i;
-        image_info = (struct isula_image_info *)util_common_calloc_s(sizeof(struct isula_image_info) * num);
+        image_info = (struct isula_image_info *)util_smart_calloc_s(sizeof(struct isula_image_info), num);
         if (image_info == NULL) {
             ERROR("out of memory");
             return -1;
@@ -134,17 +134,19 @@ static int unpack_image_info_to_list_response(image_list_images_response *crespo
         for (i = 0; i < num; i++) {
             if (cresponse->images[i]->target != NULL) {
                 image_info[i].type = cresponse->images[i]->target->media_type ?
-                                     util_strdup_s(cresponse->images[i]->target->media_type) : util_strdup_s("-");
+                                     util_strdup_s(cresponse->images[i]->target->media_type) :
+                                     util_strdup_s("-");
                 image_info[i].digest = cresponse->images[i]->target->digest ?
-                                       util_strdup_s(cresponse->images[i]->target->digest) : util_strdup_s("-");
+                                       util_strdup_s(cresponse->images[i]->target->digest) :
+                                       util_strdup_s("-");
                 image_info[i].size = cresponse->images[i]->target->size;
             }
             if (cresponse->images[i]->created_at != NULL) {
                 image_info[i].created = cresponse->images[i]->created_at->seconds;
                 image_info[i].created_nanos = cresponse->images[i]->created_at->nanos;
             }
-            image_info[i].imageref = cresponse->images[i]->name ?
-                                     util_strdup_s(cresponse->images[i]->name) : util_strdup_s("-");
+            image_info[i].imageref = cresponse->images[i]->name ? util_strdup_s(cresponse->images[i]->name) :
+                                     util_strdup_s("-");
         }
     }
 
@@ -524,7 +526,6 @@ out:
     return ret;
 }
 
-
 /* rest image pull */
 static int rest_image_pull(const struct isula_pull_request *request, struct isula_pull_response *response, void *arg)
 {
@@ -824,7 +825,6 @@ out:
     return ret;
 }
 
-
 /* rest image tag */
 static int rest_image_tag(const struct isula_tag_request *request, struct isula_tag_response *response, void *arg)
 {
@@ -929,7 +929,6 @@ out:
 static int rest_image_import(const struct isula_import_request *request, struct isula_import_response *response,
                              void *arg)
 {
-
     client_connect_config_t *connect_config = (client_connect_config_t *)arg;
     const char *socketname = (const char *)(connect_config->socket);
     char *body = NULL;
@@ -963,7 +962,6 @@ out:
     return ret;
 }
 
-
 /* rest images client ops init */
 int rest_images_client_ops_init(isula_connect_ops *ops)
 {
@@ -983,4 +981,3 @@ int rest_images_client_ops_init(isula_connect_ops *ops)
 
     return 0;
 }
-

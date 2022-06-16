@@ -394,7 +394,7 @@ static char *generate_exec_suffix()
 {
     char *exec_suffix = NULL;
 
-    exec_suffix = util_common_calloc_s(sizeof(char) * (CONTAINER_ID_MAX_LEN + 1));
+    exec_suffix = util_smart_calloc_s(sizeof(char), (CONTAINER_ID_MAX_LEN + 1));
     if (exec_suffix == NULL) {
         ERROR("Out of memory");
         goto out;

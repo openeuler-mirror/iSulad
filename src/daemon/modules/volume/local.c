@@ -87,7 +87,7 @@ void free_volumes_info(struct volumes_info *vols)
     return;
 }
 
-static struct volume * dup_volume(char *name, char *path)
+static struct volume *dup_volume(char *name, char *path)
 {
     struct volume *vol = NULL;
 
@@ -105,7 +105,7 @@ static struct volume * dup_volume(char *name, char *path)
     return vol;
 }
 
-struct volume * local_volume_get(char *name)
+struct volume *local_volume_get(char *name)
 {
     struct volume *v = NULL;
 
@@ -289,7 +289,7 @@ out:
 
 static int load_volumes(struct volumes_info *vols)
 {
-    return util_scan_subdirs((const char*)vols->root_dir, load_volume, vols);
+    return util_scan_subdirs((const char *)vols->root_dir, load_volume, vols);
 }
 
 static int local_volume_init(char *scope)
@@ -339,7 +339,7 @@ static int create_volume_meminfo(char *name, struct volume **vol)
     struct volume *v = NULL;
     int ret = 0;
     int sret = 0;
-    char path[PATH_MAX] = {0};
+    char path[PATH_MAX] = { 0 };
 
     v = util_common_calloc_s(sizeof(struct volume));
     if (v == NULL) {
@@ -367,7 +367,7 @@ out:
     return ret;
 }
 
-static struct volume * volume_create_nolock(char *name)
+static struct volume *volume_create_nolock(char *name)
 {
     struct volume *v = NULL;
     int ret = 0;
@@ -419,7 +419,7 @@ out:
     return v;
 }
 
-struct volume * local_volume_create(char *name)
+struct volume *local_volume_create(char *name)
 {
     struct volume *v_out = NULL;
     struct volume *v = NULL;
@@ -473,7 +473,7 @@ static struct volumes *new_empty_volumes(size_t size)
         return vols;
     }
 
-    vols->vols = util_common_calloc_s(sizeof(struct volume*) * size);
+    vols->vols = util_smart_calloc_s(sizeof(struct volume *), size);
     if (vols->vols == NULL) {
         ERROR("out of memory");
         free_volumes(vols);
@@ -483,7 +483,7 @@ static struct volumes *new_empty_volumes(size_t size)
     return vols;
 }
 
-struct volumes * local_volume_list(void)
+struct volumes *local_volume_list(void)
 {
     int ret = 0;
     map_itor *itor = NULL;
@@ -661,4 +661,3 @@ out:
 
     return ret;
 }
-

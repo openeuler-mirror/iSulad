@@ -387,16 +387,11 @@ static int pack_path_and_args_from_container_spec(const container_config *contai
         v2_spec->path = util_strdup_s(container_spec->entrypoint[0]);
         total = container_spec->entrypoint_len + container_spec->cmd_len - 1;
 
-        if (total > SIZE_MAX / sizeof(char *)) {
-            ERROR("Container oci spec process args elements is too much!");
-            ret = -1;
-            goto out;
-        }
         if (total == 0) {
             goto out;
         }
 
-        v2_spec->args = util_common_calloc_s(total * sizeof(char *));
+        v2_spec->args = util_smart_calloc_s(sizeof(char *), total);
         if (v2_spec->args == NULL) {
             ERROR("Out of memory");
             ret = -1;

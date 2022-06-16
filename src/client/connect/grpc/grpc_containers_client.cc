@@ -495,7 +495,7 @@ public:
             ERROR("Too many summary info!");
             return -1;
         }
-        response->processes = static_cast<char **>(util_common_calloc_s(num * sizeof(char *)));
+        response->processes = static_cast<char **>(util_smart_calloc_s(sizeof(char *), num));
         if (response->processes == nullptr) {
             ERROR("out of memory");
             response->cc = ISULAD_ERR_MEMOUT;
@@ -1666,8 +1666,8 @@ public:
     {
         int size = gresponse->containers_size();
         if (size > 0) {
-            response->container_stats = static_cast<isula_container_info *>(
-                                            util_common_calloc_s(size * sizeof(struct isula_container_info)));
+            response->container_stats =
+                static_cast<isula_container_info *>(util_smart_calloc_s(sizeof(struct isula_container_info), size));
             if (response->container_stats == nullptr) {
                 ERROR("Out of memory");
                 return -1;
