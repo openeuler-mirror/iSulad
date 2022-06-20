@@ -262,11 +262,7 @@ int containers_store_list(container_t ***out, size_t *size)
         ret = 0;
         goto unlock;
     }
-    if (*size > SIZE_MAX / sizeof(container_t *)) {
-        ERROR("Containers store list is too long!");
-        goto unlock;
-    }
-    conts = util_common_calloc_s(sizeof(container_t *) * (*size));
+    conts = util_smart_calloc_s(sizeof(container_t *), (*size));
     if (conts == NULL) {
         ERROR("Out of memory");
         goto unlock;

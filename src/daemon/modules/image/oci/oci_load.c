@@ -229,7 +229,7 @@ static char **str_array_copy(char **arr, size_t len)
     char **str_arr = NULL;
     size_t i = 0;
 
-    str_arr = util_common_calloc_s(sizeof(char *) * len);
+    str_arr = util_smart_calloc_s(sizeof(char *), len);
     if (str_arr == NULL) {
         ERROR("Out of memory");
         return NULL;
@@ -710,7 +710,8 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
     }
 
     if (conf->rootfs->diff_ids_len != im->layers_len) {
-        ERROR("Invalid manifest, layers length mismatch: expected %zu, got %zu", im->layers_len, conf->rootfs->diff_ids_len);
+        ERROR("Invalid manifest, layers length mismatch: expected %zu, got %zu", im->layers_len,
+              conf->rootfs->diff_ids_len);
         ret = -1;
         goto out;
     }
@@ -732,7 +733,8 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
         // The format is sha256:xxx
         im->layers[i]->chain_id = oci_load_calc_chain_id(parent_chain_id_sha256, conf->rootfs->diff_ids[i]);
         if (im->layers[i]->chain_id == NULL) {
-            ERROR("calc chain id failed, diff id %s, parent chain id %s", conf->rootfs->diff_ids[i], parent_chain_id_sha256);
+            ERROR("calc chain id failed, diff id %s, parent chain id %s", conf->rootfs->diff_ids[i],
+                  parent_chain_id_sha256);
             ret = -1;
             goto out;
         }
@@ -886,7 +888,7 @@ static int oci_load_set_manifest_info(load_image_t *im)
     }
 
     im->manifest->schema_version = OCI_SCHEMA_VERSION;
-    im->manifest->layers = util_common_calloc_s(sizeof(oci_image_content_descriptor *) * im->layers_len);
+    im->manifest->layers = util_smart_calloc_s(sizeof(oci_image_content_descriptor *), im->layers_len);
     if (im->manifest->layers == NULL) {
         ERROR("Out of memory");
         ret = -1;

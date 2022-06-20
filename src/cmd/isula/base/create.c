@@ -53,8 +53,7 @@
 const char g_cmd_create_desc[] = "Create a new container";
 const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
 
-struct client_arguments g_cmd_create_args = {
-    .runtime = "",
+struct client_arguments g_cmd_create_args = { .runtime = "",
     .restart = "no",
     .cr.oom_score_adj = 0,
     .custom_conf.health_interval = 0,
@@ -719,11 +718,7 @@ static int request_pack_host_ns_change_files(const struct client_arguments *args
         files = net_ipc_files;
         files_len = sizeof(net_ipc_files) / sizeof(net_ipc_files[0]);
     }
-    if (files_len > (SIZE_MAX / sizeof(char *)) - 1) {
-        ERROR("Too many files");
-        return -1;
-    }
-    hostconfig->ns_change_files = util_common_calloc_s((files_len + 1) * sizeof(char *));
+    hostconfig->ns_change_files = util_smart_calloc_s(sizeof(char *), (files_len + 1));
     if (hostconfig->ns_change_files == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -1141,8 +1136,8 @@ static int request_pack_host_network(const struct client_arguments *args, isula_
     }
     bridge_network_len = util_array_len((const char **)bridge_network);
 
-    if (util_string_array_unique((const char **)bridge_network, bridge_network_len,
-                                 &hostconfig->bridge_network, &hostconfig->bridge_network_len) != 0) {
+    if (util_string_array_unique((const char **)bridge_network, bridge_network_len, &hostconfig->bridge_network,
+                                 &hostconfig->bridge_network_len) != 0) {
         ERROR("Failed to unique bridge networks");
         ret = -1;
     }
@@ -1408,14 +1403,14 @@ static int pack_custom_network_expose(isula_container_config_t *container_spec, 
         goto out;
     }
 
-    expose->keys = util_common_calloc_s(sizeof(char *) * len);
+    expose->keys = util_smart_calloc_s(sizeof(char *), len);
     if (expose->keys == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
 
-    expose->values = util_common_calloc_s(len * sizeof(defs_map_string_object_element*));
+    expose->values = util_smart_calloc_s(sizeof(defs_map_string_object_element *), len);
     if (expose->values == NULL) {
         free(expose->keys);
         expose->keys = NULL;
@@ -1735,8 +1730,9 @@ int cmd_create_main(int argc, const char **argv)
     }
     g_cmd_create_args.progname = argv[0];
     g_cmd_create_args.subcommand = argv[1];
-    struct command_option options[] = { LOG_OPTIONS(lconf) CREATE_OPTIONS(g_cmd_create_args) CREATE_EXTEND_OPTIONS(
-            g_cmd_create_args) COMMON_OPTIONS(g_cmd_create_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) CREATE_OPTIONS(g_cmd_create_args)
+        CREATE_EXTEND_OPTIONS(g_cmd_create_args)
+        COMMON_OPTIONS(g_cmd_create_args)
 #ifdef ENABLE_NATIVE_NETWORK
         CREATE_NETWORK_OPTIONS(g_cmd_create_args)
 #endif

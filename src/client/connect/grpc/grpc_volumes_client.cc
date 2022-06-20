@@ -156,7 +156,7 @@ public:
     {
         auto size = gresponse->volumes_size();
         if (size != 0) {
-            response->volumes = static_cast<char **>(util_common_calloc_s(sizeof(char *) * size));
+            response->volumes = static_cast<char **>(util_smart_calloc_s(sizeof(char *), size));
             if (response->volumes == nullptr) {
                 return -1;
             }

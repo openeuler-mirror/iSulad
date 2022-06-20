@@ -71,7 +71,7 @@ public:
             response->cc = ISULAD_ERR_MEMOUT;
             return -1;
         }
-        images_list = (struct isula_image_info *)util_common_calloc_s(sizeof(struct isula_image_info) * (size_t)num);
+        images_list = (struct isula_image_info *)util_smart_calloc_s(sizeof(struct isula_image_info), (size_t)num);
         if (images_list == nullptr) {
             ERROR("out of memory");
             response->cc = ISULAD_ERR_MEMOUT;

@@ -80,8 +80,7 @@ auto GetDefaultSandboxImage(Errors &err) -> std::string
     const std::string defaultPodSandboxImageName { "pause" };
     const std::string defaultPodSandboxImageVersion { "3.0" };
     std::string machine;
-    struct utsname uts {
-    };
+    struct utsname uts {};
 
     if (uname(&uts) < 0) {
         err.SetError("Failed to read host arch.");
@@ -233,16 +232,12 @@ auto FiltersAdd(defs_filters *filters, const std::string &key, const std::string
     }
 
     size_t len = filters->len + 1;
-    if (len > SIZE_MAX / sizeof(char *)) {
-        ERROR("Invalid filter size");
-        return -1;
-    }
-    char **keys = (char **)util_common_calloc_s(len * sizeof(char *));
+    char **keys = (char **)util_smart_calloc_s(sizeof(char *), len);
     if (keys == nullptr) {
         ERROR("Out of memory");
         return -1;
     }
-    json_map_string_bool **vals = (json_map_string_bool **)util_common_calloc_s(len * sizeof(json_map_string_bool *));
+    json_map_string_bool **vals = (json_map_string_bool **)util_smart_calloc_s(sizeof(json_map_string_bool *), len);
     if (vals == nullptr) {
         free(keys);
         ERROR("Out of memory");
@@ -302,10 +297,7 @@ auto ContainerStatusToRuntime(Container_Status status) -> runtime::v1alpha2::Con
 auto StringVectorToCharArray(std::vector<std::string> &path) -> char **
 {
     size_t len = path.size();
-    if (len == 0 || len > (SIZE_MAX / sizeof(char *)) - 1) {
-        return nullptr;
-    }
-    char **result = (char **)util_common_calloc_s((len + 1) * sizeof(char *));
+    char **result = (char **)util_smart_calloc_s(sizeof(char *), (len + 1));
     if (result == nullptr) {
         return nullptr;
     }
@@ -387,8 +379,8 @@ auto IsImageNotFoundError(const std::string &err) -> bool
     return err.find("No such image:") != std::string::npos;
 }
 
-auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations,
-                                Errors &error) -> cri_pod_network_container *
+auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations, Errors &error)
+-> cri_pod_network_container *
 {
     auto iter = annotations.find(CRIHelpers::Constants::POD_NETWORK_ANNOTATION_KEY);
 
@@ -466,12 +458,8 @@ void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1a
     if (mounts.empty() || hostconfig == nullptr) {
         return;
     }
-    if ((size_t)mounts.size() > INT_MAX / sizeof(char *)) {
-        err.SetError("Too many mounts");
-        return;
-    }
 
-    hostconfig->binds = (char **)util_common_calloc_s(mounts.size() * sizeof(char *));
+    hostconfig->binds = (char **)util_smart_calloc_s(sizeof(char *), mounts.size());
     if (hostconfig->binds == nullptr) {
         err.SetError("Out of memory");
         return;
@@ -732,7 +720,6 @@ out:
     free_cri_checkpoint(criCheckpoint);
 }
 
-
 auto InspectContainer(const std::string &Id, Errors &err, bool with_host_config) -> container_inspect *
 {
     container_inspect *inspect_data { nullptr };
@@ -756,8 +743,7 @@ int32_t ToInt32Timeout(int64_t timeout)
     return (int32_t)timeout;
 }
 
-void GetContainerLogPath(const std::string &containerID, char **path, char **realPath,
-                         Errors &error)
+void GetContainerLogPath(const std::string &containerID, char **path, char **realPath, Errors &error)
 {
     container_inspect *info = InspectContainer(containerID, error, false);
     if (info == nullptr || error.NotEmpty()) {
@@ -807,8 +793,8 @@ cleanup:
     free(realPath);
 }
 
-void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt,
-                            int64_t *startedAt, int64_t *finishedAt, Errors &err)
+void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
+                            int64_t *finishedAt, Errors &err)
 {
     if (inspect == nullptr) {
         err.SetError("Invalid arguments");
@@ -974,7 +960,7 @@ cleanup:
 
 char *GenerateExecSuffix()
 {
-    char *exec_suffix = (char *)util_common_calloc_s(sizeof(char) * (CONTAINER_ID_MAX_LEN + 1));
+    char *exec_suffix = (char *)util_smart_calloc_s(sizeof(char), (CONTAINER_ID_MAX_LEN + 1));
     if (exec_suffix == nullptr) {
         ERROR("Out of memory");
         return nullptr;
@@ -1029,26 +1015,11 @@ out:
 
 bool ParseQuantitySuffix(const std::string &suffixStr, int64_t &base, int64_t &exponent)
 {
-    std::map<std::string, int16_t > binHandler {
-        {"Ki", 10},
-        {"Mi", 20},
-        {"Gi", 30},
-        {"Ti", 40},
-        {"Pi", 50},
-        {"Ei", 60},
+    std::map<std::string, int16_t> binHandler {
+        { "Ki", 10 }, { "Mi", 20 }, { "Gi", 30 }, { "Ti", 40 }, { "Pi", 50 }, { "Ei", 60 },
     };
-    std::map<std::string, int16_t > dexHandler {
-        {"n", -9},
-        {"u", -6},
-        {"m", -3},
-        {"", 0},
-        {"k", 3},
-        {"M", 6},
-        {"G", 9},
-        {"T", 12},
-        {"P", 15},
-        {"E", 18}
-    };
+    std::map<std::string, int16_t> dexHandler { { "n", -9 }, { "u", -6 }, { "m", -3 }, { "", 0 },   { "k", 3 },
+        { "M", 6 },  { "G", 9 },  { "T", 12 }, { "P", 15 }, { "E", 18 } };
 
     if (suffixStr.empty()) {
         base = 10;
@@ -1161,7 +1132,7 @@ int64_t ParseDecimalQuantity(bool positive, const std::string &numStr, const std
         }
         result = work;
         result = positive ? result : -result;
-        if (has_denom &&  positive) {
+        if (has_denom && positive) {
             // if denom is not null, round up
             result = result + 1;
         }
@@ -1229,7 +1200,7 @@ int64_t ParseQuantity(const std::string &str, Errors &error)
     }
 
     // strip zeros before number
-    for (size_t i = pos; ; i++) {
+    for (size_t i = pos;; i++) {
         if (i >= end) {
             return 0;
         }
@@ -1240,7 +1211,7 @@ int64_t ParseQuantity(const std::string &str, Errors &error)
     }
 
     // extract number
-    for (size_t i = pos; ; i++) {
+    for (size_t i = pos;; i++) {
         if (i >= end) {
             if (pos == end) {
                 break;
@@ -1264,7 +1235,7 @@ int64_t ParseQuantity(const std::string &str, Errors &error)
     // extract denominator
     if (pos < end && str[pos] == '.') {
         pos++;
-        for (size_t i = pos; ; i++) {
+        for (size_t i = pos;; i++) {
             if (i >= end) {
                 if (pos == end) {
                     break;

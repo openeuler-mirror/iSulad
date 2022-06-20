@@ -45,11 +45,7 @@ void *ExecServe::SetContainerStreamRequest(::google::protobuf::Message *request,
     }
 
     if (grequest->cmd_size() > 0) {
-        if (static_cast<size_t>(grequest->cmd_size()) > SIZE_MAX / sizeof(char *)) {
-            ERROR("Too many arguments!");
-            return nullptr;
-        }
-        m_request->argv = (char **)util_common_calloc_s(sizeof(char *) * grequest->cmd_size());
+        m_request->argv = (char **)util_smart_calloc_s(sizeof(char *), grequest->cmd_size());
         if (m_request->argv == nullptr) {
             ERROR("Out of memory!");
             return nullptr;
@@ -109,7 +105,7 @@ int ExecServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
 
 void ExecServe::CloseConnect(SessionData *lwsCtx)
 {
-    closeWsConnect((void*)lwsCtx, nullptr);
+    closeWsConnect((void *)lwsCtx, nullptr);
 }
 
 void ExecServe::FreeRequest(void *m_request)

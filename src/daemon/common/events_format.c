@@ -46,7 +46,7 @@ int event_copy(const struct isulad_events_format *src, struct isulad_events_form
 
     if (src->annotations_len != 0) {
         util_free_array_by_len(dest->annotations, dest->annotations_len);
-        dest->annotations = (char **)util_common_calloc_s(src->annotations_len * sizeof(char *));
+        dest->annotations = (char **)util_smart_calloc_s(sizeof(char *), src->annotations_len);
         if (dest->annotations == NULL) {
             ERROR("Out of memory");
             return -1;

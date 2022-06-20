@@ -2256,7 +2256,7 @@ static int pack_health_check_from_image(const oci_image_spec *spec, imagetool_im
         goto out;
     }
 
-    healthcheck->test = util_common_calloc_s(sizeof(char *) * spec->config->healthcheck->test_len);
+    healthcheck->test = util_smart_calloc_s(sizeof(char *), spec->config->healthcheck->test_len);
     if (healthcheck->test == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -2662,7 +2662,7 @@ int image_store_get_all_images(imagetool_images_list *images_list)
         goto unlock;
     }
 
-    images_list->images = util_common_calloc_s(g_image_store->images_list_len * sizeof(imagetool_image *));
+    images_list->images = util_smart_calloc_s(g_image_store->images_list_len, sizeof(imagetool_image *));
     if (images_list->images == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -3173,7 +3173,7 @@ static int get_layers_from_manifest(const registry_manifest_schema1 *manifest, l
         goto out;
     }
 
-    layers = util_common_calloc_s(sizeof(layer_blob) * manifest->fs_layers_len);
+    layers = util_smart_calloc_s(sizeof(layer_blob), manifest->fs_layers_len);
     if (layers == NULL) {
         ERROR("out of memory");
         ret = -1;

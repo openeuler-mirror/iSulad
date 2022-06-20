@@ -627,16 +627,12 @@ static bool is_cpuset_list_available(const char *provided, const char *available
     }
 
     cpu_num = sysinfo->ncpus;
-    if ((size_t)cpu_num > SIZE_MAX / sizeof(bool)) {
-        ERROR("invalid cpu num");
-        goto out;
-    }
-    parsed_provided = util_common_calloc_s(sizeof(bool) * (unsigned int)cpu_num);
+    parsed_provided = util_smart_calloc_s(sizeof(bool), (unsigned int)cpu_num);
     if (parsed_provided == NULL) {
         ERROR("memory alloc failed!");
         goto out;
     }
-    parsed_available = util_common_calloc_s(sizeof(bool) * (unsigned int)cpu_num);
+    parsed_available = util_smart_calloc_s(sizeof(bool), (unsigned int)cpu_num);
     if (parsed_available == NULL) {
         ERROR("memory alloc failed!");
         goto out;
@@ -1093,7 +1089,7 @@ static int verify_resources_device(defs_resources *resources)
 
     for (i = 0; i < resources->devices_len; i++) {
         if (!util_valid_device_mode(resources->devices[i]->access)) {
-            ERROR("Invalid device mode \"%s\" for device \"%" PRId64" %" PRId64 "\"", resources->devices[i]->access,
+            ERROR("Invalid device mode \"%s\" for device \"%" PRId64 " %" PRId64 "\"", resources->devices[i]->access,
                   resources->devices[i]->major, resources->devices[i]->minor);
             isulad_set_error_message("Invalid device mode \"%s\" for device \"%ld %ld\"", resources->devices[i]->access,
                                      resources->devices[i]->major, resources->devices[i]->minor);

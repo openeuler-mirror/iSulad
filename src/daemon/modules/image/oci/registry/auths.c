@@ -236,7 +236,7 @@ static int add_allocated_auth(registry_auths *auths, char *host, char *auth)
 
     result_len = auths->auths->len + 1;
     element = util_common_calloc_s(sizeof(defs_map_string_object_auths_element));
-    values = util_common_calloc_s(sizeof(defs_map_string_object_auths_element *) * result_len);
+    values = util_smart_calloc_s(sizeof(defs_map_string_object_auths_element *), result_len);
     if (element == NULL || values == NULL) {
         ERROR("out of memory");
         ret = -1;

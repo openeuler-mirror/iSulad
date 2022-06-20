@@ -45,12 +45,7 @@ static int dup_path_and_args(const container_t *cont, char **path, char ***args,
         *path = util_strdup_s(cont->common_config->path);
     }
     if (cont->common_config->args_len > 0) {
-        if ((cont->common_config->args_len) > SIZE_MAX / sizeof(char *)) {
-            ERROR("Containers config args len is too many!");
-            ret = -1;
-            goto out;
-        }
-        *args = util_common_calloc_s(cont->common_config->args_len * sizeof(char *));
+        *args = util_smart_calloc_s(sizeof(char *), cont->common_config->args_len);
         if ((*args) == NULL) {
             ERROR("Out of memory");
             ret = -1;
@@ -114,12 +109,7 @@ static int dup_health_check_config(const container_config *src, container_inspec
         goto out;
     }
     if (src->healthcheck->test != NULL && src->healthcheck->test_len != 0) {
-        if (src->healthcheck->test_len > SIZE_MAX / sizeof(char *)) {
-            ERROR("health check test is too much!");
-            ret = -1;
-            goto out;
-        }
-        dest->health_check->test = util_common_calloc_s(src->healthcheck->test_len * sizeof(char *));
+        dest->health_check->test = util_smart_calloc_s(sizeof(char *), src->healthcheck->test_len);
         if (dest->health_check->test == NULL) {
             ERROR("Out of memory");
             ret = -1;
@@ -316,11 +306,7 @@ static int mount_point_to_inspect(const container_t *cont, container_inspect *in
     }
 
     len = cont->common_config->mount_points->len;
-    if (len > SIZE_MAX / sizeof(docker_types_mount_point *)) {
-        ERROR("Invalid mount point size");
-        return -1;
-    }
-    inspect->mounts = util_common_calloc_s(sizeof(docker_types_mount_point *) * len);
+    inspect->mounts = util_smart_calloc_s(sizeof(docker_types_mount_point *), len);
     if (inspect->mounts == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -639,7 +625,8 @@ static int do_transform_cni_to_map(container_network_settings *settings)
         ret = -1;
         goto out;
     }
-    result->values = util_smart_calloc_s(sizeof(defs_map_string_object_port_bindings_element *), settings->cni_ports_len);
+    result->values =
+        util_smart_calloc_s(sizeof(defs_map_string_object_port_bindings_element *), settings->cni_ports_len);
     if (result->values == NULL) {
         ERROR("Out of memory");
         ret = -1;

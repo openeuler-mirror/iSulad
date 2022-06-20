@@ -419,12 +419,7 @@ static int pack_hostconfig_ulimits(host_config *dstconfig, const isula_host_conf
         goto out;
     }
 
-    if (srcconfig->ulimits_len > SIZE_MAX / sizeof(host_config_ulimits_element *)) {
-        COMMAND_ERROR("Too many ulimit elements in host config");
-        ret = -1;
-        goto out;
-    }
-    dstconfig->ulimits = util_common_calloc_s(srcconfig->ulimits_len * sizeof(host_config_ulimits_element *));
+    dstconfig->ulimits = util_smart_calloc_s(sizeof(host_config_ulimits_element *), srcconfig->ulimits_len);
     if (dstconfig->ulimits == NULL) {
         COMMAND_ERROR("Out of memory");
         ret = -1;
@@ -1145,12 +1140,7 @@ int generate_devices(host_config *dstconfig, const isula_host_config_t *srcconfi
         goto out;
     }
 
-    if (srcconfig->devices_len > SIZE_MAX / sizeof(host_config_devices_element *)) {
-        ERROR("Too many devices to be populated into container");
-        ret = -1;
-        goto out;
-    }
-    dstconfig->devices = util_common_calloc_s(sizeof(host_config_devices_element *) * srcconfig->devices_len);
+    dstconfig->devices = util_smart_calloc_s(sizeof(host_config_devices_element *), srcconfig->devices_len);
     if (dstconfig->devices == NULL) {
         ret = -1;
         goto out;
@@ -1490,13 +1480,7 @@ static int generate_mounts(host_config *dstconfig, const isula_host_config_t *sr
         goto out;
     }
 
-    if (srcconfig->mounts_len > SIZE_MAX / sizeof(char *)) {
-        COMMAND_ERROR("Too many mounts to mount!");
-        ret = -1;
-        goto out;
-    }
-
-    dstconfig->mounts = util_common_calloc_s(srcconfig->mounts_len * sizeof(mount_spec*));
+    dstconfig->mounts = util_smart_calloc_s(sizeof(mount_spec *), srcconfig->mounts_len);
     if (dstconfig->mounts == NULL) {
         ret = -1;
         goto out;
@@ -1558,13 +1542,7 @@ int generate_security(host_config *dstconfig, const isula_host_config_t *srcconf
         goto out;
     }
 
-    if (srcconfig->security_len > SIZE_MAX / sizeof(char *)) {
-        COMMAND_ERROR("Too many security opts!");
-        ret = -1;
-        goto out;
-    }
-
-    dstconfig->security_opt = util_common_calloc_s(srcconfig->security_len * sizeof(char *));
+    dstconfig->security_opt = util_smart_calloc_s(sizeof(char *), srcconfig->security_len);
     if (dstconfig->security_opt == NULL) {
         ret = -1;
         goto out;

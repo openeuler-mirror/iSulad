@@ -206,12 +206,7 @@ int ContainerServiceImpl::top_request_from_grpc(const TopRequest *grequest, cont
     }
 
     if (grequest->args_size() > 0) {
-        if ((size_t)grequest->args_size() > SIZE_MAX / sizeof(char *)) {
-            ERROR("Too many arguments!");
-            free_container_top_request(tmpreq);
-            return -1;
-        }
-        tmpreq->args = (char **)util_common_calloc_s(sizeof(char *) * grequest->args_size());
+        tmpreq->args = (char **)util_smart_calloc_s(sizeof(char *), grequest->args_size());
         if (tmpreq->args == nullptr) {
             ERROR("Out of memory");
             free_container_top_request(tmpreq);
@@ -373,12 +368,7 @@ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, co
     }
 
     if (grequest->argv_size() > 0) {
-        if ((size_t)grequest->argv_size() > SIZE_MAX / sizeof(char *)) {
-            ERROR("Too many arguments!");
-            free_container_exec_request(tmpreq);
-            return -1;
-        }
-        tmpreq->argv = (char **)util_common_calloc_s(sizeof(char *) * grequest->argv_size());
+        tmpreq->argv = (char **)util_smart_calloc_s(sizeof(char *), grequest->argv_size());
         if (tmpreq->argv == nullptr) {
             ERROR("Out of memory");
             free_container_exec_request(tmpreq);
@@ -391,12 +381,7 @@ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, co
     }
 
     if (grequest->env_size() > 0) {
-        if ((size_t)grequest->argv_size() > SIZE_MAX / sizeof(char *)) {
-            ERROR("Too many environmental variables!");
-            free_container_exec_request(tmpreq);
-            return -1;
-        }
-        tmpreq->env = (char **)util_common_calloc_s(sizeof(char *) * grequest->env_size());
+        tmpreq->env = (char **)util_smart_calloc_s(sizeof(char *), grequest->env_size());
         if (tmpreq->env == nullptr) {
             ERROR("Out of memory");
             free_container_exec_request(tmpreq);
@@ -490,15 +475,11 @@ int ContainerServiceImpl::list_request_from_grpc(const ListRequest *grequest, co
         *request = tmpreq;
         return 0;
     }
-    if (len > SIZE_MAX / sizeof(char *)) {
-        ERROR("invalid filters size");
-        goto cleanup;
-    }
-    tmpreq->filters->keys = (char **)util_common_calloc_s(len * sizeof(char *));
+    tmpreq->filters->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
     if (tmpreq->filters->keys == nullptr) {
         goto cleanup;
     }
-    tmpreq->filters->values = (json_map_string_bool **)util_common_calloc_s(len * sizeof(json_map_string_bool *));
+    tmpreq->filters->values = (json_map_string_bool **)util_smart_calloc_s(sizeof(json_map_string_bool *), len);
     if (tmpreq->filters->values == nullptr) {
         free(tmpreq->filters->keys);
         tmpreq->filters->keys = nullptr;
@@ -744,7 +725,7 @@ int ContainerServiceImpl::stats_request_from_grpc(const StatsRequest *grequest, 
     }
 
     if (grequest->containers_size() > 0) {
-        tmpreq->containers = (char **)util_common_calloc_s(grequest->containers_size() * sizeof(char *));
+        tmpreq->containers = (char **)util_smart_calloc_s(sizeof(char *), grequest->containers_size());
         if (tmpreq->containers == nullptr) {
             ERROR("Out of memory");
             free_container_stats_request(tmpreq);
