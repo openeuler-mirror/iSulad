@@ -1,7 +1,7 @@
 From 9133e2159e9e69434b41e9649762f8eaed191f37 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Tue, 31 May 2022 22:39:44 +0800
-Subject: [PATCH 09/22] remove static of strlncat
+Subject: [PATCH 09/28] remove static of strlncat
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
