@@ -38,7 +38,7 @@ void isulad_set_error_message(const char *format, ...)
 
     ret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
-    if (ret < 0 || ret >= BUFSIZ) {
+    if (ret < 0) {
         return;
     }
 
@@ -61,7 +61,7 @@ void isulad_try_set_error_message(const char *format, ...)
 
     ret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
-    if (ret < 0 || ret >= BUFSIZ) {
+    if (ret < 0) {
         return;
     }
 
@@ -80,7 +80,7 @@ void isulad_append_error_message(const char *format, ...)
 
     ret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
-    if (ret < 0 || ret >= BUFSIZ) {
+    if (ret < 0) {
         return;
     }
     result = util_string_append(g_isulad_errmsg, errbuf);
