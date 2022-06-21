@@ -1,5 +1,5 @@
 %global _version 2.0.14
-%global _release 8
+%global _release 9
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -35,6 +35,12 @@ Patch0019:  0019-add-null-terminal-at-end-of-gr-mem-list.patch
 Patch0020:  0020-fix-shm-size-set-invalid-when-reboot.patch
 Patch0021:  0021-set-the-name-of-each-container-and-image-operation-t.patch
 Patch0022:  0022-set-the-name-of-each-container-and-image-operation-t.patch
+Patch0023:  0023-fix-inspect-f-error-when-bionic.patch
+Patch0024:  0024-refactor-devmapper_parse_options-function.patch
+Patch0025:  0025-refactor-parse_volume-function.patch
+Patch0026:  0026-fix-parse-volume-failed.patch
+Patch0027:  0027-use-util_smart_calloc_t-to-prevent-overflow.patch
+Patch0028:  0028-increase-websocket-lws_lookup-size.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -262,6 +268,12 @@ fi
 %endif
 
 %changelog
+* Tue Jun 21 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.14-9
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sync from upstream openeuler/iSulad
+
 * Wed Jun 15 2022 chengzeruizhi <chengzeruizhi@huawei.com> - 2.0.14-8
 - Type: enhancement
 - ID: NA
