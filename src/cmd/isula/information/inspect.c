@@ -775,7 +775,7 @@ static char **inspect_split_filter(const char *format, size_t *filter_len)
         return res_array;
     }
 
-    res_array = (char **)util_common_calloc_s(sizeof(char *) * (*filter_len));
+    res_array = (char **)util_smart_calloc_s(sizeof(char *), (*filter_len));
     if (res_array == NULL) {
         ERROR("out of memory");
         return NULL;
@@ -847,14 +847,14 @@ static int generate_filter_string(char ***filter_string, bool **json_format, siz
     }
 
     *filter_string_len = format_size;
-    *filter_string = (char **)util_common_calloc_s(sizeof(char *) * format_size);
+    *filter_string = (char **)util_smart_calloc_s(sizeof(char *), format_size);
     if (*filter_string == NULL) {
         ERROR("out of memory");
         ret = ECOMMON;
         goto error_out;
     }
 
-    *json_format = (bool *)util_common_calloc_s(sizeof(bool) * format_size * g_cmd_inspect_args.argc);
+    *json_format = (bool *)util_smart_calloc_s(sizeof(bool), format_size * g_cmd_inspect_args.argc);
     if (*json_format == NULL) {
         ERROR("out of memory");
         ret = ECOMMON;

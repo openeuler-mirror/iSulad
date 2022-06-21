@@ -659,14 +659,7 @@ static int trans_im_list_images(const im_list_response *im_list, image_list_imag
     // If one image have several repo tags, display them all. Image with no
     // repo will also be displayed
     images_display_num = calc_images_display_num(im_list->images);
-    if (images_display_num >= (SIZE_MAX / sizeof(image_image *))) {
-        INFO("Too many images, out of memory");
-        ret = -1;
-        isulad_try_set_error_message("Get too many images info, out of memory");
-        goto out;
-    }
-
-    response->images = util_common_calloc_s(sizeof(image_image *) * images_display_num);
+    response->images = util_smart_calloc_s(sizeof(image_image *), images_display_num);
     if (response->images == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -1074,7 +1067,7 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
     }
 
     EVENT("Image Event: {Object: %s, Type: Pulling}", image_ref);
-    ret = pull_request_from_rest(request,  &im_req);
+    ret = pull_request_from_rest(request, &im_req);
     if (ret != 0) {
         goto out;
     }
@@ -1100,7 +1093,6 @@ out:
 
     return (ret < 0) ? ECOMMON : ret;
 }
-
 
 /* image callback init */
 void image_callback_init(service_image_callback_t *cb)

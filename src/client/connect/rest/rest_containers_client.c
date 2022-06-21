@@ -142,18 +142,13 @@ static int list_request_to_rest(const struct isula_list_request *ll_request, cha
     }
 
     len = ll_request->filters->len;
-    if (len > SIZE_MAX / sizeof(char *)) {
-        ERROR("Too many filters");
-        ret = -1;
-        goto out;
-    }
-    crequest->filters->keys = (char **)util_common_calloc_s(len * sizeof(char *));
+    crequest->filters->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
     if (crequest->filters->keys == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
-    crequest->filters->values = (json_map_string_bool **)util_common_calloc_s(len * sizeof(json_map_string_bool *));
+    crequest->filters->values = (json_map_string_bool **)util_smart_calloc_s(sizeof(json_map_string_bool *), len);
     if (crequest->filters->values == NULL) {
         ERROR("Out of memory");
         free(crequest->filters->keys);
@@ -385,12 +380,8 @@ static int unpack_container_info_for_list_response(container_list_response *cres
     if (num == 0) {
         return 0;
     }
-    if (num > SIZE_MAX / sizeof(struct isula_container_summary_info *)) {
-        ERROR("Too many container summaries");
-        return -1;
-    }
-    summary_info = (struct isula_container_summary_info **)util_common_calloc_s(
-                       sizeof(struct isula_container_summary_info *) * num);
+    summary_info = (struct isula_container_summary_info **)util_smart_calloc_s(
+                       sizeof(struct isula_container_summary_info *), num);
     if (summary_info == NULL) {
         ERROR("out of memory");
         return -1;
@@ -428,8 +419,8 @@ static int unpack_container_info_for_list_response(container_list_response *cres
         summary_info[i]->exit_code = cresponse->containers[i]->exit_code;
         summary_info[i]->restart_count = (unsigned int)cresponse->containers[i]->restartcount;
         summary_info[i]->created = cresponse->containers[i]->created;
-        summary_info[i]->health_state = cresponse->containers[i]->health_state ?
-                                        util_strdup_s(cresponse->containers[i]->health_state) : NULL;
+        summary_info[i]->health_state =
+            cresponse->containers[i]->health_state ? util_strdup_s(cresponse->containers[i]->health_state) : NULL;
     }
 
     return 0;
@@ -1632,12 +1623,7 @@ static int exec_request_to_rest(const struct isula_exec_request *le_request, cha
 
     int i = 0;
     if (le_request->argc > 0) {
-        if ((size_t)le_request->argc > SIZE_MAX / sizeof(char *)) {
-            ERROR("Too many arguments!");
-            ret = -1;
-            goto out;
-        }
-        crequest->argv = (char **)util_common_calloc_s(sizeof(char *) * (size_t)le_request->argc);
+        crequest->argv = (char **)util_smart_calloc_s(sizeof(char *), (size_t)le_request->argc);
         if (crequest->argv == NULL) {
             ERROR("Out of memory");
             ret = -1;
@@ -1649,12 +1635,7 @@ static int exec_request_to_rest(const struct isula_exec_request *le_request, cha
         crequest->argv_len = (size_t)le_request->argc;
     }
     if (le_request->env_len > 0) {
-        if ((size_t)le_request->env_len > SIZE_MAX / sizeof(char *)) {
-            ERROR("Too many environmental variables!");
-            ret = -1;
-            goto out;
-        }
-        crequest->env = (char **)util_common_calloc_s(sizeof(char *) * (size_t)le_request->env_len);
+        crequest->env = (char **)util_smart_calloc_s(sizeof(char *), (size_t)le_request->env_len);
         if (crequest->env == NULL) {
             ERROR("Out of memory");
             ret = -1;
@@ -1865,8 +1846,8 @@ out:
 }
 
 /* rest container info */
-static int rest_container_info(const struct isula_info_request *li_request,
-                               struct isula_info_response *li_response, void *arg)
+static int rest_container_info(const struct isula_info_request *li_request, struct isula_info_response *li_response,
+                               void *arg)
 {
     char *body = NULL;
     int ret = 0;

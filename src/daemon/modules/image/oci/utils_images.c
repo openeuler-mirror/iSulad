@@ -305,7 +305,7 @@ char *make_big_data_base_name(const char *key)
     }
     name_size = 1 + strlen(b64_encode_name) + 1; // '=' + encode string + '\0'
 
-    base_name = (char *)util_common_calloc_s(name_size * sizeof(char));
+    base_name = (char *)util_smart_calloc_s(sizeof(char), name_size);
     if (base_name == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -436,7 +436,7 @@ int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const re
     }
 
     config->rootfs = util_common_calloc_s(sizeof(docker_image_rootfs));
-    config->history = util_common_calloc_s(sizeof(docker_image_history *) * layers_len);
+    config->history = util_smart_calloc_s(sizeof(docker_image_history *), layers_len);
     if (config->rootfs == NULL || config->history == NULL) {
         ERROR("out of memory");
         return -1;

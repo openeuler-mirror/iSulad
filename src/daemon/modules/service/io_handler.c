@@ -218,22 +218,18 @@ static void io_copy_thread_cleanup(struct io_write_wrapper *writers, struct io_c
     free(channels);
 }
 
-static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
-                            struct io_write_wrapper **writers, transfer_channel_type **channels)
+static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds, struct io_write_wrapper **writers,
+                            transfer_channel_type **channels)
 {
     size_t i;
 
-    if (len > SIZE_MAX / sizeof(struct io_write_wrapper)) {
-        ERROR("Invalid arguments");
-        return -1;
-    }
-    *srcfds = util_common_calloc_s(sizeof(int) * len);
+    *srcfds = util_smart_calloc_s(sizeof(int), len);
     if (*srcfds == NULL) {
         ERROR("Out of memory");
         return -1;
     }
 
-    *infds = util_common_calloc_s(sizeof(int) * len);
+    *infds = util_smart_calloc_s(sizeof(int), len);
     if (*infds == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -241,7 +237,7 @@ static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
     for (i = 0; i < len; i++) {
         (*infds)[i] = -1;
     }
-    *outfds = util_common_calloc_s(sizeof(int) * len);
+    *outfds = util_smart_calloc_s(sizeof(int), len);
     if (*outfds == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -250,13 +246,13 @@ static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
         (*outfds)[i] = -1;
     }
 
-    *writers = util_common_calloc_s(sizeof(struct io_write_wrapper) * len);
+    *writers = util_smart_calloc_s(sizeof(struct io_write_wrapper), len);
     if (*writers == NULL) {
         ERROR("Out of memory");
         return -1;
     }
 
-    *channels = util_common_calloc_s(sizeof(transfer_channel_type) * len);
+    *channels = util_smart_calloc_s(sizeof(transfer_channel_type), len);
     if (*channels == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -266,7 +262,6 @@ static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
         (*channels)[i] = MAX_CHANNEL;
     }
     return 0;
-
 }
 typedef int (*src_io_type_handle)(int index, struct io_copy_arg *copy_arg, int *infds, int *srcfds);
 
@@ -305,8 +300,8 @@ static int handle_src_io_max(int index, struct io_copy_arg *copy_arg, int *infds
     return -1;
 }
 
-static int io_copy_make_srcfds(size_t len, struct io_copy_arg *copy_arg, int *infds,
-                               int *srcfds, transfer_channel_type *channels)
+static int io_copy_make_srcfds(size_t len, struct io_copy_arg *copy_arg, int *infds, int *srcfds,
+                               transfer_channel_type *channels)
 {
     size_t i;
 
@@ -536,11 +531,13 @@ int ready_copy_io_data(int sync_fd, bool detach, const char *fifoin, const char 
     if (fifoout != NULL) {
         // fifos[1]  : lxc -> iSulad read
         // fifoout   : iSulad -> iSula write
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FIFO, (void *)fifoout, O_WRONLY, STDOUT_CHANNEL);
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FIFO, (void *)fifoout, O_WRONLY,
+                            STDOUT_CHANNEL);
     }
 
     if (fifoerr != NULL) {
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FIFO, (void *)fifoerr, O_WRONLY, STDERR_CHANNEL);
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FIFO, (void *)fifoerr, O_WRONLY,
+                            STDERR_CHANNEL);
     }
 
     if (stdin_fd > 0) {
@@ -548,11 +545,13 @@ int ready_copy_io_data(int sync_fd, bool detach, const char *fifoin, const char 
     }
 
     if (stdout_handler != NULL) {
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FUNC, stdout_handler, O_WRONLY, STDOUT_CHANNEL);
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FUNC, stdout_handler, O_WRONLY,
+                            STDOUT_CHANNEL);
     }
 
     if (stderr_handler != NULL) {
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FUNC, stderr_handler, O_WRONLY, STDERR_CHANNEL);
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FUNC, stderr_handler, O_WRONLY,
+                            STDERR_CHANNEL);
     }
 
     if (start_io_copy_thread(sync_fd, detach, io_copy, len, tid) != 0) {

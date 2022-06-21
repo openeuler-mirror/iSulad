@@ -353,9 +353,7 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
             tool_image->spec->config->entrypoint_len = 1;
         }
 
-        MOCK_SET_V(util_smart_calloc_s, util_smart_calloc_s_fail);
         ASSERT_EQ(oci_image_merge_config(tool_image, custom_config), 0);
-        MOCK_CLEAR(util_smart_calloc_s);
 
         free_imagetool_image(tool_image);
         tool_image = nullptr;

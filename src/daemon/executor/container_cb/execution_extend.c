@@ -341,11 +341,7 @@ error_out:
 
 static int service_stats_make_memory(container_info ***stats_arr, size_t num)
 {
-    if (num > SIZE_MAX / sizeof(container_info *)) {
-        return -1;
-    }
-
-    *stats_arr = util_common_calloc_s(num * sizeof(container_info *));
+    *stats_arr = util_smart_calloc_s(sizeof(container_info *), num);
     if (*stats_arr == NULL) {
         ERROR("Out of memory");
         return -1;

@@ -1123,12 +1123,7 @@ static int pm_init_plugin(const plugin_t *plugin)
      * prepare or delete dirty resource.
      */
     if (container_num) {
-        if (container_num > SIZE_MAX / sizeof(plugin_init_plugin_request_containers_element *)) {
-            ERROR("Invalid container nums");
-            ret = -1;
-            goto out;
-        }
-        reqs.containers = util_common_calloc_s(container_num * sizeof(plugin_init_plugin_request_containers_element *));
+        reqs.containers = util_smart_calloc_s(sizeof(plugin_init_plugin_request_containers_element *), container_num);
         if (reqs.containers == NULL) {
             ERROR("Out of memory");
             ret = -1;

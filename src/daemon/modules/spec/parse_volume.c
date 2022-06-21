@@ -341,14 +341,14 @@ static int check_volume_element(const char *volume)
     return ret;
 }
 
-static int set_volume_element_options(defs_mount *mount_element, const char **modes, bool *with_rw,
-                                      bool *with_pro, bool *with_label)
+static int set_volume_element_options(defs_mount *mount_element, const char **modes, bool *with_rw, bool *with_pro,
+                                      bool *with_label)
 {
     const size_t max_options_len = 4;
     size_t options_len = 0;
     size_t i = 0;
 
-    mount_element->options = util_common_calloc_s(max_options_len * sizeof(char *));
+    mount_element->options = util_smart_calloc_s(sizeof(char *), max_options_len);
     if (mount_element->options == NULL) {
         ERROR("Out of memory");
         return -1;

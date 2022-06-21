@@ -1690,7 +1690,7 @@ static int dup_defs_process_user(defs_process_user *src, defs_process_user **dst
     (*dst)->gid = src->gid;
 
     if (src->additional_gids_len != 0) {
-        (*dst)->additional_gids = util_common_calloc_s(sizeof(gid_t) * src->additional_gids_len);
+        (*dst)->additional_gids = util_smart_calloc_s(sizeof(gid_t), src->additional_gids_len);
         if ((*dst)->additional_gids == NULL) {
             ERROR("Out of memory");
             ret = -1;

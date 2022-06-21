@@ -453,11 +453,8 @@ int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper
     size_t i = 0;
     struct epoll_descr descr;
     struct tty_state *ts = NULL;
-    if (len > (SIZE_MAX / sizeof(struct tty_state)) - 1) {
-        ERROR("Invalid io size");
-        return -1;
-    }
-    ts = util_common_calloc_s(sizeof(struct tty_state) * (len + 1));
+
+    ts = util_smart_calloc_s(sizeof(struct tty_state), (len + 1));
     if (ts == NULL) {
         ERROR("Out of memory");
         return -1;

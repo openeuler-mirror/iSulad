@@ -1305,11 +1305,7 @@ static int prepare_process_args(oci_runtime_spec *oci_spec, size_t args_len)
         oci_spec->process->args_len = 0;
     }
 
-    if (args_len > (SIZE_MAX / sizeof(char *))) {
-        return -1;
-    }
-
-    oci_spec->process->args = util_common_calloc_s(args_len * sizeof(char *));
+    oci_spec->process->args = util_smart_calloc_s(sizeof(char *), args_len);
     if (oci_spec->process->args == NULL) {
         return -1;
     }

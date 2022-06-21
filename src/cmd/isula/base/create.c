@@ -51,8 +51,7 @@
 const char g_cmd_create_desc[] = "Create a new container";
 const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
 
-struct client_arguments g_cmd_create_args = {
-    .runtime = "",
+struct client_arguments g_cmd_create_args = { .runtime = "",
     .restart = "no",
     .cr.oom_score_adj = 0,
     .custom_conf.health_interval = 0,
@@ -717,11 +716,7 @@ static int request_pack_host_ns_change_files(const struct client_arguments *args
         files = net_ipc_files;
         files_len = sizeof(net_ipc_files) / sizeof(net_ipc_files[0]);
     }
-    if (files_len > (SIZE_MAX / sizeof(char *)) - 1) {
-        ERROR("Too many files");
-        return -1;
-    }
-    hostconfig->ns_change_files = util_common_calloc_s((files_len + 1) * sizeof(char *));
+    hostconfig->ns_change_files = util_smart_calloc_s(sizeof(char *), (files_len + 1));
     if (hostconfig->ns_change_files == NULL) {
         ERROR("Out of memory");
         return -1;

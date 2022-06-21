@@ -589,7 +589,7 @@ static char *try_generate_id()
     char *id = NULL;
     char *value = NULL;
 
-    id = util_common_calloc_s(sizeof(char) * (CONTAINER_ID_MAX_LEN + 1));
+    id = util_smart_calloc_s(sizeof(char), (CONTAINER_ID_MAX_LEN + 1));
     if (id == NULL) {
         ERROR("Out of memory");
         return NULL;
@@ -675,14 +675,8 @@ static int conf_get_image_id(const char *image, char **id)
         goto out;
     }
 
-    if (strlen(ir->id) > SIZE_MAX / sizeof(char) - strlen("sha256:")) {
-        ERROR("Invalid image id");
-        ret = -1;
-        goto out;
-    }
-
     len = strlen("sha256:") + strlen(ir->id) + 1;
-    image_id = (char *)util_common_calloc_s(len * sizeof(char));
+    image_id = (char *)util_smart_calloc_s(sizeof(char), len);
     if (image_id == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -835,7 +829,7 @@ static int prepare_host_channel(const host_config_host_channel *host_channel, co
 #ifdef ENABLE_USERNS_REMAP
     char *daemon_userns_remap = conf_get_isulad_userns_remap();
     if (daemon_userns_remap != NULL) {
-        userns_remap = (const char *) daemon_userns_remap;
+        userns_remap = (const char *)daemon_userns_remap;
     }
 #endif
 
