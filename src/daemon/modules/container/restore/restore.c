@@ -101,12 +101,17 @@ out:
 }
 
 /* post stopped container to gc */
-static int post_stopped_container_to_gc(const char *id, const char *runtime, const char *statepath, uint32_t pid)
+static int post_stopped_container_to_gc(const char *id, const char *runtime, const char *statepath,
+                                        const pid_ppid_info_t *old_pid_info)
 {
     int ret = 0;
     pid_ppid_info_t pid_info = { 0 };
 
-    (void)util_read_pid_ppid_info(pid, &pid_info);
+    (void)util_read_pid_ppid_info(old_pid_info->pid, &pid_info);
+    if (pid_info.ppid == 0) {
+        pid_info.ppid = old_pid_info->ppid;
+        pid_info.pstart_time = old_pid_info->pstart_time;
+    }
 
     if (gc_add_container(id, runtime, &pid_info)) {
         ERROR("Failed to post container %s to garbage collector", id);
@@ -180,13 +185,17 @@ static void try_to_set_container_running(Container_Status status, container_t *c
 static void restore_stopped_container(Container_Status status, const container_t *cont)
 {
     const char *id = cont->common_config->id;
-    pid_t pid = 0;
+    pid_ppid_info_t pid_info = { 0 };
 
     if (status != CONTAINER_STATUS_STOPPED && status != CONTAINER_STATUS_CREATED) {
         if (util_process_alive(cont->state->state->pid, cont->state->state->start_time)) {
-            pid = cont->state->state->pid;
+            pid_info.pid = cont->state->state->pid;
         }
-        int nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, pid);
+        if (util_process_alive(cont->state->state->p_pid, cont->state->state->p_start_time)) {
+            pid_info.ppid = cont->state->state->p_pid;
+            pid_info.pstart_time = cont->state->state->p_start_time;
+        }
+        int nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, &pid_info);
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
@@ -210,7 +219,13 @@ static void restore_running_container(Container_Status status, container_t *cont
         container_state_reset_has_been_manual_stopped(cont->state);
     } else {
         ERROR("Failed to restore container:%s due to unable to read container pid information", id);
-        nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
+        pid_info.pid = 0;
+        pid_info.start_time = 0;
+        if (util_process_alive(cont->state->state->p_pid, cont->state->state->p_start_time)) {
+            pid_info.ppid = cont->state->state->p_pid;
+            pid_info.pstart_time = cont->state->state->p_start_time;
+        }
+        nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, &pid_info);
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
@@ -236,7 +251,13 @@ static void restore_paused_container(Container_Status status, container_t *cont,
         container_state_reset_has_been_manual_stopped(cont->state);
     } else {
         ERROR("Failed to restore container:%s due to unable to read container pid information", id);
-        nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
+        pid_info.pid = 0;
+        pid_info.start_time = 0;
+        if (util_process_alive(cont->state->state->p_pid, cont->state->state->p_start_time)) {
+            pid_info.ppid = cont->state->state->p_pid;
+            pid_info.pstart_time = cont->state->state->p_start_time;
+        }
+        nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, &pid_info);
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
@@ -388,8 +409,13 @@ static void handle_restored_container()
         if (container_is_running(cont->state)) {
             if (restore_supervisor(cont) != 0) {
                 ERROR("Failed to restore %s supervisor, set state to stopped", id);
+                pid_ppid_info_t pid_info = { 0 };
+                if (util_process_alive(cont->state->state->p_pid, cont->state->state->p_start_time)) {
+                    pid_info.ppid = cont->state->state->p_pid;
+                    pid_info.pstart_time = cont->state->state->p_start_time;
+                }
                 container_state_set_stopped(cont->state, 255);
-                if (post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0) != 0) {
+                if (post_stopped_container_to_gc(id, cont->runtime, cont->state_path, &pid_info) != 0) {
                     ERROR("Failed to post container %s to garbage"
                           "collector, that may lost some resources"
                           "used with container!",
