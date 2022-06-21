@@ -1,7 +1,7 @@
 From 60715b192de2cb1b4e8fe9ce48ddf081a6d2be53 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Wed, 1 Jun 2022 09:50:03 +0800
-Subject: [PATCH 10/22] remove check parameter label_opts in init_label
+Subject: [PATCH 10/28] remove check parameter label_opts in init_label
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---

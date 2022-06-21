@@ -1,0 +1,2106 @@
+From 7eda716c55d2247a79519a9f0a0950878eca6bf2 Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Thu, 16 Jun 2022 19:53:11 +0800
+Subject: [PATCH 27/28] use util_smart_calloc_t to prevent overflow
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ .../connect/grpc/grpc_containers_client.cc    |  6 +-
+ src/client/connect/grpc/grpc_images_client.cc |  2 +-
+ .../connect/grpc/grpc_volumes_client.cc       |  2 +-
+ src/client/connect/protocol_type.c            |  4 +-
+ .../connect/rest/rest_containers_client.c     | 39 ++++--------
+ src/client/connect/rest/rest_images_client.c  | 19 +++---
+ src/cmd/isula/base/create.c                   |  9 +--
+ src/cmd/isula/information/inspect.c           |  6 +-
+ src/cmd/isula/isula_container_spec.c          | 15 +----
+ src/cmd/isula/isula_host_spec.c               | 30 ++--------
+ src/cmd/isula/stream/exec.c                   |  2 +-
+ src/cmd/isulad/isulad_commands.c              |  5 +-
+ src/daemon/common/events_format.c             |  2 +-
+ src/daemon/config/daemon_arguments.c          |  8 +--
+ src/daemon/config/isulad_config.c             | 11 ++--
+ .../grpc/grpc_containers_service_private.cc   | 31 ++--------
+ .../entry/connect/grpc/grpc_images_service.cc |  9 +--
+ src/daemon/entry/cri/checkpoint_handler.cc    |  6 +-
+ src/daemon/entry/cri/cri_helpers.cc           | 32 +++-------
+ src/daemon/entry/cri/cri_security_context.cc  | 12 +---
+ .../entry/cri/websocket/service/exec_serve.cc |  8 +--
+ .../executor/container_cb/execution_create.c  | 12 +---
+ .../executor/container_cb/execution_extend.c  |  6 +-
+ .../container_cb/execution_information.c      | 23 ++------
+ src/daemon/executor/container_cb/list.c       |  9 +--
+ src/daemon/executor/image_cb/image_cb.c       | 12 +---
+ .../modules/container/container_state.c       |  7 +--
+ src/daemon/modules/container/container_unix.c |  7 +--
+ .../modules/container/containers_store.c      |  6 +-
+ .../container/health_check/health_check.c     | 17 +++---
+ .../modules/image/embedded/embedded_image.c   |  8 +--
+ .../modules/image/oci/oci_config_merge.c      | 15 +----
+ src/daemon/modules/image/oci/oci_load.c       | 10 ++--
+ src/daemon/modules/image/oci/registry/auths.c |  2 +-
+ .../modules/image/oci/registry/registry.c     | 37 ++++++------
+ .../oci/storage/image_store/image_store.c     |  6 +-
+ src/daemon/modules/image/oci/utils_images.c   |  4 +-
+ src/daemon/modules/plugin/plugin.c            |  7 +--
+ .../modules/runtime/engines/lcr/lcr_rt_ops.c  |  2 +-
+ .../modules/service/inspect_container.c       | 20 +------
+ src/daemon/modules/service/io_handler.c       | 35 ++++++-----
+ .../modules/service/service_container.c       |  2 +-
+ src/daemon/modules/spec/parse_volume.c        |  6 +-
+ src/daemon/modules/spec/specs.c               |  6 +-
+ src/daemon/modules/spec/specs_mount.c         | 15 ++---
+ src/daemon/modules/spec/specs_security.c      | 59 ++++++-------------
+ src/daemon/modules/spec/verify.c              | 10 +---
+ src/daemon/modules/volume/local.c             | 17 +++---
+ src/daemon/modules/volume/volume.c            |  4 +-
+ src/utils/console/console.c                   |  7 +--
+ src/utils/cutils/utils_array.c                | 16 ++---
+ src/utils/cutils/utils_string.c               | 14 +----
+ .../oci_config_merge/oci_config_merge_ut.cc   |  2 -
+ 53 files changed, 198 insertions(+), 463 deletions(-)
+
+diff --git a/src/client/connect/grpc/grpc_containers_client.cc b/src/client/connect/grpc/grpc_containers_client.cc
+index ebe71df9..85cafe9b 100644
+--- a/src/client/connect/grpc/grpc_containers_client.cc
++++ b/src/client/connect/grpc/grpc_containers_client.cc
+@@ -495,7 +495,7 @@ public:
+             ERROR("Too many summary info!");
+             return -1;
+         }
+-        response->processes = static_cast<char **>(util_common_calloc_s(num * sizeof(char *)));
++        response->processes = static_cast<char **>(util_smart_calloc_s(sizeof(char *), num));
+         if (response->processes == nullptr) {
+             ERROR("out of memory");
+             response->cc = ISULAD_ERR_MEMOUT;
+@@ -1666,8 +1666,8 @@ public:
+     {
+         int size = gresponse->containers_size();
+         if (size > 0) {
+-            response->container_stats = static_cast<isula_container_info *>(
+-                                            util_common_calloc_s(size * sizeof(struct isula_container_info)));
++            response->container_stats =
++                static_cast<isula_container_info *>(util_smart_calloc_s(sizeof(struct isula_container_info), size));
+             if (response->container_stats == nullptr) {
+                 ERROR("Out of memory");
+                 return -1;
+diff --git a/src/client/connect/grpc/grpc_images_client.cc b/src/client/connect/grpc/grpc_images_client.cc
+index 50265e04..9424a90a 100644
+--- a/src/client/connect/grpc/grpc_images_client.cc
++++ b/src/client/connect/grpc/grpc_images_client.cc
+@@ -71,7 +71,7 @@ public:
+             response->cc = ISULAD_ERR_MEMOUT;
+             return -1;
+         }
+-        images_list = (struct isula_image_info *)util_common_calloc_s(sizeof(struct isula_image_info) * (size_t)num);
++        images_list = (struct isula_image_info *)util_smart_calloc_s(sizeof(struct isula_image_info), (size_t)num);
+         if (images_list == nullptr) {
+             ERROR("out of memory");
+             response->cc = ISULAD_ERR_MEMOUT;
+diff --git a/src/client/connect/grpc/grpc_volumes_client.cc b/src/client/connect/grpc/grpc_volumes_client.cc
+index 902e8a13..32b83a9e 100644
+--- a/src/client/connect/grpc/grpc_volumes_client.cc
++++ b/src/client/connect/grpc/grpc_volumes_client.cc
+@@ -156,7 +156,7 @@ public:
+     {
+         auto size = gresponse->volumes_size();
+         if (size != 0) {
+-            response->volumes = static_cast<char **>(util_common_calloc_s(sizeof(char *) * size));
++            response->volumes = static_cast<char **>(util_smart_calloc_s(sizeof(char *), size));
+             if (response->volumes == nullptr) {
+                 return -1;
+             }
+diff --git a/src/client/connect/protocol_type.c b/src/client/connect/protocol_type.c
+index af582abf..713c69cb 100644
+--- a/src/client/connect/protocol_type.c
++++ b/src/client/connect/protocol_type.c
+@@ -63,12 +63,12 @@ struct isula_filters *isula_filters_parse_args(const char **array, size_t len)
+         return NULL;
+     }
+ 
+-    filters->keys = util_common_calloc_s(sizeof(char *) * len);
++    filters->keys = util_smart_calloc_s(sizeof(char *), len);
+     if (filters->keys == NULL) {
+         ERROR("Out of memory");
+         goto cleanup;
+     }
+-    filters->values = util_common_calloc_s(sizeof(char *) * len);
++    filters->values = util_smart_calloc_s(sizeof(char *), len);
+     if (filters->values == NULL) {
+         free(filters->keys);
+         filters->keys = NULL;
+diff --git a/src/client/connect/rest/rest_containers_client.c b/src/client/connect/rest/rest_containers_client.c
+index 04fb414d..61dcd54c 100644
+--- a/src/client/connect/rest/rest_containers_client.c
++++ b/src/client/connect/rest/rest_containers_client.c
+@@ -142,18 +142,13 @@ static int list_request_to_rest(const struct isula_list_request *ll_request, cha
+     }
+ 
+     len = ll_request->filters->len;
+-    if (len > SIZE_MAX / sizeof(char *)) {
+-        ERROR("Too many filters");
+-        ret = -1;
+-        goto out;
+-    }
+-    crequest->filters->keys = (char **)util_common_calloc_s(len * sizeof(char *));
++    crequest->filters->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
+     if (crequest->filters->keys == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+         goto out;
+     }
+-    crequest->filters->values = (json_map_string_bool **)util_common_calloc_s(len * sizeof(json_map_string_bool *));
++    crequest->filters->values = (json_map_string_bool **)util_smart_calloc_s(sizeof(json_map_string_bool *), len);
+     if (crequest->filters->values == NULL) {
+         ERROR("Out of memory");
+         free(crequest->filters->keys);
+@@ -385,12 +380,8 @@ static int unpack_container_info_for_list_response(container_list_response *cres
+     if (num == 0) {
+         return 0;
+     }
+-    if (num > SIZE_MAX / sizeof(struct isula_container_summary_info *)) {
+-        ERROR("Too many container summaries");
+-        return -1;
+-    }
+-    summary_info = (struct isula_container_summary_info **)util_common_calloc_s(
+-                       sizeof(struct isula_container_summary_info *) * num);
++    summary_info = (struct isula_container_summary_info **)util_smart_calloc_s(
++                       sizeof(struct isula_container_summary_info *), num);
+     if (summary_info == NULL) {
+         ERROR("out of memory");
+         return -1;
+@@ -428,8 +419,8 @@ static int unpack_container_info_for_list_response(container_list_response *cres
+         summary_info[i]->exit_code = cresponse->containers[i]->exit_code;
+         summary_info[i]->restart_count = (unsigned int)cresponse->containers[i]->restartcount;
+         summary_info[i]->created = cresponse->containers[i]->created;
+-        summary_info[i]->health_state = cresponse->containers[i]->health_state ?
+-                                        util_strdup_s(cresponse->containers[i]->health_state) : NULL;
++        summary_info[i]->health_state =
++            cresponse->containers[i]->health_state ? util_strdup_s(cresponse->containers[i]->health_state) : NULL;
+     }
+ 
+     return 0;
+@@ -1632,12 +1623,7 @@ static int exec_request_to_rest(const struct isula_exec_request *le_request, cha
+ 
+     int i = 0;
+     if (le_request->argc > 0) {
+-        if ((size_t)le_request->argc > SIZE_MAX / sizeof(char *)) {
+-            ERROR("Too many arguments!");
+-            ret = -1;
+-            goto out;
+-        }
+-        crequest->argv = (char **)util_common_calloc_s(sizeof(char *) * (size_t)le_request->argc);
++        crequest->argv = (char **)util_smart_calloc_s(sizeof(char *), (size_t)le_request->argc);
+         if (crequest->argv == NULL) {
+             ERROR("Out of memory");
+             ret = -1;
+@@ -1649,12 +1635,7 @@ static int exec_request_to_rest(const struct isula_exec_request *le_request, cha
+         crequest->argv_len = (size_t)le_request->argc;
+     }
+     if (le_request->env_len > 0) {
+-        if ((size_t)le_request->env_len > SIZE_MAX / sizeof(char *)) {
+-            ERROR("Too many environmental variables!");
+-            ret = -1;
+-            goto out;
+-        }
+-        crequest->env = (char **)util_common_calloc_s(sizeof(char *) * (size_t)le_request->env_len);
++        crequest->env = (char **)util_smart_calloc_s(sizeof(char *), (size_t)le_request->env_len);
+         if (crequest->env == NULL) {
+             ERROR("Out of memory");
+             ret = -1;
+@@ -1865,8 +1846,8 @@ out:
+ }
+ 
+ /* rest container info */
+-static int rest_container_info(const struct isula_info_request *li_request,
+-                               struct isula_info_response *li_response, void *arg)
++static int rest_container_info(const struct isula_info_request *li_request, struct isula_info_response *li_response,
++                               void *arg)
+ {
+     char *body = NULL;
+     int ret = 0;
+diff --git a/src/client/connect/rest/rest_images_client.c b/src/client/connect/rest/rest_images_client.c
+index c2fc17f1..c7ab78cc 100644
+--- a/src/client/connect/rest/rest_images_client.c
++++ b/src/client/connect/rest/rest_images_client.c
+@@ -122,9 +122,9 @@ static int unpack_image_info_to_list_response(image_list_images_response *crespo
+     }
+ 
+     num = cresponse->images_len;
+-    if (num > 0 && (num < (SIZE_MAX / sizeof(struct isula_image_info)))) {
++    if (num > 0) {
+         size_t i;
+-        image_info = (struct isula_image_info *)util_common_calloc_s(sizeof(struct isula_image_info) * num);
++        image_info = (struct isula_image_info *)util_smart_calloc_s(sizeof(struct isula_image_info), num);
+         if (image_info == NULL) {
+             ERROR("out of memory");
+             return -1;
+@@ -134,17 +134,19 @@ static int unpack_image_info_to_list_response(image_list_images_response *crespo
+         for (i = 0; i < num; i++) {
+             if (cresponse->images[i]->target != NULL) {
+                 image_info[i].type = cresponse->images[i]->target->media_type ?
+-                                     util_strdup_s(cresponse->images[i]->target->media_type) : util_strdup_s("-");
++                                     util_strdup_s(cresponse->images[i]->target->media_type) :
++                                     util_strdup_s("-");
+                 image_info[i].digest = cresponse->images[i]->target->digest ?
+-                                       util_strdup_s(cresponse->images[i]->target->digest) : util_strdup_s("-");
++                                       util_strdup_s(cresponse->images[i]->target->digest) :
++                                       util_strdup_s("-");
+                 image_info[i].size = cresponse->images[i]->target->size;
+             }
+             if (cresponse->images[i]->created_at != NULL) {
+                 image_info[i].created = cresponse->images[i]->created_at->seconds;
+                 image_info[i].created_nanos = cresponse->images[i]->created_at->nanos;
+             }
+-            image_info[i].imageref = cresponse->images[i]->name ?
+-                                     util_strdup_s(cresponse->images[i]->name) : util_strdup_s("-");
++            image_info[i].imageref = cresponse->images[i]->name ? util_strdup_s(cresponse->images[i]->name) :
++                                     util_strdup_s("-");
+         }
+     }
+ 
+@@ -524,7 +526,6 @@ out:
+     return ret;
+ }
+ 
+-
+ /* rest image pull */
+ static int rest_image_pull(const struct isula_pull_request *request, struct isula_pull_response *response, void *arg)
+ {
+@@ -824,7 +825,6 @@ out:
+     return ret;
+ }
+ 
+-
+ /* rest image tag */
+ static int rest_image_tag(const struct isula_tag_request *request, struct isula_tag_response *response, void *arg)
+ {
+@@ -929,7 +929,6 @@ out:
+ static int rest_image_import(const struct isula_import_request *request, struct isula_import_response *response,
+                              void *arg)
+ {
+-
+     client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+     const char *socketname = (const char *)(connect_config->socket);
+     char *body = NULL;
+@@ -963,7 +962,6 @@ out:
+     return ret;
+ }
+ 
+-
+ /* rest images client ops init */
+ int rest_images_client_ops_init(isula_connect_ops *ops)
+ {
+@@ -983,4 +981,3 @@ int rest_images_client_ops_init(isula_connect_ops *ops)
+ 
+     return 0;
+ }
+-
+diff --git a/src/cmd/isula/base/create.c b/src/cmd/isula/base/create.c
+index 2db2fd21..97da80ac 100644
+--- a/src/cmd/isula/base/create.c
++++ b/src/cmd/isula/base/create.c
+@@ -51,8 +51,7 @@
+ const char g_cmd_create_desc[] = "Create a new container";
+ const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
+ 
+-struct client_arguments g_cmd_create_args = {
+-    .runtime = "",
++struct client_arguments g_cmd_create_args = { .runtime = "",
+     .restart = "no",
+     .cr.oom_score_adj = 0,
+     .custom_conf.health_interval = 0,
+@@ -717,11 +716,7 @@ static int request_pack_host_ns_change_files(const struct client_arguments *args
+         files = net_ipc_files;
+         files_len = sizeof(net_ipc_files) / sizeof(net_ipc_files[0]);
+     }
+-    if (files_len > (SIZE_MAX / sizeof(char *)) - 1) {
+-        ERROR("Too many files");
+-        return -1;
+-    }
+-    hostconfig->ns_change_files = util_common_calloc_s((files_len + 1) * sizeof(char *));
++    hostconfig->ns_change_files = util_smart_calloc_s(sizeof(char *), (files_len + 1));
+     if (hostconfig->ns_change_files == NULL) {
+         ERROR("Out of memory");
+         return -1;
+diff --git a/src/cmd/isula/information/inspect.c b/src/cmd/isula/information/inspect.c
+index 55366551..bb52b42a 100644
+--- a/src/cmd/isula/information/inspect.c
++++ b/src/cmd/isula/information/inspect.c
+@@ -775,7 +775,7 @@ static char **inspect_split_filter(const char *format, size_t *filter_len)
+         return res_array;
+     }
+ 
+-    res_array = (char **)util_common_calloc_s(sizeof(char *) * (*filter_len));
++    res_array = (char **)util_smart_calloc_s(sizeof(char *), (*filter_len));
+     if (res_array == NULL) {
+         ERROR("out of memory");
+         return NULL;
+@@ -847,14 +847,14 @@ static int generate_filter_string(char ***filter_string, bool **json_format, siz
+     }
+ 
+     *filter_string_len = format_size;
+-    *filter_string = (char **)util_common_calloc_s(sizeof(char *) * format_size);
++    *filter_string = (char **)util_smart_calloc_s(sizeof(char *), format_size);
+     if (*filter_string == NULL) {
+         ERROR("out of memory");
+         ret = ECOMMON;
+         goto error_out;
+     }
+ 
+-    *json_format = (bool *)util_common_calloc_s(sizeof(bool) * format_size * g_cmd_inspect_args.argc);
++    *json_format = (bool *)util_smart_calloc_s(sizeof(bool), format_size * g_cmd_inspect_args.argc);
+     if (*json_format == NULL) {
+         ERROR("out of memory");
+         ret = ECOMMON;
+diff --git a/src/cmd/isula/isula_container_spec.c b/src/cmd/isula/isula_container_spec.c
+index 9340708f..09406d09 100644
+--- a/src/cmd/isula/isula_container_spec.c
++++ b/src/cmd/isula/isula_container_spec.c
+@@ -48,12 +48,7 @@ static int pack_container_custom_config_args(container_config *container_spec,
+ 
+     /* commands */
+     if ((custom_conf->cmd_len != 0 && custom_conf->cmd)) {
+-        if (custom_conf->cmd_len > SIZE_MAX / sizeof(char *)) {
+-            COMMAND_ERROR("The length of cmd is too long!");
+-            ret = -1;
+-            goto out;
+-        }
+-        container_spec->cmd = util_common_calloc_s(custom_conf->cmd_len * sizeof(char *));
++        container_spec->cmd = util_smart_calloc_s(sizeof(char *), custom_conf->cmd_len);
+         if (container_spec->cmd == NULL) {
+             ret = -1;
+             goto out;
+@@ -76,11 +71,7 @@ static int pack_container_custom_config_array(container_config *container_spec,
+ 
+     /* environment variables */
+     if (custom_conf->env_len != 0 && custom_conf->env) {
+-        if (custom_conf->env_len > SIZE_MAX / sizeof(char *)) {
+-            COMMAND_ERROR("Too many environment variables");
+-            return -1;
+-        }
+-        container_spec->env = util_common_calloc_s(custom_conf->env_len * sizeof(char *));
++        container_spec->env = util_smart_calloc_s(sizeof(char *), custom_conf->env_len);
+         if (container_spec->env == NULL) {
+             ret = -1;
+             goto out;
+@@ -202,7 +193,7 @@ static int pack_custom_with_health_check(container_config *container_spec, const
+     int ret = 0;
+ 
+     if (custom_conf->health_cmd != NULL && strlen(custom_conf->health_cmd) != 0) {
+-        health_config->test = util_common_calloc_s(2 * sizeof(char *));
++        health_config->test = util_smart_calloc_s(sizeof(char *), 2);
+         if (health_config->test == NULL) {
+             ret = -1;
+             goto out;
+diff --git a/src/cmd/isula/isula_host_spec.c b/src/cmd/isula/isula_host_spec.c
+index 297f9299..11e3eed3 100644
+--- a/src/cmd/isula/isula_host_spec.c
++++ b/src/cmd/isula/isula_host_spec.c
+@@ -401,12 +401,7 @@ static int pack_hostconfig_ulimits(host_config *dstconfig, const isula_host_conf
+         goto out;
+     }
+ 
+-    if (srcconfig->ulimits_len > SIZE_MAX / sizeof(host_config_ulimits_element *)) {
+-        COMMAND_ERROR("Too many ulimit elements in host config");
+-        ret = -1;
+-        goto out;
+-    }
+-    dstconfig->ulimits = util_common_calloc_s(srcconfig->ulimits_len * sizeof(host_config_ulimits_element *));
++    dstconfig->ulimits = util_smart_calloc_s(sizeof(host_config_ulimits_element *), srcconfig->ulimits_len);
+     if (dstconfig->ulimits == NULL) {
+         COMMAND_ERROR("Out of memory");
+         ret = -1;
+@@ -1127,12 +1122,7 @@ int generate_devices(host_config *dstconfig, const isula_host_config_t *srcconfi
+         goto out;
+     }
+ 
+-    if (srcconfig->devices_len > SIZE_MAX / sizeof(host_config_devices_element *)) {
+-        ERROR("Too many devices to be populated into container");
+-        ret = -1;
+-        goto out;
+-    }
+-    dstconfig->devices = util_common_calloc_s(sizeof(host_config_devices_element *) * srcconfig->devices_len);
++    dstconfig->devices = util_smart_calloc_s(sizeof(host_config_devices_element *), srcconfig->devices_len);
+     if (dstconfig->devices == NULL) {
+         ret = -1;
+         goto out;
+@@ -1472,13 +1462,7 @@ static int generate_mounts(host_config *dstconfig, const isula_host_config_t *sr
+         goto out;
+     }
+ 
+-    if (srcconfig->mounts_len > SIZE_MAX / sizeof(char *)) {
+-        COMMAND_ERROR("Too many mounts to mount!");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    dstconfig->mounts = util_common_calloc_s(srcconfig->mounts_len * sizeof(mount_spec*));
++    dstconfig->mounts = util_smart_calloc_s(sizeof(mount_spec *), srcconfig->mounts_len);
+     if (dstconfig->mounts == NULL) {
+         ret = -1;
+         goto out;
+@@ -1540,13 +1524,7 @@ int generate_security(host_config *dstconfig, const isula_host_config_t *srcconf
+         goto out;
+     }
+ 
+-    if (srcconfig->security_len > SIZE_MAX / sizeof(char *)) {
+-        COMMAND_ERROR("Too many security opts!");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    dstconfig->security_opt = util_common_calloc_s(srcconfig->security_len * sizeof(char *));
++    dstconfig->security_opt = util_smart_calloc_s(sizeof(char *), srcconfig->security_len);
+     if (dstconfig->security_opt == NULL) {
+         ret = -1;
+         goto out;
+diff --git a/src/cmd/isula/stream/exec.c b/src/cmd/isula/stream/exec.c
+index df911d0b..2d0d37da 100644
+--- a/src/cmd/isula/stream/exec.c
++++ b/src/cmd/isula/stream/exec.c
+@@ -394,7 +394,7 @@ static char *generate_exec_suffix()
+ {
+     char *exec_suffix = NULL;
+ 
+-    exec_suffix = util_common_calloc_s(sizeof(char) * (CONTAINER_ID_MAX_LEN + 1));
++    exec_suffix = util_smart_calloc_s(sizeof(char), (CONTAINER_ID_MAX_LEN + 1));
+     if (exec_suffix == NULL) {
+         ERROR("Out of memory");
+         goto out;
+diff --git a/src/cmd/isulad/isulad_commands.c b/src/cmd/isulad/isulad_commands.c
+index 89d91c1b..798416a3 100644
+--- a/src/cmd/isulad/isulad_commands.c
++++ b/src/cmd/isulad/isulad_commands.c
+@@ -468,7 +468,7 @@ static int do_merge_conf_hosts_into_global(struct service_arguments *args)
+ 
+     if (args->hosts_len == 0) {
+         /* set default host */
+-        args->hosts = (char **)util_common_calloc_s(sizeof(char *) * DEFAULT_HOSTS_LEN);
++        args->hosts = (char **)util_smart_calloc_s(sizeof(char *), DEFAULT_HOSTS_LEN);
+         if (args->hosts == NULL) {
+             ERROR("Out of memory");
+             return -1;
+@@ -544,8 +544,7 @@ static int do_merge_conf_default_ulimit_into_global(struct service_arguments *ar
+         telem.name = ptr->name;
+         telem.hard = ptr->hard;
+         telem.soft = ptr->soft;
+-        if (ulimit_array_append(&args->default_ulimit, &telem, args->default_ulimit_len) !=
+-            0) {
++        if (ulimit_array_append(&args->default_ulimit, &telem, args->default_ulimit_len) != 0) {
+             ERROR("merge json confs default ulimit config failed");
+             return -1;
+         }
+diff --git a/src/daemon/common/events_format.c b/src/daemon/common/events_format.c
+index 96dec401..e5ceab92 100644
+--- a/src/daemon/common/events_format.c
++++ b/src/daemon/common/events_format.c
+@@ -46,7 +46,7 @@ int event_copy(const struct isulad_events_format *src, struct isulad_events_form
+ 
+     if (src->annotations_len != 0) {
+         util_free_array_by_len(dest->annotations, dest->annotations_len);
+-        dest->annotations = (char **)util_common_calloc_s(src->annotations_len * sizeof(char *));
++        dest->annotations = (char **)util_smart_calloc_s(sizeof(char *), src->annotations_len);
+         if (dest->annotations == NULL) {
+             ERROR("Out of memory");
+             return -1;
+diff --git a/src/daemon/config/daemon_arguments.c b/src/daemon/config/daemon_arguments.c
+index c107fd74..719efef0 100644
+--- a/src/daemon/config/daemon_arguments.c
++++ b/src/daemon/config/daemon_arguments.c
+@@ -118,11 +118,11 @@ int service_arguments_init(struct service_arguments *args)
+     if (args->json_confs->log_opts == NULL) {
+         goto free_out;
+     }
+-    args->json_confs->log_opts->keys = (char **)util_common_calloc_s(sizeof(char *) * DEFAULT_LOG_OPTS_LEN);
++    args->json_confs->log_opts->keys = (char **)util_smart_calloc_s(sizeof(char *), DEFAULT_LOG_OPTS_LEN);
+     if (args->json_confs->log_opts->keys == NULL) {
+         goto free_out;
+     }
+-    args->json_confs->log_opts->values = (char **)util_common_calloc_s(sizeof(char *) * DEFAULT_LOG_OPTS_LEN);
++    args->json_confs->log_opts->values = (char **)util_smart_calloc_s(sizeof(char *), DEFAULT_LOG_OPTS_LEN);
+     if (args->json_confs->log_opts->values == NULL) {
+         goto free_out;
+     }
+@@ -138,8 +138,8 @@ int service_arguments_init(struct service_arguments *args)
+     args->max_size = 1024 * 1024;
+ 
+     // init container log configs
+-    args->json_confs->container_log = (isulad_daemon_configs_container_log *)util_common_calloc_s(sizeof(
+-                                                                                                      isulad_daemon_configs_container_log));
++    args->json_confs->container_log =
++        (isulad_daemon_configs_container_log *)util_common_calloc_s(sizeof(isulad_daemon_configs_container_log));
+     if (args->json_confs->container_log == NULL) {
+         ERROR("Out of memory");
+         goto free_out;
+diff --git a/src/daemon/config/isulad_config.c b/src/daemon/config/isulad_config.c
+index 38d2a0bf..1270d0c6 100644
+--- a/src/daemon/config/isulad_config.c
++++ b/src/daemon/config/isulad_config.c
+@@ -323,7 +323,7 @@ char *conf_get_routine_rootdir(const char *runtime)
+         ERROR("The size of path exceeds the limit");
+         goto out;
+     }
+-    path = util_common_calloc_s(sizeof(char) * len);
++    path = util_smart_calloc_s(sizeof(char), len);
+     if (path == NULL) {
+         ERROR("Out of memory");
+         goto out;
+@@ -660,7 +660,7 @@ char *get_log_file_helper(const struct service_arguments *conf, const char *suff
+         ERROR("The size of path exceeds the limit");
+         return NULL;
+     }
+-    logfile = util_common_calloc_s(len * sizeof(char));
++    logfile = util_smart_calloc_s(sizeof(char), len);
+     if (logfile == NULL) {
+         ERROR("Out of memory");
+         goto out;
+@@ -760,7 +760,7 @@ char *conf_get_engine_log_file()
+         ERROR("The size of path exceeds the limit");
+         goto out;
+     }
+-    full_path = util_common_calloc_s(len * sizeof(char));
++    full_path = util_smart_calloc_s(sizeof(char), len);
+     if (full_path == NULL) {
+         FATAL("Out of Memory");
+         goto out;
+@@ -990,10 +990,7 @@ HOOKS_ELEM_DUP_DEF(poststop)
+     int hooks_##item##_dup(oci_runtime_spec_hooks *dest, const oci_runtime_spec_hooks *src) \
+     {                                                                                       \
+         int i = 0;                                                                          \
+-        if (src->item##_len > SIZE_MAX / sizeof(defs_hook *) - 1) {                         \
+-            return -1;                                                                      \
+-        }                                                                                   \
+-        dest->item = util_common_calloc_s(sizeof(defs_hook *) * (src->item##_len + 1));     \
++        dest->item = util_smart_calloc_s(sizeof(defs_hook *), (src->item##_len + 1));       \
+         if (dest->item == NULL)                                                             \
+             return -1;                                                                      \
+         dest->item##_len = src->item##_len;                                                 \
+diff --git a/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc b/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc
+index 56283c8d..e8a48d58 100644
+--- a/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc
++++ b/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc
+@@ -206,12 +206,7 @@ int ContainerServiceImpl::top_request_from_grpc(const TopRequest *grequest, cont
+     }
+ 
+     if (grequest->args_size() > 0) {
+-        if ((size_t)grequest->args_size() > SIZE_MAX / sizeof(char *)) {
+-            ERROR("Too many arguments!");
+-            free_container_top_request(tmpreq);
+-            return -1;
+-        }
+-        tmpreq->args = (char **)util_common_calloc_s(sizeof(char *) * grequest->args_size());
++        tmpreq->args = (char **)util_smart_calloc_s(sizeof(char *), grequest->args_size());
+         if (tmpreq->args == nullptr) {
+             ERROR("Out of memory");
+             free_container_top_request(tmpreq);
+@@ -373,12 +368,7 @@ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, co
+     }
+ 
+     if (grequest->argv_size() > 0) {
+-        if ((size_t)grequest->argv_size() > SIZE_MAX / sizeof(char *)) {
+-            ERROR("Too many arguments!");
+-            free_container_exec_request(tmpreq);
+-            return -1;
+-        }
+-        tmpreq->argv = (char **)util_common_calloc_s(sizeof(char *) * grequest->argv_size());
++        tmpreq->argv = (char **)util_smart_calloc_s(sizeof(char *), grequest->argv_size());
+         if (tmpreq->argv == nullptr) {
+             ERROR("Out of memory");
+             free_container_exec_request(tmpreq);
+@@ -391,12 +381,7 @@ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, co
+     }
+ 
+     if (grequest->env_size() > 0) {
+-        if ((size_t)grequest->argv_size() > SIZE_MAX / sizeof(char *)) {
+-            ERROR("Too many environmental variables!");
+-            free_container_exec_request(tmpreq);
+-            return -1;
+-        }
+-        tmpreq->env = (char **)util_common_calloc_s(sizeof(char *) * grequest->env_size());
++        tmpreq->env = (char **)util_smart_calloc_s(sizeof(char *), grequest->env_size());
+         if (tmpreq->env == nullptr) {
+             ERROR("Out of memory");
+             free_container_exec_request(tmpreq);
+@@ -490,15 +475,11 @@ int ContainerServiceImpl::list_request_from_grpc(const ListRequest *grequest, co
+         *request = tmpreq;
+         return 0;
+     }
+-    if (len > SIZE_MAX / sizeof(char *)) {
+-        ERROR("invalid filters size");
+-        goto cleanup;
+-    }
+-    tmpreq->filters->keys = (char **)util_common_calloc_s(len * sizeof(char *));
++    tmpreq->filters->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
+     if (tmpreq->filters->keys == nullptr) {
+         goto cleanup;
+     }
+-    tmpreq->filters->values = (json_map_string_bool **)util_common_calloc_s(len * sizeof(json_map_string_bool *));
++    tmpreq->filters->values = (json_map_string_bool **)util_smart_calloc_s(sizeof(json_map_string_bool *), len);
+     if (tmpreq->filters->values == nullptr) {
+         free(tmpreq->filters->keys);
+         tmpreq->filters->keys = nullptr;
+@@ -744,7 +725,7 @@ int ContainerServiceImpl::stats_request_from_grpc(const StatsRequest *grequest,
+     }
+ 
+     if (grequest->containers_size() > 0) {
+-        tmpreq->containers = (char **)util_common_calloc_s(grequest->containers_size() * sizeof(char *));
++        tmpreq->containers = (char **)util_smart_calloc_s(sizeof(char *), grequest->containers_size());
+         if (tmpreq->containers == nullptr) {
+             ERROR("Out of memory");
+             free_container_stats_request(tmpreq);
+diff --git a/src/daemon/entry/connect/grpc/grpc_images_service.cc b/src/daemon/entry/connect/grpc/grpc_images_service.cc
+index 79c4fb7c..b1ca98b8 100644
+--- a/src/daemon/entry/connect/grpc/grpc_images_service.cc
++++ b/src/daemon/entry/connect/grpc/grpc_images_service.cc
+@@ -40,22 +40,17 @@ int ImagesServiceImpl::image_list_request_from_grpc(const ListImagesRequest *gre
+         *request = tmpreq;
+         return 0;
+     }
+-    if (len > SIZE_MAX / sizeof(char *)) {
+-        ERROR("invalid filters size");
+-        goto cleanup;
+-    }
+-
+     tmpreq->filters = (defs_filters *)util_common_calloc_s(sizeof(defs_filters));
+     if (tmpreq->filters == nullptr) {
+         ERROR("Out of memory");
+         goto cleanup;
+     }
+ 
+-    tmpreq->filters->keys = (char **)util_common_calloc_s(len * sizeof(char *));
++    tmpreq->filters->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
+     if (tmpreq->filters->keys == nullptr) {
+         goto cleanup;
+     }
+-    tmpreq->filters->values = (json_map_string_bool **)util_common_calloc_s(len * sizeof(json_map_string_bool *));
++    tmpreq->filters->values = (json_map_string_bool **)util_smart_calloc_s(sizeof(json_map_string_bool *), len);
+     if (tmpreq->filters->values == nullptr) {
+         free(tmpreq->filters->keys);
+         tmpreq->filters->keys = nullptr;
+diff --git a/src/daemon/entry/cri/checkpoint_handler.cc b/src/daemon/entry/cri/checkpoint_handler.cc
+index 858c830c..d5eab7a7 100644
+--- a/src/daemon/entry/cri/checkpoint_handler.cc
++++ b/src/daemon/entry/cri/checkpoint_handler.cc
+@@ -202,11 +202,7 @@ void CheckpointData::CheckpointDataToCStruct(cri_checkpoint_data **data, Errors
+     }
+     (*data)->host_network = m_hostNetwork;
+     if (len > 0) {
+-        if (len > SIZE_MAX / sizeof(cri_port_mapping *)) {
+-            error.SetError("Invalid port mapping size");
+-            goto out;
+-        }
+-        (*data)->port_mappings = (cri_port_mapping **)util_common_calloc_s(sizeof(cri_port_mapping *) * len);
++        (*data)->port_mappings = (cri_port_mapping **)util_smart_calloc_s(sizeof(cri_port_mapping *), len);
+         if ((*data)->port_mappings == nullptr) {
+             error.SetError("Out of memory");
+             goto out;
+diff --git a/src/daemon/entry/cri/cri_helpers.cc b/src/daemon/entry/cri/cri_helpers.cc
+index 525d65a0..e5db52f6 100644
+--- a/src/daemon/entry/cri/cri_helpers.cc
++++ b/src/daemon/entry/cri/cri_helpers.cc
+@@ -77,8 +77,7 @@ auto GetDefaultSandboxImage(Errors &err) -> std::string
+     const std::string defaultPodSandboxImageName { "pause" };
+     const std::string defaultPodSandboxImageVersion { "3.0" };
+     std::string machine;
+-    struct utsname uts {
+-    };
++    struct utsname uts {};
+ 
+     if (uname(&uts) < 0) {
+         err.SetError("Failed to read host arch.");
+@@ -230,16 +229,12 @@ auto FiltersAdd(defs_filters *filters, const std::string &key, const std::string
+     }
+ 
+     size_t len = filters->len + 1;
+-    if (len > SIZE_MAX / sizeof(char *)) {
+-        ERROR("Invalid filter size");
+-        return -1;
+-    }
+-    char **keys = (char **)util_common_calloc_s(len * sizeof(char *));
++    char **keys = (char **)util_smart_calloc_s(sizeof(char *), len);
+     if (keys == nullptr) {
+         ERROR("Out of memory");
+         return -1;
+     }
+-    json_map_string_bool **vals = (json_map_string_bool **)util_common_calloc_s(len * sizeof(json_map_string_bool *));
++    json_map_string_bool **vals = (json_map_string_bool **)util_smart_calloc_s(sizeof(json_map_string_bool *), len);
+     if (vals == nullptr) {
+         free(keys);
+         ERROR("Out of memory");
+@@ -299,10 +294,7 @@ auto ContainerStatusToRuntime(Container_Status status) -> runtime::v1alpha2::Con
+ auto StringVectorToCharArray(std::vector<std::string> &path) -> char **
+ {
+     size_t len = path.size();
+-    if (len == 0 || len > (SIZE_MAX / sizeof(char *)) - 1) {
+-        return nullptr;
+-    }
+-    char **result = (char **)util_common_calloc_s((len + 1) * sizeof(char *));
++    char **result = (char **)util_smart_calloc_s(sizeof(char *), (len + 1));
+     if (result == nullptr) {
+         return nullptr;
+     }
+@@ -487,12 +479,8 @@ void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1a
+     if (mounts.empty() || hostconfig == nullptr) {
+         return;
+     }
+-    if ((size_t)mounts.size() > INT_MAX / sizeof(char *)) {
+-        err.SetError("Too many mounts");
+-        return;
+-    }
+ 
+-    hostconfig->binds = (char **)util_common_calloc_s(mounts.size() * sizeof(char *));
++    hostconfig->binds = (char **)util_smart_calloc_s(sizeof(char *), mounts.size());
+     if (hostconfig->binds == nullptr) {
+         err.SetError("Out of memory");
+         return;
+@@ -737,7 +725,6 @@ out:
+     free_cri_checkpoint(criCheckpoint);
+ }
+ 
+-
+ auto InspectContainer(const std::string &Id, Errors &err, bool with_host_config) -> container_inspect *
+ {
+     container_inspect *inspect_data { nullptr };
+@@ -761,8 +748,7 @@ int32_t ToInt32Timeout(int64_t timeout)
+     return (int32_t)timeout;
+ }
+ 
+-void GetContainerLogPath(const std::string &containerID, char **path, char **realPath,
+-                         Errors &error)
++void GetContainerLogPath(const std::string &containerID, char **path, char **realPath, Errors &error)
+ {
+     container_inspect *info = InspectContainer(containerID, error, false);
+     if (info == nullptr || error.NotEmpty()) {
+@@ -812,8 +798,8 @@ cleanup:
+     free(realPath);
+ }
+ 
+-void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt,
+-                            int64_t *startedAt, int64_t *finishedAt, Errors &err)
++void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
++                            int64_t *finishedAt, Errors &err)
+ {
+     if (inspect == nullptr) {
+         err.SetError("Invalid arguments");
+@@ -979,7 +965,7 @@ cleanup:
+ 
+ char *GenerateExecSuffix()
+ {
+-    char *exec_suffix = (char *)util_common_calloc_s(sizeof(char) * (CONTAINER_ID_MAX_LEN + 1));
++    char *exec_suffix = (char *)util_smart_calloc_s(sizeof(char), (CONTAINER_ID_MAX_LEN + 1));
+     if (exec_suffix == nullptr) {
+         ERROR("Out of memory");
+         return nullptr;
+diff --git a/src/daemon/entry/cri/cri_security_context.cc b/src/daemon/entry/cri/cri_security_context.cc
+index 466e0e1c..8484108c 100644
+--- a/src/daemon/entry/cri/cri_security_context.cc
++++ b/src/daemon/entry/cri/cri_security_context.cc
+@@ -41,11 +41,7 @@ static void ModifyHostConfigCapabilities(const runtime::v1alpha2::LinuxContainer
+ 
+     const google::protobuf::RepeatedPtrField<std::string> &capAdd = sc.capabilities().add_capabilities();
+     if (!capAdd.empty()) {
+-        if (static_cast<size_t>(capAdd.size()) > SIZE_MAX / sizeof(char *)) {
+-            error.SetError("Invalid capability add size");
+-            return;
+-        }
+-        hostConfig->cap_add = (char **)util_common_calloc_s(sizeof(char *) * capAdd.size());
++        hostConfig->cap_add = (char **)util_smart_calloc_s(sizeof(char *), capAdd.size());
+         if (hostConfig->cap_add == nullptr) {
+             error.SetError("Out of memory");
+             return;
+@@ -57,11 +53,7 @@ static void ModifyHostConfigCapabilities(const runtime::v1alpha2::LinuxContainer
+     }
+     const google::protobuf::RepeatedPtrField<std::string> &capDrop = sc.capabilities().drop_capabilities();
+     if (!capDrop.empty()) {
+-        if (static_cast<size_t>(capDrop.size()) > SIZE_MAX / sizeof(char *)) {
+-            error.SetError("Invalid capability drop size");
+-            return;
+-        }
+-        hostConfig->cap_drop = (char **)util_common_calloc_s(sizeof(char *) * capDrop.size());
++        hostConfig->cap_drop = (char **)util_smart_calloc_s(sizeof(char *), capDrop.size());
+         if (hostConfig->cap_drop == nullptr) {
+             error.SetError("Out of memory");
+             return;
+diff --git a/src/daemon/entry/cri/websocket/service/exec_serve.cc b/src/daemon/entry/cri/websocket/service/exec_serve.cc
+index 7b7d36b5..b779f25f 100644
+--- a/src/daemon/entry/cri/websocket/service/exec_serve.cc
++++ b/src/daemon/entry/cri/websocket/service/exec_serve.cc
+@@ -45,11 +45,7 @@ void *ExecServe::SetContainerStreamRequest(::google::protobuf::Message *request,
+     }
+ 
+     if (grequest->cmd_size() > 0) {
+-        if (static_cast<size_t>(grequest->cmd_size()) > SIZE_MAX / sizeof(char *)) {
+-            ERROR("Too many arguments!");
+-            return nullptr;
+-        }
+-        m_request->argv = (char **)util_common_calloc_s(sizeof(char *) * grequest->cmd_size());
++        m_request->argv = (char **)util_smart_calloc_s(sizeof(char *), grequest->cmd_size());
+         if (m_request->argv == nullptr) {
+             ERROR("Out of memory!");
+             return nullptr;
+@@ -109,7 +105,7 @@ int ExecServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
+ 
+ void ExecServe::CloseConnect(SessionData *lwsCtx)
+ {
+-    closeWsConnect((void*)lwsCtx, nullptr);
++    closeWsConnect((void *)lwsCtx, nullptr);
+ }
+ 
+ void ExecServe::FreeRequest(void *m_request)
+diff --git a/src/daemon/executor/container_cb/execution_create.c b/src/daemon/executor/container_cb/execution_create.c
+index 850e0a0f..626cfbc6 100644
+--- a/src/daemon/executor/container_cb/execution_create.c
++++ b/src/daemon/executor/container_cb/execution_create.c
+@@ -589,7 +589,7 @@ static char *try_generate_id()
+     char *id = NULL;
+     char *value = NULL;
+ 
+-    id = util_common_calloc_s(sizeof(char) * (CONTAINER_ID_MAX_LEN + 1));
++    id = util_smart_calloc_s(sizeof(char), (CONTAINER_ID_MAX_LEN + 1));
+     if (id == NULL) {
+         ERROR("Out of memory");
+         return NULL;
+@@ -675,14 +675,8 @@ static int conf_get_image_id(const char *image, char **id)
+         goto out;
+     }
+ 
+-    if (strlen(ir->id) > SIZE_MAX / sizeof(char) - strlen("sha256:")) {
+-        ERROR("Invalid image id");
+-        ret = -1;
+-        goto out;
+-    }
+-
+     len = strlen("sha256:") + strlen(ir->id) + 1;
+-    image_id = (char *)util_common_calloc_s(len * sizeof(char));
++    image_id = (char *)util_smart_calloc_s(sizeof(char), len);
+     if (image_id == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+@@ -835,7 +829,7 @@ static int prepare_host_channel(const host_config_host_channel *host_channel, co
+ #ifdef ENABLE_USERNS_REMAP
+     char *daemon_userns_remap = conf_get_isulad_userns_remap();
+     if (daemon_userns_remap != NULL) {
+-        userns_remap = (const char *) daemon_userns_remap;
++        userns_remap = (const char *)daemon_userns_remap;
+     }
+ #endif
+ 
+diff --git a/src/daemon/executor/container_cb/execution_extend.c b/src/daemon/executor/container_cb/execution_extend.c
+index 91ce5dbb..5b131a80 100644
+--- a/src/daemon/executor/container_cb/execution_extend.c
++++ b/src/daemon/executor/container_cb/execution_extend.c
+@@ -341,11 +341,7 @@ error_out:
+ 
+ static int service_stats_make_memory(container_info ***stats_arr, size_t num)
+ {
+-    if (num > SIZE_MAX / sizeof(container_info *)) {
+-        return -1;
+-    }
+-
+-    *stats_arr = util_common_calloc_s(num * sizeof(container_info *));
++    *stats_arr = util_smart_calloc_s(sizeof(container_info *), num);
+     if (*stats_arr == NULL) {
+         ERROR("Out of memory");
+         return -1;
+diff --git a/src/daemon/executor/container_cb/execution_information.c b/src/daemon/executor/container_cb/execution_information.c
+index 297f96b9..144daebf 100644
+--- a/src/daemon/executor/container_cb/execution_information.c
++++ b/src/daemon/executor/container_cb/execution_information.c
+@@ -483,12 +483,8 @@ int parse_output(char **title, char ***process, size_t *process_len, const char
+ 
+     pid_num = get_pid_num(*title);
+     stime = get_stime(*title);
+-    if (util_array_len((const char **)tmp) > SIZE_MAX / sizeof(char *)) {
+-        ERROR("Invalid array length");
+-        ret = -1;
+-        goto out;
+-    }
+-    *process = util_common_calloc_s(util_array_len((const char **)tmp) * sizeof(char *));
++
++    *process = util_smart_calloc_s(sizeof(char *), util_array_len((const char **)tmp));
+     if (*process == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+@@ -604,15 +600,9 @@ static int get_pids(const char *name, const char *runtime, const char *rootpath,
+         goto out;
+     }
+ 
+-    if (out->pids_len > SIZE_MAX / sizeof(pid_t)) {
+-        ERROR("list too many pids");
+-        ret = -1;
+-        goto out;
+-    }
+-
+     if (out->pids_len != 0) {
+         pid_t *tmp = NULL;
+-        tmp = util_common_calloc_s(sizeof(pid_t) * out->pids_len);
++        tmp = util_smart_calloc_s(sizeof(pid_t), out->pids_len);
+         if (tmp == NULL) {
+             ERROR("Memory out");
+             ret = -1;
+@@ -814,12 +804,7 @@ static int container_top_cb(container_top_request *request, container_top_respon
+         cc = ISULAD_ERR_EXEC;
+         goto pack_response;
+     }
+-    if (process_len > SIZE_MAX / sizeof(char *)) {
+-        ERROR("invalid processe size");
+-        cc = ISULAD_ERR_EXEC;
+-        goto pack_response;
+-    }
+-    (*response)->processes = util_common_calloc_s(process_len * sizeof(char *));
++    (*response)->processes = util_smart_calloc_s(sizeof(char *), process_len);
+     if ((*response)->processes == NULL) {
+         ERROR("Out of memory");
+         cc = ISULAD_ERR_EXEC;
+diff --git a/src/daemon/executor/container_cb/list.c b/src/daemon/executor/container_cb/list.c
+index 90f4a548..026f1efb 100644
+--- a/src/daemon/executor/container_cb/list.c
++++ b/src/daemon/executor/container_cb/list.c
+@@ -609,14 +609,7 @@ static int pack_list_containers(char **idsarray, const struct list_context *ctx,
+     if (container_nums == 0) {
+         goto out;
+     }
+-
+-    if (container_nums > (SIZE_MAX / sizeof(container_container *))) {
+-        ERROR("Get too many containers:%zu", container_nums);
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    response->containers = util_common_calloc_s(container_nums * sizeof(container_container *));
++    response->containers = util_smart_calloc_s(sizeof(container_container *), container_nums);
+     if (response->containers == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+diff --git a/src/daemon/executor/image_cb/image_cb.c b/src/daemon/executor/image_cb/image_cb.c
+index e75cf65c..10a9661a 100644
+--- a/src/daemon/executor/image_cb/image_cb.c
++++ b/src/daemon/executor/image_cb/image_cb.c
+@@ -659,14 +659,7 @@ static int trans_im_list_images(const im_list_response *im_list, image_list_imag
+     // If one image have several repo tags, display them all. Image with no
+     // repo will also be displayed
+     images_display_num = calc_images_display_num(im_list->images);
+-    if (images_display_num >= (SIZE_MAX / sizeof(image_image *))) {
+-        INFO("Too many images, out of memory");
+-        ret = -1;
+-        isulad_try_set_error_message("Get too many images info, out of memory");
+-        goto out;
+-    }
+-
+-    response->images = util_common_calloc_s(sizeof(image_image *) * images_display_num);
++    response->images = util_smart_calloc_s(sizeof(image_image *), images_display_num);
+     if (response->images == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+@@ -1074,7 +1067,7 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
+     }
+ 
+     EVENT("Image Event: {Object: %s, Type: Pulling}", image_ref);
+-    ret = pull_request_from_rest(request,  &im_req);
++    ret = pull_request_from_rest(request, &im_req);
+     if (ret != 0) {
+         goto out;
+     }
+@@ -1101,7 +1094,6 @@ out:
+     return (ret < 0) ? ECOMMON : ret;
+ }
+ 
+-
+ /* image callback init */
+ void image_callback_init(service_image_callback_t *cb)
+ {
+diff --git a/src/daemon/modules/container/container_state.c b/src/daemon/modules/container/container_state.c
+index efcbe852..d342df25 100644
+--- a/src/daemon/modules/container/container_state.c
++++ b/src/daemon/modules/container/container_state.c
+@@ -479,12 +479,7 @@ static int container_dup_health_check_status(defs_health **dst, const defs_healt
+     result->status = src->status ? util_strdup_s(src->status) : NULL;
+     result->failing_streak = src->failing_streak;
+     if (src->log_len != 0) {
+-        if (src->log_len > SIZE_MAX / sizeof(defs_health_log_element *)) {
+-            ERROR("Invalid log size");
+-            ret = -1;
+-            goto error;
+-        }
+-        result->log = util_common_calloc_s(sizeof(defs_health_log_element *) * src->log_len);
++        result->log = util_smart_calloc_s(sizeof(defs_health_log_element *), src->log_len);
+         if (result->log == NULL) {
+             ERROR("Out of memory");
+             ret = -1;
+diff --git a/src/daemon/modules/container/container_unix.c b/src/daemon/modules/container/container_unix.c
+index 98f91ea9..9910b3c8 100644
+--- a/src/daemon/modules/container/container_unix.c
++++ b/src/daemon/modules/container/container_unix.c
+@@ -387,16 +387,11 @@ static int pack_path_and_args_from_container_spec(const container_config *contai
+         v2_spec->path = util_strdup_s(container_spec->entrypoint[0]);
+         total = container_spec->entrypoint_len + container_spec->cmd_len - 1;
+ 
+-        if (total > SIZE_MAX / sizeof(char *)) {
+-            ERROR("Container oci spec process args elements is too much!");
+-            ret = -1;
+-            goto out;
+-        }
+         if (total == 0) {
+             goto out;
+         }
+ 
+-        v2_spec->args = util_common_calloc_s(total * sizeof(char *));
++        v2_spec->args = util_smart_calloc_s(sizeof(char *), total);
+         if (v2_spec->args == NULL) {
+             ERROR("Out of memory");
+             ret = -1;
+diff --git a/src/daemon/modules/container/containers_store.c b/src/daemon/modules/container/containers_store.c
+index e0700296..e5c5b2ef 100644
+--- a/src/daemon/modules/container/containers_store.c
++++ b/src/daemon/modules/container/containers_store.c
+@@ -262,11 +262,7 @@ int containers_store_list(container_t ***out, size_t *size)
+         ret = 0;
+         goto unlock;
+     }
+-    if (*size > SIZE_MAX / sizeof(container_t *)) {
+-        ERROR("Containers store list is too long!");
+-        goto unlock;
+-    }
+-    conts = util_common_calloc_s(sizeof(container_t *) * (*size));
++    conts = util_smart_calloc_s(sizeof(container_t *), (*size));
+     if (conts == NULL) {
+         ERROR("Out of memory");
+         goto unlock;
+diff --git a/src/daemon/modules/container/health_check/health_check.c b/src/daemon/modules/container/health_check/health_check.c
+index dc00ae33..59ec01aa 100644
+--- a/src/daemon/modules/container/health_check/health_check.c
++++ b/src/daemon/modules/container/health_check/health_check.c
+@@ -289,13 +289,15 @@ static char **health_check_cmds(const container_config *config)
+     }
+ 
+     shell_len = util_array_len((const char **)shell);
+-    if (shell_len > (SIZE_MAX / sizeof(char *)) - config->healthcheck->test_len) {
+-        ERROR("Invalid shell length");
++
++    if (config->healthcheck->test_len > SIZE_MAX - shell_len) {
++        ERROR("Invalid test comand length");
+         goto out;
+     }
+-    cmd_slice = util_common_calloc_s((shell_len + config->healthcheck->test_len) * sizeof(char *));
++
++    cmd_slice = util_smart_calloc_s(sizeof(char *), (shell_len + config->healthcheck->test_len));
+     if (cmd_slice == NULL) {
+-        ERROR("out of memory");
++        ERROR("Out of memory");
+         goto out;
+     }
+     for (i = 0; i < shell_len; i++) {
+@@ -423,8 +425,7 @@ static int handle_increment_streak(container_t *cont, int retries)
+         if (cont->common_config->config->healthcheck->exit_on_unhealthy) {
+             pthread_t stop_container_tid = { 0 };
+             char *container_id = util_strdup_s(cont->common_config->id);
+-            if (pthread_create(&stop_container_tid, NULL, stop_container_on_unhealthy,
+-                               (void *)container_id)) {
++            if (pthread_create(&stop_container_tid, NULL, stop_container_on_unhealthy, (void *)container_id)) {
+                 free(container_id);
+                 ERROR("Failed to create thread to exec health check");
+                 ret = -1;
+@@ -845,8 +846,8 @@ static void *health_check_monitor(void *arg)
+             case MONITOR_IDLE:
+             /* fall-through */
+             default:
+-                if (do_monitor_default(container_id, probe_interval, cont->health_check,
+-                                       &start_timestamp, &last_timestamp) != 0) {
++                if (do_monitor_default(container_id, probe_interval, cont->health_check, &start_timestamp,
++                                       &last_timestamp) != 0) {
+                     goto out;
+                 }
+                 break;
+diff --git a/src/daemon/modules/image/embedded/embedded_image.c b/src/daemon/modules/image/embedded/embedded_image.c
+index e6c136e0..910ba24a 100644
+--- a/src/daemon/modules/image/embedded/embedded_image.c
++++ b/src/daemon/modules/image/embedded/embedded_image.c
+@@ -169,13 +169,7 @@ static int embedded_images_to_imagetool_images(struct db_all_images *all_images,
+         goto out;
+     }
+ 
+-    if (images_num >= (SIZE_MAX / sizeof(imagetool_image_summary *))) {
+-        ERROR("Too many images, out of memory");
+-        ret = -1;
+-        isulad_try_set_error_message("Get too many images info, out of memory");
+-        goto out;
+-    }
+-    list->images = util_common_calloc_s(sizeof(imagetool_image_summary *) * images_num);
++    list->images = util_smart_calloc_s(sizeof(imagetool_image_summary *), images_num);
+     if (list->images == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+diff --git a/src/daemon/modules/image/oci/oci_config_merge.c b/src/daemon/modules/image/oci/oci_config_merge.c
+index 41529a11..dc9cbb74 100644
+--- a/src/daemon/modules/image/oci/oci_config_merge.c
++++ b/src/daemon/modules/image/oci/oci_config_merge.c
+@@ -73,12 +73,7 @@ static int do_duplicate_commands(const oci_image_spec_config *config, container_
+         return 0;
+     }
+ 
+-    if (config->cmd_len > SIZE_MAX / sizeof(char *)) {
+-        ERROR("too many commands!");
+-        return -1;
+-    }
+-
+-    container_spec->cmd = (char **)util_common_calloc_s(sizeof(char *) * config->cmd_len);
++    container_spec->cmd = (char **)util_smart_calloc_s(sizeof(char *), config->cmd_len);
+     if (container_spec->cmd == NULL) {
+         ERROR("Out of memory");
+         return -1;
+@@ -239,13 +234,7 @@ static int dup_health_check_from_image(const defs_health_check *image_health_che
+         return -1;
+     }
+ 
+-    if (image_health_check->test_len > SIZE_MAX / sizeof(char *)) {
+-        ERROR("invalid health check commands!");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    health_check->test = util_common_calloc_s(sizeof(char *) * image_health_check->test_len);
++    health_check->test = util_smart_calloc_s(sizeof(char *), image_health_check->test_len);
+     if (health_check->test == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+diff --git a/src/daemon/modules/image/oci/oci_load.c b/src/daemon/modules/image/oci/oci_load.c
+index a8eecfe9..64ef2a1a 100644
+--- a/src/daemon/modules/image/oci/oci_load.c
++++ b/src/daemon/modules/image/oci/oci_load.c
+@@ -224,7 +224,7 @@ static char **str_array_copy(char **arr, size_t len)
+     char **str_arr = NULL;
+     size_t i = 0;
+ 
+-    str_arr = util_common_calloc_s(sizeof(char *) * len);
++    str_arr = util_smart_calloc_s(sizeof(char *), len);
+     if (str_arr == NULL) {
+         ERROR("Out of memory");
+         return NULL;
+@@ -705,7 +705,8 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
+     }
+ 
+     if (conf->rootfs->diff_ids_len != im->layers_len) {
+-        ERROR("Invalid manifest, layers length mismatch: expected %zu, got %zu", im->layers_len, conf->rootfs->diff_ids_len);
++        ERROR("Invalid manifest, layers length mismatch: expected %zu, got %zu", im->layers_len,
++              conf->rootfs->diff_ids_len);
+         ret = -1;
+         goto out;
+     }
+@@ -727,7 +728,8 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
+         // The format is sha256:xxx
+         im->layers[i]->chain_id = oci_load_calc_chain_id(parent_chain_id_sha256, conf->rootfs->diff_ids[i]);
+         if (im->layers[i]->chain_id == NULL) {
+-            ERROR("calc chain id failed, diff id %s, parent chain id %s", conf->rootfs->diff_ids[i], parent_chain_id_sha256);
++            ERROR("calc chain id failed, diff id %s, parent chain id %s", conf->rootfs->diff_ids[i],
++                  parent_chain_id_sha256);
+             ret = -1;
+             goto out;
+         }
+@@ -881,7 +883,7 @@ static int oci_load_set_manifest_info(load_image_t *im)
+     }
+ 
+     im->manifest->schema_version = OCI_SCHEMA_VERSION;
+-    im->manifest->layers = util_common_calloc_s(sizeof(oci_image_content_descriptor *) * im->layers_len);
++    im->manifest->layers = util_smart_calloc_s(sizeof(oci_image_content_descriptor *), im->layers_len);
+     if (im->manifest->layers == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+diff --git a/src/daemon/modules/image/oci/registry/auths.c b/src/daemon/modules/image/oci/registry/auths.c
+index f8cd7977..02b9753c 100644
+--- a/src/daemon/modules/image/oci/registry/auths.c
++++ b/src/daemon/modules/image/oci/registry/auths.c
+@@ -236,7 +236,7 @@ static int add_allocated_auth(registry_auths *auths, char *host, char *auth)
+ 
+     result_len = auths->auths->len + 1;
+     element = util_common_calloc_s(sizeof(defs_map_string_object_auths_element));
+-    values = util_common_calloc_s(sizeof(defs_map_string_object_auths_element *) * result_len);
++    values = util_smart_calloc_s(sizeof(defs_map_string_object_auths_element *), result_len);
+     if (element == NULL || values == NULL) {
+         ERROR("out of memory");
+         ret = -1;
+diff --git a/src/daemon/modules/image/oci/registry/registry.c b/src/daemon/modules/image/oci/registry/registry.c
+index 25973c71..e6369f90 100644
+--- a/src/daemon/modules/image/oci/registry/registry.c
++++ b/src/daemon/modules/image/oci/registry/registry.c
+@@ -132,7 +132,7 @@ static int parse_manifest_schema1(pull_descriptor *desc)
+         goto out;
+     }
+ 
+-    desc->layers = util_common_calloc_s(sizeof(layer_blob) * manifest->fs_layers_len);
++    desc->layers = util_smart_calloc_s(sizeof(layer_blob), manifest->fs_layers_len);
+     if (desc->layers == NULL) {
+         ERROR("out of memory");
+         ret = -1;
+@@ -197,7 +197,7 @@ static int parse_manifest_schema2(pull_descriptor *desc)
+         goto out;
+     }
+ 
+-    desc->layers = util_common_calloc_s(sizeof(layer_blob) * manifest->layers_len);
++    desc->layers = util_smart_calloc_s(sizeof(layer_blob), manifest->layers_len);
+     if (desc->layers == NULL) {
+         ERROR("out of memory");
+         ret = -1;
+@@ -250,7 +250,7 @@ static int parse_manifest_ociv1(pull_descriptor *desc)
+         goto out;
+     }
+ 
+-    desc->layers = util_common_calloc_s(sizeof(layer_blob) * manifest->layers_len);
++    desc->layers = util_smart_calloc_s(sizeof(layer_blob), manifest->layers_len);
+     if (desc->layers == NULL) {
+         ERROR("out of memory");
+         ret = -1;
+@@ -390,7 +390,7 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
+     struct linked_list *node = NULL;
+     char *src_file = NULL;
+     thread_fetch_info *src_info = NULL;
+-    file_elem *elem = {NULL};
++    file_elem *elem = { NULL };
+     pull_descriptor *desc = info->desc;
+ 
+     cache = (cached_layer *)map_search(g_shared->cached_layers, blob_digest);
+@@ -430,8 +430,8 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
+                 ret = -1;
+                 goto out;
+             }
+-            src_file = ((file_elem*)elem)->file;
+-            src_info = ((file_elem*)elem)->info;
++            src_file = ((file_elem *)elem)->file;
++            src_info = ((file_elem *)elem)->info;
+             if (src_info == NULL) {
+                 ERROR("source info is NULL, this should never happen");
+                 ret = -1;
+@@ -561,16 +561,16 @@ static int set_cached_info_to_desc(thread_fetch_info *info)
+     }
+ 
+     if (desc->layers[i].diff_id == NULL) {
+-        ERROR("layer %zu of image %s have invalid NULL diffid, info->use=%d, info->diffid=%s",
+-              i, desc->image_name, info->use, info->diffid);
++        ERROR("layer %zu of image %s have invalid NULL diffid, info->use=%d, info->diffid=%s", i, desc->image_name,
++              info->use, info->diffid);
+         return -1;
+     }
+ 
+     if (desc->layers[i].chain_id == NULL) {
+         desc->layers[i].chain_id = calc_chain_id(desc->parent_chain_id, desc->layers[i].diff_id);
+         if (desc->layers[i].chain_id == NULL) {
+-            ERROR("calc chain id failed, diff id %s, parent chain id %s",
+-                  desc->layers[i].diff_id, desc->parent_chain_id);
++            ERROR("calc chain id failed, diff id %s, parent chain id %s", desc->layers[i].diff_id,
++                  desc->parent_chain_id);
+             return -1;
+         }
+     }
+@@ -1177,7 +1177,7 @@ static void notify_cached_descs(char *blob_digest)
+ 
+     // notify all related register threads to do register
+     linked_list_for_each_safe(item, &cache->file_list, next) {
+-        info = ((file_elem*)item->elem)->info;
++        info = ((file_elem *)item->elem)->info;
+         info->notified = true;
+         register_layer_notify(info->desc);
+     }
+@@ -1249,7 +1249,7 @@ static int add_fetch_task(thread_fetch_info *info)
+     pthread_t tid = 0;
+     bool cached_layers_added = true;
+     cached_layer *cache = NULL;
+-    struct timespec ts = {0};
++    struct timespec ts = { 0 };
+ 
+     mutex_lock(&g_shared->mutex);
+     cache = get_cached_layer(info->blob_digest);
+@@ -1406,7 +1406,7 @@ static void *register_layers_in_thread(void *arg)
+     int ret = 0;
+     int cond_ret = 0;
+     size_t i = 0;
+-    struct timespec ts = {0};
++    struct timespec ts = { 0 };
+ 
+     ret = pthread_detach(pthread_self());
+     if (ret != 0) {
+@@ -1425,8 +1425,8 @@ static void *register_layers_in_thread(void *arg)
+                 // here we can't just break and cleanup resources because threads are running.
+                 // desc is freed if we break and then isulad crash. sleep some time
+                 // instead to avoid cpu full running and then retry.
+-                ERROR("condition wait for layer %zu to complete failed, ret %d, error: %s",
+-                      i, cond_ret, strerror(errno));
++                ERROR("condition wait for layer %zu to complete failed, ret %d, error: %s", i, cond_ret,
++                      strerror(errno));
+                 sleep(10);
+                 continue;
+             }
+@@ -1504,14 +1504,14 @@ static int fetch_all(pull_descriptor *desc)
+     char *parent_chain_id = NULL;
+     struct layer_list *list = NULL;
+     pthread_t tid = 0;
+-    struct timespec ts = {0};
++    struct timespec ts = { 0 };
+ 
+     if (desc == NULL) {
+         ERROR("Invalid NULL param");
+         return -1;
+     }
+ 
+-    infos = util_common_calloc_s(sizeof(thread_fetch_info) * desc->layers_len);
++    infos = util_smart_calloc_s(sizeof(thread_fetch_info), desc->layers_len);
+     if (infos == NULL) {
+         ERROR("out of memory");
+         return -1;
+@@ -1611,8 +1611,7 @@ static int fetch_all(pull_descriptor *desc)
+             // here we can't just break and cleanup resources because threads are running.
+             // desc is freed if we break and then isulad crash. sleep some time
+             // instead to avoid cpu full running and then retry.
+-            ERROR("condition wait for all layers to complete failed, ret %d, error: %s",
+-                  cond_ret, strerror(errno));
++            ERROR("condition wait for all layers to complete failed, ret %d, error: %s", cond_ret, strerror(errno));
+             sleep(10);
+             continue;
+         }
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+index edb28b78..3ee69ee7 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+@@ -2256,7 +2256,7 @@ static int pack_health_check_from_image(const oci_image_spec *spec, imagetool_im
+         goto out;
+     }
+ 
+-    healthcheck->test = util_common_calloc_s(sizeof(char *) * spec->config->healthcheck->test_len);
++    healthcheck->test = util_smart_calloc_s(sizeof(char *), spec->config->healthcheck->test_len);
+     if (healthcheck->test == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+@@ -2662,7 +2662,7 @@ int image_store_get_all_images(imagetool_images_list *images_list)
+         goto unlock;
+     }
+ 
+-    images_list->images = util_common_calloc_s(g_image_store->images_list_len * sizeof(imagetool_image *));
++    images_list->images = util_smart_calloc_s(g_image_store->images_list_len, sizeof(imagetool_image *));
+     if (images_list->images == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+@@ -3175,7 +3175,7 @@ static int get_layers_from_manifest(const registry_manifest_schema1 *manifest, l
+         goto out;
+     }
+ 
+-    layers = util_common_calloc_s(sizeof(layer_blob) * manifest->fs_layers_len);
++    layers = util_smart_calloc_s(sizeof(layer_blob), manifest->fs_layers_len);
+     if (layers == NULL) {
+         ERROR("out of memory");
+         ret = -1;
+diff --git a/src/daemon/modules/image/oci/utils_images.c b/src/daemon/modules/image/oci/utils_images.c
+index 415f2004..80a25502 100644
+--- a/src/daemon/modules/image/oci/utils_images.c
++++ b/src/daemon/modules/image/oci/utils_images.c
+@@ -305,7 +305,7 @@ char *make_big_data_base_name(const char *key)
+     }
+     name_size = 1 + strlen(b64_encode_name) + 1; // '=' + encode string + '\0'
+ 
+-    base_name = (char *)util_common_calloc_s(name_size * sizeof(char));
++    base_name = (char *)util_smart_calloc_s(sizeof(char), name_size);
+     if (base_name == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+@@ -436,7 +436,7 @@ int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const re
+     }
+ 
+     config->rootfs = util_common_calloc_s(sizeof(docker_image_rootfs));
+-    config->history = util_common_calloc_s(sizeof(docker_image_history *) * layers_len);
++    config->history = util_smart_calloc_s(sizeof(docker_image_history *), layers_len);
+     if (config->rootfs == NULL || config->history == NULL) {
+         ERROR("out of memory");
+         return -1;
+diff --git a/src/daemon/modules/plugin/plugin.c b/src/daemon/modules/plugin/plugin.c
+index 4e343a20..bd45f8a3 100644
+--- a/src/daemon/modules/plugin/plugin.c
++++ b/src/daemon/modules/plugin/plugin.c
+@@ -1123,12 +1123,7 @@ static int pm_init_plugin(const plugin_t *plugin)
+      * prepare or delete dirty resource.
+      */
+     if (container_num) {
+-        if (container_num > SIZE_MAX / sizeof(plugin_init_plugin_request_containers_element *)) {
+-            ERROR("Invalid container nums");
+-            ret = -1;
+-            goto out;
+-        }
+-        reqs.containers = util_common_calloc_s(container_num * sizeof(plugin_init_plugin_request_containers_element *));
++        reqs.containers = util_smart_calloc_s(sizeof(plugin_init_plugin_request_containers_element *), container_num);
+         if (reqs.containers == NULL) {
+             ERROR("Out of memory");
+             ret = -1;
+diff --git a/src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c b/src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c
+index f5313fa8..724def25 100644
+--- a/src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c
++++ b/src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c
+@@ -335,7 +335,7 @@ static int generate_user_string_by_uid_gid(const defs_process_user *puser, char
+     }
+ 
+     len = strlen(uid_str) + 1 + strlen(gid_str) + 1;
+-    *user = (char *)util_common_calloc_s(len * sizeof(char));
++    *user = (char *)util_smart_calloc_s(sizeof(char), len);
+     if (*user == NULL) {
+         ERROR("Out of memory");
+         return -1;
+diff --git a/src/daemon/modules/service/inspect_container.c b/src/daemon/modules/service/inspect_container.c
+index b060fe12..3136433f 100644
+--- a/src/daemon/modules/service/inspect_container.c
++++ b/src/daemon/modules/service/inspect_container.c
+@@ -42,12 +42,7 @@ static int dup_path_and_args(const container_t *cont, char **path, char ***args,
+         *path = util_strdup_s(cont->common_config->path);
+     }
+     if (cont->common_config->args_len > 0) {
+-        if ((cont->common_config->args_len) > SIZE_MAX / sizeof(char *)) {
+-            ERROR("Containers config args len is too many!");
+-            ret = -1;
+-            goto out;
+-        }
+-        *args = util_common_calloc_s(cont->common_config->args_len * sizeof(char *));
++        *args = util_smart_calloc_s(sizeof(char *), cont->common_config->args_len);
+         if ((*args) == NULL) {
+             ERROR("Out of memory");
+             ret = -1;
+@@ -111,12 +106,7 @@ static int dup_health_check_config(const container_config *src, container_inspec
+         goto out;
+     }
+     if (src->healthcheck->test != NULL && src->healthcheck->test_len != 0) {
+-        if (src->healthcheck->test_len > SIZE_MAX / sizeof(char *)) {
+-            ERROR("health check test is too much!");
+-            ret = -1;
+-            goto out;
+-        }
+-        dest->health_check->test = util_common_calloc_s(src->healthcheck->test_len * sizeof(char *));
++        dest->health_check->test = util_smart_calloc_s(sizeof(char *), src->healthcheck->test_len);
+         if (dest->health_check->test == NULL) {
+             ERROR("Out of memory");
+             ret = -1;
+@@ -313,11 +303,7 @@ static int mount_point_to_inspect(const container_t *cont, container_inspect *in
+     }
+ 
+     len = cont->common_config->mount_points->len;
+-    if (len > SIZE_MAX / sizeof(docker_types_mount_point *)) {
+-        ERROR("Invalid mount point size");
+-        return -1;
+-    }
+-    inspect->mounts = util_common_calloc_s(sizeof(docker_types_mount_point *) * len);
++    inspect->mounts = util_smart_calloc_s(sizeof(docker_types_mount_point *), len);
+     if (inspect->mounts == NULL) {
+         ERROR("Out of memory");
+         return -1;
+diff --git a/src/daemon/modules/service/io_handler.c b/src/daemon/modules/service/io_handler.c
+index d57894f2..893733bc 100644
+--- a/src/daemon/modules/service/io_handler.c
++++ b/src/daemon/modules/service/io_handler.c
+@@ -218,22 +218,18 @@ static void io_copy_thread_cleanup(struct io_write_wrapper *writers, struct io_c
+     free(channels);
+ }
+ 
+-static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
+-                            struct io_write_wrapper **writers, transfer_channel_type **channels)
++static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds, struct io_write_wrapper **writers,
++                            transfer_channel_type **channels)
+ {
+     size_t i;
+ 
+-    if (len > SIZE_MAX / sizeof(struct io_write_wrapper)) {
+-        ERROR("Invalid arguments");
+-        return -1;
+-    }
+-    *srcfds = util_common_calloc_s(sizeof(int) * len);
++    *srcfds = util_smart_calloc_s(sizeof(int), len);
+     if (*srcfds == NULL) {
+         ERROR("Out of memory");
+         return -1;
+     }
+ 
+-    *infds = util_common_calloc_s(sizeof(int) * len);
++    *infds = util_smart_calloc_s(sizeof(int), len);
+     if (*infds == NULL) {
+         ERROR("Out of memory");
+         return -1;
+@@ -241,7 +237,7 @@ static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
+     for (i = 0; i < len; i++) {
+         (*infds)[i] = -1;
+     }
+-    *outfds = util_common_calloc_s(sizeof(int) * len);
++    *outfds = util_smart_calloc_s(sizeof(int), len);
+     if (*outfds == NULL) {
+         ERROR("Out of memory");
+         return -1;
+@@ -250,13 +246,13 @@ static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
+         (*outfds)[i] = -1;
+     }
+ 
+-    *writers = util_common_calloc_s(sizeof(struct io_write_wrapper) * len);
++    *writers = util_smart_calloc_s(sizeof(struct io_write_wrapper), len);
+     if (*writers == NULL) {
+         ERROR("Out of memory");
+         return -1;
+     }
+ 
+-    *channels = util_common_calloc_s(sizeof(transfer_channel_type) * len);
++    *channels = util_smart_calloc_s(sizeof(transfer_channel_type), len);
+     if (*channels == NULL) {
+         ERROR("Out of memory");
+         return -1;
+@@ -266,7 +262,6 @@ static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
+         (*channels)[i] = MAX_CHANNEL;
+     }
+     return 0;
+-
+ }
+ typedef int (*src_io_type_handle)(int index, struct io_copy_arg *copy_arg, int *infds, int *srcfds);
+ 
+@@ -305,8 +300,8 @@ static int handle_src_io_max(int index, struct io_copy_arg *copy_arg, int *infds
+     return -1;
+ }
+ 
+-static int io_copy_make_srcfds(size_t len, struct io_copy_arg *copy_arg, int *infds,
+-                               int *srcfds, transfer_channel_type *channels)
++static int io_copy_make_srcfds(size_t len, struct io_copy_arg *copy_arg, int *infds, int *srcfds,
++                               transfer_channel_type *channels)
+ {
+     size_t i;
+ 
+@@ -536,11 +531,13 @@ int ready_copy_io_data(int sync_fd, bool detach, const char *fifoin, const char
+     if (fifoout != NULL) {
+         // fifos[1]  : lxc -> iSulad read
+         // fifoout   : iSulad -> iSula write
+-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FIFO, (void *)fifoout, O_WRONLY, STDOUT_CHANNEL);
++        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FIFO, (void *)fifoout, O_WRONLY,
++                            STDOUT_CHANNEL);
+     }
+ 
+     if (fifoerr != NULL) {
+-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FIFO, (void *)fifoerr, O_WRONLY, STDERR_CHANNEL);
++        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FIFO, (void *)fifoerr, O_WRONLY,
++                            STDERR_CHANNEL);
+     }
+ 
+     if (stdin_fd > 0) {
+@@ -548,11 +545,13 @@ int ready_copy_io_data(int sync_fd, bool detach, const char *fifoin, const char
+     }
+ 
+     if (stdout_handler != NULL) {
+-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FUNC, stdout_handler, O_WRONLY, STDOUT_CHANNEL);
++        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FUNC, stdout_handler, O_WRONLY,
++                            STDOUT_CHANNEL);
+     }
+ 
+     if (stderr_handler != NULL) {
+-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FUNC, stderr_handler, O_WRONLY, STDERR_CHANNEL);
++        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FUNC, stderr_handler, O_WRONLY,
++                            STDERR_CHANNEL);
+     }
+ 
+     if (start_io_copy_thread(sync_fd, detach, io_copy, len, tid) != 0) {
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index 43a4a0c9..f90ffd7d 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -1690,7 +1690,7 @@ static int dup_defs_process_user(defs_process_user *src, defs_process_user **dst
+     (*dst)->gid = src->gid;
+ 
+     if (src->additional_gids_len != 0) {
+-        (*dst)->additional_gids = util_common_calloc_s(sizeof(gid_t) * src->additional_gids_len);
++        (*dst)->additional_gids = util_smart_calloc_s(sizeof(gid_t), src->additional_gids_len);
+         if ((*dst)->additional_gids == NULL) {
+             ERROR("Out of memory");
+             ret = -1;
+diff --git a/src/daemon/modules/spec/parse_volume.c b/src/daemon/modules/spec/parse_volume.c
+index 7b02f6ca..40c4cecb 100644
+--- a/src/daemon/modules/spec/parse_volume.c
++++ b/src/daemon/modules/spec/parse_volume.c
+@@ -341,14 +341,14 @@ static int check_volume_element(const char *volume)
+     return ret;
+ }
+ 
+-static int set_volume_element_options(defs_mount *mount_element, const char **modes, bool *with_rw,
+-                                      bool *with_pro, bool *with_label)
++static int set_volume_element_options(defs_mount *mount_element, const char **modes, bool *with_rw, bool *with_pro,
++                                      bool *with_label)
+ {
+     const size_t max_options_len = 4;
+     size_t options_len = 0;
+     size_t i = 0;
+ 
+-    mount_element->options = util_common_calloc_s(max_options_len * sizeof(char *));
++    mount_element->options = util_smart_calloc_s(sizeof(char *), max_options_len);
+     if (mount_element->options == NULL) {
+         ERROR("Out of memory");
+         return -1;
+diff --git a/src/daemon/modules/spec/specs.c b/src/daemon/modules/spec/specs.c
+index 7023fa41..cf4aa111 100644
+--- a/src/daemon/modules/spec/specs.c
++++ b/src/daemon/modules/spec/specs.c
+@@ -1305,11 +1305,7 @@ static int prepare_process_args(oci_runtime_spec *oci_spec, size_t args_len)
+         oci_spec->process->args_len = 0;
+     }
+ 
+-    if (args_len > (SIZE_MAX / sizeof(char *))) {
+-        return -1;
+-    }
+-
+-    oci_spec->process->args = util_common_calloc_s(args_len * sizeof(char *));
++    oci_spec->process->args = util_smart_calloc_s(sizeof(char *), args_len);
+     if (oci_spec->process->args == NULL) {
+         return -1;
+     }
+diff --git a/src/daemon/modules/spec/specs_mount.c b/src/daemon/modules/spec/specs_mount.c
+index e55832c5..62fd875c 100644
+--- a/src/daemon/modules/spec/specs_mount.c
++++ b/src/daemon/modules/spec/specs_mount.c
+@@ -376,7 +376,7 @@ static defs_mount *mount_point_to_defs_mnt(container_config_v2_common_config_mou
+         return NULL;
+     }
+     mnt->options =
+-        util_common_calloc_s(sizeof(char *) * (options_len + 3)); // +2 for readonly/propagation/selinux_relabel
++        util_smart_calloc_s(sizeof(char *), (options_len + 3)); // +2 for readonly/propagation/selinux_relabel
+     if (mnt->options == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+@@ -1154,12 +1154,7 @@ static host_config_devices_element **parse_multi_devices(const char *dir_host, c
+         return NULL;
+     }
+ 
+-    if (devices_len > SIZE_MAX / sizeof(host_config_devices_element *)) {
+-        ERROR("Too many devices");
+-        return NULL;
+-    }
+-
+-    dev_maps = util_common_calloc_s(devices_len * sizeof(host_config_devices_element *));
++    dev_maps = util_smart_calloc_s(sizeof(host_config_devices_element *), devices_len);
+     if (dev_maps == NULL) {
+         ERROR("Memory out");
+         return NULL;
+@@ -2312,7 +2307,7 @@ static bool mount_file(defs_mount ***all_mounts, size_t *all_mounts_len, const c
+     bool ret = false;
+     defs_mount *tmp_mounts = NULL;
+ 
+-    options = util_common_calloc_s(options_len * sizeof(char *));
++    options = util_smart_calloc_s(sizeof(char *), options_len);
+     if (options == NULL) {
+         ERROR("Out of memory");
+         goto out_free;
+@@ -2359,7 +2354,7 @@ static bool add_host_channel_mount(defs_mount ***all_mounts, size_t *all_mounts_
+     bool ret = false;
+     defs_mount *tmp_mounts = NULL;
+ 
+-    options = util_common_calloc_s(options_len * sizeof(char *));
++    options = util_smart_calloc_s(sizeof(char *), options_len);
+     if (options == NULL) {
+         ERROR("Out of memory");
+         goto out_free;
+@@ -3262,7 +3257,7 @@ static int merge_all_fs_mounts(host_config *host_spec, container_config *contain
+         return 0;
+     }
+ 
+-    merged_mounts = util_common_calloc_s(sizeof(defs_mount *) * len);
++    merged_mounts = util_smart_calloc_s(sizeof(defs_mount *), len);
+     if (merged_mounts == NULL) {
+         ERROR("out of memory");
+         ret = -1;
+diff --git a/src/daemon/modules/spec/specs_security.c b/src/daemon/modules/spec/specs_security.c
+index 8a8b2d86..643c2745 100644
+--- a/src/daemon/modules/spec/specs_security.c
++++ b/src/daemon/modules/spec/specs_security.c
+@@ -42,11 +42,11 @@
+ 
+ static const char * const g_system_caps[] = { "SYS_BOOT",     "SETPCAP", "NET_RAW", "NET_BIND_SERVICE",
+ #ifdef CAP_AUDIT_WRITE
+-                                              "AUDIT_WRITE",
++                                             "AUDIT_WRITE",
+ #endif
+-                                              "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
+-                                              "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT"
+-                                            };
++                                             "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
++                                             "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT"
++                                           };
+ 
+ static int append_capability(char ***dstcaps, size_t *dstcaps_len, const char *cap)
+ {
+@@ -83,12 +83,7 @@ static int copy_capabilities(char ***dstcaps, size_t *dstcaps_len, const char **
+         *dstcaps_len = 0;
+         return ret;
+     }
+-    if (srccaps_len > SIZE_MAX / sizeof(char *)) {
+-        ERROR("Too many capabilities to copy!");
+-        return -1;
+-    }
+-
+-    *dstcaps = util_common_calloc_s(srccaps_len * sizeof(char *));
++    *dstcaps = util_smart_calloc_s(sizeof(char *), srccaps_len);
+     if (*dstcaps == NULL) {
+         ret = -1;
+         goto out;
+@@ -457,7 +452,7 @@ static bool meet_filtering_rules(const docker_seccomp *seccomp, const docker_sec
+     return meet_include_arch && meet_include_cap && meet_exclude_arch && meet_exclude_cap;
+ }
+ 
+-static size_t docker_seccomp_arches_count(const char* seccomp_architecture, const docker_seccomp *docker_seccomp_spec)
++static size_t docker_seccomp_arches_count(const char *seccomp_architecture, const docker_seccomp *docker_seccomp_spec)
+ {
+     size_t count = 0;
+     size_t i = 0;
+@@ -468,7 +463,7 @@ static size_t docker_seccomp_arches_count(const char* seccomp_architecture, cons
+     }
+ 
+     for (i = 0; i < docker_seccomp_spec->arch_map_len; ++i) {
+-        if (docker_seccomp_spec->arch_map[i] == NULL ||  docker_seccomp_spec->arch_map[i]->architecture == NULL) {
++        if (docker_seccomp_spec->arch_map[i] == NULL || docker_seccomp_spec->arch_map[i]->architecture == NULL) {
+             continue;
+         }
+         if (strcmp(seccomp_architecture, docker_seccomp_spec->arch_map[i]->architecture) == 0) {
+@@ -485,7 +480,7 @@ static size_t docker_seccomp_arches_count(const char* seccomp_architecture, cons
+     return count;
+ }
+ 
+-static int dup_architectures_to_oci_spec(const char* seccomp_architecture, const docker_seccomp *docker_seccomp_spec,
++static int dup_architectures_to_oci_spec(const char *seccomp_architecture, const docker_seccomp *docker_seccomp_spec,
+                                          oci_runtime_config_linux_seccomp *oci_seccomp_spec)
+ {
+     size_t i = 0;
+@@ -503,7 +498,7 @@ static int dup_architectures_to_oci_spec(const char* seccomp_architecture, const
+         return -1;
+     }
+ 
+-    oci_seccomp_spec->architectures = util_common_calloc_s(arch_size * sizeof(char *));
++    oci_seccomp_spec->architectures = util_smart_calloc_s(sizeof(char *), arch_size);
+     if (oci_seccomp_spec->architectures == NULL) {
+         ERROR("Failed to calloc memory for architectures in seccomp spec");
+         return -1;
+@@ -582,12 +577,7 @@ static int dup_syscall_args_to_oci_spec(const docker_seccomp_syscalls_element *d
+     if (docker_syscall->args_len == 0) {
+         return 0;
+     }
+-
+-    if (docker_syscall->args_len > (SIZE_MAX / sizeof(defs_syscall_arg *))) {
+-        return -1;
+-    }
+-
+-    oci_syscall->args = util_common_calloc_s(docker_syscall->args_len * sizeof(defs_syscall_arg *));
++    oci_syscall->args = util_smart_calloc_s(sizeof(defs_syscall_arg *), docker_syscall->args_len);
+     if (oci_syscall->args == NULL) {
+         return -1;
+     }
+@@ -620,11 +610,7 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
+         return 0;
+     }
+ 
+-    if (docker_seccomp_spec->syscalls_len > (SIZE_MAX / sizeof(defs_syscall *))) {
+-        return -1;
+-    }
+-
+-    oci_seccomp_spec->syscalls = util_common_calloc_s(docker_seccomp_spec->syscalls_len * sizeof(defs_syscall *));
++    oci_seccomp_spec->syscalls = util_smart_calloc_s(sizeof(defs_syscall *), docker_seccomp_spec->syscalls_len);
+     if (oci_seccomp_spec->syscalls == NULL) {
+         return -1;
+     }
+@@ -639,12 +625,8 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
+         }
+         oci_seccomp_spec->syscalls_len++;
+ 
+-        if (docker_seccomp_spec->syscalls[i]->names_len > (SIZE_MAX / sizeof(char *))) {
+-            return -1;
+-        }
+-
+         oci_seccomp_spec->syscalls[k]->names =
+-            util_common_calloc_s(docker_seccomp_spec->syscalls[i]->names_len * sizeof(char *));
++            util_smart_calloc_s(sizeof(char *), docker_seccomp_spec->syscalls[i]->names_len);
+         if (oci_seccomp_spec->syscalls[k]->names == NULL) {
+             return -1;
+         }
+@@ -670,8 +652,9 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
+     return 0;
+ }
+ 
+-static oci_runtime_config_linux_seccomp *trans_docker_seccomp_to_oci_format(const docker_seccomp *docker_seccomp_spec,
+-                                                                            const defs_process_capabilities *capabilities)
++static oci_runtime_config_linux_seccomp *
++trans_docker_seccomp_to_oci_format(const docker_seccomp *docker_seccomp_spec,
++                                   const defs_process_capabilities *capabilities)
+ {
+     oci_runtime_config_linux_seccomp *oci_seccomp_spec = NULL;
+ 
+@@ -771,11 +754,7 @@ static defs_syscall *make_seccomp_syscalls_element(const char **names, size_t na
+     ret->action = util_strdup_s(action ? action : "");
+     ret->args_len = args_len;
+     if (args_len) {
+-        if (args_len > SIZE_MAX / sizeof(defs_syscall_arg *)) {
+-            CRIT("Too many seccomp syscalls!");
+-            goto out;
+-        }
+-        ret->args = util_common_calloc_s(args_len * sizeof(defs_syscall_arg *));
++        ret->args = util_smart_calloc_s(sizeof(defs_syscall_arg *), args_len);
+         if (ret->args == NULL) {
+             CRIT("Memory allocation error.");
+             goto out;
+@@ -794,11 +773,7 @@ static defs_syscall *make_seccomp_syscalls_element(const char **names, size_t na
+     }
+ 
+     ret->names_len = names_len;
+-    if (names_len > SIZE_MAX / sizeof(char *)) {
+-        CRIT("Too many syscalls!");
+-        goto out;
+-    }
+-    ret->names = util_common_calloc_s(names_len * sizeof(char *));
++    ret->names = util_smart_calloc_s(sizeof(char *), names_len);
+     if (ret->names == NULL) {
+         CRIT("Memory allocation error.");
+         goto out;
+diff --git a/src/daemon/modules/spec/verify.c b/src/daemon/modules/spec/verify.c
+index 4bd11558..fe53bb0f 100644
+--- a/src/daemon/modules/spec/verify.c
++++ b/src/daemon/modules/spec/verify.c
+@@ -627,16 +627,12 @@ static bool is_cpuset_list_available(const char *provided, const char *available
+     }
+ 
+     cpu_num = sysinfo->ncpus;
+-    if ((size_t)cpu_num > SIZE_MAX / sizeof(bool)) {
+-        ERROR("invalid cpu num");
+-        goto out;
+-    }
+-    parsed_provided = util_common_calloc_s(sizeof(bool) * (unsigned int)cpu_num);
++    parsed_provided = util_smart_calloc_s(sizeof(bool), (unsigned int)cpu_num);
+     if (parsed_provided == NULL) {
+         ERROR("memory alloc failed!");
+         goto out;
+     }
+-    parsed_available = util_common_calloc_s(sizeof(bool) * (unsigned int)cpu_num);
++    parsed_available = util_smart_calloc_s(sizeof(bool), (unsigned int)cpu_num);
+     if (parsed_available == NULL) {
+         ERROR("memory alloc failed!");
+         goto out;
+@@ -1093,7 +1089,7 @@ static int verify_resources_device(defs_resources *resources)
+ 
+     for (i = 0; i < resources->devices_len; i++) {
+         if (!util_valid_device_mode(resources->devices[i]->access)) {
+-            ERROR("Invalid device mode \"%s\" for device \"%" PRId64" %" PRId64 "\"", resources->devices[i]->access,
++            ERROR("Invalid device mode \"%s\" for device \"%" PRId64 " %" PRId64 "\"", resources->devices[i]->access,
+                   resources->devices[i]->major, resources->devices[i]->minor);
+             isulad_set_error_message("Invalid device mode \"%s\" for device \"%ld %ld\"", resources->devices[i]->access,
+                                      resources->devices[i]->major, resources->devices[i]->minor);
+diff --git a/src/daemon/modules/volume/local.c b/src/daemon/modules/volume/local.c
+index 18961eb1..87b90317 100644
+--- a/src/daemon/modules/volume/local.c
++++ b/src/daemon/modules/volume/local.c
+@@ -87,7 +87,7 @@ void free_volumes_info(struct volumes_info *vols)
+     return;
+ }
+ 
+-static struct volume * dup_volume(char *name, char *path)
++static struct volume *dup_volume(char *name, char *path)
+ {
+     struct volume *vol = NULL;
+ 
+@@ -105,7 +105,7 @@ static struct volume * dup_volume(char *name, char *path)
+     return vol;
+ }
+ 
+-struct volume * local_volume_get(char *name)
++struct volume *local_volume_get(char *name)
+ {
+     struct volume *v = NULL;
+ 
+@@ -289,7 +289,7 @@ out:
+ 
+ static int load_volumes(struct volumes_info *vols)
+ {
+-    return util_scan_subdirs((const char*)vols->root_dir, load_volume, vols);
++    return util_scan_subdirs((const char *)vols->root_dir, load_volume, vols);
+ }
+ 
+ static int local_volume_init(char *scope)
+@@ -339,7 +339,7 @@ static int create_volume_meminfo(char *name, struct volume **vol)
+     struct volume *v = NULL;
+     int ret = 0;
+     int sret = 0;
+-    char path[PATH_MAX] = {0};
++    char path[PATH_MAX] = { 0 };
+ 
+     v = util_common_calloc_s(sizeof(struct volume));
+     if (v == NULL) {
+@@ -367,7 +367,7 @@ out:
+     return ret;
+ }
+ 
+-static struct volume * volume_create_nolock(char *name)
++static struct volume *volume_create_nolock(char *name)
+ {
+     struct volume *v = NULL;
+     int ret = 0;
+@@ -419,7 +419,7 @@ out:
+     return v;
+ }
+ 
+-struct volume * local_volume_create(char *name)
++struct volume *local_volume_create(char *name)
+ {
+     struct volume *v_out = NULL;
+     struct volume *v = NULL;
+@@ -473,7 +473,7 @@ static struct volumes *new_empty_volumes(size_t size)
+         return vols;
+     }
+ 
+-    vols->vols = util_common_calloc_s(sizeof(struct volume*) * size);
++    vols->vols = util_smart_calloc_s(sizeof(struct volume *), size);
+     if (vols->vols == NULL) {
+         ERROR("out of memory");
+         free_volumes(vols);
+@@ -483,7 +483,7 @@ static struct volumes *new_empty_volumes(size_t size)
+     return vols;
+ }
+ 
+-struct volumes * local_volume_list(void)
++struct volumes *local_volume_list(void)
+ {
+     int ret = 0;
+     map_itor *itor = NULL;
+@@ -661,4 +661,3 @@ out:
+ 
+     return ret;
+ }
+-
+diff --git a/src/daemon/modules/volume/volume.c b/src/daemon/modules/volume/volume.c
+index 9d496594..8255aff9 100644
+--- a/src/daemon/modules/volume/volume.c
++++ b/src/daemon/modules/volume/volume.c
+@@ -221,7 +221,7 @@ static struct volume_names * empty_volume_names(size_t size)
+         return NULL;
+     }
+ 
+-    vns->names = util_common_calloc_s(sizeof(char *) * size);
++    vns->names = util_smart_calloc_s(sizeof(char *), size);
+     if (vns->names == NULL) {
+         ERROR("out of memory");
+         ret = -1;
+@@ -575,7 +575,7 @@ int volume_prune(struct volume_names **pruned)
+     }
+ 
+     if (list->vols_len != 0) {
+-        (*pruned)->names = util_common_calloc_s(sizeof(char*) * list->vols_len);
++        (*pruned)->names = util_smart_calloc_s(sizeof(char *), list->vols_len);
+         if ((*pruned)->names == NULL) {
+             ret = -1;
+             goto out;
+diff --git a/src/utils/console/console.c b/src/utils/console/console.c
+index b0dc7ee5..3565eef3 100644
+--- a/src/utils/console/console.c
++++ b/src/utils/console/console.c
+@@ -453,11 +453,8 @@ int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper
+     size_t i = 0;
+     struct epoll_descr descr;
+     struct tty_state *ts = NULL;
+-    if (len > (SIZE_MAX / sizeof(struct tty_state)) - 1) {
+-        ERROR("Invalid io size");
+-        return -1;
+-    }
+-    ts = util_common_calloc_s(sizeof(struct tty_state) * (len + 1));
++
++    ts = util_smart_calloc_s(sizeof(struct tty_state), (len + 1));
+     if (ts == NULL) {
+         ERROR("Out of memory");
+         return -1;
+diff --git a/src/utils/cutils/utils_array.c b/src/utils/cutils/utils_array.c
+index 448c9d9d..4e2ed6fd 100644
+--- a/src/utils/cutils/utils_array.c
++++ b/src/utils/cutils/utils_array.c
+@@ -72,11 +72,7 @@ int util_array_append(char ***array, const char *element)
+     // let new len to len + 2 for element and null
+     len = util_array_len((const char **)(*array));
+ 
+-    if (len > SIZE_MAX / sizeof(char *) - 2) {
+-        ERROR("Too many array elements!");
+-        return -1;
+-    }
+-    new_array = util_common_calloc_s((len + 2) * sizeof(char *));
++    new_array = util_smart_calloc_s(sizeof(char *), (len + 2));
+     if (new_array == NULL) {
+         ERROR("Out of memory");
+         return -1;
+@@ -92,8 +88,7 @@ int util_array_append(char ***array, const char *element)
+     return 0;
+ }
+ 
+-int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
+-                    size_t increment)
++int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size, size_t increment)
+ {
+     size_t add_capacity;
+     char **add_array = NULL;
+@@ -102,7 +97,7 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
+         return -1;
+     }
+ 
+-    if (((*orig_array) == NULL)  || ((*orig_capacity) == 0)) {
++    if (((*orig_array) == NULL) || ((*orig_capacity) == 0)) {
+         UTIL_FREE_AND_SET_NULL(*orig_array);
+         *orig_capacity = 0;
+     }
+@@ -112,10 +107,7 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
+         add_capacity += increment;
+     }
+     if (add_capacity != *orig_capacity) {
+-        if (add_capacity > SIZE_MAX / sizeof(void *)) {
+-            return -1;
+-        }
+-        add_array = util_common_calloc_s(add_capacity * sizeof(void *));
++        add_array = util_smart_calloc_s(sizeof(void *), add_capacity);
+         if (add_array == NULL) {
+             return -1;
+         }
+diff --git a/src/utils/cutils/utils_string.c b/src/utils/cutils/utils_string.c
+index 8c9b2eea..de1cc60e 100644
+--- a/src/utils/cutils/utils_string.c
++++ b/src/utils/cutils/utils_string.c
+@@ -303,11 +303,7 @@ static char **util_shrink_array(char **orig_array, size_t new_size)
+     if (new_size == 0) {
+         return orig_array;
+     }
+-    if (new_size > SIZE_MAX / sizeof(char *)) {
+-        ERROR("Invalid arguments");
+-        return orig_array;
+-    }
+-    new_array = util_common_calloc_s(new_size * sizeof(char *));
++    new_array = util_smart_calloc_s(sizeof(char *), new_size);
+     if (new_array == NULL) {
+         return orig_array;
+     }
+@@ -724,11 +720,7 @@ int util_dup_array_of_strings(const char **src, size_t src_len, char ***dst, siz
+ 
+     *dst = NULL;
+     *dst_len = 0;
+-    if (src_len > SIZE_MAX / sizeof(char *)) {
+-        ERROR("Src elements is too much!");
+-        return -1;
+-    }
+-    *dst = (char **)util_common_calloc_s(src_len * sizeof(char *));
++    *dst = (char **)util_smart_calloc_s(sizeof(char *), src_len);
+     if (*dst == NULL) {
+         ERROR("Out of memory");
+         return -1;
+@@ -853,7 +845,7 @@ int util_string_array_unique(const char **elements, size_t length, char ***uniqu
+     }
+ 
+     tmp_elements_len = map_size(map);
+-    tmp_elements = (char **)util_common_calloc_s(tmp_elements_len * sizeof(char *));
++    tmp_elements = (char **)util_smart_calloc_s(sizeof(char *), tmp_elements_len);
+     if (tmp_elements == NULL) {
+         ERROR("Out of memory");
+         ret = -1;
+diff --git a/test/image/oci/oci_config_merge/oci_config_merge_ut.cc b/test/image/oci/oci_config_merge/oci_config_merge_ut.cc
+index 3c9d5004..d94229b2 100644
+--- a/test/image/oci/oci_config_merge/oci_config_merge_ut.cc
++++ b/test/image/oci/oci_config_merge/oci_config_merge_ut.cc
+@@ -353,9 +353,7 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
+             tool_image->spec->config->entrypoint_len = 1;
+         }
+ 
+-        MOCK_SET_V(util_smart_calloc_s, util_smart_calloc_s_fail);
+         ASSERT_EQ(oci_image_merge_config(tool_image, custom_config), 0);
+-        MOCK_CLEAR(util_smart_calloc_s);
+ 
+         free_imagetool_image(tool_image);
+         tool_image = nullptr;
+-- 
+2.25.1
+
