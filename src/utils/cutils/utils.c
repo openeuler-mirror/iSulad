@@ -516,7 +516,7 @@ static void set_stderr_buf(char **stderr_buf, const char *format, ...)
     int nret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
 
-    if (nret < 0 || nret >= BUFSIZ) {
+    if (nret < 0) {
         return;
     }
 

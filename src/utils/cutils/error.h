@@ -64,8 +64,7 @@ static inline void format_errorf(char **err, const char *format, ...)
 
     ret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
-    if (ret < 0 || ret >= BUFSIZ) {
-        *err = util_strdup_s("Error is too long!!!");
+    if (ret < 0) {
         return;
     }
 
