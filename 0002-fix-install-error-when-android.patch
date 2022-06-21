@@ -1,7 +1,7 @@
 From 426a282802b8b81c66e6857857a745583f816c0a Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Tue, 24 May 2022 16:51:02 +0800
-Subject: [PATCH 02/22] fix install error when android
+Subject: [PATCH 02/28] fix install error when android
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
 ---

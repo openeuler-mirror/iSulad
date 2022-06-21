@@ -1,7 +1,7 @@
 From b4596641a08891bfec9384f87815c8e671d594d4 Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Thu, 9 Jun 2022 17:07:40 +0800
-Subject: [PATCH 17/22] do not fail if gr is NULL
+Subject: [PATCH 17/28] do not fail if gr is NULL
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
 ---
