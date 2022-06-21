@@ -117,8 +117,7 @@ void Errors::Errorf(const char *fmt, ...)
 
     ret = vsnprintf(errbuf, BUFSIZ, fmt, argp);
     va_end(argp);
-    if (ret < 0 || ret >= BUFSIZ) {
-        m_message = "Error message is too long";
+    if (ret < 0) {
         return;
     }
 
