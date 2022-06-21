@@ -187,7 +187,13 @@ void WebsocketServer::EmitLog(int level, const char *line)
 
 int WebsocketServer::CreateContext()
 {
-    const size_t WS_ULIMIT_FDS { 1024 };
+    /*
+        context->lws_lookup is allocated ( sizeof(struct lws *) * max_fds ) spaces,
+        In general, max_fds should be the process maximum number of open file descriptor.
+        If WS_ULIMIT_FDS set too large, context->lws_lookup will cost too much memory.
+        If WS_ULIMIT_FDS set too small, maybe fd > max_fds and context->lws_lookup[fd] will overflow.
+    */
+    const size_t WS_ULIMIT_FDS { 10240 };
 
     m_url.SetScheme("ws");
     m_url.SetHost("localhost:" + std::to_string(m_listenPort));
@@ -208,7 +214,7 @@ int WebsocketServer::CreateContext()
 
     /* daemon set RLIMIT_NOFILE to a large value at main.c,
      * belowing lws_create_context limit the fds of websocket to RLIMIT_NOFILE,
-     * and malloced memory according to it. To reduce memory, we recover it to 1024 before create m_context.
+     * and malloced memory according to it. To reduce memory, we recover it to WS_ULIMIT_FDS before create m_context.
     */
     rlimit oldLimit, newLimit;
     newLimit.rlim_cur = WS_ULIMIT_FDS;
