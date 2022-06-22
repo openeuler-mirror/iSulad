@@ -1,0 +1,88 @@
+From 3bc72738519d6f38674c7ce8b9d89a9a5e160ae6 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Tue, 21 Jun 2022 19:15:12 +0800
+Subject: [PATCH 29/30] fix misuse of BUFSIZ
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/daemon/common/err_msg.c    | 6 +++---
+ src/daemon/entry/cri/errors.cc | 3 +--
+ src/utils/cutils/error.h       | 3 +--
+ src/utils/cutils/utils.c       | 2 +-
+ 4 files changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/src/daemon/common/err_msg.c b/src/daemon/common/err_msg.c
+index 3e62fad6..531af82b 100644
+--- a/src/daemon/common/err_msg.c
++++ b/src/daemon/common/err_msg.c
+@@ -38,7 +38,7 @@ void isulad_set_error_message(const char *format, ...)
+ 
+     ret = vsnprintf(errbuf, BUFSIZ, format, argp);
+     va_end(argp);
+-    if (ret < 0 || ret >= BUFSIZ) {
++    if (ret < 0) {
+         return;
+     }
+ 
+@@ -61,7 +61,7 @@ void isulad_try_set_error_message(const char *format, ...)
+ 
+     ret = vsnprintf(errbuf, BUFSIZ, format, argp);
+     va_end(argp);
+-    if (ret < 0 || ret >= BUFSIZ) {
++    if (ret < 0) {
+         return;
+     }
+ 
+@@ -80,7 +80,7 @@ void isulad_append_error_message(const char *format, ...)
+ 
+     ret = vsnprintf(errbuf, BUFSIZ, format, argp);
+     va_end(argp);
+-    if (ret < 0 || ret >= BUFSIZ) {
++    if (ret < 0) {
+         return;
+     }
+     result = util_string_append(g_isulad_errmsg, errbuf);
+diff --git a/src/daemon/entry/cri/errors.cc b/src/daemon/entry/cri/errors.cc
+index a80ca433..3dc3bba6 100644
+--- a/src/daemon/entry/cri/errors.cc
++++ b/src/daemon/entry/cri/errors.cc
+@@ -117,8 +117,7 @@ void Errors::Errorf(const char *fmt, ...)
+ 
+     ret = vsnprintf(errbuf, BUFSIZ, fmt, argp);
+     va_end(argp);
+-    if (ret < 0 || ret >= BUFSIZ) {
+-        m_message = "Error message is too long";
++    if (ret < 0) {
+         return;
+     }
+ 
+diff --git a/src/utils/cutils/error.h b/src/utils/cutils/error.h
+index 28ad5dec..5a8dca99 100644
+--- a/src/utils/cutils/error.h
++++ b/src/utils/cutils/error.h
+@@ -64,8 +64,7 @@ static inline void format_errorf(char **err, const char *format, ...)
+ 
+     ret = vsnprintf(errbuf, BUFSIZ, format, argp);
+     va_end(argp);
+-    if (ret < 0 || ret >= BUFSIZ) {
+-        *err = util_strdup_s("Error is too long!!!");
++    if (ret < 0) {
+         return;
+     }
+ 
+diff --git a/src/utils/cutils/utils.c b/src/utils/cutils/utils.c
+index a47c5644..010f48b9 100644
+--- a/src/utils/cutils/utils.c
++++ b/src/utils/cutils/utils.c
+@@ -516,7 +516,7 @@ static void set_stderr_buf(char **stderr_buf, const char *format, ...)
+     int nret = vsnprintf(errbuf, BUFSIZ, format, argp);
+     va_end(argp);
+ 
+-    if (nret < 0 || nret >= BUFSIZ) {
++    if (nret < 0) {
+         return;
+     }
+ 
+-- 
+2.32.1 (Apple Git-133)
+
