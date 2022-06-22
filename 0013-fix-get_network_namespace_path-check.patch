@@ -1,7 +1,7 @@
 From a96ad33008671e61bddebb744a7ac0aa3798313b Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Thu, 2 Jun 2022 10:33:07 +0800
-Subject: [PATCH 13/28] fix get_network_namespace_path check
+Subject: [PATCH 13/30] fix get_network_namespace_path check
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
@@ -29,5 +29,5 @@ index 3888f556..2bf4cc36 100644
      for (index = 0; index < jump_table_size; ++index) {
          if (strncmp(network_mode, handler_jump_table[index].mode, strlen(handler_jump_table[index].mode)) == 0) {
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 
