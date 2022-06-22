@@ -1,5 +1,5 @@
 %global _version 2.0.14
-%global _release 9
+%global _release 10
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -41,6 +41,8 @@ Patch0025:  0025-refactor-parse_volume-function.patch
 Patch0026:  0026-fix-parse-volume-failed.patch
 Patch0027:  0027-use-util_smart_calloc_t-to-prevent-overflow.patch
 Patch0028:  0028-increase-websocket-lws_lookup-size.patch
+Patch0029:  0029-fix-misuse-of-BUFSIZ.patch
+Patch0030:  0030-gc-considers-stored-monitor-pid.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -268,6 +270,12 @@ fi
 %endif
 
 %changelog
+* Wed Jun 22 2022 yangjiaqi <yangjiaqi16@huawei.com> - 2.0.14-10
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sync from upstream openeuler/iSulad
+
 * Tue Jun 21 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.14-9
 - Type: enhancement
 - ID: NA

@@ -1,7 +1,7 @@
 From b289a6b384ac5ba474dd477b2a92b89244b27c24 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Mon, 13 Jun 2022 14:35:46 +0800
-Subject: [PATCH 20/28] fix shm size set invalid when reboot
+Subject: [PATCH 20/30] fix shm size set invalid when reboot
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
@@ -242,5 +242,5 @@ index 45b21ecd..7d05deb4 100644
      ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
      ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 

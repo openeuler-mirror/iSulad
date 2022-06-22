@@ -1,7 +1,7 @@
 From 2ca552a7faee850c6cfdccc4625b4459add56074 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Tue, 21 Jun 2022 17:34:23 +0800
-Subject: [PATCH 28/28] increase websocket lws_lookup size
+Subject: [PATCH 28/30] increase websocket lws_lookup size
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
@@ -37,5 +37,5 @@ index 0e462737..98c0fee0 100644
      rlimit oldLimit, newLimit;
      newLimit.rlim_cur = WS_ULIMIT_FDS;
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 

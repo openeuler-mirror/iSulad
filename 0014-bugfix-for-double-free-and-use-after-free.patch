@@ -1,7 +1,7 @@
 From 7934311c1b1003021449b92900f3102ff77395e2 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Tue, 7 Jun 2022 15:19:20 +0800
-Subject: [PATCH 14/28] bugfix for double free and use after free
+Subject: [PATCH 14/30] bugfix for double free and use after free
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
@@ -223,5 +223,5 @@ index 8492eb4d..b0dc7ee5 100644
          return -1;
      }
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 

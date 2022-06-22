@@ -1,7 +1,7 @@
 From 31a92265a6bd29dc8f98179947406f1bb56ac5a8 Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Thu, 26 May 2022 13:53:09 +0100
-Subject: [PATCH 04/28] improve fuzz test
+Subject: [PATCH 04/30] improve fuzz test
 
 Signed-off-by: haozi007 <liuhao27@huawei.com>
 ---
@@ -115,5 +115,5 @@ index 8e975e3b..c333c0dd 100644
 +    return nullptr;
  }
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 
