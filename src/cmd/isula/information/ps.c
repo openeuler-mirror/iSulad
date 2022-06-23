@@ -889,6 +889,7 @@ static int append_header_item_field(const char *index, const char *prefix, const
         goto out;
     }
     field->name = filter_string;
+    filter_string = NULL;
     field->is_field = true;
     if (append_field(ff, field) != 0) {
         ERROR("Failed to append field");
