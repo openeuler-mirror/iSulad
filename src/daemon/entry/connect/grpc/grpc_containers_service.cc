@@ -26,6 +26,8 @@
 #include "grpc_server_tls_auth.h"
 #include "container_api.h"
 #include "isula_libutils/logger_json_file.h"
+#include "service_base.h"
+#include "create_service.h"
 
 void protobuf_timestamp_to_grpc(const types_timestamp_t *timestamp, Timestamp *gtimestamp)
 {
@@ -216,36 +218,8 @@ Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *req
 
 Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest *request, CreateResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_create_response *container_res = nullptr;
-    container_create_request *container_req = nullptr;
-
-    prctl(PR_SET_NAME, "ContCreate");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_create");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.create == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = create_request_from_grpc(request, &container_req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.create(container_req, &container_res);
-    create_response_to_grpc(container_res, reply);
-
-    free_container_create_request(container_req);
-    free_container_create_response(container_res);
-
-    return Status::OK;
+    auto createService { ContainerCreateService() };
+    return SpecificServiceRun<CreateRequest, CreateResponse>(createService, context, request, reply);
 }
 
 Status ContainerServiceImpl::Start(ServerContext *context, const StartRequest *request, StartResponse *reply)
