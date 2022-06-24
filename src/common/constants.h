@@ -154,6 +154,11 @@ extern "C" {
 /* RUNPATH is defined by -DRUNPATH=$value when execute cmake, default is "/var/run" */
 #define CLIENT_RUNDIR RUNPATH"/isula"
 
+#ifdef ENABLE_SUP_GROUPS
+#define GROUPS_NUM_MAX 32
+#define GROUPS_STR_LEN_MAX 5
+#endif
+
 typedef enum {
     CONTAINER_STATUS_UNKNOWN = 0,
     CONTAINER_STATUS_CREATED = 1,
