@@ -37,6 +37,20 @@ int update_hosts(struct service_arguments *args);
 int update_default_ulimit(struct service_arguments *args);
 int command_default_ulimit_append(command_option_t *option, const char *arg);
 
+#ifdef ENABLE_SUP_GROUPS
+#define SUP_GROUPS_OPT(cmdargs)                                                                                   \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                      \
+      false,                                                                                                      \
+      "sup-groups",                                                                                               \
+      0,                                                                                                          \
+      (cmdargs)->json_confs,                                                                                      \
+      "Set the supplementary group IDs for isulad, can be specified multiple times",                              \
+      command_append_sup_groups },                                                                                \
+
+#else
+#define SUP_GROUPS_OPT(cmdargs)
+#endif
+
 #ifdef ENABLE_USERNS_REMAP
 #define USERNS_REMAP_OPT(cmdargs)                                                                                 \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
@@ -149,6 +163,7 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       &(cmdargs)->json_confs->storage_opts,                                                                       \
       "Storage driver options",                                                                                   \
       command_append_array },                                                                                     \
+    SUP_GROUPS_OPT(cmdargs)                                                                                       \
     { CMD_OPT_TYPE_CALLBACK,                                                                                      \
       false,                                                                                                      \
       "registry-mirrors",                                                                                         \

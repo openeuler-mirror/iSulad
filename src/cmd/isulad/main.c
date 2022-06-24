@@ -40,6 +40,9 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/time.h>
+#ifdef ENABLE_SUP_GROUPS
+#include <grp.h>
+#endif
 #ifdef SYSTEMD_NOTIFY
 #include <systemd/sd-daemon.h>
 #endif
@@ -1178,6 +1181,16 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
     char *isulad_root = NULL;
 #endif
     mode_t mode = CONFIG_DIRECTORY_MODE;
+
+#ifdef ENABLE_SUP_GROUPS
+    if (args->json_confs->sup_groups_len > 0) {
+        if (setgroups(args->json_confs->sup_groups_len, args->json_confs->sup_groups) != 0) {
+            SYSERROR("failed to setgroups");
+            ret = -1;
+            goto out;
+        }
+    }
+#endif
 
     if (check_and_save_pid(args->json_confs->pidfile) != 0) {
         ERROR("Failed to save pid");

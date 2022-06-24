@@ -109,6 +109,12 @@ if (ENABLE_USERNS_REMAP)
     message("${Green}--  Enable userns remap${ColourReset}")
 endif()
 
+option(ENABLE_SUP_GROUPS "enable sup groups" OFF)
+if (ENABLE_SUP_GROUPS)
+    add_definitions(-DENABLE_SUP_GROUPS)
+    message("${Green}--  Enable sup groups${ColourReset}")
+endif()
+
 if (NOT RUNPATH)
     set(RUNPATH "/var/run")
 endif()

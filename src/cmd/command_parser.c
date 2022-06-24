@@ -26,6 +26,9 @@
 #include "constants.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
+#ifdef ENABLE_SUP_GROUPS
+#include "isula_libutils/isulad_daemon_configs.h"
+#endif
 #include "utils_array.h"
 #include "utils_convert.h"
 #include "utils_string.h"
@@ -446,6 +449,84 @@ int command_valid_socket_append_array(command_option_t *option, const char *arg)
 
     return 0;
 }
+
+#ifdef ENABLE_SUP_GROUPS
+static int parse_sup_groups(const char *arg, gid_t *group)
+{
+    int i = 0;
+    size_t size = 0;
+    unsigned int converted = 0;
+
+    if (arg == NULL) {
+        return -1;
+    }
+
+    size = strlen(arg);
+    if (size > GROUPS_STR_LEN_MAX) {
+        COMMAND_ERROR("Invalid groups, string too long. groups: %s", arg);
+        return -1;
+    }
+
+    for (i = 0; i < size; i++) {
+        if (!isdigit(arg[i])) {
+            COMMAND_ERROR("Invalid groups, only number is valid. groups: %s", arg);
+            return -1;
+        }
+    }
+
+    if (util_safe_uint(arg, &converted) != 0) {
+        COMMAND_ERROR("Invalid groups, convert to uint failed. groups: %s", arg);
+        return -1;
+    }
+
+    if (converted >= NGROUPS_MAX) {
+        COMMAND_ERROR("Invalid groups, exceeded the max id %d. groups: %s", NGROUPS_MAX - 1, arg);
+        return -1;
+    }
+
+    *group = converted;
+
+    return 0;
+}
+
+int command_append_sup_groups(command_option_t *option, const char *arg)
+{
+    isulad_daemon_configs *json_confs = NULL;
+    gid_t group = 0;
+
+    if (option == NULL) {
+        return -1;
+    }
+
+    json_confs = (isulad_daemon_configs *) option->data;
+    if (json_confs == NULL) {
+        return -1;
+    }
+
+    if (json_confs->sup_groups_len == GROUPS_NUM_MAX) {
+        COMMAND_ERROR("Too many groups IDs, max is %d", GROUPS_NUM_MAX);
+        return -1;
+    }
+
+    if (parse_sup_groups(arg, &group) < 0) {
+        return -1;
+    }
+
+    if (json_confs->sup_groups == NULL) {
+        json_confs->sup_groups = (gid_t *) util_smart_calloc_s(sizeof(gid_t), GROUPS_NUM_MAX);
+        if (json_confs->sup_groups == NULL) {
+            COMMAND_ERROR("Out of memory");
+            return -1;
+        }
+        json_confs->sup_groups_len = 0;
+    }
+
+    json_confs->sup_groups[json_confs->sup_groups_len] = group;
+    json_confs->sup_groups_len++;
+
+    return 0;
+}
+#endif
 
 int command_append_array(command_option_t *option, const char *arg)
 {
