@@ -898,7 +898,6 @@ static int append_header_item_field(const char *index, const char *prefix, const
     }
 
     field = NULL;
-    filter_string = NULL;
 
 out:
     free(sub_patten);
