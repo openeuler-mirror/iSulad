@@ -2639,6 +2639,59 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_USERNS_REMAP
+static int change_shm_parent_dirs_owner_for_userns_remap(const host_config *host_spec, const char *spath)
+{
+    int ret = 0;
+    char *tmp_path = NULL;
+    char *p = NULL;
+    char *userns_remap = NULL;
+
+    if (host_spec->user_remap != NULL) {
+        return 0;
+    }
+    userns_remap = conf_get_isulad_userns_remap();
+    if (userns_remap == NULL) {
+        return 0;
+    }
+
+    // find parent directory
+    tmp_path = util_strdup_s(spath);
+    p = strrchr(tmp_path, '/');
+    if (p == NULL) {
+        ERROR("Failed to find parent directory for %s", tmp_path);
+        ret = -1;
+        goto out;
+    }
+    *p = '\0';
+
+    if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", tmp_path);
+        ret = -1;
+        goto out;
+    }
+
+    p = strrchr(tmp_path, '/');
+    if (p == NULL) {
+        ERROR("Failed to find parent directory for %s", tmp_path);
+        ret = -1;
+        goto out;
+    }
+    *p = '\0';
+
+    if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", tmp_path);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(tmp_path);
+    free(userns_remap);
+    return ret;
+}
+#endif
+
 int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
 #define MAX_PROPERTY_LEN 64
@@ -2647,11 +2700,6 @@ int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2
     int nret = 0;
     bool has_mount = false;
     char *spath = NULL;
-#ifdef ENABLE_USERNS_REMAP
-    char *tmp_path = NULL;
-    char *p = NULL;
-    char *userns_remap = NULL;
-#endif
 
     // ignore shm of system container
     if (host_spec->system_container) {
@@ -2698,34 +2746,9 @@ int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2
     }
 
 #ifdef ENABLE_USERNS_REMAP
-    userns_remap = conf_get_isulad_userns_remap();
-
-    if (host_spec->user_remap == NULL && userns_remap != NULL) {
-        // find parent directory
-        tmp_path = util_strdup_s(spath);
-        p = strrchr(tmp_path, '/');
-        if (p == NULL) {
-            ERROR("Failed to find parent directory for %s", tmp_path);
-            goto out;
-        }
-        *p = '\0';
-
-        if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
-            ERROR("Unable to change directory %s owner for user remap.", tmp_path);
-            goto out;
-        }
-
-        p = strrchr(tmp_path, '/');
-        if (p == NULL) {
-            ERROR("Failed to find parent directory for %s", tmp_path);
-            goto out;
-        }
-        *p = '\0';
-
-        if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
-            ERROR("Unable to change directory %s owner for user remap.", tmp_path);
-            goto out;
-        }
+    if (change_shm_parent_dirs_owner_for_userns_remap(host_spec, spath) != 0) {
+        ERROR("Failed to change shm directory owner for user remap.");
+        goto out;
     }
 #endif
 
@@ -2735,10 +2758,6 @@ out:
         (void)umount(spath);
     }
     free(spath);
-#ifdef ENABLE_USERNS_REMAP
-    free(tmp_path);
-    free(userns_remap);
-#endif
     return ret;
 }
 
