@@ -128,17 +128,9 @@ private:
 
     void info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
-    int create_request_from_grpc(const CreateRequest *grequest, container_create_request **request);
-
-    void create_response_to_grpc(const container_create_response *response, CreateResponse *gresponse);
-
-    int start_request_from_grpc(const StartRequest *grequest, container_start_request **request);
-
     int top_request_from_grpc(const TopRequest *grequest, container_top_request **request);
 
     void top_response_to_grpc(const container_top_response *response, TopResponse *gresponse);
-
-    int stop_request_from_grpc(const StopRequest *grequest, container_stop_request **request);
 
     int restart_request_from_grpc(const RestartRequest *grequest, container_restart_request **request);
 

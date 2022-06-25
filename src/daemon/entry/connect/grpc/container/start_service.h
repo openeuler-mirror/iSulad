@@ -9,11 +9,11 @@
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
  * Author: wujing
- * Create: 2022-06-14
- * Description: define grpc container create service functions
+ * Start: 2022-06-24
+ * Description: define grpc container start service functions
  ******************************************************************************/
-#ifndef DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_CREATE_SERVICE_H
-#define DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_CREATE_SERVICE_H
+#ifndef DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_START_SERVICE_H
+#define DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_START_SERVICE_H
 
 #include "service_base.h"
 #include <grpc++/grpc++.h>
@@ -25,21 +25,21 @@ using grpc::ServerContext;
 // Implement of containers service
 using namespace containers;
 
-class ContainerCreateService : public ContainerServiceBase<CreateRequest, CreateResponse> {
+class ContainerStartService : public ContainerServiceBase<StartRequest, StartResponse> {
 public:
-    ContainerCreateService() = default;
-    ContainerCreateService(const ContainerCreateService &) = default;
-    ContainerCreateService &operator=(const ContainerCreateService &) = delete;
-    ~ContainerCreateService() = default;
+    ContainerStartService() = default;
+    ContainerStartService(const ContainerStartService &) = default;
+    ContainerStartService &operator=(const ContainerStartService &) = delete;
+    ~ContainerStartService() = default;
 
 protected:
     void SetThreadName() override;
     Status Authenticate(ServerContext *context) override;
     bool WithServiceExecutorOperator(service_executor_t *cb) override;
-    int FillRequestFromgRPC(const CreateRequest *request, void *containerReq) override;
+    int FillRequestFromgRPC(const StartRequest *request, void *containerReq) override;
     void ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes) override;
-    void FillResponseTogRPC(void *containerRes, CreateResponse *reply) override;
+    void FillResponseTogRPC(void *containerRes, StartResponse *reply) override;
     void CleanUp(void *containerReq, void *containerRes) override;
 };
 
-#endif // DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_CREATE_SERVICE_H
+#endif // DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_START_SERVICES_H

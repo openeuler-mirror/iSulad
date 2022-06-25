@@ -12,8 +12,8 @@
  * Create: 2022-06-14
  * Description: provide container service base functions
  ******************************************************************************/
-#ifndef DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_SERVICES_CONTAINERS_SERVICE_H
-#define DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_SERVICES_CONTAINERS_SERVICE_H
+#ifndef DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_SERVICE_BASE_H
+#define DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_SERVICE_BASE_H
 #include <grpc++/grpc++.h>
 #include <string>
 
@@ -87,6 +87,21 @@ protected:
     virtual void CleanUp(void *containerReq, void *containerRes) = 0;
 };
 
+template <class T1, class T2>
+void ResponseToGrpc(const T1 *response, T2 *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
+        return;
+    }
+
+    gresponse->set_cc(response->cc);
+
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+}
+
 template <class REQUEST, class RESPONSE>
 auto SpecificServiceRun(ContainerServiceBase<REQUEST, RESPONSE> &service, ServerContext *context,
                         const REQUEST *request, RESPONSE *response) noexcept -> Status
@@ -94,4 +109,4 @@ auto SpecificServiceRun(ContainerServiceBase<REQUEST, RESPONSE> &service, Server
     return service.Run(context, request, response);
 }
 
-#endif // DAEMON_ENTRY_CONNECT_GRPC_CONTAINERS_SERVICE_CONTAINERS_SERVICE_H
+#endif // DAEMON_ENTRY_CONNECT_GRPC_CONTAINER_SERVICE_BASE_H
