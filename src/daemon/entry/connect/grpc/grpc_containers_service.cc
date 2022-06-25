@@ -28,6 +28,8 @@
 #include "isula_libutils/logger_json_file.h"
 #include "service_base.h"
 #include "create_service.h"
+#include "start_service.h"
+#include "stop_service.h"
 
 void protobuf_timestamp_to_grpc(const types_timestamp_t *timestamp, Timestamp *gtimestamp)
 {
@@ -224,36 +226,8 @@ Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest 
 
 Status ContainerServiceImpl::Start(ServerContext *context, const StartRequest *request, StartResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_start_request *req = nullptr;
-    container_start_response *res = nullptr;
-
-    prctl(PR_SET_NAME, "ContStart");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_start");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.start == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = start_request_from_grpc(request, &req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::CANCELLED;
-    }
-
-    (void)cb->container.start(req, &res, -1, nullptr, nullptr);
-    response_to_grpc(res, reply);
-
-    free_container_start_request(req);
-    free_container_start_response(res);
-
-    return Status::OK;
+    auto startService { ContainerStartService() };
+    return SpecificServiceRun<StartRequest, StartResponse>(startService, context, request, reply);
 }
 
 struct RemoteStartContext {
@@ -415,36 +389,8 @@ Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *reque
 
 Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *request, StopResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_stop_request *container_req = nullptr;
-    container_stop_response *container_res = nullptr;
-
-    prctl(PR_SET_NAME, "ContStop");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_stop");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.stop == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = stop_request_from_grpc(request, &container_req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.stop(container_req, &container_res);
-    response_to_grpc(container_res, reply);
-
-    free_container_stop_request(container_req);
-    free_container_stop_response(container_res);
-
-    return Status::OK;
+    auto stopService { ContainerStopService() };
+    return SpecificServiceRun<StopRequest, StopResponse>(stopService, context, request, reply);
 }
 
 Status ContainerServiceImpl::Restart(ServerContext *context, const RestartRequest *request, RestartResponse *reply)
