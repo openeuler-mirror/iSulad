@@ -87,6 +87,10 @@ int have_short_options(command_t *self, char arg);
 
 int command_valid_socket_append_array(command_option_t *option, const char *arg);
 
+#ifdef ENABLE_SUP_GROUPS
+int command_append_sup_groups(command_option_t *option, const char *arg);
+#endif
+
 int command_append_array(command_option_t *option, const char *arg);
 
 int command_convert_u16(command_option_t *option, const char *arg);
