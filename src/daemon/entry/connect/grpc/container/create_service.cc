@@ -31,9 +31,7 @@ bool ContainerCreateService::WithServiceExecutorOperator(service_executor_t *cb)
 
 int ContainerCreateService::FillRequestFromgRPC(const CreateRequest *request, void *contReq)
 {
-    container_create_request *tmpreq = nullptr;
-
-    tmpreq = static_cast<container_create_request *>(util_common_calloc_s(sizeof(container_create_request)));
+    auto *tmpreq = static_cast<container_create_request *>(util_common_calloc_s(sizeof(container_create_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;

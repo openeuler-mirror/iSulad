@@ -31,8 +31,7 @@ bool ContainerStopService::WithServiceExecutorOperator(service_executor_t *cb)
 
 int ContainerStopService::FillRequestFromgRPC(const StopRequest *request, void *contReq)
 {
-    container_stop_request *tmpreq = static_cast<container_stop_request *>(util_common_calloc_s(sizeof(
-                                                                                                    container_stop_request)));
+    auto *tmpreq = static_cast<container_stop_request *>(util_common_calloc_s(sizeof(container_stop_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
