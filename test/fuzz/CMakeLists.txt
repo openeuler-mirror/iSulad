@@ -4,37 +4,44 @@ execute_process(COMMAND bash "-c" "find /usr -name *libclang_rt.fuzzer-${CMAKE_H
     OUTPUT_VARIABLE LIB_FUZZING_ENGINE
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+execute_process(COMMAND bash "-c" "which gclang"
+    OUTPUT_VARIABLE GCLANG_BINARY
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+execute_process(COMMAND bash "-c" "which gclang++"
+    OUTPUT_VARIABLE GCLANG_PP_BINARY
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
 IF(LIB_FUZZING_ENGINE STREQUAL "")
     MESSAGE(WARNING "LIB_FUZZING_ENGINE IS NULL, WILL IGNORE DIRECTORY <FUZZ> COMPILE")
     RETURN()
 ENDIF()
 
-MESSAGE(STATUS "LIB_FUZZING_ENGINE is set to ${LIB_FUZZING_ENGINE}")
+IF(GCLANG_BINARY STREQUAL "")
+    MESSAGE(WARNING "GCLANG_BINARY IS NULL, WILL IGNORE DIRECTORY <FUZZ> COMPILE")
+    RETURN()
+ENDIF()
 
-SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address -fsanitize-coverage=trace-pc")
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUGS} -fsanitize=address -fsanitize-coverage=trace-pc")
+IF(GCLANG_PP_BINARY STREQUAL "")
+    MESSAGE(WARNING "GCLANG_PP_BINARY IS NULL, WILL IGNORE DIRECTORY <FUZZ> COMPILE")
+    RETURN()
+ENDIF()
+
+MESSAGE(STATUS "LIB_FUZZING_ENGINE is set to ${LIB_FUZZING_ENGINE}")
+MESSAGE(STATUS "GCLANG_BINARY is set to ${GCLANG_BINARY}")
+MESSAGE(STATUS "GCLANG_PP_BINARY is set to ${GCLANG_PP_BINARY}")
+
+SET(CMAKE_C_COMPILER "${GCLANG_BINARY}")
+SET(CMAKE_CXX_COMPILER "${GCLANG_PP_BINARY}")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 --coverage -fsanitize=fuzzer,address -fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage -std=c++11 -fsanitize=fuzzer,address -fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-SET(EXE0 im_oci_image_exist_fuzz)
-SET(EXE1 im_config_image_exist_fuzz)
-SET(EXE2 im_get_image_count_fuzz)
-SET(EXE3 test_volume_mount_spec_fuzz)
-SET(EXE4 test_volume_parse_volume_fuzz)
-SET(EXE5 test_pw_obj_parser_fuzz)
-SET(EXE6 test_gr_obj_parser_fuzz)
+SET(EXE0 test_volume_mount_spec_fuzz)
+SET(EXE1 test_volume_parse_volume_fuzz)
+SET(EXE2 test_pw_obj_parser_fuzz)
+SET(EXE3 test_gr_obj_parser_fuzz)
 add_executable(${EXE0}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/isulad_config.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/daemon_arguments.c
-    im_oci_image_exist_fuzz.cc)
-add_executable(${EXE1}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/isulad_config.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/daemon_arguments.c
-    im_config_image_exist_fuzz.cc)
-add_executable(${EXE2}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/isulad_config.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/daemon_arguments.c
-    im_get_image_count_fuzz.cc)
-add_executable(${EXE3}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/map.c
@@ -49,9 +56,10 @@ add_executable(${EXE3}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_mount_spec.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/isulad_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/daemon_arguments.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/err_msg.c
     test_volume_mount_spec_fuzz.cc
     )
-add_executable(${EXE4}
+add_executable(${EXE1}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/map.c
@@ -66,9 +74,10 @@ add_executable(${EXE4}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/spec/parse_volume.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/isulad_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/config/daemon_arguments.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/err_msg.c
     test_volume_parse_volume_fuzz.cc
     )
-add_executable(${EXE5}
+add_executable(${EXE2}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_string.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_array.c
@@ -83,7 +92,7 @@ add_executable(${EXE5}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
     test_pw_obj_parser_fuzz.cc
     )
-add_executable(${EXE6}
+add_executable(${EXE3}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_string.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_array.c
@@ -129,48 +138,24 @@ target_include_directories(${EXE1} PUBLIC
 
 target_include_directories(${EXE2} PUBLIC
     ${IMAGE_FUZZ_INCLUDE_DIRS}
-    )
-
-target_include_directories(${EXE3} PUBLIC
-    ${IMAGE_FUZZ_INCLUDE_DIRS}
-    )
-
-target_include_directories(${EXE4} PUBLIC
-    ${IMAGE_FUZZ_INCLUDE_DIRS}
-    )
-
-target_include_directories(${EXE5} PUBLIC
-    ${IMAGE_FUZZ_INCLUDE_DIRS}
 )
 
-target_include_directories(${EXE6} PUBLIC
+target_include_directories(${EXE3} PUBLIC
     ${IMAGE_FUZZ_INCLUDE_DIRS}
 )
 
 set_target_properties(${EXE0} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${EXE0} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
-target_link_libraries(${EXE0} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lisulad_img -lgcov)
+set_target_properties(${EXE0} PROPERTIES LINK_FLAGS "--coverage -fsanitize=fuzzer,address -fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep")
+target_link_libraries(${EXE0} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz)
 
 set_target_properties(${EXE1} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${EXE1} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
-target_link_libraries(${EXE1} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lisulad_img -lgcov)
+set_target_properties(${EXE1} PROPERTIES LINK_FLAGS "--coverage -fsanitize=fuzzer,address -fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep")
+target_link_libraries(${EXE1} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz)
 
 set_target_properties(${EXE2} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${EXE2} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
-target_link_libraries(${EXE2} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lisulad_img -lgcov)
+set_target_properties(${EXE2} PROPERTIES LINK_FLAGS "--coverage -fsanitize=fuzzer,address -fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep")
+target_link_libraries(${EXE2} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz)
 
 set_target_properties(${EXE3} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${EXE3} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
-target_link_libraries(${EXE3} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
-
-set_target_properties(${EXE4} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${EXE4} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
-target_link_libraries(${EXE4} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
-
-set_target_properties(${EXE5} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${EXE5} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
-target_link_libraries(${EXE5} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
-
-set_target_properties(${EXE6} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${EXE6} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
-target_link_libraries(${EXE6} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
+set_target_properties(${EXE3} PROPERTIES LINK_FLAGS "--coverage -fsanitize=fuzzer,address -fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep")
+target_link_libraries(${EXE3} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz)
