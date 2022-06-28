@@ -671,11 +671,15 @@ static void wait_exit_fifo(const char *id, const int exit_fifo_fd)
     int nret = 0;
     int exit_code = 0;
     const int WAIT_TIMEOUT = 3;
-    fd_set set = { 0 };
-    struct timeval timeout = { 0 };
+    fd_set set;
+    struct timeval timeout;
 
+    FD_ZERO(&set);
     FD_SET(exit_fifo_fd, &set);
+
     timeout.tv_sec = WAIT_TIMEOUT;
+    timeout.tv_usec = 0;
+
     nret = select(exit_fifo_fd + 1, &set, NULL, NULL, &timeout);
     if (nret < 0) {
         ERROR("Wait containers %s 's monitor on fd %d error: %s", id, exit_fifo_fd,
