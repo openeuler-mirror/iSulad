@@ -35,6 +35,10 @@
 #include "delete_service.h"
 #include "pause_service.h"
 #include "resume_service.h"
+#include "exec_service.h"
+#include "inspect_service.h"
+#include "list_service.h"
+#include "rename_service.h"
 
 void protobuf_timestamp_to_grpc(const types_timestamp_t *timestamp, Timestamp *gtimestamp)
 {
@@ -418,36 +422,8 @@ Status ContainerServiceImpl::Delete(ServerContext *context, const DeleteRequest 
 
 Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *request, ExecResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_exec_request *container_req = nullptr;
-    container_exec_response *container_res = nullptr;
-
-    prctl(PR_SET_NAME, "ContExec");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_exec_create");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.exec == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = exec_request_from_grpc(request, &container_req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::CANCELLED;
-    }
-
-    (void)cb->container.exec(container_req, &container_res, -1, nullptr, nullptr);
-    exec_response_to_grpc(container_res, reply);
-
-    free_container_exec_request(container_req);
-    free_container_exec_response(container_res);
-
-    return Status::OK;
+    auto execService = ContainerExecService();
+    return SpecificServiceRun<ExecRequest, ExecResponse>(execService, context, request, reply);
 }
 
 ssize_t WriteExecStdoutResponseToRemoteClient(void *context, const void *data, size_t len)
@@ -484,8 +460,8 @@ class RemoteExecReceiveFromClientTask : public StoppableThread {
 public:
     RemoteExecReceiveFromClientTask() = default;
     RemoteExecReceiveFromClientTask(ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream, int read_pipe_fd)
-            : m_stream(stream)
-            , m_read_pipe_fd(read_pipe_fd)
+        : m_stream(stream)
+        , m_read_pipe_fd(read_pipe_fd)
     {
     }
     ~RemoteExecReceiveFromClientTask() = default;
@@ -556,7 +532,9 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
 
         receive_task.SetStream(stream);
         receive_task.SetReadPipeFd(read_pipe_fd[1]);
-        command_writer = std::thread([&]() { receive_task.run(); });
+        command_writer = std::thread([&]() {
+            receive_task.run();
+        });
     }
 
     struct io_write_wrapper StdoutstringWriter = { 0 };
@@ -597,71 +575,15 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
 Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContainerRequest *request,
                                      InspectContainerResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_inspect_request *container_req = nullptr;
-    container_inspect_response *container_res = nullptr;
-
-    prctl(PR_SET_NAME, "ContInspect");
-
-    Status status = GrpcServerTlsAuth::auth(context, "container_inspect");
-    if (!status.ok()) {
-        return status;
-    }
-
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.inspect == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = inspect_request_from_grpc(request, &container_req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.inspect(container_req, &container_res);
-    inspect_response_to_grpc(container_res, reply);
-
-    free_container_inspect_request(container_req);
-    free_container_inspect_response(container_res);
-
-    return Status::OK;
+    auto inspectService = ContainerInspectService();
+    return SpecificServiceRun<InspectContainerRequest, InspectContainerResponse>(inspectService, context, request,
+                                                                                 reply);
 }
 
 Status ContainerServiceImpl::List(ServerContext *context, const ListRequest *request, ListResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_list_request *container_req = nullptr;
-    container_list_response *container_res = nullptr;
-
-    prctl(PR_SET_NAME, "ContList");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_list");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.list == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = list_request_from_grpc(request, &container_req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.list(container_req, &container_res);
-    list_response_to_grpc(container_res, reply);
-
-    free_container_list_request(container_req);
-    free_container_list_response(container_res);
-
-    return Status::OK;
+    auto listService = ContainerListService();
+    return SpecificServiceRun<ListRequest, ListResponse>(listService, context, request, reply);
 }
 
 struct AttachContext {
@@ -854,37 +776,8 @@ Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest 
 
 Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest *request, RenameResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    struct isulad_container_rename_request *isuladreq = nullptr;
-    struct isulad_container_rename_response *isuladres = nullptr;
-
-    prctl(PR_SET_NAME, "ContRename");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_rename");
-    if (!status.ok()) {
-        return status;
-    }
-
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.rename == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = container_rename_request_from_grpc(request, &isuladreq);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.rename(isuladreq, &isuladres);
-    container_rename_response_to_grpc(isuladres, reply);
-
-    isulad_container_rename_request_free(isuladreq);
-    isulad_container_rename_response_free(isuladres);
-
-    return Status::OK;
+    auto renameService = ContainerRenameService();
+    return SpecificServiceRun<RenameRequest, RenameResponse>(renameService, context, request, reply);
 }
 
 Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest *request, ResizeResponse *reply)

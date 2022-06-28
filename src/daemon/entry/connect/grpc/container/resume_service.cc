@@ -49,7 +49,7 @@ int ContainerResumeService::FillRequestFromgRPC(const ResumeRequest *request, vo
 void ContainerResumeService::ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes)
 {
     (void)cb->container.resume(static_cast<container_resume_request *>(containerReq),
-                              static_cast<container_resume_response **>(containerRes));
+                               static_cast<container_resume_response **>(containerRes));
 }
 
 void ContainerResumeService::FillResponseTogRPC(void *containerRes, ResumeResponse *gresponse)

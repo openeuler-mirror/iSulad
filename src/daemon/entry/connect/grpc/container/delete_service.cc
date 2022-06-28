@@ -51,7 +51,7 @@ int ContainerDeleteService::FillRequestFromgRPC(const DeleteRequest *request, vo
 void ContainerDeleteService::ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes)
 {
     (void)cb->container.remove(static_cast<container_delete_request *>(containerReq),
-                             static_cast<container_delete_response **>(containerRes));
+                               static_cast<container_delete_response **>(containerRes));
 }
 
 void ContainerDeleteService::FillResponseTogRPC(void *containerRes, DeleteResponse *gresponse)
