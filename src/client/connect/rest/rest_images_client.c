@@ -35,12 +35,9 @@ static int image_load_request_to_rest(const struct isula_load_request *request, 
         return -1;
     }
 
-    if (request->file != NULL) {
-        crequest->file = util_strdup_s(request->file);
-    }
-    if (request->type != NULL) {
-        crequest->type = util_strdup_s(request->type);
-    }
+    crequest->file = util_strdup_s(request->file);
+    crequest->type = util_strdup_s(request->type);
+    crequest->tag = util_strdup_s(request->tag);
     *body = image_load_image_request_generate_json(crequest, NULL, &err);
     if (*body == NULL) {
         ERROR("Failed to generate image load request json:%s", err);
