@@ -1,7 +1,7 @@
 From 12bbd939c1c2c55d0906b5a53a0b9b26b616c56b Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Fri, 10 Jun 2022 04:16:48 +0100
-Subject: [PATCH 19/28] add null terminal at end of gr mem list
+Subject: [PATCH 19/30] add null terminal at end of gr mem list
 
 Signed-off-by: haozi007 <liuhao27@huawei.com>
 ---
@@ -52,5 +52,5 @@ index c289e2b9..2a6b7e08 100644
          }
          EXPECT_TRUE(pgr == &gr);
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 

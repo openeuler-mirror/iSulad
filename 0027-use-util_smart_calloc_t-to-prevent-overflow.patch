@@ -1,7 +1,7 @@
 From 7eda716c55d2247a79519a9f0a0950878eca6bf2 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Thu, 16 Jun 2022 19:53:11 +0800
-Subject: [PATCH 27/28] use util_smart_calloc_t to prevent overflow
+Subject: [PATCH 27/30] use util_smart_calloc_t to prevent overflow
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
@@ -2102,5 +2102,5 @@ index 3c9d5004..d94229b2 100644
          free_imagetool_image(tool_image);
          tool_image = nullptr;
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 
