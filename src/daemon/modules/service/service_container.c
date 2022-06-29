@@ -662,6 +662,39 @@ static int verify_mounts(const container_t *cont)
     return 0;
 }
 
+static void wait_exit_fifo(const char *id, const int exit_fifo_fd)
+{
+    int nret = 0;
+    int exit_code = 0;
+    const int WAIT_TIMEOUT = 3;
+    fd_set set;
+    struct timeval timeout;
+
+    FD_ZERO(&set);
+    FD_SET(exit_fifo_fd, &set);
+
+    timeout.tv_sec = WAIT_TIMEOUT;
+    timeout.tv_usec = 0;
+
+    nret = select(exit_fifo_fd + 1, &set, NULL, NULL, &timeout);
+    if (nret < 0) {
+        ERROR("Wait containers %s 's monitor on fd %d error: %s", id, exit_fifo_fd,
+              errno ? strerror(errno) : "");
+        return;
+    }
+
+    if (nret == 0) {
+        // timeout
+        // maybe monitor still cleanup cgroup and processes,
+        // or monitor doesn't step in cleanup at all
+        ERROR("Wait containers %s 's monitor on fd %d timeout", id, exit_fifo_fd);
+        return;
+    }
+
+    (void)util_read_nointr(exit_fifo_fd, &exit_code, sizeof(int));
+    ERROR("The container %s 's monitor on fd %d has exited: %d", id, exit_fifo_fd, exit_code);
+}
+
 static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm, pid_ppid_info_t *pid_info)
 {
     int ret = 0;
@@ -827,6 +860,8 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
             goto clean_resources;
         }
     } else {
+        // wait monitor cleanup cgroup and processes finished
+        wait_exit_fifo(id, exit_fifo_fd);
         goto close_exit_fd;
     }
     goto out;
