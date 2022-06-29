@@ -1,7 +1,7 @@
 From fdb731d7a272eb1574ef31b058beffbefffa1eb2 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Wed, 18 May 2022 10:30:35 +0800
-Subject: [PATCH 26/28] fix parse volume failed
+Subject: [PATCH 26/30] fix parse volume failed
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
@@ -89,5 +89,5 @@ index 3afa0962..7b02f6ca 100644
      util_free_array(modes);
      if (ret != 0) {
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 

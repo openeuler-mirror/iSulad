@@ -1,7 +1,7 @@
 From 59557dbd1b4d0bde973941d383a30a7b9e0d63d4 Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Thu, 16 Jun 2022 09:16:47 +0800
-Subject: [PATCH 23/28] fix inspect -f error when bionic
+Subject: [PATCH 23/30] fix inspect -f error when bionic
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
 ---
@@ -28,5 +28,5 @@ index 5058fb95..55366551 100644
  #define JSON_FORMAT_SECOND "^\\s*\\{\\s*\\{\\s*json\\s+(\\.\\w+)+\\s*\\}\\s*\\}\\s*$"
  #endif
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 
