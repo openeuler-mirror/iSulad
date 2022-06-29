@@ -1,7 +1,7 @@
 From 1db2941da2eba089f3ed07c59f4925c857860023 Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Tue, 31 May 2022 03:33:16 +0100
-Subject: [PATCH 06/28] fix different type convert
+Subject: [PATCH 06/30] fix different type convert
 
 Signed-off-by: haozi007 <liuhao27@huawei.com>
 ---
@@ -260,5 +260,5 @@ index 5ea1677c..37475b33 100644
      size_t ssize, dsize;
  
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 
