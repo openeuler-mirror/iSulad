@@ -1,7 +1,7 @@
 From 4c945810da8c645eb048e5fbb3a195da855bdcf7 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Sat, 14 May 2022 17:13:26 +0800
-Subject: [PATCH 24/28] refactor devmapper_parse_options function
+Subject: [PATCH 24/30] refactor devmapper_parse_options function
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
@@ -285,5 +285,5 @@ index d90dde50..868e3086 100644
  
      return 0;
 -- 
-2.25.1
+2.32.1 (Apple Git-133)
 
