@@ -14,9 +14,9 @@ message("--  commit id: " ${GIT_COMMIT_HASH})
 add_definitions(-DISULAD_GIT_COMMIT="${GIT_COMMIT_HASH}")
 
 execute_process(
-	COMMAND sh -c "date --rfc-3339 ns | sed -e 's/ /T/'"
-	OUTPUT_VARIABLE BUILD_DATE
-	OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND sh -c "date --rfc-3339 ns | sed -e 's/ /T/'"
+    OUTPUT_VARIABLE BUILD_DATE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 message("--  build time: " ${BUILD_DATE})
 add_definitions(-DISULAD_BUILD_TIME="${BUILD_DATE}")
@@ -41,13 +41,13 @@ if (CHECKER_RESULT)
 endif()
 
 configure_file(
-	"${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
-	"${CMAKE_BINARY_DIR}/conf/config.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
+    "${CMAKE_BINARY_DIR}/conf/config.h"
 )
 
 configure_file(
-	"${CMAKE_CURRENT_SOURCE_DIR}/isulad.pc.in"
-	"${CMAKE_BINARY_DIR}/conf/isulad.pc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/isulad.pc.in"
+    "${CMAKE_BINARY_DIR}/conf/isulad.pc"
 )
 
 # parse .proto files
@@ -92,7 +92,7 @@ ENDIF(ENABLE_FUZZ AND (NOT ENABLE_UT))
 install(FILES ${CMAKE_BINARY_DIR}/conf/isulad.pc
   DESTINATION ${LIB_INSTALL_DIR_DEFAULT}/pkgconfig PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
 install(FILES src/daemon/modules/api/image_api.h
-	DESTINATION include/isulad)
+    DESTINATION include/isulad)
 
 # install config files
 set(conf_prefix "/etc")

@@ -9,7 +9,7 @@ add_library(libhttpclient ${LIBTYPE} ${http_client_srcs}
     ${CMAKE_SOURCE_DIR}/src/utils/buffer/buffer.c
     )
 
-target_include_directories(libhttpclient PUBLIC 
+target_include_directories(libhttpclient PUBLIC
     ${CMAKE_SOURCE_DIR}/src/common
     ${CMAKE_SOURCE_DIR}/src/utils
     ${CMAKE_SOURCE_DIR}/src/utils/cutils
@@ -28,5 +28,5 @@ if (ISULAD_GCOV)
     target_link_libraries(libhttpclient -lgcov)
 endif()
 
-install(TARGETS libhttpclient 
+install(TARGETS libhttpclient
     ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)

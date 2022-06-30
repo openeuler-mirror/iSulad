@@ -334,7 +334,7 @@ static void InsertPortmappingIntoAdaptorAnnotations(const std::map<std::string, 
         cni_pms->items[i++] = elem;
         cni_pms->len += 1;
     }
-    
+
     if(cni_pms->len <= 0)
         return;
 

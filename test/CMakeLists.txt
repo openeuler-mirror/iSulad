@@ -44,7 +44,7 @@ IF(ENABLE_UT)
     add_subdirectory(cmd)
     add_subdirectory(runtime)
     add_subdirectory(specs)
-    add_subdirectory(services)  
+    add_subdirectory(services)
     add_subdirectory(network)
 
 ENDIF(ENABLE_UT)

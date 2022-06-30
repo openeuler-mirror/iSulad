@@ -29,7 +29,7 @@ if (GRPC_CONNECTOR)
         list(APPEND local_client_connect_srcs ${CONNECT_API_NETWORK})
         list(APPEND local_client_connect_incs ${CMAKE_BINARY_DIR}/grpc/src/api/services/network)
     endif()
-    
+
 else()
     add_subdirectory(rest)
     list(APPEND local_client_connect_srcs ${CLIENT_REST_SRCS})

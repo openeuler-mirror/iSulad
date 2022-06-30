@@ -1361,7 +1361,7 @@ static char *get_cpu_variant()
         ERROR("can not found delimiter \":\" when try to get cpu variant");
         return NULL;
     }
-    start_pos += 1;	// skip char ":"
+    start_pos += 1;    // skip char ":"
     util_trim_newline(start_pos);
     start_pos = util_trim_space(start_pos);
 

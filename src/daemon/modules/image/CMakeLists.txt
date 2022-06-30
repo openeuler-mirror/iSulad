@@ -16,10 +16,10 @@ set(local_image_incs
 if (ENABLE_OCI_IMAGE)
     add_subdirectory(oci)
     list(APPEND local_image_srcs
-	    ${OCI_SRCS}
+        ${OCI_SRCS}
         )
     list(APPEND local_image_incs
-	    ${OCI_INCS}
+        ${OCI_INCS}
         )
 endif()
 
