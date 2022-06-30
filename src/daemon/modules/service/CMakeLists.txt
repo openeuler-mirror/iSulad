@@ -6,11 +6,11 @@ if(NOT ENABLE_NATIVE_NETWORK)
 endif()
 
 set(SERVICE_SRCS
-	${local_service_srcs}
-	PARENT_SCOPE
-	)
+    ${local_service_srcs}
+    PARENT_SCOPE
+    )
 
 set(SERVICE_INCS
-	${CMAKE_CURRENT_SOURCE_DIR}
-	PARENT_SCOPE
-	)
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    PARENT_SCOPE
+    )

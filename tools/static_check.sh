@@ -343,8 +343,8 @@ function clang_tidy_check() {
 =================================================================================================\033[1;33m
             ████████╗██╗██████╗ ██╗   ██╗     ██████╗██╗  ██╗███████╗ ██████╗██╗  ██╗
             ╚══██╔══╝██║██╔══██╗╚██╗ ██╔╝    ██╔════╝██║  ██║██╔════╝██╔════╝██║ ██╔╝
-               ██║   ██║██║  ██║ ╚████╔╝     ██║     ███████║█████╗  ██║     █████╔╝ 
-               ██║   ██║██║  ██║  ╚██╔╝      ██║     ██╔══██║██╔══╝  ██║     ██╔═██╗ 
+               ██║   ██║██║  ██║ ╚████╔╝     ██║     ███████║█████╗  ██║     █████╔╝
+               ██║   ██║██║  ██║  ╚██╔╝      ██║     ██╔══██║██╔══╝  ██║     ██╔═██╗
                ██║   ██║██████╔╝   ██║       ╚██████╗██║  ██║███████╗╚██████╗██║  ██╗
                ╚═╝   ╚═╝╚═════╝    ╚═╝        ╚═════╝╚═╝  ╚═╝╚══════╝ ╚═════╝╚═╝  ╚═╝\033[0m
 ================================================================================================="
@@ -363,28 +363,28 @@ function clang_tidy_check() {
         files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc|cpp)")
     elif [[ ${1} == "incremental" ]]; then
         files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$|*.cpp$")
-	elif [[ -f "$1" ]]; then
+    elif [[ -f "$1" ]]; then
         files="$1"
-	elif [[ -d "$1" ]]; then
+    elif [[ -d "$1" ]]; then
         files=$(find "$1" -regextype posix-extended -regex ".*\.(h|c|cc|cpp)")
     fi
     files=(${files// / })
     local total=${#files[@]}
     local index=1
     logfile=${CURRENT_PATH}/../clang-tidy-check.log
-    echo "" > ${logfile} 
+    echo "" > ${logfile}
     if [[ ${total} -eq 1 ]]; then
-    	clang-tidy -checks='-*,abseil-*,bugprone-*,cert-*,clang-analyzer-*,cppcoreguidelines-*, \
-        	google-*,hicpp-*,linuxkernel-*,llvm-*,llvmlibc-*,-llvm-header-guard,misc-*,modernize-*,performance-*,portability-*,readability-*' ${files[0]} 
+        clang-tidy -checks='-*,abseil-*,bugprone-*,cert-*,clang-analyzer-*,cppcoreguidelines-*, \
+            google-*,hicpp-*,linuxkernel-*,llvm-*,llvmlibc-*,-llvm-header-guard,misc-*,modernize-*,performance-*,portability-*,readability-*' ${files[0]}
         return 0
     fi
 
     for file in ${files[@]}
     do
         echo ">>>>>>>>>>>>>>>>>>checking: ${file}" >> ${logfile}
-    	clang-tidy -checks='-*,abseil-*,bugprone-*,cert-*,clang-analyzer-*,cppcoreguidelines-*, \
-        	google-*,hicpp-*,linuxkernel-*,llvm-*,llvmlibc-*,-llvm-header-guard,misc-*,modernize-*,performance-*,portability-*,readability-*' ${file} \
-            >> ${logfile} 2>&1 
+        clang-tidy -checks='-*,abseil-*,bugprone-*,cert-*,clang-analyzer-*,cppcoreguidelines-*, \
+            google-*,hicpp-*,linuxkernel-*,llvm-*,llvmlibc-*,-llvm-header-guard,misc-*,modernize-*,performance-*,portability-*,readability-*' ${file} \
+            >> ${logfile} 2>&1
         echo ">>>>>>>>>>>>>>>>>>checked: ${file}" >> ${logfile}
         printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;32m%-5s\033[0m\n" \
           ${index} ${total} ${file} "[CHECKED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
@@ -408,8 +408,8 @@ function clang_tidy_fix() {
 =================================================================================================\033[1;33m
     ████████╗██╗██████╗ ██╗   ██╗     ██████╗ ██████╗ ██████╗ ███████╗    ███████╗██╗██╗  ██╗
     ╚══██╔══╝██║██╔══██╗╚██╗ ██╔╝    ██╔════╝██╔═══██╗██╔══██╗██╔════╝    ██╔════╝██║╚██╗██╔╝
-       ██║   ██║██║  ██║ ╚████╔╝     ██║     ██║   ██║██║  ██║█████╗      █████╗  ██║ ╚███╔╝ 
-       ██║   ██║██║  ██║  ╚██╔╝      ██║     ██║   ██║██║  ██║██╔══╝      ██╔══╝  ██║ ██╔██╗ 
+       ██║   ██║██║  ██║ ╚████╔╝     ██║     ██║   ██║██║  ██║█████╗      █████╗  ██║ ╚███╔╝
+       ██║   ██║██║  ██║  ╚██╔╝      ██║     ██║   ██║██║  ██║██╔══╝      ██╔══╝  ██║ ██╔██╗
        ██║   ██║██████╔╝   ██║       ╚██████╗╚██████╔╝██████╔╝███████╗    ██║     ██║██╔╝ ██╗
        ╚═╝   ╚═╝╚═════╝    ╚═╝        ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝    ╚═╝     ╚═╝╚═╝  ╚═╝\033[0m
 ================================================================================================="
@@ -435,17 +435,17 @@ function clang_tidy_fix() {
         files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc|cpp)")
     elif [[ ${1} == "incremental" ]]; then
         files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$|*.cpp$")
-	elif [[ -f "$1" ]]; then
+    elif [[ -f "$1" ]]; then
         files="$1"
-	elif [[ -d "$1" ]]; then
+    elif [[ -d "$1" ]]; then
         files=$(find "$1" -regextype posix-extended -regex ".*\.(h|c|cc|cpp)")
     fi
     files=(${files// / })
     local total=${#files[@]}
     local index=1
     if [[ ${total} -eq 1 ]]; then
-    	clang-tidy -checks='-*,abseil-*,bugprone-*,cert-*,clang-analyzer-*,cppcoreguidelines-*, \
-        	google-*,hicpp-*,linuxkernel-*,llvm-*,llvmlibc-*,-llvm-header-guard,misc-*,modernize-*,performance-*,portability-*,readability-*' --fix ${files[0]} 
+        clang-tidy -checks='-*,abseil-*,bugprone-*,cert-*,clang-analyzer-*,cppcoreguidelines-*, \
+            google-*,hicpp-*,linuxkernel-*,llvm-*,llvmlibc-*,-llvm-header-guard,misc-*,modernize-*,performance-*,portability-*,readability-*' --fix ${files[0]}
         return 0
     fi
 
