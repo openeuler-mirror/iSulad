@@ -361,7 +361,7 @@ static size_t calc_replaced_url_len(const char *url)
             max++;
             continue;
         }
-        max += 3;	/* ' ' to %20 so size should add 3 */
+        max += 3;    /* ' ' to %20 so size should add 3 */
     }
 
     return max + 1; /* +1 for terminator */
