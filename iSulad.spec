@@ -1,6 +1,8 @@
 %global _version 2.1.0
 %global _release 1
 %global is_systemd 1
+%global enable_shimv2 1
+%global enable_embedded 1
 
 Name:      iSulad
 Version:   %{_version}
@@ -29,18 +31,26 @@ Requires(preun): chkconfig
 Requires(preun): initscripts
 %endif
 
-BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel
-BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
-BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel
+%if 0%{?enable_embedded}
+BuildRequires: sqlite-devel
+Requires:      sqlite
+%endif
+
+%if 0%{?enable_shimv2}
+BuildRequires: lib-shim-v2-devel
+Requires:      lib-shim-v2
+%endif
+
+BuildRequires: cmake gcc-c++ lxc-devel lcr-devel yajl-devel
+BuildRequires: grpc-plugins grpc-devel protobuf-devel
+BuildRequires: libcurl-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
-BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
+BuildRequires: libselinux-devel libwebsockets-devel
 BuildRequires: systemd-devel git
 
 Requires:      lcr lxc
-Requires:      grpc protobuf
-Requires:      libcurl
-Requires:      sqlite http-parser libseccomp
-Requires:      libcap libselinux libwebsockets libarchive device-mapper
+Requires:      grpc libcurl http-parser
+Requires:      libselinux libwebsockets libarchive device-mapper
 Requires:      systemd
 
 %description
@@ -53,7 +63,14 @@ Runtime Daemon, written by C.
 %build
 mkdir -p build
 cd build
-%cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
+%cmake \
+    -DDEBUG=ON \
+    -DLIB_INSTALL_DIR=%{_libdir} \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+%if 0%{?enable_shimv2}
+    -DENABLE_SHIM_V2=ON \
+%endif
+    ../
 %make_build
 
 %install
