@@ -4,15 +4,29 @@ This manual is mainly about how to use native network for iSulad community devel
 
 ## Compile
 
-The native network code is isolated by compilation macro `ENABLE_NATIVE_NETWORK`, and it is enabled by default. For the installation of the dependent environment of iSulad, please refer to the document `docs/build_guide_zh.md`, and it will not be repeated here. The following only describes the compilation of iSulad.
+The code of native network code is only exists in the master branch of lcr and iSulad. It is isolated by compilation macro `ENABLE_NATIVE_NETWORK`, and it is enabled by default. For the installation of the dependent environment of iSulad, please refer to the document `docs/build_guide_zh.md`, and it will not be repeated here. The following only describes the compilation of lcr and iSulad.
 
 ```bash
-$ cd iSulad
-$ rm -rf build && mkdir build
+# build and install lcr
+$ git clone https://gitee.com/openeuler/lcr.git
+$ cd lcr
+# master branch
+$ mkdir build
 $ cd build
-$ sudo -E cmake ..
-$ sudo -E make -j $(nproc)
-$ sudo -E make install
+$ cmake ..
+$ make -j $(nproc)
+$ make install
+
+# build and install iSulad
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad
+# master branch
+$ mkdir build
+$ cd build
+# enable ENABLE_NATIVE_NETWORK by default
+$ cmake -DENABLE_NATIVE_NETWORK=ON ..
+$ make -j $(nproc)
+$ make install
 ```
 
 ## Network Plugin
