@@ -236,7 +236,7 @@ static int rest_image_load(const struct isula_load_request *request, struct isul
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceLoad, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ImagesServiceLoad, body, len, &output);
     if (ret != 0) {
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         response->cc = ISULAD_ERR_EXEC;
@@ -303,7 +303,7 @@ static int rest_image_list(const struct isula_list_images_request *request, stru
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceList, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ImagesServiceList, body, len, &output);
     if (ret != 0) {
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         response->cc = ISULAD_ERR_EXEC;
@@ -335,7 +335,7 @@ static int rest_image_remove(const struct isula_rmi_request *request, struct isu
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceDelete, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ImagesServiceDelete, body, len, &output);
     if (ret != 0) {
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         response->cc = ISULAD_ERR_EXEC;
@@ -440,7 +440,7 @@ static int rest_image_inspect(const struct isula_inspect_request *li_request,
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceInspect, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ImagesServiceInspect, body, len, &output);
     if (ret != 0) {
         li_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         li_response->cc = ISULAD_ERR_EXEC;
@@ -537,7 +537,7 @@ static int rest_image_pull(const struct isula_pull_request *request, struct isul
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ImagesServicePull, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ImagesServicePull, body, len, &output);
     if (ret != 0) {
         ERROR("Send pull request failed.");
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
@@ -637,7 +637,7 @@ static int rest_image_login(const struct isula_login_request *request, struct is
         ERROR("Build login request failed.");
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceLogin, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ImagesServiceLogin, body, len, &output);
     if (ret != 0) {
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         response->cc = ISULAD_ERR_EXEC;
@@ -738,7 +738,7 @@ static int rest_image_logout(const struct isula_logout_request *request, struct 
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceLogout, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ImagesServiceLogout, body, len, &output);
     if (ret != 0) {
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         response->cc = ISULAD_ERR_EXEC;
@@ -836,7 +836,7 @@ static int rest_image_tag(const struct isula_tag_request *request, struct isula_
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceTag, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ImagesServiceTag, body, len, &output);
     if (ret != 0) {
         ERROR("Send tag request failed.");
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
@@ -938,7 +938,7 @@ static int rest_image_import(const struct isula_import_request *request, struct 
         goto out;
     }
 
-    ret = rest_send_requst(socketname, RestHttpHead ImagesServiceImport, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ImagesServiceImport, body, len, &output);
     if (ret != 0) {
         ERROR("Send import request failed.");
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));

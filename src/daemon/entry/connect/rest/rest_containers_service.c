@@ -1514,7 +1514,7 @@ static void evhtp_send_rename_response(evhtp_request_t *req, struct isulad_conta
 
     resp_str = container_rename_response_generate_json(&cresponse, &ctx, &err);
     if (resp_str == NULL) {
-        ERROR("Failed to generate rename request json, err: %s", err);
+        ERROR("Failed to generate rename response json, err: %s", err);
         evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
