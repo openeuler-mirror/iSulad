@@ -31,7 +31,7 @@ struct http_get_options {
              with_body : 1, /* if set, means write output with response BODY */
              /* if set, means set request with "Authorization:(char *)authorization" */
              with_header_auth : 1,
-             /* if set, means set requst with "Content-Type: application/json" */
+             /* if set, means set request with "Content-Type: application/json" */
              with_header_json : 1,
              /* if set, means set request with "Accept:(char *)accepts" */
              with_header_accept : 1,

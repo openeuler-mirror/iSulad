@@ -105,7 +105,7 @@ static int rest_network_create(const struct isula_network_create_request *reques
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead NetworkServiceCreate, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead NetworkServiceCreate, body, len, &output);
     if (ret != 0) {
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         response->cc = ISULAD_ERR_EXEC;
@@ -203,7 +203,7 @@ static int rest_network_inspect(const struct isula_network_inspect_request *requ
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead NetworkServiceInspect, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead NetworkServiceInspect, body, len, &output);
     if (ret != 0) {
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         response->cc = ISULAD_ERR_EXEC;
@@ -423,7 +423,7 @@ static int rest_network_list(const struct isula_network_list_request *request,
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead NetworkServiceList, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead NetworkServiceList, body, len, &output);
     if (ret != 0) {
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         response->cc = ISULAD_ERR_EXEC;
@@ -521,7 +521,7 @@ static int rest_network_remove(const struct isula_network_remove_request *reques
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead NetworkServiceRemove, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead NetworkServiceRemove, body, len, &output);
     if (ret != 0) {
         response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         response->cc = ISULAD_ERR_EXEC;
