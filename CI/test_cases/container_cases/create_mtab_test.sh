@@ -30,7 +30,7 @@ function do_test_t()
     testcontainer $id running
 
     isula exec $id sh -c 'ls -al /etc/mtab'
-    fn_check_eq "$?" "0" "/etc/mtab not exist" 
+    fn_check_eq "$?" "0" "/etc/mtab not exist"
 
     isula rm -f $id
     fn_check_eq "$?" "0" "rm failed"

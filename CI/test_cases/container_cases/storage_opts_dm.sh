@@ -59,7 +59,7 @@ function do_test()
 
     isula pull $image_busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image_busybox}" && ((ret++))
-    
+
     id=`isula run -tid $image_busybox`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container failed" && ((ret++))
 

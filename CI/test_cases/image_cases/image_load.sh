@@ -30,7 +30,7 @@ function test_image_load()
   local test="isula load image test => (${FUNCNAME[@]})"
 
   msg_info "${test} starting..."
-  
+
   # file is not exist, expect fail
   isula load -i xxx.tar
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - image tar file not exist test failed" && ((ret++))
@@ -50,7 +50,7 @@ function test_image_load()
   isula load -i $single_image --tag "kitty"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${single_image} with --tag kitty" && ((ret++))
 
-  isula images | grep kitty 
+  isula images | grep kitty
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: kitty" && ((ret++))
 
   isula rmi $id

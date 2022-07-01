@@ -45,7 +45,7 @@ function test_multiplex_layers_image_load()
   isula load -i $base_image
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${base_image} with" && ((ret++))
 
-  isula images | grep busybox 
+  isula images | grep busybox
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list base image: busybox" && ((ret++))
 
   # load image with base image loaded
