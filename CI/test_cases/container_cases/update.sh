@@ -154,7 +154,7 @@ fi
 if [ -f "/sys/fs/cgroup/memory/memory.memsw.usage_in_bytes" ];then
     do_test_t1
     if [ $? -ne 0 ];then
-	let "ret=$ret + 1"
+    let "ret=$ret + 1"
     fi
 fi
 

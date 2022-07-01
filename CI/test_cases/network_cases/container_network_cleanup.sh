@@ -23,7 +23,7 @@ curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
 if [ ${enable_native_network} -ne 0 ]; then
-    msg_info "${test} disable native network, just ignore test." 
+    msg_info "${test} disable native network, just ignore test."
     exit 0
 fi
 
@@ -77,12 +77,12 @@ function test_container_network_cleanup()
         status=$(isula inspect -f {{.State.Status}} ${cont_name}${i})
         [[ "x${status}" != "xexited" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - kill container ${cont_name}${i} failed" && return ${FAILURE}
     done
-    
+
     # test iptables rule cleanup
     for i in $(seq 1 10); do
         cont_id=$(isula inspect -f {{.Id}} ${cont_name}${i})
         [[ "x${cont_id}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get container ${cont_name}${i} Id failed" && return ${FAILURE}
-    
+
         isula start ${cont_name}${i}
         [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start container ${cont_name}${i} failed" && return ${FAILURE}
 
@@ -95,7 +95,7 @@ function test_container_network_cleanup()
         ip6tables -t nat --list --wait | grep ${cont_id}
         [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ip6tables rules success after stop container" && return ${FAILURE}
     done
-    
+
     pids=()
     for i in $(seq 1 10); do
         isula start ${cont_name}${i}

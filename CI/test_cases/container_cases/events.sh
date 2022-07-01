@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# attributes: isulad daemon events 
+# attributes: isulad daemon events
 # concurrent: NA
 # spend time: 3
 
@@ -29,22 +29,22 @@ function test_events()
     local test="isula events command test => (${FUNCNAME[@]})"
     start_time=$(date +"%Y-%m-%dT%H:%M:%S")
     isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" &&  return ${FAILURE} 
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" &&  return ${FAILURE}
 
     msg_info "${test} starting..."
 
-    isula images | grep ${image} 
+    isula images | grep ${image}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
     container_name="test"
-    isula run -itd -n ${container_name} ${image} /bin/sh 
+    isula run -itd -n ${container_name} ${image} /bin/sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     local cmd="ls"
     isula exec -it ${container_name} ${cmd}
     sleep 1 # To include the end time
     end_time=$(date +"%Y-%m-%dT%H:%M:%S")
-   
+
     isula events --since ${start_time} --until ${end_time} | grep "image pull busybox"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - lose image pull event" && ((ret++))
 

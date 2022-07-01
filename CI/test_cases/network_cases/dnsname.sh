@@ -23,7 +23,7 @@ curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
 if [ ${enable_native_network} -ne 0 ]; then
-    msg_info "${test} disable native network, just ignore test." 
+    msg_info "${test} disable native network, just ignore test."
     exit 0
 fi
 

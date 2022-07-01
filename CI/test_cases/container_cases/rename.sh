@@ -42,40 +42,40 @@ function test_rename_spec()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula rename > $rename_log 2>&1
-	[[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check rename container exit code: ${image}" && ((ret++))
+    [[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check rename container exit code: ${image}" && ((ret++))
 
     cat $rename_log | grep "requires 2 arguments"
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
 
     isula rename $old_name $old_name > $rename_log 2>&1
-	[[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check rename same container exit code: ${image}" && ((ret++))
+    [[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check rename same container exit code: ${image}" && ((ret++))
 
     cat $rename_log | grep "Renaming a container with the same name as its current name"
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
 
     isula rename no_exist no_exist1 > $rename_log 2>&1
-	[[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check rename same container exit code: ${image}" && ((ret++))
+    [[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check rename same container exit code: ${image}" && ((ret++))
 
     cat $rename_log | grep "No such container"
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
 
     isula rename $old_name 1 > $rename_log 2>&1
-	[[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check rename same container exit code: ${image}" && ((ret++))
-    
+    [[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check rename same container exit code: ${image}" && ((ret++))
+
     cat $rename_log | grep "Invalid container new name"
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
 
     isula rename $old_name 123@ > $rename_log 2>&1
-	[[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check rename same container exit code: ${image}" && ((ret++))
+    [[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check rename same container exit code: ${image}" && ((ret++))
 
     cat $rename_log | grep "Invalid container new name"
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
 
     isula rename $old_name new_name > $rename_log 2>&1
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
 
     isula rm -f new_name
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check error output with image: ${image}" && ((ret++))
 
     rm -f $rename_log
 

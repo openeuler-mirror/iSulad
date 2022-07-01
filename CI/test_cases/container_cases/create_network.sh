@@ -25,7 +25,7 @@ ipv6="2000::1:2345:3456:ab34"
 ipv4="127.0.0.1"
 
 if [ ${enable_native_network} -ne 0 ]; then
-    msg_info "${test} disable native network, just ignore test." 
+    msg_info "${test} disable native network, just ignore test."
     exit 0
 fi
 
@@ -52,21 +52,21 @@ function test_network_param()
     id=`isula create -ti -p 80-89 ${image} /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create container with -p" && ((ret++))
 
-    grep "88/tcp"  ${root}/${id}/config.v2.json && grep "89/tcp" ${root}/${id}/hostconfig.json 
+    grep "88/tcp"  ${root}/${id}/config.v2.json && grep "89/tcp" ${root}/${id}/hostconfig.json
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check -p 80-89" && ((ret++))
-    
+
     # Host ports range equal to container ports range
     id=`isula create -ti -p ${ipv4}:80-82:90-92 ${image} /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create container with -p" && ((ret++))
 
-    grep "91/tcp"  ${root}/${id}/config.v2.json && grep "${ipv4}" ${root}/${id}/hostconfig.json 
+    grep "91/tcp"  ${root}/${id}/config.v2.json && grep "${ipv4}" ${root}/${id}/hostconfig.json
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check -p ${ipv4}:80-82:90-92" && ((ret++))
 
     # ip parse
     id=`isula create -ti -p [${ipv6}]:80-82:90-92 ${image} /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create container with -p" && ((ret++))
 
-    grep "${ipv6}" ${root}/${id}/hostconfig.json 
+    grep "${ipv6}" ${root}/${id}/hostconfig.json
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check --publish with ipv6" && ((ret++))
 
     # Host ports range to container single port

@@ -46,7 +46,7 @@ function test_mem()
 
     isula start $cont_id
     fn_check_eq "$?" "0" "start failed"
-  
+
     #mem info (get base cpu info)
     curl -i $metric_server/metrics/type/mem_cpu >> $metrics_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run curl" && ((ret++))

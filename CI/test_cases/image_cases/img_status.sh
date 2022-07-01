@@ -28,12 +28,12 @@ function pre_test()
 {
     cut_output_lines isula info
     fn_check_eq "$?" "0" "check failed"
-    
+
     for i in ${lines[@]};do
-	    echo $i | grep 'devicemapper'
-	    if [ $? -eq 0 ]; then
-		    driver="devicemapper"
-	    fi
+        echo $i | grep 'devicemapper'
+        if [ $? -eq 0 ]; then
+            driver="devicemapper"
+        fi
     done
 }
 
@@ -41,7 +41,7 @@ function overlay2_status()
 {
     local ret=0
     local test="isula status overlay2 test => (${FUNCNAME[@]})"
-    
+
     msg_info "${test} starting..."
 
     [[ "${lines[6]}" != "Storage Driver:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Storage Driver failed" && ((ret++))
@@ -56,7 +56,7 @@ function devicemapper_status()
 {
     local ret=0
     local test="isula status devicemapper test => (${FUNCNAME[@]})"
-    
+
     msg_info "${test} starting..."
 
     [[ "${lines[6]}" != "Storage Driver:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Storage Driver failed" && ((ret++))
@@ -88,12 +88,12 @@ function do_test_t()
 
     pre_test
     if [[ "$driver"x = "overlay2"x ]];then
-	    overlay2_status || ((ret++))
+        overlay2_status || ((ret++))
     elif [[ "$driver"x = "devicemapper"x ]];then
-	    devicemapper_status || ((ret++))
+        devicemapper_status || ((ret++))
     else
-	    echo "error: not support $driver"
-	    ((ret++))
+        echo "error: not support $driver"
+        ((ret++))
     fi
 
     return $ret

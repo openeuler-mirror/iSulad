@@ -23,7 +23,7 @@ curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
 if [ ${enable_native_network} -ne 0 ]; then
-    msg_info "${test} disable native network, just ignore test." 
+    msg_info "${test} disable native network, just ignore test."
     exit 0
 fi
 
@@ -62,10 +62,10 @@ function test_network_list()
     isula network ls -f aa=bb 2>&1 | grep "Invalid filter"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - list network and catch error msg failed" && return ${FAILURE}
 
-    isula network ls -q | grep ${name1} 
+    isula network ls -q | grep ${name1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - list network --quiet failed" && return ${FAILURE}
 
-    isula network ls -q | grep ${name2} 
+    isula network ls -q | grep ${name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - list network --quiet failed" && return ${FAILURE}
 
     isula network ls --filter name=${name1} | grep ${name1}

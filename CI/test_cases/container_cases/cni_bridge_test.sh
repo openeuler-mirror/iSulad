@@ -17,7 +17,7 @@
 ##- @Description: CI test case for cni bridge feature.
 #                 It will create and start two pods, then pods ping
 #                 each other. The expected behavior is that packets can be
-#                 detected on cni0 by tcpdump. 
+#                 detected on cni0 by tcpdump.
 ##- @Author: chengzeruizhi
 ##- @Create: 2021-11-30
 #######################################################################
@@ -32,7 +32,7 @@ ping_count_down=5
 function do_pre()
 {
     local ret=0
-    
+
     cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
     sed -i "s#\"pod-sandbox-image\": \"\"#\"pod-sandbox-image\": \"mirrorgooglecontainers/pause-amd64:3.0\"#g" /etc/isulad/daemon.json
 
@@ -57,7 +57,7 @@ function do_pre()
 
     isula load -i ${pause_img_path}/pause.tar
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Failed to load pause image" && ((ret++))
-    
+
     msg_info "$0 do_pre finished with return ${ret}..."
     return ${ret}
 }
@@ -111,7 +111,7 @@ function do_test_help()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspectp: expect ip: $3, get: " && ((ret++))
 
     ip2=`crictl inspectp $sid2 | grep -w ip | awk '{print $2}' | sed 's/\"//g'`
-    nsenter --net=/proc/$pod_pid1/ns/net ping -w $timeout_count_down -c $ping_count_down $ip2 & 
+    nsenter --net=/proc/$pod_pid1/ns/net ping -w $timeout_count_down -c $ping_count_down $ip2 &
     timeout $timeout_count_down tcpdump -c $ping_count_down -i cni0
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping another pod failed" && ((ret++))
 

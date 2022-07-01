@@ -63,8 +63,8 @@ function perpare_selinux_environment()
   fi
   chcon -R system_u:object_r:container_ro_file_t:s0 /var/lib/isulad/storage/devicemapper
   chcon -R system_u:object_r:container_var_run_t:s0 /var/run/isula
-  chcon -R system_u:object_r:container_var_run_t:s0 /var/run/isulad 
-  chcon system_u:object_r:container_var_run_t:s0 /var/run/isulad.pid 
+  chcon -R system_u:object_r:container_var_run_t:s0 /var/run/isulad
+  chcon system_u:object_r:container_var_run_t:s0 /var/run/isulad.pid
   chcon system_u:object_r:container_var_run_t:s0 /var/run/isulad.sock
 }
 
@@ -104,7 +104,7 @@ function test_isulad_selinux_file_label()
   mount_label=$(isula inspect -f "{{.MountLabel}}" ${container})
   selinux_context_type=$(echo ${mount_label} | awk -F: '{print $3}')
 
-  cat /etc/selinux/targeted/contexts/lxc_contexts | grep file | grep ${selinux_context_type} 
+  cat /etc/selinux/targeted/contexts/lxc_contexts | grep file | grep ${selinux_context_type}
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid selinux context type: ${image}" && ((ret++))
 
   isula exec -it ${container} ls -l -Z / | grep dev | grep ${mount_label}
@@ -125,7 +125,7 @@ function test_isulad_selinux_file_label()
   isula exec -it ${container} ls -l -Z /etc/hosts | grep ${mount_label}
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to set selinux mount label for hosts" && ((ret++))
 
-  isula exec -it ${container} ls -l -Z /etc/resolv.conf | grep ${mount_label} 
+  isula exec -it ${container} ls -l -Z /etc/resolv.conf | grep ${mount_label}
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to set selinux mount label for resolv.conf" && ((ret++))
 
   isula exec -it ${container} ls -l -Z / | grep proc | grep system_u:object_r:proc_t:s0
