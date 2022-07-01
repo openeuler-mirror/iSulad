@@ -155,7 +155,7 @@ function check_valgrind_log() {
 }
 
 function start_isulad_without_valgrind() {
-    isulad $@ -l DEBUG > /dev/null 2>&1 & 
+    isulad $@ -l DEBUG > /dev/null 2>&1 &
     wait_isulad_running
 }
 
@@ -214,10 +214,10 @@ function do_install_thinpool()
 
     pvremove -f $dev_disk
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - pvremove failed" && ((ret++))
-    
+
     # If udev do not sync in time, do remove force
     rm -rf /dev/isulad
-    
+
     mount | grep $dev_disk | grep /var/lib/isulad
     if [ x"$?" == x"0" ]; then
         umount /var/lib/isulad
@@ -261,7 +261,7 @@ EOF
     return $ret
 }
 
-# Delete all containers and stop isulad before executing this func 
+# Delete all containers and stop isulad before executing this func
 function reinstall_thinpool()
 {
     retry_limit=10

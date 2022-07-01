@@ -44,7 +44,7 @@ function test_devmapper_size()
 
     cont_lower=`isula run -itd --storage-opt size="${opt_size_lower}G" $image /bin/sh`
     [[ $nret -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container with storage-opt size: ${opt_size_lower}G that not expected as failed" && ((ret++))
-   
+
     cont_upper=`isula run -itd --storage-opt size="${opt_size_upper}G" $image /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with storage-opt size:${opt_size_upper}G" && ((ret++))
 

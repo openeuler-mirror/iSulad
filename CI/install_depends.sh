@@ -133,7 +133,7 @@ ldconfig
 # install runc
 cd ~
 if [ -d ./runc ];then
-	rm -rf ./runc
+    rm -rf ./runc
 fi
 go env -w GO111MODULE="off"
 git clone https://gitee.com/src-openeuler/runc.git
@@ -143,9 +143,9 @@ git checkout -q origin/openEuler-20.03-LTS
 mkdir -p .gopath/src/github.com/opencontainers
 export GOPATH=`pwd`/.gopath
 if [ -L .gopath/src/github.com/opencontainers/runc ];then
-	echo "Link exist"
+    echo "Link exist"
 else
-	ln -sf `pwd` .gopath/src/github.com/opencontainers/runc
+    ln -sf `pwd` .gopath/src/github.com/opencontainers/runc
 fi
 
 cd .gopath/src/github.com/opencontainers/runc

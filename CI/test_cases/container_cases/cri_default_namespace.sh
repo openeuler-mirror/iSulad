@@ -45,7 +45,7 @@ function test_cri_default_namespace_in_pod_fun()
     local ret=0
     local test="test_cri_default_namespace_in_pod_fun => (${FUNCNAME[@]})"
     msg_info "${test} starting..."
-    
+
     sid=$(crictl runp ${data_path}/sandbox-config.json)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run sandbox" && ((ret++))
 
@@ -54,7 +54,7 @@ function test_cri_default_namespace_in_pod_fun()
 
     crictl start $cid
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start container" && ((ret++))
-    
+
     spid=$(isula inspect -f '{{.State.Pid}}' $sid)
     cpid=$(isula inspect -f '{{.State.Pid}}' $cid)
 

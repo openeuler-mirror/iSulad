@@ -23,7 +23,7 @@ curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
 if [ ${enable_native_network} -ne 0 ]; then
-    msg_info "${test} disable native network, just ignore test." 
+    msg_info "${test} disable native network, just ignore test."
     exit 0
 fi
 
@@ -64,7 +64,7 @@ function test_container_network_cleanup()
     # run container
     isula run -tid --net ${network_name1},${invalid_network},${network_name2} -n ${cont_name} busybox sh
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container with network ${network_name1},${invalid_network},${network_name2} success, but should failed" && return ${FAILURE}
-    
+
     # inspect
     isula inspect -f {{.NetworkSettings}} ${cont_name} | grep -E "${network_name1}|${invalid_network}|${network_name2}"
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect container network info success, but should failed" && return ${FAILURE}

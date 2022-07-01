@@ -24,7 +24,7 @@ data_path=$(realpath $curr_path/../data)
 source ../helpers.sh
 
 if [ ${enable_native_network} -ne 0 ]; then
-    msg_info "${test} disable native network, just ignore test." 
+    msg_info "${test} disable native network, just ignore test."
     exit 0
 fi
 
@@ -49,7 +49,7 @@ function test_network_help()
 
     isula network ls --help
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula network ls --help failed" && ((ret++))
-    
+
     isula network rm --help
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula network rm --help failed" && ((ret++))
 
