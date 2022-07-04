@@ -186,7 +186,8 @@ void PodSandboxManagerService::MakeSandboxIsuladConfig(const runtime::v1alpha2::
         std::vector<std::string> securityOpts =
             CRIHelpers::GetSecurityOpts(c.linux().security_context().seccomp_profile_path(), securityOptSep, error);
         if (error.NotEmpty()) {
-            error.Errorf("failed to generate security options for sandbox %s", c.metadata().name().c_str());
+            error.Errorf("failed to generate security options for sandbox %s: %s",
+                c.metadata().name().c_str(), error.GetMessage().c_str());
             return;
         }
         if (!securityOpts.empty()) {

@@ -615,7 +615,7 @@ auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, E
 {
     std::vector<std::string> seccompSecurityOpts = GetSeccompSecurityOpts(seccompProfile, separator, error);
     if (error.NotEmpty()) {
-        error.Errorf("failed to generate seccomp security options for container");
+        error.Errorf("failed to generate seccomp security options for container: %s", error.GetMessage().c_str());
     }
     return seccompSecurityOpts;
 }
