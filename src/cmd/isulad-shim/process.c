@@ -511,6 +511,11 @@ static void *task_console_accept(void *data)
     int ret = SHIM_ERR;
     console_accept_t *ac = (console_accept_t *)data;
 
+    if ((pthread_detach(pthread_self())) != 0) {
+        write_message(g_log_fd, ERR_MSG, "detach thread failed");
+        return NULL;
+    }
+
     conn_fd = accept(ac->listen_fd, NULL, NULL);
     if (conn_fd < 0) {
         write_message(g_log_fd, ERR_MSG, "accept from fd %d failed:%d", ac->listen_fd, SHIM_SYS_ERR(errno));
@@ -575,6 +580,11 @@ static void *io_epoll_loop(void *data)
     int wait_fds = 0;
     struct epoll_event evs[MAX_EVENTS];
     int i;
+
+    if ((pthread_detach(pthread_self())) != 0) {
+        write_message(g_log_fd, ERR_MSG, "detach thread failed");
+        return NULL;
+    }
 
     p->io_loop_fd = epoll_create1(EPOLL_CLOEXEC);
     if (p->io_loop_fd < 0) {
@@ -660,11 +670,7 @@ static int console_init(process_t *p)
     ac->listen_fd = fd;
 
     pthread_t tid_accept;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    ret = pthread_create(&tid_accept, &attr, task_console_accept, ac);
-    pthread_attr_destroy(&attr);
+    ret = pthread_create(&tid_accept, NULL, task_console_accept, ac);
     if (ret != SHIM_OK) {
         goto failure;
     }
