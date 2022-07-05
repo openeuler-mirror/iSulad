@@ -203,13 +203,6 @@ static int image_load_cb(const image_load_image_request *request, image_load_ima
         goto out;
     }
 
-    if (request->tag != NULL && !util_valid_image_name(request->tag)) {
-        ERROR("Invalid image name %s", request->tag);
-        cc = ISULAD_ERR_INPUT;
-        isulad_try_set_error_message("Invalid image name:%s", request->tag);
-        goto out;
-    }
-
     EVENT("Image Event: {Object: %s, Type: Loading}", request->file);
 
     ret = do_load_image(request->file, request->tag, request->type);
@@ -397,7 +390,6 @@ out:
 static int image_remove_cb(const image_delete_image_request *request, image_delete_image_response **response)
 {
     int ret = -1;
-    char *image_ref = NULL;
     uint32_t cc = ISULAD_SUCCESS;
 
     DAEMON_CLEAR_ERRMSG();
@@ -407,8 +399,6 @@ static int image_remove_cb(const image_delete_image_request *request, image_dele
         return EINVALIDARGS;
     }
 
-    image_ref = request->image_name;
-
     *response = util_common_calloc_s(sizeof(image_delete_image_response));
     if (*response == NULL) {
         ERROR("Out of memory");
@@ -416,22 +406,15 @@ static int image_remove_cb(const image_delete_image_request *request, image_dele
         goto out;
     }
 
-    if (!util_valid_image_name(image_ref)) {
-        ERROR("Invalid image name %s", image_ref);
-        cc = ISULAD_ERR_INPUT;
-        isulad_try_set_error_message("Invalid image name:%s", image_ref);
-        goto out;
-    }
+    EVENT("Image Event: {Object: %s, Type: Deleting}", request->image_name);
 
-    EVENT("Image Event: {Object: %s, Type: Deleting}", image_ref);
-
-    ret = delete_image(image_ref, request->force);
+    ret = delete_image(request->image_name, request->force);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         goto out;
     }
 
-    EVENT("Image Event: {Object: %s, Type: Deleted}", image_ref);
+    EVENT("Image Event: {Object: %s, Type: Deleted}", request->image_name);
 
 out:
     if (*response != NULL) {
@@ -491,8 +474,6 @@ out:
 static int image_tag_cb(const image_tag_image_request *request, image_tag_image_response **response)
 {
     int ret = -1;
-    char *src_name = NULL;
-    char *dest_name = NULL;
     uint32_t cc = ISULAD_SUCCESS;
 
     DAEMON_CLEAR_ERRMSG();
@@ -502,9 +483,6 @@ static int image_tag_cb(const image_tag_image_request *request, image_tag_image_
         return EINVALIDARGS;
     }
 
-    src_name = request->src_name;
-    dest_name = request->dest_name;
-
     *response = util_common_calloc_s(sizeof(image_delete_image_response));
     if (*response == NULL) {
         ERROR("Out of memory");
@@ -512,29 +490,15 @@ static int image_tag_cb(const image_tag_image_request *request, image_tag_image_
         goto out;
     }
 
-    if (!util_valid_image_name(src_name)) {
-        ERROR("Invalid image name %s", src_name);
-        cc = ISULAD_ERR_INPUT;
-        isulad_try_set_error_message("Invalid image name:%s", src_name);
-        goto out;
-    }
+    EVENT("Image Event: {Object: %s, Type: Tagging}", request->src_name);
 
-    if (!util_valid_image_name(dest_name)) {
-        ERROR("Invalid image name %s", dest_name);
-        cc = ISULAD_ERR_INPUT;
-        isulad_try_set_error_message("Invalid image name:%s", dest_name);
-        goto out;
-    }
-
-    EVENT("Image Event: {Object: %s, Type: Tagging}", src_name);
-
-    ret = do_tag_image(src_name, dest_name);
+    ret = do_tag_image(request->src_name, request->dest_name);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         goto out;
     }
 
-    EVENT("Image Event: {Object: %s, Type: Tagged}", src_name);
+    EVENT("Image Event: {Object: %s, Type: Tagged}", request->src_name);
 
 out:
     if (*response != NULL) {
@@ -952,13 +916,6 @@ static int inspect_image_helper(const char *image_ref, char **inspected_json)
         goto out;
     }
 
-    if (!util_valid_image_name(image_ref)) {
-        ERROR("Inspect invalid name %s", image_ref);
-        isulad_set_error_message("Inspect invalid name %s", image_ref);
-        ret = -1;
-        goto out;
-    }
-
     if (inspect_image_with_valid_name(image_ref, inspected_json) != 0) {
         ERROR("No such image or container or accelerator:%s", image_ref);
         isulad_set_error_message("No such image or container or accelerator:%s", image_ref);
@@ -1038,7 +995,6 @@ int pull_request_from_rest(const image_pull_image_request *request, im_pull_requ
 static int image_pull_cb(const image_pull_image_request *request, image_pull_image_response **response)
 {
     int ret = -1;
-    char *image_ref = NULL;
     im_pull_request *im_req = NULL;
     im_pull_response *im_rsp = NULL;
     uint32_t cc = ISULAD_SUCCESS;
@@ -1050,8 +1006,6 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
         return EINVALIDARGS;
     }
 
-    image_ref = request->image_name;
-
     *response = util_common_calloc_s(sizeof(image_pull_image_response));
     if (*response == NULL) {
         ERROR("Out of memory");
@@ -1059,19 +1013,13 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
         goto out;
     }
 
-    if (!util_valid_image_name(image_ref)) {
-        ERROR("Invalid image name %s", image_ref);
-        cc = ISULAD_ERR_INPUT;
-        isulad_try_set_error_message("Invalid image name:%s", image_ref);
-        goto out;
-    }
-
-    EVENT("Image Event: {Object: %s, Type: Pulling}", image_ref);
+    EVENT("Image Event: {Object: %s, Type: Pulling}", request->image_name);
     ret = pull_request_from_rest(request, &im_req);
     if (ret != 0) {
         goto out;
     }
 
+    // current only oci image support pull
     im_req->type = util_strdup_s(IMAGE_TYPE_OCI);
     ret = im_pull_image(im_req, &im_rsp);
     if (ret != 0) {
@@ -1079,7 +1027,7 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
         goto out;
     }
 
-    EVENT("Image Event: {Object: %s, Type: Pulled}", image_ref);
+    EVENT("Image Event: {Object: %s, Type: Pulled}", request->image_name);
 
 out:
     if (*response != NULL) {
