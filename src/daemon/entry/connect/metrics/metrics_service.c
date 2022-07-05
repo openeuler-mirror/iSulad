@@ -75,7 +75,10 @@ void *metrics_server_thrd(void *args)
     int def_port = 0;
 
     prctl(PR_SET_NAME, __func__);
-    pthread_detach(pthread_self());
+    if (pthread_detach(pthread_self()) != 0) {
+        CRIT("Set thread detach fail");
+        return NULL;
+    }
 
     g_metrics_htp_param->ev_base = event_base_new();
     if (g_metrics_htp_param->ev_base == NULL) {
