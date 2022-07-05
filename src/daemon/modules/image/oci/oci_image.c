@@ -313,6 +313,17 @@ void oci_exit()
 
 int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
 {
+    if (request == NULL || request->image == NULL || response == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    if (!util_valid_image_name(request->image)) {
+        ERROR("Invalid image name: %s", request->image);
+        isulad_try_set_error_message("Invalid image name: %s", request->image);
+        return -1;
+    }
+
     return oci_do_pull_image(request, response);
 }
 
@@ -410,6 +421,13 @@ int oci_rmi(const im_rmi_request *request)
     if (request == NULL || request->image.image == NULL) {
         ERROR("Invalid input arguments");
         return -1;
+    }
+
+    if (!util_valid_image_name(request->image.image)) {
+        ERROR("Invalid image name: %s", request->image.image);
+        isulad_try_set_error_message("Invalid image name: %s", request->image.image);
+        ret = -1;
+        goto out;
     }
 
     real_image_name = oci_resolve_image_name(request->image.image);
@@ -519,6 +537,18 @@ int oci_tag(const im_tag_request *request)
         return -1;
     }
 
+    if (!util_valid_image_name(request->src_name.image)) {
+        ERROR("Invalid image name %s", request->src_name.image);
+        isulad_try_set_error_message("Invalid image name:%s", request->src_name.image);
+        return -1;
+    }
+
+    if (!util_valid_image_name(request->dest_name.image)) {
+        ERROR("Invalid image name %s", request->dest_name.image);
+        isulad_try_set_error_message("Invalid image name:%s", request->dest_name.image);
+        return -1;
+    }
+
     src_name = oci_resolve_image_name(request->src_name.image);
     if (src_name == NULL) {
         ret = -1;
@@ -620,6 +650,13 @@ int oci_load_image(const im_load_request *request)
     if (request == NULL) {
         ERROR("Invalid input arguments");
         return -1;
+    }
+
+    if (request->tag != NULL && !util_valid_image_name(request->tag)) {
+        ERROR("Invalid image tag: %s", request->tag);
+        isulad_try_set_error_message("Invalid image tag: %s", request->tag);
+        ret = -1;
+        goto out;
     }
 
     ret = oci_do_load(request);
