@@ -180,7 +180,7 @@ static int devmapper_option_exact(const char *name, char *val, struct device_set
         { "devicemapper.mountopt", handle_dm_mountopt       },
     };
 
-    for (i = 0; i < sizeof(handler_jump_table)/sizeof(handler_jump_table[0]); i++) {
+    for (i = 0; i < sizeof(handler_jump_table) / sizeof(handler_jump_table[0]); i++) {
         if (strcmp(handler_jump_table[i].name, name) != 0) {
             continue;
         }
@@ -2517,13 +2517,13 @@ static void *cleanup_devices_cb(void *arg)
 {
     struct graphdriver *driver = (struct graphdriver *)arg;
 
-    if (driver == NULL) {
-        ERROR("cleanup_deleted_devices: invalid input param");
+    if (pthread_detach(pthread_self()) != 0) {
+        ERROR("cleanup_deleted_devices: set thread detach failed");
         return NULL;
     }
 
-    if (pthread_detach(pthread_self()) != 0) {
-        ERROR("cleanup_deleted_devices: set thread detach failed");
+    if (driver == NULL) {
+        ERROR("cleanup_deleted_devices: invalid input param");
         return NULL;
     }
 

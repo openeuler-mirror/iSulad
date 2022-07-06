@@ -381,16 +381,16 @@ static void *stop_container_on_unhealthy(void *arg)
     char *container_id = NULL;
     container_t *cont = NULL;
 
+    ret = pthread_detach(pthread_self());
+    if (ret != 0) {
+        CRIT("Set thread detach fail");
+    }
+
     if (arg == NULL) {
         ERROR("Invalid input arguments");
         return NULL;
     }
     container_id = (char *)arg;
-
-    ret = pthread_detach(pthread_self());
-    if (ret != 0) {
-        CRIT("Set thread detach fail");
-    }
 
     prctl(PR_SET_NAME, "ExitOnUnhealthy");
 

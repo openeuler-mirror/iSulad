@@ -270,13 +270,13 @@ static void *client_console_resize_thread(void *arg)
     struct client_arguments *args = arg;
     struct winsize wsz = { 0 };
 
-    if (!isatty(STDIN_FILENO)) {
-        goto out;
-    }
-
     ret = pthread_detach(pthread_self());
     if (ret != 0) {
         CRIT("Start: set thread detach fail");
+        goto out;
+    }
+
+    if (!isatty(STDIN_FILENO)) {
         goto out;
     }
 
