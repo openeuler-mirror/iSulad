@@ -51,6 +51,8 @@
 #include "isula_libutils/container_export_response.h"
 #include "isula_libutils/container_rename_request.h"
 #include "isula_libutils/container_rename_response.h"
+#include "isula_libutils/container_resize_request.h"
+#include "isula_libutils/container_resize_response.h"
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
@@ -74,6 +76,7 @@
 #define ContainerServiceInfo "/ContainerService/Info"
 #define ContainerServiceExport "/ContainerService/Export"
 #define ContainerServiceRename "/ContainerService/Rename"
+#define ContainerServiceResize "/ContainerService/Resize"
 
 /* "/ContainerService/Kill",
 "/ContainerService/Delete",
