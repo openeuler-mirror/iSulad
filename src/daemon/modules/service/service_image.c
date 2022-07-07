@@ -95,13 +95,13 @@ static bool check_image_in_used(const char *image_ref)
             goto unref_continue;
         }
 
-        if (strcmp(IMAGE_TYPE_EMBEDDED, img_type) != 0) {
+        if (strcmp(IMAGE_TYPE_EMBEDDED, img_type) == 0) {
             if (embeded_image_check(image_ref, conts[i])) {
-                isulad_set_error_message("Embeded mage used by %s", conts[i]->common_config->id);
+                isulad_set_error_message("Embeded image used by %s", conts[i]->common_config->id);
                 in_used = true;
                 goto unref_continue;
             }
-        } else if (strcmp(IMAGE_TYPE_EXTERNAL, img_type) != 0) {
+        } else if (strcmp(IMAGE_TYPE_EXTERNAL, img_type) == 0) {
             if (external_image_check(image_ref, conts[i])) {
                 isulad_set_error_message("External rootfs used by %s", conts[i]->common_config->id);
                 in_used = true;
