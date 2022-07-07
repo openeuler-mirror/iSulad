@@ -1416,7 +1416,7 @@ static int resize_request_check(const struct isulad_container_resize_request *re
 
     char *name = request->id;
     if (name == NULL) {
-        ERROR("Resume: receive NULL id");
+        ERROR("Resize: receive NULL id");
         ret = -1;
         goto out;
     }
