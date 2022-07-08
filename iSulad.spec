@@ -1,5 +1,5 @@
 %global _version 2.0.14
-%global _release 10
+%global _release 11
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -67,7 +67,7 @@ BuildRequires: sqlite-devel
 Requires: sqlite
 %endif
 
-%define lcrver 2.0.7
+%define lcrver 2.0.8
 %define clibcniver 2.0.7
 
 
@@ -270,6 +270,12 @@ fi
 %endif
 
 %changelog
+* Fri Jul 8 2022 haozi007 <liuhao27@huawei.com> - 2.0.14-11
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: add limit to lcr version
+
 * Wed Jun 22 2022 yangjiaqi <yangjiaqi16@huawei.com> - 2.0.14-10
 - Type: enhancement
 - ID: NA
