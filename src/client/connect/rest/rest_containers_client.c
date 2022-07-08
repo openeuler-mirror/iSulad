@@ -2162,6 +2162,185 @@ out:
     return ret;
 }
 
+/* helper function for unpack_container_info_for_stats_response */
+static char *default_strdup(char *str)
+{
+    if (str == NULL) {
+        return util_strdup_s("-");
+    }
+    return util_strdup_s(str);
+}
+
+/* helper function for unpack_stats_response */
+static int unpack_container_info_for_stats_response(const container_stats_response *cresponse,
+                                                    struct isula_stats_response *response)
+{
+    size_t num = 0;
+    struct isula_container_info *infos = NULL;
+    size_t i = 0;
+
+    if (cresponse == NULL || response == NULL) {
+        return -1;
+    }
+
+    num = cresponse->container_stats_len;
+    if (num == 0) {
+        return 0;
+    }
+    infos = (struct isula_container_info *)util_smart_calloc_s(sizeof(struct isula_container_info), num);
+    if (infos == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    response->container_num = num;
+    response->container_stats = infos;
+
+    for (i = 0; i < num ; i++) {
+        container_info *con_info = cresponse->container_stats[i];
+        // id
+        infos[i].id = default_strdup(con_info->id);
+        infos[i].name = default_strdup(con_info->name);
+        infos[i].status = default_strdup(con_info->status);
+        // pid
+        infos[i].pids_current = con_info->pids_current;
+        // cpu usage
+        infos[i].cpu_use_nanos = con_info->cpu_use_nanos;
+        infos[i].cpu_system_use = con_info->cpu_system_use;
+        infos[i].online_cpus = con_info->online_cpus;
+        // blk I/O usage
+        infos[i].blkio_read = con_info->blkio_read;
+        infos[i].blkio_write = con_info->blkio_write;
+        // memory usage
+        infos[i].mem_used = con_info->mem_used;
+        infos[i].mem_limit = con_info->mem_limit;
+        // kernel memory usage
+        infos[i].kmem_used = con_info->kmem_used;
+        infos[i].kmem_limit = con_info->kmem_limit;
+        // cache usage
+        infos[i].cache = con_info->cache;
+        infos[i].cache_total = con_info->cache_total;
+        infos[i].inactive_file_total = con_info->inactive_file_total;
+    }
+
+    return 0;
+}
+
+/* rest response to isula stats response*/
+static int unpack_stats_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_stats_response *response = (struct isula_stats_response *)arg;
+    container_stats_response *cresponse = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        return ret;
+    }
+
+    cresponse = container_stats_response_parse_data(message->body, NULL, &err);
+    if (cresponse == NULL) {
+        ERROR("Invalid stats response: %s", err);
+        ret = -1;
+        goto out;
+    }
+    response->server_errono = cresponse->cc;
+    if (cresponse->errmsg != NULL) {
+        response->errmsg = util_strdup_s(cresponse->errmsg);
+    }
+    if (message->status_code == RESTFUL_RES_SERVERR || cresponse->cc != ISULAD_SUCCESS) {
+        ret = -1;
+        goto out;
+    }
+    if (unpack_container_info_for_stats_response(cresponse, response)) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(err);
+    free_container_stats_response(cresponse);
+    return ret;
+}
+
+/* isula stats request to rest request */
+static int stats_request_to_rest(const struct isula_stats_request *stats_request, char **body, size_t *body_len)
+{
+    container_stats_request *crequest = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error err = NULL;
+    int ret = 0;
+    size_t containers_length;
+    size_t i = 0;
+
+    crequest = util_common_calloc_s(sizeof(container_stats_request));
+    if (crequest == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    // struct field: all
+    crequest->all = stats_request->all;
+
+    // struct field: containers
+    containers_length = stats_request->containers_len;
+    crequest->containers_len = containers_length;
+    crequest->containers = util_smart_calloc_s(sizeof(char *), containers_length);
+    if (crequest->containers == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0 ; i < containers_length ; i++) {
+        crequest->containers[i] = util_strdup_s(stats_request->containers[i]);
+    }
+
+    *body = container_stats_request_generate_json(crequest, &ctx, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate stats request json: %s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_container_stats_request(crequest);
+    return ret;
+}
+
+/* send stats request, get stats response */
+static int rest_container_stats(const struct isula_stats_request *stats_request,
+                                struct isula_stats_response *stats_response, void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char*)(connect_config->socket);
+    Buffer *resp = NULL;
+
+    ret = stats_request_to_rest(stats_request, &body, &len);
+    if (ret != 0) {
+        ERROR("Failed to convert isula stats requst to restful format");
+        goto out;
+    }
+
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceStats, body, len, &resp);
+    if (ret != 0) {
+        stats_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        stats_response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    ret = get_response(resp, unpack_stats_response, (void *)stats_response);
+
+out:
+    buffer_free(resp);
+    put_body(body);
+    return ret;
+}
+
 /* rest containers client ops init */
 int rest_containers_client_ops_init(isula_connect_ops *ops)
 {
@@ -2188,6 +2367,6 @@ int rest_containers_client_ops_init(isula_connect_ops *ops)
     ops->container.export_rootfs = &rest_container_export;
     ops->container.rename = &rest_container_rename;
     ops->container.resize = &rest_container_resize;
-
+    ops->container.stats = &rest_container_stats;
     return 0;
 }
