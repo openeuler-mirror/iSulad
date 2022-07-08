@@ -676,6 +676,8 @@ static int container_stop_cb(const container_stop_request *request, container_st
         goto pack_response;
     }
 
+    container_stop_health_checks(id);
+
     if (stop_container(cont, timeout, force, false)) {
         cc = ISULAD_ERR_EXEC;
         container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
