@@ -38,7 +38,7 @@ typedef int (*unpack_response_func_t)(const struct parsed_http_message *message,
 
 int get_response(Buffer *output, unpack_response_func_t unpack_func, void *arg);
 
-int rest_send_requst(const char *socket, const char *url, char *request_body, size_t body_len, Buffer **output);
+int rest_send_request(const char *socket, const char *url, char *request_body, size_t body_len, Buffer **output);
 
 int check_status_code(int status_code);
 

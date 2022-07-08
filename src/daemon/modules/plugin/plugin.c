@@ -935,7 +935,7 @@ int pm_activate_plugin(plugin_t *plugin)
         goto out;
     }
 
-    ret = rest_send_requst(socket, RestHttpHead PluginServiceActivate, body, body_len, &output);
+    ret = rest_send_request(socket, RestHttpHead PluginServiceActivate, body, body_len, &output);
     if (ret != 0) {
         ERROR("send activate request to %s failed", plugin->addr);
         goto out;
@@ -1156,7 +1156,7 @@ static int pm_init_plugin(const plugin_t *plugin)
         ret = -1;
         goto out;
     }
-    ret = rest_send_requst(socket, RestHttpHead PluginServiceInit, body, body_len, &output);
+    ret = rest_send_request(socket, RestHttpHead PluginServiceInit, body, body_len, &output);
     if (ret != 0) {
         ret = -1;
         ERROR("plugin init request to %s failed", plugin->addr);
@@ -1445,7 +1445,7 @@ static int plugin_event_pre_create_handle(const plugin_t *plugin, const char *ci
         goto out;
     }
 
-    ret = rest_send_requst(socket, RestHttpHead PluginServicePreCreate, body, body_len, &output);
+    ret = rest_send_request(socket, RestHttpHead PluginServicePreCreate, body, body_len, &output);
     if (ret != 0) {
         ret = -1;
         ERROR("send event precreate request to %s failed", plugin->addr);
@@ -1617,7 +1617,7 @@ static int plugin_event_pre_start_handle(const plugin_t *plugin, const char *cid
         goto out;
     }
 
-    ret = rest_send_requst(socket, RestHttpHead PluginServicePreStart, body, body_len, &output);
+    ret = rest_send_request(socket, RestHttpHead PluginServicePreStart, body, body_len, &output);
     if (ret != 0) {
         ret = -1;
         ERROR("send event prestart request to %s failed", plugin->addr);
@@ -1717,7 +1717,7 @@ static int plugin_event_post_stop_handle(const plugin_t *plugin, const char *cid
         goto out;
     }
 
-    ret = rest_send_requst(socket, RestHttpHead PluginServicePostStop, body, body_len, &output);
+    ret = rest_send_request(socket, RestHttpHead PluginServicePostStop, body, body_len, &output);
     if (ret != 0) {
         ret = -1;
         ERROR("send event post_stop request to %s failed", plugin->addr);
@@ -1816,7 +1816,7 @@ static int plugin_event_post_remove_handle(const plugin_t *plugin, const char *c
         goto out;
     }
 
-    ret = rest_send_requst(socket, RestHttpHead PluginServicePostRemove, body, body_len, &output);
+    ret = rest_send_request(socket, RestHttpHead PluginServicePostRemove, body, body_len, &output);
     if (ret != 0) {
         ret = -1;
         ERROR("send event post_remove request to %s failed", plugin->addr);

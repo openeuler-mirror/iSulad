@@ -105,7 +105,7 @@ function test_inspect_spec()
 
     if [ -d /sys/fs/cgroup/files ];then
         grepval="100"
-	else
+    else
         grepval="0"
     fi
     isula inspect --format='{{json .HostConfig.FilesLimit}}' $containername 2>&1 | grep "$grepval"

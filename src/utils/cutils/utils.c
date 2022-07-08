@@ -465,8 +465,6 @@ bool util_process_alive(pid_t pid, unsigned long long start_time)
     int sret = 0;
     bool alive = true;
     proc_t *pid_info = NULL;
-    char filename[PATH_MAX] = { 0 };
-    char sbuf[1024] = { 0 }; /* bufs for stat */
 
     if (pid == 0) {
         return false;
@@ -477,21 +475,8 @@ bool util_process_alive(pid_t pid, unsigned long long start_time)
         return false;
     }
 
-    sret = snprintf(filename, sizeof(filename), "/proc/%d/stat", pid);
-    if (sret < 0 || (size_t)sret >= sizeof(filename)) {
-        ERROR("Failed to sprintf filename");
-        goto out;
-    }
-
-    if ((util_file2str(filename, sbuf, sizeof(sbuf))) == -1) {
-        ERROR("Failed to read pidfile %s", filename);
-        alive = false;
-        goto out;
-    }
-
-    pid_info = util_stat2proc(sbuf, sizeof(sbuf));
+    pid_info = util_get_process_proc_info(pid);
     if (pid_info == NULL) {
-        ERROR("Failed to get proc stat info");
         alive = false;
         goto out;
     }
@@ -499,6 +484,7 @@ bool util_process_alive(pid_t pid, unsigned long long start_time)
     if (start_time != pid_info->start_time) {
         alive = false;
     }
+
 out:
     free(pid_info);
     return alive;
@@ -1341,7 +1327,7 @@ static char *get_cpu_variant()
         ERROR("can not found delimiter \":\" when try to get cpu variant");
         return NULL;
     }
-    start_pos += 1;	// skip char ":"
+    start_pos += 1;    // skip char ":"
     util_trim_newline(start_pos);
     start_pos = util_trim_space(start_pos);
 

@@ -64,9 +64,9 @@
 #include "utils_verify.h"
 
 #ifdef __ANDROID__
-#define SIG_CANCEL_SIGNAL 	SIGUSR1
-#define PTHREAD_CANCEL_ENABLE	1
-#define PTHREAD_CANCEL_DISABLE	0
+#define SIG_CANCEL_SIGNAL     SIGUSR1
+#define PTHREAD_CANCEL_ENABLE    1
+#define PTHREAD_CANCEL_DISABLE    0
 
 typedef long pthread_t;
 

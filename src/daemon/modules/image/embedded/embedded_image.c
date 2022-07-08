@@ -64,6 +64,7 @@ char *embedded_resolve_image_name(const char *image_name)
 {
     return util_strdup_s(image_name);
 }
+
 int embedded_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage)
 {
     return 0;
@@ -285,6 +286,11 @@ int embedded_remove_image(const im_rmi_request *request)
     force = request->force;
     image_ref = request->image.image;
 
+    if (image_ref == NULL || !util_valid_embedded_image_name(image_ref)) {
+        isulad_set_error_message("Invalid image name '%s'", image_ref != NULL ? image_ref : "");
+        return -1;
+    }
+
     return lim_delete_image(image_ref, force);
 }
 
@@ -298,6 +304,10 @@ int embedded_inspect_image(const im_inspect_request *request, char **inspected_j
     }
 
     image_ref = request->image.image;
+    if (image_ref == NULL || !util_valid_embedded_image_name(image_ref)) {
+        isulad_set_error_message("Invalid embedded image name '%s'", image_ref != NULL ? image_ref : "");
+        return -1;
+    }
 
     return lim_query_image_data(image_ref, IMAGE_DATA_TYPE_CONFIG, inspected_json, NULL);
 }

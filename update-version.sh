@@ -19,23 +19,23 @@
 
 function update_release_notes()
 {
-	LAST_RELEASE=$(git describe --tags --abbrev=0)
-	# Prepare proposed delease notes
-	rm -f release_notes.tmp
-	echo "$(date "+%Y-%m-%d") $USER release $1" >> release_notes.tmp
-	git log --first-parent --oneline $LAST_RELEASE.. | cut -d' ' -f 2- | sed 's/^/    - /' >> release_notes.tmp
-	echo >> release_notes.tmp
-	echo "    dev stats:" >> release_notes.tmp
-	echo "      -$(git diff --shortstat $LAST_RELEASE)" >> release_notes.tmp
-	echo -n "      - contributors: " >> release_notes.tmp
-	git shortlog -ns --no-merges $LAST_RELEASE..HEAD | cut -d$'\t' -f 2 | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/, /g' >> release_notes.tmp
-	echo "#" >> release_notes.tmp
-	echo "#" >> release_notes.tmp
-	echo "#" >> release_notes.tmp
-	echo >> release_notes.tmp
-	cat release_notes >> release_notes.tmp
-	grep -v '^#' release_notes.tmp | sed '/./,$!d' > release_notes
-	rm -rf release_notes.tmp
+    LAST_RELEASE=$(git describe --tags --abbrev=0)
+    # Prepare proposed delease notes
+    rm -f release_notes.tmp
+    echo "$(date "+%Y-%m-%d") $USER release $1" >> release_notes.tmp
+    git log --first-parent --oneline $LAST_RELEASE.. | cut -d' ' -f 2- | sed 's/^/    - /' >> release_notes.tmp
+    echo >> release_notes.tmp
+    echo "    dev stats:" >> release_notes.tmp
+    echo "      -$(git diff --shortstat $LAST_RELEASE)" >> release_notes.tmp
+    echo -n "      - contributors: " >> release_notes.tmp
+    git shortlog -ns --no-merges $LAST_RELEASE..HEAD | cut -d$'\t' -f 2 | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/, /g' >> release_notes.tmp
+    echo "#" >> release_notes.tmp
+    echo "#" >> release_notes.tmp
+    echo "#" >> release_notes.tmp
+    echo >> release_notes.tmp
+    cat release_notes >> release_notes.tmp
+    grep -v '^#' release_notes.tmp | sed '/./,$!d' > release_notes
+    rm -rf release_notes.tmp
 }
 
 topDir=$(git rev-parse --show-toplevel)
@@ -66,7 +66,7 @@ fi
 new_version=${first_old_version}.${second_old_version}.${third_old_version}
 
 if [[ ${choice} -ne "r" ]]; then
-	update_release_notes "$new_version"
+    update_release_notes "$new_version"
 fi
 
 echo "The version number has been modified: ${old_version} => ${new_version}"

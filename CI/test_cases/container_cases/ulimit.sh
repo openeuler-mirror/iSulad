@@ -70,7 +70,7 @@ function test_ulimit()
 
     isula run -td -n $container_name --ulimit nofile=20480:40960 --ulimit core=1024:2048 $image /bin/sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
-    
+
     isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max open files" |awk '{ print $(NF-1) }' |grep 40960
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 

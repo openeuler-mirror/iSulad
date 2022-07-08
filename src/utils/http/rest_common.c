@@ -231,8 +231,8 @@ static int set_http_get_options(const char *socket, char *request_body, size_t b
     return 0;
 }
 
-/* rest send requst */
-int rest_send_requst(const char *socket, const char *url, char *request_body, size_t body_len, Buffer **output)
+/* rest send request */
+int rest_send_request(const char *socket, const char *url, char *request_body, size_t body_len, Buffer **output)
 {
     long response_code = 0;
     int ret = 0;

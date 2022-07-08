@@ -582,7 +582,7 @@ static int rest_container_create(const struct isula_create_request *lc_request,
         lc_response->cc = ISULAD_ERR_INPUT;
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceCreate, body, len, &c_output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceCreate, body, len, &c_output);
     if (ret != 0) {
         lc_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         lc_response->cc = ISULAD_ERR_EXEC;
@@ -615,7 +615,7 @@ static int rest_container_start(const struct isula_start_request *ls_request, st
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceStart, body, len, &s_output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceStart, body, len, &s_output);
     if (ret != 0) {
         ls_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         ls_response->cc = ISULAD_ERR_EXEC;
@@ -649,7 +649,7 @@ static int rest_container_attach(const struct isula_attach_request *la_request,
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceAttach, body, len, &a_output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceAttach, body, len, &a_output);
     if (ret != 0) {
         la_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         la_response->cc = ISULAD_ERR_EXEC;
@@ -682,7 +682,7 @@ static int rest_container_list(const struct isula_list_request *ll_request, stru
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceList, body, len, &l_output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceList, body, len, &l_output);
     if (ret != 0) {
         ll_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         ll_response->cc = ISULAD_ERR_EXEC;
@@ -715,7 +715,7 @@ static int rest_container_resume(const struct isula_resume_request *lr_request,
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceResume, body, len, &r_output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceResume, body, len, &r_output);
     if (ret != 0) {
         lr_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         lr_response->cc = ISULAD_ERR_EXEC;
@@ -748,7 +748,7 @@ static int rest_container_wait(const struct isula_wait_request *lw_request, stru
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceWait, body, len, &w_output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceWait, body, len, &w_output);
     if (ret != 0) {
         lw_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         lw_response->cc = ISULAD_ERR_EXEC;
@@ -849,7 +849,7 @@ static int rest_container_stop(const struct isula_stop_request *ls_request, stru
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceStop, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceStop, body, len, &output);
     if (ret != 0) {
         ls_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         ls_response->cc = ISULAD_ERR_EXEC;
@@ -949,7 +949,7 @@ static int rest_container_restart(const struct isula_restart_request *lr_request
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceRestart, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceRestart, body, len, &output);
     if (ret != 0) {
         lr_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         lr_response->cc = ISULAD_ERR_EXEC;
@@ -1050,7 +1050,7 @@ static int rest_container_update(const struct isula_update_request *lu_request,
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceUpdate, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceUpdate, body, len, &output);
     if (ret != 0) {
         lu_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         lu_response->cc = ISULAD_ERR_EXEC;
@@ -1157,7 +1157,7 @@ static int rest_container_version(const struct isula_version_request *lv_request
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceVersion, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceVersion, body, len, &output);
     if (ret != 0) {
         lv_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         lv_response->cc = ISULAD_ERR_EXEC;
@@ -1256,7 +1256,7 @@ static int rest_container_pause(const struct isula_pause_request *lp_request, st
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServicePause, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServicePause, body, len, &output);
     if (ret != 0) {
         lp_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         lp_response->cc = ISULAD_ERR_EXEC;
@@ -1356,7 +1356,7 @@ static int rest_container_kill(const struct isula_kill_request *lk_request, stru
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceKill, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceKill, body, len, &output);
     if (ret != 0) {
         lk_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         lk_response->cc = ISULAD_ERR_EXEC;
@@ -1459,7 +1459,7 @@ static int rest_container_remove(const struct isula_delete_request *ld_request,
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceRemove, body, len, &r_output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceRemove, body, len, &r_output);
     if (ret != 0) {
         ld_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         ld_response->cc = ISULAD_ERR_EXEC;
@@ -1564,7 +1564,7 @@ static int rest_container_inspect(const struct isula_inspect_request *li_request
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceInspect, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceInspect, body, len, &output);
     if (ret != 0) {
         li_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         li_response->cc = ISULAD_ERR_EXEC;
@@ -1710,7 +1710,7 @@ static int rest_container_exec(const struct isula_exec_request *le_request, stru
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceExec, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceExec, body, len, &output);
     if (ret != 0) {
         le_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         le_response->cc = ISULAD_ERR_EXEC;
@@ -1860,7 +1860,7 @@ static int rest_container_info(const struct isula_info_request *li_request, stru
     if (ret != 0) {
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceInfo, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceInfo, body, len, &output);
     if (ret != 0) {
         li_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         li_response->cc = ISULAD_ERR_EXEC;
@@ -1958,7 +1958,7 @@ static int rest_container_export(const struct isula_export_request *le_request,
         ERROR("Failed to convert request to restful format");
         goto out;
     }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceExport, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceExport, body, len, &output);
     if (ret != 0) {
         le_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         le_response->cc = ISULAD_ERR_EXEC;
@@ -2053,13 +2053,108 @@ int rest_container_rename(const struct isula_rename_request *in_request, struct 
         goto out;
     }
 
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceRename, body, len, &output);
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceRename, body, len, &output);
     if (ret != 0) {
         in_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         in_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_rename_response, (void *)in_response);
+
+out:
+    buffer_free(output);
+    put_body(body);
+    return ret;
+}
+
+static int unpack_resize_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_resize_response *export_response = (struct isula_resize_response *) arg;
+    container_resize_response *response = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        ERROR("Responsed status code is not correct");
+        return -1;
+    }
+
+    response = container_resize_response_parse_data(message->body, NULL, &err);
+    if (response == NULL) {
+        ERROR("Invalid resize response: %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    export_response->server_errono = response->cc;
+    export_response->errmsg = util_strdup_s(response->errmsg);
+    ret = (response->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    free(err);
+    free_container_resize_response(response);
+    return ret;
+}
+
+static int resize_request_to_rest(const struct isula_resize_request *in_request, char **body, size_t *body_len)
+{
+    container_resize_request *crequest = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0};
+    parser_error err = NULL;
+    int ret = 0;
+
+    crequest = util_common_calloc_s(sizeof(container_resize_request));
+    if (crequest == NULL) {
+        ERROR("out of memory");
+        return -1;
+    }
+
+    crequest->id = util_strdup_s(in_request->id);
+    crequest->suffix = util_strdup_s(in_request->suffix);
+    crequest->height = in_request->height;
+    crequest->width = in_request->width;
+
+    *body = container_resize_request_generate_json(crequest, &ctx, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate resize request json, err: %s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_container_resize_request(crequest);
+    return ret;
+}
+
+int rest_container_resize(const struct isula_resize_request *in_request, struct isula_resize_response *in_response,
+                          void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *) arg;
+    const char *socketname = (const char*)(connect_config->socket);
+    Buffer *output = NULL;
+
+    ret = resize_request_to_rest(in_request, &body, &len);
+    if (ret != 0) {
+        ERROR("Failed to convert request to restful format");
+        goto out;
+    }
+
+    ret = rest_send_request(socketname, RestHttpHead ContainerServiceResize, body, len, &output);
+    if (ret != 0) {
+        in_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        in_response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    ret = get_response(output, unpack_resize_response, (void *)in_response);
 
 out:
     buffer_free(output);
@@ -2092,6 +2187,7 @@ int rest_containers_client_ops_init(isula_connect_ops *ops)
     ops->container.info = &rest_container_info;
     ops->container.export_rootfs = &rest_container_export;
     ops->container.rename = &rest_container_rename;
+    ops->container.resize = &rest_container_resize;
 
     return 0;
 }
