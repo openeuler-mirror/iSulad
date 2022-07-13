@@ -1,5 +1,5 @@
-%global _version 2.0.14
-%global _release 1
+%global _version 2.0.15
+%global _release 2
 %global is_systemd 1
 %global enable_shimv2 1
 %global enable_embedded 1

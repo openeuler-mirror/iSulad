@@ -6,7 +6,7 @@ endif()
 
 option(VERSION "set isulad version" ON)
 if (VERSION STREQUAL "ON")
-    set(ISULAD_VERSION "2.0.14")
+    set(ISULAD_VERSION "2.0.15")
     message("${BoldBlue}Version: ${ISULAD_VERSION} ${ColourReset}")
 endif()
 

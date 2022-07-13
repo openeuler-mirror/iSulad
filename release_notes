@@ -1,3 +1,39 @@
+2022-07-13 ubuntu release 2.0.15
+    - !1523 Add rest api for stats
+    - !1520 stop health check monitor before stopping container Merge pull request !1520 from JingWoo/stable-v2.0.x
+    - !1518 sync patches from master
+    - !1512 refactor fuzz
+    - !1499 wait exit fifo if runtime start failed From: @zh_xiaoyu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1498 cherry pick recent commits from master to stable branch From: @chengzrz Reviewed-by: @wangfengtu, @jingwoo Signed-off-by: @jingwoo
+    - !1490 [v2.0.14]可能的double free （src/cmd/isula/information/ps.c:856) From: @songbuhuang Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1485 gc considers stored monitor pid From: @vegbir Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1483 fix misuse of BUFSIZ From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1478 use util_smart_calloc_t to prevent overflow From: @jingwoo Reviewed-by: @zh_xiaoyu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1481 increase websocket lws_lookup size From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1476 refactor parse_volume function Merge pull request !1476 from JingWoo/My2022-stable
+    - !1475 refactor devmapper_parse_options function Merge pull request !1475 from JingWoo/My2022-stable
+    - !1473 fix inspect -f error when bionic Merge pull request !1473 from wangfengtu/inspect_stable
+    - !1471 set the name of each container and image operation thread for restful version Merge pull request !1471 from JingWoo/My2022-stable
+    - !1470 set the name of each container and image operation thread Merge pull request !1470 from JingWoo/My2022-stable
+    - !1464 fix shm size set invalid when reboot Merge pull request !1464 from zhangxiaoyu/stable-v2.0.x
+    - !1463 sync from master branch From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1459 fix isulad-shim coredump when remove ioc fd node Merge pull request !1459 from zhangxiaoyu/stable-v2.0.x
+    - !1455 bugfix for double free and use after free From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1454 fix get_network_namespace_path check From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1453 fix invalid convert and format From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1451 update seccomp to Linux 5.10 syscall list From: @zh_xiaoyu Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1448 remove check parameter label_opts in init_label From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1446 remove static of strlncat Merge pull request !1446 from zhangxiaoyu/stable-v2.0.x
+    - !1445 sync from master branch From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1441 sync from master branch seccomp optimiazation Merge pull request !1441 from czrz/stable-v2.0.x
+    - !1440 improve fuzz for pw gr parser Merge pull request !1440 from haozi007/stable-v2.0.x
+    - !1437 fix install error when android From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1435 do not mkdir of isulad if no controller found From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+
+    dev stats:
+      - 214 files changed, 3075 insertions(+), 2058 deletions(-)
+      - contributors: zhangxiaoyu, WangFengTu, haozi007, wujing, Neil.wrz, William Dean, ger202, vegbir, chegJH, chengzrz
+
 2022-05-23 root release 2.0.14
     - !1432 sync from master branch From: @duguhaotian Reviewed-by: @wangfengtu, @jingwoo Signed-off-by: @jingwoo
     - !1422 sync two patches from master Merge pull request !1422 from wangfengtu/sync
