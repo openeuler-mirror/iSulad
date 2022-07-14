@@ -1,5 +1,5 @@
-%global _version 2.0.14
-%global _release 11
+%global _version 2.0.15
+%global _release 1
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -13,36 +13,6 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 
-Patch0001:  0001-do-not-mkdir-of-isulad-if-no-controller-found.patch
-Patch0002:  0002-fix-install-error-when-android.patch
-Patch0003:  0003-imp-fuzz-for-pw-gr-parser.patch
-Patch0004:  0004-improve-fuzz-test.patch
-Patch0005:  0005-Seccomp-optimization.patch
-Patch0006:  0006-fix-different-type-convert.patch
-Patch0007:  0007-add-pointer-parameters-NULL-check.patch
-Patch0008:  0008-add-check-to-arguments.patch
-Patch0009:  0009-remove-static-of-strlncat.patch
-Patch0010:  0010-remove-check-parameter-label_opts-in-init_label.patch
-Patch0011:  0011-update-seccomp-to-Linux-5.10-syscall-list.patch
-Patch0012:  0012-fix-invalid-convert-and-format.patch
-Patch0013:  0013-fix-get_network_namespace_path-check.patch
-Patch0014:  0014-bugfix-for-double-free-and-use-after-free.patch
-Patch0015:  0015-fix-isulad-shim-coredump-when-remove-ioc-fd-node.patch
-Patch0016:  0016-do-not-fail-if-pw-is-not-NULL.patch
-Patch0017:  0017-do-not-fail-if-gr-is-NULL.patch
-Patch0018:  0018-fix-memory-leak-of-remove-layer.patch
-Patch0019:  0019-add-null-terminal-at-end-of-gr-mem-list.patch
-Patch0020:  0020-fix-shm-size-set-invalid-when-reboot.patch
-Patch0021:  0021-set-the-name-of-each-container-and-image-operation-t.patch
-Patch0022:  0022-set-the-name-of-each-container-and-image-operation-t.patch
-Patch0023:  0023-fix-inspect-f-error-when-bionic.patch
-Patch0024:  0024-refactor-devmapper_parse_options-function.patch
-Patch0025:  0025-refactor-parse_volume-function.patch
-Patch0026:  0026-fix-parse-volume-failed.patch
-Patch0027:  0027-use-util_smart_calloc_t-to-prevent-overflow.patch
-Patch0028:  0028-increase-websocket-lws_lookup-size.patch
-Patch0029:  0029-fix-misuse-of-BUFSIZ.patch
-Patch0030:  0030-gc-considers-stored-monitor-pid.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -269,6 +239,12 @@ fi
 %endif
 
 %changelog
+* Fri Jul 8 2022 haozi007 <liuhao27@huawei.com> - 2.0.15-1
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: update version to v2.0.15
+
 * Fri Jul 8 2022 haozi007 <liuhao27@huawei.com> - 2.0.14-11
 - Type: enhancement
 - ID: NA
