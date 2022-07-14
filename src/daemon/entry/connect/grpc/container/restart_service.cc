@@ -50,7 +50,7 @@ int ContainerRestartService::FillRequestFromgRPC(const RestartRequest *request, 
 void ContainerRestartService::ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes)
 {
     (void)cb->container.restart(static_cast<container_restart_request *>(containerReq),
-                              static_cast<container_restart_response **>(containerRes));
+                                static_cast<container_restart_response **>(containerRes));
 }
 
 void ContainerRestartService::FillResponseTogRPC(void *containerRes, RestartResponse *gresponse)

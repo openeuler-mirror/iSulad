@@ -132,24 +132,6 @@ private:
 
     void top_response_to_grpc(const container_top_response *response, TopResponse *gresponse);
 
-    int exec_request_from_grpc(const ExecRequest *grequest, container_exec_request **request);
-
-    void exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse);
-
-    int inspect_request_from_grpc(const InspectContainerRequest *grequest, container_inspect_request **request);
-
-    void inspect_response_to_grpc(const container_inspect_response *response, InspectContainerResponse *gresponse);
-
-    int list_request_from_grpc(const ListRequest *grequest, container_list_request **request);
-
-    void list_response_to_grpc(const container_list_response *response, ListResponse *gresponse);
-
-    int container_rename_request_from_grpc(const RenameRequest *grequest,
-                                           struct isulad_container_rename_request **request);
-
-    void container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
-                                           RenameResponse *gresponse);
-
     int container_resize_request_from_grpc(const ResizeRequest *grequest,
                                            struct isulad_container_resize_request **request);
 
