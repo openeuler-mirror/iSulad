@@ -113,6 +113,34 @@ auto ImageManagerServiceImpl::pull_request_from_grpc(const runtime::v1alpha2::Im
     return 0;
 }
 
+auto ImageManagerServiceImpl::search_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
+                                                     const runtime::v1alpha2::AuthConfig *auth, im_search_request **request,
+                                                     Errors &error) -> int
+{
+    im_search_request *tmpreq = (im_search_request *)util_common_calloc_s(sizeof(im_search_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        error.SetError("Out of memory");
+        return -1;
+    }
+
+    if (!image->image().empty()) {
+        tmpreq->image = util_strdup_s(image->image().c_str());
+    }
+
+    if (!auth->username().empty()) {
+        tmpreq->username = util_strdup_s(auth->username().c_str());
+    }
+
+    if (!auth->password().empty()) {
+        tmpreq->password = util_strdup_s(auth->password().c_str());
+    }
+
+    *request = tmpreq;
+
+    return 0;
+}
+
 auto ImageManagerServiceImpl::list_request_from_grpc(const runtime::v1alpha2::ImageFilter *filter,
                                                      im_list_request **request, Errors &error) -> int
 {
@@ -283,6 +311,39 @@ cleanup:
     DAEMON_CLEAR_ERRMSG();
     free_im_pull_request(request);
     free_im_pull_response(response);
+    return out_str;
+}
+
+auto ImageManagerServiceImpl::SearchImage(const runtime::v1alpha2::ImageSpec &image,
+                                        const runtime::v1alpha2::AuthConfig &auth, Errors &error) -> std::string
+{
+    std::string out_str;
+    im_search_request *request { nullptr };
+    im_search_response *response { nullptr };
+
+    int ret = search_request_from_grpc(&image, &auth, &request, error);
+    if (ret != 0) {
+        goto cleanup;
+    }
+    request->type = util_strdup_s(IMAGE_TYPE_OCI);
+
+    ret = im_search_image(request, &response);
+    if (ret != 0) {
+        if (response != nullptr && response->errmsg != nullptr) {
+            error.SetError(response->errmsg);
+        } else {
+            error.SetError("Failed to call search image");
+        }
+        goto cleanup;
+    }
+    if (response->image_tags_json != nullptr) {
+        out_str = response->image_tags_json;
+    }
+
+cleanup:
+    DAEMON_CLEAR_ERRMSG();
+    free_im_search_request(request);
+    free_im_search_response(response);
     return out_str;
 }
 

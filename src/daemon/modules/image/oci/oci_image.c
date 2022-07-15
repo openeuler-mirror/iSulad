@@ -23,6 +23,7 @@
 #include "oci_pull.h"
 #include "oci_login.h"
 #include "oci_logout.h"
+#include "oci_search.h"
 #include "registry.h"
 #include "utils.h"
 #include "utils_images.h"
@@ -325,6 +326,11 @@ int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
     }
 
     return oci_do_pull_image(request, response);
+}
+
+int oci_search_rf(const im_search_request *request, im_search_response *response)
+{
+    return oci_do_search_image(request, response);
 }
 
 int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs)

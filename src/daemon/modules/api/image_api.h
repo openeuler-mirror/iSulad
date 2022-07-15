@@ -154,6 +154,20 @@ typedef struct {
     char *errmsg;
 } im_pull_response;
 
+
+typedef struct {
+    char *type;
+    char *image;
+    char *auth;
+
+    char *username;;
+    char *password;
+} im_search_request;
+typedef struct {
+    char *image_tags_json;
+    char *errmsg;
+} im_search_response;
+
 typedef struct {
     char *server;
     char *username;
@@ -286,6 +300,12 @@ int im_pull_image(const im_pull_request *request, im_pull_response **response);
 void free_im_pull_request(im_pull_request *req);
 
 void free_im_pull_response(im_pull_response *resp);
+
+int im_search_image(const im_search_request *request, im_search_response **response);
+
+void free_im_search_request(im_search_request *req);
+
+void free_im_search_response(im_search_response *resp);
 
 char *im_get_image_type(const char *image, const char *external_rootfs);
 

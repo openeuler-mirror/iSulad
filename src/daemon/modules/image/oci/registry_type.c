@@ -153,3 +153,46 @@ void free_pull_desc(pull_descriptor *desc)
 
     free(desc);
 }
+
+
+void free_search_desc(search_descriptor *desc)
+{
+    int i = 0;
+
+    if (desc == NULL) {
+        return;
+    }
+
+    free(desc->host);
+    desc->host = NULL;
+
+
+    util_free_sensitive_string(desc->username);
+    desc->username = NULL;
+    util_free_sensitive_string(desc->password);
+    desc->password = NULL;
+
+    desc->use_decrypted_key = false;
+    desc->cert_loaded = false;
+    free(desc->ca_file);
+    desc->ca_file = NULL;
+    free(desc->cert_file);
+    desc->cert_file = NULL;
+    free(desc->key_file);
+    desc->key_file = NULL;
+
+
+    free(desc->protocol);
+    desc->protocol = NULL;
+    desc->skip_tls_verify = false;
+
+    for (i = 0; i < CHALLENGE_MAX; i++) {
+        free_challenge(&desc->challenges[i]);
+    }
+
+
+
+
+
+    free(desc);
+}

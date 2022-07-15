@@ -35,6 +35,9 @@ public:
 
     virtual auto PullImage(const runtime::v1alpha2::ImageSpec &image, const runtime::v1alpha2::AuthConfig &auth,
                            Errors &error) -> std::string = 0;
+                           
+    virtual auto SearchImage(const runtime::v1alpha2::ImageSpec &image, const runtime::v1alpha2::AuthConfig &auth,
+                           Errors &error) -> std::string = 0;
 
     virtual void RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error) = 0;
 

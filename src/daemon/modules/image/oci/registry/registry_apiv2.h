@@ -31,6 +31,11 @@ int fetch_layer(pull_descriptor *desc, size_t index);
 
 int login_to_registry(pull_descriptor *desc);
 
+
+int fetch_catalog(search_descriptor *desc);
+
+int fetch_tags(search_descriptor *desc,char** output_buffer);
+
 #ifdef __cplusplus
 }
 #endif

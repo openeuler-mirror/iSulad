@@ -83,6 +83,9 @@ struct bim_ops {
     /* pull image */
     int (*pull_image)(const im_pull_request *request, im_pull_response *response);
 
+    /* search image */
+    int (*search_image)(const im_search_request *request, im_search_response *response);
+
     /* login */
     int (*login)(const im_login_request *request);
 
@@ -146,6 +149,7 @@ static const struct bim_ops g_embedded_ops = {
     .image_status = NULL,
     .load_image = embedded_load_image,
     .pull_image = NULL,
+    .search_image = NULL,
 
     .login = NULL,
     .logout = NULL,
@@ -180,6 +184,7 @@ static const struct bim_ops g_oci_ops = {
     .image_status = oci_status_image,
     .load_image = oci_load_image,
     .pull_image = oci_pull_rf,
+    .search_image = oci_search_rf,
     .login = oci_login,
     .logout = oci_logout,
     .tag_image = oci_tag,
@@ -213,6 +218,7 @@ static const struct bim_ops g_ext_ops = {
     .get_filesystem_info = NULL,
     .load_image = ext_load_image,
     .pull_image = NULL,
+    .search_image = NULL,
     .login = ext_login,
     .logout = ext_logout,
     .tag_image = NULL,
@@ -948,7 +954,7 @@ int im_pull_image(const im_pull_request *request, im_pull_response **response)
 
     EVENT("Event: {Object: %s, Type: Pulling}", request->image);
     ret = bim->ops->pull_image(request, tmp_res);
-    if (ret != 0) {
+     if (ret != 0) {
         ERROR("Pull image %s failed", request->image);
         ret = -1;
         goto out;
@@ -996,6 +1002,96 @@ void free_im_pull_response(im_pull_response *resp)
     }
     free(resp->image_ref);
     resp->image_ref = NULL;
+    free(resp->errmsg);
+    resp->errmsg = NULL;
+    free(resp);
+}
+
+static bool check_im_search_args(const im_search_request *req, im_search_response * const *resp)
+{
+    if (req == NULL || resp == NULL) {
+        ERROR("Request or response is NULL");
+        return false;
+    }
+    if (req->image == NULL) {
+        ERROR("Empty image required");
+        isulad_set_error_message("Empty image required");
+        return false;
+    }
+    return true;
+}
+
+int im_search_image(const im_search_request *request, im_search_response **response)
+{
+    int ret = -1;
+    struct bim *bim = NULL;
+    im_search_response *tmp_res = NULL;
+
+    DAEMON_CLEAR_ERRMSG();
+
+    if (!check_im_search_args(request, response)) {
+        return ret;
+    }
+
+    tmp_res = (im_search_response *)util_common_calloc_s(sizeof(im_search_response));
+    if (tmp_res == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
+    bim = bim_get(request->type, NULL, NULL, NULL);
+    if (bim == NULL) {
+        ERROR("Failed to init bim, image type: %s", request->type);
+        goto out;
+    }
+
+    if (bim->ops->search_image == NULL) {
+        ERROR("Unimplements search image in %s", bim->type);
+        goto out;
+    }
+
+    EVENT("Event: {Object: %s, Type: Searching}", request->image);
+    ret = bim->ops->search_image(request, tmp_res);
+    if (ret != 0) {
+        ERROR("Search image %s failed", request->image);
+        ret = -1;
+        goto out;
+    }
+    EVENT("Event: {Object: %s, Type: Searched}", request->image);
+
+out:
+    bim_put(bim);
+    if (ret != 0 && tmp_res != NULL && g_isulad_errmsg != NULL) {
+        tmp_res->errmsg = util_strdup_s(g_isulad_errmsg);
+    }
+    DAEMON_CLEAR_ERRMSG();
+    *response = tmp_res;
+    return ret;
+}
+
+void free_im_search_request(im_search_request *req)
+{
+    if (req == NULL) {
+        return;
+    }
+    free(req->type);
+    req->type = NULL;
+    free(req->image);
+    req->image = NULL;
+    util_free_sensitive_string(req->username);
+    req->username = NULL;
+    util_free_sensitive_string(req->password);
+    req->password = NULL;
+    free(req);
+}
+
+void free_im_search_response(im_search_response *resp)
+{
+    if (resp == NULL) {
+        return;
+    }
+    free(resp->image_tags_json);
+    resp->image_tags_json = NULL;
     free(resp->errmsg);
     resp->errmsg = NULL;
     free(resp);

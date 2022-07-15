@@ -114,7 +114,7 @@ add_executable(isulad-shim
     ${ISULAD_SHIM_SRCS}
     )
 target_include_directories(isulad-shim PUBLIC ${ISULAD_SHIM_INCS} ${SHARED_INCS})
-target_link_libraries(isulad-shim libisulad_tools)
+target_link_libraries(isulad-shim libisulad_tools -lm)
 if (ANDROID)
     target_link_libraries(isulad-shim ${LIBSSL_LIBRARY} ${LIBYAJL_LIBRARY})
 else()
