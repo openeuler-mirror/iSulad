@@ -2115,7 +2115,9 @@ static void free_tar_split(tar_split *ts)
 static tar_split *new_tar_split(layer_t *l, const char *tspath)
 {
     int ret = 0;
+    int nret = 0;
     tar_split *ts = NULL;
+    char path[PATH_MAX] = {0};
 
     ts = util_common_calloc_s(sizeof(tar_split));
     if (ts == NULL) {
@@ -2124,12 +2126,20 @@ static tar_split *new_tar_split(layer_t *l, const char *tspath)
         goto out;
     }
 
-    ts->tmp_file = tmpfile();
+    nret = snprintf(path, sizeof(path), ".%s.tmp", tspath);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("sprintf .%s.tmp failed", tspath);
+        ret = -1;
+        goto out;
+    }
+
+    ts->tmp_file = fopen(path, "w+");
     if (ts->tmp_file == NULL) {
         ERROR("create tmpfile failed: %s", strerror(errno));
         ret = -1;
         goto out;
     }
+    (void)unlink(path);
 
     ret = util_gzip_d(tspath, ts->tmp_file);
     if (ret != 0) {
