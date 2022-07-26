@@ -235,6 +235,9 @@
 			},
 			{
 				"type": "mount"
+			},
+			{
+				"type": "cgroup"
 			}
 		],
 		"maskedPaths": [
