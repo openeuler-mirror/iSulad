@@ -248,9 +248,11 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
 {
     int ret = 0;
     int pid = 0;
+    int fd = -1;
     char addr[PATH_MAX] = {0};
     char *exit_fifo_path = NULL;
     char *state_path = NULL;
+    char *log_path = NULL;
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("Invalid input params");
@@ -271,6 +273,21 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
         goto out;
     }
 
+    log_path = util_string_append(SHIM_V2_LOG, params->bundle);
+    if (log_path == NULL) {
+        ERROR("Fail to append log path");
+        ret = -1;
+        goto out;
+    }
+
+    fd = util_open(log_path, O_RDWR | O_CREAT | O_TRUNC, DEFAULT_SECURE_FILE_MODE);
+    if (fd < 0) {
+        ERROR("Failed to create log file for shim v2: %s", log_path);
+        ret = -1;
+        goto out;
+    }
+    close(fd);
+    
     if (shim_bin_v2_create(runtime, id, params->bundle, NULL, addr, state_path) != 0) {
         ERROR("%s: failed to create v2 shim", id);
         ret = -1;
@@ -292,6 +309,7 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
     }
 
 out:
+    free(log_path);
     free(exit_fifo_path);
     free(state_path);
     return ret;

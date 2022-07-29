@@ -210,13 +210,6 @@
 					"major": 10,
 					"minor": 200,
 					"access": "rwm"
-				},
-				{
-					"allow": false,
-					"type": "c",
-					"major": 10,
-					"minor": 229,
-					"access": "rwm"
 				}
 			]
 		},
