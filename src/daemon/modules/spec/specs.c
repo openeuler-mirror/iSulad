@@ -1549,6 +1549,12 @@ int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_sp
         goto out;
     }
 
+    // cgroup
+    if (merge_share_single_namespace(oci_spec, host_spec->cgroupns_mode, TYPE_NAMESPACE_CGROUP) != 0) {
+        ret = -1;
+        goto out;
+    }
+
     ret = 0;
 out:
     return ret;
