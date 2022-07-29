@@ -76,18 +76,16 @@ static int do_create_daemon_fifos(const char *statepath, const char *subpath, bo
         }
     }
 
-    if (attach_stdout) {
-        fifos[1] = create_single_fifo(statepath, subpath, "out");
-        if (fifos[1] == NULL) {
-            goto cleanup;
-        }
+    // Providing stdout fifo to low-level container runtime
+    fifos[1] = create_single_fifo(statepath, subpath, "out");
+    if (fifos[1] == NULL) {
+        goto cleanup;
     }
-
-    if (attach_stderr) {
-        fifos[2] = create_single_fifo(statepath, subpath, "err");
-        if (fifos[2] == NULL) {
-            goto cleanup;
-        }
+ 
+    // Providing stderr fifo to low-level container runtime
+    fifos[2] = create_single_fifo(statepath, subpath, "err");
+    if (fifos[2] == NULL) {
+        goto cleanup;
     }
 
     ret = 0;
@@ -365,6 +363,10 @@ static int handle_dst_io_fd(int index, struct io_copy_arg *copy_arg, int *outfds
 
 static int handle_dst_io_fifo(int index, struct io_copy_arg *copy_arg, int *outfds, struct io_write_wrapper *writers)
 {
+    if ((const char *)copy_arg[index].dst == NULL) {
+        WARN("copy arg is null, make sure that container is launching in detach mode");
+        return 0;
+    }
     if (console_fifo_open_withlock((const char *)copy_arg[index].dst, &outfds[index],
                                    copy_arg[index].dstfifoflag | O_NONBLOCK)) {
         ERROR("Failed to open console fifo.");
@@ -528,17 +530,15 @@ int ready_copy_io_data(int sync_fd, bool detach, const char *fifoin, const char 
         add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifoin, IO_FIFO, (void *)fifos[0], O_RDWR, STDIN_CHANNEL);
     }
 
-    if (fifoout != NULL) {
-        // fifos[1]  : lxc -> iSulad read
-        // fifoout   : iSulad -> iSula write
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FIFO, (void *)fifoout, O_WRONLY,
-                            STDOUT_CHANNEL);
-    }
+    // fifos[1]  : lxc -> iSulad read
+    // fifoout   : iSulad -> iSula write
+    // isulad stdout fifo now should always be an IO src
+    add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FIFO, (void *)fifoout, O_WRONLY,
+                        STDOUT_CHANNEL);
 
-    if (fifoerr != NULL) {
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FIFO, (void *)fifoerr, O_WRONLY,
-                            STDERR_CHANNEL);
-    }
+    // isulad stderr fifo now should always be an IO src
+    add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FIFO, (void *)fifoerr, O_WRONLY,
+                        STDERR_CHANNEL);
 
     if (stdin_fd > 0) {
         add_io_copy_element(&io_copy[len++], IO_FD, &stdin_fd, IO_FIFO, (void *)fifos[0], O_RDWR, STDIN_CHANNEL);
