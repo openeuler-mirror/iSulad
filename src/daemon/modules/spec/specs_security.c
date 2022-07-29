@@ -42,11 +42,11 @@
 
 static const char * const g_system_caps[] = { "SYS_BOOT",     "SETPCAP", "NET_RAW", "NET_BIND_SERVICE",
 #ifdef CAP_AUDIT_WRITE
-                                             "AUDIT_WRITE",
+                                              "AUDIT_WRITE",
 #endif
-                                             "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
-                                             "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT"
-                                           };
+                                              "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
+                                              "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT"
+                                            };
 
 static int append_capability(char ***dstcaps, size_t *dstcaps_len, const char *cap)
 {
@@ -472,11 +472,6 @@ static size_t docker_seccomp_arches_count(const char *seccomp_architecture, cons
         }
     }
 
-    if (count == 0) {
-        ERROR("seccomp architecture not found");
-        count = -1;
-    }
-
     return count;
 }
 
@@ -496,6 +491,18 @@ static int dup_architectures_to_oci_spec(const char *seccomp_architecture, const
     if (arch_size < 0) {
         ERROR("Failed to get arches count from docker seccomp spec");
         return -1;
+    }
+
+    if (arch_size == 0) {
+        WARN("arch map is not provided in specified seccomp profile");
+        oci_seccomp_spec->architectures = util_smart_calloc_s(sizeof(char *), 1);
+        if (oci_seccomp_spec->architectures == NULL) {
+            ERROR("Failed to allocate memory for architectures in seccomp spec");
+            return -1;
+        }
+        oci_seccomp_spec->architectures[oci_seccomp_spec->architectures_len++] =
+            util_strdup_s(seccomp_architecture);
+        return 0;
     }
 
     oci_seccomp_spec->architectures = util_smart_calloc_s(sizeof(char *), arch_size);
