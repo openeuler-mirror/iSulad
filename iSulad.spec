@@ -18,6 +18,7 @@ ExclusiveArch:  x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
 Provides:       libisula.so()(64bit)
 Provides:       libisulad_img.so()(64bit)
+Provides:       libisulad_tools.so()(64bit)
 %endif
 
 %if 0%{?is_systemd}
