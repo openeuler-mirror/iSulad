@@ -1,0 +1,11 @@
+{
+        "defaultAction": "SCMP_ACT_ALLOW",
+        "syscalls": [
+                {
+                        "names": ["getcwd"],
+			"action": "SCMP_ACT_ERRNO",
+			"args": null
+		}
+	]
+
+}
