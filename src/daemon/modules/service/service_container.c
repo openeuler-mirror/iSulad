@@ -1482,6 +1482,7 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
 
     id = cont->common_config->id;
 
+    container_stop_health_checks(id);
     container_lock(cont);
 
     if (container_is_paused(cont->state)) {
