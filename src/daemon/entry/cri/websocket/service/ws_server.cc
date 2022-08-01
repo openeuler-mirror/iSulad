@@ -703,6 +703,28 @@ ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len)
     return WsWriteToClient(context, data, len, STDERRCHANNEL);
 }
 
+ssize_t WsDoNotWriteStdoutToClient(void *context, const void *data, size_t len)
+{
+    if (context == nullptr) {
+        ERROR("websocket session context empty");
+        return -1;
+    }
+
+    TRACE("Ws do not write stdout to client");
+    return len;
+}
+
+ssize_t WsDoNotWriteStderrToClient(void *context, const void *data, size_t len)
+{
+    if (context == nullptr) {
+        ERROR("websocket session context empty");
+        return -1;
+    }
+
+    TRACE("Ws do not write stderr to client");
+    return len;
+}
+
 int closeWsConnect(void *context, char **err)
 {
     (void)err;
