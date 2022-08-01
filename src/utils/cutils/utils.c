@@ -1396,8 +1396,8 @@ static void normalized_host_variant(const char *host_arch, char **host_variant) 
     *host_variant = get_cpu_variant();
     if (!strcmp(host_arch, "arm64") && *host_variant != NULL &&
         (!strcmp(*host_variant, "8") || !strcmp(*host_variant, "v8"))) {
-        free(host_variant);
-        host_variant = NULL;
+        free(*host_variant);
+        *host_variant = NULL;
     }
 
     if (!strcmp(host_arch, "arm") && *host_variant == NULL) {
