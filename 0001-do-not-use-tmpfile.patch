@@ -1,0 +1,49 @@
+From 2e404b3aa5fcea87a905fbd7ff3465b6135b701e Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Wed, 20 Jul 2022 14:26:58 +0800
+Subject: [PATCH 1/6] do not use tmpfile()
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ .../image/oci/storage/layer_store/layer_store.c      | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+index 7e95a52f..208bb3bc 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+@@ -2115,7 +2115,9 @@ static void free_tar_split(tar_split *ts)
+ static tar_split *new_tar_split(layer_t *l, const char *tspath)
+ {
+     int ret = 0;
++    int nret = 0;
+     tar_split *ts = NULL;
++    char path[PATH_MAX] = {0};
+ 
+     ts = util_common_calloc_s(sizeof(tar_split));
+     if (ts == NULL) {
+@@ -2124,12 +2126,20 @@ static tar_split *new_tar_split(layer_t *l, const char *tspath)
+         goto out;
+     }
+ 
+-    ts->tmp_file = tmpfile();
++    nret = snprintf(path, sizeof(path), ".%s.tmp", tspath);
++    if (nret < 0 || nret >= PATH_MAX) {
++        ERROR("sprintf .%s.tmp failed", tspath);
++        ret = -1;
++        goto out;
++    }
++
++    ts->tmp_file = fopen(path, "w+");
+     if (ts->tmp_file == NULL) {
+         ERROR("create tmpfile failed: %s", strerror(errno));
+         ret = -1;
+         goto out;
+     }
++    (void)unlink(path);
+ 
+     ret = util_gzip_d(tspath, ts->tmp_file);
+     if (ret != 0) {
+-- 
+2.25.1
+
