@@ -518,7 +518,7 @@ static void to_engine_resources(const host_config *hostconfig, struct engine_cgr
     cr->blkio_weight = hostconfig->blkio_weight;
     cr->cpu_shares = (uint64_t)hostconfig->cpu_shares;
     cr->cpu_period = (uint64_t)hostconfig->cpu_period;
-    cr->cpu_quota = (uint64_t)hostconfig->cpu_quota;
+    cr->cpu_quota = hostconfig->cpu_quota;
     cr->cpuset_cpus = hostconfig->cpuset_cpus;
     cr->cpuset_mems = hostconfig->cpuset_mems;
     cr->memory_limit = (uint64_t)hostconfig->memory;
@@ -532,7 +532,7 @@ static void to_engine_resources(const host_config *hostconfig, struct engine_cgr
         period = (uint64_t)(100 * Time_Milli / Time_Micro);
         quota = hostconfig->nano_cpus * (int64_t)period / 1e9;
         cr->cpu_period = period;
-        cr->cpu_quota = (uint64_t)quota;
+        cr->cpu_quota = quota;
     }
 }
 

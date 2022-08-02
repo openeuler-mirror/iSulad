@@ -33,7 +33,7 @@ struct engine_cgroup_resources {
     uint64_t blkio_weight;
     uint64_t cpu_shares;
     uint64_t cpu_period;
-    uint64_t cpu_quota;
+    int64_t cpu_quota;
     char *cpuset_cpus;
     char *cpuset_mems;
     uint64_t memory_limit;
