@@ -1,5 +1,5 @@
 %global _version 2.0.15
-%global _release 1
+%global _release 2
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -13,6 +13,12 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 
+Patch6000: 0001-do-not-use-tmpfile.patch
+Patch6001: 0002-use-only-TLS-v1.2-or-later.patch
+Patch6002: 0003-don-t-mount-shareable-dirs-if-user-set-mount-for-dev.patch
+Patch6003: 0004-tolerate-arch-unspecified-seccomp-profiles.patch
+Patch6004: 0005-add-a-CI-test-case-checking-seccomp-option.patch
+Patch6005: 0006-fix-cri-attach-when-stdout-and-stderr-are-false.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -240,6 +246,12 @@ fi
 %endif
 
 %changelog
+* Mon Aug 1 2022 chengzeruizhi <chengzeruizhi@huawei.com> - 2.0.15-2
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sycn patches from openeuler branch
+
 * Fri Jul 8 2022 haozi007 <liuhao27@huawei.com> - 2.0.15-1
 - Type: enhancement
 - ID: NA
