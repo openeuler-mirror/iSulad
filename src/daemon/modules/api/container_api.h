@@ -271,7 +271,7 @@ extern char *container_exit_fifo_create(const char *cont_state_path);
 extern int container_exit_fifo_open(const char *cont_exit_fifo);
 
 void container_init_health_monitor(const char *id);
-void container_stop_health_checks(const char *container_id);
+void container_stop_health_checks(container_t *cont);
 
 bool container_is_in_gc_progress(const char *id);
 
