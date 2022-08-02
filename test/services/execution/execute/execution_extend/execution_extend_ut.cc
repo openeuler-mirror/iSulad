@@ -204,7 +204,7 @@ void invokeStateSetPaused(container_state_t *s)
     return;
 }
 
-void invokeContainerStopHealthCheck(const container_t *cont)
+void invokeContainerStopHealthCheck(container_t *cont)
 {
     return;
 }
