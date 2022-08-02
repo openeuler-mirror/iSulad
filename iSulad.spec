@@ -426,7 +426,7 @@ fi
 - SUG: NA
 - DESC: specify version
 
-* Thu Dec 03 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-8
+* Fri Dec 03 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.10-8
 - Type: bugfix
 - ID: NA
 - SUG: NA
