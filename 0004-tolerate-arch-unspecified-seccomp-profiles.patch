@@ -1,0 +1,64 @@
+From 73e02e66102b3e066d5d6424624461c3024cabe4 Mon Sep 17 00:00:00 2001
+From: chengzrz <czrzrichard@gmail.com>
+Date: Fri, 29 Jul 2022 14:44:55 +0800
+Subject: [PATCH 4/6] tolerate arch unspecified seccomp profiles
+
+Signed-off-by: chengzrz <czrzrichard@gmail.com>
+---
+ src/daemon/modules/spec/specs_security.c | 25 +++++++++++++++---------
+ 1 file changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/src/daemon/modules/spec/specs_security.c b/src/daemon/modules/spec/specs_security.c
+index 643c2745..62f67082 100644
+--- a/src/daemon/modules/spec/specs_security.c
++++ b/src/daemon/modules/spec/specs_security.c
+@@ -42,11 +42,11 @@
+ 
+ static const char * const g_system_caps[] = { "SYS_BOOT",     "SETPCAP", "NET_RAW", "NET_BIND_SERVICE",
+ #ifdef CAP_AUDIT_WRITE
+-                                             "AUDIT_WRITE",
++                                              "AUDIT_WRITE",
+ #endif
+-                                             "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
+-                                             "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT"
+-                                           };
++                                              "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
++                                              "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT"
++                                            };
+ 
+ static int append_capability(char ***dstcaps, size_t *dstcaps_len, const char *cap)
+ {
+@@ -472,11 +472,6 @@ static size_t docker_seccomp_arches_count(const char *seccomp_architecture, cons
+         }
+     }
+ 
+-    if (count == 0) {
+-        ERROR("seccomp architecture not found");
+-        count = -1;
+-    }
+-
+     return count;
+ }
+ 
+@@ -498,6 +493,18 @@ static int dup_architectures_to_oci_spec(const char *seccomp_architecture, const
+         return -1;
+     }
+ 
++    if (arch_size == 0) {
++        WARN("arch map is not provided in specified seccomp profile");
++        oci_seccomp_spec->architectures = util_smart_calloc_s(sizeof(char *), 1);
++        if (oci_seccomp_spec->architectures == NULL) {
++            ERROR("Failed to allocate memory for architectures in seccomp spec");
++            return -1;
++        }
++        oci_seccomp_spec->architectures[oci_seccomp_spec->architectures_len++] =
++            util_strdup_s(seccomp_architecture);
++        return 0;
++    }
++
+     oci_seccomp_spec->architectures = util_smart_calloc_s(sizeof(char *), arch_size);
+     if (oci_seccomp_spec->architectures == NULL) {
+         ERROR("Failed to calloc memory for architectures in seccomp spec");
+-- 
+2.25.1
+
