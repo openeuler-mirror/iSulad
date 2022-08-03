@@ -1401,6 +1401,9 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
         ret = -1;
         goto out;
     }
+
+    container_stop_health_checks(cont);
+
     // set AutoRemove flag to false before stop so the container won't be
     // removed during restart process
     if (restart) {

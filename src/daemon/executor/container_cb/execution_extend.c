@@ -715,7 +715,7 @@ static int do_pause_container(container_t *cont)
     params.rootpath = cont->root_path;
     params.state = cont->state_path;
 
-    container_stop_health_checks(cont->common_config->id);
+    container_stop_health_checks(cont);
 
     if (runtime_pause(id, cont->runtime, &params)) {
         container_update_health_monitor(cont->common_config->id);
