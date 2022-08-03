@@ -22,7 +22,7 @@
 class MockHealthCheck {
 public:
     MOCK_METHOD1(UpdateHealthMonitor, void(const char *container_id));
-    MOCK_METHOD1(ContainerStopHealthCheck, void(const char *container_id));
+    MOCK_METHOD1(ContainerStopHealthCheck, void(container_t *cont));
 };
 
 void MockHealthCheck_SetMock(MockHealthCheck* mock);

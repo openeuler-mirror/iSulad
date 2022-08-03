@@ -182,23 +182,15 @@ static void close_health_check_monitor(container_t *cont)
 
 // Called when the container is being stopped (whether because the health check is
 // failing or for any other reason).
-void container_stop_health_checks(const char *container_id)
+void container_stop_health_checks(container_t *cont)
 {
-    container_t *cont = NULL;
-
-    if (container_id == NULL) {
-        return;
-    }
-
-    cont = containers_store_get(container_id);
     if (cont == NULL) {
-        ERROR("Failed to get container info");
         return;
     }
+
     if (cont->state != NULL && cont->state->state != NULL && cont->state->state->health != NULL) {
         close_health_check_monitor(cont);
     }
-    container_unref(cont);
 }
 
 /* health check manager free */
