@@ -552,7 +552,34 @@ auto fmtiSuladOpts(const std::vector<iSuladOpt> &opts, const char &sep) -> std::
     return fmtOpts;
 }
 
-auto GetSeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> std::vector<iSuladOpt>
+auto GetSeccompiSuladOptsByPath(const char *dstpath, Errors &error) -> std::vector<iSuladOpt>
+{
+    std::vector<iSuladOpt> ret { };
+    parser_error err = nullptr;
+    char *seccomp_json = nullptr;
+
+    docker_seccomp *seccomp_spec = get_seccomp_security_opt_spec(dstpath);
+    if (seccomp_spec == nullptr) {
+        error.Errorf("failed to parse seccomp profile");
+        return ret;
+    }
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    seccomp_json = docker_seccomp_generate_json(seccomp_spec, &ctx, &err);
+    if (seccomp_json == nullptr) {
+        error.Errorf("failed to generate seccomp json: %s", err);
+	goto out;
+    }
+
+    ret = std::vector<iSuladOpt> { { "seccomp", seccomp_json, "" } };
+
+out:
+    free(err);
+    free(seccomp_json);
+    free_docker_seccomp(seccomp_spec);
+    return ret;
+}
+
+auto GetlegacySeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> std::vector<iSuladOpt>
 {
     if (seccompProfile.empty() || seccompProfile == "unconfined") {
         return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
@@ -576,33 +603,40 @@ auto GetSeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> s
         error.Errorf("seccomp profile path must be absolute, but got relative path %s", fname.c_str());
         return std::vector<iSuladOpt> {};
     }
-    docker_seccomp *seccomp_spec = get_seccomp_security_opt_spec(dstpath);
-    if (seccomp_spec == nullptr) {
-        error.Errorf("failed to parse seccomp profile");
-        return std::vector<iSuladOpt> {};
-    }
-    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
-    parser_error err = nullptr;
-    char *seccomp_json = docker_seccomp_generate_json(seccomp_spec, &ctx, &err);
-    if (seccomp_json == nullptr) {
-        free(err);
-        free_docker_seccomp(seccomp_spec);
-        error.Errorf("failed to generate seccomp json!");
-        return std::vector<iSuladOpt> {};
-    }
 
-    // msg does not need
-    std::vector<iSuladOpt> ret { { "seccomp", seccomp_json, "" } };
-    free(err);
-    free(seccomp_json);
-    free_docker_seccomp(seccomp_spec);
-    return ret;
+    return GetSeccompiSuladOptsByPath(dstpath, error);
 }
 
-auto GetSeccompSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
+auto GetSeccompiSuladOpts(const bool hasSeccomp, const ::runtime::v1alpha2::SecurityProfile &seccomp,
+                          const std::string &seccompProfile, Errors &error)
+-> std::vector<iSuladOpt>
+{
+    if (!hasSeccomp) {
+        return GetlegacySeccompiSuladOpts(seccompProfile, error);
+    }
+
+    if (seccomp.profile_type() == ::runtime::v1alpha2::SecurityProfile_ProfileType_Unconfined) {
+        return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
+    }
+
+    if (seccomp.profile_type() == ::runtime::v1alpha2::SecurityProfile_ProfileType_RuntimeDefault) {
+        // return nil so iSulad will load the default seccomp profile
+        return std::vector<iSuladOpt> {};
+    }
+
+    if (seccomp.profile_type() == ::runtime::v1alpha2::SecurityProfile_ProfileType_Localhost) {
+        return GetSeccompiSuladOptsByPath(seccomp.localhost_ref().c_str(), error);
+    }
+
+    error.Errorf("unsupported seccomp profile type %d", seccomp.profile_type());
+    return std::vector<iSuladOpt> {};
+}
+
+auto GetSeccompSecurityOpts(const bool hasSeccomp, const ::runtime::v1alpha2::SecurityProfile &seccomp,
+                            const std::string &seccompProfile, const char &separator, Errors &error)
 -> std::vector<std::string>
 {
-    std::vector<iSuladOpt> seccompOpts = GetSeccompiSuladOpts(seccompProfile, error);
+    std::vector<iSuladOpt> seccompOpts = GetSeccompiSuladOpts(hasSeccomp, seccomp, seccompProfile, error);
     if (error.NotEmpty()) {
         return std::vector<std::string>();
     }
@@ -610,10 +644,12 @@ auto GetSeccompSecurityOpts(const std::string &seccompProfile, const char &separ
     return fmtiSuladOpts(seccompOpts, separator);
 }
 
-auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
+auto GetSecurityOpts(const bool hasSeccomp, const ::runtime::v1alpha2::SecurityProfile &seccomp,
+                     const std::string &seccompProfile, const char &separator, Errors &error)
 -> std::vector<std::string>
 {
-    std::vector<std::string> seccompSecurityOpts = GetSeccompSecurityOpts(seccompProfile, separator, error);
+    std::vector<std::string> seccompSecurityOpts = GetSeccompSecurityOpts(hasSeccomp, seccomp, seccompProfile,
+                                                                          separator, error);
     if (error.NotEmpty()) {
         error.Errorf("failed to generate seccomp security options for container: %s", error.GetMessage().c_str());
     }
