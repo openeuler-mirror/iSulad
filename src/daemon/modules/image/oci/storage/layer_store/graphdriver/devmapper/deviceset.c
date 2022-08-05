@@ -239,6 +239,7 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
         }
 
         free(dup_option);
+        dup_option = NULL;
     }
 
 out:
