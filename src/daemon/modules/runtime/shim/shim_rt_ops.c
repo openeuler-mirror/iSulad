@@ -110,7 +110,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
     int err_fd[2] = {-1, -1};
     int out_fd[2] = {-1, -1};
     char exec_buff[BUFSIZ + 1] = {0};
-    char stdout_buff[PATH_MAX] = {0};
+    char stdout_buff[PATH_MAX + 1] = {0};
     char stderr_buff[BUFSIZ + 1] = {0};
 
 
@@ -186,7 +186,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
     }
 
     close(exec_fd[1]);
-    if (util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff)) > 0) {
+    if (util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1) > 0) {
         ERROR("exec failed: %s", exec_buff);
         ret = -1;
         goto out;
@@ -203,10 +203,10 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
     status = status_to_exit_code(status);
 
     close(out_fd[1]);
-    util_read_nointr(out_fd[0], stdout_buff, sizeof(stdout_buff));
+    util_read_nointr(out_fd[0], stdout_buff, sizeof(stdout_buff) - 1);
     close(out_fd[0]);
     close(err_fd[1]);
-    util_read_nointr(err_fd[0], stderr_buff, sizeof(stderr_buff));
+    util_read_nointr(err_fd[0], stderr_buff, sizeof(stderr_buff) - 1);
     close(err_fd[0]);
 
     if (status != 0) {
