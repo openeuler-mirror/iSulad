@@ -596,7 +596,7 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
     pid_t pid = -1;
     int keepfds[] = { -1, -1, -1 };
     int pipe_stderr[2] = { -1, -1 };
-    char errbuf[BUFSIZ] = { 0 };
+    char errbuf[BUFSIZ + 1] = { 0 };
 
     if (pipe2(pipe_stderr, O_CLOEXEC) != 0) {
         ERROR("Failed to create pipe");
@@ -980,7 +980,7 @@ int archive_chroot_tar(char *path, char *file, char **errmsg)
     pid_t pid;
     int pipe_for_read[2] = { -1, -1 };
     int keepfds[] = { -1, -1 };
-    char errbuf[BUFSIZ] = { 0 };
+    char errbuf[BUFSIZ + 1] = { 0 };
     int fd = 0;
 
     if (pipe2(pipe_for_read, O_CLOEXEC) != 0) {

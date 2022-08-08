@@ -712,7 +712,7 @@ realexec:
     }
 
     close(exec_fd[1]);
-    num = util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff));
+    num = util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
     close(exec_fd[0]);
     if (num > 0) {
         ERROR("exec failed: %s", exec_buff);
