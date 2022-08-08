@@ -262,25 +262,25 @@ static int prepare_start_io(container_t *cont, const container_start_request *re
 
     id = cont->common_config->id;
 
-    // Considering that there are container runtimes requiring stdout or stderr
-    // in detach mode, now we ensure that stdout and stderr fifos are always provided
-    if (create_daemon_fifos(id, cont->runtime, request->attach_stdin, request->attach_stdout,
-                            request->attach_stderr, "start", fifos, fifopath)) {
-        ret = -1;
-        goto out;
-    }
+    if (request->attach_stdin || request->attach_stdout || request->attach_stderr) {
+        if (create_daemon_fifos(id, cont->runtime, request->attach_stdin, request->attach_stdout,
+                                request->attach_stderr, "start", fifos, fifopath)) {
+            ret = -1;
+            goto out;
+        }
 
-    *sync_fd = eventfd(0, EFD_CLOEXEC);
-    if (*sync_fd < 0) {
-        ERROR("Failed to create eventfd: %s", strerror(errno));
-        ret = -1;
-        goto out;
-    }
+        *sync_fd = eventfd(0, EFD_CLOEXEC);
+        if (*sync_fd < 0) {
+            ERROR("Failed to create eventfd: %s", strerror(errno));
+            ret = -1;
+            goto out;
+        }
 
-    if (ready_copy_io_data(*sync_fd, false, request->stdin, request->stdout, request->stderr, stdinfd,
-                            stdout_handler, stderr_handler, (const char **)fifos, thread_id)) {
-        ret = -1;
-        goto out;
+        if (ready_copy_io_data(*sync_fd, false, request->stdin, request->stdout, request->stderr, stdinfd,
+                               stdout_handler, stderr_handler, (const char **)fifos, thread_id)) {
+            ret = -1;
+            goto out;
+        }
     }
 
 out:
