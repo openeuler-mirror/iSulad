@@ -128,23 +128,11 @@ private:
 
     void info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
-    int top_request_from_grpc(const TopRequest *grequest, container_top_request **request);
-
-    void top_response_to_grpc(const container_top_response *response, TopResponse *gresponse);
-
     int container_resize_request_from_grpc(const ResizeRequest *grequest,
                                            struct isulad_container_resize_request **request);
 
     void container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
                                            ResizeResponse *gresponse);
-
-    int update_request_from_grpc(const UpdateRequest *grequest, container_update_request **request);
-
-    void update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse);
-
-    int stats_request_from_grpc(const StatsRequest *grequest, container_stats_request **request);
-
-    void stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse);
 
     int wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request);
 
@@ -171,8 +159,6 @@ private:
                                          container_start_request **request);
 
     void add_start_trailing_metadata(ServerContext *context, container_start_response *response);
-
-    int export_request_from_grpc(const ExportRequest *grequest, container_export_request **request);
 
     void pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 

@@ -39,6 +39,10 @@
 #include "inspect_service.h"
 #include "list_service.h"
 #include "rename_service.h"
+#include "top_service.h"
+#include "export_service.h"
+#include "update_service.h"
+#include "stats_service.h"
 
 void protobuf_timestamp_to_grpc(const types_timestamp_t *timestamp, Timestamp *gtimestamp)
 {
@@ -364,36 +368,8 @@ Status ContainerServiceImpl::RemoteStart(ServerContext *context,
 
 Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *request, TopResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_top_request *req = nullptr;
-    container_top_response *res = nullptr;
-
-    prctl(PR_SET_NAME, "ContTop");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_top");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.top == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = top_request_from_grpc(request, &req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::CANCELLED;
-    }
-
-    (void)cb->container.top(req, &res);
-    top_response_to_grpc(res, reply);
-
-    free_container_top_request(req);
-    free_container_top_response(res);
-
-    return Status::OK;
+    auto topService = ContainerTopService();
+    return SpecificServiceRun<TopRequest, TopResponse>(topService, context, request, reply);
 }
 
 Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *request, StopResponse *reply)
@@ -460,8 +436,8 @@ class RemoteExecReceiveFromClientTask : public StoppableThread {
 public:
     RemoteExecReceiveFromClientTask() = default;
     RemoteExecReceiveFromClientTask(ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream, int read_pipe_fd)
-        : m_stream(stream)
-        , m_read_pipe_fd(read_pipe_fd)
+            : m_stream(stream)
+            , m_read_pipe_fd(read_pipe_fd)
     {
     }
     ~RemoteExecReceiveFromClientTask() = default;
@@ -532,9 +508,7 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
 
         receive_task.SetStream(stream);
         receive_task.SetReadPipeFd(read_pipe_fd[1]);
-        command_writer = std::thread([&]() {
-            receive_task.run();
-        });
+        command_writer = std::thread([&]() { receive_task.run(); });
     }
 
     struct io_write_wrapper StdoutstringWriter = { 0 };
@@ -742,36 +716,8 @@ Status ContainerServiceImpl::Resume(ServerContext *context, const ResumeRequest 
 
 Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest *request, ExportResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_export_request *container_req = nullptr;
-    container_export_response *container_res = nullptr;
-
-    prctl(PR_SET_NAME, "ContExport");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_export");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.export_rootfs == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = export_request_from_grpc(request, &container_req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.export_rootfs(container_req, &container_res);
-    response_to_grpc(container_res, reply);
-
-    free_container_export_request(container_req);
-    free_container_export_response(container_res);
-
-    return Status::OK;
+    auto exportService = ContainerExportService();
+    return SpecificServiceRun<ExportRequest, ExportResponse>(exportService, context, request, reply);
 }
 
 Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest *request, RenameResponse *reply)
@@ -817,70 +763,14 @@ Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest 
 
 Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest *request, UpdateResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_update_request *container_req = nullptr;
-    container_update_response *container_res = nullptr;
-
-    prctl(PR_SET_NAME, "ContUpdate");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_update");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.update == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = update_request_from_grpc(request, &container_req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.update(container_req, &container_res);
-    update_response_to_grpc(container_res, reply);
-
-    free_container_update_request(container_req);
-    free_container_update_response(container_res);
-
-    return Status::OK;
+    auto updateService = ContainerUpdateService();
+    return SpecificServiceRun<UpdateRequest, UpdateResponse>(updateService, context, request, reply);
 }
 
 Status ContainerServiceImpl::Stats(ServerContext *context, const StatsRequest *request, StatsResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_stats_request *container_req = nullptr;
-    container_stats_response *container_res = nullptr;
-
-    prctl(PR_SET_NAME, "ContStats");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_stats");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.stats == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = stats_request_from_grpc(request, &container_req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.stats(container_req, &container_res);
-    stats_response_to_grpc(container_res, reply);
-
-    free_container_stats_request(container_req);
-    free_container_stats_response(container_res);
-
-    return Status::OK;
+    auto statsService = ContainerStatsService();
+    return SpecificServiceRun<StatsRequest, StatsResponse>(statsService, context, request, reply);
 }
 
 Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *request, WaitResponse *reply)
