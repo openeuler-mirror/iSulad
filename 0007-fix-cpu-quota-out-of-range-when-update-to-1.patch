@@ -1,0 +1,49 @@
+From 5174fd2608a25a8f7f4b61be79d125b19fb420f9 Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Tue, 26 Jul 2022 02:08:43 -0700
+Subject: [PATCH 07/15] fix cpu-quota out of range when update to -1
+
+Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
+---
+ src/daemon/modules/runtime/engines/engine.h         | 2 +-
+ src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/daemon/modules/runtime/engines/engine.h b/src/daemon/modules/runtime/engines/engine.h
+index 8935f845..95428e0f 100644
+--- a/src/daemon/modules/runtime/engines/engine.h
++++ b/src/daemon/modules/runtime/engines/engine.h
+@@ -33,7 +33,7 @@ struct engine_cgroup_resources {
+     uint64_t blkio_weight;
+     uint64_t cpu_shares;
+     uint64_t cpu_period;
+-    uint64_t cpu_quota;
++    int64_t cpu_quota;
+     char *cpuset_cpus;
+     char *cpuset_mems;
+     uint64_t memory_limit;
+diff --git a/src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c b/src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c
+index dd310091..a2b93b72 100644
+--- a/src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c
++++ b/src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c
+@@ -518,7 +518,7 @@ static void to_engine_resources(const host_config *hostconfig, struct engine_cgr
+     cr->blkio_weight = hostconfig->blkio_weight;
+     cr->cpu_shares = (uint64_t)hostconfig->cpu_shares;
+     cr->cpu_period = (uint64_t)hostconfig->cpu_period;
+-    cr->cpu_quota = (uint64_t)hostconfig->cpu_quota;
++    cr->cpu_quota = hostconfig->cpu_quota;
+     cr->cpuset_cpus = hostconfig->cpuset_cpus;
+     cr->cpuset_mems = hostconfig->cpuset_mems;
+     cr->memory_limit = (uint64_t)hostconfig->memory;
+@@ -532,7 +532,7 @@ static void to_engine_resources(const host_config *hostconfig, struct engine_cgr
+         period = (uint64_t)(100 * Time_Milli / Time_Micro);
+         quota = hostconfig->nano_cpus * (int64_t)period / 1e9;
+         cr->cpu_period = period;
+-        cr->cpu_quota = (uint64_t)quota;
++        cr->cpu_quota = quota;
+     }
+ }
+ 
+-- 
+2.25.1
+
