@@ -18,19 +18,12 @@
 #include "utils_network.h"
 
 #include <unistd.h>
-#include <sched.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/mount.h>
-#include <linux/fs.h>
-#include <syscall.h>
 #include <isula_libutils/log.h>
-#include <fcntl.h>
 
 #include "utils.h"
-#include "utils_fs.h"
-#include "utils_file.h"
-#include "constants.h"
 
 int util_create_netns_file(const char *netns_path)
 {

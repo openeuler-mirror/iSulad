@@ -35,7 +35,6 @@
 #include <inttypes.h>
 #include <linux/magic.h>
 #include <linux/dqblk_xfs.h>
-#include <linux/fs.h>
 #include <errno.h>
 #include <libgen.h>
 #include <dirent.h>
