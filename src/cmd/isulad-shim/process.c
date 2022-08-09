@@ -1166,7 +1166,7 @@ int create_process(process_t *p)
         close_fd(&p->stdio->err);
         close_fd(&p->stdio->resize);
     }
-    nread = read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff));
+    nread = read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
     if (nread > 0) {
         write_message(g_log_fd, ERR_MSG, "runtime error");
         ret = SHIM_ERR;
