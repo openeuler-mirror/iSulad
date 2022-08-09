@@ -1,0 +1,136 @@
+From 6e0b890c16d851bd29009b8a778234ce9e82339e Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Mon, 8 Aug 2022 16:46:22 +0800
+Subject: [PATCH 10/15] ensure read string must have space store null char
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/cmd/isulad-shim/process.c                   | 2 +-
+ src/daemon/entry/cri/sysctl_tools.c             | 4 ++--
+ src/daemon/modules/runtime/isula/isula_rt_ops.c | 2 +-
+ src/daemon/modules/runtime/shim/shim_rt_ops.c   | 8 ++++----
+ src/utils/tar/util_archive.c                    | 4 ++--
+ src/utils/tar/util_gzip.c                       | 2 +-
+ 6 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/src/cmd/isulad-shim/process.c b/src/cmd/isulad-shim/process.c
+index cb859920..4d665b26 100644
+--- a/src/cmd/isulad-shim/process.c
++++ b/src/cmd/isulad-shim/process.c
+@@ -1166,7 +1166,7 @@ int create_process(process_t *p)
+         close_fd(&p->stdio->err);
+         close_fd(&p->stdio->resize);
+     }
+-    nread = read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff));
++    nread = read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
+     if (nread > 0) {
+         write_message(g_log_fd, ERR_MSG, "runtime error");
+         ret = SHIM_ERR;
+diff --git a/src/daemon/entry/cri/sysctl_tools.c b/src/daemon/entry/cri/sysctl_tools.c
+index 9883f9ff..257ccf8f 100644
+--- a/src/daemon/entry/cri/sysctl_tools.c
++++ b/src/daemon/entry/cri/sysctl_tools.c
+@@ -31,7 +31,7 @@ int get_sysctl(const char *sysctl, char **err)
+     int fd = -1;
+     ssize_t rsize;
+     char fullpath[PATH_MAX] = { 0 };
+-    char buff[MAX_BUFFER_SIZE] = { 0 };
++    char buff[MAX_BUFFER_SIZE + 1] = { 0 };
+ 
+     ret = snprintf(fullpath, PATH_MAX, "%s/%s", SYSCTL_BASE, sysctl);
+     if (ret < 0 || ret >= PATH_MAX) {
+@@ -46,7 +46,7 @@ int get_sysctl(const char *sysctl, char **err)
+         }
+         goto free_out;
+     }
+-    rsize = util_read_nointr(fd, buff, MAX_BUFFER_SIZE);
++    rsize = util_read_nointr(fd, buff, sizeof(buff) - 1);
+     if (rsize <= 0) {
+         if (asprintf(err, "Read file failed: %s", strerror(errno)) < 0) {
+             *err = util_strdup_s("Out of memory");
+diff --git a/src/daemon/modules/runtime/isula/isula_rt_ops.c b/src/daemon/modules/runtime/isula/isula_rt_ops.c
+index 42f1cda6..2ccdde2e 100644
+--- a/src/daemon/modules/runtime/isula/isula_rt_ops.c
++++ b/src/daemon/modules/runtime/isula/isula_rt_ops.c
+@@ -712,7 +712,7 @@ realexec:
+     }
+ 
+     close(exec_fd[1]);
+-    num = util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff));
++    num = util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
+     close(exec_fd[0]);
+     if (num > 0) {
+         ERROR("exec failed: %s", exec_buff);
+diff --git a/src/daemon/modules/runtime/shim/shim_rt_ops.c b/src/daemon/modules/runtime/shim/shim_rt_ops.c
+index 21d339e5..9c9446a8 100644
+--- a/src/daemon/modules/runtime/shim/shim_rt_ops.c
++++ b/src/daemon/modules/runtime/shim/shim_rt_ops.c
+@@ -110,7 +110,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
+     int err_fd[2] = {-1, -1};
+     int out_fd[2] = {-1, -1};
+     char exec_buff[BUFSIZ + 1] = {0};
+-    char stdout_buff[PATH_MAX] = {0};
++    char stdout_buff[PATH_MAX + 1] = {0};
+     char stderr_buff[BUFSIZ + 1] = {0};
+ 
+ 
+@@ -186,7 +186,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
+     }
+ 
+     close(exec_fd[1]);
+-    if (util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff)) > 0) {
++    if (util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1) > 0) {
+         ERROR("exec failed: %s", exec_buff);
+         ret = -1;
+         goto out;
+@@ -203,10 +203,10 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
+     status = status_to_exit_code(status);
+ 
+     close(out_fd[1]);
+-    util_read_nointr(out_fd[0], stdout_buff, sizeof(stdout_buff));
++    util_read_nointr(out_fd[0], stdout_buff, sizeof(stdout_buff) - 1);
+     close(out_fd[0]);
+     close(err_fd[1]);
+-    util_read_nointr(err_fd[0], stderr_buff, sizeof(stderr_buff));
++    util_read_nointr(err_fd[0], stderr_buff, sizeof(stderr_buff) - 1);
+     close(err_fd[0]);
+ 
+     if (status != 0) {
+diff --git a/src/utils/tar/util_archive.c b/src/utils/tar/util_archive.c
+index 1128b947..da814c94 100644
+--- a/src/utils/tar/util_archive.c
++++ b/src/utils/tar/util_archive.c
+@@ -596,7 +596,7 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
+     pid_t pid = -1;
+     int keepfds[] = { -1, -1, -1 };
+     int pipe_stderr[2] = { -1, -1 };
+-    char errbuf[BUFSIZ] = { 0 };
++    char errbuf[BUFSIZ + 1] = { 0 };
+ 
+     if (pipe2(pipe_stderr, O_CLOEXEC) != 0) {
+         ERROR("Failed to create pipe");
+@@ -980,7 +980,7 @@ int archive_chroot_tar(char *path, char *file, char **errmsg)
+     pid_t pid;
+     int pipe_for_read[2] = { -1, -1 };
+     int keepfds[] = { -1, -1 };
+-    char errbuf[BUFSIZ] = { 0 };
++    char errbuf[BUFSIZ + 1] = { 0 };
+     int fd = 0;
+ 
+     if (pipe2(pipe_for_read, O_CLOEXEC) != 0) {
+diff --git a/src/utils/tar/util_gzip.c b/src/utils/tar/util_gzip.c
+index 9b17e9d7..5c34d719 100644
+--- a/src/utils/tar/util_gzip.c
++++ b/src/utils/tar/util_gzip.c
+@@ -203,7 +203,7 @@ int gzip(const char *filename, size_t len)
+     }
+ 
+     ssize_t size_read = 0;
+-    char buffer[BUFSIZ] = { 0 };
++    char buffer[BUFSIZ + 1] = { 0 };
+ 
+     close(pipefd[1]);
+ 
+-- 
+2.25.1
+
