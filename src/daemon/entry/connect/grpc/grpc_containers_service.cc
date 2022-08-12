@@ -436,8 +436,8 @@ class RemoteExecReceiveFromClientTask : public StoppableThread {
 public:
     RemoteExecReceiveFromClientTask() = default;
     RemoteExecReceiveFromClientTask(ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream, int read_pipe_fd)
-            : m_stream(stream)
-            , m_read_pipe_fd(read_pipe_fd)
+        : m_stream(stream)
+        , m_read_pipe_fd(read_pipe_fd)
     {
     }
     ~RemoteExecReceiveFromClientTask() = default;
@@ -508,7 +508,9 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
 
         receive_task.SetStream(stream);
         receive_task.SetReadPipeFd(read_pipe_fd[1]);
-        command_writer = std::thread([&]() { receive_task.run(); });
+        command_writer = std::thread([&]() {
+            receive_task.run();
+        });
     }
 
     struct io_write_wrapper StdoutstringWriter = { 0 };
