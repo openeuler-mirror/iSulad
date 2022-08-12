@@ -1620,6 +1620,9 @@ static int exec_request_to_rest(const struct isula_exec_request *le_request, cha
     if (le_request->stderr != NULL) {
         crequest->stderr = util_strdup_s(le_request->stderr);
     }
+    if (le_request->suffix != NULL) {
+        crequest->suffix = util_strdup_s(le_request->suffix);
+    }
 
     int i = 0;
     if (le_request->argc > 0) {
