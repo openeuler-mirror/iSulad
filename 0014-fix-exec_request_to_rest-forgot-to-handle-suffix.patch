@@ -1,0 +1,27 @@
+From dfcd1cbd6403af11d7afed96b0c8e3ca292722f9 Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Fri, 12 Aug 2022 15:30:50 -0700
+Subject: [PATCH 14/15] fix exec_request_to_rest forgot to handle suffix
+
+Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
+---
+ src/client/connect/rest/rest_containers_client.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/client/connect/rest/rest_containers_client.c b/src/client/connect/rest/rest_containers_client.c
+index 7e549339..dfa20c75 100644
+--- a/src/client/connect/rest/rest_containers_client.c
++++ b/src/client/connect/rest/rest_containers_client.c
+@@ -1620,6 +1620,9 @@ static int exec_request_to_rest(const struct isula_exec_request *le_request, cha
+     if (le_request->stderr != NULL) {
+         crequest->stderr = util_strdup_s(le_request->stderr);
+     }
++    if (le_request->suffix != NULL) {
++        crequest->suffix = util_strdup_s(le_request->suffix);
++    }
+ 
+     int i = 0;
+     if (le_request->argc > 0) {
+-- 
+2.25.1
+
