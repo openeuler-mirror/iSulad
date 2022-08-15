@@ -869,7 +869,8 @@ static int prepare_host_channel(const host_config_host_channel *host_channel, co
     }
 #endif
 
-    if (host_channel == NULL) {
+    if (host_channel == NULL || host_channel->path_on_host == NULL) {
+        DEBUG("Host channel is not setting.");
         goto out;
     }
     if (util_dir_exists(host_channel->path_on_host)) {
