@@ -27,7 +27,7 @@
     "insecure-registries": [
     ],
     "pod-sandbox-image": "",
-    "native.umask": "secure",
+    "native.umask": "normal",
     "network-plugin": "",
     "cni-bin-dir": "",
     "cni-conf-dir": "",
