@@ -1,0 +1,38 @@
+From e524923aeeeb96f999dd153ea51f778289fade52 Mon Sep 17 00:00:00 2001
+From: zhongtao <taozh97@163.com>
+Date: Fri, 12 Aug 2022 17:17:44 +0800
+Subject: [PATCH 13/15] Add read and execute permissions for libhttpclient.so
+ and libisulad_tools.so for other users, so that non-root users who join the
+ isula group can use the isula command normally
+
+---
+ src/CMakeLists.txt            | 2 +-
+ src/utils/http/CMakeLists.txt | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index b8843f16..65bcb978 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -197,7 +197,7 @@ endif()
+ 
+ # ------ install binary --------
+ install(TARGETS libisulad_tools
+-    ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
++    ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+ install(TARGETS libisula
+     ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+ install(TARGETS isula
+diff --git a/src/utils/http/CMakeLists.txt b/src/utils/http/CMakeLists.txt
+index 0937cfab..ad7d0747 100644
+--- a/src/utils/http/CMakeLists.txt
++++ b/src/utils/http/CMakeLists.txt
+@@ -29,4 +29,4 @@ if (ISULAD_GCOV)
+ endif()
+ 
+ install(TARGETS libhttpclient
+-    ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
++    ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+-- 
+2.25.1
+
