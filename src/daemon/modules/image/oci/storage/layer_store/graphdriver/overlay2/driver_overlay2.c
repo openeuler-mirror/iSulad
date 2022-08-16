@@ -475,7 +475,7 @@ static int do_diff_symlink(const char *id, char *link_id, const char *driver_hom
     }
 
     nret = symlink(target_path, clean_path);
-    if (ret < 0) {
+    if (nret < 0) {
         SYSERROR("Failed to create symlink from \"%s\" to \"%s\"", clean_path, target_path);
         ret = -1;
         goto out;

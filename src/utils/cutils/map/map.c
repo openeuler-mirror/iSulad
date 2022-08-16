@@ -340,7 +340,7 @@ map_t *map_new(map_type_t kvtype, map_cmp_func comparator, map_kvfree_func kvfre
     } else {
         freer = kvfree;
     }
-    cmpor = comparator;
+
     if (is_key_ptr(kvtype) && (comparator == MAP_DEFAULT_CMP_FUNC)) {
         cmpor = rbtree_ptr_cmp;
     } else if (is_key_int(kvtype) && (comparator == MAP_DEFAULT_CMP_FUNC)) {
