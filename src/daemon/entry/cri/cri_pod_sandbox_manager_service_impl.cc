@@ -851,7 +851,7 @@ auto PodSandboxManagerServiceImpl::RemoveAllContainersInSandbox(const std::strin
     }
 
     // Remove all containers in the sandbox.
-    for (size_t i = 0; i < list_response->containers_len; i++) {
+    for (size_t i = 0; list_response != nullptr && i < list_response->containers_len; i++) {
         Errors rmError;
         CRIHelpers::RemoveContainer(m_cb, list_response->containers[i]->id, rmError);
         if (rmError.NotEmpty() && !CRIHelpers::IsContainerNotFoundError(rmError.GetMessage())) {

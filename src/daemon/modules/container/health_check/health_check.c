@@ -813,7 +813,8 @@ static void *health_check_monitor(void *arg)
     cont = containers_store_get(container_id);
     if (cont == NULL) {
         ERROR("Failed to get container info");
-        goto out;
+        free(container_id);
+        return NULL;
     }
     set_monitor_exist_flag(cont->health_check, true);
     if (util_get_now_time_stamp(&start_timestamp) == false) {

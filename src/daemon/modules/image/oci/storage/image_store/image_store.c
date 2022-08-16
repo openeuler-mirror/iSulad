@@ -2026,7 +2026,7 @@ static bool validate_digest(const char *digest)
     char *encode = NULL;
 
     // contains ':' and is not the last character
-    if (index == NULL && index - value + 1 == strlen(value)) {
+    if (index == NULL || index - value + 1 == strlen(value)) {
         INFO("Invalid checksum digest format");
         ret = false;
         goto out;
