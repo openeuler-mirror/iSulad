@@ -32,7 +32,7 @@ bool GetHexDigit(char c, char &d)
         d = c - '0';
     } else if (c >= 'a' && c <= 'f') {
         d = c - 'a' + 10;
-    } else if (c >= 'A' && c <= 'F') {
+    } else {
         d = c - 'A' + 10;
     }
     return true;

@@ -391,6 +391,7 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
     }
     if (GenerateSessionData(session, containerID) != 0) {
         ERROR("failed to fill generate session data");
+        delete session;
         return -1;
     }
 
