@@ -282,13 +282,36 @@ message LinuxSandboxSecurityContext {
     // This allows a sandbox to take additional security precautions if no
     // privileged containers are expected to be run.
     bool privileged = 6;
+    // Seccomp profile for the sandbox.
+    SecurityProfile seccomp = 9;
     // Seccomp profile for the sandbox, candidate values are:
     // * runtime/default: the default profile for the container runtime
     // * unconfined: unconfined profile, ie, no seccomp sandboxing
     // * localhost/<full-path-to-profile>: the profile installed on the node.
     //   <full-path-to-profile> is the full path of the profile.
     // Default: "", which is identical with unconfined.
+    // note: deprecated=true
     string seccomp_profile_path = 7;
+}
+
+// A security profile which can be used for sandboxes and containers.
+message SecurityProfile {
+    // Available profile types.
+    enum ProfileType {
+        // The container runtime default profile should be used.
+        RuntimeDefault = 0;
+        // Disable the feature for the sandbox or the container.
+        Unconfined = 1;
+        // A pre-defined profile on the node should be used.
+        Localhost = 2;
+    }
+    // Indicator which `ProfileType` should be applied.
+    ProfileType profile_type = 1;
+    // Indicates that a pre-defined profile on the node should be used.
+    // Must only be set if `ProfileType` is `Localhost`.
+    // For seccomp, it must be an absolute path to the seccomp profile.
+    // For AppArmor, this field is the AppArmor `<profile name>/`
+    string localhost_ref = 2;
 }
 
 // LinuxPodSandboxConfig holds platform-specific configurations for Linux
@@ -634,6 +657,8 @@ message LinuxContainerSecurityContext {
     // List of groups applied to the first process run in the container, in
     // addition to the container's primary GID.
     repeated int64 supplemental_groups = 8;
+    // Seccomp profile for the container.
+    SecurityProfile seccomp = 15;
     // AppArmor profile for the container, candidate values are:
     // * runtime/default: equivalent to not specifying a profile.
     // * unconfined: no profiles are loaded
@@ -647,6 +672,7 @@ message LinuxContainerSecurityContext {
     // * localhost/<full-path-to-profile>: the profile installed on the node.
     //   <full-path-to-profile> is the full path of the profile.
     // Default: "", which is identical with unconfined.
+    // note: deprecated=true
     string seccomp_profile_path = 10;
     // no_new_privs defines if the flag for no_new_privs should be set on the
     // container.

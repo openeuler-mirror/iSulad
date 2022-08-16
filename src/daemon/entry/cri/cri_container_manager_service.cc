@@ -98,8 +98,10 @@ auto ContainerManagerService::PackCreateContainerHostConfigSecurityContext(
     // security Opt Separator Change Version : k8s v1.23.0 (Corresponds to docker 1.11.x)
     // New version '=' , old version ':', iSulad cri is based on v18.09, so iSulad cri use new version separator
     const char securityOptSep { '=' };
-    std::vector<std::string> securityOpts = CRIHelpers::GetSecurityOpts(
-                                                containerConfig.linux().security_context().seccomp_profile_path(), securityOptSep, error);
+    const ::runtime::v1alpha2::LinuxContainerSecurityContext &context = containerConfig.linux().security_context();
+    std::vector<std::string> securityOpts = CRIHelpers::GetSecurityOpts(context.has_seccomp(), context.seccomp(),
+                                                                        context.seccomp_profile_path(), securityOptSep,
+                                                                        error);
     if (error.NotEmpty()) {
         error.Errorf("failed to generate security options for container %s", containerConfig.metadata().name().c_str());
         return -1;

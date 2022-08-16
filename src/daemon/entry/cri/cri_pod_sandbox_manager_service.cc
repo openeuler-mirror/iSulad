@@ -180,14 +180,16 @@ void PodSandboxManagerService::MakeSandboxIsuladConfig(const runtime::v1alpha2::
     }
 
     const char securityOptSep = '=';
+    const ::runtime::v1alpha2::LinuxSandboxSecurityContext &context = c.linux().security_context();
 
     // Security Opts
     if (c.linux().has_security_context()) {
         std::vector<std::string> securityOpts =
-            CRIHelpers::GetSecurityOpts(c.linux().security_context().seccomp_profile_path(), securityOptSep, error);
+            CRIHelpers::GetSecurityOpts(context.has_seccomp(), context.seccomp(),
+                                        context.seccomp_profile_path(), securityOptSep, error);
         if (error.NotEmpty()) {
             error.Errorf("failed to generate security options for sandbox %s: %s",
-                c.metadata().name().c_str(), error.GetMessage().c_str());
+                         c.metadata().name().c_str(), error.GetMessage().c_str());
             return;
         }
         if (!securityOpts.empty()) {
