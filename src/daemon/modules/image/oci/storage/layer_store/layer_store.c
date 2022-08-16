@@ -853,7 +853,7 @@ static void free_storage_entry_data(storage_entry *entry)
     }
 }
 
-static char *caculate_playload(struct archive *ar)
+static int caculate_playload(struct archive *ar, char **result)
 {
     int r = 0;
     unsigned char *block_buf = NULL;
@@ -863,8 +863,7 @@ static char *caculate_playload(struct archive *ar)
 #else
     off_t block_offset = 0;
 #endif
-    char *ret = NULL;
-    int nret = 0;
+    int ret = 0;
     const isula_crc_table_t *ctab = NULL;
     uint64_t crc = 0;
     // max crc bits is 8
@@ -876,7 +875,7 @@ static char *caculate_playload(struct archive *ar)
     ctab = new_isula_crc_table(ISO_POLY);
 
     if (ctab == NULL) {
-        return NULL;
+        return -1;
     }
 
     for (;;) {
@@ -886,10 +885,12 @@ static char *caculate_playload(struct archive *ar)
         }
         if (r != ARCHIVE_OK) {
             ERROR("Read archive failed");
+            ret = -1;
             goto out;
         }
         if (!isula_crc_update(ctab, &crc, block_buf, block_size)) {
             ERROR("Do crc update failed");
+            ret = -1;
             goto out;
         }
         empty = false;
@@ -903,10 +904,9 @@ static char *caculate_playload(struct archive *ar)
     for (r = 0; r < 8; r++) {
         tmp_data[r] = sum_data[r];
     }
-    nret = util_base64_encode(tmp_data, 8, &ret);
-
-    if (nret != 0) {
-        return NULL;
+    ret = util_base64_encode(tmp_data, 8, result);
+    if (ret != 0) {
+        ERROR("Do encode failed");
     }
 
 out:
@@ -929,9 +929,8 @@ static int archive_entry_parse(struct archive_entry *entry, struct archive *ar, 
     sentry.size = archive_entry_size(entry);
     sentry.position = position;
     // caculate playload
-    sentry.payload = caculate_playload(ar);
-    if (sentry.payload == NULL) {
-        ERROR("Caculate playload failed.");
+    if (caculate_playload(ar, &sentry.payload) != 0) {
+        ERROR("Caculate playload failed");
         goto out;
     }
 

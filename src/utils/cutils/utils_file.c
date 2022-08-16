@@ -1549,10 +1549,10 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
     }
 
 free_out:
-    free(tmp_file);
     if (ret != 0 && unlink(tmp_file) != 0 && errno != ENOENT) {
         SYSERROR("Failed to remove temp file:%s", tmp_file);
     }
+    free(tmp_file);
     return ret;
 }
 
