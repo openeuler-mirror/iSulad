@@ -15,11 +15,14 @@
 #include "oci_export.h"
 #include <stdbool.h>
 #include <stdlib.h>
+#include <linux/limits.h>
 
 #include "storage.h"
 #include "isula_libutils/log.h"
 #include "err_msg.h"
 #include "util_archive.h"
+#include "path.h"
+#include "utils_file.h"
 
 int oci_do_export(char *id, char *file)
 {
@@ -27,10 +30,23 @@ int oci_do_export(char *id, char *file)
     int ret2 = 0;
     char *mount_point = NULL;
     char *errmsg = NULL;
+    char cleanpath[PATH_MAX] = { 0 };
 
     if (id == NULL || file == NULL) {
         ERROR("Invalid NULL param");
         return -1;
+    }
+
+    if (util_clean_path(file, cleanpath, sizeof(cleanpath)) == NULL) {
+        ERROR("clean path for %s failed", file);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_fileself_exists(cleanpath)) {
+        ERROR("dst file %s exist", cleanpath);
+        ret = -1;
+        goto out;
     }
 
     mount_point = storage_rootfs_mount(id);
@@ -40,9 +56,9 @@ int oci_do_export(char *id, char *file)
         return -1;
     }
 
-    ret = archive_chroot_tar(mount_point, file, &errmsg);
+    ret = archive_chroot_tar(mount_point, cleanpath, &errmsg);
     if (ret != 0) {
-        ERROR("failed to export container %s to file %s: %s", id, file, errmsg);
+        ERROR("failed to export container %s to file %s: %s", id, cleanpath, errmsg);
         isulad_set_error_message("Failed to export rootfs with error: %s", errmsg);
         goto out;
     }
