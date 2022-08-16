@@ -20,7 +20,6 @@
 #include <string.h>
 #include <sha256.h>
 #include <isula_libutils/storage_image.h>
-#include <isula_libutils/container_config.h>
 #include <isula_libutils/imagetool_images_list.h>
 #include <isula_libutils/json_common.h>
 #include <limits.h>

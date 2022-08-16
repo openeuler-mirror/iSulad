@@ -20,7 +20,6 @@
 #include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "registry.h"
-#include "isulad_config.h"
 #include "utils_array.h"
 #include "utils_string.h"
 #include "oci_image.h"

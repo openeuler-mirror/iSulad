@@ -29,9 +29,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/unistd.h>
 
 #include <archive.h>
 #include <archive_entry.h>
@@ -52,8 +50,6 @@
 #include "constants.h"
 
 #define PAYLOAD_CRC_LEN 12
-
-struct io_read_wrapper;
 
 typedef struct __layer_store_metadata_t {
     pthread_rwlock_t rwlock;

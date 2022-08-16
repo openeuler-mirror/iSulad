@@ -21,7 +21,6 @@
 #include <limits.h>
 #include <errno.h>
 #include <isula_libutils/docker_image_rootfs.h>
-#include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/oci_image_content_descriptor.h>
 #include <isula_libutils/oci_image_manifest.h>

@@ -36,7 +36,6 @@
 #include "mediatype.h"
 #include "utils_images.h"
 #include "err_msg.h"
-#include "constants.h"
 #include "io_wrapper.h"
 #include "utils_array.h"
 #include "utils_file.h"

@@ -13,17 +13,14 @@
 * Description: isula image import operator implement
 *******************************************************************************/
 #include "oci_import.h"
-#include <errno.h>
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/docker_image_history.h>
 #include <isula_libutils/docker_image_rootfs.h>
-#include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/json_common.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "mediatype.h"
 #include "isula_libutils/log.h"
@@ -32,7 +29,6 @@
 #include "utils.h"
 #include "isula_libutils/registry_manifest_schema2.h"
 #include "isula_libutils/docker_image_config_v2.h"
-#include "utils_images.h"
 #include "sha256.h"
 #include "utils_file.h"
 #include "utils_timestamp.h"

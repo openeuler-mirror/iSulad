@@ -29,7 +29,6 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <strings.h>
-#include <sys/statfs.h>
 
 #include "isula_libutils/log.h"
 #include "err_msg.h"

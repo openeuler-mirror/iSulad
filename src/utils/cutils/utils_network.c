@@ -17,18 +17,13 @@
 
 #include "utils_network.h"
 
-#include <unistd.h>
 #include <stdlib.h>
-#include <pthread.h>
-#include <sys/mount.h>
 
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include <errno.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/types.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"

@@ -39,7 +39,6 @@
 #include "utils_string.h"
 #include "network_namespace.h"
 #include "utils_network.h"
-#include "network_api.h"
 
 static int write_hostname_to_file(const char *rootfs, const char *hostname)
 {

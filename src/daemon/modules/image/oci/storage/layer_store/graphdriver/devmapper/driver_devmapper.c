@@ -17,7 +17,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <sys/mount.h>
 #include <stdio.h>
 
 #include "isula_libutils/log.h"

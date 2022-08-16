@@ -17,7 +17,6 @@
 #include "oci_config_merge.h"
 
 #include <stdio.h>
-#include <string.h>
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/defs.h>
 #include <isula_libutils/imagetool_image.h>
