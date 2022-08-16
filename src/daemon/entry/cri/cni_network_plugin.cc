@@ -648,6 +648,7 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
     UnlockNetworkMap(err);
     free_network_api_result_list(result);
     free_network_api_conf(config);
+    DAEMON_CLEAR_ERRMSG();
 }
 
 void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &name, const std::string &interfaceName,

@@ -56,7 +56,6 @@
 #include "utils_timestamp.h"
 #include "utils_verify.h"
 #ifdef ENABLE_NATIVE_NETWORK
-#include "utils_network.h"
 #include "service_network_api.h"
 
 #define STOP_TIMEOUT 10

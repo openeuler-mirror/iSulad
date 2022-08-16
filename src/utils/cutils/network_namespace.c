@@ -23,9 +23,7 @@
 #include <isula_libutils/log.h>
 
 #include "utils.h"
-#include "utils_network.h"
 #include "utils_fs.h"
-#include "path.h"
 
 struct mount_netns {
     int pid;

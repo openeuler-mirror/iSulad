@@ -19,7 +19,6 @@
 #include <errno.h>
 #include <malloc.h>
 #include <sys/sysinfo.h>
-#include <isula_libutils/container_config.h>
 #include <isula_libutils/container_config_v2.h>
 #include <isula_libutils/container_create_response.h>
 #include <isula_libutils/container_inspect_request.h>
@@ -32,13 +31,9 @@
 #include <isula_libutils/container_version_response.h>
 #include <isula_libutils/container_wait_request.h>
 #include <isula_libutils/container_wait_response.h>
-#include <isula_libutils/defs.h>
-#include <isula_libutils/docker_types_mount_point.h>
-#include <isula_libutils/host_config.h>
 #include <isula_libutils/host_info_request.h>
 #include <isula_libutils/host_info_response.h>
 #include <isula_libutils/json_common.h>
-#include <isula_libutils/container_inspect.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -59,7 +54,6 @@
 #include "error.h"
 #include "events_sender_api.h"
 #include "constants.h"
-#include "daemon_arguments.h"
 #include "err_msg.h"
 #include "event_type.h"
 #include "utils_array.h"

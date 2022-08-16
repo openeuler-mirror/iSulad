@@ -18,14 +18,12 @@
 #include <libgen.h>
 #include <stdio.h>
 #include <string.h>
-#include <sha256.h>
 #include <isula_libutils/json_common.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdlib.h>
 
 #include "utils.h"
-#include "utils_images.h"
 #include "isula_libutils/log.h"
 #include "constants.h"
 #include "map.h"

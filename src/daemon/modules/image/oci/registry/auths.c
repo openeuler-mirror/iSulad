@@ -22,7 +22,6 @@
 #include <isula_libutils/json_common.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <sys/stat.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"

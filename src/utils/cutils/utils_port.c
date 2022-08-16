@@ -16,8 +16,6 @@
 #include "utils_port.h"
 
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -27,7 +25,6 @@
 #include "utils_array.h"
 #include "utils_convert.h"
 #include "utils_network.h"
-#include "utils_convert.h"
 #include "isula_libutils/json_common.h"
 
 typedef struct {
