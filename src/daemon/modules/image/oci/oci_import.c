@@ -331,8 +331,6 @@ static int register_image(import_desc *desc)
             ret = -1;
             goto out;
         }
-
-        ret = 0;
     }
 
     image_created = true;

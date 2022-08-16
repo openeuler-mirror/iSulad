@@ -217,7 +217,7 @@ out:
     free(err);
     err = NULL;
 
-    return 0;
+    return ret;
 }
 
 static int add_allocated_auth(registry_auths *auths, char *host, char *auth)

@@ -626,7 +626,6 @@ static int merge_resolv(const host_config *host_spec, const char *rootfs, const 
         if (ret != 0) {
             WARN("Failed to handle resolv config %s, skip", pline);
             free(tmp_content);
-            ret = 0;
         } else {
             free(content);
             content = tmp_content;
