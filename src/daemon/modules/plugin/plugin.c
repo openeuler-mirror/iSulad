@@ -1268,7 +1268,6 @@ int pm_init(void)
 
     ret = pthread_rwlock_init(&gpm->pm_rwlock, NULL);
     if (ret != 0) {
-        ret = -1;
         goto bad;
     }
 

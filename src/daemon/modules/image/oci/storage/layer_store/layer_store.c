@@ -885,12 +885,12 @@ static char *caculate_playload(struct archive *ar)
             break;
         }
         if (r != ARCHIVE_OK) {
-            nret = -1;
-            break;
+            ERROR("Read archive failed");
+            goto out;
         }
         if (!isula_crc_update(ctab, &crc, block_buf, block_size)) {
-            nret = -1;
-            break;
+            ERROR("Do crc update failed");
+            goto out;
         }
         empty = false;
     }
@@ -930,6 +930,10 @@ static int archive_entry_parse(struct archive_entry *entry, struct archive *ar, 
     sentry.position = position;
     // caculate playload
     sentry.payload = caculate_playload(ar);
+    if (sentry.payload == NULL) {
+        ERROR("Caculate playload failed.");
+        goto out;
+    }
 
     data = storage_entry_generate_json(&sentry, &ctx, &jerr);
     if (data == NULL) {
