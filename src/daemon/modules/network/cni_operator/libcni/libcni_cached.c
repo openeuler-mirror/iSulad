@@ -80,6 +80,7 @@ int copy_port_mapping_from_inner(const cni_inner_port_mapping *src, struct cni_p
 
 static char *get_cache_file_path(const char *net_name, const char *cache_dir, const struct runtime_conf *rc)
 {
+    int nret;
     const char *use_dir = cache_dir;
     char buff[PATH_MAX] = { 0 };
 
@@ -92,7 +93,9 @@ static char *get_cache_file_path(const char *net_name, const char *cache_dir, co
     if (use_dir == NULL) {
         use_dir = DEFAULT_CACHE_DIR;
     }
-    if (snprintf(buff, PATH_MAX, "%s/results/%s-%s-%s", use_dir, net_name, rc->container_id, rc->ifname) < 0) {
+
+    nret = snprintf(buff, PATH_MAX, "%s/results/%s-%s-%s", use_dir, net_name, rc->container_id, rc->ifname);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("format cache file path failed");
         return NULL;
     }
