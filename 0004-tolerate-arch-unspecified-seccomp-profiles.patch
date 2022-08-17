@@ -1,7 +1,7 @@
 From 73e02e66102b3e066d5d6424624461c3024cabe4 Mon Sep 17 00:00:00 2001
 From: chengzrz <czrzrichard@gmail.com>
 Date: Fri, 29 Jul 2022 14:44:55 +0800
-Subject: [PATCH 04/15] tolerate arch unspecified seccomp profiles
+Subject: [PATCH 04/21] tolerate arch unspecified seccomp profiles
 
 Signed-off-by: chengzrz <czrzrichard@gmail.com>
 ---
