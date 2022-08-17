@@ -101,6 +101,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
 {
     pid_t pid = 0;
     int ret = 0;
+    int nret = 0;
     int i = 0;
     int status = 0;
     char binary[PATH_MAX + 1] = {0};
@@ -128,7 +129,8 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
 
     INFO("exec shim-v2 binary in %s %s %s %s %s %s", params[0], params[1], params[2], params[3], params[4], params[5]);
 
-    if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
+    nret = snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir);
+    if (nret < 0 || (size_t)nret >= sizeof(fpid)) {
         ERROR("Failed to make shim-pid full path");
         ret = -1;
         goto out;
@@ -497,6 +499,7 @@ int rt_shim_status(const char *id, const char *runtime, const rt_status_params_t
     char address_file[PATH_MAX] = {0};
     char address[PATH_MAX] = {0};
     int ret = 0;
+    int nret = 0;
     struct State ss = {};
 
     if (id == NULL || params == NULL || status == NULL) {
@@ -504,7 +507,8 @@ int rt_shim_status(const char *id, const char *runtime, const rt_status_params_t
         return -1;
     }
 
-    if (snprintf(address_file, sizeof(address_file), "%s/%s/address", params->rootpath, id) < 0) {
+    nret = snprintf(address_file, sizeof(address_file), "%s/%s/address", params->rootpath, id);
+    if (nret < 0 || (size_t)nret >= sizeof(address_file)) {
         ERROR("Failed to join full workdir %s/%s", params->rootpath, id);
         ret = -1;
         goto out;
