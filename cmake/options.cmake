@@ -142,6 +142,12 @@ if (ENABLE_SUP_GROUPS)
     message("${Green}--  Enable sup groups${ColourReset}")
 endif()
 
+option(ENABLE_BORINGSSL "enable boringssl" OFF)
+if (ENABLE_BORINGSSL)
+    add_definitions(-DENABLE_BORINGSSL)
+    message("${Green}--  Enable boringssl${ColourReset}")
+endif()
+
 if (NOT RUNPATH)
     set(RUNPATH "/var/run")
 endif()
