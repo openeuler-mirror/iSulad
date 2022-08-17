@@ -1575,7 +1575,12 @@ int convert_v2_runtime(const char *runtime, char *binary)
     }
 
     if (binary != NULL) {
-        snprintf(buf, sizeof(buf), "%s-%s-%s-%s", "containerd", "shim", parts[2], parts[3]);
+        int nret = snprintf(buf, sizeof(buf), "%s-%s-%s-%s", "containerd", "shim", parts[2], parts[3]);
+        if (nret < 0 || (size_t)nret >= sizeof(buf)) {
+            ERROR("Failed to snprintf string");
+            ret = -1;
+            goto out;
+        }
         strcpy(binary, buf);
     }
 
