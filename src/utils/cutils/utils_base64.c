@@ -24,7 +24,7 @@
 #include "openssl/bio.h"
 #include "utils.h"
 
-#ifdef __ANDROID__
+#ifdef ENABLE_BORINGSSL
 int util_base64_encode(unsigned char *bytes, size_t len, char **out)
 {
     uint8_t *encoded = NULL;
