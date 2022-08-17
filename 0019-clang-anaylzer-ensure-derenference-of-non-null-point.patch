@@ -1,0 +1,188 @@
+From befc89eb26ff693ecb4fc5209985da9183bfd796 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Tue, 16 Aug 2022 16:12:13 +0800
+Subject: [PATCH 19/21] [clang-anaylzer] ensure derenference of non-null
+ pointer
+
+1. ensure derenference non-null pointer;
+2. fix double free;
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/cmd/isula/information/ps.c                         |  5 ++---
+ .../entry/cri/cri_pod_sandbox_manager_service_impl.cc  |  2 +-
+ src/daemon/executor/image_cb/image_cb.c                | 10 ++++------
+ .../modules/container/container_events_handler.c       |  3 +--
+ .../modules/container/health_check/health_check.c      |  3 ++-
+ src/daemon/modules/image/oci/registry/http_request.c   |  5 ++---
+ .../image/oci/storage/image_store/image_store.c        |  2 +-
+ src/daemon/modules/spec/specs.c                        |  5 +++--
+ 8 files changed, 16 insertions(+), 19 deletions(-)
+
+diff --git a/src/cmd/isula/information/ps.c b/src/cmd/isula/information/ps.c
+index 805cbbd6..71c01acb 100644
+--- a/src/cmd/isula/information/ps.c
++++ b/src/cmd/isula/information/ps.c
+@@ -731,6 +731,7 @@ static int append_first_non_header_field(const char *index, struct filters *ff)
+         goto out;
+     }
+     tmp->name = first_non_field;
++    first_non_field = NULL;
+     tmp->is_field = false;
+     if (append_field(ff, tmp) != 0) {
+         ERROR("Failed to append field");
+@@ -738,7 +739,6 @@ static int append_first_non_header_field(const char *index, struct filters *ff)
+         goto out;
+     }
+     tmp = NULL;
+-    first_non_field = NULL;
+ 
+ out:
+     free_filter_field(tmp);
+@@ -870,15 +870,14 @@ static int append_header_item_field(const char *index, const char *prefix, const
+         goto out;
+     }
+     field->name = filter_string;
++    filter_string = NULL;
+     field->is_field = true;
+     if (append_field(ff, field) != 0) {
+         ERROR("Failed to append field");
+         ret = -1;
+         goto out;
+     }
+-
+     field = NULL;
+-    filter_string = NULL;
+ 
+ out:
+     free(sub_patten);
+diff --git a/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc b/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
+index f0c0c6bb..fc0616e8 100644
+--- a/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
++++ b/src/daemon/entry/cri/cri_pod_sandbox_manager_service_impl.cc
+@@ -851,7 +851,7 @@ auto PodSandboxManagerServiceImpl::RemoveAllContainersInSandbox(const std::strin
+     }
+ 
+     // Remove all containers in the sandbox.
+-    for (size_t i = 0; i < list_response->containers_len; i++) {
++    for (size_t i = 0; list_response != nullptr && i < list_response->containers_len; i++) {
+         Errors rmError;
+         CRIHelpers::RemoveContainer(m_cb, list_response->containers[i]->id, rmError);
+         if (rmError.NotEmpty() && !CRIHelpers::IsContainerNotFoundError(rmError.GetMessage())) {
+diff --git a/src/daemon/executor/image_cb/image_cb.c b/src/daemon/executor/image_cb/image_cb.c
+index 75ae7b74..55e12d51 100644
+--- a/src/daemon/executor/image_cb/image_cb.c
++++ b/src/daemon/executor/image_cb/image_cb.c
+@@ -1009,8 +1009,7 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
+     *response = util_common_calloc_s(sizeof(image_pull_image_response));
+     if (*response == NULL) {
+         ERROR("Out of memory");
+-        cc = ISULAD_ERR_MEMOUT;
+-        goto out;
++        return ISULAD_ERR_MEMOUT;
+     }
+ 
+     EVENT("Image Event: {Object: %s, Type: Pulling}", request->image_name);
+@@ -1030,12 +1029,11 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
+     EVENT("Image Event: {Object: %s, Type: Pulled}", request->image_name);
+ 
+ out:
+-    if (*response != NULL) {
+-        (*response)->image_ref = util_strdup_s(im_rsp->image_ref);
+-        (*response)->cc = cc;
++    (*response)->cc = cc;
++    if (im_rsp != NULL) {
+         (*response)->errmsg = util_strdup_s(im_rsp->errmsg);
++        (*response)->image_ref = util_strdup_s(im_rsp->image_ref);
+     }
+-
+     free_im_pull_request(im_req);
+     free_im_pull_response(im_rsp);
+ 
+diff --git a/src/daemon/modules/container/container_events_handler.c b/src/daemon/modules/container/container_events_handler.c
+index 994c11cc..55dbfbe6 100644
+--- a/src/daemon/modules/container/container_events_handler.c
++++ b/src/daemon/modules/container/container_events_handler.c
+@@ -282,8 +282,7 @@ int container_events_handler_post_events(const struct isulad_events_format *even
+     cont = containers_store_get(event->id);
+     if (cont == NULL) {
+         ERROR("No such container:%s", event->id);
+-        ret = -1;
+-        goto out;
++        return -1;
+     }
+ 
+     it = util_common_calloc_s(sizeof(struct linked_list));
+diff --git a/src/daemon/modules/container/health_check/health_check.c b/src/daemon/modules/container/health_check/health_check.c
+index 273d3531..e9dcbdb9 100644
+--- a/src/daemon/modules/container/health_check/health_check.c
++++ b/src/daemon/modules/container/health_check/health_check.c
+@@ -813,7 +813,8 @@ static void *health_check_monitor(void *arg)
+     cont = containers_store_get(container_id);
+     if (cont == NULL) {
+         ERROR("Failed to get container info");
+-        goto out;
++        free(container_id);
++        return NULL;
+     }
+     set_monitor_exist_flag(cont->health_check, true);
+     if (util_get_now_time_stamp(&start_timestamp) == false) {
+diff --git a/src/daemon/modules/image/oci/registry/http_request.c b/src/daemon/modules/image/oci/registry/http_request.c
+index e812f947..f29c2017 100644
+--- a/src/daemon/modules/image/oci/registry/http_request.c
++++ b/src/daemon/modules/image/oci/registry/http_request.c
+@@ -704,9 +704,8 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
+ 
+     options = util_common_calloc_s(sizeof(struct http_get_options));
+     if (options == NULL) {
+-        ERROR("Failed to malloc http_get_options");
+-        ret = -1;
+-        goto out;
++        ERROR("Out of memory");
++        return -1;
+     }
+ 
+     memset(options, 0x00, sizeof(struct http_get_options));
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+index 3ee69ee7..9dab66fd 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+@@ -2026,7 +2026,7 @@ static bool validate_digest(const char *digest)
+     char *encode = NULL;
+ 
+     // contains ':' and is not the last character
+-    if (index == NULL && index - value + 1 == strlen(value)) {
++    if (index == NULL || index - value + 1 == strlen(value)) {
+         INFO("Invalid checksum digest format");
+         ret = false;
+         goto out;
+diff --git a/src/daemon/modules/spec/specs.c b/src/daemon/modules/spec/specs.c
+index cf4aa111..44e38674 100644
+--- a/src/daemon/modules/spec/specs.c
++++ b/src/daemon/modules/spec/specs.c
+@@ -1794,12 +1794,12 @@ int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, ch
+             continue;
+         }
+ 
+-        if (split_security_opt(host_spec->security_opt[i], &items, &items_size)) {
++        if (split_security_opt(host_spec->security_opt[i], &items, &items_size) != 0) {
+             ret = -1;
+             goto out;
+         }
+ 
+-        if (items_size != 2) {
++        if (items == NULL || items_size != 2) {
+             ERROR("invalid --security-opt: %s", host_spec->security_opt[i]);
+             ret = -1;
+             goto out;
+@@ -1823,6 +1823,7 @@ int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, ch
+         }
+         util_free_array(items);
+         items = NULL;
++        items_size = 0;
+     }
+ 
+ out:
+-- 
+2.25.1
+

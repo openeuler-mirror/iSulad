@@ -1,0 +1,121 @@
+From 9d365a82ceea7e50bce8069a9b14a529b6467299 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Mon, 15 Aug 2022 19:34:42 +0800
+Subject: [PATCH 16/21] [clang-analyzer] ensure agrument with nonnull attirbute
+ passed nonnull
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/daemon/executor/container_cb/execution_create.c       | 3 ++-
+ .../storage/layer_store/graphdriver/devmapper/deviceset.c | 8 +++-----
+ .../layer_store/graphdriver/devmapper/wrapper_devmapper.c | 4 ++--
+ src/daemon/modules/spec/specs_mount.c                     | 6 ++++--
+ src/utils/cutils/utils_file.c                             | 3 +--
+ 5 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/src/daemon/executor/container_cb/execution_create.c b/src/daemon/executor/container_cb/execution_create.c
+index 626cfbc6..da01a57f 100644
+--- a/src/daemon/executor/container_cb/execution_create.c
++++ b/src/daemon/executor/container_cb/execution_create.c
+@@ -833,7 +833,8 @@ static int prepare_host_channel(const host_config_host_channel *host_channel, co
+     }
+ #endif
+ 
+-    if (host_channel == NULL) {
++    if (host_channel == NULL || host_channel->path_on_host == NULL) {
++        DEBUG("Host channel is not setting.");
+         goto out;
+     }
+     if (util_dir_exists(host_channel->path_on_host)) {
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
+index 10c7fafd..78d8737d 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
+@@ -3340,15 +3340,14 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
+     mnt_root = util_path_join(devset->root, "mnt");
+     if (mnt_root == NULL) {
+         ERROR("devmapper:join path %s/mnt failed", devset->root);
+-        ret = -1;
+-        goto out;
++        return -1;
+     }
+ 
+     dp = opendir(mnt_root);
+     if (dp == NULL) {
+         ERROR("devmapper: open dir %s failed", mnt_root);
+-        ret = -1;
+-        goto out;
++        free(mnt_root);
++        return -1;
+     }
+ 
+     // Do my best to umount all of the device that has been mounted
+@@ -3398,7 +3397,6 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
+         devmapper_device_info_ref_dec(device_info);
+     }
+ 
+-out:
+     closedir(dp);
+     free(mnt_root);
+     return ret;
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
+index 07d64318..8a1dfff5 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
+@@ -393,13 +393,13 @@ void dev_udev_wait(uint32_t cookie)
+ 
+     if (gettimeofday(&start, NULL) != 0) {
+         ERROR("devmapper: get time failed");
+-        goto free_out;
++        return;
+     }
+ 
+     uwait = util_common_calloc_s(sizeof(udev_wait_pth_t));
+     if (uwait == NULL) {
+         ERROR("Out of memory");
+-        goto free_out;
++        return;
+     }
+     uwait->cookie = cookie;
+     uwait->state = DEV_INIT;
+diff --git a/src/daemon/modules/spec/specs_mount.c b/src/daemon/modules/spec/specs_mount.c
+index 8966293f..12f66d8c 100644
+--- a/src/daemon/modules/spec/specs_mount.c
++++ b/src/daemon/modules/spec/specs_mount.c
+@@ -3358,7 +3358,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
+ 
+     /* mounts to mount filesystem */
+     ret = merge_fs_mounts_to_v2_spec(all_fs_mounts, all_fs_mounts_len, v2_spec);
+-    if (ret) {
++    if (ret != 0) {
+         ERROR("Failed to merge mounts in to v2 spec");
+         goto out;
+     }
+@@ -3404,7 +3404,9 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
+         }
+     }
+ 
+-    qsort(all_fs_mounts, all_fs_mounts_len, sizeof(all_fs_mounts[0]), destination_compare);
++    if (all_fs_mounts_len > 0) {
++        qsort(all_fs_mounts, all_fs_mounts_len, sizeof(all_fs_mounts[0]), destination_compare);
++    }
+ 
+     ret = merge_fs_mounts_to_oci_spec(oci_spec, all_fs_mounts, all_fs_mounts_len);
+     if (ret) {
+diff --git a/src/utils/cutils/utils_file.c b/src/utils/cutils/utils_file.c
+index 00f586f1..67e7a707 100644
+--- a/src/utils/cutils/utils_file.c
++++ b/src/utils/cutils/utils_file.c
+@@ -1531,8 +1531,7 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
+     tmp_file = get_random_tmp_file(fname);
+     if (tmp_file == NULL) {
+         ERROR("Failed to get tmp file for %s", fname);
+-        ret = -1;
+-        goto free_out;
++        return -1;
+     }
+ 
+     ret = do_atomic_write_file(tmp_file, content, content_len, mode, sync);
+-- 
+2.25.1
+

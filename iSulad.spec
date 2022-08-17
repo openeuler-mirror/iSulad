@@ -1,5 +1,5 @@
 %global _version 2.0.15
-%global _release 4
+%global _release 5
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -28,7 +28,12 @@ Patch6011: 0012-fix-lose-override-flag.patch
 Patch6012: 0013-Add-read-and-execute-permissions-for-libhttpclient.s.patch
 Patch6013: 0014-fix-exec_request_to_rest-forgot-to-handle-suffix.patch
 Patch6014: 0015-add-fuzz-dict.patch
-Patch6015: 0016-change-default-umask-to-0022.patch
+Patch6015: 0016-clang-analyzer-ensure-agrument-with-nonnull-attirbut.patch
+Patch6016: 0017-change-default-umask-to-0022.patch
+Patch6017: 0018-clang-analyzer-remove-dead-assignment.patch
+Patch6018: 0019-clang-anaylzer-ensure-derenference-of-non-null-point.patch
+Patch6019: 0020-do-clean-path-and-check-if-file-exist.patch
+Patch6020: 0021-clang-analyzer-fix-memory-leak-and-use-after-free.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -256,6 +261,12 @@ fi
 %endif
 
 %changelog
+* Wed Aug 17 2022 haozi007 <liuhao27@huawei.com> - 2.0.15-5
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sycn patches from openeuler
+
 * Mon Aug 15 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.15-4
 - Type: enhancement
 - ID: NA
