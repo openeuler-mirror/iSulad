@@ -1,7 +1,7 @@
 From 9498a8df59f69acbf75f9aa69fef465350288bb8 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Mon, 1 Aug 2022 11:20:31 +0800
-Subject: [PATCH 06/15] fix cri attach when stdout and stderr are false
+Subject: [PATCH 06/21] fix cri attach when stdout and stderr are false
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---

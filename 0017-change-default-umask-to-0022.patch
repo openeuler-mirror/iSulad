@@ -1,7 +1,7 @@
 From 53ba0431c50a618bee0e17315ec176e6c400ed86 Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Mon, 15 Aug 2022 19:41:27 +0800
-Subject: [PATCH] change default umask to 0022
+Subject: [PATCH 17/21] change default umask to 0022
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
 ---
