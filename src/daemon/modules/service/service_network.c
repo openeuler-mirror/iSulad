@@ -140,7 +140,7 @@ static json_map_string_string *prepare_native_args(const container_t *cont)
     if (strlen(cont->common_config->name) > HOST_NAME_MAX_LENGTH) {
         // set short id as host name
         nret = snprintf(name, SHORT_ID_SPACE, "%s", cont->common_config->id);
-        if (nret < 0 || (size_t)nret >= SHORT_ID_SPACE) {
+        if (nret < 0) {
             ERROR("snprintf name failed, %d", nret);
             goto err_out;
         }
@@ -900,7 +900,7 @@ static int do_update_internal_file(const char *id, const char *file_path,
     }
 
     nret = snprintf(hostname, SHORT_ID_SPACE, "%s", id);
-    if (nret < 0 || (size_t)nret >= SHORT_ID_SPACE) {
+    if (nret < 0) {
         ERROR("snprintf hostname failed, %d", nret);
         ret = -1;
         goto out;
@@ -1152,7 +1152,7 @@ static int do_drop_internal_file(const char *id, const char *file_path, const de
     }
 
     nret = snprintf(hostname, SHORT_ID_SPACE, "%s", id);
-    if (nret < 0 || (size_t)nret >= SHORT_ID_SPACE) {
+    if (nret < 0) {
         ERROR("snprintf hostname failed, %d", nret);
         return -1;
     }
