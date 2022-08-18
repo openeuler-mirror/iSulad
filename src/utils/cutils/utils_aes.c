@@ -21,11 +21,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <openssl/ossl_typ.h>
+#include <openssl/aes.h>
+#include <openssl/evp.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "openssl/aes.h"
-#include "openssl/evp.h"
 #include "utils_file.h"
 
 int util_aes_key(char *key_file, bool create, unsigned char *aeskey)
