@@ -18,7 +18,6 @@
 #include <algorithm>
 #include <functional>
 #include <iostream>
-#include <openssl/sha.h>
 #include <sys/utsname.h>
 #include <utility>
 
@@ -582,6 +581,7 @@ out:
 auto GetlegacySeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> std::vector<iSuladOpt>
 {
     if (seccompProfile.empty() || seccompProfile == "unconfined") {
+        DEBUG("Legacy seccomp is unconfined");
         return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
     }
     if (seccompProfile == "iSulad/default" || seccompProfile == "docker/default" ||
@@ -616,6 +616,7 @@ auto GetSeccompiSuladOpts(const bool hasSeccomp, const ::runtime::v1alpha2::Secu
     }
 
     if (seccomp.profile_type() == ::runtime::v1alpha2::SecurityProfile_ProfileType_Unconfined) {
+        DEBUG("Use set seccomp to unconfined");
         return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
     }
 
