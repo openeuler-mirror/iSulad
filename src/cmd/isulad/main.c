@@ -976,74 +976,60 @@ static int update_container_log_configs(isulad_daemon_configs_container_log *con
 
 static int update_server_args(struct service_arguments *args)
 {
-    int ret = 0;
-
 #ifdef ENABLE_USERNS_REMAP
     if (update_graph_for_userns_remap(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 #endif
 
     if (update_tls_options(args)) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (update_set_default_log_file(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (update_hosts(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (update_default_ulimit(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (update_container_log_configs(args->json_confs->container_log) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     /* check args */
     if (check_args(args)) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (set_parent_mount_dir(args)) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     /* parse hook spec */
     if (parse_conf_hooks(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     /* parse image opt timeout */
     if (parse_conf_time_duration(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
 #ifdef ENABLE_SELINUX
     // Configure and validate the kernels security support. Note this is a Linux/FreeBSD
     // operation only, so it is safe to pass *just* the runtime OS graphdriver.
     if (configure_kernel_security_support(args)) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 #endif
 
-out:
-    return ret;
+    return 0;
 }
 
 static int server_conf_parse_save(int argc, const char **argv)

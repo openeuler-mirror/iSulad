@@ -101,19 +101,20 @@ static int http_get_header_common(const unsigned int flag, const char *key, cons
     int nret = 0;
     size_t len = 0;
     char *header = NULL;
+    const int extra_char_len = 3;
 
     if (flag == 0 || key == NULL || value == NULL) {
         return 0;
     }
 
     // format   key: value
-    if (strlen(value) > (SIZE_MAX - strlen(key)) - 3) {
+    if (strlen(value) > (SIZE_MAX - strlen(key)) - extra_char_len) {
         ERROR("Invalid authorization option");
         return -1;
     }
 
     // key + ": " + value + '\0'
-    len = strlen(key) + strlen(value) + 3;
+    len = strlen(key) + strlen(value) + extra_char_len;
     header = util_common_calloc_s(len);
     if (header == NULL) {
         ERROR("Out of memory");
