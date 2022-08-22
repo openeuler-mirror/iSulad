@@ -151,7 +151,7 @@ static int create_engine_root_path(const char *path)
 #ifdef ENABLE_USERNS_REMAP
     if (userns_remap != NULL) {
         if (set_file_owner_for_userns_remap(path, userns_remap) != 0) {
-            ERROR("Unable to change directory %s owner for user remap.", path);
+            ERROR("Unable to change engine root %s owner for user remap.", path);
             goto out;
         }
 
@@ -165,7 +165,7 @@ static int create_engine_root_path(const char *path)
         *p = '\0';
 
         if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
-            ERROR("Unable to change directory %s owner for user remap.", tmp_path);
+            ERROR("Unable to change engine root %s owner for user remap.", tmp_path);
             goto out;
         }
     }
