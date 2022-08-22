@@ -88,11 +88,12 @@ static void hold_string(const char delim, char **src, char **dst)
     }
 }
 
-static int parse_line_pw(const char delim, char *line, struct passwd *result)
+static int parse_line_pw(const char delim, char *line, char *buffend, void *vresult)
 {
     int ret = 0;
     bool required = false;
     char *walker = NULL;
+    struct passwd *result = (struct passwd *)vresult;
 
     walker = strpbrk(line, "\n");
     if (walker != NULL) {
@@ -160,12 +161,13 @@ out:
     return result;
 }
 
-static int parse_line_gr(const char delim, char *line, char *buffend, struct group *result)
+static int parse_line_gr(const char delim, char *line, char *buffend, void *vresult)
 {
     int ret = 0;
     bool rf = false;
     char *freebuff = line + 1 + strlen(line);
     char *walker = NULL;
+    struct group *result = (struct group *)vresult;
 
     walker = strpbrk(line, "\n");
     if (walker != NULL) {
@@ -196,7 +198,9 @@ static int parse_line_gr(const char delim, char *line, char *buffend, struct gro
     return 0;
 }
 
-int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t buflen, struct passwd **result)
+typedef int (*line_parser_cb)(const char delim, char *line, char *buffend, void *vresult);
+
+static int do_util_line_parser(FILE *stream, void *resbuf, char *buffer, size_t buflen, void **result, line_parser_cb cb)
 {
     const char delim = ':';
     char *buff_end = NULL;
@@ -245,7 +249,7 @@ int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t bu
             continue;
         }
 
-        if (parse_line_pw(delim, walker, resbuf) == 0) {
+        if (cb(delim, walker, buff_end, resbuf) == 0) {
             got = true;
             break;
         }
@@ -263,70 +267,12 @@ out:
     return ret;
 }
 
+int util_getpwent_r(FILE *stream, struct passwd *resbuf, char *buffer, size_t buflen, struct passwd **result)
+{
+    return do_util_line_parser(stream, resbuf, buffer, buflen, (void **)result, parse_line_pw);
+}
+
 int util_getgrent_r(FILE *stream, struct group *resbuf, char *buffer, size_t buflen, struct group **result)
 {
-    const char delim = ':';
-    char *buff_end = NULL;
-    char *walker = NULL;
-    bool got = false;
-    int ret = 0;
-
-    if (stream == NULL || resbuf == NULL || buffer == NULL || result == NULL) {
-        ERROR("Group obj, params is NULL.");
-        return -1;
-    }
-
-    if (buflen <= 1) {
-        ERROR("Inadequate buffer length was given.");
-        return -1;
-    }
-
-    flockfile(stream);
-    buff_end = buffer + buflen - 1;
-
-    while (1) {
-        *buff_end = '\xff';
-        walker = fgets_unlocked(buffer, buflen, stream);
-        // if get NULL string
-        if (walker == NULL) {
-            *result = NULL;
-            // reach end of file, return error
-            if (feof(stream)) {
-                ret = ENOENT;
-                goto out;
-            }
-            // overflow buffer
-            ret = ERANGE;
-            goto out;
-        }
-        // just overflow last char in buffer
-        if (*buff_end != '\xff') {
-            *result = NULL;
-            ret = ERANGE;
-            goto out;
-        }
-
-        (void)util_trim_space(walker);
-        // skip comment line and empty line
-        if (walker[0] == '#' || walker[0] == '\0') {
-            continue;
-        }
-
-        if (parse_line_gr(delim, walker, buff_end, resbuf) == 0) {
-            got = true;
-            break;
-        }
-    }
-
-    if (!got) {
-        *result = NULL;
-        ret = ERANGE;
-        goto out;
-    }
-
-    *result = resbuf;
-    ret = 0;
-out:
-    funlockfile(stream);
-    return ret;
+    return do_util_line_parser(stream, resbuf, buffer, buflen, (void **)result, parse_line_gr);
 }
