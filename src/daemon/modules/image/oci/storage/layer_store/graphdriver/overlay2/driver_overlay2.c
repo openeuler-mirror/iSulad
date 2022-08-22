@@ -299,13 +299,13 @@ int overlay2_init(struct graphdriver *driver, const char *driver_home, const cha
 
     link_dir = util_path_join(driver_home, OVERLAY_LINK_DIR);
     if (link_dir == NULL) {
-        ERROR("Unable to create driver link directory %s.", driver_home);
+        ERROR("Unable to create overlay link directory %s.", driver_home);
         ret = -1;
         goto out;
     }
 
     if (util_mkdir_p(link_dir, 0700) != 0) {
-        ERROR("Unable to create driver home directory %s.", link_dir);
+        ERROR("Unable to create overlay home directory %s.", link_dir);
         ret = -1;
         goto out;
     }
@@ -333,14 +333,14 @@ int overlay2_init(struct graphdriver *driver, const char *driver_home, const cha
 
     root_dir = util_path_dir(driver_home);
     if (root_dir == NULL) {
-        ERROR("Unable to get driver root home directory %s.", driver_home);
+        ERROR("Unable to get overlay root home directory %s.", driver_home);
         ret = -1;
         goto out;
     }
 
     driver->backing_fs = util_get_fs_name(root_dir);
     if (driver->backing_fs == NULL) {
-        ERROR("Failed to get backing fs");
+        ERROR("Failed to get overlay backing fs");
         ret = -1;
         goto out;
     }
