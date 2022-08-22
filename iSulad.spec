@@ -1,5 +1,5 @@
 %global _version 2.0.15
-%global _release 5
+%global _release 6
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -67,7 +67,7 @@ BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
-BuildRequires: systemd-devel git chrpath
+BuildRequires: systemd-devel git
 %if 0%{?enable_shimv2}
 BuildRequires: lib-shim-v2 lib-shim-v2-devel
 %endif
@@ -94,9 +94,9 @@ Runtime Daemon, written by C.
 mkdir -p build
 cd build
 %if 0%{?enable_shimv2}
-%cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=ON ../
+%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=ON ../
 %else
-%cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
+%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
 %endif
 %make_build
 
@@ -106,9 +106,9 @@ cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
 install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
 install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
-chrpath -d ./src/libisulad_tools.so
+
 install -m 0644 ./src/libisulad_tools.so  %{buildroot}/%{_libdir}/libisulad_tools.so
-chrpath -d ./src/daemon/modules/image/libisulad_img.so
+
 install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
 chmod +x %{buildroot}/%{_libdir}/libisula.so
 chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
@@ -118,10 +118,10 @@ install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
 
 install -d $RPM_BUILD_ROOT/%{_bindir}
-chrpath -d ./src/isula
+
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
 install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
-chrpath -d ./src/isulad
+
 install -m 0755 ./src/isulad                 %{buildroot}/%{_bindir}/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
@@ -260,6 +260,12 @@ fi
 %endif
 
 %changelog
+* Mon Aug 22 2022 zhongtao <zhongtao17@huawei.com> - 2.0.15-6
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: remove rpath by cmake
+
 * Wed Aug 17 2022 haozi007 <liuhao27@huawei.com> - 2.0.15-5
 - Type: enhancement
 - ID: NA
