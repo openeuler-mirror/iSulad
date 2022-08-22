@@ -942,6 +942,8 @@ int util_to_unix_nanos_from_str(const char *str, int64_t *nanos)
     struct types_timezone tz;
     int32_t nano = 0;
     types_timestamp_t ts;
+    const int s_hour = 3600;
+    const int s_minute = 60;
 
     if (nanos == NULL) {
         return -1;
@@ -972,7 +974,7 @@ int util_to_unix_nanos_from_str(const char *str, int64_t *nanos)
         return -1;
     }
 
-    *nanos = (timegm(&tm) - (int64_t)tz.hour * 3600 - (int64_t)tz.min * 60) * Time_Second + nano;
+    *nanos = (timegm(&tm) - (int64_t)tz.hour * s_hour - (int64_t)tz.min * s_minute) * Time_Second + nano;
     return 0;
 }
 

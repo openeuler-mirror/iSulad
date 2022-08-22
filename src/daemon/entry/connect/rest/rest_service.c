@@ -130,8 +130,9 @@ void rest_server_wait(void)
 void rest_server_shutdown(void)
 {
     struct timeval tv = { 0 } ;
+    const int wait_usec = 100;
 
-    tv.tv_usec = 100;
+    tv.tv_usec = wait_usec;
     if (event_base_loopexit(g_evbase, &tv) != 0) {
         WARN("shutdwon rest server failed");
     }

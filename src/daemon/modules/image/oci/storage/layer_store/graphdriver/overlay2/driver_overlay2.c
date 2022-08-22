@@ -271,37 +271,18 @@ out:
     return ret;
 }
 
-int overlay2_init(struct graphdriver *driver, const char *driver_home, const char **options, size_t len)
+static int overlay2_create_home_directory(const char *driver_home)
 {
     int ret = 0;
     char *link_dir = NULL;
-    char *root_dir = NULL;
 #ifdef ENABLE_USERNS_REMAP
     char *userns_remap = NULL;
 #endif
 
-    if (driver == NULL || driver_home == NULL) {
-        ERROR("Invalid input arguments");
-        return -1;
-    }
-
-    if (!util_support_overlay()) {
-        ERROR("driver \'%s\'not supported", driver->name);
-        ret = -1;
-        goto out;
-    }
-
-    ret = overlay2_parse_options(driver, options, len);
-    if (ret != 0) {
-        ret = -1;
-        goto out;
-    }
-
     link_dir = util_path_join(driver_home, OVERLAY_LINK_DIR);
     if (link_dir == NULL) {
         ERROR("Unable to create overlay link directory %s.", driver_home);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (util_mkdir_p(link_dir, 0700) != 0) {
@@ -329,13 +310,45 @@ int overlay2_init(struct graphdriver *driver, const char *driver_home, const cha
     }
 #endif
 
+out:
+    free(link_dir);
+#ifdef ENABLE_USERNS_REMAP
+    free(userns_remap);
+#endif
+    return ret;
+}
+
+int overlay2_init(struct graphdriver *driver, const char *driver_home, const char **options, size_t len)
+{
+    int ret = 0;
+    char *root_dir = NULL;
+
+    if (driver == NULL || driver_home == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    if (!util_support_overlay()) {
+        ERROR("driver \'%s\'not supported", driver->name);
+        return -1;
+    }
+
+    ret = overlay2_parse_options(driver, options, len);
+    if (ret != 0) {
+        return -1;
+    }
+
+    ret = overlay2_create_home_directory(driver_home);
+    if (ret != 0) {
+        return -1;
+    }
+
     driver->home = util_strdup_s(driver_home);
 
     root_dir = util_path_dir(driver_home);
     if (root_dir == NULL) {
         ERROR("Unable to get overlay root home directory %s.", driver_home);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     driver->backing_fs = util_get_fs_name(root_dir);
@@ -372,11 +385,7 @@ int overlay2_init(struct graphdriver *driver, const char *driver_home, const cha
     }
 
 out:
-    free(link_dir);
     free(root_dir);
-#ifdef ENABLE_USERNS_REMAP
-    free(userns_remap);
-#endif
     return ret;
 }
 
