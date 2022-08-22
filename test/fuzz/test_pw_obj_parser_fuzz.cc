@@ -42,5 +42,4 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
     fclose(f);
     return 0;
-
 }
