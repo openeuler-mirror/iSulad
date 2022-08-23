@@ -1,3 +1,35 @@
+2022-08-23 root release 2.0.16
+    - !1590 [codecheck] cleancode about big function and magic number
+    - !1591 【codecheck】handle some warnings
+    - !1593 [codecheck]the right brace should take a single line
+    - !1589 【codecheck】improve code
+    - !1586 use existing micro OPENSSL_IS_BORINGSSL
+    - !1581 check snprintf return value
+    - !1579 [clang-analyzer] fix memory leak and use after free
+    - !1578 do clean path and check if file exist
+    - !1577 [clang-anaylzer] ensure derenference of non-null pointer
+    - !1575 [clang-analyzer] remove dead assignment
+    - !1573 change default umask to 0022
+    - !1571 [clang-analyzer] ensure agrument with nonnull attirbute passed nonnull
+    - !1569 add fuzz dict Merge pull request !1569 from wangfengtu/add_dict_stable
+    - !1568 fix exec_request_to_rest forgot to handle suffix Merge pull request !1568 from haozi007/stable
+    - !1566 Add read and execute permissions for libhttpclient.so and libisulad_tools.so for other users
+    - !1562 add lose override flag
+    - !1560 remove unused include files
+    - !1558 ensure read string must have space store null char
+    - !1553 set dup_option null after free
+    - !1551 stop health check monitor before stopping container
+    - !1550 fix cpu-quota out of range when update to -1
+    - !1546 fix cri attach when stdout and stderr are false
+    - !1543 cherry pick tolerate arch unspecified seccomp profiles to stable branch
+    - !1538 don't mount shareable dirs if user set mount for dev shm
+    - !1530 use only TLS v1.2 or later
+    - !1528 do not use tmpfile()
+
+    dev stats:
+      - 90 files changed, 589 insertions(+), 415 deletions(-)
+      - contributors: haozi007, WangFengTu, zhangxiaoyu, Neil.wrz, chengzrz, songbuhuang, zhongtao
+
 2022-07-13 ubuntu release 2.0.15
     - !1523 Add rest api for stats
     - !1520 stop health check monitor before stopping container Merge pull request !1520 from JingWoo/stable-v2.0.x
