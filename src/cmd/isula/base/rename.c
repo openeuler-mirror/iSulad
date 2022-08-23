@@ -65,7 +65,10 @@ int cmd_rename_main(int argc, const char **argv)
 {
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_rename_args) };
+    struct command_option options[] = {
+        LOG_OPTIONS(lconf)
+        COMMON_OPTIONS(g_cmd_rename_args)
+    };
 
     if (client_arguments_init(&g_cmd_rename_args)) {
         COMMAND_ERROR("client arguments init failed\n");
