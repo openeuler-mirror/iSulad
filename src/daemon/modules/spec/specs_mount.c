@@ -2692,13 +2692,42 @@ out:
 }
 #endif
 
-int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2_spec)
+static inline bool is_shareable_ipc(char *ipc_mode)
 {
+    return ipc_mode == NULL || namespace_is_shareable(ipc_mode);
+}
+
+static int create_shm_path(const char *spath, const int64_t shm_size)
+{
+#define SHM_DIR_MODE 0700
 #define MAX_PROPERTY_LEN 64
     char shmproperty[MAX_PROPERTY_LEN] = { 0 };
-    int ret = -1;
     int nret = 0;
-    bool has_mount = false;
+
+    nret = util_mkdir_p(spath, SHM_DIR_MODE);
+    if (nret != 0) {
+        ERROR("Build shm dir failed");
+        return -1;
+    }
+
+    nret = snprintf(shmproperty, MAX_PROPERTY_LEN, "mode=1777,size=%" PRId64, shm_size);
+    if (nret < 0 || nret >= MAX_PROPERTY_LEN) {
+        ERROR("Sprintf failed");
+        return -1;
+    }
+
+    nret = mount("shm", spath, "tmpfs", MS_NOEXEC | MS_NODEV | MS_NOSUID, shmproperty);
+    if (nret < 0) {
+        ERROR("Mount %s failed: %s", spath, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2_spec)
+{
+    int ret = 0;
     const char *spath = NULL;
 
     if (host_spec == NULL || v2_spec == NULL) {
@@ -2706,16 +2735,9 @@ int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2
         return -1;
     }
 
-    // ignore shm of system container
-    if (host_spec->system_container) {
-        return 0;
-    }
-    // setup shareable dirs
-    if (host_spec->ipc_mode != NULL && !namespace_is_shareable(host_spec->ipc_mode)) {
-        return 0;
-    }
-    // has mount for /dev/shm
-    if (has_mount_shm(host_spec, v2_spec)) {
+    // skip setup ipc dirs if system container, not shareable ipc or has mount for /dev/shm
+    if (host_spec->system_container || !is_shareable_ipc(host_spec->ipc_mode) || has_mount_shm(host_spec, v2_spec)) {
+        DEBUG("skip setup ipc dirs");
         return 0;
     }
 
@@ -2731,41 +2753,28 @@ int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2
         return 0;
     }
 
-    nret = util_mkdir_p(spath, 0700);
-    if (nret != 0) {
-        ERROR("Build shm dir failed");
-        goto out;
-    }
-    nret = snprintf(shmproperty, MAX_PROPERTY_LEN, "mode=1777,size=%" PRId64, host_spec->shm_size);
-    if (nret < 0 || nret >= MAX_PROPERTY_LEN) {
-        ERROR("Sprintf failed");
-        goto out;
+    ret = create_shm_path(spath, host_spec->shm_size);
+    if (ret != 0) {
+        ERROR("Failed to create shm path");
+        return -1;
     }
 
-    nret = mount("shm", spath, "tmpfs", MS_NOEXEC | MS_NODEV | MS_NOSUID, shmproperty);
-    if (nret < 0) {
-        ERROR("Mount %s failed: %s", spath, strerror(errno));
-        goto out;
-    }
-    has_mount = true;
-
-    nret = chown_for_shm(spath, host_spec->user_remap);
-    if (nret != 0) {
+    ret = chown_for_shm(spath, host_spec->user_remap);
+    if (ret != 0) {
+        ret = -1;
         goto out;
     }
 
 #ifdef ENABLE_USERNS_REMAP
     if (change_shm_parent_dirs_owner_for_userns_remap(host_spec, spath) != 0) {
         ERROR("Failed to change shm directory owner for user remap.");
+        ret = -1;
         goto out;
     }
 #endif
 
-    ret = 0;
 out:
-    if (ret != 0 && has_mount) {
-        (void)umount(spath);
-    }
+    (void)umount(spath);
     return ret;
 }
 
@@ -2829,7 +2838,7 @@ static int set_shm_path(host_config *host_spec, container_config_v2_common_confi
         return 0;
     }
     // setup shareable dirs
-    if (host_spec->ipc_mode == NULL || namespace_is_shareable(host_spec->ipc_mode)) {
+    if (is_shareable_ipc(host_spec->ipc_mode)) {
         // has mount for /dev/shm
         if (has_mount_shm(host_spec, v2_spec)) {
             return 0;

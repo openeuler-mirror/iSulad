@@ -35,8 +35,8 @@ static bool embeded_image_check(const char *image_ref, container_t *cont)
 
 static bool external_image_check(const char *image_ref, container_t *cont)
 {
-    char cleanend_base_fs[PATH_MAX+1] = { 0 };
-    char cleaned_img_ref[PATH_MAX+1] = { 0 };
+    char cleanend_base_fs[PATH_MAX + 1] = { 0 };
+    char cleaned_img_ref[PATH_MAX + 1] = { 0 };
 
     if (util_clean_path(image_ref, cleaned_img_ref, PATH_MAX) == NULL) {
         WARN("Remove invalid image: %s, just ignore it.", image_ref);

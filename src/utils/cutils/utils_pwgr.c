@@ -200,7 +200,8 @@ static int parse_line_gr(const char delim, char *line, char *buffend, void *vres
 
 typedef int (*line_parser_cb)(const char delim, char *line, char *buffend, void *vresult);
 
-static int do_util_line_parser(FILE *stream, void *resbuf, char *buffer, size_t buflen, void **result, line_parser_cb cb)
+static int do_util_line_parser(FILE *stream, void *resbuf, char *buffer, size_t buflen, void **result,
+                               line_parser_cb cb)
 {
     const char delim = ':';
     char *buff_end = NULL;
