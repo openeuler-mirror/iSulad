@@ -1,5 +1,5 @@
-%global _version 2.0.15
-%global _release 6
+%global _version 2.0.16
+%global _release 1
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -12,28 +12,6 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
-
-Patch6000: 0001-do-not-use-tmpfile.patch
-Patch6001: 0002-use-only-TLS-v1.2-or-later.patch
-Patch6002: 0003-don-t-mount-shareable-dirs-if-user-set-mount-for-dev.patch
-Patch6003: 0004-tolerate-arch-unspecified-seccomp-profiles.patch
-Patch6004: 0005-add-a-CI-test-case-checking-seccomp-option.patch
-Patch6005: 0006-fix-cri-attach-when-stdout-and-stderr-are-false.patch
-Patch6006: 0007-fix-cpu-quota-out-of-range-when-update-to-1.patch
-Patch6007: 0008-stop-health-check-monitor-before-stopping-container.patch
-Patch6008: 0009-set-dup_option-null-after-free.patch
-Patch6009: 0010-ensure-read-string-must-have-space-store-null-char.patch
-Patch6010: 0011-remove-unused-include-files.patch
-Patch6011: 0012-fix-lose-override-flag.patch
-Patch6012: 0013-Add-read-and-execute-permissions-for-libhttpclient.s.patch
-Patch6013: 0014-fix-exec_request_to_rest-forgot-to-handle-suffix.patch
-Patch6014: 0015-add-fuzz-dict.patch
-Patch6015: 0016-clang-analyzer-ensure-agrument-with-nonnull-attirbut.patch
-Patch6016: 0017-change-default-umask-to-0022.patch
-Patch6017: 0018-clang-analyzer-remove-dead-assignment.patch
-Patch6018: 0019-clang-anaylzer-ensure-derenference-of-non-null-point.patch
-Patch6019: 0020-do-clean-path-and-check-if-file-exist.patch
-Patch6020: 0021-clang-analyzer-fix-memory-leak-and-use-after-free.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -260,6 +238,12 @@ fi
 %endif
 
 %changelog
+* Tue Aug 23 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.16-1
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: update iSulad version to 2.0.16-1
+
 * Mon Aug 22 2022 zhongtao <zhongtao17@huawei.com> - 2.0.15-6
 - Type: enhancement
 - ID: NA
