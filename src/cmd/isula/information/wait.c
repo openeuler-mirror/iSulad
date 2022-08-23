@@ -89,7 +89,10 @@ int cmd_wait_main(int argc, const char **argv)
     int i = 0;
     int status = 0;
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_wait_args) };
+    struct command_option options[] = {
+        LOG_OPTIONS(lconf)
+        COMMON_OPTIONS(g_cmd_wait_args)
+    };
 
     if (client_arguments_init(&g_cmd_wait_args)) {
         COMMAND_ERROR("client arguments init failed");

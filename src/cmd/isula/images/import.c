@@ -86,7 +86,10 @@ int cmd_import_main(int argc, const char **argv)
     char file[PATH_MAX] = { 0 };
     int exit_code = 1;
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_import_args) };
+    struct command_option options[] = {
+        LOG_OPTIONS(lconf)
+        COMMON_OPTIONS(g_cmd_import_args)
+    };
 
     if (client_arguments_init(&g_cmd_import_args)) {
         COMMAND_ERROR("client arguments init failed");

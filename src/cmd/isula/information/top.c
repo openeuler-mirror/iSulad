@@ -118,7 +118,10 @@ int cmd_top_main(int argc, const char **argv)
 {
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_top_args) };
+    struct command_option options[] = {
+        LOG_OPTIONS(lconf)
+        COMMON_OPTIONS(g_cmd_top_args)
+    };
 
     if (client_arguments_init(&g_cmd_top_args)) {
         COMMAND_ERROR("client arguments init failed");

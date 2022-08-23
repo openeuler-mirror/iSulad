@@ -325,7 +325,10 @@ int cmd_cp_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_cp_args.progname = argv[0];
-    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_cp_args) };
+    struct command_option options[] = {
+        LOG_OPTIONS(lconf)
+        COMMON_OPTIONS(g_cmd_cp_args)
+    };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_cp_desc,
