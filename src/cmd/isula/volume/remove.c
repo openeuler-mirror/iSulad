@@ -78,7 +78,10 @@ int cmd_volume_rm_main(int argc, const char **argv)
     struct isula_libutils_log_config lconf = { 0 };
     int exit_code = 1;
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_volume_rm_args) };
+    struct command_option options[] = {
+        LOG_OPTIONS(lconf)
+        COMMON_OPTIONS(g_cmd_volume_rm_args)
+    };
 
     if (client_arguments_init(&g_cmd_volume_rm_args)) {
         COMMAND_ERROR("client arguments init failed");

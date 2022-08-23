@@ -205,7 +205,9 @@ static void command_init_isulad(command_t *self, command_option_t *options, int 
 int parse_args(struct service_arguments *args, int argc, const char **argv)
 {
     command_t cmd = { 0 };
-    struct command_option options[] = { ISULAD_OPTIONS(args) };
+    struct command_option options[] = {
+        ISULAD_OPTIONS(args)
+    };
     command_init_isulad(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, isulad_desc,
                         isulad_usage);
     if (command_parse_args(&cmd, &args->argc, &args->argv)) {
