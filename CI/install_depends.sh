@@ -44,7 +44,9 @@ function make_crictl()
     git clone https://gitee.com/duguhaotian/cri-tools.git
     go version
     cd cri-tools
-    git checkout v1.18.0
+    # crictl v1.18 cannot recognise the SecurityProfile seccomp of LinuxSandboxSecurityContext
+    # and the LinuxContainerSecurityContext.has_seccomp() always false
+    git checkout v1.24.2
     make -j $nproc
     echo "make cri-tools: $?"
     cp ./_output/crictl ${builddir}/bin/
