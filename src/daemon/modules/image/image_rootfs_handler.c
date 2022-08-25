@@ -79,9 +79,7 @@ static bool b_user_found(const char *user, const struct passwd *pwbufp)
 
 static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *puser, char **matched_username)
 {
-    int ret = 0;
     int errval = 0;
-    int uret = -1;
     bool userfound = false;
     long long n_user = 0;
     char buf[BUFSIZ] = { 0 };
@@ -118,28 +116,24 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
     if (errval != 0 && errval != ENOENT) {
         ERROR("Failed to parse passwd file: Insufficient buffer space supplied");
         isulad_set_error_message("Failed to parse passwd file: Insufficient buffer space supplied");
-        ret = -1;
-        goto out;
+        return -1;
     }
     if (!userfound && user != NULL) {
-        uret = util_safe_llong(user, &n_user);
+        int uret = util_safe_llong(user, &n_user);
         // user is not a valid numeric UID
         if (uret != 0) {
             ERROR("Unable to find user '%s'", user);
             isulad_set_error_message("Unable to find user '%s': no matching entries in passwd file", user);
-            ret = -1;
-            goto out;
+            return -1;
         }
         if (n_user < MINUID || n_user > MAXUID) {
             uids_gids_range_err_log();
-            ret = -1;
-            goto out;
+            return -1;
         }
         puser->uid = (uid_t)n_user;
     }
 
-out:
-    return ret;
+    return 0;
 }
 
 static int append_additional_gids(gid_t gid, gid_t **additional_gids, size_t *len)

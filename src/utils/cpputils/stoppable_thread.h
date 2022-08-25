@@ -30,7 +30,7 @@ public:
 
     explicit StoppableThread(StoppableThread &&obj) noexcept
         : m_exit_signal(std::move(obj.m_exit_signal))
-        ,m_future_obj(std::move(obj.m_future_obj))
+        , m_future_obj(std::move(obj.m_future_obj))
     {
     }
 
