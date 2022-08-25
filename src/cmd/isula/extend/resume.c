@@ -79,7 +79,10 @@ int cmd_resume_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_resume_args.progname = argv[0];
-    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_resume_args) };
+    struct command_option options[] = {
+        LOG_OPTIONS(lconf)
+        COMMON_OPTIONS(g_cmd_resume_args)
+    };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_resume_desc,
                  g_cmd_resume_usage);
