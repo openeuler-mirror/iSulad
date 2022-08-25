@@ -1354,7 +1354,8 @@ static char *get_cpu_variant()
     return variant;
 }
 
-static void normalized_host_arch(char **host_arch, struct utsname uts) {
+static void normalized_host_arch(char **host_arch, struct utsname uts)
+{
     const char *arch_map[][2] = { { "i386", "386" },
         { "x86_64", "amd64" },
         { "x86-64", "amd64" },
@@ -1377,7 +1378,8 @@ static void normalized_host_arch(char **host_arch, struct utsname uts) {
     }
 }
 
-static void normalized_host_variant(const char *host_arch, char **host_variant) {
+static void normalized_host_variant(const char *host_arch, char **host_variant)
+{
     int i = 0;
     char *tmp_variant = NULL;
     const char *variant_map[][2] = { { "5", "v5" },

@@ -115,7 +115,7 @@ int ContainerServiceImpl::container_resize_request_from_grpc(const ResizeRequest
                                                              struct isulad_container_resize_request **request)
 {
     struct isulad_container_resize_request *tmpreq = (struct isulad_container_resize_request *)util_common_calloc_s(
-            sizeof(struct isulad_container_resize_request));
+                                                         sizeof(struct isulad_container_resize_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -193,7 +193,7 @@ int ContainerServiceImpl::events_request_from_grpc(const EventsRequest *grequest
                                                    struct isulad_events_request **request)
 {
     struct isulad_events_request *tmpreq =
-            (struct isulad_events_request *)util_common_calloc_s(sizeof(struct isulad_events_request));
+        (struct isulad_events_request *)util_common_calloc_s(sizeof(struct isulad_events_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -221,8 +221,8 @@ int ContainerServiceImpl::copy_from_container_request_from_grpc(const CopyFromCo
                                                                 struct isulad_copy_from_container_request **request)
 {
     struct isulad_copy_from_container_request *tmpreq =
-            (struct isulad_copy_from_container_request *)util_common_calloc_s(
-                    sizeof(isulad_copy_from_container_request));
+        (struct isulad_copy_from_container_request *)util_common_calloc_s(
+            sizeof(isulad_copy_from_container_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -287,7 +287,7 @@ int ContainerServiceImpl::attach_request_from_stream(const std::multimap<grpc::s
                                                      container_attach_request **request)
 {
     container_attach_request *tmpreq =
-            (container_attach_request *)util_common_calloc_s(sizeof(container_attach_request));
+        (container_attach_request *)util_common_calloc_s(sizeof(container_attach_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -343,7 +343,7 @@ void ContainerServiceImpl::add_attach_trailing_metadata(ServerContext *context, 
 }
 
 int ContainerServiceImpl::remote_start_request_from_stream(
-        const std::multimap<grpc::string_ref, grpc::string_ref> &metadata, container_start_request **request)
+    const std::multimap<grpc::string_ref, grpc::string_ref> &metadata, container_start_request **request)
 {
     container_start_request *tmpreq = (container_start_request *)util_common_calloc_s(sizeof(container_start_request));
     if (tmpreq == nullptr) {

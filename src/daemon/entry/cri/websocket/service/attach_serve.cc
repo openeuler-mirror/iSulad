@@ -129,8 +129,8 @@ int AttachServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
     // To make sure the close func sem_post, set attach stdout and stderr true.
     bool record_attach_stdout = m_request->attach_stdout;
     bool record_attach_stderr = m_request->attach_stderr;
-    m_request->attach_stdout=true;
-    m_request->attach_stderr=true;
+    m_request->attach_stdout = true;
+    m_request->attach_stderr = true;
 
     container_attach_response *m_response { nullptr };
     int ret = cb->container.attach(m_request, &m_response, m_request->attach_stdin ? lwsCtx->pipes.at(0) : -1,
