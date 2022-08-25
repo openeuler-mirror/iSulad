@@ -40,7 +40,7 @@ ssize_t AttachWriteToClient(void *context, const void *data, size_t len)
         return -1;
     }
 
-    return attachCtx->attachWriter((void *)(attachCtx->lwsCtx), data, len);
+    return attachCtx->attachWriter(static_cast<void *>(attachCtx->lwsCtx), data, len);
 }
 
 int AttachConnectClosed(void *context, char **err)
@@ -161,7 +161,7 @@ int AttachServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
 
 void AttachServe::CloseConnect(SessionData *lwsCtx)
 {
-    closeWsConnect((void*)lwsCtx, nullptr);
+    closeWsConnect(static_cast<void*>(lwsCtx), nullptr);
 }
 
 void AttachServe::FreeRequest(void *m_request)
