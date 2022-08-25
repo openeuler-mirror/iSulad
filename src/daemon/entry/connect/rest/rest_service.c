@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -22,6 +22,7 @@
 #include "utils.h"
 #include "rest_containers_service.h"
 #include "rest_images_service.h"
+#include "rest_volumes_service.h"
 #ifdef ENABLE_METRICS
 #include "rest_metrics_service.h"
 #endif
@@ -67,6 +68,10 @@ static int rest_register_handler(evhtp_t *g_htp)
     }
 
     if (rest_register_images_handler(g_htp) != 0) {
+        return -1;
+    }
+
+    if (rest_register_volumes_handler(g_htp) != 0) {
         return -1;
     }
 
