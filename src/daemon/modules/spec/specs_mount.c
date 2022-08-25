@@ -2668,7 +2668,7 @@ static int change_shm_parent_dirs_owner_for_userns_remap(const host_config *host
     *p = '\0';
 
     if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
-        ERROR("Unable to change directory %s owner for user remap.", tmp_path);
+        ERROR("Unable to change shm dir %s owner for user remap.", tmp_path);
         ret = -1;
         goto out;
     }
@@ -2682,7 +2682,7 @@ static int change_shm_parent_dirs_owner_for_userns_remap(const host_config *host
     *p = '\0';
 
     if (set_file_owner_for_userns_remap(tmp_path, userns_remap) != 0) {
-        ERROR("Unable to change directory %s owner for user remap.", tmp_path);
+        ERROR("Unable to change shm dir %s owner for user remap.", tmp_path);
         ret = -1;
         goto out;
     }

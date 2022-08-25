@@ -49,20 +49,20 @@ int devmapper_init(struct graphdriver *driver, const char *driver_home, const ch
 
     root_dir = util_path_dir(driver_home);
     if (root_dir == NULL) {
-        ERROR("Unable to get driver root home directory %s.", driver_home);
+        ERROR("Unable to get devmapper root home directory %s.", driver_home);
         ret = -1;
         goto out;
     }
 
     driver->backing_fs = util_get_fs_name(root_dir);
     if (driver->backing_fs == NULL) {
-        ERROR("Failed to get backing fs");
+        ERROR("Failed to get devmapper backing fs");
         ret = -1;
         goto out;
     }
 
     if (util_mkdir_p(driver_home, DEFAULT_DEVICE_SET_MODE) != 0) {
-        ERROR("Unable to create driver home directory %s.", driver_home);
+        ERROR("Unable to create devmapper home directory %s.", driver_home);
         ret = -1;
         goto out;
     }
