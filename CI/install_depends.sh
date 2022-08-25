@@ -49,7 +49,7 @@ function make_crictl()
     git checkout v1.24.2
     make -j $nproc
     echo "make cri-tools: $?"
-    cp ./_output/crictl ${builddir}/bin/
+    cp ./build/bin/crictl ${builddir}/bin/
 }
 
 #install cni plugins
@@ -190,7 +190,7 @@ wait
 if [ -e ${buildstatus} ];then
     for i in ${buildlogs[@]}
     do
-        if [ -e ${$i} ];then
+        if [ -e ${i} ];then
             cat $i
         fi
     done
