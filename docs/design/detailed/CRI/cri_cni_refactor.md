@@ -43,11 +43,11 @@
 
 ## 时序图
 
-![重构前时序图](../../images/sequencebefore.png)
+![重构前时序图](../../../images/sequencebefore.png)
 
 重构前时序图
 
-![重构后时序图](../../images/sequenceafter.png)
+![重构后时序图](../../../images/sequenceafter.png)
 
 重构后时序图
 

@@ -1,39 +1,98 @@
-<img src="logo/isula-logo.png" alt="iSulad" style="zoom:80%;" />
+[中文版入口](README_zh.md)
 
-## iSulad
+<img src="./logo/isula-logo.png" alt="iSulad" style="zoom:80%;" />
 
-`iSulad` is a lightweight container runtime daemon which is designed for IOT and Cloud infrastructure.`iSulad` has the characteristics of light, fast and not limited by hardware specifications and architecture, and can be applied more widely.
+<a href="https://github.com/openeuler-mirror/iSulad"><img src="https://img.shields.io/badge/github-iSulad-blue"/></a> ![license](https://img.shields.io/badge/license-Mulan%20PSL%20v2-blue) ![language](https://img.shields.io/badge/language-C%2FC%2B%2B-blue)
 
-## Documentation
+## Introduction
 
-- [en build guide](./docs/build_guide.md)
-- [cn build guide](./docs/build_guide_zh.md)
-- [more usage guide](https://openeuler.org/zh/docs/20.09/docs/Container/iSula%E5%AE%B9%E5%99%A8%E5%BC%95%E6%93%8E.html)
+`iSulad` , written in C/C++, is a lightweight container engine that has the advantage of being light, fast and applicable to multiple hardware specifications and architecture. `iSulad` has a wide application prospect. 
+
+## Architecture
+
+You can see `iSulad`  architecture on [architecture](./docs/design/architecture_en.md).
+
+## Function
+
+### Runtime
+
+`iSulad` support multiple container runtimes, including lxc、runc and kata.
+
+#### lxc
+
+lxc is an open-source container  runtime written in C , which occupies less resources and is suitable for scenarios with high restrictions on noise floor resources. It is the default runtime of iSulad.
+
+#### runc
+
+runc is an OCI-compliant runtime written in GO. When users use runc, the OCI runtime-spec version is required to be at least 1.0.0.
+
+#### kata-runtime
+
+kata-runtime start secure containers with lightweight virtual machines.
+
+### Image
+
+`iSulad` supports multiple image formats, including OCI, external rootfs and embedded image.
+
+#### OCI
+
+OCI is a docker-compatible image format that supports pulling images and running containers from remote image repositories.
+
+#### external rootfs
+
+External rootfs allows users to prepare a bootable `root fs` directory, which is mainly used in system container scenarios.
+
+#### embedded image
+
+Embedded image is a unique embedded image format of `iSulad`, which occupies low resources and is mainly used in embedded application scenarios.
+
+### Operation Interface
+
+`iSulad` provides two different interfaces for image and container management operations: CLI and CRI.
+
+#### CLI
+
+CLI uses the command line to manage images and containers. It is a standard C/S architecture model. iSula performs as an independent command line client that talks to the iSulad daemon.
+
+The commands provided by iSula cover most of the common application scenarios, including the operation interface of the container, such as run, stop, rm, pause, etc, as well as the related operations of the image, such as pull, import, rmi, etc.
+
+#### CRI
+
+CRI (Container Runtime Interface) implementer can work seamlessly with K8s.
+
+CRI interface is implemented based on gRPC. iSulad implemented CRI gRPC Server following CRI interface standards. CRI gRPC Server includes runtime service and image service, which are used to provide container runtime interface and image operation interface respectively. CRI gRPC Server listen on a local unix socket, and the K8s component kubelet runs as a gRPC Client.
 
 ## Getting Started
 
+For more information on `iSulad` usage, please see [guide](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html).
+
+**If you want to install  `iSulad`  through rpm package**, please refer to  [rpmbuild_guide](./docs/build_guide/rpmbuild_guide.md).
+
+**If you are a developer and want to build `iSulad` from source**, please refer to [build_guide](./docs/build_guide/build_guide.md).
+
 ### Installing
 
-To install iSulad, you can use `rpm` or `yum` package manager command with `openEuler` repository.
+To install `iSulad`, you can use `rpm` or `yum` package manager command with `openEuler` repository.
 
 Or write repository file by hand:
 
-```sh
-cat << EOF > /etc/yum.repos.d/openEuler.repo
+```shell
+$ cat << EOF > /etc/yum.repos.d/openEuler.repo
 [openEuler]
 baseurl=https://repo.openeuler.org/openEuler-20.03-LTS/OS/\$basearch
 enabled=1
 EOF
 ```
 
-Install iSulad with yum:
+Install `iSulad` with yum:
 
-```sh
-yum install -y iSulad
+```shell
+$ yum install -y iSulad
 ```
 
 if you found this error 
-```
+
+```txt
 Repository 'openEuler' is missing name in configuration, using id.
 
 You have enabled checking of packages via GPG keys. This is a good thing.
@@ -48,17 +107,15 @@ for a repository in the 'gpgkey' option in a repository section and YUM
 will install it for you.
 
 For more information contact your distribution or package provider.
-
 ```
 
-you should run `rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openEuler` first
-
+you should run `rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openEuler` first.
 
 ### Configure
 
 Configure the container image registry address, for example "docker.io" or other registry addrss.
 
-```sh
+```shell
 # cat /etc/isulad/daemon.json
 .....
     "registry-mirrors": [
@@ -69,120 +126,104 @@ Configure the container image registry address, for example "docker.io" or other
 
 ### Run
 
-We provide `systemd` service to start `iSulad`:
-```sh
-systemctl restart isulad # restart the server with systemd command
+`iSulad` provides two ways to start the isulad:
+
+1. Use `systemd` service to start `iSulad`:
+
+```shell
+# restart the server with systemd command
+$ systemctl restart isulad 
 ```
 
-You can use direct command to start `iSulad` server：
-```sh
-$ sudo isulad  # run the server with default socket name and default log level and images manage function
+2. Use direct command to start `iSulad`:
+
+```shell
+# run the server with default socket name and default log level and images manage function
+$ sudo isulad 
 ```
-### Operations on containers:
 
-For more informations on how to use `iSulad`, please refer to the [guide](https://openeuler.org/en/docs/20.03_LTS/docs/Container/isulad-container-engine.html)
+###  Operations on containers
 
-`iSulad` provides two operate interfaces to manager images and containers.
+`iSulad` provides two operation interfaces for managing images and containers: CLI and CRI.
 
-- CLI, `iSulad` provides `isula` as client CLI
+#### **CLI**
 
-    Here are some sample commands to manager containers.
+CLI, `iSulad` provides `isula` as client CLI
 
-    List all containers in your own environment:
-    ```sh
-    # list containers
-    $ sudo isula ps -a
-    ```
+Here are some sample commands to manager containers.
 
-    Create a container with busybox named `test`:
-    ```sh
-    # create a container 'test' with image busybox
-    $ sudo isula create -t -n test busybox
-    ```
+- List all containers in your own environment:
 
-    Start this container `test`:
-    ```sh
-    # start the container 'test'
-    $ sudo isula start test
-    ```
-    Kill the container `test`:
-    ```sh
-    # kill the container 'test':
-    $ sudo isula kill test
-    ```
-    Remove the container `test`:
-    ```sh
-    # remove the container 'test'
-    $ sudo isula rm test
-    ```
+```shell
+$ sudo isula ps -a
+```
 
-- CRI interface, `iSulad` can be integrated with `kubernetes` through CRI interface
+- Create a container with busybox named `test`:
 
-    How to integrate with `kubernetes` please refer to [integration.md](./docs/integration.md)
+```shell
+$ sudo isula create -t -n test busybox
+```
 
-### Operations about native network
+- Start this container `test`:
 
-Operations about how to use native network, please refer to the [native_network.md](./docs/manual/native_network.md)
+```shell
+$ sudo isula start test
+```
 
-### Build from source
-Build requirements for developers are listed in [build_guide](./docs/build_guide.md)
+- Kill the container `test`:
 
-## Performance
+```shell
+$ sudo isula kill test
+```
 
-Power by [ptcr](https://gitee.com/openeuler/ptcr)
-### ARM Radar charts
+- Remove the container `test`:
 
-#### searially with 10 containers
+```shell
+$ sudo isula rm test
+```
 
-<img src="docs/images/performance_arm_seri.png" alt="ARM searially" style="zoom:80%;" />
+#### CRI
 
-#### parallerlly with 100 containers
+`iSulad` can be integrated with kubernetes through the CRI interface. For  integrating with kubernetes, please refer to [k8s_integration](./docs/manual/k8s_integration.md)。
 
-<img src="docs/images/performance_arm_para.png" alt="ARM parallerlly" style="zoom:80%;" />
+###  Operations about native network
 
-### X86 Radar chart
+For using native network in `iSulad`, please refer to [native_network](./docs/manual/native_network.md)。
 
-#### searially with 10 containers
+##  Performance
 
-<img src="docs/images/performance_x86_seri.png" alt="X86 searially" style="zoom:80%;" />
+Using [ptcr](https://gitee.com/openeuler/ptcr) as a performance test tool , it shows the performance of `iSulad` in computers with different architectures.
 
-#### parallerlly with 100 containers
+###  ARM
 
-<img src="docs/images/performance_x86_para.png" alt="X86 parallerlly" style="zoom:80%;" />
+- For searially with 10 containers, the performance radar chart of `iSula`, `docker`, `podman` is as follows:
 
+<img src="./docs/images/performance_arm_seri.png" alt="ARM searially" style="zoom:80%;" />
+
+- For parallerlly with 100 containers, the performance radar chart of `iSula`, `docker`, `podman` is as follows:
+
+<img src="./docs/images/performance_arm_para.png" alt="ARM parallerlly" style="zoom:80%;" />
+
+### X86
+
+- For searially with 10 containers, the performance radar chart of `iSula`, `docker`, `podman` is as follows:
+
+<img src="./docs/images/performance_x86_seri.png" alt="X86 searially" style="zoom:80%;" />
+
+- For parallerlly with 100 containers, the performance radar chart of `iSula`, `docker`, `podman` is as follows:
+
+<img src="./docs/images/performance_x86_para.png" alt="X86 parallerlly" style="zoom:80%;" />
 
 **More information can get from:**  [Performance test](https://gitee.com/openeuler/iSulad/wikis/Performance?sort_id=5449355)
 
-## Try to Use iSulad
+## Kernel Requirements
 
-If you want to experience iSulad right now, you can try to use it at：
+`iSulad` runs on Kernels above 3.0.x.
 
-- https://lab.huaweicloud.com/testdetail_498
+## Compatibility
 
-It is the experiment about iSulad. In this experiment you can install iSulad easily. And then you can pull image, run container, analyse iSulad's performance and compare it with performance of Docker.
+The standard specification versions that `iSulad` is compatible with are as follows:
 
-## How to Contribute
-
-We always welcome new contributors. And we are happy to provide guidance for the new contributors.
-iSulad follows the kernel coding conventions. You can find a detailed introduction at:
-
-- https://www.kernel.org/doc/html/v4.10/process/coding-style.html
-
-You can get more information about iSulad from our wikis, including roadmap, feature design documents, etc:
-
-- https://gitee.com/openeuler/iSulad/wikis
-
-## Licensing
-
-iSulad is licensed under the Mulan PSL v2.
-
-## Related Resouces
-
-- [bilibili videos](https://space.bilibili.com/527064077/video?keyword=iSulad)
-- [如何在openEuler树莓派镜像上部署k8s+iSula集群](https://my.oschina.net/openeuler/blog/4774838)
-- [基于openEuler搭建部署k8s](https://bbs.huaweicloud.com/forum/forum.php?mod=viewthread&tid=94271)
-
-## Join us
-You can join us on any of the following channels:
-* Join our [mailing list](https://mailweb.openeuler.org/postorius/lists/isulad.openeuler.org/)
-* Join our Biweekly meeting at 16:30 pm on Tuesday (meeting link will be mailed at mailing list)
+- Compatible with OCI 1.0.0.
+- Compatible with CNI 0.3.0 and above.
+- Compatible with lcr 2.1.x and above.
