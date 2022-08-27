@@ -566,7 +566,7 @@ auto GetSeccompiSuladOptsByPath(const char *dstpath, Errors &error) -> std::vect
     seccomp_json = docker_seccomp_generate_json(seccomp_spec, &ctx, &err);
     if (seccomp_json == nullptr) {
         error.Errorf("failed to generate seccomp json: %s", err);
-	goto out;
+        goto out;
     }
 
     ret = std::vector<iSuladOpt> { { "seccomp", seccomp_json, "" } };
