@@ -481,7 +481,7 @@ static int uniq_mcs(unsigned int range, char *mcs, size_t len)
             c2 = tmp;
         }
 
-        nret = snprintf(mcs, len, "s0:c%d,c%d", c1, c2);
+        nret = snprintf(mcs, len, "s0:c%u,c%u", c1, c2);
         if (nret < 0 || nret >= len) {
             ERROR("Failed to compose mcs");
             return -1;
