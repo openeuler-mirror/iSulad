@@ -44,7 +44,7 @@ static int list_request_to_rest(const struct isula_list_volume_request *request,
         ret = -1;
         goto out;
     }
-    
+
     *body_len = strlen(*body) + 1;
 
 out:
