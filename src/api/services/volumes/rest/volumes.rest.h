@@ -19,6 +19,8 @@
 #include <isula_libutils/volume_list_volume_response.h>
 #include <isula_libutils/volume_remove_volume_request.h>
 #include <isula_libutils/volume_remove_volume_response.h>
+#include <isula_libutils/volume_prune_volume_request.h>
+#include <isula_libutils/volume_prune_volume_response.h>
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
@@ -26,6 +28,7 @@
 
 #define VolumesServiceList "/VolumesService/List"
 #define VolumesServiceRemove "/VolumesService/Remove"
+#define VolumesServicePrune "/VolumesService/Prune"
 
 #endif // API_SERVICES_VOLUMES_REST_H
 

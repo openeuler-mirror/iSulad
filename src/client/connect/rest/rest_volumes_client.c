@@ -244,6 +244,132 @@ out:
     return ret;
 }
 
+static int prune_request_to_rest(const struct isula_prune_volume_request *request, char **body, size_t *body_len)
+{
+    volume_prune_volume_request *nrequest = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error err = NULL;
+    int ret = 0;
+
+    nrequest = util_common_calloc_s(sizeof(volume_list_volume_request));
+    if (nrequest == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    nrequest->unuseful = request->unuseful;
+
+    *body = volume_prune_volume_request_generate_json(nrequest, &ctx, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate volume prune request json:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    *body_len = strlen(*body) + 1;
+
+out:
+    UTIL_FREE_AND_SET_NULL(err);
+    free_volume_prune_volume_request(nrequest);
+    return ret;
+}
+
+static int unpack_volume_info_for_prune_response(const volume_prune_volume_response *nresponse,
+                                                 struct isula_prune_volume_response *response)
+{
+    size_t i;
+    char **volumes = NULL;
+
+    if (nresponse->volumes_len == 0) {
+        return 0;
+    }
+
+    volumes = (char **)(util_smart_calloc_s(sizeof(char *), nresponse->volumes_len));
+    if (volumes == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < nresponse->volumes_len; i++) {
+        volumes[i] = util_strdup_s(nresponse->volumes[i]);
+    }
+
+    response->volumes = volumes;
+    response->volumes_len = nresponse->volumes_len;
+
+    volumes = NULL;
+
+    return 0;
+}
+
+static int unpack_prune_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_prune_volume_response *response = (struct isula_prune_volume_response *)arg;
+    volume_prune_volume_response *nresponse = NULL;
+    parser_error err = NULL;
+    int ret;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        return ret;
+    }
+
+    nresponse = volume_prune_volume_response_parse_data(message->body, NULL, &err);
+    if (nresponse == NULL) {
+        ERROR("Invalid volume prune response:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    response->server_errono = nresponse->cc;
+    response->errmsg = util_strdup_s(nresponse->errmsg);
+
+    if (unpack_volume_info_for_prune_response(nresponse, response) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    ret = (nresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    UTIL_FREE_AND_SET_NULL(err);
+    free_volume_prune_volume_response(nresponse);
+    return ret;
+}
+
+static int rest_volume_prune(const struct isula_prune_volume_request *request,
+                             struct isula_prune_volume_response *response, void *arg)
+{
+    int ret;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    char *body = NULL;
+    Buffer *output = NULL;
+
+    ret = prune_request_to_rest(request, &body, &len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = rest_send_request(socketname, RestHttpHead VolumesServicePrune, body, len, &output);
+    if (ret != 0) {
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+
+    ret = get_response(output, unpack_prune_response, (void *)response);
+
+out:
+    buffer_free(output);
+    put_body(body);
+    return ret;
+}
+
 int rest_volumes_client_ops_init(isula_connect_ops *ops)
 {
     if (ops == NULL) {
@@ -252,6 +378,7 @@ int rest_volumes_client_ops_init(isula_connect_ops *ops)
 
     ops->volume.list = &rest_volume_list;
     ops->volume.remove = &rest_volume_remove;
+    ops->volume.prune = &rest_volume_prune;
 
     return 0;
 }
