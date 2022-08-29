@@ -342,7 +342,6 @@ static int init_log(const struct log_gather_conf *lgconf)
             break;
         case LOG_GATHER_DRIVER_NOSET:
             g_save_log_op = write_into_stdout;
-            driver = LOG_GATHER_DRIVER_STDOUT;
             COMMAND_ERROR("Unset log driver, use stderr to log.");
             break;
         default:

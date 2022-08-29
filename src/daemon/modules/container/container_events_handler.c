@@ -282,8 +282,7 @@ int container_events_handler_post_events(const struct isulad_events_format *even
     cont = containers_store_get(event->id);
     if (cont == NULL) {
         ERROR("No such container:%s", event->id);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     it = util_common_calloc_s(sizeof(struct linked_list));

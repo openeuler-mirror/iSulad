@@ -1926,6 +1926,7 @@ public:
                                             ClientBaseConstants::COMMON_NAME_LEN);
         if (ret != 0) {
             ERROR("Failed to get common name in: %s", m_certFile.c_str());
+            delete ctx;
             return -1;
         }
         ctx->context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
@@ -1945,11 +1946,15 @@ public:
                 ERROR("Invalid json: %s", err);
                 free(err);
                 CopyFromContainerFinish(ctx, &response->errmsg);
+                delete ctx->reader;
+                delete ctx;
                 return -1;
             }
             free(err);
         } else {
             CopyFromContainerFinish(ctx, &response->errmsg);
+            delete ctx->reader;
+            delete ctx;
             return -1;
         }
         // Ignore the first reader which is used for transform metadata

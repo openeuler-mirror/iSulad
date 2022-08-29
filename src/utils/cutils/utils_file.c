@@ -1517,8 +1517,7 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
     tmp_file = get_random_tmp_file(fname);
     if (tmp_file == NULL) {
         ERROR("Failed to get tmp file for %s", fname);
-        ret = -1;
-        goto free_out;
+        return -1;
     }
 
     ret = do_atomic_write_file(tmp_file, content, content_len, mode, sync);
@@ -1536,10 +1535,10 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
     }
 
 free_out:
-    free(tmp_file);
     if (ret != 0 && unlink(tmp_file) != 0 && errno != ENOENT) {
         SYSERROR("Failed to remove temp file:%s", tmp_file);
     }
+    free(tmp_file);
     return ret;
 }
 

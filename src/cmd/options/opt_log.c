@@ -162,6 +162,10 @@ bool parse_container_log_opt(const char *key, const char *val, json_map_string_s
             }
             nret = append_json_map_string_string(opts, support_parsers[i].real_key, parsed_val);
             free(parsed_val);
+            if (nret != 0) {
+                ERROR("Out of memory.");
+                return false;
+            }
             return true;
         }
     }

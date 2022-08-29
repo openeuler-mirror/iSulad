@@ -1804,12 +1804,12 @@ int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, ch
             continue;
         }
 
-        if (split_security_opt(host_spec->security_opt[i], &items, &items_size)) {
+        if (split_security_opt(host_spec->security_opt[i], &items, &items_size) != 0) {
             ret = -1;
             goto out;
         }
 
-        if (items_size != 2) {
+        if (items == NULL || items_size != 2) {
             ERROR("invalid --security-opt: %s", host_spec->security_opt[i]);
             ret = -1;
             goto out;
@@ -1833,6 +1833,7 @@ int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, ch
         }
         util_free_array(items);
         items = NULL;
+        items_size = 0;
     }
 
 out:

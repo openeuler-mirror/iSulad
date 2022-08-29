@@ -297,7 +297,7 @@ static void *do_io_copy(void *data)
             }
 
             fd_node_t *fn = ioc->fd_to;
-            fd_node_t *next = fn;
+            fd_node_t *next = NULL;
             for (; fn != NULL; fn = next) {
                 next = fn->next;
                 if (fn->is_log) {

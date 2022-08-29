@@ -1024,8 +1024,7 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
     *response = util_common_calloc_s(sizeof(image_pull_image_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = ISULAD_ERR_MEMOUT;
-        goto out;
+        return ISULAD_ERR_MEMOUT;
     }
 
     EVENT("Image Event: {Object: %s, Type: Pulling}", request->image_name);
@@ -1045,12 +1044,11 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
     EVENT("Image Event: {Object: %s, Type: Pulled}", request->image_name);
 
 out:
-    if (*response != NULL) {
-        (*response)->image_ref = util_strdup_s(im_rsp->image_ref);
-        (*response)->cc = cc;
+    (*response)->cc = cc;
+    if (im_rsp != NULL) {
         (*response)->errmsg = util_strdup_s(im_rsp->errmsg);
+        (*response)->image_ref = util_strdup_s(im_rsp->image_ref);
     }
-
     free_im_pull_request(im_req);
     free_im_pull_response(im_rsp);
 

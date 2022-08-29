@@ -695,6 +695,7 @@ static int create_image(pull_descriptor *desc, char *image_id, bool *reuse)
         goto out;
     }
 
+    *reuse = false;
     ret = storage_img_create(image_id, top_layer_id, NULL, &opts);
     if (ret != 0) {
         pre_top_layer = storage_get_img_top_layer(image_id);
@@ -711,10 +712,7 @@ static int create_image(pull_descriptor *desc, char *image_id, bool *reuse)
             goto out;
         }
 
-        ret = 0;
         *reuse = true;
-    } else {
-        *reuse = false;
     }
 
     ret = storage_img_add_name(image_id, desc->dest_image_name);

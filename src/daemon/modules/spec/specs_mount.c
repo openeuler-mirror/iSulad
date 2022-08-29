@@ -3376,7 +3376,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
 
     /* mounts to mount filesystem */
     ret = merge_fs_mounts_to_v2_spec(all_fs_mounts, all_fs_mounts_len, v2_spec);
-    if (ret) {
+    if (ret != 0) {
         ERROR("Failed to merge mounts in to v2 spec");
         goto out;
     }
@@ -3422,7 +3422,9 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
         }
     }
 
-    qsort(all_fs_mounts, all_fs_mounts_len, sizeof(all_fs_mounts[0]), destination_compare);
+    if (all_fs_mounts_len > 0) {
+        qsort(all_fs_mounts, all_fs_mounts_len, sizeof(all_fs_mounts[0]), destination_compare);
+    }
 
     ret = merge_fs_mounts_to_oci_spec(oci_spec, all_fs_mounts, all_fs_mounts_len);
     if (ret) {

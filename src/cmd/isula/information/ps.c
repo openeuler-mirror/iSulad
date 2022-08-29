@@ -750,6 +750,7 @@ static int append_first_non_header_field(const char *index, struct filters *ff)
         goto out;
     }
     tmp->name = first_non_field;
+    first_non_field = NULL;
     tmp->is_field = false;
     if (append_field(ff, tmp) != 0) {
         ERROR("Failed to append field");
@@ -757,7 +758,6 @@ static int append_first_non_header_field(const char *index, struct filters *ff)
         goto out;
     }
     tmp = NULL;
-    first_non_field = NULL;
 
 out:
     free_filter_field(tmp);
@@ -896,7 +896,6 @@ static int append_header_item_field(const char *index, const char *prefix, const
         ret = -1;
         goto out;
     }
-
     field = NULL;
 
 out:
