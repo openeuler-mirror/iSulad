@@ -210,6 +210,93 @@ out:
     free_volume_remove_volume_request(request);
 }
 
+static int volumes_prune_request_from_rest(evhtp_request_t *req, volume_prune_volume_request **request)
+{
+    int ret;
+    size_t body_len = 0;
+    char *body = NULL;
+    parser_error err = NULL;
+
+    ret = get_body(req, &body_len, &body);
+    if (ret != 0) {
+        ERROR("Failed to get body");
+        return -1;
+    }
+
+    *request = volume_prune_volume_request_parse_data(body, NULL, &err);
+    if (*request == NULL) {
+        ERROR("Invalid request body:%s", err);
+        ret = -1;
+    }
+
+    UTIL_FREE_AND_SET_NULL(err);
+    put_body(body);
+    return ret;
+}
+
+static void evhtp_send_volumes_prune_repsponse(evhtp_request_t *req, volume_prune_volume_response *response,
+                                               int rescode)
+{
+    parser_error err = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    char *responsedata = NULL;
+
+    if (response == NULL) {
+        ERROR("Failed to generate volume prune response info");
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        return;
+    }
+
+    responsedata = volume_prune_volume_response_generate_json(response, &ctx, &err);
+    if (responsedata == NULL) {
+        ERROR("Failed to generate volume prune json:%s", err);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        goto out;
+    }
+
+    evhtp_send_response(req, responsedata, rescode);
+
+out:
+    UTIL_FREE_AND_SET_NULL(responsedata);
+    UTIL_FREE_AND_SET_NULL(err);
+}
+
+static void rest_volumes_prune_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    volume_prune_volume_request *request = NULL;
+    volume_prune_volume_response *response = NULL;
+
+    // only deal with POST request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    cb = get_service_executor();
+    if (cb == NULL || cb->volume.prune == NULL) {
+        ERROR("Unimplemented callback");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = volumes_prune_request_from_rest(req, &request);
+    if (tret < 0) {
+        ERROR("Bad request");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->volume.prune(request, &response);
+
+    evhtp_send_volumes_prune_repsponse(req, response, RESTFUL_RES_OK);
+
+out:
+    free_volume_prune_volume_response(response);
+    free_volume_prune_volume_request(request);
+}
+
 int rest_register_volumes_handler(evhtp_t *htp)
 {
     if (evhtp_set_cb(htp, VolumesServiceList, rest_volumes_list_cb, NULL) == NULL) {
@@ -219,6 +306,11 @@ int rest_register_volumes_handler(evhtp_t *htp)
 
     if (evhtp_set_cb(htp, VolumesServiceRemove, rest_volumes_remove_cb, NULL) == NULL) {
         ERROR("Failed to register remove callback");
+        return -1;
+    }
+
+    if (evhtp_set_cb(htp, VolumesServicePrune, rest_volumes_prune_cb, NULL) == NULL) {
+        ERROR("Failed to register prune callback");
         return -1;
     }
 
