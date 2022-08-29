@@ -12,15 +12,16 @@ We provided a script to auto install iSulad on centos7, you can just execute the
 
 ```sh
 $ git clone https://gitee.com/openeuler/iSulad.git
-$ cd iSulad/docs
+$ cd iSulad/docs/build_docs/guide/script
 $ sudo ./install_iSulad_on_Centos_7.sh
 ```
 
 ### install basic dependencies based on Ubuntu distribution
 ```sh
 $ git clone https://gitee.com/openeuler/iSulad.git
-$ cd iSulad/docs
-$ sudo ./docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
+$ cd iSulad/docs/build_docs/guide/script
+$ sudo chmod +x ./install_iSulad_on_Ubuntu_20_04_LTS.sh
+$ sudo ./install_iSulad_on_Ubuntu_20_04_LTS.sh
 ```
 
 ## Build and install other dependencies from source
