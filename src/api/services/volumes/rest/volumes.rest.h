@@ -17,12 +17,15 @@
 
 #include <isula_libutils/volume_list_volume_request.h>
 #include <isula_libutils/volume_list_volume_response.h>
+#include <isula_libutils/volume_remove_volume_request.h>
+#include <isula_libutils/volume_remove_volume_response.h>
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
 #endif
 
 #define VolumesServiceList "/VolumesService/List"
+#define VolumesServiceRemove "/VolumesService/Remove"
 
 #endif // API_SERVICES_VOLUMES_REST_H
 
