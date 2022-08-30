@@ -1,5 +1,5 @@
 %global _version 2.0.16
-%global _release 1
+%global _release 2
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -12,6 +12,9 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
+
+Patch001: 0001-fix-memleak.patch
+Patch002: 0002-cleancode-about-rest-register-container.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -239,6 +242,12 @@ fi
 %endif
 
 %changelog
+* Tue Aug 30 2022 leizhongkai <leizhongkai@huawei.com> - 2.0.16-2
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sync from upstream openeuler/iSulad
+
 * Tue Aug 23 2022 wangfengtu <wangfengtu@huawei.com> - 2.0.16-1
 - Type: enhancement
 - ID: NA
