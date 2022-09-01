@@ -18,7 +18,6 @@
 #include <algorithm>
 #include <functional>
 #include <iostream>
-#include <openssl/sha.h>
 #include <sys/utsname.h>
 #include <utility>
 
