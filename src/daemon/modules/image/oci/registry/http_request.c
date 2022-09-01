@@ -692,7 +692,7 @@ out:
 
 
 static int search_setup_common_options(search_descriptor *desc, struct http_get_options *options, const char *url,
-                                const char **custom_headers)
+                                       const char **custom_headers)
 {
     int ret = 0;
 
@@ -733,8 +733,6 @@ out:
 
     return ret;
 }
-
-
 
 static int setup_get_token_options(pull_descriptor *desc, struct http_get_options *options, const char *url)
 {
@@ -803,10 +801,8 @@ out:
     return ret;
 }
 
-
-
-static int http_request_buf_options_for_search(search_descriptor *desc, struct http_get_options *options, const char *url,
-                                    char **output)
+static int http_request_buf_options_for_search(search_descriptor *desc, struct http_get_options *options,
+                                               const char *url, char **output)
 {
     int ret = 0;
     Buffer *output_buffer = NULL;
@@ -998,46 +994,6 @@ out:
     return ret;
 }
 
-/*
-search相关
-*/
-
-static int search_http_request_buf_options(struct http_get_options *options, const char *url,
-                                    char **output)
-{
-    int ret = 0;
-    Buffer *output_buffer = NULL;
-
-    if ( url == NULL || output == NULL || options == NULL) {
-        ERROR("Invalid NULL pointer");
-        return -1;
-    }
-
-    output_buffer = buffer_alloc(HTTP_GET_BUFFER_SIZE);
-    if (output_buffer == NULL) {
-        ERROR("Failed to malloc output_buffer");
-        return -1;
-    }
-
-    options->outputtype = HTTP_REQUEST_STRBUF;
-    options->output = output_buffer;
-    options->timeout = true;
-    ret = http_request(url, options, NULL, 0);//？所以这个desc起了什么作用吗？把它传进来干啥？
-    if (ret) {
-        ERROR("Failed to get http request: %s", options->errmsg);
-        isulad_try_set_error_message("%s", options->errmsg);
-        ret = -1;
-        goto out;
-    }
-
-    *output = util_strdup_s(output_buffer->contents);
-out:
-
-    buffer_free(output_buffer);
-
-    return ret;
-}
-
 static int search_setup_get_token_options(search_descriptor *desc, struct http_get_options *options, const char *url)
 {
     int ret = 0;
@@ -1098,13 +1054,13 @@ static int http_request_get_token_for_search(search_descriptor *desc, challenge 
         goto out;
     }
 
-    /*url = build_get_token_url(c, desc->username, desc->scope);
+    url = build_get_token_url(c, desc->username, desc->scope);
     if (url == NULL) {
         ret = -1;
         goto out;
-    }以前没看到需要用scope所以search_descriptor没设计，不知道是干嘛的，暂时先注释掉*/
+    }
 
-    ret = search_http_request_buf_options(options, url, output);
+    ret = http_request_buf_options_for_search(desc, options, url, output);
     if (ret) {
         ERROR("Failed to get http request");
         ret = -1;
@@ -1119,9 +1075,6 @@ out:
 
     return ret;
 }
-
-
-
 
 static int progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow)
 {
@@ -1192,7 +1145,7 @@ out:
 
 
 int http_request_buf_for_search(search_descriptor *desc, const char *url, const char **custom_headers, char **output,
-                     resp_data_type type)
+                                resp_data_type type)
 {
     int ret = 0;
     struct http_get_options *options = NULL;

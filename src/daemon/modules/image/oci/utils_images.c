@@ -79,35 +79,35 @@ char *oci_get_host(const char *name)
     return host;
 }
 
-
- int oci_get_host_and_imagename(const char *image, char **host, char **image_name){
-    int ret = 0;
+char *oci_get_imagename(const char *image)
+{
     char **parts = NULL;
+    char *image_name = NULL;
 
     if (image == NULL) {
         ERROR("Invalid NULL param");
-        ret = -1;
-        return ret;
+        return NULL;
     }
 
     if (strstr(image, "/") == NULL) {
-        *image_name = util_strdup_s(image);
-        util_free_array(parts);
-    } 
-    else{
-    
-    parts = util_string_split(image, '/');
-    
-        if(parts != NULL){
-            *host = util_strdup_s(parts[0]);
-            *image_name = util_strdup_s(parts[1]);
+        image_name = util_strdup_s(image);
+    } else {
+        parts = util_string_split(image, '/');
+
+        if (parts != NULL) {
+            int len_host = strlen(parts[0]);
+            int len_image = strlen(image);
+            if (len_image > len_host) {
+                image_name = util_sub_string(image, len_host + 1, len_image - len_host - 1);
+            } else {
+                ERROR("Failed to get image %s", image);
+            }
             util_free_array(parts);
         }
     }
 
-    return ret;
- }
-
+    return image_name;
+}
 
 char *oci_default_tag(const char *name)
 {
