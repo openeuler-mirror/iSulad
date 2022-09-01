@@ -22,14 +22,14 @@ dnf builddep iSulad.spec
 
 ```sh
 $ git clone https://gitee.com/openeuler/iSulad.git
-$ cd iSulad/docs
+$ cd iSulad/docs/build_docs/guide/script
 $ sudo ./install_iSulad_on_Centos_7.sh
 ```
 
 ### Ubuntu的安装命令
 ```sh
 $ git clone https://gitee.com/openeuler/iSulad.git
-$ cd iSulad/docs
+$ cd iSulad/docs/build_docs/guide/script
 $ sudo chmod +x ./install_iSulad_on_Ubuntu_20_04_LTS.sh
 $ sudo ./install_iSulad_on_Ubuntu_20_04_LTS.sh
 ```

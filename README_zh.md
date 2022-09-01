@@ -66,9 +66,9 @@ CRI接口基于gRPC实现。iSulad遵循CRI接口规范，实现 CRI gRPC Server
 
 详细的`iSulad`用法指南请查看 [guide](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html)
 
-**如果您想要使用rpm包安装`iSulad`**，请查看rpm编译指南 [rpmbuild_guide](./docs/build_guide/rpmbuild_guide.md)
+**如果您想要使用rpm包安装`iSulad`**，请查看rpm编译指南 [rpmbuild_guide](./docs/build_docs/guide/rpmbuild_guide_zh.md)
 
-**如果您是一名开发者，想要从源代码构建`iSulad`**，请查看源码编译指南 [build_guide](./docs/build_guide/build_guide_zh.md)
+**如果您是一名开发者，想要从源代码构建`iSulad`**，请查看源码编译指南 [build_guide](./docs/build_docs/guide/build_guide_zh.md)
 
 ### Installing
 

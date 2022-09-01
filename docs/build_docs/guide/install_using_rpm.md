@@ -1,5 +1,5 @@
 # Install iSulad with rpm package
-You can also try to install iSulad using rpm with the rpm packages. The rpm packages can be built by referencing [rpmbuild_guid.md](rpmbuild_guide.md).
+You can also try to install iSulad using rpm with the rpm packages. The rpm packages can be built by referencing [rpmbuild_guid.md](rpmbuild_guide_zh.md).
 
 ## Build Steps on Centos 8
 

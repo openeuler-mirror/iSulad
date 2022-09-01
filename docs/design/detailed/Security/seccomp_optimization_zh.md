@@ -20,9 +20,9 @@ iSulad通过对标准配置文件的读取生成docker seccomp spec，随后将�
 
 ## 时间性能差异
 
-![x86_64 parallel](../../images/x86_64parallel.png) ![arm64 parallel](../../images/arm64parallel.png)
+![x86_64 parallel](../../../images/x86_64parallel.png) ![arm64 parallel](../../../images/arm64parallel.png)
 
-![x86_64 sequential](../../images/x86_64sequential.png) ![arm64 sequential](../../images/arm64sequential.png)
+![x86_64 sequential](../../../images/x86_64sequential.png) ![arm64 sequential](../../../images/arm64sequential.png)
 
 x86_64：
 
