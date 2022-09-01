@@ -17,9 +17,6 @@
 #define UTILS_CUTILS_UTILS_FS_H
 
 #include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {

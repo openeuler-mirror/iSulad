@@ -15,7 +15,6 @@
 #include "http.h"
 #include <curl/curl.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>

@@ -16,10 +16,7 @@
 #ifndef UTILS_CUTILS_UTILS_BASE64_H
 #define UTILS_CUTILS_UTILS_BASE64_H
 
-#include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
-#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {

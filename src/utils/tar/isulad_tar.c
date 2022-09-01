@@ -28,7 +28,6 @@
 #include "path.h"
 #include "isula_libutils/log.h"
 #include "error.h"
-#include "isula_libutils/json_common.h"
 #include "util_archive.h"
 
 static void set_char_to_separator(char *p)
