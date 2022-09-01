@@ -322,7 +322,7 @@ out:
     return ret;
 }
 
-int registry_pingv2(pull_descriptor *desc, char *protocol) 
+int registry_pingv2(pull_descriptor *desc, char *protocol)
 {
     int ret = 0;
     int sret = 0;
@@ -335,7 +335,7 @@ int registry_pingv2(pull_descriptor *desc, char *protocol)
         return -1;
     }
 
-    sret = snprintf(url, sizeof(url), "%s://%s/v2/", protocol, desc->host); 
+    sret = snprintf(url, sizeof(url), "%s://%s/v2/", protocol, desc->host);
     if (sret < 0 || (size_t)sret >= sizeof(url)) {
         ERROR("Failed to sprintf url for ping, host is %s", desc->host);
         ret = -1;
@@ -676,7 +676,7 @@ static int search_ping(search_descriptor *desc)
         goto out;
     }
 
-    if (desc->insecure_registry) { 
+    if (desc->insecure_registry) {
         ERROR("ping %s with https failed, try http", desc->host);
 
         DAEMON_CLEAR_ERRMSG();
@@ -736,7 +736,7 @@ static int registry_request(pull_descriptor *desc, char *path, char **custom_hea
         goto out;
     }
 
-    DEBUG("sending url: %s", url); 
+    DEBUG("sending url: %s", url);
     if (output_buffer != NULL) {
         ret = http_request_buf(desc, url, (const char **)headers, output_buffer, type);
         if (ret != 0) {
@@ -759,7 +759,6 @@ out:
     return ret;
 }
 
-
 static int search_request(search_descriptor *desc, char *path, char **custom_headers, char **output_buffer,
                           resp_data_type type, CURLcode *errcode)
 {
@@ -768,7 +767,7 @@ static int search_request(search_descriptor *desc, char *path, char **custom_hea
     char url[PATH_MAX] = { 0 };
     char **headers = NULL;
 
-    if (desc == NULL ||path == NULL || output_buffer == NULL){
+    if (desc == NULL || path == NULL || output_buffer == NULL) {
         ERROR("Invalid NULL param");
         return -1;
     }
@@ -780,7 +779,6 @@ static int search_request(search_descriptor *desc, char *path, char **custom_hea
     }
 
     sret = snprintf(url, sizeof(url), "%s://%s%s", desc->protocol, desc->host, path);
-
     if (sret < 0 || (size_t)sret >= sizeof(url)) {
         ERROR("Failed to sprintf url, path is %s", path);
         ret = -1;
@@ -804,15 +802,15 @@ static int search_request(search_descriptor *desc, char *path, char **custom_hea
 
     DEBUG("sending url: %s", url);
 
-  if (output_buffer != NULL) {
-    ret = http_request_buf_for_search(desc, url, (const char **)headers, output_buffer, type);
+    if (output_buffer != NULL) {
+        ret = http_request_buf_for_search(desc, url, (const char **)headers, output_buffer, type);
 
-    if (ret != 0) {
-        ERROR("http request buffer failed, url: %s", url);
-        goto out;
+        if (ret != 0) {
+            ERROR("http request buffer failed, url: %s", url);
+            goto out;
+        }
+        DEBUG("resp=%s", *output_buffer);
     }
-    DEBUG("resp=%s", *output_buffer);
-     }
 
 out:
     util_free_array(headers);
@@ -927,7 +925,8 @@ static int append_manifests_accepts(char ***custom_headers)
                                  DOCKER_MANIFEST_SCHEMA2_LIST,
                                  MEDIA_TYPE_APPLICATION_JSON,
                                  OCI_MANIFEST_V1_JSON,
-                                 OCI_INDEX_V1_JSON };
+                                 OCI_INDEX_V1_JSON
+                               };
 
     for (i = 0; i < sizeof(mediatypes) / sizeof(mediatypes[0]); i++) {
         sret = snprintf(accept, MAX_ACCEPT_LEN, "Accept: %s", mediatypes[i]);
@@ -1020,7 +1019,7 @@ static int fetch_manifest_list(pull_descriptor *desc, char *file, char **content
     }
 
     sret = snprintf(path, sizeof(path), "/v2/%s/manifests/%s", desc->name,
-                    desc->tag); 
+                    desc->tag);
     if (sret < 0 || (size_t)sret >= sizeof(path)) {
         ERROR("Failed to sprintf path for manifest");
         ret = -1;
@@ -1030,8 +1029,8 @@ static int fetch_manifest_list(pull_descriptor *desc, char *file, char **content
     while (retry_times > 0) {
         retry_times--;
         ret = registry_request(
-                desc, path, custom_headers, file, NULL, HEAD_BODY,
-                &errcode); 
+                  desc, path, custom_headers, file, NULL, HEAD_BODY,
+                  &errcode);
         if (ret != 0) {
             if (retry_times > 0 && !desc->cancel) {
                 continue;
@@ -1448,7 +1447,6 @@ int fetch_tags(search_descriptor *desc, char **output_buffer)
         goto out;
     }
 
-
     ret = search_request(desc, path, custom_headers, output_buffer, BODY_ONLY, &errcode);
 
 out:
@@ -1457,102 +1455,132 @@ out:
     return ret;
 }
 
-bool search_target_image(char* catalog_page,search_descriptor *desc,int *messageNum){
+bool search_target_image(char *catalog_page, search_descriptor *desc, int *messageNum)
+{
     bool ret = false;
     utils_cjson *cjson_parsed = NULL;
     utils_cjson *cjson_repositories = NULL;
     utils_cjson *cjson_last_item = NULL;
+    utils_cjson *cjson_errors = NULL;
+    utils_cjson *errorsArray = NULL;
+    utils_cjson *item = NULL;
+    utils_cjson *current_item = NULL;
+    int repo_size = 0;
+    int err_size = 0;
+    int i;
+
     cjson_parsed = utils_cjson_Parse(catalog_page);
     if (cjson_parsed == NULL) {
-        ERROR("Failed to parse json");
+        ERROR("parse catalog failed\n%s", catalog_page);
+        isulad_try_set_error_message("parse catalog failed\n%s", catalog_page);
         return ret;
-        }
-
-    
+    }
 
     cjson_repositories = utils_cjson_GetObjectItem(cjson_parsed, "repositories");
-    int repo_size = utils_cjson_GetArraySize(cjson_repositories);
-    *messageNum = repo_size;
-
-    if(repo_size>0){
-        cjson_last_item = utils_cjson_GetArrayItem(cjson_repositories, repo_size-1);
-        desc->last_imageName = util_strdup_s(cjson_last_item->valuestring); 
+    if (cjson_repositories != NULL) {
+        repo_size = utils_cjson_GetArraySize(cjson_repositories);
+        *messageNum = repo_size;
+        if (repo_size > 0) {
+            cjson_last_item = utils_cjson_GetArrayItem(cjson_repositories, repo_size - 1);
+            desc->last_imageName = util_strdup_s(cjson_last_item->valuestring);
         }
 
-    for(int i = 0; i < repo_size; i++)
-        {
-            utils_cjson* current_item = NULL;
+        for (i = 0; i < repo_size; i++) {
             current_item = utils_cjson_GetArrayItem(cjson_repositories, i);
-            if(strcmp(desc->image_name,current_item->valuestring)==0){
+            if (strcmp(desc->image_name, current_item->valuestring) == 0) {
                 ret = true;
                 break;
             }
-
         }
-        free(cjson_parsed);
-        cjson_parsed = NULL;
-        
-        return ret;
-}
 
+        goto out;
+    }
+
+    cjson_errors = utils_cjson_GetObjectItem(cjson_parsed, "errors");
+    if (cjson_errors == NULL) {
+        ERROR("parse repositories failed\n%s", catalog_page);
+        isulad_try_set_error_message("parse repositories failed\n%s", catalog_page);
+
+        goto out;
+    }
+
+    err_size = utils_cjson_GetArraySize(cjson_errors);
+    for (i = 0; i < err_size; i++) {
+        errorsArray = utils_cjson_GetArrayItem(cjson_errors, i);
+        item = utils_cjson_GetObjectItem(errorsArray, "message");
+        if (item != NULL) {
+            ERROR("parse repositories failed, %s", item->valuestring);
+        }
+    }
+    isulad_try_set_error_message("parse repositories failed");
+
+out:
+    free(cjson_parsed);
+    cjson_parsed = NULL;
+
+    return ret;
+}
 
 int fetch_catalog(search_descriptor *desc)
 {
     int ret = 0;
+    int sret;
+    int message_num;
     char path[PATH_MAX] = { 0 };
     char **custom_headers = NULL;
+    char *catalog_page = NULL;
     CURLcode errcode = CURLE_OK;
 
     if (desc == NULL) {
         ERROR("Invalid NULL pointer");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
-    while(ret == 0){
-        int rret = 0;
+    while (ret == 0) {
+        sret = 0;
 
-        if(desc->last_imageName == NULL) {
-            rret = snprintf(path, sizeof(path), "/v2/_catalog?n=%d", PAGE_SIZE);
+        if (desc->last_imageName == NULL) {
+            sret = snprintf(path, sizeof(path), "/v2/_catalog?n=%d", PAGE_SIZE);
         } else {
-            rret = snprintf(path, sizeof(path), "/v2/_catalog?n=%d&last=%s", PAGE_SIZE ,desc->last_imageName);
+            sret = snprintf(path, sizeof(path), "/v2/_catalog?n=%d&last=%s", PAGE_SIZE, desc->last_imageName);
         }
-        if (rret < 0 || (size_t)rret >= sizeof(path)) {
-                ERROR("Failed to sprintf path for catalog");
-                ret = -1;
+        if (sret < 0 || (size_t)sret >= sizeof(path)) {
+            ERROR("Failed to sprintf path for catalog");
+            ret = -1;
+            goto out;
+        }
+
+        ret = search_request(desc, path, custom_headers, &catalog_page, BODY_ONLY, &errcode);
+        if (ret != 0) {
+            ERROR("Failed to search catalog");
+            goto out;
+        } else {
+            message_num = 0;
+            if (search_target_image(catalog_page, desc, &message_num)) {
                 goto out;
             }
 
-        char *catalog_page = util_common_calloc_s(sizeof(char*));   
-
-        ret = search_request(desc, path, custom_headers,  &catalog_page, BODY_ONLY, &errcode);
-
-        if(ret != 0){
-            ERROR("Failed to search catalog");
-            free(catalog_page);
-            catalog_page = NULL;
-            goto out;
-        }
-        else{
-            int message_num = 0;
-            if(search_target_image(catalog_page,desc,&message_num )){
-                free(catalog_page);
-                catalog_page = NULL;
-                break;
-                }
-            
-            free(catalog_page);
-            catalog_page = NULL;
-            if(message_num < PAGE_SIZE){
+            if (message_num < PAGE_SIZE) {
                 ERROR("target image not found");
+                isulad_try_set_error_message("target image %s not found", desc->image_name);
                 ret = -1;
                 goto out;
-                }
+            }
         }
     }
 
 out:
+    if (desc->last_imageName != NULL) {
+        free(desc->last_imageName);
+        desc->last_imageName = NULL;
+    }
+
     util_free_array(custom_headers);
     custom_headers = NULL;
+    free(catalog_page);
+    catalog_page = NULL;
+    
     return ret;
 }
 

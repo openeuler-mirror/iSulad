@@ -56,7 +56,7 @@ char *oci_get_isulad_tmpdir(const char *root_dir);
 int makesure_isulad_tmpdir_perm_right(const char *root_dir);
 char *get_hostname_to_strip();
 
-int oci_get_host_and_imagename(const char *image, char **host, char **image_name);
+char *oci_get_imagename(const char *image);
 
 #ifdef __cplusplus
 }

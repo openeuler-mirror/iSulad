@@ -34,15 +34,14 @@ typedef struct {
     bool insecure_registry;
 } registry_pull_options;
 
-
 typedef struct {
-   char* image;
-   char*image_name;
-   registry_auth auth;
-   bool insecure_registry;
-   char *host;
-   bool skip_tls_verify;
-}  registry_search_options;
+    char *image;
+    char *image_name;
+    char *host;
+    registry_auth auth;
+    bool insecure_registry;
+    bool skip_tls_verify;
+} registry_search_options;
 
 typedef struct {
     char *host;
@@ -56,15 +55,13 @@ int registry_pull(registry_pull_options *options);
 int registry_login(registry_login_options *options);
 int registry_logout(char *host);
 
-int  registry_search(registry_search_options *options,char **response_output);
+int registry_search(registry_search_options *options, char **response_output);
 void free_registry_search_options(registry_search_options *options);
 
 void free_registry_pull_options(registry_pull_options *options);
-
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

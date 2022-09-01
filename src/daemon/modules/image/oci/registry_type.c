@@ -154,7 +154,6 @@ void free_pull_desc(pull_descriptor *desc)
     free(desc);
 }
 
-
 void free_search_desc(search_descriptor *desc)
 {
     int i = 0;
@@ -165,7 +164,6 @@ void free_search_desc(search_descriptor *desc)
 
     free(desc->host);
     desc->host = NULL;
-
 
     util_free_sensitive_string(desc->username);
     desc->username = NULL;
@@ -181,18 +179,15 @@ void free_search_desc(search_descriptor *desc)
     free(desc->key_file);
     desc->key_file = NULL;
 
-
     free(desc->protocol);
     desc->protocol = NULL;
     desc->skip_tls_verify = false;
+    free(desc->scope);
+    desc->scope = NULL;
 
     for (i = 0; i < CHALLENGE_MAX; i++) {
         free_challenge(&desc->challenges[i]);
     }
-
-
-
-
 
     free(desc);
 }
