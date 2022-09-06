@@ -529,6 +529,34 @@ out:
     return result;
 }
 
+static char *get_parent_mount_dir(char *graph)
+{
+    int nret;
+    size_t len;
+    char *rootfsdir = NULL;
+
+    len = strlen(graph) + strlen("/mnt/rootfs") + 1;
+    if (len > PATH_MAX) {
+        ERROR("The size of path exceeds the limit");
+        return NULL;
+    }
+
+    rootfsdir = util_common_calloc_s(len);
+    if (rootfsdir == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    nret = snprintf(rootfsdir, len, "%s/mnt/rootfs", graph);
+    if (nret < 0 || (size_t)nret >= len) {
+        ERROR("Failed to print string");
+        free(rootfsdir);
+        return NULL;
+    }
+
+    return rootfsdir;
+}
+
 /* conf get isulad mount rootfs */
 char *conf_get_isulad_mount_rootfs()
 {
@@ -540,11 +568,11 @@ char *conf_get_isulad_mount_rootfs()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->rootfsmntdir == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->graph == NULL) {
         goto out;
     }
 
-    path = util_strdup_s(conf->json_confs->rootfsmntdir);
+    path = get_parent_mount_dir(conf->json_confs->graph);
 
 out:
     (void)isulad_server_conf_unlock();
@@ -1449,6 +1477,25 @@ static int merge_logs_conf_into_global(struct service_arguments *args, isulad_da
     return do_merge_container_logs_conf(args, tmp_json_confs);
 }
 
+static int merge_cri_runtimes_into_global(struct service_arguments *args, isulad_daemon_configs *tmp_json_confs)
+{
+    size_t i;
+
+    if (tmp_json_confs->cri_runtimes == NULL) {
+        return 0;
+    }
+
+    for (i = 0; i < tmp_json_confs->cri_runtimes->len; i++) {
+        if (append_json_map_string_string(args->json_confs->cri_runtimes, tmp_json_confs->cri_runtimes->keys[i],
+                                          tmp_json_confs->cri_runtimes->values[i]) != 0) {
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static int merge_authorization_conf_into_global(struct service_arguments *args, isulad_daemon_configs *tmp_json_confs)
 {
     args->json_confs->tls = tmp_json_confs->tls;
@@ -1549,7 +1596,6 @@ int merge_json_confs_into_global(struct service_arguments *args)
 #endif
     override_string_value(&args->json_confs->native_umask, &tmp_json_confs->native_umask);
     override_string_value(&args->json_confs->cgroup_parent, &tmp_json_confs->cgroup_parent);
-    override_string_value(&args->json_confs->rootfsmntdir, &tmp_json_confs->rootfsmntdir);
     override_string_value(&args->json_confs->start_timeout, &tmp_json_confs->start_timeout);
     override_string_value(&args->json_confs->pod_sandbox_image, &tmp_json_confs->pod_sandbox_image);
     override_string_value(&args->json_confs->network_plugin, &tmp_json_confs->network_plugin);
@@ -1559,8 +1605,10 @@ int merge_json_confs_into_global(struct service_arguments *args)
     args->json_confs->runtimes = tmp_json_confs->runtimes;
     tmp_json_confs->runtimes = NULL;
 
-    args->json_confs->cri_runtimes = tmp_json_confs->cri_runtimes;
-    tmp_json_confs->cri_runtimes = NULL;
+    if (merge_cri_runtimes_into_global(args, tmp_json_confs)) {
+        ret = -1;
+        goto out;
+    }
 
 #ifdef ENABLE_SUP_GROUPS
     args->json_confs->sup_groups = tmp_json_confs->sup_groups;
@@ -1588,9 +1636,6 @@ int merge_json_confs_into_global(struct service_arguments *args)
         args->json_confs->cpu_rt_runtime = tmp_json_confs->cpu_rt_runtime;
     }
 
-    if (tmp_json_confs->image_service) {
-        args->json_confs->image_service = tmp_json_confs->image_service;
-    }
     if (tmp_json_confs->image_layer_check) {
         args->json_confs->image_layer_check = tmp_json_confs->image_layer_check;
     }

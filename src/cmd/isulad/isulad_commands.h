@@ -71,10 +71,10 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
         "host",                                                                                                   \
         'H',                                                                                                      \
         &(cmdargs)->hosts,                                                                                        \
-        "The socket name used to create gRPC server",                                                             \
+        "The socket name used to create gRPC server (default \"unix:///var/run/isulad.sock\")",                   \
         command_valid_socket_append_array },                                                                      \
     { CMD_OPT_TYPE_STRING_DUP,   false, "pidfile", 'p', &(cmdargs)->json_confs->pidfile,                          \
-      "Save pid into this file", NULL },                                                                          \
+      "Save pid into this file (default \"/var/run/isulad.pid\")", NULL },                                        \
     { CMD_OPT_TYPE_BOOL, false, "help", 0, &(cmdargs)->help, "Show help", NULL },                                 \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
@@ -88,14 +88,14 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       "graph",                                                                                                    \
       'g',                                                                                                        \
       &(cmdargs)->json_confs->graph,                                                                              \
-      "Root directory of the iSulad runtime",                                                                     \
+      "Root directory of the iSulad runtime (default \"/var/lib/isulad\")",                                       \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
       "state",                                                                                                    \
       'S',                                                                                                        \
       &(cmdargs)->json_confs->state,                                                                              \
-      "Root directory for execution state files",                                                                 \
+      "Root directory for execution state files (default \"/var/run/isulad\")",                                   \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
@@ -105,20 +105,20 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       "timeout duration for waiting on a container to start before it is killed",                                 \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP, false, "engine", 'e', &(cmdargs)->json_confs->engine,                              \
-      "Select backend engine", NULL },                                                                            \
+      "Select backend engine (default lcr)", NULL },                                                              \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
       "log-level",                                                                                                \
       'l',                                                                                                        \
       &(cmdargs)->json_confs->log_level,                                                                          \
-      "Set log level, the levels can be: FATAL ALERT CRIT ERROR WARN NOTICE INFO DEBUG TRACE",                    \
+      "Set log level, the levels can be: FATAL ALERT CRIT ERROR WARN NOTICE INFO DEBUG TRACE (default INFO)",     \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
       "log-driver",                                                                                               \
       0,                                                                                                          \
       &(cmdargs)->json_confs->log_driver,                                                                         \
-      "Set daemon log driver, such as: file",                                                                     \
+      "Set daemon log driver, support stdout and file (default file)",                                            \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_CALLBACK,                                                                                      \
       false,                                                                                                      \
@@ -127,34 +127,34 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       (cmdargs),                                                                                                  \
       "Set daemon log driver options, such as: log-path=/tmp/logs/ to set directory where to store daemon logs",  \
       server_callback_log_opt },                                                                                  \
-    { CMD_OPT_TYPE_CALLBACK,                                                                                                  \
-      false,                                                                                                                  \
-      "container-log-driver",                                                                                                 \
-      0,                                                                                                                      \
-      (cmdargs),                                                                                                              \
-      "Set default container log driver, such as: json-file",                                                                 \
-      server_callback_container_log_driver },                                                                                 \
-    { CMD_OPT_TYPE_CALLBACK,                                                                                                  \
-      false,                                                                                                                  \
-      "container-log-opts",                                                                                                   \
-      0,                                                                                                                      \
-      (cmdargs),                                                                                                              \
-      "Set default container log driver options, such as: max-file=7 to set max number of container log files",               \
-      server_callback_container_log },                                                                                        \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                      \
+      false,                                                                                                      \
+      "container-log-driver",                                                                                     \
+      0,                                                                                                          \
+      (cmdargs),                                                                                                  \
+      "Set default container log driver, such as: json-file",                                                     \
+      server_callback_container_log_driver },                                                                     \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                      \
+      false,                                                                                                      \
+      "container-log-opts",                                                                                       \
+      0,                                                                                                          \
+      (cmdargs),                                                                                                  \
+      "Set default container log driver options, such as: max-file=7 to set max number of container log files",   \
+      server_callback_container_log },                                                                            \
     { CMD_OPT_TYPE_BOOL, false, "version", 'V', &(cmdargs)->version, "Print the version", NULL },                 \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
       "group",                                                                                                    \
       'G',                                                                                                        \
       &(cmdargs)->json_confs->group,                                                                              \
-      "Group for the unix socket(default is isula)",                                                              \
+      "Group for the unix socket (default isula)",                                                                \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
       "storage-driver",                                                                                           \
       0,                                                                                                          \
       &(cmdargs)->json_confs->storage_driver,                                                                     \
-      "Storage driver to use(default overlay2)",                                                                  \
+      "Storage driver to use (default overlay2)",                                                                 \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_CALLBACK,                                                                                      \
       false,                                                                                                      \
@@ -166,7 +166,7 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
     SUP_GROUPS_OPT(cmdargs)                                                                                       \
     { CMD_OPT_TYPE_CALLBACK,                                                                                      \
       false,                                                                                                      \
-      "registry-mirrors",                                                                                         \
+      "registry-mirrors",                                                                                          \
       0,                                                                                                          \
       &(cmdargs)->json_confs->registry_mirrors,                                                                   \
       "Registry to be prepended when pulling unqualified images, can be specified multiple times",                \
@@ -197,28 +197,28 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       "pod-sandbox-image",                                                                                        \
       0,                                                                                                          \
       &(cmdargs)->json_confs->pod_sandbox_image,                                                                  \
-      "The image whose network/ipc namespaces containers in each pod will use. (default \"pause-${machine}:3.0\")", \
+      "The image whose network/ipc namespaces containers in each pod will use (default \"pause-${machine}:3.0\")",\
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
       "network-plugin",                                                                                           \
       0,                                                                                                          \
       &(cmdargs)->json_confs->network_plugin,                                                                     \
-      "Set network plugin, default is null, suppport null and cni",                                               \
+      "Set network plugin, suppport null and cni (default null)",                                                 \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
       "cni-bin-dir",                                                                                              \
       0,                                                                                                          \
       &(cmdargs)->json_confs->cni_bin_dir,                                                                        \
-      "The full path of the directory in which to search for CNI plugin binaries. Default: /opt/cni/bin",         \
+      "The full path of the directory in which to search for CNI plugin binaries (default \"/opt/cni/bin\")",     \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
       "cni-conf-dir",                                                                                             \
       0,                                                                                                          \
       &(cmdargs)->json_confs->cni_conf_dir,                                                                       \
-      "The full path of the directory in which to search for CNI config files. Default: /etc/cni/net.d",          \
+      "The full path of the directory in which to search for CNI config files (default \"/etc/cni/net.d\")",      \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_BOOL,                                                                                          \
       false,                                                                                                      \
@@ -232,14 +232,14 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       "insecure-skip-verify-enforce",                                                                             \
       0,                                                                                                          \
       &(cmdargs)->json_confs->insecure_skip_verify_enforce,                                                       \
-      "Force to skip the insecure verify(default false)",                                                         \
+      "Force to skip the insecure verify (default false)",                                                        \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_BOOL,                                                                                          \
       false,                                                                                                      \
       "use-decrypted-key",                                                                                        \
       0,                                                                                                          \
       (cmdargs)->json_confs->use_decrypted_key,                                                                   \
-      "Use decrypted private key by default(default true)",                                                       \
+      "Use decrypted private key by default (default true)",                                                      \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
@@ -295,6 +295,26 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
     { CMD_OPT_TYPE_BOOL,                                                                                          \
       false, "selinux-enabled", 0, &(cmdargs)->json_confs->selinux_enabled,                                       \
       "Enable selinux support", NULL                                                                              \
+    },                                                                                                            \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
+      false, "default-runtime", 0, &(cmdargs)->json_confs->default_runtime,                                       \
+      "Default container runtime (default lcr)", NULL                                                             \
+    },                                                                                                            \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                      \
+      false, "cpu-rt-period", 0, &(cmdargs)->json_confs->cpu_rt_period,                                           \
+      "Limit CPU real-time period in microseconds for all containers", command_convert_llong                      \
+    },                                                                                                            \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                      \
+      false, "cpu-rt-runtime", 0, &(cmdargs)->json_confs->cpu_rt_runtime,                                         \
+      "Limit CPU real-time runtime in microseconds for all containers", command_convert_llong                     \
+    },                                                                                                            \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
+      false, "enable-plugins", 0, &(cmdargs)->json_confs->enable_plugins,                                         \
+      "Enable plugins for all containers", NULL                                                                   \
+    },                                                                                                            \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                      \
+      false, "cri-runtime", 0, (cmdargs),                                                                         \
+      "CRI runtime class transform", server_callback_cri_runtime                                                  \
     },                                                                                                            \
 
 #ifdef __cplusplus
