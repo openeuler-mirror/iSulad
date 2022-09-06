@@ -514,7 +514,7 @@ extern "C" {
     USERNS_OPT(cmdargs)
 
 #ifdef ENABLE_NATIVE_NETWORK
-#define CREATE_NETWORK_OPTIONS(cmdargs)                                                                                                                    \
+#define CREATE_NETWORK_OPTIONS(cmdargs)                                                                                                                   \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
       false,                                                                                                                                              \
       "network",                                                                                                                                          \

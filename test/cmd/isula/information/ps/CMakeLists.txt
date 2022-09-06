@@ -25,6 +25,8 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/client/connect/isula_connect.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cmd/isula/information/ps.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/grpc_client_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cmd/isula/client_show_format.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cmd/isula/template_string_parse.c
     ps_ut.cc)
 
 target_include_directories(${EXE} PUBLIC

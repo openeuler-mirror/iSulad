@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -24,7 +24,6 @@
 
 // 8 is enough for challenge, usually only one challenge is provided.
 #define CHALLENGE_MAX 8
-
 
 #define MAX_LAYER_NUM 125
 #define ROOTFS_TYPE "layers"
@@ -130,6 +129,11 @@ typedef struct {
     bool mutex_inited;
     pthread_cond_t cond;
     bool cond_inited;
+#ifdef ENABLE_IMAGE_SEARCH
+    //used to search image
+    char *search_name;
+    uint32_t limit;
+#endif
 } pull_descriptor;
 
 void free_challenge(challenge *c);

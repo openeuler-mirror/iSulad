@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -51,6 +51,9 @@ void free_items_not_inherit(docker_image_config_v2 *config);
 int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
                            docker_image_config_v2 *config);
 bool oci_valid_time(char *time);
+#ifdef ENABLE_IMAGE_SEARCH
+int oci_split_search_name(const char *search_name, char **host, char **name);
+#endif
 
 char *oci_get_isulad_tmpdir(const char *root_dir);
 int makesure_isulad_tmpdir_perm_right(const char *root_dir);

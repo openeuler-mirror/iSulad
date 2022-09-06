@@ -154,4 +154,11 @@ endif()
 add_definitions(-DSYSCONFDIR_PREFIX="${SYSCONFDIR_PREFIX}")
 message("${Green}--  SYSCONFDIR_PREFIX=${SYSCONFDIR_PREFIX}${ColourReset}")
 
+option(ENABLE_IMAGE_SEARCH "Enable isula search" ON)
+if (ENABLE_IMAGE_SEARCH STREQUAL "ON")
+    add_definitions(-DENABLE_IMAGE_SEARCH)
+    set(ENABLE_IMAGE_SEARCH 1)
+    message("${Green}--  Enable isula search${ColourReset}")
+endif()
+
 message("${BoldGreen}---- Selected options end ----${ColourReset}")

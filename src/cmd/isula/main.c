@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -55,6 +55,9 @@
 #include "remove.h"
 #include "prune.h"
 #include "list.h"
+#ifdef ENABLE_IMAGE_SEARCH
+#include "search.h"
+#endif
 #ifdef ENABLE_NATIVE_NETWORK
 #include "network.h"
 #include "port.h"
@@ -205,6 +208,12 @@ struct command g_commands[] = {
         // `import` sub-command
         "import", false, cmd_import_main, g_cmd_import_desc, NULL, &g_cmd_import_args
     },
+#ifdef ENABLE_IMAGE_SEARCH
+    {
+        // `search` sub-command
+        "search", false, cmd_search_main, g_cmd_search_desc, NULL, &g_cmd_search_args
+    },
+#endif
     {
         // `volume` sub-command
         "volume", true, cmd_volume_main, g_cmd_volume_desc, NULL, NULL

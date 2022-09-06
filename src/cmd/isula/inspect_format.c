@@ -485,43 +485,6 @@ void inspect_free_trees(int tree_nums, container_tree_t *tree_array)
     }
 }
 
-/* arg string format: "{{json .State.Running}}"
- * ret_string should be free outside by free().
- */
-char *inspect_parse_filter(const char *arg)
-{
-    char *input_str = NULL;
-    char *p = NULL;
-    char *ret_string = NULL;
-    char *next_context = NULL;
-
-    input_str = util_strdup_s(arg);
-
-    p = strtok_r(input_str, ".", &next_context);
-    if (p == NULL) {
-        goto out;
-    }
-
-    p = next_context;
-    if (p == NULL) {
-        goto out;
-    }
-
-    p = strtok_r(p, " }", &next_context);
-    if (p == NULL) {
-        goto out;
-    }
-
-    ret_string = util_strdup_s(p);
-
-out:
-    if (input_str != NULL) {
-        free(input_str);
-    }
-
-    return ret_string;
-}
-
 #define CHECK_FAILED (-1)
 #ifdef __ANDROID__
 #define JSON_ARGS "^[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*\\{[ \t\r\n\v\f]*(json)?[ \t\r\n\v\f]+[^ \t\r\n\v\f]+[ \t\r\n\v\f]*.*\\}[ \t\r\n\v\f]*\\}[ \t\r\n\v\f]*$"

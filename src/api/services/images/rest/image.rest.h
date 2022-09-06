@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2017-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -33,6 +33,11 @@
 #include "isula_libutils/image_tag_image_response.h"
 #include "isula_libutils/image_import_request.h"
 #include "isula_libutils/image_import_response.h"
+#ifdef ENABLE_IMAGE_SEARCH
+#include "isula_libutils/image_search_image.h"
+#include "isula_libutils/image_search_images_request.h"
+#include "isula_libutils/image_search_images_response.h"
+#endif
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
@@ -47,6 +52,9 @@
 #define ImagesServiceLogout "/ImagesService/Logout"
 #define ImagesServiceTag "/ImagesService/Tag"
 #define ImagesServiceImport "/ImagesService/Import"
+#ifdef ENABLE_IMAGE_SEARCH
+#define ImagesServiceSearch "/ImagesService/Search"
+#endif
 
 #endif
 

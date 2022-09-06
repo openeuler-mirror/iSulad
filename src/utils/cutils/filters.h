@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -17,6 +17,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <isula_libutils/json_common.h>
 
 #include "map.h"
 
@@ -27,6 +28,15 @@ extern "C" {
 struct filters_args {
     // A map of map[string][map[string][bool]]
     map_t *fields;
+};
+
+typedef bool (*valid_filter_value_t)(const char *value);
+typedef char *(*pre_processe_t)(const char *value);
+
+struct filter_opt {
+    char *name;
+    valid_filter_value_t valid;
+    pre_processe_t pre;
 };
 
 struct filters_args *filters_args_new(void);
@@ -52,9 +62,11 @@ bool filters_args_exact_match(const struct filters_args *filters, const char *fi
 
 bool filters_args_match(const struct filters_args *filters, const char *field, const char *source);
 
+int do_add_filters(const char *filter_key, const json_map_string_bool *filter_value,
+                   struct filters_args *filters,
+                   valid_filter_value_t valid_ops, pre_processe_t pre_ops);
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

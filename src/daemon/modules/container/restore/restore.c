@@ -125,36 +125,22 @@ out:
 
 static int check_container_image_exist(const container_t *cont)
 {
-    int ret = 0;
-    char *tmp = NULL;
     const char *id = cont->common_config->id;
     const char *image_name = cont->common_config->image;
     const char *image_type = cont->common_config->image_type;
 
     if (image_type == NULL || image_name == NULL) {
         ERROR("Failed to get image type for container %s", id);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     /* only check exist for oci image */
-    if (strcmp(image_type, IMAGE_TYPE_OCI) == 0) {
-        ret = im_resolv_image_name(image_type, image_name, &tmp);
-        if (ret != 0) {
-            ERROR("Failed to resolve image %s", image_name);
-            goto out;
-        }
-
-        if (!im_oci_image_exist(tmp)) {
-            WARN("Image %s not exist", tmp);
-            ret = -1;
-            goto out;
-        }
+    if (strcmp(image_type, IMAGE_TYPE_OCI) == 0 && !im_oci_image_exist(image_name)) {
+        ERROR("Image of container not exist");
+        return -1;
     }
 
-out:
-    free(tmp);
-    return ret;
+    return 0;
 }
 
 static bool is_same_process(const container_t *cont, const pid_ppid_info_t *pid_info)

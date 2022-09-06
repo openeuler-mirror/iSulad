@@ -106,8 +106,6 @@ cleanup:
     return NULL;
 }
 
-static const char *accepted_ps_filter_tags[] = { "id", "label", "name", "status", "last_n", NULL };
-
 static int filter_by_name(const struct list_context *ctx, const map_t *map_id_name, const map_t *matches, bool idsearch)
 {
     int ret = 0;
@@ -695,34 +693,27 @@ cleanup:
     return container_info;
 }
 
-static int do_add_filters(const char *filter_key, const json_map_string_bool *filter_value, struct list_context *ctx)
-{
-    int ret = 0;
-    size_t j;
-    bool bret = false;
+static const struct filter_opt g_ps_filter[] = {
+    {.name = "id", .valid = NULL, .pre = NULL},
+    {.name = "label", .valid = NULL, .pre = NULL},
+    {.name = "name", .valid = NULL, .pre = NULL},
+    {.name = "status", .valid = container_is_valid_state_string, .pre = NULL},
+    {.name = "last_n", .valid = NULL, .pre = NULL},
+};
 
-    for (j = 0; j < filter_value->len; j++) {
-        if (strcmp(filter_key, "status") == 0) {
-            if (!container_is_valid_state_string(filter_value->keys[j])) {
-                ERROR("Unrecognised filter value for status: %s", filter_value->keys[j]);
-                isulad_set_error_message("Unrecognised filter value for status: %s", filter_value->keys[j]);
-                ret = -1;
-                goto out;
-            }
-            ctx->list_config->all = true;
+static int do_add_ps_filters(const char *filter_key, const json_map_string_bool *filter_value,
+                             struct list_context *ctx)
+{
+    size_t i, len;
+
+    len = sizeof(g_ps_filter) / sizeof(struct filter_opt);
+    for (i = 0; i < len; i++) {
+        if (strcmp(filter_key,  g_ps_filter[i].name) != 0) {
+            continue;
         }
-        if (strcmp(filter_key, "last_n") == 0) {
-            ctx->list_config->all = true;
-        }
-        bret = filters_args_add(ctx->ps_filters, filter_key, filter_value->keys[j]);
-        if (!bret) {
-            ERROR("Add filter args failed");
-            ret = -1;
-            goto out;
-        }
+        return do_add_filters(filter_key, filter_value, ctx->ps_filters,  g_ps_filter[i].valid,  g_ps_filter[i].pre);
     }
-out:
-    return ret;
+    return -1;
 }
 
 static struct list_context *fold_filter(const container_list_request *request)
@@ -741,14 +732,13 @@ static struct list_context *fold_filter(const container_list_request *request)
     }
 
     for (i = 0; i < request->filters->len; i++) {
-        if (!filters_args_valid_key(accepted_ps_filter_tags, sizeof(accepted_ps_filter_tags) / sizeof(char *),
-                                    request->filters->keys[i])) {
+        if (do_add_ps_filters(request->filters->keys[i], request->filters->values[i], ctx) != 0) {
             ERROR("Invalid filter '%s'", request->filters->keys[i]);
             isulad_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
             goto error_out;
         }
-        if (do_add_filters(request->filters->keys[i], request->filters->values[i], ctx) != 0) {
-            goto error_out;
+        if (strcmp(request->filters->keys[i], "last_n") == 0 || strcmp(request->filters->keys[i], "status") == 0) {
+            ctx->list_config->all = true;
         }
     }
 

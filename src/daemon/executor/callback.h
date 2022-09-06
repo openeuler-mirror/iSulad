@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -87,6 +87,11 @@
 #include "isula_libutils/volume_remove_volume_response.h"
 #include "isula_libutils/volume_prune_volume_request.h"
 #include "isula_libutils/volume_prune_volume_response.h"
+#ifdef ENABLE_IMAGE_SEARCH
+#include "isula_libutils/image_search_images_request.h"
+#include "isula_libutils/image_search_images_response.h"
+#endif
+
 #ifdef ENABLE_NATIVE_NETWORK
 #include "isula_libutils/network_create_request.h"
 #include "isula_libutils/network_create_response.h"
@@ -281,6 +286,9 @@ typedef struct {
 
     int (*tag)(const image_tag_image_request *request, image_tag_image_response **response);
     int (*pull)(const image_pull_image_request *request, image_pull_image_response **response);
+#ifdef ENABLE_IMAGE_SEARCH
+    int (*search)(const image_search_images_request *request, image_search_images_response **response);
+#endif
 } service_image_callback_t;
 
 typedef struct {

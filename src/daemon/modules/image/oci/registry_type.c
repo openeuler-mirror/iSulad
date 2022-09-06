@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -150,6 +150,11 @@ void free_pull_desc(pull_descriptor *desc)
     if (desc->challenges_mutex_inited) {
         pthread_mutex_destroy(&desc->challenges_mutex);
     }
+
+#ifdef ENABLE_IMAGE_SEARCH
+    free(desc->search_name);
+    desc->search_name = NULL;
+#endif
 
     free(desc);
 }

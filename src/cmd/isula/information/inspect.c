@@ -20,6 +20,7 @@
 #include "utils.h"
 #include "connect.h"
 #include "inspect_format.h"
+#include "template_string_parse.h"
 
 const char g_cmd_inspect_desc[] = "Return low-level information on a container or image";
 const char g_cmd_inspect_usage[] = "inspect [OPTIONS] CONTAINER|IMAGE [CONTAINER|IMAGE...]";
@@ -256,7 +257,7 @@ static int generate_filter_string(char ***filter_string, bool **json_format, siz
             goto error_out;
         }
 
-        (*filter_string)[i] = inspect_parse_filter(format_string[i]);
+        (*filter_string)[i] = parse_single_template_string(format_string[i]);
         if ((*filter_string)[i] == NULL) {
             COMMAND_ERROR("Inspect format parameter invalid: %s", g_cmd_inspect_args.format);
             ret = EINVALIDARGS;

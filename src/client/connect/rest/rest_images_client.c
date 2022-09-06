@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -959,6 +959,172 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_IMAGE_SEARCH
+static int unpack_image_search_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_search_response *c_rmi_response = (struct isula_search_response *)arg;
+    image_search_images_response *search_response = NULL;
+    struct search_image_info *search_image = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+    size_t i, num;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        ERROR("Search image check status code failed.\n");
+        return -1;
+    }
+
+    search_response = image_search_images_response_parse_data(message->body, NULL, &err);
+    if (search_response == NULL) {
+        ERROR("Invalid search image response:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    num = search_response->search_result_len;
+
+    search_image = (struct search_image_info *)util_smart_calloc_s(sizeof(struct search_image_info), num);
+    if (search_image == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    c_rmi_response->server_errono = search_response->cc;
+    c_rmi_response->result_num = search_response->search_result_len;
+    c_rmi_response->errmsg = util_strdup_s(search_response->errmsg);
+    c_rmi_response->search_result = search_image;
+
+    for (i = 0; i < num; i++) {
+        search_image[i].description = util_strdup_s(search_response->search_result[i]->description);
+        search_image[i].name = util_strdup_s(search_response->search_result[i]->name);
+        search_image[i].is_automated = search_response->search_result[i]->is_automated;
+        search_image[i].is_official = search_response->search_result[i]->is_official;
+        search_image[i].star_count = search_response->search_result[i]->star_count;
+    }
+
+    ret = (search_response->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    free(err);
+    free_image_search_images_response(search_response);
+    return ret;
+}
+
+static int image_search_request_to_rest(const struct isula_search_request *request, char **body, size_t *body_len)
+{
+    image_search_images_request *crequest = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+    size_t i, len;
+
+    crequest = util_common_calloc_s(sizeof(image_search_images_request));
+    if (crequest == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    crequest->search_name = util_strdup_s(request->search_name);
+    crequest->limit = request->limit;
+
+    if (request->filters == NULL || request->filters->len == 0) {
+        goto pack_json;
+    }
+
+    crequest->filters = util_common_calloc_s(sizeof(defs_filters));
+    if (crequest->filters == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    len = request->filters->len;
+    crequest->filters->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
+    if (crequest->filters->keys == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    crequest->filters->values = (json_map_string_bool **)util_smart_calloc_s(sizeof(json_map_string_bool *), len);
+    if (crequest->filters->values == NULL) {
+        ERROR("Out of memory");
+        free(crequest->filters->keys);
+        crequest->filters->keys = NULL;
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < request->filters->len; i++) {
+        crequest->filters->values[crequest->filters->len] = util_common_calloc_s(sizeof(json_map_string_bool));
+        if (crequest->filters->values[crequest->filters->len] == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        if (append_json_map_string_bool(crequest->filters->values[crequest->filters->len],
+                                        request->filters->values[i], true)) {
+            free(crequest->filters->values[crequest->filters->len]);
+            crequest->filters->values[crequest->filters->len] = NULL;
+            ERROR("Append failed");
+            ret = -1;
+            goto out;
+        }
+        crequest->filters->keys[crequest->filters->len] = util_strdup_s(request->filters->keys[i]);
+        crequest->filters->len++;
+    }
+
+pack_json:
+    *body = image_search_images_request_generate_json(crequest, NULL, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate image search request json:%s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_image_search_images_request(crequest);
+    return ret;
+}
+
+static int rest_image_search(const struct isula_search_request *request, struct isula_search_response *response,
+                             void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    Buffer *output = NULL;
+
+    ret = image_search_request_to_rest(request, &body, &len);
+    if (ret != 0) {
+        goto out;
+    }
+    ret = rest_send_request(socketname, RestHttpHead ImagesServiceSearch, body, len, &output);
+    if (ret != 0) {
+        ERROR("Send search request failed.");
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    ret = get_response(output, unpack_image_search_response, (void *)response);
+    if (ret != 0) {
+        ERROR("Get search response failed.");
+        goto out;
+    }
+
+out:
+    buffer_free(output);
+    put_body(body);
+    return ret;
+}
+#endif
+
 /* rest images client ops init */
 int rest_images_client_ops_init(isula_connect_ops *ops)
 {
@@ -975,6 +1141,8 @@ int rest_images_client_ops_init(isula_connect_ops *ops)
     ops->image.logout = &rest_image_logout;
     ops->image.tag = &rest_image_tag;
     ops->image.import = &rest_image_import;
-
+#ifdef ENABLE_IMAGE_SEARCH
+    ops->image.search = &rest_image_search;
+#endif
     return 0;
 }

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -20,6 +20,7 @@
 #include "callback.h"
 #include "image.rest.h"
 #include "rest_service_common.h"
+#include "constants.h"
 
 /* image load request check */
 static int image_load_request_check(image_load_image_request *req)
@@ -899,6 +900,112 @@ out:
     free_image_import_response(cresponse);
 }
 
+#ifdef ENABLE_IMAGE_SEARCH
+static int image_search_request_check(const image_search_images_request *req)
+{
+    int ret = 0;
+
+    if (req->search_name == NULL) {
+        ERROR("Recive NULL Request search name");
+        return -1;
+    }
+
+    if (req->limit < MIN_LIMIT || req->limit > MAX_LIMIT) {
+        ERROR("Recive invalid Request search limit");
+        return -1;
+    }
+
+    return ret;
+}
+
+static int image_search_request_from_rest(evhtp_request_t *req, image_search_images_request **crequest)
+{
+    char *body = NULL;
+    int ret = 0;
+    parser_error err = NULL;
+    size_t body_len;
+
+    if (get_body(req, &body_len, &body) != 0) {
+        ERROR("Failed to get body");
+        return -1;
+    }
+
+
+    *crequest = image_search_images_request_parse_data(body, NULL, &err);
+    if (*crequest == NULL) {
+        ERROR("Invalid create request body:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (image_search_request_check(*crequest) < 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    put_body(body);
+    free(err);
+    return ret;
+}
+
+static void evhtp_send_image_search_repsponse(evhtp_request_t *req, image_search_images_response *response, int rescode)
+{
+    parser_error err = NULL;
+    char *responsedata = NULL;
+
+    responsedata = image_search_images_response_generate_json(response, NULL, &err);
+    if (responsedata == NULL) {
+        ERROR("List: failed to generate request json:%s", err);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        goto out;
+    }
+    evhtp_send_response(req, responsedata, rescode);
+
+out:
+    free(err);
+    free(responsedata);
+    return;
+}
+
+static void rest_image_search_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    image_search_images_request *crequest = NULL;
+    image_search_images_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ImageSearch");
+
+    // only deal with POST request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+    cb = get_service_executor();
+    if (cb == NULL || cb->image.search == NULL) {
+        ERROR("Unimplemented callback");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = image_search_request_from_rest(req, &crequest);
+    if (tret < 0) {
+        ERROR("Bad request");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->image.search(crequest, &cresponse);
+
+    evhtp_send_image_search_repsponse(req, cresponse, RESTFUL_RES_OK);
+out:
+    free_image_search_images_request(crequest);
+    free_image_search_images_response(cresponse);
+}
+#endif
+
+
 
 /* rest register images handler */
 int rest_register_images_handler(evhtp_t *htp)
@@ -947,6 +1054,12 @@ int rest_register_images_handler(evhtp_t *htp)
         ERROR("Failed to register image logout callback");
         return -1;
     }
+#ifdef ENABLE_IMAGE_SEARCH
+    if (evhtp_set_cb(htp, ImagesServiceSearch, rest_image_search_cb, NULL) == NULL) {
+        ERROR("Failed to register image search callback");
+        return -1;
+    }
+#endif
 
     return 0;
 }

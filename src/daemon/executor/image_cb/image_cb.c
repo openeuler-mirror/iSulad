@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -34,6 +34,11 @@
 #include <isula_libutils/image_tag_image_response.h>
 #include <isula_libutils/image_pull_image_request.h>
 #include <isula_libutils/image_pull_image_response.h>
+#ifdef ENABLE_IMAGE_SEARCH
+#include <isula_libutils/image_search_image.h>
+#include <isula_libutils/image_search_images_request.h>
+#include <isula_libutils/image_search_images_response.h>
+#endif
 #include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/imagetool_images_list.h>
 #include <isula_libutils/json_common.h>
@@ -678,82 +683,39 @@ struct image_list_context {
     struct filters_args *image_filters;
 };
 
-static const char *g_accepted_image_filter_tags[] = { "dangling", "label", "before", "since", "reference", NULL };
-
-static bool is_valid_dangling_string(const char *val)
+static char *pre_processe_wildcard(const char *wildcard)
 {
-    return strcmp(val, "true") == 0 || strcmp(val, "false") == 0;
-}
-
-static bool is_valid_image(const char *val)
-{
-    bool ret = true;
-    char *resolved_name = NULL;
-    int nret = im_resolv_image_name(IMAGE_TYPE_OCI, val, &resolved_name);
-    if (nret != 0) {
-        ERROR("Failed to resolve image name");
-        ret = false;
-        goto out;
+    char *ret = NULL;
+    if (util_wildcard_to_regex(wildcard, &ret) != 0) {
+        ERROR("Failed to convert wildcard to regex: %s", wildcard);
+        isulad_set_error_message("Failed to convert wildcard to regex: %s", wildcard);
+        return NULL;
     }
-    if (!im_oci_image_exist(resolved_name)) {
-        ERROR("No such image: %s", val);
-        ret = false;
-        goto out;
-    }
-
-out:
-    free(resolved_name);
     return ret;
 }
 
-static int do_add_filters(const char *filter_key, const json_map_string_bool *filter_value, im_list_request *ctx)
+static const struct filter_opt g_image_list_filter[] = {
+    {.name = "dangling", .valid = util_valid_bool_string, .pre = NULL},
+    {.name = "label", .valid = NULL, .pre = NULL},
+    {.name = "before", .valid = im_oci_image_exist, .pre = NULL},
+    {.name = "since", .valid = im_oci_image_exist, .pre = NULL},
+    {.name = "reference", .valid = NULL, .pre = pre_processe_wildcard},
+};
+
+static int do_add_image_list_filters(const char *filter_key, const json_map_string_bool *filter_value,
+                                     im_list_request *ctx)
 {
-    int ret = 0;
-    size_t j;
-    bool bret = false;
-    char *value = NULL;
+    size_t i, len;
 
-    for (j = 0; j < filter_value->len; j++) {
-        if (strcmp(filter_key, "reference") == 0) {
-            if (util_wildcard_to_regex(filter_value->keys[j], &value) != 0) {
-                ERROR("Failed to convert wildcard to regex: %s", filter_value->keys[j]);
-                isulad_set_error_message("Failed to convert wildcard to regex: %s", filter_value->keys[j]);
-                ret = -1;
-                goto out;
-            }
-        } else if (strcmp(filter_key, "dangling") == 0) {
-            if (!is_valid_dangling_string(filter_value->keys[j])) {
-                ERROR("Unrecognised filter value for status: %s", filter_value->keys[j]);
-                isulad_set_error_message("Unrecognised filter value for status: %s", filter_value->keys[j]);
-                ret = -1;
-                goto out;
-            }
-            value = util_strdup_s(filter_value->keys[j]);
-        } else if (strcmp(filter_key, "before") == 0 || strcmp(filter_key, "since") == 0) {
-            if (!is_valid_image(filter_value->keys[j])) {
-                ERROR("No such image: %s", filter_value->keys[j]);
-                isulad_set_error_message("No such image: %s", filter_value->keys[j]);
-                ret = -1;
-                goto out;
-            }
-            value = util_strdup_s(filter_value->keys[j]);
-        } else {
-            value = util_strdup_s(filter_value->keys[j]);
+    len = sizeof(g_image_list_filter) / sizeof(struct filter_opt);
+    for (i = 0; i < len; i++) {
+        if (strcmp(filter_key,  g_image_list_filter[i].name) != 0) {
+            continue;
         }
-
-        bret = filters_args_add(ctx->image_filters, filter_key, value);
-        if (!bret) {
-            ERROR("Add filter args failed");
-            ret = -1;
-            goto out;
-        }
-        free(value);
-        value = NULL;
+        return do_add_filters(filter_key, filter_value, ctx->image_filters,  g_image_list_filter[i].valid,
+                              g_image_list_filter[i].pre);
     }
-
-out:
-    free(value);
-    return ret;
+    return -1;
 }
 #endif
 
@@ -779,14 +741,9 @@ static im_list_request *fold_filter(const image_list_images_request *request)
     }
 
     for (i = 0; i < request->filters->len; i++) {
-        if (!filters_args_valid_key(g_accepted_image_filter_tags, sizeof(g_accepted_image_filter_tags) / sizeof(char *),
-                                    request->filters->keys[i])) {
+        if (do_add_image_list_filters(request->filters->keys[i], request->filters->values[i], ctx) != 0) {
             ERROR("Invalid filter '%s'", request->filters->keys[i]);
             isulad_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
-            goto error_out;
-        }
-
-        if (do_add_filters(request->filters->keys[i], request->filters->values[i], ctx) != 0) {
             goto error_out;
         }
     }
@@ -1055,6 +1012,181 @@ out:
     return (ret < 0) ? ECOMMON : ret;
 }
 
+#ifdef ENABLE_IMAGE_SEARCH
+bool valid_uint_filter_value(const char *value)
+{
+    int num = 0;
+
+    if (util_safe_int(value, &num) != 0 || num < 0) {
+        return false;
+    }
+
+    return true;
+}
+
+static const struct filter_opt g_search_filter[] = {
+    {.name = "stars", .valid = valid_uint_filter_value, .pre = NULL},
+    {.name = "is-automated", .valid = util_valid_bool_string, .pre = NULL},
+    {.name = "is-official", .valid = util_valid_bool_string, .pre = NULL},
+};
+
+static int do_add_search_filters(const char *filter_key, const json_map_string_bool *filter_value,
+                                 im_search_request *ctx)
+{
+    size_t i, len;
+
+    len = sizeof(g_search_filter) / sizeof(struct filter_opt);
+    for (i = 0; i < len; i++) {
+        if (strcmp(filter_key,  g_search_filter[i].name) != 0) {
+            continue;
+        }
+        return do_add_filters(filter_key, filter_value, ctx->filter,  g_search_filter[i].valid,  g_search_filter[i].pre);
+    }
+    return -1;
+}
+
+static im_search_request *trans_im_search_request(const image_search_images_request *request)
+{
+    im_search_request *req = NULL;
+
+    req = util_common_calloc_s(sizeof(im_search_request));
+    if (req == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    req->search_name = util_strdup_s(request->search_name);
+    req->limit = request->limit;
+
+    size_t i;
+    if (request->filters == NULL) {
+        return req;
+    }
+
+    req->filter = filters_args_new();
+    if (req->filter == NULL) {
+        ERROR("Out of memory");
+        goto error_out;
+    }
+
+    for (i = 0; i < request->filters->len; i++) {
+        if (do_add_search_filters(request->filters->keys[i], request->filters->values[i], req) != 0) {
+            ERROR("Invalid filter '%s'", request->filters->keys[i]);
+            isulad_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
+            goto error_out;
+        }
+    }
+    return req;
+
+error_out:
+    free_im_search_request(req);
+    return NULL;
+}
+
+static int trans_im_search_images(const im_search_response *im_search, image_search_images_response *response)
+{
+    size_t i = 0;
+
+    if (im_search == NULL || im_search->result == NULL) {
+        return -1;
+    }
+
+    response->search_result =
+        (image_search_image **)util_smart_calloc_s(sizeof(image_search_image *), im_search->result->results_len);
+    if (response->search_result == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (im_search->result->results_len == 0) {
+        return 0;
+    }
+
+    for (i = 0; i < im_search->result->results_len; i++) {
+        response->search_result[i] = (image_search_image *)util_common_calloc_s(sizeof(image_search_image));
+        if (response->search_result[i] == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        response->search_result[i]->name = util_strdup_s(im_search->result->results[i]->name);
+        response->search_result[i]->description = util_strdup_s(im_search->result->results[i]->description);
+        response->search_result[i]->is_automated = im_search->result->results[i]->is_automated;
+        response->search_result[i]->is_official = im_search->result->results[i]->is_official;
+        response->search_result[i]->star_count = im_search->result->results[i]->star_count;
+        response->search_result_len++;
+    }
+
+    return 0;
+}
+
+static int image_search_cb(const image_search_images_request *request, image_search_images_response **response)
+{
+    int ret = -1;
+    uint32_t cc = ISULAD_SUCCESS;
+    im_search_request *im_request = NULL;
+    im_search_response *im_response = NULL;
+
+    if (request == NULL || request->search_name == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    DAEMON_CLEAR_ERRMSG();
+
+    *response = util_common_calloc_s(sizeof(image_search_images_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = ISULAD_ERR_MEMOUT;
+        goto out;
+    }
+
+    im_request = trans_im_search_request(request);
+    if (im_request == NULL) {
+        ERROR("Failed to trans im_search_request");
+        cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+
+    // current only oci image support search
+    im_request->type = util_strdup_s(IMAGE_TYPE_OCI);
+
+    ret = im_search_images(im_request, &im_response);
+    if (ret != 0) {
+        if (im_response != NULL && im_response->errmsg != NULL) {
+            ERROR("Search images failed:%s", im_response->errmsg);
+            isulad_try_set_error_message("Search images failed:%s", im_response->errmsg);
+        } else {
+            ERROR("Search images failed");
+            isulad_try_set_error_message("Search images failed");
+        }
+        cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+
+    ret = trans_im_search_images(im_response, *response);
+    if (ret) {
+        ERROR("Failed to translate search result");
+        cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+
+out:
+
+    free_im_search_request(im_request);
+    free_im_search_response(im_response);
+
+    if (*response != NULL) {
+        (*response)->cc = cc;
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+            DAEMON_CLEAR_ERRMSG();
+        }
+    }
+
+    return (ret < 0) ? ECOMMON : ret;
+}
+#endif
+
 /* image callback init */
 void image_callback_init(service_image_callback_t *cb)
 {
@@ -1072,4 +1204,7 @@ void image_callback_init(service_image_callback_t *cb)
     cb->logout = logout_cb;
     cb->tag = image_tag_cb;
     cb->pull = image_pull_cb;
+#ifdef ENABLE_IMAGE_SEARCH
+    cb->search = image_search_cb;
+#endif
 }

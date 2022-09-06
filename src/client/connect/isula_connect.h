@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -91,6 +91,10 @@ typedef struct {
     int (*logout)(const struct isula_logout_request *request, struct isula_logout_response *response, void *arg);
     int (*tag)(const struct isula_tag_request *request, struct isula_tag_response *response, void *arg);
     int (*import)(const struct isula_import_request *request, struct isula_import_response *response, void *arg);
+#ifdef ENABLE_IMAGE_SEARCH
+    int (*search)(const struct isula_search_request *request, struct isula_search_response *response, void *arg);
+#endif
+
 } image_ops;
 
 typedef struct {

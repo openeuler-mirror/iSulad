@@ -3,6 +3,10 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} local_oci_srcs)
 add_subdirectory(storage)
 add_subdirectory(registry)
 
+if(NOT ENABLE_IMAGE_SEARCH)
+    list(REMOVE_ITEM local_oci_srcs "${CMAKE_CURRENT_SOURCE_DIR}/oci_search.c")
+endif()
+
 set(OCI_SRCS
     ${STORAGE_SRCS}
     ${local_oci_srcs}

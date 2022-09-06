@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -17,6 +17,7 @@
 #include "client_base.h"
 #include "images.grpc.pb.h"
 #include "utils.h"
+#include "constants.h"
 #include <string>
 
 using namespace images;
@@ -571,6 +572,103 @@ public:
         return stub_->Logout(context, req, reply);
     }
 };
+#ifdef ENABLE_IMAGE_SEARCH
+class ImageSearch : public ClientBase<ImagesService, ImagesService::Stub, isula_search_request, SearchRequest,
+    isula_search_response, SearchResponse> {
+public:
+    explicit ImageSearch(void *args)
+        : ClientBase(args)
+    {
+    }
+    ~ImageSearch() = default;
+
+    auto request_to_grpc(const isula_search_request *request, SearchRequest *grequest) -> int override
+    {
+        if (request == nullptr) {
+            return -1;
+        }
+
+        if (request->search_name != nullptr) {
+            grequest->set_search_name(request->search_name);
+        }
+
+        grequest->set_limit(request->limit);
+
+        if (request->filters != nullptr) {
+            auto *map = grequest->mutable_filters();
+            for (size_t i = 0; i < request->filters->len; i++) {
+                (*map)[request->filters->keys[i]] = request->filters->values[i];
+            }
+        }
+
+        return 0;
+    }
+
+    auto response_from_grpc(SearchResponse *gresponse, isula_search_response *response) -> int override
+    {
+        struct search_image_info *search_result = nullptr;
+        int i = 0;
+        int num = gresponse->result_num();
+
+        if (num <= 0) {
+            response->search_result = nullptr;
+            response->result_num = 0;
+            response->server_errono = gresponse->cc();
+            if (!gresponse->errmsg().empty()) {
+                response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
+            }
+            return 0;
+        }
+
+        search_result = (struct search_image_info *)util_smart_calloc_s(sizeof(struct search_image_info), (size_t)num);
+        if (search_result == nullptr) {
+            ERROR("out of memory");
+            response->cc = ISULAD_ERR_MEMOUT;
+            return -1;
+        }
+
+        for (i = 0; i < num; i++) {
+            const SearchImage &image = gresponse->search_result(i);
+            const char *name = !image.name().empty() ? image.name().c_str() : "-";
+            const char *description = !image.description().empty() ? image.description().c_str() : "-";
+
+            search_result[i].star_count = image.star_count();
+            search_result[i].is_official = image.is_official();
+            search_result[i].is_automated = image.is_automated();
+            search_result[i].name = util_strdup_s(name);
+            search_result[i].description = util_strdup_s(description);
+        }
+
+        response->search_result = search_result;
+        response->result_num = (uint32_t)gresponse->result_num();
+        response->server_errono = gresponse->cc();
+        if (!gresponse->errmsg().empty()) {
+            response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
+        }
+
+        return 0;
+    }
+
+    auto check_parameter(const SearchRequest &req) -> int override
+    {
+        if (req.search_name().empty()) {
+            ERROR("Missing search_name in the request");
+            return -1;
+        }
+
+        if (req.limit() < MIN_LIMIT || req.limit() > MAX_LIMIT) {
+            ERROR("Invalid limit in the request");
+            return -1;
+        }
+        return 0;
+    }
+
+    auto grpc_call(ClientContext *context, const SearchRequest &req, SearchResponse *reply) -> Status override
+    {
+        return stub_->Search(context, req, reply);
+    }
+};
+#endif
 
 auto grpc_images_client_ops_init(isula_connect_ops *ops) -> int
 {
@@ -587,6 +685,9 @@ auto grpc_images_client_ops_init(isula_connect_ops *ops) -> int
     ops->image.logout = container_func<isula_logout_request, isula_logout_response, Logout>;
     ops->image.tag = container_func<isula_tag_request, isula_tag_response, ImageTag>;
     ops->image.import = container_func<isula_import_request, isula_import_response, Import>;
+#ifdef ENABLE_IMAGE_SEARCH
+    ops->image.search = container_func<isula_search_request, isula_search_response, ImageSearch>;
+#endif
 
     return 0;
 }

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2017-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -387,6 +387,12 @@ struct client_arguments {
 
     do_resize_call_back_t resize_cb;
     struct winsize s_pre_wsz;
+
+#ifdef ENABLE_IMAGE_SEARCH
+    // search
+    char *search_name;
+    uint32_t limit;
+#endif
 
 #ifdef ENABLE_NATIVE_NETWORK
     // network

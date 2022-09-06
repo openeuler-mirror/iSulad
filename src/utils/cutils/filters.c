@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -318,7 +318,7 @@ bool filters_args_valid_key(const char **accepted, size_t len, const char *field
     if (accepted == NULL || field == NULL) {
         return false;
     }
-    
+
     for (i = 0; i < len; i++) {
         if (accepted[i] != NULL && strcmp(accepted[i], field) == 0) {
             return true;
@@ -326,4 +326,50 @@ bool filters_args_valid_key(const char **accepted, size_t len, const char *field
     }
     return false;
 }
+
+int do_add_filters(const char *filter_key, const json_map_string_bool *filter_value,
+                   struct filters_args *filters,
+                   valid_filter_value_t valid_ops, pre_processe_t pre_ops)
+{
+    int ret = 0;
+    size_t j;
+    char *value = NULL;
+    bool bret = false;
+
+    if (filter_key == NULL || filter_value == NULL || filters == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    for (j = 0; j < filter_value->len; j++) {
+        if (valid_ops != NULL && !valid_ops(filter_value->keys[j]) != 0) {
+            ERROR("Unvalid filter value for %s: %s", filter_key, filter_value->keys[j]);
+            return -1;
+        }
+
+        if (pre_ops != NULL) {
+            value = pre_ops(filter_value->keys[j]);
+        } else {
+            value = util_strdup_s(filter_value->keys[j]);
+        }
+
+        if (value == NULL) {
+            continue;
+        }
+
+        bret = filters_args_add(filters, filter_key, value);
+        if (!bret) {
+            ERROR("Add filter args failed");
+            ret = -1;
+            goto out;
+        }
+        free(value);
+        value = NULL;
+    }
+
+out:
+    free(value);
+    return ret;
+}
+
 

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2017-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -29,6 +29,9 @@
 #include "isula_libutils/imagetool_fs_info.h"
 #include "isula_libutils/imagetool_image_status.h"
 #include "isula_libutils/imagetool_image_summary.h"
+#ifdef ENABLE_IMAGE_SEARCH
+#include "isula_libutils/imagetool_search_result.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -220,6 +223,20 @@ struct graphdriver_status {
     char *status;
 };
 
+#ifdef ENABLE_IMAGE_SEARCH
+typedef struct {
+    char *type;
+    char *search_name;
+    uint32_t limit;
+    struct filters_args *filter;
+} im_search_request;
+
+typedef struct {
+    imagetool_search_result *result;
+    char *errmsg;
+} im_search_response;
+#endif
+
 int image_module_init(const isulad_daemon_configs *args);
 
 void image_module_exit();
@@ -339,7 +356,15 @@ struct graphdriver_status *im_graphdriver_get_status(void);
 
 void im_free_graphdriver_status(struct graphdriver_status *status);
 
-bool im_oci_image_exist(const char *image_or_id);
+bool im_oci_image_exist(const char *name);
+
+#ifdef ENABLE_IMAGE_SEARCH
+void free_im_search_request(im_search_request *request);
+
+void free_im_search_response(im_search_response *response);
+
+int im_search_images(im_search_request *request, im_search_response **response);
+#endif
 
 #ifdef __cplusplus
 }

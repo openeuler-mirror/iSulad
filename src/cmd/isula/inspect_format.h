@@ -29,8 +29,6 @@ typedef struct {
 
 int inspect_check_format_f(const char *json_str, bool *json_format);
 
-char *inspect_parse_filter(const char *arg);
-
 yajl_val inspect_load_json(const char *json_data);
 
 bool inspect_filter_done(yajl_val root, const char *filter, container_tree_t *tree_array);
