@@ -1,7 +1,7 @@
 From 199971d61cc53ee11b16b353bcd0594abc86cb3e Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Fri, 26 Aug 2022 09:33:05 +0800
-Subject: [PATCH 1/2] fix memleak
+Subject: [PATCH 1/5] fix memleak
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: WangFengTu <wangfengtu@huawei.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/src/daemon/entry/cri/websocket/service/ws_server.cc b/src/daemon/entry/cri/websocket/service/ws_server.cc
-index 63afc9d..6438c4d 100644
+index 63afc9dd..6438c4d7 100644
 --- a/src/daemon/entry/cri/websocket/service/ws_server.cc
 +++ b/src/daemon/entry/cri/websocket/service/ws_server.cc
 @@ -399,6 +399,7 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
@@ -21,5 +21,5 @@ index 63afc9d..6438c4d 100644
      }
  
 -- 
-1.8.3.1
+2.25.1
 
