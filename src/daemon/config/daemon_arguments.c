@@ -148,7 +148,6 @@ int service_arguments_init(struct service_arguments *args)
     args->json_confs->pidfile = util_strdup_s(DEFAULT_PID_FILE);
     args->json_confs->storage_driver = util_strdup_s("overlay2");
     args->json_confs->native_umask = util_strdup_s(UMASK_SECURE);
-    args->json_confs->image_service = true;
     args->json_confs->image_layer_check = false;
     args->json_confs->use_decrypted_key = (bool *)util_common_calloc_s(sizeof(bool));
     if (args->json_confs->use_decrypted_key == NULL) {
@@ -165,6 +164,11 @@ int service_arguments_init(struct service_arguments *args)
     args->default_ulimit_len = 0;
     args->json_confs->websocket_server_listening_port = DEFAULT_WEBSOCKET_SERVER_LISTENING_PORT;
     args->json_confs->selinux_enabled = false;
+    args->json_confs->default_runtime = util_strdup_s(DEFAULT_RUNTIME_NAME);
+    args->json_confs->cri_runtimes = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
+    if (args->json_confs->cri_runtimes == NULL) {
+        goto free_out;
+    }
 
     ret = 0;
 
@@ -200,6 +204,60 @@ void service_arguments_free(struct service_arguments *args)
     free_default_ulimit(args->default_ulimit);
     args->default_ulimit = NULL;
     args->default_ulimit_len = 0;
+
+    free(args->json_confs->default_runtime);
+    args->json_confs->default_runtime = NULL;
+
+    free_json_map_string_string(args->json_confs->cri_runtimes);
+    args->json_confs->cri_runtimes = NULL;
+}
+
+static int key_value_opt_parser(const char *option, char **key, char **value)
+{
+    int ret = -1;
+    char *tmp_key = NULL;
+    char *tmp_value = NULL;
+    char *tmp_option = NULL;
+    size_t len = 0;
+    size_t total_len = 0;
+
+    // option format: key=value
+    total_len = strlen(option);
+    if (total_len <= 2) {
+        return -1;
+    }
+
+    tmp_option = util_strdup_s(option);
+    tmp_key = tmp_option;
+    tmp_value = strchr(tmp_option, '=');
+    // option do not contain '='
+    if (tmp_value == NULL) {
+        goto out;
+    }
+
+    len = (size_t)(tmp_value - tmp_key);
+    // if option is '=key'
+    if (len == 0) {
+        goto out;
+    }
+
+    // if option is 'key='
+    if (total_len == len + 1) {
+        goto out;
+    }
+
+    tmp_option[len] = '\0';
+    *key = util_strdup_s(tmp_key);
+    tmp_option[len] = '=';
+
+    tmp_value += 1;
+    *value = util_strdup_s(tmp_value);
+
+    ret = 0;
+
+out:
+    free(tmp_option);
+    return ret;
 }
 
 /* server log opt parser */
@@ -208,49 +266,46 @@ int server_log_opt_parser(struct service_arguments *args, const char *option)
     int ret = -1;
     char *key = NULL;
     char *value = NULL;
-    char *tmp = NULL;
-    size_t len = 0;
-    size_t total_len = 0;
 
     if (option == NULL || args == NULL) {
-        goto out;
+        return -1;
     }
 
-    // option format: key=value
-    total_len = strlen(option);
-    if (args == NULL || total_len <= 2) {
-        goto out;
+    if (key_value_opt_parser(option, &key, &value) != 0) {
+        return -1;
     }
-
-    tmp = util_strdup_s(option);
-    key = tmp;
-    value = strchr(tmp, '=');
-    // option do not contain '='
-    if (value == NULL) {
-        goto out;
-    }
-
-    len = (size_t)(value - key);
-    // if option is '=key'
-    if (len == 0) {
-        goto out;
-    }
-    // if option is 'key='
-    if (total_len == len + 1) {
-        goto out;
-    }
-    tmp[len] = '\0';
-    value += 1;
 
     ret = parse_log_opts(args, key, value);
-
     if (ret == 0 && args->json_confs != NULL && args->json_confs->log_opts != NULL) {
         ret = append_json_map_string_string(args->json_confs->log_opts, key, value);
     }
 
-    tmp[len] = '=';
-out:
-    free(tmp);
+    free(key);
+    free(value);
+    return ret;
+}
+
+/* server cri runtime parser */
+int server_cri_runtime_parser(struct service_arguments *args, const char *option)
+{
+    int ret = 0;
+    char *key = NULL;
+    char *value = NULL;
+
+    if (option == NULL || args == NULL) {
+        return -1;
+    }
+
+    if (key_value_opt_parser(option, &key, &value) != 0) {
+        return -1;
+    }
+
+    if (args->json_confs != NULL && args->json_confs->cri_runtimes != NULL) {
+        ret = append_json_map_string_string(args->json_confs->cri_runtimes, key, value);
+    }
+
+    free(key);
+    free(value);
     return ret;
 }
 

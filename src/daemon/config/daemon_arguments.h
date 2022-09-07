@@ -71,6 +71,7 @@ struct service_arguments {
 int service_arguments_init(struct service_arguments *args);
 void service_arguments_free(struct service_arguments *args);
 int server_log_opt_parser(struct service_arguments *args, const char *option);
+int server_cri_runtime_parser(struct service_arguments *args, const char *option);
 
 size_t ulimit_array_len(host_config_ulimits_element **default_ulimit);
 
