@@ -204,12 +204,6 @@ void service_arguments_free(struct service_arguments *args)
     free_default_ulimit(args->default_ulimit);
     args->default_ulimit = NULL;
     args->default_ulimit_len = 0;
-
-    free(args->json_confs->default_runtime);
-    args->json_confs->default_runtime = NULL;
-
-    free_json_map_string_string(args->json_confs->cri_runtimes);
-    args->json_confs->cri_runtimes = NULL;
 }
 
 static int key_value_opt_parser(const char *option, char **key, char **value)
