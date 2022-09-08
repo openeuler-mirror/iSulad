@@ -2112,6 +2112,13 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_c
         goto out;
     }
 
+    // should before merge process env
+    ret = merge_hostname(oci_spec, host_spec, v2_spec->config);
+    if (ret != 0) {
+        ERROR("Failed to merge hostname");
+        goto out;
+    }
+
     ret = merge_process_conf(oci_spec, host_spec, v2_spec->config);
     if (ret != 0) {
         goto out;
@@ -2135,12 +2142,6 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_c
     ret = adapt_settings_for_privileged(oci_spec, host_spec->privileged);
     if (ret != 0) {
         ERROR("Failed to adapt settings for privileged container");
-        goto out;
-    }
-
-    ret = merge_hostname(oci_spec, host_spec, v2_spec->config);
-    if (ret != 0) {
-        ERROR("Failed to merge hostname");
         goto out;
     }
 
