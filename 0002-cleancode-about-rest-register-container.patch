@@ -1,16 +1,16 @@
 From bf50cef67ac2288bed7013c675df8d35f370dc32 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Sat, 27 Aug 2022 10:40:02 +0800
-Subject: [PATCH 2/2] cleancode about rest register container
+Subject: [PATCH 2/5] cleancode about rest register container
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
- src/daemon/common/selinux_label.c                  |  2 +-
- .../entry/connect/rest/rest_containers_service.c   | 93 ++++++++++++++--------
+ src/daemon/common/selinux_label.c             |  2 +-
+ .../connect/rest/rest_containers_service.c    | 93 ++++++++++++-------
  2 files changed, 62 insertions(+), 33 deletions(-)
 
 diff --git a/src/daemon/common/selinux_label.c b/src/daemon/common/selinux_label.c
-index 5242297..145e4b6 100644
+index 52422970..145e4b6e 100644
 --- a/src/daemon/common/selinux_label.c
 +++ b/src/daemon/common/selinux_label.c
 @@ -481,7 +481,7 @@ static int uniq_mcs(unsigned int range, char *mcs, size_t len)
@@ -23,7 +23,7 @@ index 5242297..145e4b6 100644
              ERROR("Failed to compose mcs");
              return -1;
 diff --git a/src/daemon/entry/connect/rest/rest_containers_service.c b/src/daemon/entry/connect/rest/rest_containers_service.c
-index 53241be..397660e 100644
+index 53241bef..397660e2 100644
 --- a/src/daemon/entry/connect/rest/rest_containers_service.c
 +++ b/src/daemon/entry/connect/rest/rest_containers_service.c
 @@ -1733,8 +1733,7 @@ out:
@@ -171,5 +171,5 @@ index 53241be..397660e 100644
      return 0;
  }
 -- 
-1.8.3.1
+2.25.1
 
