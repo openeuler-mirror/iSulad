@@ -166,7 +166,7 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
     SUP_GROUPS_OPT(cmdargs)                                                                                       \
     { CMD_OPT_TYPE_CALLBACK,                                                                                      \
       false,                                                                                                      \
-      "registry-mirrors",                                                                                          \
+      "registry-mirrors",                                                                                         \
       0,                                                                                                          \
       &(cmdargs)->json_confs->registry_mirrors,                                                                   \
       "Registry to be prepended when pulling unqualified images, can be specified multiple times",                \
