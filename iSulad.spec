@@ -1,5 +1,5 @@
 %global _version 2.0.16
-%global _release 3
+%global _release 4
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -18,6 +18,7 @@ Patch0002: 0002-cleancode-about-rest-register-container.patch
 Patch0003: 0003-adapt-to-openssl-3.0.patch
 Patch0004: 0004-remove-redundant-header-files.patch
 Patch0005: 0005-add-isulad-args.patch
+Patch0006: 0006-invalid-free-default-runtime-and-cri-runtime-after-f.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -244,6 +245,12 @@ fi
 %endif
 
 %changelog
+* Thu Sep 08 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.16-4
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: invalid free default-runtime and cri-runtime after free json-confs
+
 * Wed Sep 07 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.16-3
 - Type: enhancement
 - ID: NA
