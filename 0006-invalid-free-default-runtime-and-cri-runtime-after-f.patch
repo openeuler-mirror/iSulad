@@ -1,0 +1,45 @@
+From 710aa3de0e21c3566934897dd34a9ac497f808a7 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Thu, 8 Sep 2022 10:14:39 +0800
+Subject: [PATCH 6/6] invalid free default-runtime and cri-runtime after free
+ json-confs
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/cmd/isulad/isulad_commands.h     | 2 +-
+ src/daemon/config/daemon_arguments.c | 6 ------
+ 2 files changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/src/cmd/isulad/isulad_commands.h b/src/cmd/isulad/isulad_commands.h
+index dc278f9c..a89de5c1 100644
+--- a/src/cmd/isulad/isulad_commands.h
++++ b/src/cmd/isulad/isulad_commands.h
+@@ -166,7 +166,7 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
+     SUP_GROUPS_OPT(cmdargs)                                                                                       \
+     { CMD_OPT_TYPE_CALLBACK,                                                                                      \
+       false,                                                                                                      \
+-      "registry-mirrors",                                                                                          \
++      "registry-mirrors",                                                                                         \
+       0,                                                                                                          \
+       &(cmdargs)->json_confs->registry_mirrors,                                                                   \
+       "Registry to be prepended when pulling unqualified images, can be specified multiple times",                \
+diff --git a/src/daemon/config/daemon_arguments.c b/src/daemon/config/daemon_arguments.c
+index 076c10a6..04173557 100644
+--- a/src/daemon/config/daemon_arguments.c
++++ b/src/daemon/config/daemon_arguments.c
+@@ -204,12 +204,6 @@ void service_arguments_free(struct service_arguments *args)
+     free_default_ulimit(args->default_ulimit);
+     args->default_ulimit = NULL;
+     args->default_ulimit_len = 0;
+-
+-    free(args->json_confs->default_runtime);
+-    args->json_confs->default_runtime = NULL;
+-
+-    free_json_map_string_string(args->json_confs->cri_runtimes);
+-    args->json_confs->cri_runtimes = NULL;
+ }
+ 
+ static int key_value_opt_parser(const char *option, char **key, char **value)
+-- 
+2.25.1
+
