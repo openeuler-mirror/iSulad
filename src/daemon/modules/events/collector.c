@@ -578,7 +578,7 @@ static int do_write_events(const stream_func_wrapper *stream, struct isulad_even
         goto out;
     }
     if (!stream->write_func(stream->writer, event)) {
-        ERROR("Failed to send exit event for 'events' client");
+        ERROR("Failed to send event for 'events' client");
         ret = -1;
         goto out;
     }
