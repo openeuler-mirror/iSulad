@@ -149,17 +149,17 @@ bool util_get_timestamp(const char *str_time, types_timestamp_t *timestamp)
 
 bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, size_t maxsize, bool local_utc)
 {
-    struct tm tm_utc = { 0 };
-    struct tm tm_local = { 0 };
+    int nret = 0;
     int tm_zone_hour = 0;
     int tm_zone_min = 0;
     int32_t nanos;
-    int nret = 0;
-    time_t seconds;
+    struct tm tm_local = { 0 };
     size_t tmp_size = 0;
-    const int minutes_per_hour = 60;
-    const int hours_per_day = 24;
-    const int zone_hours = 12;
+    time_t seconds;
+    bool west_timezone = false;
+    long int tm_gmtoff = 0;
+    const int seconds_per_minutes = 60;
+    const int seconds_per_hour = 3600;
 
     if (timebuffer == NULL || maxsize == 0 || !timestamp->has_seconds) {
         return false;
@@ -182,24 +182,24 @@ bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, 
         goto out;
     }
 
-    gmtime_r(&seconds, &tm_utc);
-    tm_zone_min = tm_local.tm_min - tm_utc.tm_min;
-    if (tm_zone_min < 0) {
-        tm_zone_min += minutes_per_hour;
-        tm_zone_hour = -1;
+#ifdef	__USE_MISC
+    tm_gmtoff = tm_local.tm_gmtoff;
+#else
+    tm_gmtoff = tm_local.__tm_gmtoff;
+#endif
+
+    if (tm_gmtoff < 0) {
+        west_timezone = true;
+        tm_gmtoff = -tm_gmtoff;
     }
 
-    tm_zone_hour += tm_local.tm_hour - tm_utc.tm_hour;
-    if (tm_zone_hour < -zone_hours) {
-        tm_zone_hour += hours_per_day;
-    } else if (tm_zone_hour > zone_hours) {
-        tm_zone_hour -= hours_per_day;
-    }
+    tm_zone_hour = tm_gmtoff / seconds_per_hour;
+    tm_zone_min = (tm_gmtoff - tm_zone_hour * seconds_per_hour) / seconds_per_minutes;
 
-    if (tm_zone_hour >= 0) {
+    if (!west_timezone) {
         nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d+%02d:%02d", nanos, tm_zone_hour, tm_zone_min);
     } else {
-        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d-%02d:%02d", nanos, -tm_zone_hour, tm_zone_min);
+        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d-%02d:%02d", nanos, tm_zone_hour, tm_zone_min);
     }
 
 out:
