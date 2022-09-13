@@ -1,5 +1,5 @@
 %global _version 2.0.16
-%global _release 4
+%global _release 5
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -19,6 +19,7 @@ Patch0003: 0003-adapt-to-openssl-3.0.patch
 Patch0004: 0004-remove-redundant-header-files.patch
 Patch0005: 0005-add-isulad-args.patch
 Patch0006: 0006-invalid-free-default-runtime-and-cri-runtime-after-f.patch
+Patch0007: 0007-calculate-timezone-by-tm_gmtoff.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -246,6 +247,12 @@ fi
 %endif
 
 %changelog
+* Tue Sep 13 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.16-5
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: calculate timezone by tm_gmtoff
+
 * Thu Sep 08 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.16-4
 - Type: enhancement
 - ID: NA
