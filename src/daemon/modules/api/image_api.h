@@ -154,15 +154,15 @@ typedef struct {
     char *errmsg;
 } im_pull_response;
 
-
 typedef struct {
     char *type;
     char *image;
     char *auth;
 
-    char *username;;
+    char *username;
     char *password;
 } im_search_request;
+
 typedef struct {
     char *image_tags_json;
     char *errmsg;

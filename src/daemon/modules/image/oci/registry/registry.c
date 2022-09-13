@@ -1966,12 +1966,12 @@ out:
     return ret;
 }
 
-
 static int prepare_search_desc(search_descriptor *desc, registry_search_options *options)
 {
     int ret = 0;
+    int sret = 0;
+    char scope[PATH_MAX] = { 0 };
     struct oci_image_module_data *oci_image_data = NULL;
-
     oci_image_data = get_oci_image_data();
 
     if (desc == NULL || options == NULL) {
@@ -1981,28 +1981,29 @@ static int prepare_search_desc(search_descriptor *desc, registry_search_options 
 
     desc->host = util_strdup_s(options->host);
     if (desc->host == NULL) {
-        ERROR("Invalid image %s, host not found", options->image);
-        ret = -1;
-        goto out;
+        ERROR("Invalid host %s, host not found", options->host);
+        return -1;
     }
 
-
-   desc->image_name = util_strdup_s(options->image_name);
+    desc->image_name = util_strdup_s(options->image_name);
     if (desc->image_name == NULL) {
-        ERROR("Invalid image %s, image name not found", options->image);
-        ret = -1;
-        goto out;
+        ERROR("Invalid image %s, image name not found", options->image_name);
+        return -1;
     }
- 
 
+    sret = snprintf(scope, sizeof(scope), "repository:%s:search", desc->image_name);
+    if (sret < 0 || (size_t)sret >= sizeof(scope)) {
+        ERROR("Failed to sprintf scope");
+        ret = -1;
+    }
 
     ret = pthread_mutex_init(&desc->challenges_mutex, NULL);
     if (ret != 0) {
-        ERROR("Failed to init challenges mutex for pull");
-        goto out;
+        ERROR("Failed to init challenges mutex for search");
+        return -1;
     }
-    
 
+    desc->scope = util_strdup_s(scope);
     desc->use_decrypted_key = oci_image_data->use_decrypted_key;
     desc->skip_tls_verify = options->skip_tls_verify;
     desc->insecure_registry = options->insecure_registry;
@@ -2015,11 +2016,10 @@ static int prepare_search_desc(search_descriptor *desc, registry_search_options 
         if (ret != 0) {
             ERROR("Failed to load auths for host %s", desc->host);
             isulad_try_set_error_message("Failed to load auths for host %s", desc->host);
-            goto out;
+            return -1;
         }
     }
 
-out:
     return ret;
 }
 
@@ -2131,14 +2131,11 @@ out:
     return ret;
 }
 
-
-
-int  registry_search(registry_search_options *options,char **response_output )
+int registry_search(registry_search_options *options, char **response_output)
 {
     int ret = 0;
     search_descriptor *desc = NULL;
-    
-    
+
     if (options == NULL || options->image_name == NULL) {
         ERROR("Invalid NULL param");
         return -1;
@@ -2150,7 +2147,6 @@ int  registry_search(registry_search_options *options,char **response_output )
         return -1;
     }
 
-    
     ret = prepare_search_desc(desc, options);
     if (ret != 0) {
         ERROR("registry prepare failed");
@@ -2161,30 +2157,26 @@ int  registry_search(registry_search_options *options,char **response_output )
 
     ret = fetch_catalog(desc);
     if (ret != 0) {
-        ERROR("error fetching catalog %s", options->host);
-        isulad_try_set_error_message("error fetching %s", options->host);
+        ERROR("error fetching catalog");
+        isulad_try_set_error_message("error fetching catalog of %s", options->host);
         ret = -1;
         goto out;
     }
 
-
-    ret = fetch_tags(desc,response_output);
+    ret = fetch_tags(desc, response_output);
     if (ret != 0) {
-        ERROR("error fetching tags %s", options->host);
-        isulad_try_set_error_message("error fetching %s", options->host);
+        ERROR("error fetching tags");
+        isulad_try_set_error_message("error fetching tags of %s", options->image_name);
         ret = -1;
         goto out;
     }
 
 out:
-   
     free_search_desc(desc);
     desc = NULL;
 
     return ret;
 }
-
-
 
 static void cached_layers_kvfree(void *key, void *value)
 {

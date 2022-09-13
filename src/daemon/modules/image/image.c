@@ -954,7 +954,7 @@ int im_pull_image(const im_pull_request *request, im_pull_response **response)
 
     EVENT("Event: {Object: %s, Type: Pulling}", request->image);
     ret = bim->ops->pull_image(request, tmp_res);
-     if (ret != 0) {
+    if (ret != 0) {
         ERROR("Pull image %s failed", request->image);
         ret = -1;
         goto out;

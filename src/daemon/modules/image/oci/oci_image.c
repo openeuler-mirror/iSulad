@@ -330,6 +330,17 @@ int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
 
 int oci_search_rf(const im_search_request *request, im_search_response *response)
 {
+    if (request == NULL || request->image == NULL || response == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    if (!util_valid_image_name(request->image)) {
+        ERROR("Invalid image name: %s", request->image);
+        isulad_try_set_error_message("Invalid image name: %s", request->image);
+        return -1;
+    }
+
     return oci_do_search_image(request, response);
 }
 

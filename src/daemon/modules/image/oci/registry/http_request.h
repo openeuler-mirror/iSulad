@@ -33,10 +33,8 @@ int http_request_buf(pull_descriptor *desc, const char *url, const char **custom
                      resp_data_type type);
 int http_request_file(pull_descriptor *desc, const char *url, const char **custom_headers, char *file,
                       resp_data_type type, CURLcode *errcode);
-
-
 int http_request_buf_for_search(search_descriptor *desc, const char *url, const char **custom_headers, char **output,
-                     resp_data_type type);
+                                resp_data_type type);
 
 #ifdef __cplusplus
 }
