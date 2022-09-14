@@ -26,6 +26,17 @@ source ../helpers.sh
 function do_test_t()
 {
     containername=test_basic_run
+
+    tid=$(isula run --name $containername  -td busybox)
+    hostname=$(isula exec -it $containername hostname)
+    fn_check_eq "${hostname}" "${tid:0:12}" "default hostname is not id of container"
+    isula exec -it $containername env | grep HOSTNAME
+    fn_check_eq "$?" "0" "check HOSTNAME env failed"
+    isula stop -t 0 $tid
+    fn_check_eq "$?" "0" "stop failed"
+    isula rm $tid
+    fn_check_eq "$?" "0" "rm failed"
+
     isula run --name $containername  -td busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
