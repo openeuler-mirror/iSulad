@@ -415,13 +415,19 @@ out:
 int merge_env(oci_runtime_spec *oci_spec, const char **env, size_t env_len)
 {
     int ret = 0;
+    int nret = 0;
     size_t new_size = 0;
     size_t old_size = 0;
-    size_t i = 0;
+    size_t i;
     char **temp = NULL;
+    // 10 is lenght of "HOSTNAME=" and '\0'
+    char host_name_env[MAX_HOST_NAME_LEN + 10] = { 0 };
 
-    if (env_len == 0 || env == NULL) {
-        return 0;
+    nret = snprintf(host_name_env, sizeof(host_name_env), "HOSTNAME=%s", oci_spec->hostname);
+    if (nret < 0 || (size_t)nret >= sizeof(host_name_env)) {
+        ret = -1;
+        ERROR("Sprint failed");
+        goto out;
     }
 
     ret = make_sure_oci_spec_process(oci_spec);
@@ -429,13 +435,14 @@ int merge_env(oci_runtime_spec *oci_spec, const char **env, size_t env_len)
         goto out;
     }
 
-    if (env_len > LIST_ENV_SIZE_MAX - oci_spec->process->env_len) {
+    if (env_len > LIST_ENV_SIZE_MAX - oci_spec->process->env_len - 1) {
         ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
         isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
     }
-    new_size = (oci_spec->process->env_len + env_len) * sizeof(char *);
+    // add 1 for hostname env
+    new_size = (oci_spec->process->env_len + env_len + 1) * sizeof(char *);
     old_size = oci_spec->process->env_len * sizeof(char *);
     ret = util_mem_realloc((void **)&temp, new_size, oci_spec->process->env, old_size);
     if (ret != 0) {
@@ -445,7 +452,12 @@ int merge_env(oci_runtime_spec *oci_spec, const char **env, size_t env_len)
     }
 
     oci_spec->process->env = temp;
-    for (i = 0; i < env_len; i++) {
+
+    // append hostname env into default oci spec env list
+    oci_spec->process->env[oci_spec->process->env_len] = util_strdup_s(host_name_env);
+    oci_spec->process->env_len++;
+
+    for (i = 0; i < env_len && env != NULL; i++) {
         oci_spec->process->env[oci_spec->process->env_len] = util_strdup_s(env[i]);
         oci_spec->process->env_len++;
     }

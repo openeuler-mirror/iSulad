@@ -888,26 +888,23 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
     int ret = 0;
     int nret = 0;
     char file_path[PATH_MAX] = { 0x0 };
+    // 2 is '\0' + '\n'
     char hostname_content[MAX_HOST_NAME_LEN + 2] = { 0 };
 
     if (v2_spec->config->hostname == NULL) {
         char hostname[MAX_HOST_NAME_LEN] = { 0x00 };
         if (share_host) {
             ret = gethostname(hostname, sizeof(hostname));
-            if (ret != 0) {
-                ERROR("Get hostname error");
-                goto out;
-            }
-            v2_spec->config->hostname = util_strdup_s(hostname);
         } else {
             // hostname max length is 12 + '\0'
-            if (snprintf(hostname, 13, "%s", id) < 0) {
-                ERROR("sprintf hostname failed");
-                ret = -1;
-                goto out;
-            }
-            v2_spec->config->hostname = util_strdup_s(hostname);
+            nret = snprintf(hostname, 13, "%s", id);
+            ret = nret < 0 ? 1 : 0;
         }
+        if (ret != 0) {
+            ERROR("Create hostname error");
+            goto out;
+        }
+        v2_spec->config->hostname = util_strdup_s(hostname);
     }
 
     nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "hostname");
@@ -917,6 +914,7 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
         goto out;
     }
 
+    // 2 is '\0' + '\n'
     nret = snprintf(hostname_content, MAX_HOST_NAME_LEN + 2, "%s\n", v2_spec->config->hostname);
     if (nret < 0 || (size_t)nret >= sizeof(hostname_content)) {
         ERROR("Failed to print string");
