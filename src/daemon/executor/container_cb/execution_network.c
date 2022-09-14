@@ -890,17 +890,19 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
     char hostname_content[MAX_HOST_NAME_LEN + 2] = { 0 };
 
     if (v2_spec->config->hostname == NULL) {
+        char hostname[MAX_HOST_NAME_LEN] = { 0 };
         if (share_host) {
-            char hostname[MAX_HOST_NAME_LEN] = { 0x00 };
             ret = gethostname(hostname, sizeof(hostname));
-            if (ret != 0) {
-                ERROR("Get hostname error");
-                goto out;
-            }
-            v2_spec->config->hostname = util_strdup_s(hostname);
         } else {
-            v2_spec->config->hostname = util_strdup_s("localhost");
+            // max length of hostname from ID is 12 + '\0'
+            nret = snprintf(hostname, 13, "%s", id);
+            ret = nret < 0 ? 1 : 0;
         }
+        if (ret != 0) {
+            ERROR("Create hostname error");
+            goto out;
+        }
+        v2_spec->config->hostname = util_strdup_s(hostname);
     }
 
     nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "hostname");
