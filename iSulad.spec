@@ -1,5 +1,5 @@
 %global _version 2.0.16
-%global _release 5
+%global _release 6
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -147,13 +147,13 @@ rm -rf %{buildroot}
 # support update from lcrd to isulad, will remove in next version
 if [ "$1" = "2" ]; then
 %if 0%{?is_systemd}
-systemctl stop lcrd
-systemctl disable lcrd
+systemctl stop lcrd &>/dev/null
+systemctl disable lcrd &>/dev/null
 if [ -e %{_sysconfdir}/isulad/daemon.json ];then
     sed -i 's#/etc/default/lcrd/hooks#/etc/default/isulad/hooks#g' %{_sysconfdir}/isulad/daemon.json
 fi
 %else
-/sbin/chkconfig --del lcrd
+/sbin/chkconfig --del lcrd &>/dev/null
 %endif
 fi
 
@@ -246,6 +246,12 @@ fi
 %endif
 
 %changelog
+* Thu Sep 15 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.16-6
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: shield upgrade error if lcrd not exist
+
 * Tue Sep 13 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.16-5
 - Type: enhancement
 - ID: NA
