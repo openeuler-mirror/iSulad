@@ -1,6 +1,6 @@
 ## scan-build用法
 
-```
+```bash
 # 以fedora为例
 $ dnf install clang clang-analyzer
 # 编译iSulad

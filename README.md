@@ -66,7 +66,7 @@ CRI interface is implemented based on gRPC. iSulad implemented CRI gRPC Server f
 
 For more information on `iSulad` usage, please see [guide](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html).
 
-**If you want to install  `iSulad`  through rpm package**, please refer to  [rpmbuild_guide](./docs/build_docs/guide/rpmbuild_guide_zh.md).
+**If you want to install  `iSulad`  through the rpm package**, please refer to  [rpmbuild_guide](./docs/build_docs/guide/build_guide_with_rpm.md).
 
 **If you are a developer and want to build `iSulad` from source**, please refer to [build_guide](./docs/build_docs/guide/build_guide.md).
 
@@ -158,11 +158,20 @@ Here are some sample commands to manager containers.
 $ sudo isula ps -a
 ```
 
-- Create a container with busybox named `test`:
+- Create a container with busybox:
 
-```shell
-$ sudo isula create -t -n test busybox
-```
+  - You can create container `test` with default runtime:
+
+  ```sh
+  $ sudo isula create -t -n test busybox
+  ```
+
+  - You also can create container `testrunc` with **runc runtime**:
+
+  ```sh
+  $ sudo isula create -t --runtime runc -n testrunc busybox
+  ```
+
 
 - Start this container `test`:
 

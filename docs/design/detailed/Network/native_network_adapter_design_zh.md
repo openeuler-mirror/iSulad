@@ -1,8 +1,19 @@
+| Author | 刘昊                                       |
+| ------ | ------------------------------------------ |
+| Date   | 2021-02-19                                 |
+| Email  | [liuhao27@huawei.com](liuhao27@huawei.com) |
+
+# 1.方案目标
+
 Native-adaptor主要包括config及容器网络两部分。config模块主要实现了用户对网络的管理功能，包括网络的创建、查询、删除。容器网络模块则主要是针对某个容器进行网络的创建、删除操作。
 
-## 结构体及常量说明
+# 2.总体设计
 
-```
+# 3.接口描述
+
+## 3.1 结构体及常量说明
+
+```c
 struct subnet_scope {
     char *begin;
     char *end;
@@ -65,9 +76,9 @@ struct net_driver {
 - plugin_op记录plugin(bridge/portmap/firewall)及其对应的operation
 - net_driver_ops及net_driver记录了driver(bridge)及其对应的operation
 
-## 对外函数接口说明
+## 3.2 对外函数
 
-```
+```c
 /*
 * 说明：初始化，读取本地存储的network conflist，设置配置文件、bin文件的目录；
 * conf_dir: cni配置文件存储目录；
@@ -152,11 +163,12 @@ int native_config_remove(const char *name, char **res_name);
 * 返回值：成功返回0，失败返回非0
 */
 int native_network_add_container_list(const char *network_name, const char *cont_id);
+
 ```
 
-## 详细设计及流程
+# 4.详细设计
 
-### 容器加入网络流程
+## 4.1 容器加入网络流程
 
 1. 判断容器的网络模式是否为bridge，且容器非系统容器。如果不符合，则直接退出，不需要为容器prepare network
 2. 判断容器网络是否已经启动，已经启动则直接退出
@@ -167,9 +179,10 @@ int native_network_add_container_list(const char *network_name, const char *cont
 7. 依次为容器attach指定的网络平面，并记录结果。如果失败，则detach网络，删除网络命名空间
 8. 更新容器的网络信息，端口映射信息，并落盘
 9. 更新容器内的hosts、resolve.conf文件
-   ![enter image description here](https://images.gitee.com/uploads/images/2021/0330/162647_d85d58af_5609952.png "屏幕截图.png")
 
-### 容器退出网络流程
+![enter image description here](https://images.gitee.com/uploads/images/2021/0330/162647_d85d58af_5609952.png "屏幕截图.png")
+
+## 4.2 容器退出网络流程
 
 1. 判断容器的网络模式是否为bridge，且容器非系统容器。如果不符合，则直接退出，不需要为容器remove network
 2. 如果容器在restart阶段，则跳过remove network阶段
@@ -179,11 +192,12 @@ int native_network_add_container_list(const char *network_name, const char *cont
 6. 更新容器内的hosts、resolve.conf文件
 7. 更新容器的网络信息，端口映射信息，并落盘
 8. 删除容器网络命名空间
-   ![enter image description here](https://images.gitee.com/uploads/images/2021/0330/162736_b4bf0266_5609952.png "屏幕截图.png")
 
-### 网络生成流程
+![enter image description here](https://images.gitee.com/uploads/images/2021/0330/162736_b4bf0266_5609952.png "屏幕截图.png")
 
-#### 主体流程
+## 4.3 网络生成流程
+
+### 主体流程
 
 客户端：
 
@@ -203,13 +217,14 @@ int native_network_add_container_list(const char *network_name, const char *cont
 9. 检查主机上CNI网络插件是否存在
 10. 生成网络配置
 11. 写网络配置文件
-    ![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163307_2027883d_5609952.png "屏幕截图.png")
 
-#### 对外接口变更
+![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163307_2027883d_5609952.png "屏幕截图.png")
+
+### 对外接口变更
 
 命令行
 
-```
+```sh
 ➜  ~ isula network create --help
 
 Usage:  isula network create [OPTIONS] [NETWORK]
@@ -224,7 +239,7 @@ Create a network
 
 grpc 接口
 
-```
+```c
 service NetworkService {
     rpc Create(NetworkCreateRequest) returns (NetworkCreateResponse);
 }
@@ -246,13 +261,13 @@ message NetworkCreateResponse {
 
 rest 接口
 
-```
+```c
 #define NetworkServiceCreate "/NetworkService/Create"
 ```
 
-#### 生成的网络配置文件
+### 生成的网络配置文件
 
-```
+```sh
 ➜  ~ cat /etc/cni/net.d/isulacni-isula-br0.conflist
 {
     "cniVersion": "0.4.0",
@@ -294,9 +309,9 @@ rest 接口
 }
 ```
 
-### 网络查询流程
+## 4.4 网络查询流程
 
-#### 主体流程
+### 主体流程
 
 客户端：
 
@@ -308,20 +323,21 @@ rest 接口
    服务端：
 4. 对接收到的网络name进行校验 
 5. 查询内存中对应的网络。如果存在，则将返回网络信息json。如果没有，则返回未找到。
-   ![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163544_0db4b1ac_5609952.png "屏幕截图.png")
 
-#### 对外接口变更
+![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163544_0db4b1ac_5609952.png "屏幕截图.png")
+
+### 对外接口变更
 
 命令行
 
-```
+```sh
 isula network inspect [OPTIONS] NETWORK [NETWORK...] 
 	-f, --format 	Format the output using the given go template
 ```
 
 grpc 接口
 
-```
+```c
 service NetworkService {
     rpc Inspect(NetworkInspectRequest) returns (NetworkInspectResponse);
 }
@@ -339,13 +355,13 @@ message NetworkInspectResponse {
 
 rest 接口
 
-```
+```c
 #define NetworkServiceInspect "/NetworkService/Inspect"
 ```
 
-### 网络罗列流程
+## 4.5 网络罗列流程
 
-#### 主体流程
+### 主体流程
 
 客户端：
 
@@ -355,13 +371,14 @@ rest 接口
 3. 读取客户端发来的请求信息
 4. 校验filter指定的condition是否合法
 5. 根据用户指定的filter condition筛选出合适的网络，返回给客户端
-   ![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163705_15aec22a_5609952.png "屏幕截图.png")
 
-#### 对外接口变更
+![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163705_15aec22a_5609952.png "屏幕截图.png")
+
+### 对外接口变更
 
 命令行
 
-```
+```sh
 isula network ls [OPTIONS]  
 	-q, --quiet 	Only display network Names
         -f, --filter 	Filter output based on conditions provided
@@ -369,7 +386,7 @@ isula network ls [OPTIONS]
 
 grpc 接口
 
-```
+```c
 service NetworkService {
     rpc List(NetworkListRequest) returns (NetworkListResponse);
 }
@@ -392,13 +409,13 @@ message NetworkListResponse {
 
 rest 接口
 
-```
+```c
 #define NetworkServiceList "/NetworkService/List"
 ```
 
-### 网络删除流程
+## 4.6 网络删除流程
 
-#### 主体流程
+### 主体流程
 
 客户端：
 
@@ -411,19 +428,20 @@ rest 接口
 6. 删除主机上的网桥设备
 7. 删除网络配置文件
 8. 删除内存中的网络信息
-   ![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163852_30fb9316_5609952.png "屏幕截图.png")
 
-#### 对外接口变更
+![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163852_30fb9316_5609952.png "屏幕截图.png")
+
+### 对外接口变更
 
 命令行
 
-```
+```sh
 isula network rm [OPTIONS] NETWORK [NETWORK...] 
 ```
 
 grpc 接口
 
-```
+```c
 service NetworkService {
     rpc Remove(NetworkRemoveRequest) returns (NetworkRemoveResponse);
 }
@@ -441,7 +459,7 @@ message NetworkRemoveResponse {
 
 rest 接口
 
-```
+```c
 #define NetworkServiceRemove "/NetworkService/Remove"
 ```
 

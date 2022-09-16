@@ -1,8 +1,17 @@
+| Author | 高华涛     |
+| ------ | ---------- |
+| Date   | 2021-01-22 |
+| Email  | -          |
+
+# 1.方案目标
+
 cni-operator模块封装libcni模块，为生成提供更加合理友好的网络管理接口，负责网络配置文件的加载更新。
 
-## 网络管理层cni-operator对外接口
+# 2.总体设计
 
-```
+# 3.接口描述
+
+```c
 /*
 * 说明：网络管理模块初始化，完成libcni网络模块的初始化和网络管理层数据初始化；
 * cache_dir: 网络缓存配置文件存储目录；
@@ -66,16 +75,16 @@ int detach_network_plane(const struct cni_manager *manager, const struct cni_net
 int check_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list, struct cni_opt_result **result);
 ```
 
-## 流程分析
+# 4.详细设计
 
-### 加载网络配置文件
+## 4.1 加载网络配置文件
 
 ![输入图片说明](https://images.gitee.com/uploads/images/2021/0122/094638_d03ff180_5626156.png "屏幕截图.png")
 
-### 创建网络流程
+## 4.2 创建网络流程
 
 ![输入图片说明](https://images.gitee.com/uploads/images/2021/0122/094708_ec1f2f75_5626156.png "屏幕截图.png")
 
-### 删除网络流程
+## 4.3 删除网络流程
 
 ![输入图片说明](https://images.gitee.com/uploads/images/2021/0122/094727_20f3222d_5626156.png "屏幕截图.png")

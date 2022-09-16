@@ -1,12 +1,20 @@
-# Build iSulad from source
+# Build and install iSulad from source
 
-If you intend to contribute on iSulad. Thanks for your effort. Every contribution is very appreciated for us.
+Due to the complicated steps of building and installation form source, it is recommended that you install iSuald through the rpm package. For details, please refer to: [rpmbuild_guide](./build_guide_with_rpm_zh.md). If you still want to build and install iSulad from source, please follow the steps below.
 
-## Install basic dependencies on different distribution
+## Auto Build and install iSulad from source on different distribution
 
-These dependencies are required for build:
+### install iSulad from source based on openEuler distribution
 
-### install basic dependencies based on Centos distribution
+You can automatically install isulad on openEuler directly by compiling dependencies (other rpm distributions can also refer to this method, but some package names are inconsistent).
+
+```bash
+dnf builddep iSulad.spec
+```
+
+`tips`：iSulad.spec directly uses the files in the isulad source code.
+
+### install iSulad from source based on Centos distribution
 
 We provided a script to auto install iSulad on centos7, you can just execute the script to install iSulad.
 
@@ -16,7 +24,10 @@ $ cd iSulad/docs/build_docs/guide/script
 $ sudo ./install_iSulad_on_Centos_7.sh
 ```
 
-### install basic dependencies based on Ubuntu distribution
+### install iSulad from source based on Ubuntu distribution
+
+We also provided a script to auto install iSulad on Ubuntu20.04, you can just execute the script to install iSulad.
+
 ```sh
 $ git clone https://gitee.com/openeuler/iSulad.git
 $ cd iSulad/docs/build_docs/guide/script
@@ -24,20 +35,32 @@ $ sudo chmod +x ./install_iSulad_on_Ubuntu_20_04_LTS.sh
 $ sudo ./install_iSulad_on_Ubuntu_20_04_LTS.sh
 ```
 
-## Build and install other dependencies from source
-These dependencies may not be provided by your package manager. So you need to build them from source.
+`tips`:  If you want to keep the source of all dependencies, you can comment `rm -rf $BUILD_DIR` in the script.
 
-Please use the protobuf and grpc came with your distribution, if not exists then need to build them from source.
+## Build and install iSulad from source by yourself
 
-Note: grpc-1.22 can not support GCC 9+.
+After executing the automated installation command, if there are dependencies  that do not exist in the package management or the versions do not meet the requirements, you can optionally build them from source.
 
-### set ldconfig and pkgconfig
+**Note: grpc-1.22 can not support GCC 9+**.
+
+Similarly, if you want to build and install iSulad from source step by step, you can follow the steps below to build and install basic dependencies, and then build and install specific versions of key dependencies.
+
+### build and install base dependencies from source 
+
+#### set ldconfig and pkgconfig
+
+The default installation path is `/usr/local/lib/`, which needs to be added to `PKG_CONFIG_PATH` and `LD_LIBRARY_PATH`, so that the system can find the packages and lib libraries. If the installed path is `/usr/lib/`, you can ignore this step.
+
 ```bash
 $ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 $ export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH
 $ sudo -E echo "/usr/local/lib" >> /etc/ld.so.conf
 ```
-### build and install protobuf
+
+**Note:** If the build is interrupted, you must re-execute the above commands to set the paths of ldconfig and pkgconfig before building the source again.
+
+#### build and install protobuf
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/protobuf.git
 $ cd protobuf
@@ -51,7 +74,8 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-### build and install c-ares
+#### build and install c-ares
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/c-ares.git
 $ cd c-ares
@@ -65,7 +89,8 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-### build and install grpc
+#### build and install grpc
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/grpc.git
 $ cd grpc
@@ -77,7 +102,7 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-### build and install libevent
+#### build and install libevent
 
 ```bash
 $ git clone https://gitee.com/src-openeuler/libevent.git
@@ -90,7 +115,7 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-### build and install libevhtp
+#### build and install libevhtp
 
 ```bash
 $ git clone https://gitee.com/src-openeuler/libevhtp.git
@@ -106,7 +131,8 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-### build and install http-parser
+#### build and install http-parser
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/http-parser.git
 $ cd http-parser
@@ -118,7 +144,8 @@ $ sudo -E make CFLAGS="-Wno-error" install
 $ sudo -E ldconfig
 ```
 
-### build and install libwebsockets
+#### build and install libwebsockets
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/libwebsockets.git
 $ cd libwebsockets
@@ -134,10 +161,19 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-## Build and install specific versions dependencies from source
-iSulad depend on some specific versions dependencies.
+### Build and install specific versions of critical dependencies from source 
 
-### build and install lxc
+Finally, because iSulad depends on some specific versions of key dependencies, and each dependency is called through a functional interface, **you must ensure that the versions of all key dependencies are consistent**.
+
+The consistency of the version includes the following four aspects:
+
+- Branch consistency: build and install the same branch of each dependency;
+- Consistent releases: Since each isulad release has an adapted dependency release, you need to build and install the dependencies of the specified release;
+- Specific OS: If you use a specific OS version of [openEuler](https://openeuler.org/zh/download/), you need to obtain the `src.rpm` package of each dependency through the package management tool to obtain the source to build and install;
+- Src-openeuler: If the dependencies are obtained from the [src-openeuler](https://gitee.com/src-openeuler) community, it is also necessary to keep the dependencies built with the same branch;
+
+#### build and install lxc
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/lxc.git
 $ cd lxc
@@ -150,7 +186,8 @@ $ sudo -E make -j
 $ sudo -E make install
 ```
 
-### build and install lcr
+#### build and install lcr
+
 ```bash
 $ git clone https://gitee.com/openeuler/lcr.git
 $ cd lcr
@@ -161,7 +198,8 @@ $ sudo -E make -j
 $ sudo -E make install
 ```
 
-### build and install clibcni
+#### build and install clibcni
+
 ```bash
 $ git clone https://gitee.com/openeuler/clibcni.git
 $ cd clibcni
@@ -172,7 +210,8 @@ $ sudo -E make -j
 $ sudo -E make install
 ```
 
-### build and install iSulad
+#### build and install iSulad
+
 ```sh
 $ git clone https://gitee.com/openeuler/iSulad.git
 $ cd iSulad

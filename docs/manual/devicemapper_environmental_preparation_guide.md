@@ -1,24 +1,24 @@
-# devicemapper的环境准备
+# devicemapper environment preparation
 
-1. 安装lvm逻辑卷管理包：
+1. Install the lvm logical volume management package:
 
-```bash
+```shell
 # apt-get install lvm2
 ```
 
-2. 查看当前主机上可用块设备：
+2. View available block devices on the host:
 
-```bash
+```shell
 # lsblk
 ```
 
-3. 执行`isulad_lvm_conf.sh`配置isulad-thinpool:
+3. Use `isulad_lvm_conf.sh` to configure isulad-thinpool
 
-```bash
+```sh
 #sh -x isulad_lvm_conf.sh sda8
 ```
 
-`isulad_lvm_conf.sh`中的内容如下：
+The contents of `isulad_lvm_conf.sh` are as follows:
 
 ```shell
 #!/bin/bash
@@ -54,21 +54,22 @@ lvs -o+seg_monitor
 exit 0
 ```
 
-4. 配置`isulad`
+4. Configure `isulad`
 
-   在`/etc/isulad/daemon.json`中配置`storage-driver`和`storage-opts`：
+   Configure the `storage-driver` and `storage-opts`  in `/etc/isulad/daemon.json`:
 
-   ```txt
-   "storage-driver": "devicemapper",
-   "storage-opts": [
-           "dm.thinpooldev=/dev/mapper/isulad-thinpool",
-           "dm.fs=ext4",
-           "dm.min_free_space=10%"
-    ],
-   ```
+```txt
+"storage-driver": "devicemapper",
+"storage-opts": [
+        "dm.thinpooldev=/dev/mapper/isulad-thinpool",
+        "dm.fs=ext4",
+        "dm.min_free_space=10%"
+ ],
+```
 
-5. 重启`isulad`。
+5. Restart `isulad`.
 
    ```bash
    $ sudo systemctl restart isulad
    ```
+

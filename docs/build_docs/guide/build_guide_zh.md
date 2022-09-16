@@ -1,20 +1,18 @@
-# 源码编译iSulad
+# 源码编译安装iSulad
 
-我们感谢为iSulad做的任何贡献。
+源码编译安装的步骤复杂，不易操作，推荐您使用rpm包安装iSuald，具体请参照：[rpmbuild_guide](./build_guide_with_rpm_zh.md)。若您仍想源码编译安装iSulad，请参照以下步骤。
 
-## 各发行版本的基本依赖安装
-
-这些依赖是编译依赖的基础组件：
+## 各发行版本上自动化源码编译安装iSulad
 
 ### openEuler的安装命令
 
-openEuler可以直接通过编译依赖自动安装的方式（其他rpm的发行版本也可以参考，但是存在部分包名不一致的情况），具体如下：
+在openEuler上可以直接通过编译依赖自动安装（其他rpm的发行版本也可以参考这种方式，但是存在部分包名不一致的情况），具体如下：  
 
 ```bash
-dnf builddep iSulad.spec
+ dnf builddep iSulad.spec
 ```
 
-注：iSulad.spec直接用源码中的文件即可。
+**注意**：iSulad.spec直接用源码中的文件即可。
 
 ### Centos的安装命令
 
@@ -27,6 +25,9 @@ $ sudo ./install_iSulad_on_Centos_7.sh
 ```
 
 ### Ubuntu的安装命令
+
+我们同样在代码仓中提供了在Ubuntu上自动化安装的脚本，您只需要执行这个脚本就可以自动编译安装iSulad以及其依赖的组件。
+
 ```sh
 $ git clone https://gitee.com/openeuler/iSulad.git
 $ cd iSulad/docs/build_docs/guide/script
@@ -34,21 +35,32 @@ $ sudo chmod +x ./install_iSulad_on_Ubuntu_20_04_LTS.sh
 $ sudo ./install_iSulad_on_Ubuntu_20_04_LTS.sh
 ```
 
-## 从源码构建和安装关键依赖
-下面的依赖组件，你的包管理中可能不存在，或者版本不满足要求。因此，需要从源码编译安装。protobuf和grpc建议直接通过包管理安装，除非没有或者版本太老。
+**注意**：若需要保留各种依赖的源码，可将脚本中的`rm -rf $BUILD_DIR`注释。
 
-***注意：grpc-1.22不支持GCC 9+。***
+## 逐步源码构建和安装iSulad
 
-### 设置ldconfig和pkgconfig的路径
+若您在使用自动化安装命令后，存在依赖组件在包管理中不存在或版本不满足要求，则可有选择的使用以下源码构建和安装所需依赖组件。
 
-编译安装的默认路径为`/usr/local/lib/`，因此需要把该路径添加到`PKG_CONFIG_PATH`和`LD_LIBRARY_PATH`，从而系统能找到我们编译安装的软件包和lib库。如果安装的`/usr/lib/`，可以忽略这一步。
+**注意：grpc-1.22不支持GCC 9+**。
+
+同样，若您想要自己逐步源码编译安装iSulad，则可以按照以下步骤依次源码构建和安装基础依赖，之后再源码构建和安装关键依赖的特定版本。
+
+### 源码构建和安装基础依赖
+
+#### 设置ldconfig和pkgconfig的路径
+
+编译安装的默认路径为`/usr/local/lib/`，因此需要把该路径添加到`PKG_CONFIG_PATH`和`LD_LIBRARY_PATH`，从而系统能找到我们编译安装的软件包和lib库。如果安装的路径为`/usr/lib/`，可以忽略这一步。
 
 ```bash
 $ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 $ export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH
 $ sudo -E echo "/usr/local/lib" >> /etc/ld.so.conf
 ```
-### 编译安装protobuf
+
+**注意：**若编译中断，再次进入系统进行源码编译之前，必须重新利用上述命令设置ldconfig和pkgconfig的路径。
+
+#### 编译安装protobuf
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/protobuf.git
 $ cd protobuf
@@ -62,7 +74,8 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-### 编译安装c-ares
+#### 编译安装c-ares
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/c-ares.git
 $ cd c-ares
@@ -76,7 +89,8 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-### 编译安装grpc
+#### 编译安装grpc
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/grpc.git
 $ cd grpc
@@ -88,7 +102,7 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-### 编译安装libevent
+#### 编译安装libevent
 
 ```bash
 $ git clone https://gitee.com/src-openeuler/libevent.git
@@ -101,7 +115,7 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-### 编译安装libevhtp
+#### 编译安装libevhtp
 
 ```bash
 $ git clone https://gitee.com/src-openeuler/libevhtp.git
@@ -117,7 +131,7 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-### 编译安装http-parser
+#### 编译安装http-parser
 
 ```bash
 $ git clone https://gitee.com/src-openeuler/http-parser.git
@@ -130,7 +144,8 @@ $ sudo -E make CFLAGS="-Wno-error" install
 $ sudo -E ldconfig
 ```
 
-### 编译安装libwebsockets
+#### 编译安装libwebsockets
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/libwebsockets.git
 $ cd libwebsockets
@@ -146,15 +161,17 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-## 编译安装特定依赖版本
-iSulad依赖一些特定版本的组件，由于各组件是通过函数接口使用，因此，**必须保证各组件版本一致**。例如：
+### 源码构建和安装关键依赖的特定版本
 
-- 统一使用各组件的master分支的代码进行构建；
-- 后续的releases版本会增加依赖的组件的版本号；
-- 也统一可以从[openEuler](https://openeuler.org/zh/download/)的特定OS版本，通过包管理工具获取各组件的`src.rpm`包的方式获取源码；
-- 也可以到[src-openeuler](https://gitee.com/src-openeuler)社区获取各组件相同分支的代码；
+最后，因为iSulad依赖一些特定版本的关键依赖组件，且各组件是通过函数接口调用，因此，**必须保证各关键依赖组件版本一致**。版本的一致包括以下四个方面：
 
-### 编译安装lxc
+- 分支一致：统一使用各组件的相同分支进行构建；
+- releases一致：每个isulad的release都有适配的组件release，使用指定release的组件进行构建；
+- 特定OS：若使用的为[openEuler](https://openeuler.org/zh/download/)的特定OS版本，则需要通过包管理工具获取各组件的`src.rpm`包的，从而获取源码进行构建；
+- src-openeuler：若从[src-openeuler](https://gitee.com/src-openeuler)社区获取各组件，也需要保持组件都使用相同分支进行构建；
+
+#### 编译安装lxc
+
 ```bash
 $ git clone https://gitee.com/src-openeuler/lxc.git
 $ cd lxc
@@ -167,7 +184,8 @@ $ sudo -E make -j $(nproc)
 $ sudo -E make install
 ```
 
-### 编译安装lcr
+#### 编译安装lcr
+
 ```bash
 $ git clone https://gitee.com/openeuler/lcr.git
 $ cd lcr
@@ -178,7 +196,8 @@ $ sudo -E make -j $(nproc)
 $ sudo -E make install
 ```
 
-### 编译安装clibcni
+#### 编译安装clibcni
+
 ```bash
 $ git clone https://gitee.com/openeuler/clibcni.git
 $ cd clibcni
@@ -189,7 +208,8 @@ $ sudo -E make -j $(nproc)
 $ sudo -E make install
 ```
 
-### 编译安装iSulad
+#### 编译安装iSulad
+
 ```bash
 $ git clone https://gitee.com/openeuler/iSulad.git
 $ cd iSulad

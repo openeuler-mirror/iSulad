@@ -1,6 +1,9 @@
-# Seccomp重构设计文档
+| Author | 程泽睿志                                             |
+| ------ | ---------------------------------------------------- |
+| Date   | 2021-12-30                                           |
+| Email  | [chengzeruizhi@huawei.com](chengzeruizhi@huawei.com) |
 
-## 重构目的
+# 1.重构目的
 
 Seccomp 代表安全计算模式（secure computing mode），用于限制进程可以从用户空间向内核进行的调用。
 
@@ -8,7 +11,7 @@ iSulad通过对标准配置文件的读取生成docker seccomp spec，随后将�
 
 本次重构拟通过在程序运行时获取当前机器架构，在docker/oci seccomp spec转换过程中针对性获取架构，以减少文件写入时间，提升容器启动速度。
 
-## 重构思路
+# 2.重构方案
 
 在spec转换时，通过uname读取当前机器架构，并将架构转换成seccomp标准格式，对应关系如下（目前仅支持x86和arm架构）：
 
@@ -18,7 +21,9 @@ iSulad通过对标准配置文件的读取生成docker seccomp spec，随后将�
 
 之后遍历docker seccomp spec中的所有架构，找到所需要的架构将它及其所有子架构加入oci seccomp spec中。如此这般，下层容器运行时只会将当前系统对应架构的系统调用落盘。
 
-## 时间性能差异
+# 3.对比差异
+
+## 3.1 时间性能差异
 
 ![x86_64 parallel](../../../images/x86_64parallel.png) ![arm64 parallel](../../../images/arm64parallel.png)
 

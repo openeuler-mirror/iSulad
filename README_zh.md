@@ -1,4 +1,4 @@
-[English version](README.md)
+- [English version](README.md)
 
 <img src="./logo/isula-logo.png" alt="iSulad" style="zoom:80%;" />
 
@@ -66,7 +66,7 @@ CRI接口基于gRPC实现。iSulad遵循CRI接口规范，实现 CRI gRPC Server
 
 详细的`iSulad`用法指南请查看 [guide](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html)
 
-**如果您想要使用rpm包安装`iSulad`**，请查看rpm编译指南 [rpmbuild_guide](./docs/build_docs/guide/rpmbuild_guide_zh.md)
+**如果您想要使用rpm包安装`iSulad`**，请查看rpm编译指南 [rpmbuild_guide](./docs/build_docs/guide/build_guide_with_rpm_zh.md)
 
 **如果您是一名开发者，想要从源代码构建`iSulad`**，请查看源码编译指南 [build_guide](./docs/build_docs/guide/build_guide_zh.md)
 
@@ -154,11 +154,20 @@ $ sudo isulad
 $ sudo isula ps -a
 ```
 
-- 通过`busybox`镜像创建容器`test`：
+- 通过`busybox`镜像创建容器：
 
-```shell
-$ sudo isula create -t -n test busybox
-```
+  - 采用默认的runtime创建容器`test`
+
+  ```sh
+  $ sudo isula create -t -n test busybox
+  ```
+
+    - 创建**runtime为runc**的容器`testrunc`
+
+  ```sh
+  $ sudo isula create -t --runtime runc -n testrunc busybox
+  ```
+
 
 - 启动容器`test`:
 
@@ -180,7 +189,7 @@ $ sudo isula rm test
 
 #### CRI
 
-`iSulad`可以通过CRI接口与kubernetes集成，如何与kubernetes集成请参考[k8s_integration](./docs/manual/k8s_integration.md)。
+`iSulad`可以通过CRI接口与kubernetes集成，如何与kubernetes集成请参考[k8s_integration](./docs/manual/k8s_integration_zh.md)。
 
 ###  Operations about native network
 

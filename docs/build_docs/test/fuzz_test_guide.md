@@ -1,6 +1,6 @@
-## 安装编译fuzz用例依赖包
+## Build and install fuzz dependencies
 
-除了安装编译lxc/lcr/iSulad的编译依赖外，还需要安装如下依赖并配置PATH环境变量指向gclang所在二进制目录：
+You need to install the following dependencies and configure the PATH environment variable to point to the binary directory where gclang is located:
 
 ```bash
 $ yum makecache
@@ -11,33 +11,33 @@ $ go get -v github.com/SRI-CSL/gllvm/cmd/...
 $ export PATH=/root/go/bin:$PATH
 ```
 
-##  编译iSulad
+##  Build iSulad
 
 ```bash
-# 进入iSulad源码所在目录
+# cd the iSulad root directory
 $ mkdir build && cd build
 $ cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_ASAN=ON -DENABLE_FUZZ=ON ..
 $ cmake -DCMAKE_BUILD_TYPE=Debug -DGCOV=ON -DENABLE_ASAN=ON -DENABLE_FUZZ=ON ..
 $ make -j $(nproc)
 ```
 
-##  执行fuzz用例
+##  Execute fuzz test cases
 
-执行所有的fuzz用例：
+Execute all fuzz test cases:
 
 ```bash
 $ cd test/fuzz/
 $ ./fuzz.sh
 ```
 
-执行部分fuzz用例：
+Execute some fuzz test cases:
 
 ```bash
 $ cd test/fuzz/
 $ ./fuzz.sh test_gr_obj_parser_fuzz test_pw_obj_parser_fuzz test_volume_mount_spec_fuzz test_volume_parse_volume_fuzz
 ```
 
-用例执行成功会在iSulad根目录生成执行过程的日志
+If the test is successful, a log will be generated in the iSulad root directory:
 
 ```bash
 $ ls -la *.log
@@ -47,10 +47,11 @@ $ ls -la *.log
 -rw-------. 1 root root 3411 Jul  4 10:23 test_volume_parse_volume_fuzz.log
 ```
 
-##  覆盖率信息
+##  Coverage information
 
-可以使用第三方工具收集覆盖率信息并进行分析，例如使用lcov收集cover.info覆盖率信息，其中ISULAD_SRC_PATH填写iSulad源代码路径：
+You can use third-party tools to collect coverage information and analyze it. For example, you can run the following command to let lcov collect cover.info, where ISULAD_SRC_PATH is filled with iSulad source code path:
 
 ```bash
 $ lcov -gcov-tool /usr/bin/llvm-gcov.sh -c -d -m $ISULAD_SRC_PATH -o cover.info
 ```
+
