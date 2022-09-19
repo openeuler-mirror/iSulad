@@ -1,4 +1,4 @@
-# Integrate kubernetes
+# kubernetes integration
 
 ## Configuration
 
@@ -39,7 +39,7 @@
 
 ## Use  RuntimeClass
 
-RuntimeClass is used for selecting the container runtime configuration to use to run a pod’s containers, see [runtime-class](https://kubernetes.io/docs/concepts/containers/runtime-class/). Currently, only `kata-containers` and `runc`  this two `oci runtime` are supported.
+RuntimeClass is a feature for selecting the container runtime configuration. The container runtime configuration is used to run a Pod's containers. For more information, please refer to [runtime-class](https://kubernetes.io/docs/concepts/containers/runtime-class/). Currently `isulad` only supports `kata-containers` and `runc`.
 
 1. Configure `isulad` in `/etc/isulad/daemon.json`:
 
@@ -61,7 +61,7 @@ RuntimeClass is used for selecting the container runtime configuration to use to
 
    In some scenarios, using block device type as storage drivers is a better choice, such as run a `kata-containers`. The procedure for configuring the `devicemapper` is as follows:
 
-   Create ThinPool:
+   First, create ThinPool:
 
    ```bash
    $ sudo pvcreate /dev/sdb1 # /dev/sdb1 for example
@@ -72,7 +72,7 @@ RuntimeClass is used for selecting the container runtime configuration to use to
    $ sudo lvchange --metadataprofile isulad-thinpool isulad/thinpool
    ```
 
-   Add configuration for `devicemapper` in `/etc/isulad/daemon.json`:
+   Then,add configuration for `devicemapper` in `/etc/isulad/daemon.json`:
 
    ```json
    "storage-driver": "devicemapper"
@@ -89,7 +89,7 @@ RuntimeClass is used for selecting the container runtime configuration to use to
    $ sudo systemctl restart isulad
    ```
 
-4. Define `kata-runtime.yaml` for example:
+4. Create `kata-runtime.yaml`. For example:
 
    ```yaml
    apiVersion: node.k8s.io/v1beta1
@@ -101,7 +101,7 @@ RuntimeClass is used for selecting the container runtime configuration to use to
 
    Execute `kubectl apply -f kata-runtime.yaml`
 
-5. Define pod spec `kata-pod.yaml` for example:
+5. Create pod spec `kata-pod.yaml`. For example:
 
    ```yaml
    apiVersion: v1

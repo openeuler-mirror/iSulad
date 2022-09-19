@@ -1,8 +1,20 @@
+| Author | 刘昊                                    |
+| ------ | ------------------------------------------ |
+| Date   | 2021-03-30                                 |
+| Email  | [liuhao27@huawei.com](liuhao27@huawei.com) |
+
+# 1.方案目标
+
 CRI适配器用于实现CRI的网络功能，用于Pod加入、退出和网络信息获取；以及对网络配置文件的管理。
 
-## 适配器对外接口
+# 2.总体设计
 
-```
+# 3.接口描述
+
+```c
+## 
+
+​```
 /*
 * 说明：适配器初始化，设置cni配置文件所在目录，cni插件所在目录列表；
 * conf_dir: cni配置文件存储目录；
@@ -47,14 +59,17 @@ int adaptor_cni_teardown(const network_api_conf *conf, network_api_result_list *
 * 返回值：成功返回0，失败返回非0
 */
 int adaptor_cni_check(const network_api_conf *conf, network_api_result_list *result);
+​```
+
+## 
 ```
 
-## 流程分析
+# 4.详细设计
 
-### 更新流程
+## 4.1 更新流程
 
 ![输入图片说明](https://images.gitee.com/uploads/images/2021/0114/170516_0313b8bc_5595769.png "屏幕截图.png")
 
-### 网络操作流程
+## 4.2 网络操作流程
 
 ![输入图片说明](https://images.gitee.com/uploads/images/2021/0115/102633_cf3027eb_5595769.png "屏幕截图.png")

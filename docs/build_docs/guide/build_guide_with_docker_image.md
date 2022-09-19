@@ -1,14 +1,14 @@
-# 搭建iSulad开发环境
+# Build guide with docker image
 
-本文主要是指导iSulad社区开发者，如何利用镜像快速构建iSulad的开发、编译、运行、测试环境。减少环境准备的成本。
+This guide is mainly about how to use the image to quickly build the development environment of iSulad. Reduce the cost of environmental preparation.
 
-## 准备编译容器镜像
+## Prepare the container image
 
-以openEuler-21.03的docker镜像为例。
+Take the docker image of openEuler-21.03 as an example.
 
-首先从官方网站下载对应的镜像：`wget https://repo.openeuler.org/openEuler-21.03/docker_img/x86_64/openEuler-docker.x86_64.tar.xz`
+First download the image from the official website: `wget https://repo.openeuler.org/openEuler-21.03/docker_img/x86_64/openEuler-docker.x86_64.tar.xz`
 
-以docs提供的[dockerfile](./dockerfiles/isulad_build_in_openeuler.Dockerfile)，准备构建基础镜像：
+Prepare to build the base image with the [dockerfile](./dockerfiles/isulad_build_in_openeuler.Dockerfile) provided by the docs：
 
 ```bash
 $ mkdir -p ./build-home
@@ -18,22 +18,22 @@ $ docker build -t isulad_build:v1 -f isulad_build_in_openeuler.Dockerfile .
 $ popd
 ```
 
-## 从源码构建
+## build and install isulad
 
-### 启动构建容器
+### run container
 
 ```bash
 $ docker run -itd -v /root/tmp/:/var/lib/isulad -v /sys/fs/cgroup/:/sys/fs/cgroup -v /lib/modules:/lib/modules --tmpfs /tmp:exec,mode=777 --tmpfs /run:exe
 c,mode=777 --privileged isulad_build:v1 sh
 ```
 
-注意：
+**Note**：
 
-- 需要挂载一个主机目录到容器中，用于isulad的工作目录；
-- 需要privileged权限；
-- 需要挂入modules目录；
+- A host directory must be mounted to the container for isulad's working directory;
+- Requires privileged permission;
+- Must be linked to the modules directory;
 
-### 编译安装lxc
+### build and install lxc
 
 ```bash
 git clone https://gitee.com/src-openeuler/lxc.git
@@ -48,7 +48,7 @@ popd
 popd
 ```
 
-### 编译安装lcr
+### build and install lcr
 
 ```bash
 ldconfig
@@ -64,7 +64,7 @@ popd
 popd
 ```
 
-### 编译安装clibcni
+### build and install clibcni
 
 ```bash
 ldconfig
@@ -80,7 +80,7 @@ popd
 popd
 ```
 
-### 编译安装lib-shim-v2
+### build and install lib-shim-v2
 
 ```bash
 mkdir -p ~/.cargo
@@ -101,21 +101,21 @@ popd
 popd
 ```
 
-### 编译安装iSulad
+### build and install iSulad
 
 ```bash
 ldconfig
 rm -rf iSulad
 git clone https://gitee.com/openeuler/iSulad.git
 pushd iSulad
-# 修改代码
+# modify code
 rm -rf build
 mkdir build
 pushd build
 cmake -DDEBUG=ON -DENABLE_UT=ON -DENABLE_SHIM_V2=ON ../ || exit 1
 make -j $(nproc) || exit 1
 make install
-# 运行UT测试保障修改无问题
+# Run UT test to ensure correct modification
 ctest -V || exit 1
 popd
 popd
