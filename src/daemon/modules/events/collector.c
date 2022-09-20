@@ -1011,22 +1011,18 @@ out:
     return ret;
 }
 
-int events_module_init(char **msg)
+int events_module_init()
 {
-    int ret = 0;
-
     if (newcollector()) {
-        *msg = "Create collector thread failed";
-        ret = -1;
-        goto out;
+        ERROR("Create collector thread failed");
+        return -1;
     }
 
     if (start_monitored()) {
-        *msg = g_isulad_errmsg ? g_isulad_errmsg : "Failed to init cgroups path";
-        ret = -1;
-        goto out;
+        ERROR("%s", g_isulad_errmsg ? g_isulad_errmsg : "Failed to init cgroups path");
+        return -1;
     }
 
-out:
-    return ret;
+    INFO("Event module started");
+    return 0;
 }

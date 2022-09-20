@@ -40,7 +40,7 @@ int events_subscribe(const char *name, const types_timestamp_t *since, const typ
 
 struct isulad_events_format *dup_event(const struct isulad_events_format *event);
 
-int events_module_init(char **msg);
+int events_module_init();
 
 #ifdef __cplusplus
 }
