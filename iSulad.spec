@@ -1,5 +1,5 @@
 %global _version 2.0.16
-%global _release 6
+%global _release 7
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -91,15 +91,10 @@ cd build
 rm -rf %{buildroot}
 cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
-install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
-install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
-
-install -m 0644 ./src/libisulad_tools.so  %{buildroot}/%{_libdir}/libisulad_tools.so
-
-install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
-chmod +x %{buildroot}/%{_libdir}/libisula.so
-chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
-chmod +x %{buildroot}/%{_libdir}/libisulad_img.so
+install -m 0755 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
+install -m 0755 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+install -m 0755 ./src/libisulad_tools.so  %{buildroot}/%{_libdir}/libisulad_tools.so
+install -m 0755 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
 
 install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
@@ -247,6 +242,12 @@ fi
 %endif
 
 %changelog
+* Tue Sep 20 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.16-7
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: change libisulad_tools.so mode
+
 * Thu Sep 15 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.16-6
 - Type: enhancement
 - ID: NA
