@@ -10,7 +10,7 @@
 
 ## Architecture
 
-You can see `iSulad`  architecture on [architecture](./docs/design/architecture_en.md).
+You can see `iSulad`  architecture in [architecture](./docs/design/architecture.md).
 
 ## Function
 
@@ -64,11 +64,13 @@ CRI interface is implemented based on gRPC. iSulad implemented CRI gRPC Server f
 
 ## Getting Started
 
-For more information on `iSulad` usage, please see [guide](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html).
+**For more information on `iSulad` usage**, please see [openeuler official manual](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html).
 
-**If you want to install  `iSulad`  through the rpm package**, please refer to  [rpmbuild_guide](./docs/build_docs/guide/build_guide_with_rpm.md).
+**For the development guide on `iSulad`**, please see  [development_guide](./docs/build_docs/README.md).
 
-**If you are a developer and want to build `iSulad` from source**, please refer to [build_guide](./docs/build_docs/guide/build_guide.md).
+**For the user manual on `iSulad`**, please see [manual](./docs/manual/README.md).
+
+**For the desgin docs on `iSulad`**, please see [desgin](./docs/design/README.md).
 
 ### Installing
 
@@ -193,11 +195,7 @@ $ sudo isula rm test
 
 #### CRI
 
-`iSulad` can be integrated with kubernetes through the CRI interface. For  integrating with kubernetes, please refer to [k8s_integration](./docs/manual/k8s_integration.md)。
-
-###  Operations about native network
-
-For using native network in `iSulad`, please refer to [native_network](./docs/manual/native_network.md)。
+`iSulad` can be integrated with kubernetes through the CRI interface. For integrating with kubernetes, please refer to [k8s_integration](./docs/manual/k8s_integration.md).
 
 ##  Performance
 

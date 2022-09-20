@@ -64,11 +64,13 @@ CRI接口基于gRPC实现。iSulad遵循CRI接口规范，实现 CRI gRPC Server
 
 ## Getting Started
 
-详细的`iSulad`用法指南请查看 [guide](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html)
+**详细的`iSulad`用法指南**，请查看 [openeuler官方手册](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html)。
 
-**如果您想要使用rpm包安装`iSulad`**，请查看rpm编译指南 [rpmbuild_guide](./docs/build_docs/guide/build_guide_with_rpm_zh.md)
+**`iSulad`开发指南**，请查看 [development_guide](./docs/build_docs/README_zh.md)。
 
-**如果您是一名开发者，想要从源代码构建`iSulad`**，请查看源码编译指南 [build_guide](./docs/build_docs/guide/build_guide_zh.md)
+**`iSulad`用户手册**，请查看 [manual](./docs/manual/README_zh.md)。
+
+**`iSulad`设计文档**，请查看 [desgin](./docs/design/README_zh.md)。
 
 ### Installing
 
@@ -190,10 +192,6 @@ $ sudo isula rm test
 #### CRI
 
 `iSulad`可以通过CRI接口与kubernetes集成，如何与kubernetes集成请参考[k8s_integration](./docs/manual/k8s_integration_zh.md)。
-
-###  Operations about native network
-
-关于如何在`iSulad`中使用 native network，请参考[native_network](./docs/manual/native_network_zh.md)。
 
 ##  Performance
 
