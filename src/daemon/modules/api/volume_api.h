@@ -60,7 +60,7 @@ struct volume_options {
     char *ref;
 };
 
-int volume_init(char *root_dir);
+int volume_init(const char *root_dir);
 
 int register_driver(char *name, volume_driver *driver);
 

@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-int register_local_volume(char *root_dir);
+int register_local_volume(const char *root_dir);
 
 struct volume * local_volume_create(char *name);
 
