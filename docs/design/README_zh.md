@@ -20,7 +20,7 @@
 
 ## Events
 
-- 查看 events 模块的设计文档： [events_design](./detailed/Events/events_design.md) 。
+- 查看 events 模块的设计文档： [events_design](./detailed/Events/events_design_zh.md) 。
 
 ## Image
 
