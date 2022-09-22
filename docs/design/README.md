@@ -48,8 +48,8 @@ This section contains some design documents for users who want to learn more abo
 
 ## Security
 
-- You can see how the seccomp is optimized in [seccomp_optimization](./detailed/Security/seccomp_optimization_zh.md).
+- You can see how the seccomp is optimized in [seccomp_optimization](./detailed/Security/seccomp_optimization.md).
 
 ## Volume
 
-- You can see how the local volume modules are designed in [local_volume_design](./detailed/Volume/local_volume_design_zh.md).
+- You can see how the local volume modules are designed in [local_volume_design](./detailed/Volume/local_volume_design.md).
