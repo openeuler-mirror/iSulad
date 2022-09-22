@@ -68,8 +68,8 @@ int adaptor_cni_check(const network_api_conf *conf, network_api_result_list *res
 
 ## 4.1 更新流程
 
-![输入图片说明](https://images.gitee.com/uploads/images/2021/0114/170516_0313b8bc_5595769.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0114/170516_0313b8bc_5595769.png )
 
 ## 4.2 网络操作流程
 
-![输入图片说明](https://images.gitee.com/uploads/images/2021/0115/102633_cf3027eb_5595769.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0115/102633_cf3027eb_5595769.png )

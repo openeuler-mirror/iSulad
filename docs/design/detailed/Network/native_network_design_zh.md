@@ -25,13 +25,11 @@ CRI接口中通过对CNI的封装，实现了容器网络的能力。其高度�
 
 整体结构如下：
 
-![输入图片说明](https://images.gitee.com/uploads/images/2020/1228/161128_5ca842d8_5595769.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2020/1228/161128_5ca842d8_5595769.png )
 
 序列图如下：
 
-![输入图片说明](https://images.gitee.com/uploads/images/2021/0219/092345_561c8afa_5595769.png "屏幕截图.png")
-
-为了更好的完善iSulad的使用场景，Native网络支持是很重要的，常用的测试、开发场景基本都是通过客户端的方式启动容器进行的。因此，本文详细说明iSulad的Native网络设计。
+![](https://images.gitee.com/uploads/images/2021/0219/092345_561c8afa_5595769.png)
 
 # 3.接口描述
 
@@ -190,6 +188,14 @@ int network_module_exist(const char *type, const char *name);
 
 为上层提供CNI的基础能力，根据传入的CNI网络配置信息完成CNI网络的构建、删除、检查等功能。当前libcni模块已提供了`v0.3.0`版本的能力，当前迭代需要升级到`v0.4.0`，而`v0.4.0`需要支持`check`和`cache`机制。如下图红色部分标识的部分。
 
-![输入图片说明](https://images.gitee.com/uploads/images/2020/1228/161204_2d5abaa1_5595769.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2020/1228/161204_2d5abaa1_5595769.png)
 
-## 其余模块见各子模块的详细设计
+## 4.2 adaptor模块
+
+1. 查看 CRI adapter 模块的设计文档： [CRI_adapter_design](./cni_operator_design_zh.md) 。
+
+2. 查看 native network adapter 模块的设计文档： [native_network_adapter_design](./native_network_adapter_design_zh.md) 。
+
+## 4.3 cni-operator模块
+
+- 查看 cni operator 模块的设计文档： [cni_operator_design](./cni_operator_design_zh.md) 。

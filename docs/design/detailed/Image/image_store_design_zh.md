@@ -13,7 +13,7 @@
 
 # 2.总体设计
 
-![输入图片说明](https://images.gitee.com/uploads/images/2020/0327/160234_e46b36bc_5595733.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2020/0327/160234_e46b36bc_5595733.png)
 
 # 3.接口描述
 
