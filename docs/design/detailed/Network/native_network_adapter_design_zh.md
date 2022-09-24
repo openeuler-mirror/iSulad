@@ -180,7 +180,7 @@ int native_network_add_container_list(const char *network_name, const char *cont
 8. 更新容器的网络信息，端口映射信息，并落盘
 9. 更新容器内的hosts、resolve.conf文件
 
-![enter image description here](https://images.gitee.com/uploads/images/2021/0330/162647_d85d58af_5609952.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0330/162647_d85d58af_5609952.png )
 
 ## 4.2 容器退出网络流程
 
@@ -193,7 +193,7 @@ int native_network_add_container_list(const char *network_name, const char *cont
 7. 更新容器的网络信息，端口映射信息，并落盘
 8. 删除容器网络命名空间
 
-![enter image description here](https://images.gitee.com/uploads/images/2021/0330/162736_b4bf0266_5609952.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0330/162736_b4bf0266_5609952.png )
 
 ## 4.3 网络生成流程
 
@@ -203,13 +203,15 @@ int native_network_add_container_list(const char *network_name, const char *cont
 
 1. 解析用户传入的参数
 2. 对传入的参数进行校验，包括
-   1. 每次只允许创建一个网络， 即最多指定一个name
-   2. 若指定name，检查name长度是否超过MAX_NETWORK_NAME_LEN(128)
+   - 每次只允许创建一个网络， 即最多指定一个name
+   - 若指定name，检查name长度是否超过MAX_NETWORK_NAME_LEN(128)
 3. 发送请求到服务端
-   服务端：
+
+服务端：
+
 4. 对接收到的参数校验，包括
-   1. 若指定name，则对name的合法性进行检查，包括name长度是否超过MAX_NETWORK_NAME_LEN，name是否匹配正则表达式^[a-zA-Z0-9][a-zA-Z0-9_.-]*$
-   2. 若指定subnet或gateway，检查用户是否仅指定了gateway而未指定subnet，检查subnet及gateway的格式是否正确，及检查subnet及gateway是否匹配
+   - 若指定name，则对name的合法性进行检查，包括name长度是否超过MAX_NETWORK_NAME_LEN，name是否匹配正则表达式^[a-zA-Z0-9][a-zA-Z0-9_.-]*$
+   - 若指定subnet或gateway，检查用户是否仅指定了gateway而未指定subnet，检查subnet及gateway的格式是否正确，及检查subnet及gateway是否匹配
 5. 如果用户指定driver，则检查 driver 是否为 bridge
 6. 如果用户指定name，则检查name是否与已经配置的native网络的name冲突；若未指定，则将生成的网桥名字作为网络的name。网桥name保证与已有的网络name、网桥名字以及主机上网络设备名不冲突
 7. 如果用户指定subnet，则检查subnet网段与已经配置的网络subnet，以及主机的IP是否冲突；若未指定，则寻找空闲的私有网段作为subnet网段
@@ -218,7 +220,7 @@ int native_network_add_container_list(const char *network_name, const char *cont
 10. 生成网络配置
 11. 写网络配置文件
 
-![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163307_2027883d_5609952.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0330/163307_2027883d_5609952.png )
 
 ### 对外接口变更
 
@@ -317,14 +319,16 @@ rest 接口
 
 1. 解析用户传入的参数
 2. 对传入的参数进行校验，包括
-   1. 至少指定一个需要查询的name
-   2. 若指定format，检查format是否合法
+   - 至少指定一个需要查询的name
+   - 若指定format，检查format是否合法
 3. 发送请求到服务端
-   服务端：
+
+服务端：
+
 4. 对接收到的网络name进行校验 
 5. 查询内存中对应的网络。如果存在，则将返回网络信息json。如果没有，则返回未找到。
 
-![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163544_0db4b1ac_5609952.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0330/163544_0db4b1ac_5609952.png )
 
 ### 对外接口变更
 
@@ -367,12 +371,14 @@ rest 接口
 
 1. 解析用户传入的参数
 2. 发送请求到服务端
-   服务端：
+
+服务端：
+
 3. 读取客户端发来的请求信息
 4. 校验filter指定的condition是否合法
 5. 根据用户指定的filter condition筛选出合适的网络，返回给客户端
 
-![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163705_15aec22a_5609952.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0330/163705_15aec22a_5609952.png)
 
 ### 对外接口变更
 
@@ -421,7 +427,9 @@ rest 接口
 
 1. 解析用户传入的参数
 2. 发送请求给服务端
-   服务端：
+
+服务端：
+
 3. 校验name是否合法
 4. 找到对应的网络
 5. 判断是否有容器使用该网络。如果有，则不能删除该网络。
@@ -429,7 +437,7 @@ rest 接口
 7. 删除网络配置文件
 8. 删除内存中的网络信息
 
-![enter image description here](https://images.gitee.com/uploads/images/2021/0330/163852_30fb9316_5609952.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0330/163852_30fb9316_5609952.png )
 
 ### 对外接口变更
 

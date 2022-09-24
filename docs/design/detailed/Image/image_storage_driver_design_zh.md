@@ -13,7 +13,7 @@ Driver模块计划支持overlay2和devicemapper两种驱动，实现如下功能
 
 # 2.总体设计
 
-![输入图片说明](https://images.gitee.com/uploads/images/2020/0327/103225_bed304d3_5226885.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2020/0327/103225_bed304d3_5226885.png)
 
 # 3.接口描述
 
@@ -90,15 +90,15 @@ int graphdriver_cleanup(void)
 
 Driver 初始化初始化流程：
 
-![输入图片说明](https://images.gitee.com/uploads/images/2020/0327/103821_1d31a134_5226885.png "driver_init.png")
+![](https://images.gitee.com/uploads/images/2020/0327/103821_1d31a134_5226885.png "driver_init.png")
 
 Overlay 模块初始化流程：
 
-![输入图片说明](https://images.gitee.com/uploads/images/2020/0327/103713_4db8b576_5226885.png "overlay_init.png")
+![](https://images.gitee.com/uploads/images/2020/0327/103713_4db8b576_5226885.png "overlay_init.png")
 
 Devicemapper模块初始化流程：
 
-![输入图片说明](https://images.gitee.com/uploads/images/2020/0327/172343_7483d81e_5626156.png "devmapper_init.png")
+![](https://images.gitee.com/uploads/images/2020/0327/172343_7483d81e_5626156.png "devmapper_init.png")
 
 ## 3.2 创建读写层
 

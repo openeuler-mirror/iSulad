@@ -64,13 +64,13 @@ CRI interface is implemented based on gRPC. iSulad implemented CRI gRPC Server f
 
 ## Getting Started
 
-**For more information on `iSulad` usage**, please see [openeuler official manual](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html).
+- [usage guide: openeuler official manual](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html)
 
-**For the development guide on `iSulad`**, please see  [development_guide](./docs/build_docs/README.md).
+- [development guide](./docs/build_docs/README.md)
 
-**For the user manual on `iSulad`**, please see [manual](./docs/manual/README.md).
+- [user manual](./docs/manual/README.md)
 
-**For the desgin docs on `iSulad`**, please see [desgin](./docs/design/README.md).
+- [desgin docs](./docs/design/README.md)
 
 ### Installing
 

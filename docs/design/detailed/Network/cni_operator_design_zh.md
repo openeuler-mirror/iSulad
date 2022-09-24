@@ -79,12 +79,12 @@ int check_network_plane(const struct cni_manager *manager, const struct cni_netw
 
 ## 4.1 加载网络配置文件
 
-![输入图片说明](https://images.gitee.com/uploads/images/2021/0122/094638_d03ff180_5626156.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0122/094638_d03ff180_5626156.png)
 
 ## 4.2 创建网络流程
 
-![输入图片说明](https://images.gitee.com/uploads/images/2021/0122/094708_ec1f2f75_5626156.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0122/094708_ec1f2f75_5626156.png )
 
 ## 4.3 删除网络流程
 
-![输入图片说明](https://images.gitee.com/uploads/images/2021/0122/094727_20f3222d_5626156.png "屏幕截图.png")
+![](https://images.gitee.com/uploads/images/2021/0122/094727_20f3222d_5626156.png )
