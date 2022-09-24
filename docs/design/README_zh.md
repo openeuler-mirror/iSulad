@@ -10,9 +10,9 @@
 
 ## Container
 
-- 查看 gc 和 supervisor模块的设计文档：[gc_and_supervisor_design](./detailed/Container/gc_and_supervisor_design.md) 。
+- 查看 gc 和 supervisor模块的设计文档：[gc_and_supervisor_design](./detailed/Container/gc_and_supervisor_design_zh.md) 。
 
-- 查看 restore 模块的设计文档： [restore_design](./detailed/Container/restore_design.md) 。
+- 查看 restore 模块的设计文档： [restore_design](./detailed/Container/restore_design_zh.md) 。
 
 ## CRI
 

@@ -5,41 +5,58 @@
 | Emial | wangrunze13@huawei.com|
 
 
-# 1.方案目标
-isulad进程和它管理的容器进程可以独立运行， 当isulad退出的时候， 容器进程可以不受影响继续运行； restore模块是为了让isulad重启的时候， restore模块可以把所有容器的状态恢复到isulad进程中去， 让isulad进程重新管理这些容器。
+# 1. Program Objectives
 
-# 2.总体设计
-restore模块的整体流程图如下：
+The isulad process and the container process managed by isulad can run independently. When isulad exits, the container process can continue to run unaffected; when isulad restarts, the restore module can restore the state of all containers to the isulad process, and let the isulad process re-manage these containers.
+
+# 2. Overall Design
+
+The overall flow chart of the restore module is as follows:
+
 ![restore](../../../images/restore_overview.png)
-restore模块向外提供唯一接口，一般在isulad启动的时候调用这个接口来完成所有restore的工作。
 
-总体来说， 整个restore阶段会做两件事：
-* restore：首先， 通过持久化存储的数据来构建出一个container对象，这是isulad定义的一个结构体， 它的类型是`contianer_t`, 而这些持久化的数据存储在一个以容器ID命名的目录中， 这个反序列化的过程由函数`container_load`完成。之后， 恢复成功的container对象会被放入一个map中统一管理。
-* handle：在恢复了所有的container对象之后，剩下的要做的就是根据host上实际容器进程的状态来同步处理container对象。 一个container对象应该对应着host上一个具体的容器进程， 如果isulad要管理这个具体的容器进程光恢复一个container对象是不够的，还需要进行一些额外的操作。
+The restore module provides an interface to complete all restore work when isulad starts.
+
+In general, the entire restore phase will do two things:
+
+* restore: First, build a container object from the persisted data. The container object is a structure named `container_t`. All persistent data is stored in a directory named after the container ID. This deserialization process is done by the function `container_load`. After that, the successfully restored container objects will be put into a map for unified management.
+
+* handle: After restoring all container objects, the next thing to do is to synchronize the container objects according to the state of the actual container process on the host. A container object should correspond to a specific container process on the host. If isulad wants to manage this specific container process, some additional operations are required.
 
 
-# 3.接口描述
-```c
-// 1. 容器状态恢复接口；
+# 3. Interface Description
+
+````c
+// 1. Container state restore interface;
 extern void containers_restore(void);
-```
+````
 
-# 4.详细设计
-## 4.1 restore container详细流程
+# 4. Detailed Design
+
+## 4.1 detailed process of restore container
+
 ![restore detail](../../../images/restore_detail.png)
 
-这里有一些关键流程：
-* container_load: 这里使用的是container module提供的一个接口，通过解析以container id命名的目录里的各种配置文件来构建一个container对象。
-* check_container_image_exist: 这里是检查容器的镜像层是否还存在，如果已经删除，则该容器restore失败。
-* restore_state: 持久化存储的container status可能已经过期，这里尝试利用runtime接口来获得runtime container status, 用真实的status来修改container status。
-* container_store_add: 这里使用container store submodule提供的map数据结构和接口来管理成功restore的container对象。 
+Here are some key processes:
 
-## 4.2 handle restored container详细流程
+* container_load: An interface provided by the container module is used here, and a container object is constructed by parsing various configuration files in the directory named by the container id.
+
+* check_container_image_exist: Check whether the image layer of the container still exists. If it has been deleted, the restore of the container fails.
+
+* restore_state: The container status of the persistent storage may have expired, so try to use the runtime interface to obtain the runtime container status, and use the real status to modify the container status.
+
+* container_store_add: Use the map and interface provided by the container store sub module to manage successfully restored container objects.
+
+## 4.2 detailed process of handle restored container
+
 ![handle detail](../../../images/restore_handle_detail.png)
 
-这里主要的流程就是根据不同的container state来完成一些操作：
-* gc状态， 这时不需要额外处理，gc线程会完成该container的资源回收。
-* running状态， 这时候尝试恢复supervisor和init health checker。isulad需要这两个组件来管理真实的容器进程，当这两个步骤完成了，才算是成功的restore了一个正在运行的container。
-* 其他状态，举个例子，如果容器处于stopped状态，这时检查是否设置了退出了自动remove，如果设置了则执行remove操作， 否则执行restart操作。
+The main process is to complete some operations according to different container states:
 
-关于重启操作， 这里简单描述， 详细的文档请参考restart manager 设计文档：由于容器有重启策略而重启操作只能由isulad完成， 所以当isulad退出的这段时间， 需要重启的容器都无法完成重启操作， 这时， 当重启isulad时完成restore操作的时候， 这是一个完成容器restart操作的时机。这时根据容器的自定义的重启策略来完成重启。
+* gc state: No need to do any processing, the gc thread will complete the resource recovery of the container.
+
+* Running state: Try to restore supervisor and init health checker. isulad requires supervisor and health checker to manage real container processes. When the two steps are completed, a running container is successfully restored.
+
+* For other states: For example, if the container is in the stopped state, check whether it is set to automatically remove after exit, if set, execute the remove operation, otherwise execute the restart operation.
+
+The restart operation is briefly described here. For detailed documentation, please refer to the restart manager design document. Since the container has a restart strategy, the restart operation can only be completed by isulad. Therefore, when isulad exits, the container that needs to be restarted cannot complete the restart operation. After the restore operation is completed, the restart is completed according to the customized restart policy of the container.

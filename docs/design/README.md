@@ -16,7 +16,7 @@ This section contains some design documents for users who want to learn more abo
 
 ## CRI
 
-- You can see how the CRI startup process is refactored in [cri_cni_refactor](./detailed/CRI/cri_cni_refactor_zh.md).
+- You can see how the CRI startup process is refactored in [cri_cni_refactor](./detailed/CRI/cri_cni_refactor.md).
 
 ## Events
 
