@@ -68,8 +68,57 @@ int adaptor_cni_check(const network_api_conf *conf, network_api_result_list *res
 
 ## 4.1 update process
 
-![Enter image description](https://images.gitee.com/uploads/images/2021/0114/170516_0313b8bc_5595769.png "screenshot.png")
+```mermaid
+graph TD
+	A(获取CNI配置文件信息列表)
+	B(foreach配置)
+	C{网络是否已存在}
+	D(忽略当前配置)
+	E(记录配置的索引到全局map)
+	F(next)
+	A -->B
+	B -->C
+	C -->|No|E
+	C -->|Yes|D
+	D -->F
+	E -->F
+	F --> B
+```
 
 ## 4.2 network operation process
 
-![Enter image description](https://images.gitee.com/uploads/images/2021/0115/102633_cf3027eb_5595769.png "screenshot.png")
+```mermaid
+graph TD
+	A(attach loop网络)
+	B(操作的网络列表)
+	C(foreach网络列表)
+	D(执行默认网口的网络操作)
+	E(准备配置)
+	F(退出)
+	G{是否存在}
+	H{是否忽略}
+	I{是否默认网口}
+	J(忽略当前配置)
+	K(报错退出)
+	L(退出for循环)
+	M(记录默认网口的网络索引)
+	N(执行网络操作attach/detach)
+	O(next)
+	A -->B
+	B -->C
+	B -->D
+	D -->F
+	C -->E
+	E -->G
+	G -->|No|H
+	G -->|Yes|I
+	H -->|Yes|J
+	H -->|No|K
+	I -->|Yes|M
+	I -->|No|N
+	J -->E
+	K -->L
+	M -->O
+	N -->O
+	O -->E
+```

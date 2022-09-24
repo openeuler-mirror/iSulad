@@ -50,11 +50,35 @@ The solution is as follows:
 
 ## 3.1 timing diagram
 
-![Sequence before reconstruction](../../../images/sequencebefore.png)
+```mermaid
+sequenceDiagram
+	participant CRI client
+	participant iSulad_CRI
+	participant iSulad
+	participant m_pluginManager
+	CRI client ->> iSulad_CRI: request
+	iSulad_CRI ->> iSulad: create
+	iSulad_CRI ->> iSulad_CRI: set network ready
+	iSulad_CRI ->> iSulad: start
+	iSulad_CRI ->> m_pluginManager: setup pod
+```
 
 Timing diagram before reconstruction
 
-![Sequence after reconstruction](../../../images/sequenceafter.png)
+
+```mermaid
+sequenceDiagram
+	participant CRI client
+	participant iSulad_CRI
+	participant iSulad
+	participant m_pluginManager
+	CRI client ->> iSulad_CRI: request
+	iSulad_CRI ->> iSulad: create
+	iSulad_CRI ->> iSulad_CRI: set network ready
+	iSulad_CRI ->> iSulad_CRI: mount network namespace
+	iSulad_CRI ->> m_pluginManager: setup pod
+	iSulad_CRI ->> iSulad: start
+```
 
 Timing diagram after reconstruction
 

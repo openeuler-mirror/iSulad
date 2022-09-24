@@ -13,7 +13,35 @@ Driver模块计划支持overlay2和devicemapper两种驱动，实现如下功能
 
 # 2.总体设计
 
-![](https://images.gitee.com/uploads/images/2020/0327/103225_bed304d3_5226885.png)
+```mermaid
+classDiagram
+	class driver
+	class overlay
+	<<interface>> overlay
+	class devicemapper
+	<<interface>> devicemapper
+	driver : +char *name
+	driver : +char *home
+	driver : +char *backingfs
+	driver : +bool support_dtype
+	driver : +bool support_quota
+	driver : +struct pquota_control *quota_ctrl
+	driver : +struct graphdriver_ops*
+	driver : +init()
+	driver : +create_rw()
+	driver : +create_ro()
+	driver : +rm_layer()
+	driver : +mount_layer()
+	driver : +umount_layer()
+	driver : +exists()
+	driver : +apply_diff()
+	driver : +get_layer_metadata()
+	driver : +get_driver_status()
+	driver : +clean_up()
+	driver : +rm_layer()
+	driver <|-- devicemapper
+	driver <|-- overlay
+```
 
 # 3.接口描述
 
@@ -90,15 +118,14 @@ int graphdriver_cleanup(void)
 
 Driver 初始化初始化流程：
 
-![](https://images.gitee.com/uploads/images/2020/0327/103821_1d31a134_5226885.png "driver_init.png")
-
+![driver_init](https://images.gitee.com/uploads/images/2020/0327/103821_1d31a134_5226885.png)
 Overlay 模块初始化流程：
 
-![](https://images.gitee.com/uploads/images/2020/0327/103713_4db8b576_5226885.png "overlay_init.png")
+![overlay_init](https://images.gitee.com/uploads/images/2020/0327/103713_4db8b576_5226885.png)
 
 Devicemapper模块初始化流程：
 
-![](https://images.gitee.com/uploads/images/2020/0327/172343_7483d81e_5626156.png "devmapper_init.png")
+![devmapper_init](https://images.gitee.com/uploads/images/2020/0327/172343_7483d81e_5626156.png)
 
 ## 3.2 创建读写层
 

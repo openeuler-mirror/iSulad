@@ -48,11 +48,34 @@
 
 ## 3.1 时序图
 
-![重构前时序图](../../../images/sequencebefore.png)
+```mermaid
+sequenceDiagram
+	participant CRI client
+	participant iSulad_CRI
+	participant iSulad
+	participant m_pluginManager
+	CRI client ->> iSulad_CRI: request
+	iSulad_CRI ->> iSulad: create
+	iSulad_CRI ->> iSulad_CRI: set network ready
+	iSulad_CRI ->> iSulad: start
+	iSulad_CRI ->> m_pluginManager: setup pod
+```
 
 重构前时序图
 
-![重构后时序图](../../../images/sequenceafter.png)
+```mermaid
+sequenceDiagram
+	participant CRI client
+	participant iSulad_CRI
+	participant iSulad
+	participant m_pluginManager
+	CRI client ->> iSulad_CRI: request
+	iSulad_CRI ->> iSulad: create
+	iSulad_CRI ->> iSulad_CRI: set network ready
+	iSulad_CRI ->> iSulad_CRI: mount network namespace
+	iSulad_CRI ->> m_pluginManager: setup pod
+	iSulad_CRI ->> iSulad: start
+```
 
 重构后时序图
 

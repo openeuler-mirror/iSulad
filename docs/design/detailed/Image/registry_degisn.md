@@ -7,7 +7,7 @@
 
 The registry module is located as follows:
 
-![Enter image description](https://images.gitee.com/uploads/images/2020/0327/154119_63be70c0_5595781.png "Location.png")
+![Location](https://images.gitee.com/uploads/images/2020/0327/154119_63be70c0_5595781.png)
 
 In addition to accepting calls from the Manager module, the Registry module also calls the store module to store the downloaded images and layers.
 
@@ -24,7 +24,7 @@ It is necessary to implement the pull part of the protocol Docker Registry HTTP 
 
 The internal structure of the Registry is as follows:
 
-![Enter image description](https://images.gitee.com/uploads/images/2020/0327/154200_0d38813a_5595781.png "registry internal structure.png")
+![registry internal structure](https://images.gitee.com/uploads/images/2020/0327/154200_0d38813a_5595781.png)
 
 1. **Registry apiv2 module**: Implement the interaction protocol with the registry, including Schema1 and Schema2. Mainly to implement the specific protocols for downloading manifest, downloading config files, and downloading layers files, including the ping operation that needs to be performed when downloading.
 
@@ -246,7 +246,7 @@ One of the long list of tokens is obtained from the authentication server,
 
 For the detailed implementation of the protocol, see the link: https://docs.docker.com/registry/spec/auth/token/
 
-![](https://images.gitee.com/uploads/images/2020/0327/161248_05fd7c37_5595781.png "auth.png")
+![auth](https://images.gitee.com/uploads/images/2020/0327/161248_05fd7c37_5595781.png)
 
 The login verification process is as shown above. The meaning of each step is as follows:
 

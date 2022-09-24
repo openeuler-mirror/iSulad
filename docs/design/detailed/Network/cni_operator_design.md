@@ -79,12 +79,12 @@ int check_network_plane(const struct cni_manager *manager, const struct cni_netw
 
 ## 4.1 load network configuration file
 
-![Enter image description](https://images.gitee.com/uploads/images/2021/0122/094638_d03ff180_5626156.png "screenshot.png")
+![](https://images.gitee.com/uploads/images/2021/0122/094638_d03ff180_5626156.png)
 
 ## 4.2 create network process
 
-![Enter image description](https://images.gitee.com/uploads/images/2021/0122/094708_ec1f2f75_5626156.png "screenshot.png")
+![](https://images.gitee.com/uploads/images/2021/0122/094708_ec1f2f75_5626156.png )
 
 ## 4.3 delete network process
 
-![Enter image description](https://images.gitee.com/uploads/images/2021/0122/094727_20f3222d_5626156.png "screenshot.png")
+![](https://images.gitee.com/uploads/images/2021/0122/094727_20f3222d_5626156.png )

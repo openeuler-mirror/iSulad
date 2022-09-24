@@ -74,14 +74,14 @@ CRI interface is implemented based on gRPC. iSulad implemented CRI gRPC Server f
 
 ### Installing
 
-To install `iSulad`, you can use `rpm` or `yum` package manager command with `openEuler` repository.
+To install `iSulad`, you can use `yum` package manager command with `openEuler` repository.
 
 Or write repository file by hand:
 
 ```shell
 $ cat << EOF > /etc/yum.repos.d/openEuler.repo
 [openEuler]
-baseurl=https://repo.openeuler.org/openEuler-20.03-LTS/OS/\$basearch
+baseurl=https://repo.openeuler.org/openEuler-22.03-LTS/OS/\$basearch
 enabled=1
 EOF
 ```

@@ -13,7 +13,48 @@
 
 # 2.总体设计
 
-![](https://images.gitee.com/uploads/images/2020/0327/160234_e46b36bc_5595733.png)
+```mermaid
+classDiagram
+	class ImageStore
+	class ROImageStore
+	<<interface>> ROImageStore
+	class DataStructure
+	<<member>> DataStructure
+	ImageStore : +image_create
+	ImageStore : +image_set_names
+	ImageStore : +image_delete
+	ImageStore : +image_wipe
+	ImageStore : +image_set_loaded_time
+	ImageStore : +image_add_name
+	ImageStore : +save
+	ImageStore : +image_set_metadata
+	ImageStore : +image_set_big_data
+	
+	ROImageStore : +image_exists
+	ROImageStore : +image_get
+	ROImageStore : +image_lookup
+	ROImageStore : +images
+	ROImageStore : +image_by_digest
+	ROImageStore : +image_load
+	ROImageStore : +image_metadata
+	ROImageStore : +image_big_data_size
+	ROImageStore : +image_big_data_digest
+	ROImageStore : +image_big_data_names
+	
+	DataStructure : map_t *image_lock
+	DataStructure : pthread_mutex_t lock
+	DataStructure : char *dir
+	DataStructure : image_store_images **images
+	DataStructure : size_t images_len
+	DataStructure : map_t *idindex
+	DataStructure : map_t *byid
+	DataStructure : map_t *byname
+	DataStructure : map_t *bydigest
+	DataStructure : bool loaded
+	
+	ImageStore <|-- ROImageStore
+	ImageStore <|-- DataStructure
+```
 
 # 3.接口描述
 

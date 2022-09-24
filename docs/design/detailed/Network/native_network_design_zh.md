@@ -25,11 +25,88 @@ CRI接口中通过对CNI的封装，实现了容器网络的能力。其高度�
 
 整体结构如下：
 
-![](https://images.gitee.com/uploads/images/2020/1228/161128_5ca842d8_5595769.png )
+```mermaid
+flowchart TD
+	classDef impStyle fill:#c19,stroke:#686,stroke-width:2px,color:#fff;
+	classDef apiStyle stroke:#216,stroke-width:2px,stroke-dasharray: 5 5;
+	
+	subgraph networkAPI
+		B(attach network)
+		C(detach network)
+		D(config create)
+		E(config remove)
+		F(config ls)
+		G(config inspect)
+		H(init)
+	end
+	networkAPI:::apiStyle
+	subgraph CRI-adaptor
+    	XA[detach network]
+    	XB[attach network]
+    	XC[......]
+	end
+	CRI-adaptor:::impStyle
+
+	subgraph Native-adaptor
+    YA[detach network]
+    YB[attach network]
+    YC[config apis...]
+end
+
+subgraph config-apis
+    ADA[create]
+    ADB[remove]
+    ADC[ls]
+    ADD[inspect]
+end
+config-apis:::apiStyle
+
+subgraph bridge-driver
+    BDA[bridge create]
+    BDB[bridge remove]
+    BDC[bridge ls]
+    BDD[bridge inspect]
+end
+subgraph other-drivers
+    ODA[implement driver]
+end
+YC --> config-apis
+config-apis --> bridge-driver
+config-apis --> other-drivers
+Native-adaptor:::impStyle
+
+subgraph cni-operator
+    J[attach network]
+    K[detach network]
+end
+
+subgraph libcni
+    M[AddNetworkList]
+    N[CheckNetworkList]
+    O[DelNetworkList]
+end
+
+networkAPI --> CRI-adaptor
+networkAPI --> Native-adaptor
+CRI-adaptor --> cni-operator
+Native-adaptor --> cni-operator
+cni-operator --> libcni
+
+OA[CRI pod lifecycle] --> |call| networkAPI
+OB[Container lifecycle] --> |call| networkAPI
+```
 
 序列图如下：
 
-![](https://images.gitee.com/uploads/images/2021/0219/092345_561c8afa_5595769.png)
+```mermaid
+sequenceDiagram
+	participant adaptor
+	participant configsDatabase
+	participant cniManager
+	adaptor ->> configsDatabase: 网络配置信息管理
+	cniManager ->> configsDatabase: 网络配置信息获取
+	adaptor ->> cniManager: 调用API
+```
 
 # 3.接口描述
 
@@ -188,7 +265,37 @@ int network_module_exist(const char *type, const char *name);
 
 为上层提供CNI的基础能力，根据传入的CNI网络配置信息完成CNI网络的构建、删除、检查等功能。当前libcni模块已提供了`v0.3.0`版本的能力，当前迭代需要升级到`v0.4.0`，而`v0.4.0`需要支持`check`和`cache`机制。如下图红色部分标识的部分。
 
-![](https://images.gitee.com/uploads/images/2020/1228/161204_2d5abaa1_5595769.png)
+```mermaid
+graph TD
+classDef unFinish fill:#c19,stroke:#216,stroke-width:2px,color:#fff,stroke-dasharray: 5 5;
+O(libcni) --> X
+O(libcni) --> Y
+subgraph test
+X[exec]
+X --> A(AddNetworkList)
+X --> B(CheckNetworkList)
+X --> C(DelNetworkList)
+X --> F(ValidateNetworkList)
+end
+subgraph cache
+Y[cache]
+Y --> D(GetNetworkListCachedResult)
+Y --> E(GetNetworkListCachedConfig)
+end
+A --> G[executor]
+B --> G[executor]
+C --> G[executor]
+F --> G[executor]
+G --> H(cni plugin)
+D --> P[cache API]
+E --> P[cache API]
+P --> R[addCache]
+P --> S[deleteCache]
+B:::unFinish
+F:::unFinish
+cache:::unFinish
+```
+
 
 ## 4.2 adaptor模块
 
