@@ -4,23 +4,19 @@
 | Date  | 2022-09-19 |
 | Email | chengzeruizhi@huawei.com|
 
-# 1. Program Objectives
+# 1.方案目标
+iSulad通过统一的操作接口兼容各种符合OCI标准的容器运行时（runtime），包括runc、kata以及lxc等。除此之外，iSulad也支持用户自定义runtime。
 
-iSulad is compatible with various OCI-compliant container runtimes, including runc, kata, and lxc, through a unified operation interface. In addition, iSulad also supports user-defined runtime.
 
-
-# 2. Overall Design
-
-The overall flow chart of the runtime is as follows:
+# 2.总体设计
+runtime整体流程图如下：
 ![runtime_overview](../../../images/runtime_overview.png)
 
-In isula, different runtimes have different fields in the request. After the request reaches iSulad through gRPC, the container engine will find the corresponding operation in the global variable according to the name of the runtime and execute it.
+在isula部分，不同的runtime只是request中对应的字段不同而已。请求通过gRPC到了iSulad一侧后，容器引擎会根据runtime的名称在全局变量找到对应的操作进行执行。
 
-# 3. Interface Description
-
-1. The various container operations of iSulad are defined in the runtime api, and the specific implementation of connecting to the lower-level runtime is isolated:
-
-    ````c
+# 3.接口描述
+1. 在runtime api中定义了iSulad的各项容器操作、隔离了对接更底层的runtime的具体实现:
+    ```c
     int runtime_create(const char *name, const char *runtime, const rt_create_params_t *params);
 
     int runtime_clean_resource(const char *name, const char *runtime, const rt_clean_params_t *params);
@@ -31,12 +27,12 @@ In isula, different runtimes have different fields in the request. After the req
 
     int runtime_restart(const char *name, const char *runtime, const rt_restart_params_t *params);
     ......
-    ````
-    There will be *rt_ops_query* in these functions. The query function will query in a global jump table according to the runtime name and call the specific implementation of the corresponding runtime.
+    ```
+    这些函数中都会有*rt_ops_query*，query函数会根据runtime名称在一个全局的跳转表中查询并调用对应的runtime的具体实现。
 
-2. The interface of the runtime is rt_ops, and the structure specifies various container-related operations that the runtime should support, such as life cycle management, resource query, update restart, and so on.
+2. runtime的接口表现为rt_ops，结构体规定了runtime应当支持的各种容器相关的操作，比如生命周期管理、资源查询、更新重启等等。
 
-    ````c
+    ```c
     struct rt_ops {
         /* detect whether runtime is of this runtime type */
         bool (*detect)(const char *runtime);
@@ -55,10 +51,10 @@ In isula, different runtimes have different fields in the request. After the req
         int (*rt_rm)(const char *name, const char *runtime, const rt_rm_params_t *params);
     ......
     }
-    ````
+    ```
 
-3. At present, iSulad encapsulates three types of runtimes. They are lcr, shim v2 and isula shim (shim v1).
-    ````c
+3. 目前iSulad中封装了三大类型的runtime。分别是lcr、shim v2和isula shim（shim v1）。
+    ```c
     static const struct rt_ops *g_rt_ops[] = {
     &g_lcr_rt_ops,
     #ifdef ENABLE_SHIM_V2
@@ -66,25 +62,25 @@ In isula, different runtimes have different fields in the request. After the req
     #endif
     &g_isula_rt_ops,
     };
-    ````
+    ```
 
-# 4. Detailed Design
-## 4.1 initialization during iSulad startup
+# 4.详细设计
+## 4.1 iSulad启动过程中的初始化
 ![runtime_initialization](../../../images/runtime_initialization.png)
 
-Now iSulad has the abstraction layer of engine, which is to read the dynamic link library of lcr and encapsulate it to provide the runtime interface.
+现在iSulad中有engine这一层抽象，这一层抽象是为了读取lcr的动态链接库并封装起来提供给runtime接口。
 
-## 4.2 runtime name source and validity check
+## 4.2 runtime名称来源和合法性校验
 
-The runtime has three sources, with priority from high to low:
+runtime有三个来源，优先级从高到低：
 
-- grpc request - that is, command line parsing, or remote
+- grpc request —— 也就是命令行解析，或者remote
 - daemon.json
-- default value -- lcr
+- default value —— lcr
 
-Reflected in the code:
-````C
-static int prepare_runtime_environment(const container_create_request *request, const char *id, char **runtime,
+体现在代码中：
+```C
+static int preparate_runtime_environment(const container_create_request *request, const char *id, char **runtime,
                                          char **runtime_root, uint32_t *cc)
 {
     bool runtime_res = false;
@@ -105,10 +101,10 @@ static int prepare_runtime_environment(const container_create_request *request, 
         return -1;
     }
 }
-````
+```
 
-The value of runtime has a whitelist check, the whitelist is: lcr, runc, kata-runtime, io.containerd.x.x or user-defined runtime
-````c
+runtime的值有一个白名单检验，白名单为：lcr、runc、kata-runtime、io.containerd.x.x或用户的自定义runtime
+```c
 static int runtime_check(const char *name, bool *runtime_res)
 {
     ......
@@ -150,13 +146,13 @@ out:
 
     return ret;
 }
-````
+```
 
-## 4.3 conversion of runtime values
-It can also be understood as the specific use of the runtime value or the conversion of the binary name corresponding to the runtime. For example, if the user specifies --runtime=xxx when running, then the runtime=xxx here is configured as xxx:/usr/bin/runc in the runtime in daemon.json, then the mapping relationship at this time is xxx-> /usr/bin/runc. This mapping conversion currently only exists in isula_rt_ops.c, which is only for shim v1 scenarios.
+## 4.3 runtime值的转换
+这里也可以理解为runtime值的具体使用或者runtime对应的二进制名字的转换。举例来说，如果用户运行时指定--runtime=xxx，那这里的runtime=xxx在daemon.json中的runtime中配置为xxx:/usr/bin/runc，那么此时的映射关系就是xxx->/usr/bin/runc。这种映射转换当前只存在于isula_rt_ops.c中，也就是只针对shim v1场景。
 
-There are currently three processing logics of runtime. The value of runtime is used to judge which one to enter, and the order of lcr->shimv2->shimv1 is used to judge. If the conditions are met, it will jump out of the judgment and enter the corresponding module processing flow.
-````c
+当前runtime的处理逻辑有三种，通过runtime的值来判断进入哪一条，按照lcr->shimv2->shimv1的顺序进行判断，符合条件即跳出判断进入相应的模块处理流程。
+```c
 bool rt_lcr_detect(const char *runtime)
 {
     /* now we just support lcr engine */
@@ -183,4 +179,4 @@ bool rt_isula_detect(const char *runtime)
 
     return false;
 }
-````
+```

@@ -44,7 +44,7 @@
 
 ## Runtime
 
-- 查看 runtime 模块的设计文档： [runtime_design](./detailed/Runtime/runtime_design.md) 。
+- 查看 runtime 模块的设计文档： [runtime_design](./detailed/Runtime/runtime_design_zh.md) 。
 
 ## Security
 
