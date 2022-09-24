@@ -24,13 +24,13 @@ This section contains some design documents for users who want to learn more abo
 
 ## Image
 
-- You can see how the image storage driver modules are designed in [image_storage_driver_design](./detailed/Image/image_storage_driver_design_zh.md).
+- You can see how the image storage driver modules are designed in [image_storage_driver_design](./detailed/Image/image_storage_driver_design.md).
 
-- You can see how the image store modules are designed in [image_store_design](./detailed/Image/image_store_design_zh.md).
+- You can see how the image store modules are designed in [image_store_design](./detailed/Image/image_store_design.md).
 
-- You can see how the layer store modules are designed in [layer_store_degisn](./detailed/Image/layer_store_degisn_zh.md).
+- You can see how the layer store modules are designed in [layer_store_degisn](./detailed/Image/layer_store_degisn.md).
 
-- You can see how the registry modules are designed in [registry_degisn](./detailed/Image/registry_degisn_zh.md).
+- You can see how the registry modules are designed in [registry_degisn](./detailed/Image/registry_degisn.md).
 
 ## Network
 
