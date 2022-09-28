@@ -359,6 +359,17 @@ out:
     return ret;
 }
 
+void free_udev_wait_pth_t(udev_wait_pth_t* uwait)
+{
+    if (uwait->cond_init) {
+        pthread_cond_destroy(&uwait->wait_cond);
+    }
+    if (uwait->mutex_init) {
+        pthread_mutex_destroy(&uwait->udev_mutex);
+    }
+    free(uwait);
+}
+
 static void *udev_wait_process(void *data)
 {
     int ret = 0;
@@ -376,11 +387,47 @@ static void *udev_wait_process(void *data)
     } else {
         uwait->state = DEV_OK;
     }
+    if (pthread_cond_wait(&uwait->wait_cond, &uwait->udev_mutex) != 0) {
+        CRIT("Udev wait condition failed");
+    }
     pthread_mutex_unlock(&uwait->udev_mutex);
+
+    free_udev_wait_pth_t(uwait);
 
 out:
     DAEMON_CLEAR_ERRMSG();
     return NULL;
+}
+
+udev_wait_pth_t *init_udev_wait_pth_t(uint32_t cookie)
+{
+    udev_wait_pth_t *uwait = NULL;
+
+    uwait = util_common_calloc_s(sizeof(udev_wait_pth_t));
+    if (uwait == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+    uwait->cookie = cookie;
+    uwait->state = DEV_INIT;
+    uwait->mutex_init = false;
+    uwait->cond_init = false;
+
+    if (pthread_mutex_init(&uwait->udev_mutex, NULL) != 0) {
+        ERROR("Udev mutex initialized failed");
+        free(uwait);
+        return NULL;
+    }
+    uwait->mutex_init = true;
+
+    if (pthread_cond_init(&uwait->wait_cond, NULL) != 0) {
+        ERROR("Udev condition initialized failed");
+        free_udev_wait_pth_t(uwait);
+        return NULL;
+    }
+    uwait->cond_init = true;
+
+    return uwait;
 }
 
 // UdevWait waits for any processes that are waiting for udev to complete the specified cookie.
@@ -396,51 +443,49 @@ void dev_udev_wait(uint32_t cookie)
         return;
     }
 
-    uwait = util_common_calloc_s(sizeof(udev_wait_pth_t));
+    // free in udev_wait_process
+    uwait = init_udev_wait_pth_t(cookie);
     if (uwait == NULL) {
-        ERROR("Out of memory");
         return;
-    }
-    uwait->cookie = cookie;
-    uwait->state = DEV_INIT;
-
-    if (pthread_mutex_init(&uwait->udev_mutex, NULL) != 0) {
-        ERROR("Udev mutex initialized failed");
-        goto free_out;
     }
 
     if (pthread_create(&tid, NULL, udev_wait_process, uwait) != 0) {
         ERROR("devmapper: create udev wait process thread error:%s", strerror(errno));
-        goto free_out;
+        free_udev_wait_pth_t(uwait);
+        return;
     }
 
     while (true) {
         pthread_mutex_lock(&uwait->udev_mutex);
         if (uwait->state != DEV_INIT) {
             pthread_mutex_unlock(&uwait->udev_mutex);
-            goto free_out;
+            goto out;
         }
         pthread_mutex_unlock(&uwait->udev_mutex);
 
         if (gettimeofday(&end, NULL) != 0) {
             ERROR("devmapper: get time failed");
-            goto free_out;
+            goto out;
         }
 
         timeout = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000; // seconds
         if (timeout >= (float)dm_udev_wait_timeout) {
             if (dm_udev_complete(cookie) != 1) {
                 ERROR("Failed to complete udev cookie %u on udev wait timeout", cookie);
-                goto free_out;
+                goto out;
             }
             ERROR("Wait on udev cookie time out");
             break;
         }
     }
 
-free_out:
-    pthread_mutex_destroy(&uwait->udev_mutex);
-    free(uwait);
+out:
+    pthread_mutex_lock(&uwait->udev_mutex);
+    if (pthread_cond_broadcast(&uwait->wait_cond) != 0) {
+        ERROR("Failed to broadcast wait conditio");
+    }
+    pthread_mutex_unlock(&uwait->udev_mutex);
+    return;
 }
 
 int dev_delete_device_force(const char *name)
