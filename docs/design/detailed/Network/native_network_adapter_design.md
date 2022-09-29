@@ -180,7 +180,7 @@ int native_network_add_container_list(const char *network_name, const char *cont
 8. Update the container's network information, port mapping information, and place it on the disk.
 9. Update the hosts and resolve.conf files in the container.
 
-![](https://images.gitee.com/uploads/images/2021/0330/162647_d85d58af_5609952.png "screenshot.png")
+![](https://images.gitee.com/uploads/images/2021/0330/162647_d85d58af_5609952.png)
 
 ## 4.2 the container exits the network process
 
@@ -193,7 +193,7 @@ int native_network_add_container_list(const char *network_name, const char *cont
 7. Update the container's network information, port mapping information, and place it on the disk.
 8. Delete the container network namespace.
 
-![](https://images.gitee.com/uploads/images/2021/0330/162736_b4bf0266_5609952.png "screenshot.png")
+![](https://images.gitee.com/uploads/images/2021/0330/162736_b4bf0266_5609952.png )
 
 ## 4.3 network generation process
 
@@ -220,7 +220,7 @@ Server:
 10. Generate network configuration
 11. Write the network configuration file
 
-![](https://images.gitee.com/uploads/images/2021/0330/163307_2027883d_5609952.png "screenshot.png")
+![](https://images.gitee.com/uploads/images/2021/0330/163307_2027883d_5609952.png)
 
 ### external interface changes
 

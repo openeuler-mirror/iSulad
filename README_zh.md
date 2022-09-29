@@ -74,12 +74,12 @@ CRI接口基于gRPC实现。iSulad遵循CRI接口规范，实现 CRI gRPC Server
 
 ### Installing
 
-`iSulad`可以使用`rpm`或者`yum`命令进行安装，安装之前需要查看确保配置了openEuler仓库:
+`iSulad`可以使用`yum`命令进行安装，安装之前需要查看确保配置了openEuler仓库:
 
 ```shell
 $ cat << EOF > /etc/yum.repos.d/openEuler.repo
 [openEuler]
-baseurl=https://repo.openeuler.org/openEuler-20.03-LTS/OS/\$basearch
+baseurl=https://repo.openeuler.org/openEuler-22.03-LTS/OS/\$basearch
 enabled=1
 EOF
 ```

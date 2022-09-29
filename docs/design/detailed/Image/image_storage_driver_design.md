@@ -20,7 +20,35 @@ The quota function also needs to be implemented for the overlay2 driver.
 
 # 2. Overall Design
 
-![Enter image description](https://images.gitee.com/uploads/images/2020/0327/103225_bed304d3_5226885.png "screenshot.png")
+```mermaid
+classDiagram
+	class driver
+	class overlay
+	<<interface>> overlay
+	class devicemapper
+	<<interface>> devicemapper
+	driver : +char *name
+	driver : +char *home
+	driver : +char *backingfs
+	driver : +bool support_dtype
+	driver : +bool support_quota
+	driver : +struct pquota_control *quota_ctrl
+	driver : +struct graphdriver_ops*
+	driver : +init()
+	driver : +create_rw()
+	driver : +create_ro()
+	driver : +rm_layer()
+	driver : +mount_layer()
+	driver : +umount_layer()
+	driver : +exists()
+	driver : +apply_diff()
+	driver : +get_layer_metadata()
+	driver : +get_driver_status()
+	driver : +clean_up()
+	driver : +rm_layer()
+	driver <|-- devicemapper
+	driver <|-- overlay
+```
 
 # 3. Interface Description
 
@@ -97,15 +125,15 @@ int graphdriver_cleanup(void)
 
 Driver initialization initialization process:
 
-![Enter image description](https://images.gitee.com/uploads/images/2020/0327/103821_1d31a134_5226885.png "driver_init.png")
+![driver_init](https://images.gitee.com/uploads/images/2020/0327/103821_1d31a134_5226885.png)
 
 Overlay module initialization process:
 
-![Enter image description](https://images.gitee.com/uploads/images/2020/0327/103713_4db8b576_5226885.png "overlay_init.png")
+![overlay_init](https://images.gitee.com/uploads/images/2020/0327/103713_4db8b576_5226885.png)
 
 Devicemapper module initialization process:
 
-![Enter image description](https://images.gitee.com/uploads/images/2020/0327/172343_7483d81e_5626156.png "devmapper_init.png")
+![devmapper_init](https://images.gitee.com/uploads/images/2020/0327/172343_7483d81e_5626156.png)
 
 ## 3.2 create read-write layer
 
