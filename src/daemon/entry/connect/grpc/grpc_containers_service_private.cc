@@ -111,51 +111,6 @@ void ContainerServiceImpl::info_response_to_grpc(const host_info_response *respo
     return;
 }
 
-int ContainerServiceImpl::container_resize_request_from_grpc(const ResizeRequest *grequest,
-                                                             struct isulad_container_resize_request **request)
-{
-    struct isulad_container_resize_request *tmpreq = (struct isulad_container_resize_request *)util_common_calloc_s(
-                                                         sizeof(struct isulad_container_resize_request));
-    if (tmpreq == nullptr) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    if (!grequest->id().empty()) {
-        tmpreq->id = util_strdup_s(grequest->id().c_str());
-    }
-
-    if (!grequest->suffix().empty()) {
-        tmpreq->suffix = util_strdup_s(grequest->suffix().c_str());
-    }
-
-    tmpreq->height = grequest->height();
-
-    tmpreq->width = grequest->width();
-
-    *request = tmpreq;
-    return 0;
-}
-
-void ContainerServiceImpl::container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
-                                                             ResizeResponse *gresponse)
-{
-    if (response == nullptr) {
-        gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return;
-    }
-
-    gresponse->set_cc(response->cc);
-    if (response->errmsg != nullptr) {
-        gresponse->set_errmsg(response->errmsg);
-    }
-    if (response->id != nullptr) {
-        gresponse->set_id(response->id);
-    }
-
-    return;
-}
-
 int ContainerServiceImpl::wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request)
 {
     container_wait_request *tmpreq = (container_wait_request *)util_common_calloc_s(sizeof(container_wait_request));

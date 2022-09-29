@@ -43,6 +43,7 @@
 #include "export_service.h"
 #include "update_service.h"
 #include "stats_service.h"
+#include "resize_service.h"
 
 void protobuf_timestamp_to_grpc(const types_timestamp_t *timestamp, Timestamp *gtimestamp)
 {
@@ -730,37 +731,8 @@ Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest 
 
 Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest *request, ResizeResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    struct isulad_container_resize_request *isuladreq = nullptr;
-    struct isulad_container_resize_response *isuladres = nullptr;
-
-    prctl(PR_SET_NAME, "ContResize");
-
-    auto status = GrpcServerTlsAuth::auth(context, "container_resize");
-    if (!status.ok()) {
-        return status;
-    }
-
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.resize == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = container_resize_request_from_grpc(request, &isuladreq);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.resize(isuladreq, &isuladres);
-    container_resize_response_to_grpc(isuladres, reply);
-
-    isulad_container_resize_request_free(isuladreq);
-    isulad_container_resize_response_free(isuladres);
-
-    return Status::OK;
+    auto resizeService = ContainerResizeService();
+    return SpecificServiceRun<ResizeRequest, ResizeResponse>(resizeService, context, request, reply);
 }
 
 Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest *request, UpdateResponse *reply)
