@@ -1,7 +1,7 @@
 From 64ef4f52a1f75be2dbd1b750a52500818790f501 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Thu, 1 Sep 2022 09:41:50 +0800
-Subject: [PATCH 4/5] remove redundant header files
+Subject: [PATCH 04/11] remove redundant header files
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---

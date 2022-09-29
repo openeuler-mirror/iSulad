@@ -1,0 +1,35 @@
+From b0664f10a349563376a0db00c1524d01599cd697 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Wed, 14 Sep 2022 10:49:22 +0800
+Subject: [PATCH 09/11] add testcase for check env HOSTNAME
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ CI/test_cases/container_cases/run.sh | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/CI/test_cases/container_cases/run.sh b/CI/test_cases/container_cases/run.sh
+index 29c761d3..1dea51ab 100755
+--- a/CI/test_cases/container_cases/run.sh
++++ b/CI/test_cases/container_cases/run.sh
+@@ -26,6 +26,17 @@ source ../helpers.sh
+ function do_test_t()
+ {
+     containername=test_basic_run
++
++    tid=$(isula run --name $containername  -td busybox)
++    hostname=$(isula exec -it $containername hostname)
++    fn_check_eq "${hostname}" "${tid:0:12}" "default hostname is not id of container"
++    isula exec -it $containername env | grep HOSTNAME
++    fn_check_eq "$?" "0" "check HOSTNAME env failed"
++    isula stop -t 0 $tid
++    fn_check_eq "$?" "0" "stop failed"
++    isula rm $tid
++    fn_check_eq "$?" "0" "rm failed"
++
+     isula run --name $containername  -td busybox
+     fn_check_eq "$?" "0" "run failed"
+     testcontainer $containername running
+-- 
+2.25.1
+
