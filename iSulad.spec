@@ -1,5 +1,5 @@
 %global _version 2.0.16
-%global _release 7
+%global _release 8
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -20,6 +20,10 @@ Patch0004: 0004-remove-redundant-header-files.patch
 Patch0005: 0005-add-isulad-args.patch
 Patch0006: 0006-invalid-free-default-runtime-and-cri-runtime-after-f.patch
 Patch0007: 0007-calculate-timezone-by-tm_gmtoff.patch
+Patch0008: 0008-fixbug-add-hostname-env-for-container.patch
+Patch0009: 0009-add-testcase-for-check-env-HOSTNAME.patch
+Patch0010: 0010-Add-timezone-CI-test.patch
+Patch0011: 0011-fix-maybe-uwait-use-after-free.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -242,6 +246,12 @@ fi
 %endif
 
 %changelog
+* Thu Sep 29 2022 haozi007 <liuhao27@huawei.com> - 2.0.16-8
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sync from openEuler
+
 * Tue Sep 20 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.16-7
 - Type: enhancement
 - ID: NA
