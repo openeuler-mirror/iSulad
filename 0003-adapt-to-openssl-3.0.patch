@@ -1,7 +1,7 @@
 From 194eb950ea072ac313635d75dc3913f48e300edf Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Wed, 11 May 2022 18:25:40 +0800
-Subject: [PATCH 3/5] adapt to openssl 3.0
+Subject: [PATCH 03/11] adapt to openssl 3.0
 
 SHA512_Init&SHA512_Update&SHA512_Final function have been deprecated since OpenSSL 3.0
 
