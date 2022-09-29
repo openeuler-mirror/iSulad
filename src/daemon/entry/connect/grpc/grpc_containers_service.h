@@ -128,12 +128,6 @@ private:
 
     void info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
-    int container_resize_request_from_grpc(const ResizeRequest *grequest,
-                                           struct isulad_container_resize_request **request);
-
-    void container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
-                                           ResizeResponse *gresponse);
-
     int wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request);
 
     void wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse);
