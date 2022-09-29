@@ -44,6 +44,8 @@
 #include "update_service.h"
 #include "stats_service.h"
 #include "resize_service.h"
+#include "version_service.h"
+#include "info_service.h"
 
 void protobuf_timestamp_to_grpc(const types_timestamp_t *timestamp, Timestamp *gtimestamp)
 {
@@ -166,70 +168,14 @@ bool grpc_copy_to_container_read_function(void *reader, void *data)
 
 Status ContainerServiceImpl::Version(ServerContext *context, const VersionRequest *request, VersionResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    container_version_request *container_req = nullptr;
-    container_version_response *container_res = nullptr;
-
-    prctl(PR_SET_NAME, "VersionOp");
-
-    auto status = GrpcServerTlsAuth::auth(context, "docker_version");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.version == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = version_request_from_grpc(request, &container_req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.version(container_req, &container_res);
-    version_response_to_grpc(container_res, reply);
-
-    free_container_version_request(container_req);
-    free_container_version_response(container_res);
-
-    return Status::OK;
+    auto versionService = QueryVersionService();
+    return SpecificServiceRun<VersionRequest, VersionResponse>(versionService, context, request, reply);
 }
 
 Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *request, InfoResponse *reply)
 {
-    int tret;
-    service_executor_t *cb = nullptr;
-    host_info_request *container_req = nullptr;
-    host_info_response *container_res = nullptr;
-
-    prctl(PR_SET_NAME, "InfoOp");
-
-    auto status = GrpcServerTlsAuth::auth(context, "docker_info");
-    if (!status.ok()) {
-        return status;
-    }
-    cb = get_service_executor();
-    if (cb == nullptr || cb->container.info == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = info_request_from_grpc(request, &container_req);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(ISULAD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    (void)cb->container.info(container_req, &container_res);
-    info_response_to_grpc(container_res, reply);
-
-    free_host_info_request(container_req);
-    free_host_info_response(container_res);
-
-    return Status::OK;
+    auto infoService = QueryInfoService();
+    return SpecificServiceRun<InfoRequest, InfoResponse>(infoService, context, request, reply);
 }
 
 Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest *request, CreateResponse *reply)

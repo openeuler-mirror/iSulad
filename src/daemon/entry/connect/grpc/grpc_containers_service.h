@@ -120,14 +120,6 @@ private:
         }
     }
 
-    int version_request_from_grpc(const VersionRequest *grequest, container_version_request **request);
-
-    void version_response_to_grpc(const container_version_response *response, VersionResponse *gresponse);
-
-    int info_request_from_grpc(const InfoRequest *grequest, host_info_request **request);
-
-    void info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse);
-
     int wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request);
 
     void wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse);
@@ -153,12 +145,6 @@ private:
                                          container_start_request **request);
 
     void add_start_trailing_metadata(ServerContext *context, container_start_response *response);
-
-    void pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
-
-    void pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
-
-    void pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
     int logs_request_from_grpc(const LogsRequest *grequest, struct isulad_logs_request **request);
 };
