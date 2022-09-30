@@ -55,7 +55,7 @@ static int do_clean_path(const char *respath, const char *limit_respath, const c
     char *dest = *dst;
     const char *endpos = NULL;
 
-    for (endpos = stpos; *stpos; stpos = endpos) {
+    for (; *stpos; stpos = endpos) {
         while (ISSLASH(*stpos)) {
             ++stpos;
         }

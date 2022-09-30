@@ -16,8 +16,6 @@
 #define UTILS_BUFFER_H
 
 #include <stdlib.h>
-#include <strings.h>
-#include <stdarg.h>
 
 struct Buffer {
     char *contents;

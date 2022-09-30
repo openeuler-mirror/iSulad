@@ -120,50 +120,6 @@ private:
         }
     }
 
-    int version_request_from_grpc(const VersionRequest *grequest, container_version_request **request);
-
-    void version_response_to_grpc(const container_version_response *response, VersionResponse *gresponse);
-
-    int info_request_from_grpc(const InfoRequest *grequest, host_info_request **request);
-
-    void info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse);
-
-    int top_request_from_grpc(const TopRequest *grequest, container_top_request **request);
-
-    void top_response_to_grpc(const container_top_response *response, TopResponse *gresponse);
-
-    int exec_request_from_grpc(const ExecRequest *grequest, container_exec_request **request);
-
-    void exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse);
-
-    int inspect_request_from_grpc(const InspectContainerRequest *grequest, container_inspect_request **request);
-
-    void inspect_response_to_grpc(const container_inspect_response *response, InspectContainerResponse *gresponse);
-
-    int list_request_from_grpc(const ListRequest *grequest, container_list_request **request);
-
-    void list_response_to_grpc(const container_list_response *response, ListResponse *gresponse);
-
-    int container_rename_request_from_grpc(const RenameRequest *grequest,
-                                           struct isulad_container_rename_request **request);
-
-    void container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
-                                           RenameResponse *gresponse);
-
-    int container_resize_request_from_grpc(const ResizeRequest *grequest,
-                                           struct isulad_container_resize_request **request);
-
-    void container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
-                                           ResizeResponse *gresponse);
-
-    int update_request_from_grpc(const UpdateRequest *grequest, container_update_request **request);
-
-    void update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse);
-
-    int stats_request_from_grpc(const StatsRequest *grequest, container_stats_request **request);
-
-    void stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse);
-
     int wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request);
 
     void wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse);
@@ -189,14 +145,6 @@ private:
                                          container_start_request **request);
 
     void add_start_trailing_metadata(ServerContext *context, container_start_response *response);
-
-    int export_request_from_grpc(const ExportRequest *grequest, container_export_request **request);
-
-    void pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
-
-    void pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
-
-    void pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
     int logs_request_from_grpc(const LogsRequest *grequest, struct isulad_logs_request **request);
 };

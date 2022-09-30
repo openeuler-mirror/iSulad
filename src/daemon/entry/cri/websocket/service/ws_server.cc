@@ -391,6 +391,7 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
     }
     if (GenerateSessionData(session, containerID) != 0) {
         ERROR("failed to fill generate session data");
+        delete session;
         return -1;
     }
 
@@ -398,6 +399,7 @@ int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
     auto insertRet = m_wsis.insert(std::make_pair(socketID, session));
     if (!insertRet.second) {
         ERROR("failed to insert session data to map");
+        delete session;
         return -1;
     }
 
@@ -701,6 +703,28 @@ ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len)
     }
 
     return WsWriteToClient(context, data, len, STDERRCHANNEL);
+}
+
+ssize_t WsDoNotWriteStdoutToClient(void *context, const void *data, size_t len)
+{
+    if (context == nullptr) {
+        ERROR("websocket session context empty");
+        return -1;
+    }
+
+    TRACE("Ws do not write stdout to client");
+    return len;
+}
+
+ssize_t WsDoNotWriteStderrToClient(void *context, const void *data, size_t len)
+{
+    if (context == nullptr) {
+        ERROR("websocket session context empty");
+        return -1;
+    }
+
+    TRACE("Ws do not write stderr to client");
+    return len;
 }
 
 int closeWsConnect(void *context, char **err)

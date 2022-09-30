@@ -55,14 +55,22 @@
 #include "utils_regex.h"
 #include "utils_timestamp.h"
 #include "utils_verify.h"
+#include "path.h"
 
 static int do_import_image(const char *file, const char *tag, char **id)
 {
     int ret = 0;
     im_import_request *request = NULL;
+    char cleanpath[PATH_MAX] = { 0 };
 
     if (file == NULL || tag == NULL || id == NULL) {
         ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+
+    if (util_clean_path(file, cleanpath, sizeof(cleanpath)) == NULL) {
+        ERROR("clean path for %s failed", file);
         ret = -1;
         goto out;
     }
@@ -75,7 +83,7 @@ static int do_import_image(const char *file, const char *tag, char **id)
     }
 
     request->tag = util_strdup_s(tag);
-    request->file = util_strdup_s(file);
+    request->file = util_strdup_s(cleanpath);
 
     ret = im_import_image(request, id);
     if (ret != 0) {
@@ -147,9 +155,16 @@ static int do_load_image(const char *file, const char *tag, const char *type)
     int ret = 0;
     im_load_request *request = NULL;
     im_load_response *response = NULL;
+    char cleanpath[PATH_MAX] = { 0 };
 
     if (file == NULL || type == NULL) {
         ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+
+    if (util_clean_path(file, cleanpath, sizeof(cleanpath)) == NULL) {
+        ERROR("clean path for %s failed", file);
         ret = -1;
         goto out;
     }
@@ -163,7 +178,7 @@ static int do_load_image(const char *file, const char *tag, const char *type)
     if (tag != NULL) {
         request->tag = util_strdup_s(tag);
     }
-    request->file = util_strdup_s(file);
+    request->file = util_strdup_s(cleanpath);
     request->type = util_strdup_s(type);
 
     ret = im_load_image(request, &response);
@@ -1009,8 +1024,7 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
     *response = util_common_calloc_s(sizeof(image_pull_image_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = ISULAD_ERR_MEMOUT;
-        goto out;
+        return ISULAD_ERR_MEMOUT;
     }
 
     EVENT("Image Event: {Object: %s, Type: Pulling}", request->image_name);
@@ -1030,12 +1044,11 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
     EVENT("Image Event: {Object: %s, Type: Pulled}", request->image_name);
 
 out:
-    if (*response != NULL) {
-        (*response)->image_ref = util_strdup_s(im_rsp->image_ref);
-        (*response)->cc = cc;
+    (*response)->cc = cc;
+    if (im_rsp != NULL) {
         (*response)->errmsg = util_strdup_s(im_rsp->errmsg);
+        (*response)->image_ref = util_strdup_s(im_rsp->image_ref);
     }
-
     free_im_pull_request(im_req);
     free_im_pull_response(im_rsp);
 

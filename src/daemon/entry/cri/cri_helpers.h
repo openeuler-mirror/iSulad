@@ -125,7 +125,8 @@ auto ValidateCheckpointKey(const std::string &key, Errors &error) -> bool;
 
 auto ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state) -> std::string;
 
-auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
+auto GetSecurityOpts(const bool hasSeccomp, const ::runtime::v1alpha2::SecurityProfile &seccomp,
+                     const std::string &seccompProfile, const char &separator, Errors &error)
 -> std::vector<std::string>;
 
 auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string;

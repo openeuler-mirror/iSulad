@@ -101,6 +101,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
 {
     pid_t pid = 0;
     int ret = 0;
+    int nret = 0;
     int i = 0;
     int status = 0;
     char binary[PATH_MAX + 1] = {0};
@@ -110,7 +111,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
     int err_fd[2] = {-1, -1};
     int out_fd[2] = {-1, -1};
     char exec_buff[BUFSIZ + 1] = {0};
-    char stdout_buff[PATH_MAX] = {0};
+    char stdout_buff[PATH_MAX + 1] = {0};
     char stderr_buff[BUFSIZ + 1] = {0};
 
 
@@ -128,7 +129,8 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
 
     INFO("exec shim-v2 binary in %s %s %s %s %s %s", params[0], params[1], params[2], params[3], params[4], params[5]);
 
-    if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
+    nret = snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir);
+    if (nret < 0 || (size_t)nret >= sizeof(fpid)) {
         ERROR("Failed to make shim-pid full path");
         ret = -1;
         goto out;
@@ -186,7 +188,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
     }
 
     close(exec_fd[1]);
-    if (util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff)) > 0) {
+    if (util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1) > 0) {
         ERROR("exec failed: %s", exec_buff);
         ret = -1;
         goto out;
@@ -203,10 +205,10 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
     status = status_to_exit_code(status);
 
     close(out_fd[1]);
-    util_read_nointr(out_fd[0], stdout_buff, sizeof(stdout_buff));
+    util_read_nointr(out_fd[0], stdout_buff, sizeof(stdout_buff) - 1);
     close(out_fd[0]);
     close(err_fd[1]);
-    util_read_nointr(err_fd[0], stderr_buff, sizeof(stderr_buff));
+    util_read_nointr(err_fd[0], stderr_buff, sizeof(stderr_buff) - 1);
     close(err_fd[0]);
 
     if (status != 0) {
@@ -248,9 +250,11 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
 {
     int ret = 0;
     int pid = 0;
+    int fd = -1;
     char addr[PATH_MAX] = {0};
     char *exit_fifo_path = NULL;
     char *state_path = NULL;
+    char *log_path = NULL;
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("Invalid input params");
@@ -270,6 +274,21 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
         ret = -1;
         goto out;
     }
+
+    log_path = util_string_append(SHIM_V2_LOG, params->bundle);
+    if (log_path == NULL) {
+        ERROR("Fail to append log path");
+        ret = -1;
+        goto out;
+    }
+
+    fd = util_open(log_path, O_RDWR | O_CREAT | O_TRUNC, DEFAULT_SECURE_FILE_MODE);
+    if (fd < 0) {
+        ERROR("Failed to create log file for shim v2: %s", log_path);
+        ret = -1;
+        goto out;
+    }
+    close(fd);
 
     if (shim_bin_v2_create(runtime, id, params->bundle, NULL, addr, state_path) != 0) {
         ERROR("%s: failed to create v2 shim", id);
@@ -292,6 +311,7 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
     }
 
 out:
+    free(log_path);
     free(exit_fifo_path);
     free(state_path);
     return ret;
@@ -497,6 +517,7 @@ int rt_shim_status(const char *id, const char *runtime, const rt_status_params_t
     char address_file[PATH_MAX] = {0};
     char address[PATH_MAX] = {0};
     int ret = 0;
+    int nret = 0;
     struct State ss = {};
 
     if (id == NULL || params == NULL || status == NULL) {
@@ -504,7 +525,8 @@ int rt_shim_status(const char *id, const char *runtime, const rt_status_params_t
         return -1;
     }
 
-    if (snprintf(address_file, sizeof(address_file), "%s/%s/address", params->rootpath, id) < 0) {
+    nret = snprintf(address_file, sizeof(address_file), "%s/%s/address", params->rootpath, id);
+    if (nret < 0 || (size_t)nret >= sizeof(address_file)) {
         ERROR("Failed to join full workdir %s/%s", params->rootpath, id);
         ret = -1;
         goto out;

@@ -17,30 +17,16 @@
 
 #include "utils_network.h"
 
-#include <unistd.h>
-#include <sched.h>
 #include <stdlib.h>
-#include <pthread.h>
-#include <sys/mount.h>
-#include <linux/fs.h>
-#include <syscall.h>
-#include <fcntl.h>
 
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include <errno.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/types.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "utils_array.h"
-#include "utils_string.h"
-#include "utils_fs.h"
-#include "utils_file.h"
-#include "constants.h"
 #include "namespace.h"
 
 #define IPV4_TO_V6_EMPTY_PREFIX_BYTES 12

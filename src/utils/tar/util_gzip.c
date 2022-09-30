@@ -203,7 +203,7 @@ int gzip(const char *filename, size_t len)
     }
 
     ssize_t size_read = 0;
-    char buffer[BUFSIZ] = { 0 };
+    char buffer[BUFSIZ + 1] = { 0 };
 
     close(pipefd[1]);
 

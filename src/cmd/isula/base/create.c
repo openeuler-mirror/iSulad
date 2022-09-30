@@ -1085,6 +1085,8 @@ static void request_pack_host_namespaces(const struct client_arguments *args, is
 
     hostconfig->pid_mode = util_strdup_s(args->custom_conf.share_ns[NAMESPACE_PID]);
 
+    hostconfig->cgroupns_mode = util_strdup_s(args->custom_conf.share_ns[NAMESPACE_CGROUP]);
+
     if (args->custom_conf.share_ns[NAMESPACE_NET] == NULL) {
         return;
     }

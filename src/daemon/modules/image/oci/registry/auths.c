@@ -22,7 +22,6 @@
 #include <isula_libutils/json_common.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <sys/stat.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
@@ -218,7 +217,7 @@ out:
     free(err);
     err = NULL;
 
-    return 0;
+    return ret;
 }
 
 static int add_allocated_auth(registry_auths *auths, char *host, char *auth)

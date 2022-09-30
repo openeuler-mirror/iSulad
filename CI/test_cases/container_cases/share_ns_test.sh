@@ -26,6 +26,7 @@ arr_ns_type[0]="--ipc"
 arr_ns_type[1]="--pid"
 arr_ns_type[2]="--net"
 arr_ns_type[3]="--uts"
+arr_ns_type[4]="--cgroupns"
 
 
 function do_test_t()

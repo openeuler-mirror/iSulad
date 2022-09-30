@@ -1099,9 +1099,8 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
 
     options = util_common_calloc_s(sizeof(struct http_get_options));
     if (options == NULL) {
-        ERROR("Failed to malloc http_get_options");
-        ret = -1;
-        goto out;
+        ERROR("Out of memory");
+        return -1;
     }
 
     memset(options, 0x00, sizeof(struct http_get_options));

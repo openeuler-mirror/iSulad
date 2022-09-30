@@ -14,9 +14,7 @@
  *********************************************************************************/
 
 #include <stdio.h>
-#include <malloc.h>
-#include <isula_libutils/defs.h>
-#include <isula_libutils/json_common.h>
+#include <stdint.h>
 #include "isula_libutils/volume_list_volume_request.h"
 #include "isula_libutils/volume_list_volume_response.h"
 #include "isula_libutils/volume_remove_volume_request.h"
@@ -24,10 +22,6 @@
 #include "isula_libutils/volume_prune_volume_request.h"
 #include "isula_libutils/volume_prune_volume_response.h"
 #include "isula_libutils/volume_volume.h"
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "volume_cb.h"
 #include "utils.h"

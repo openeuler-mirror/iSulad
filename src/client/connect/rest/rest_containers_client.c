@@ -1620,6 +1620,9 @@ static int exec_request_to_rest(const struct isula_exec_request *le_request, cha
     if (le_request->stderr != NULL) {
         crequest->stderr = util_strdup_s(le_request->stderr);
     }
+    if (le_request->suffix != NULL) {
+        crequest->suffix = util_strdup_s(le_request->suffix);
+    }
 
     int i = 0;
     if (le_request->argc > 0) {
@@ -1778,54 +1781,25 @@ static int unpack_info_response(const struct parsed_http_message *message, void 
     }
 
     info_response->server_errono = response->cc;
-    if (response->version != NULL) {
-        info_response->version = util_strdup_s(response->version);
-    }
-    if (response->kversion != NULL) {
-        info_response->kversion = util_strdup_s(response->kversion);
-    }
-    if (response->os_type != NULL) {
-        info_response->os_type = util_strdup_s(response->os_type);
-    }
-    if (response->architecture != NULL) {
-        info_response->architecture = util_strdup_s(response->architecture);
-    }
-    if (response->nodename != NULL) {
-        info_response->nodename = util_strdup_s(response->nodename);
-    }
-    if (response->operating_system != NULL) {
-        info_response->operating_system = util_strdup_s(response->operating_system);
-    }
-    if (response->cgroup_driver != NULL) {
-        info_response->cgroup_driver = util_strdup_s(response->cgroup_driver);
-    }
-    if (response->logging_driver != NULL) {
-        info_response->logging_driver = util_strdup_s(response->logging_driver);
-    }
-    if (response->huge_page_size != NULL) {
-        info_response->huge_page_size = util_strdup_s(response->huge_page_size);
-    }
-    if (response->isulad_root_dir != NULL) {
-        info_response->isulad_root_dir = util_strdup_s(response->isulad_root_dir);
-    }
-    if (response->http_proxy != NULL) {
-        info_response->http_proxy = util_strdup_s(response->http_proxy);
-    }
-    if (response->https_proxy != NULL) {
-        info_response->https_proxy = util_strdup_s(response->https_proxy);
-    }
-    if (response->no_proxy != NULL) {
-        info_response->no_proxy = util_strdup_s(response->no_proxy);
-    }
-    if (response->driver_name != NULL) {
-        info_response->driver_name = util_strdup_s(response->driver_name);
-    }
-    if (response->driver_status != NULL) {
-        info_response->driver_status = util_strdup_s(response->driver_status);
-    }
-    if (response->errmsg != NULL) {
-        info_response->errmsg = util_strdup_s(response->errmsg);
-    }
+    info_response->version = util_strdup_s(response->version);
+    info_response->kversion = util_strdup_s(response->kversion);
+    info_response->os_type = util_strdup_s(response->os_type);
+    info_response->architecture = util_strdup_s(response->architecture);
+    info_response->nodename = util_strdup_s(response->nodename);
+    info_response->operating_system = util_strdup_s(response->operating_system);
+
+    info_response->cgroup_driver = util_strdup_s(response->cgroup_driver);
+    info_response->logging_driver = util_strdup_s(response->logging_driver);
+    info_response->huge_page_size = util_strdup_s(response->huge_page_size);
+    info_response->isulad_root_dir = util_strdup_s(response->isulad_root_dir);
+    info_response->http_proxy = util_strdup_s(response->http_proxy);
+    info_response->https_proxy = util_strdup_s(response->https_proxy);
+    info_response->no_proxy = util_strdup_s(response->no_proxy);
+    info_response->driver_name = util_strdup_s(response->driver_name);
+    info_response->driver_status = util_strdup_s(response->driver_status);
+
+    info_response->errmsg = util_strdup_s(response->errmsg);
+
     info_response->total_mem = response->total_mem;
     info_response->containers_num = (uint32_t)response->containers_num;
     info_response->c_running = (uint32_t)response->c_running;

@@ -56,7 +56,6 @@
 #include "utils_timestamp.h"
 #include "utils_verify.h"
 #ifdef ENABLE_NATIVE_NETWORK
-#include "utils_network.h"
 #include "service_network_api.h"
 
 #define STOP_TIMEOUT 10
@@ -692,8 +691,6 @@ static int container_stop_cb(const container_stop_request *request, container_st
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
-
-    container_stop_health_checks(id);
 
     if (stop_container(cont, timeout, force, false)) {
         cc = ISULAD_ERR_EXEC;

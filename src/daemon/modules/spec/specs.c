@@ -1549,6 +1549,12 @@ int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_sp
         goto out;
     }
 
+    // cgroup
+    if (merge_share_single_namespace(oci_spec, host_spec->cgroupns_mode, TYPE_NAMESPACE_CGROUP) != 0) {
+        ret = -1;
+        goto out;
+    }
+
     ret = 0;
 out:
     return ret;
@@ -1798,12 +1804,12 @@ int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, ch
             continue;
         }
 
-        if (split_security_opt(host_spec->security_opt[i], &items, &items_size)) {
+        if (split_security_opt(host_spec->security_opt[i], &items, &items_size) != 0) {
             ret = -1;
             goto out;
         }
 
-        if (items_size != 2) {
+        if (items == NULL || items_size != 2) {
             ERROR("invalid --security-opt: %s", host_spec->security_opt[i]);
             ret = -1;
             goto out;
@@ -1827,6 +1833,7 @@ int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, ch
         }
         util_free_array(items);
         items = NULL;
+        items_size = 0;
     }
 
 out:
@@ -2115,6 +2122,13 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_c
         goto out;
     }
 
+    // should before merge process env
+    ret = merge_hostname(oci_spec, host_spec, v2_spec->config);
+    if (ret != 0) {
+        ERROR("Failed to merge hostname");
+        goto out;
+    }
+
     ret = merge_process_conf(oci_spec, host_spec, v2_spec->config);
     if (ret != 0) {
         goto out;
@@ -2138,12 +2152,6 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_c
     ret = adapt_settings_for_privileged(oci_spec, host_spec->privileged);
     if (ret != 0) {
         ERROR("Failed to adapt settings for privileged container");
-        goto out;
-    }
-
-    ret = merge_hostname(oci_spec, host_spec, v2_spec->config);
-    if (ret != 0) {
-        ERROR("Failed to merge hostname");
         goto out;
     }
 

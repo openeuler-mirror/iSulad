@@ -15,7 +15,6 @@
 #include "http.h"
 #include <curl/curl.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -101,19 +100,20 @@ static int http_get_header_common(const unsigned int flag, const char *key, cons
     int nret = 0;
     size_t len = 0;
     char *header = NULL;
+    const int extra_char_len = 3;
 
     if (flag == 0 || key == NULL || value == NULL) {
         return 0;
     }
 
     // format   key: value
-    if (strlen(value) > (SIZE_MAX - strlen(key)) - 3) {
+    if (strlen(value) > (SIZE_MAX - strlen(key)) - extra_char_len) {
         ERROR("Invalid authorization option");
         return -1;
     }
 
     // key + ": " + value + '\0'
-    len = strlen(key) + strlen(value) + 3;
+    len = strlen(key) + strlen(value) + extra_char_len;
     header = util_common_calloc_s(len);
     if (header == NULL) {
         ERROR("Out of memory");
@@ -447,6 +447,13 @@ int http_request(const char *url, struct http_get_options *options, long *respon
      * CURL_VERSION_BITS(7,54,0) = 0x073600 */
 #if (LIBCURL_VERSION_NUM >= 0x073600)
     curl_easy_setopt(curl_handle, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
+#endif
+
+    /* libcurl support option CURL_SSLVERSION_TLSv1_2 when version >= 7.34.0
+     * #define CURL_VERSION_BITS(x,y,z) ((x)<<16|(y)<<8|(z))
+     * CURL_VERSION_BITS(7,34,0) = 0x072200 */
+#if (LIBCURL_VERSION_NUM >= 0x072200)
+    curl_easy_setopt(curl_handle, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
 #endif
 
     ret = http_custom_options(curl_handle, options);

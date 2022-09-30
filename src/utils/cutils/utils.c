@@ -39,11 +39,9 @@
 #include <time.h>
 
 #include "isula_libutils/log.h"
-#include "isula_libutils/json_common.h"
 #include "utils_array.h"
 #include "utils_convert.h"
 #include "utils_file.h"
-#include "utils_regex.h"
 #include "utils_string.h"
 #include "utils_verify.h"
 
@@ -1356,7 +1354,8 @@ static char *get_cpu_variant()
     return variant;
 }
 
-static void normalized_host_arch(char **host_arch, struct utsname uts) {
+static void normalized_host_arch(char **host_arch, struct utsname uts)
+{
     const char *arch_map[][2] = { { "i386", "386" },
         { "x86_64", "amd64" },
         { "x86-64", "amd64" },
@@ -1379,7 +1378,8 @@ static void normalized_host_arch(char **host_arch, struct utsname uts) {
     }
 }
 
-static void normalized_host_variant(const char *host_arch, char **host_variant) {
+static void normalized_host_variant(const char *host_arch, char **host_variant)
+{
     int i = 0;
     char *tmp_variant = NULL;
     const char *variant_map[][2] = { { "5", "v5" },
@@ -1396,8 +1396,8 @@ static void normalized_host_variant(const char *host_arch, char **host_variant) 
     *host_variant = get_cpu_variant();
     if (!strcmp(host_arch, "arm64") && *host_variant != NULL &&
         (!strcmp(*host_variant, "8") || !strcmp(*host_variant, "v8"))) {
-        free(host_variant);
-        host_variant = NULL;
+        free(*host_variant);
+        *host_variant = NULL;
     }
 
     if (!strcmp(host_arch, "arm") && *host_variant == NULL) {
@@ -1577,7 +1577,12 @@ int convert_v2_runtime(const char *runtime, char *binary)
     }
 
     if (binary != NULL) {
-        snprintf(buf, sizeof(buf), "%s-%s-%s-%s", "containerd", "shim", parts[2], parts[3]);
+        int nret = snprintf(buf, sizeof(buf), "%s-%s-%s-%s", "containerd", "shim", parts[2], parts[3]);
+        if (nret < 0 || (size_t)nret >= sizeof(buf)) {
+            ERROR("Failed to snprintf string");
+            ret = -1;
+            goto out;
+        }
         strcpy(binary, buf);
     }
 

@@ -335,8 +335,9 @@ static void InsertPortmappingIntoAdaptorAnnotations(const std::map<std::string, 
         cni_pms->len += 1;
     }
 
-    if(cni_pms->len <= 0)
+    if (cni_pms->len <= 0) {
         return;
+    }
 
     tmpVal = cni_anno_port_mappings_container_generate_json(cni_pms, nullptr, &jerr);
     if (network_module_insert_portmapping(tmpVal, config) != 0) {
@@ -648,6 +649,7 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
     UnlockNetworkMap(err);
     free_network_api_result_list(result);
     free_network_api_conf(config);
+    DAEMON_CLEAR_ERRMSG();
 }
 
 void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &name, const std::string &interfaceName,

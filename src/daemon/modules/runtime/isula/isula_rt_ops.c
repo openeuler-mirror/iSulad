@@ -100,9 +100,11 @@ static void copy_annotations(shim_client_process_state *p, json_map_string_strin
 
 static int file_write_int(const char *fname, int val)
 {
+    int nret;
     char sint[UINT_LEN] = { 0 };
 
-    if (snprintf(sint, sizeof(sint), "%d", val) < 0) {
+    nret = snprintf(sint, sizeof(sint), "%d", val);
+    if (nret < 0 || (size_t)nret >= sizeof(sint)) {
         return -1;
     }
 
@@ -138,13 +140,15 @@ static void file_read_int(const char *fname, int *val)
 
 static void get_err_message(char *buf, int buf_size, const char *workdir, const char *file)
 {
+    int nret;
     char fname[PATH_MAX] = { 0 };
     FILE *fp = NULL;
     char *pline = NULL;
     char *lines[3] = { 0 };
     size_t length = 0;
 
-    if (snprintf(fname, sizeof(fname), "%s/%s", workdir, file) < 0) {
+    nret = snprintf(fname, PATH_MAX, "%s/%s", workdir, file);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("failed make full path %s/%s", workdir, file);
         return;
     }
@@ -355,8 +359,10 @@ static bool shim_alive(const char *workdir)
     int pid = 0;
     char fpid[PATH_MAX] = { 0 };
     int ret = 0;
+    int nret = 0;
 
-    if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
+    nret = snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir);
+    if (nret < 0 || (size_t)nret >= sizeof(fpid)) {
         ERROR("failed make shim-pid full path");
         return false;
     }
@@ -720,7 +726,7 @@ realexec:
     }
 
     close(exec_fd[1]);
-    num = util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff));
+    num = util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
     close(exec_fd[0]);
     if (num > 0) {
         ERROR("exec failed: %s", exec_buff);

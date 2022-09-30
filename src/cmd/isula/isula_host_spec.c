@@ -1694,6 +1694,7 @@ int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigs
     check_and_strdup_s(&dstconfig->user_remap, srcconfig->user_remap);
     check_and_strdup_s(&dstconfig->uts_mode, srcconfig->uts_mode);
     check_and_strdup_s(&dstconfig->pid_mode, srcconfig->pid_mode);
+    check_and_strdup_s(&dstconfig->cgroupns_mode, srcconfig->cgroupns_mode);
     /* hook-spec file */
     check_and_strdup_s(&dstconfig->hook_spec, srcconfig->hook_spec);
     /* env target file */
@@ -1857,6 +1858,9 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
 
     free(hostconfig->cgroup_parent);
     hostconfig->cgroup_parent = NULL;
+
+    free(hostconfig->cgroupns_mode);
+    hostconfig->cgroupns_mode = NULL;
 
     util_free_array_by_len(hostconfig->binds, hostconfig->binds_len);
     hostconfig->binds = NULL;

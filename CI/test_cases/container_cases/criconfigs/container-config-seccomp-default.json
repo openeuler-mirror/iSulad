@@ -1,0 +1,24 @@
+{
+    "metadata": {
+        "name": "seccomp"
+    },
+    "image":{
+        "image": "busybox:latest"
+    },
+    "command": [
+        "/bin/sh",
+        "-c",
+        "i=0; while true; do echo \"$i: $(date)\"; i=$((i+1)); sleep 10; done"
+    ],
+    "annotations": {
+        "extension.network.kubernetes.io/cni/instancename": "pod_instance_name"
+    },
+    "linux": {
+	    "security_context": {
+		    "seccomp": {
+		        "profile_type": 0
+		    }
+	    }
+    },
+    "log_path": "cri_test.log"
+}

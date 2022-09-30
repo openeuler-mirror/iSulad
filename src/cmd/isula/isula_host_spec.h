@@ -69,6 +69,8 @@ typedef struct isula_host_config {
 
     char *userns_mode;
 
+    char *cgroupns_mode;
+
     char *user_remap;
 
     char **ulimits;

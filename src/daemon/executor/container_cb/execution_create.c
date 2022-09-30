@@ -23,8 +23,6 @@
 #include <isula_libutils/container_config_v2.h>
 #include <isula_libutils/defs.h>
 #include <isula_libutils/host_config.h>
-#include <isula_libutils/imagetool_image.h>
-#include <isula_libutils/imagetool_image_status.h>
 #include <isula_libutils/isulad_daemon_configs.h>
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/oci_runtime_spec.h>
@@ -46,7 +44,6 @@
 #include "utils.h"
 #include "error.h"
 #include "constants.h"
-#include "namespace.h"
 #include "events_sender_api.h"
 #include "sysinfo.h"
 #include "service_container_api.h"
@@ -56,11 +53,9 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_timestamp.h"
-#include "utils_network.h"
 #include "utils_verify.h"
 #include "selinux_label.h"
 #include "opt_log.h"
-#include "network_namespace.h"
 
 static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
                                       int64_t cpu_rt_period, int64_t cpu_rt_runtime);
@@ -874,7 +869,8 @@ static int prepare_host_channel(const host_config_host_channel *host_channel, co
     }
 #endif
 
-    if (host_channel == NULL) {
+    if (host_channel == NULL || host_channel->path_on_host == NULL) {
+        DEBUG("Host channel is not setting.");
         goto out;
     }
     if (util_dir_exists(host_channel->path_on_host)) {

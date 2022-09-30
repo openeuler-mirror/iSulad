@@ -44,10 +44,12 @@ function make_crictl()
     git clone https://gitee.com/duguhaotian/cri-tools.git
     go version
     cd cri-tools
-    git checkout v1.18.0
+    # crictl v1.18 cannot recognise the SecurityProfile seccomp of LinuxSandboxSecurityContext
+    # and the LinuxContainerSecurityContext.has_seccomp() always false
+    git checkout v1.24.2
     make -j $nproc
     echo "make cri-tools: $?"
-    cp ./_output/crictl ${builddir}/bin/
+    cp ./build/bin/crictl ${builddir}/bin/
 }
 
 #install cni plugins
@@ -135,13 +137,15 @@ cd ~
 if [ -d ./runc ];then
     rm -rf ./runc
 fi
-go env -w GO111MODULE="off"
 git clone https://gitee.com/src-openeuler/runc.git
 cd runc
-git checkout -q origin/openEuler-20.03-LTS
-./apply-patch
-mkdir -p .gopath/src/github.com/opencontainers
+tfname=$(cat runc.spec | grep Source0 | awk -F '/' '{print $NF}')
+tar -zxf ${tfname}
+runc_dir=$(tar -tf ${tfname} | head -1)
+cd ${runc_dir}
+export GO111MODULE=off
 export GOPATH=`pwd`/.gopath
+mkdir -p .gopath/src/github.com/opencontainers
 if [ -L .gopath/src/github.com/opencontainers/runc ];then
     echo "Link exist"
 else
@@ -149,8 +153,8 @@ else
 fi
 
 cd .gopath/src/github.com/opencontainers/runc
-make -j $(nproc)
-\cp -f ./runc ${builddir}/bin
+make BUILDTAGS='seccomp selinux'
+cp -f ./runc ${builddir}/bin
 cd -
 
 # install lib-shim-v2
@@ -186,7 +190,7 @@ wait
 if [ -e ${buildstatus} ];then
     for i in ${buildlogs[@]}
     do
-        if [ -e ${$i} ];then
+        if [ -e ${i} ];then
             cat $i
         fi
     done

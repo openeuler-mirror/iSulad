@@ -149,13 +149,17 @@ bool util_get_timestamp(const char *str_time, types_timestamp_t *timestamp)
 
 bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, size_t maxsize, bool local_utc)
 {
-    struct tm tm_utc = { 0 };
-    struct tm tm_local = { 0 };
-    int tm_zone = 0;
-    int32_t nanos;
     int nret = 0;
-    time_t seconds;
+    int tm_zone_hour = 0;
+    int tm_zone_min = 0;
+    int32_t nanos;
+    struct tm tm_local = { 0 };
     size_t tmp_size = 0;
+    time_t seconds;
+    bool west_timezone = false;
+    long int tm_gmtoff = 0;
+    const int seconds_per_minutes = 60;
+    const int seconds_per_hour = 3600;
 
     if (timebuffer == NULL || maxsize == 0 || !timestamp->has_seconds) {
         return false;
@@ -178,18 +182,24 @@ bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, 
         goto out;
     }
 
-    gmtime_r(&seconds, &tm_utc);
-    tm_zone = tm_local.tm_hour - tm_utc.tm_hour;
-    if (tm_zone < -12) {
-        tm_zone += 24;
-    } else if (tm_zone > 12) {
-        tm_zone -= 24;
+#ifdef	__USE_MISC
+    tm_gmtoff = tm_local.tm_gmtoff;
+#else
+    tm_gmtoff = tm_local.__tm_gmtoff;
+#endif
+
+    if (tm_gmtoff < 0) {
+        west_timezone = true;
+        tm_gmtoff = -tm_gmtoff;
     }
 
-    if (tm_zone >= 0) {
-        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d+%02d:00", nanos, tm_zone);
+    tm_zone_hour = tm_gmtoff / seconds_per_hour;
+    tm_zone_min = (tm_gmtoff - tm_zone_hour * seconds_per_hour) / seconds_per_minutes;
+
+    if (!west_timezone) {
+        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d+%02d:%02d", nanos, tm_zone_hour, tm_zone_min);
     } else {
-        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d-%02d:00", nanos, -tm_zone);
+        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d-%02d:%02d", nanos, tm_zone_hour, tm_zone_min);
     }
 
 out:
@@ -942,6 +952,8 @@ int util_to_unix_nanos_from_str(const char *str, int64_t *nanos)
     struct types_timezone tz;
     int32_t nano = 0;
     types_timestamp_t ts;
+    const int s_hour = 3600;
+    const int s_minute = 60;
 
     if (nanos == NULL) {
         return -1;
@@ -972,7 +984,7 @@ int util_to_unix_nanos_from_str(const char *str, int64_t *nanos)
         return -1;
     }
 
-    *nanos = (timegm(&tm) - (int64_t)tz.hour * 3600 - (int64_t)tz.min * 60) * Time_Second + nano;
+    *nanos = (timegm(&tm) - (int64_t)tz.hour * s_hour - (int64_t)tz.min * s_minute) * Time_Second + nano;
     return 0;
 }
 

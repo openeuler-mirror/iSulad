@@ -339,7 +339,10 @@ static int add_shutdown_signal_handler()
     }
 
     // ensure SIGCHLD not be ignore, otherwise waitpid() will failed
-    signal(SIGCHLD, SIG_DFL);
+    if (signal(SIGCHLD, SIG_DFL) == SIG_ERR) {
+        ERROR("Failed to enable SIGCHLD signal");
+        return -1;
+    }
 
     sa.sa_handler = sigint_handler;
     sigemptyset(&sa.sa_mask);
@@ -499,47 +502,6 @@ int check_and_set_default_isulad_log_file(struct service_arguments *args)
         return -1;
     }
     return 0;
-}
-
-static int set_parent_mount_dir(struct service_arguments *args)
-{
-    int ret = -1;
-    int nret;
-    size_t len;
-    char *rootfsdir = NULL;
-
-    if (args->json_confs == NULL) {
-        ERROR("Empty json configs");
-        goto out;
-    }
-    if (strlen(args->json_confs->graph) > (SIZE_MAX - strlen("/mnt/rootfs")) - 1) {
-        ERROR("Root directory of the isulad runtime is too long");
-        goto out;
-    }
-    len = strlen(args->json_confs->graph) + strlen("/mnt/rootfs") + 1;
-    if (len > PATH_MAX) {
-        ERROR("The size of path exceeds the limit");
-        goto out;
-    }
-    rootfsdir = util_common_calloc_s(len);
-    if (rootfsdir == NULL) {
-        ERROR("Out of memory");
-        goto out;
-    }
-    nret = snprintf(rootfsdir, len, "%s/mnt/rootfs", args->json_confs->graph);
-    if (nret < 0 || (size_t)nret >= len) {
-        ERROR("Failed to print string");
-        goto out;
-    }
-
-    free(args->json_confs->rootfsmntdir);
-    args->json_confs->rootfsmntdir = util_strdup_s(rootfsdir);
-
-    ret = 0;
-
-out:
-    free(rootfsdir);
-    return ret;
 }
 
 static int check_hook_spec_file(const char *hook_spec)
@@ -973,74 +935,56 @@ static int update_container_log_configs(isulad_daemon_configs_container_log *con
 
 static int update_server_args(struct service_arguments *args)
 {
-    int ret = 0;
-
 #ifdef ENABLE_USERNS_REMAP
     if (update_graph_for_userns_remap(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 #endif
 
     if (update_tls_options(args)) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (update_set_default_log_file(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (update_hosts(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (update_default_ulimit(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (update_container_log_configs(args->json_confs->container_log) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     /* check args */
     if (check_args(args)) {
-        ret = -1;
-        goto out;
-    }
-
-    if (set_parent_mount_dir(args)) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     /* parse hook spec */
     if (parse_conf_hooks(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     /* parse image opt timeout */
     if (parse_conf_time_duration(args) != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
 #ifdef ENABLE_SELINUX
     // Configure and validate the kernels security support. Note this is a Linux/FreeBSD
     // operation only, so it is safe to pass *just* the runtime OS graphdriver.
     if (configure_kernel_security_support(args)) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 #endif
 
-out:
-    return ret;
+    return 0;
 }
 
 static int server_conf_parse_save(int argc, const char **argv)
@@ -1064,6 +1008,7 @@ static int server_conf_parse_save(int argc, const char **argv)
 
     /* Step2: load json configs and merge into global configs */
     if (merge_json_confs_into_global(args) != 0) {
+        ERROR("Failed to merge json conf into global");
         ret = -1;
         goto out;
     }
@@ -1076,6 +1021,7 @@ static int server_conf_parse_save(int argc, const char **argv)
     }
 
     if (update_server_args(args) != 0) {
+        ERROR("Failed to update server args");
         ret = -1;
         goto out;
     }
@@ -1171,6 +1117,7 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
                                   const char *fifo_full_path)
 {
     int ret = 0;
+    char *rootfs_mnt_dir = NULL;
 #ifdef ENABLE_USERNS_REMAP
     char* userns_remap = conf_get_isulad_userns_remap();
     char *isulad_root = NULL;
@@ -1234,7 +1181,14 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
     }
 #endif
 
-    if (mount_rootfs_mnt_dir(args->json_confs->rootfsmntdir)) {
+    rootfs_mnt_dir = conf_get_isulad_mount_rootfs();
+    if (rootfs_mnt_dir == NULL) {
+        ERROR("Failed to get isulad mount rootfs");
+        ret = -1;
+        goto out;
+    }
+
+    if (mount_rootfs_mnt_dir(rootfs_mnt_dir)) {
         ERROR("Create and mount parent directory failed");
         ret = -1;
         goto out;
@@ -1247,6 +1201,7 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
     }
 
 out:
+    free(rootfs_mnt_dir);
 #ifdef ENABLE_USERNS_REMAP
     free(isulad_root);
     free(userns_remap);

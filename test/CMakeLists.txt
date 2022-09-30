@@ -46,6 +46,7 @@ IF(ENABLE_UT)
     add_subdirectory(specs)
     add_subdirectory(services)
     add_subdirectory(network)
+    add_subdirectory(volume)
 
 ENDIF(ENABLE_UT)
 

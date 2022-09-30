@@ -14,8 +14,6 @@
  ******************************************************************************/
 #include "error.h"
 
-#include <stdlib.h>
-
 #define ISULAD_ERRMSG_GEN(n, s) { ISULAD_##n, s },
 struct isulad_strerror_tab_t {
     isulad_errno_t errcode;

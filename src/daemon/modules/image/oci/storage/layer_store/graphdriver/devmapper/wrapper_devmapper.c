@@ -20,8 +20,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
 #include <sys/sem.h>
 
 #include "isula_libutils/log.h"
@@ -393,13 +391,13 @@ void dev_udev_wait(uint32_t cookie)
 
     if (gettimeofday(&start, NULL) != 0) {
         ERROR("devmapper: get time failed");
-        goto free_out;
+        return;
     }
 
     uwait = util_common_calloc_s(sizeof(udev_wait_pth_t));
     if (uwait == NULL) {
         ERROR("Out of memory");
-        goto free_out;
+        return;
     }
     uwait->cookie = cookie;
     uwait->state = DEV_INIT;

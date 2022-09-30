@@ -1733,8 +1733,7 @@ out:
     free_container_stats_response(cresponse);
 }
 
-/* rest register containers handler */
-int rest_register_containers_handler(evhtp_t *htp)
+static int rest_register_containers_manage_handler(evhtp_t *htp)
 {
     if (evhtp_set_cb(htp, ContainerServiceCreate, rest_create_cb, NULL) == NULL) {
         ERROR("Failed to register create callback");
@@ -1748,28 +1747,12 @@ int rest_register_containers_handler(evhtp_t *htp)
         ERROR("Failed to register restart callback");
         return -1;
     }
-    if (evhtp_set_cb(htp, ContainerServiceVersion, rest_version_cb, NULL) == NULL) {
-        ERROR("Failed to register version callback");
-        return -1;
-    }
     if (evhtp_set_cb(htp, ContainerServiceUpdate, rest_update_cb, NULL) == NULL) {
         ERROR("Failed to register update callback");
         return -1;
     }
     if (evhtp_set_cb(htp, ContainerServiceKill, rest_kill_cb, NULL) == NULL) {
         ERROR("Failed to register kill callback");
-        return -1;
-    }
-    if (evhtp_set_cb(htp, ContainerServiceInspect, rest_container_inspect_cb, NULL) == NULL) {
-        ERROR("Failed to register inspect callback");
-        return -1;
-    }
-    if (evhtp_set_cb(htp, ContainerServiceExec, rest_exec_cb, NULL) == NULL) {
-        ERROR("Failed to register exec callback");
-        return -1;
-    }
-    if (evhtp_set_cb(htp, ContainerServiceAttach, rest_attach_cb, NULL) == NULL) {
-        ERROR("Failed to register attach callback");
         return -1;
     }
     if (evhtp_set_cb(htp, ContainerServiceRemove, rest_remove_cb, NULL) == NULL) {
@@ -1780,29 +1763,20 @@ int rest_register_containers_handler(evhtp_t *htp)
         ERROR("Failed to register start callback");
         return -1;
     }
-    if (evhtp_set_cb(htp, ContainerServiceList, rest_list_cb, NULL) == NULL) {
-        ERROR("Failed to register list callback");
-        return -1;
-    }
-
-    if (evhtp_set_cb(htp, ContainerServiceWait, rest_wait_cb, NULL) == NULL) {
-        ERROR("Failed to register wait callback");
-        return -1;
-    }
-    if (evhtp_set_cb(htp, ContainerServiceInfo, rest_info_cb, NULL) == NULL) {
-        ERROR("Failed to register info callback");
-        return -1;
-    }
-    if (evhtp_set_cb(htp, ContainerServiceExport, rest_export_cb, NULL) == NULL) {
-        ERROR("Failed to register export callback");
-        return -1;
-    }
     if (evhtp_set_cb(htp, ContainerServicePause, rest_pause_cb, NULL) == NULL) {
         ERROR("Failed to register pause callback");
         return -1;
     }
     if (evhtp_set_cb(htp, ContainerServiceResume, rest_resume_cb, NULL) == NULL) {
         ERROR("Failed to register resume callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServiceWait, rest_wait_cb, NULL) == NULL) {
+        ERROR("Failed to register wait callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServiceExport, rest_export_cb, NULL) == NULL) {
+        ERROR("Failed to register export callback");
         return -1;
     }
     if (evhtp_set_cb(htp, ContainerServiceRename, rest_rename_cb, NULL) == NULL) {
@@ -1813,9 +1787,64 @@ int rest_register_containers_handler(evhtp_t *htp)
         ERROR("Failed to register resize callback");
         return -1;
     }
+
+    return 0;
+}
+
+static int rest_register_containers_info_handler(evhtp_t *htp)
+{
+    if (evhtp_set_cb(htp, ContainerServiceVersion, rest_version_cb, NULL) == NULL) {
+        ERROR("Failed to register version callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServiceInspect, rest_container_inspect_cb, NULL) == NULL) {
+        ERROR("Failed to register inspect callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServiceList, rest_list_cb, NULL) == NULL) {
+        ERROR("Failed to register list callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServiceInfo, rest_info_cb, NULL) == NULL) {
+        ERROR("Failed to register info callback");
+        return -1;
+    }
     if (evhtp_set_cb(htp, ContainerServiceStats, rest_stats_cb, NULL) == NULL) {
         ERROR("Failed to register stats callback");
         return -1;
     }
+
+    return 0;
+}
+
+static int rest_register_containers_stream_handler(evhtp_t *htp)
+{
+    if (evhtp_set_cb(htp, ContainerServiceExec, rest_exec_cb, NULL) == NULL) {
+        ERROR("Failed to register exec callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, ContainerServiceAttach, rest_attach_cb, NULL) == NULL) {
+        ERROR("Failed to register attach callback");
+        return -1;
+    }
+
+    return 0;
+}
+
+/* rest register containers handler */
+int rest_register_containers_handler(evhtp_t *htp)
+{
+    if (rest_register_containers_manage_handler(htp) != 0) {
+        return -1;
+    }
+
+    if (rest_register_containers_info_handler(htp) != 0) {
+        return -1;
+    }
+
+    if (rest_register_containers_stream_handler(htp) != 0) {
+        return -1;
+    }
+
     return 0;
 }

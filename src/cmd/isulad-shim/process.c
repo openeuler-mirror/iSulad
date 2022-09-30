@@ -297,7 +297,7 @@ static void *do_io_copy(void *data)
             }
 
             fd_node_t *fn = ioc->fd_to;
-            fd_node_t *next = fn;
+            fd_node_t *next = NULL;
             for (; fn != NULL; fn = next) {
                 next = fn->next;
                 if (fn->is_log) {
@@ -1171,7 +1171,7 @@ int create_process(process_t *p)
         close_fd(&p->stdio->err);
         close_fd(&p->stdio->resize);
     }
-    nread = read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff));
+    nread = read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
     if (nread > 0) {
         write_message(g_log_fd, ERR_MSG, "runtime error");
         ret = SHIM_ERR;

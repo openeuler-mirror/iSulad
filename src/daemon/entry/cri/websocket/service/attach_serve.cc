@@ -40,7 +40,7 @@ ssize_t AttachWriteToClient(void *context, const void *data, size_t len)
         return -1;
     }
 
-    return attachCtx->attachWriter((void *)(attachCtx->lwsCtx), data, len);
+    return attachCtx->attachWriter(static_cast<void *>(attachCtx->lwsCtx), data, len);
 }
 
 int AttachConnectClosed(void *context, char **err)
@@ -101,31 +101,40 @@ int AttachServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
         return -1;
     }
 
+    // stdout
     struct AttachContext stdoutContext = { 0 };
     stdoutContext.lwsCtx = lwsCtx;
     stdoutContext.sem = &attachSem;
-    stdoutContext.attachWriter = WsWriteStdoutToClient;
+    // write stdout to client if attach stdout is true
+    stdoutContext.attachWriter = m_request->attach_stdout ? WsWriteStdoutToClient : WsDoNotWriteStdoutToClient;
 
     struct io_write_wrapper stdoutstringWriter = { 0 };
     stdoutstringWriter.context = static_cast<void *>(&stdoutContext);
     stdoutstringWriter.write_func = AttachWriteToClient;
-    // the close function of StderrstringWriter is preferred unless StderrstringWriter is nullptr
-    stdoutstringWriter.close_func = m_request->attach_stderr ? nullptr : AttachConnectClosed;
+    stdoutstringWriter.close_func = AttachConnectClosed;
 
+    // stderr
     struct AttachContext stderrContext = { 0 };
     stderrContext.lwsCtx = lwsCtx;
-    stderrContext.sem = &attachSem;
-    stderrContext.attachWriter = WsWriteStderrToClient;
+    stderrContext.sem = nullptr;
+    // write stderr to client if attach stderr is true
+    stderrContext.attachWriter = m_request->attach_stderr ? WsWriteStderrToClient : WsDoNotWriteStderrToClient;
 
     struct io_write_wrapper stderrstringWriter = { 0 };
     stderrstringWriter.context = static_cast<void *>(&stderrContext);
     stderrstringWriter.write_func = AttachWriteToClient;
-    stderrstringWriter.close_func = m_request->attach_stderr ? AttachConnectClosed : nullptr;
+    stderrstringWriter.close_func = nullptr;
+
+    // Maybe attach stdout and stderr are both false.
+    // To make sure the close func sem_post, set attach stdout and stderr true.
+    bool record_attach_stdout = m_request->attach_stdout;
+    bool record_attach_stderr = m_request->attach_stderr;
+    m_request->attach_stdout = true;
+    m_request->attach_stderr = true;
 
     container_attach_response *m_response { nullptr };
     int ret = cb->container.attach(m_request, &m_response, m_request->attach_stdin ? lwsCtx->pipes.at(0) : -1,
-                                   m_request->attach_stdout ? &stdoutstringWriter : nullptr,
-                                   m_request->attach_stderr ? &stderrstringWriter : nullptr);
+                                   &stdoutstringWriter, &stderrstringWriter);
 
     if (ret != 0) {
         // join io copy thread in attach callback
@@ -139,17 +148,20 @@ int AttachServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
         }
         WsWriteStdoutToClient(lwsCtx, message.c_str(), message.length());
     } else {
+        // wait io copy thread complete
         (void)sem_wait(&attachSem);
     }
 
     (void)sem_destroy(&attachSem);
     free_container_attach_response(m_response);
+    m_request->attach_stdout = record_attach_stdout;
+    m_request->attach_stderr = record_attach_stderr;
     return ret;
 }
 
 void AttachServe::CloseConnect(SessionData *lwsCtx)
 {
-    closeWsConnect((void*)lwsCtx, nullptr);
+    closeWsConnect(static_cast<void*>(lwsCtx), nullptr);
 }
 
 void AttachServe::FreeRequest(void *m_request)

@@ -21,7 +21,6 @@
 #include <limits.h>
 #include <errno.h>
 #include <isula_libutils/docker_image_rootfs.h>
-#include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/oci_image_content_descriptor.h>
 #include <isula_libutils/oci_image_manifest.h>
@@ -696,6 +695,7 @@ static int create_image(pull_descriptor *desc, char *image_id, bool *reuse)
         goto out;
     }
 
+    *reuse = false;
     ret = storage_img_create(image_id, top_layer_id, NULL, &opts);
     if (ret != 0) {
         pre_top_layer = storage_get_img_top_layer(image_id);
@@ -712,10 +712,7 @@ static int create_image(pull_descriptor *desc, char *image_id, bool *reuse)
             goto out;
         }
 
-        ret = 0;
         *reuse = true;
-    } else {
-        *reuse = false;
     }
 
     ret = storage_img_add_name(image_id, desc->dest_image_name);
@@ -1898,7 +1895,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     }
 
     sret = snprintf(blobpath, PATH_MAX, "%s/registry-XXXXXX", image_tmp_path);
-    if (sret < 0 || (size_t)sret > PATH_MAX) {
+    if (sret < 0 || (size_t)sret >= PATH_MAX) {
         ERROR("image tmp work path too long");
         ret = -1;
         goto out;

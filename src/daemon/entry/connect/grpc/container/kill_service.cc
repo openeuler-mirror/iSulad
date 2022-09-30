@@ -51,7 +51,7 @@ int ContainerKillService::FillRequestFromgRPC(const KillRequest *request, void *
 void ContainerKillService::ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes)
 {
     (void)cb->container.kill(static_cast<container_kill_request *>(containerReq),
-                              static_cast<container_kill_response **>(containerRes));
+                             static_cast<container_kill_response **>(containerRes));
 }
 
 void ContainerKillService::FillResponseTogRPC(void *containerRes, KillResponse *gresponse)

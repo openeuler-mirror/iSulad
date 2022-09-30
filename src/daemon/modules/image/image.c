@@ -20,7 +20,6 @@
 #include <isula_libutils/defs.h>
 #include <isula_libutils/host_config.h>
 #include <isula_libutils/imagetool_fs_info.h>
-#include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/imagetool_image_status.h>
 #include <isula_libutils/imagetool_images_list.h>
 #include <isula_libutils/isulad_daemon_configs.h>

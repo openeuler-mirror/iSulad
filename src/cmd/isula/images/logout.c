@@ -78,7 +78,9 @@ int cmd_logout_main(int argc, const char **argv)
     struct isula_libutils_log_config lconf = { 0 };
     int exit_code = 1; /* exit 1 if failed to logout */
     command_t cmd;
-    struct command_option options[] = { COMMON_OPTIONS(g_cmd_logout_args) };
+    struct command_option options[] = {
+        COMMON_OPTIONS(g_cmd_logout_args)
+    };
 
     if (client_arguments_init(&g_cmd_logout_args)) {
         COMMAND_ERROR("client arguments init failed");

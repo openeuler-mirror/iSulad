@@ -29,7 +29,6 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <strings.h>
-#include <sys/statfs.h>
 
 #include "isula_libutils/log.h"
 #include "err_msg.h"
@@ -239,6 +238,7 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
         }
 
         free(dup_option);
+        dup_option = NULL;
     }
 
 out:
@@ -3339,15 +3339,14 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
     mnt_root = util_path_join(devset->root, "mnt");
     if (mnt_root == NULL) {
         ERROR("devmapper:join path %s/mnt failed", devset->root);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     dp = opendir(mnt_root);
     if (dp == NULL) {
         ERROR("devmapper: open dir %s failed", mnt_root);
-        ret = -1;
-        goto out;
+        free(mnt_root);
+        return -1;
     }
 
     // Do my best to umount all of the device that has been mounted
@@ -3397,7 +3396,6 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
         devmapper_device_info_ref_dec(device_info);
     }
 
-out:
     closedir(dp);
     free(mnt_root);
     return ret;

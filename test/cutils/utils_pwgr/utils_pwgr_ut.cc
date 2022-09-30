@@ -77,7 +77,9 @@ TEST(utils_pwgr, test_getgrent_r)
     FILE *f_gr = fopen(path.c_str(), "r");
     ASSERT_NE(f_gr, nullptr);
 
-    struct group gr{0};
+    struct group gr {
+        0
+    };
     struct group *pgr = nullptr;
     struct group *pgr_alter = &gr;
     char buf[BUFSIZ] = { 0 };

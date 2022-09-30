@@ -275,6 +275,13 @@ extern "C" {
       NULL },                                                                                                                                             \
     { CMD_OPT_TYPE_STRING_DUP, false, "pid", 0, &(cmdargs).custom_conf.share_ns[NAMESPACE_PID],                                                           \
       "PID namespace to use",  NULL },                                                                                                                    \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                              \
+      false,                                                                                                                                              \
+      "cgroupns",                                                                                                                                          \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.share_ns[NAMESPACE_CGROUP],                                                                                                  \
+      "Cgroup namespace to use (host|none) ",                                                                                                          \
+      NULL },                                                                                                                                             \
     { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
       false,                                                                                                                                              \
       "pids-limit",                                                                                                                                       \

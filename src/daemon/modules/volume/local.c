@@ -156,7 +156,7 @@ out:
     return vols_info;
 }
 
-static int init_volume_root_dir(struct volumes_info *vols_info, char *root_dir)
+static int init_volume_root_dir(struct volumes_info *vols_info, const char *root_dir)
 {
     int ret = 0;
 #ifdef ENABLE_USERNS_REMAP
@@ -292,7 +292,7 @@ static int load_volumes(struct volumes_info *vols)
     return util_scan_subdirs((const char *)vols->root_dir, load_volume, vols);
 }
 
-static int local_volume_init(char *scope)
+static int local_volume_init(const char *scope)
 {
     int ret = 0;
 
@@ -619,7 +619,7 @@ int local_volume_remove(char *name)
     return ret;
 }
 
-int register_local_volume(char *root_dir)
+int register_local_volume(const char *root_dir)
 {
     int ret = 0;
     char *local_volume_root_dir = NULL;

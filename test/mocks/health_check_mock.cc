@@ -32,10 +32,10 @@ void container_update_health_monitor(const char *container_id)
     return;
 }
 
-void container_stop_health_checks(const char *container_id)
+void container_stop_health_checks(container_t *cont)
 {
     if (g_health_check_mock != nullptr) {
-        return g_health_check_mock->ContainerStopHealthCheck(container_id);
+        return g_health_check_mock->ContainerStopHealthCheck(cont);
     }
     return;
 }

@@ -14,12 +14,10 @@
  ******************************************************************************/
 #include "oci_common_operators.h"
 
-#include <stdio.h>
 #include <string.h>
 #include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/imagetool_image_status.h>
 #include <isula_libutils/json_common.h>
-#include <isula_libutils/oci_image_spec.h>
 #include <stdint.h>
 #include <stdlib.h>
 

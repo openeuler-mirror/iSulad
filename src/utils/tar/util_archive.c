@@ -14,28 +14,31 @@
  ********************************************************************************/
 #define _GNU_SOURCE /* See feature_test_macros(7) */
 #include "util_archive.h"
-#include <unistd.h>
+#include <archive.h>
+#include <archive_entry.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/xattr.h>
 #include <sys/stat.h>
-#include <archive.h>
-#include <archive_entry.h>
-#include <errno.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <libgen.h>
+#include <sys/types.h> 
+#include <sys/wait.h>
+#include <sys/xattr.h>
+#include <unistd.h>
 
-#include "stdbool.h"
-#include "utils.h"
-#include "isula_libutils/log.h"
+#include "error.h"
 #include "io_wrapper.h"
-#include "utils_file.h"
+#include "isula_libutils/log.h"
 #include "map.h"
 #include "path.h"
-#include "error.h"
+#include "stdbool.h"
+#include "utils.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 struct archive;
 struct archive_entry;
@@ -596,7 +599,7 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
     pid_t pid = -1;
     int keepfds[] = { -1, -1, -1 };
     int pipe_stderr[2] = { -1, -1 };
-    char errbuf[BUFSIZ] = { 0 };
+    char errbuf[BUFSIZ + 1] = { 0 };
 
     if (pipe2(pipe_stderr, O_CLOEXEC) != 0) {
         ERROR("Failed to create pipe");
@@ -980,7 +983,7 @@ int archive_chroot_tar(char *path, char *file, char **errmsg)
     pid_t pid;
     int pipe_for_read[2] = { -1, -1 };
     int keepfds[] = { -1, -1 };
-    char errbuf[BUFSIZ] = { 0 };
+    char errbuf[BUFSIZ + 1] = { 0 };
     int fd = 0;
 
     if (pipe2(pipe_for_read, O_CLOEXEC) != 0) {

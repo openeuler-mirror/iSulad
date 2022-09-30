@@ -20,7 +20,6 @@
 #include <string.h>
 #include <sha256.h>
 #include <isula_libutils/storage_image.h>
-#include <isula_libutils/container_config.h>
 #include <isula_libutils/imagetool_images_list.h>
 #include <isula_libutils/json_common.h>
 #include <limits.h>
@@ -2026,7 +2025,7 @@ static bool validate_digest(const char *digest)
     char *encode = NULL;
 
     // contains ':' and is not the last character
-    if (index == NULL && index - value + 1 == strlen(value)) {
+    if (index == NULL || index - value + 1 == strlen(value)) {
         INFO("Invalid checksum digest format");
         ret = false;
         goto out;

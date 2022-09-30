@@ -31,7 +31,7 @@ int get_sysctl(const char *sysctl, char **err)
     int fd = -1;
     ssize_t rsize;
     char fullpath[PATH_MAX] = { 0 };
-    char buff[MAX_BUFFER_SIZE] = { 0 };
+    char buff[MAX_BUFFER_SIZE + 1] = { 0 };
 
     ret = snprintf(fullpath, PATH_MAX, "%s/%s", SYSCTL_BASE, sysctl);
     if (ret < 0 || ret >= PATH_MAX) {
@@ -46,7 +46,7 @@ int get_sysctl(const char *sysctl, char **err)
         }
         goto free_out;
     }
-    rsize = util_read_nointr(fd, buff, MAX_BUFFER_SIZE);
+    rsize = util_read_nointr(fd, buff, sizeof(buff) - 1);
     if (rsize <= 0) {
         if (asprintf(err, "Read file failed: %s", strerror(errno)) < 0) {
             *err = util_strdup_s("Out of memory");

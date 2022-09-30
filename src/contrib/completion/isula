@@ -150,6 +150,7 @@ __isula_container_run_and_create(){
             --cap-add
             --cap-drop 
             --cgroup-parent
+            --cgroupns
             --cpu-period
             --cpu-quota
             --cpu-rt-period

@@ -302,13 +302,13 @@ static int del_name_ref(map_t *name_refs, char *name, char *ref)
     return 0;
 }
 
-static int register_drivers(char *root_dir)
+static int register_drivers(const char *root_dir)
 {
     // support local volume driver only right now
     return register_local_volume(root_dir);
 }
 
-int volume_init(char *root_dir)
+int volume_init(const char *root_dir)
 {
     int ret = 0;
 

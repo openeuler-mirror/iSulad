@@ -33,7 +33,8 @@ if (GRPC_CONNECTOR)
 else()
         list(APPEND local_utils_incs ${CMAKE_CURRENT_SOURCE_DIR}/../api/services/containers/rest
                 ${CMAKE_CURRENT_SOURCE_DIR}/../api/services/images/rest
-                ${CMAKE_CURRENT_SOURCE_DIR}/../api/services/network/rest)
+                ${CMAKE_CURRENT_SOURCE_DIR}/../api/services/network/rest
+                ${CMAKE_CURRENT_SOURCE_DIR}/../api/services/volumes/rest)
 
 endif()
 
