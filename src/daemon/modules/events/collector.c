@@ -31,7 +31,6 @@
 
 #include "isula_libutils/log.h"
 #include "events_collector_api.h"
-#include "monitord.h"
 #include "err_msg.h"
 #include "container_api.h"
 #include "event_type.h"
@@ -854,7 +853,7 @@ void events_handler(struct monitord_msg *msg)
     }
 
     if (format_msg(events, msg) != true) {
-        ERROR("Failed to format massage");
+        ERROR("Failed to format message");
         goto out;
     }
 
@@ -977,52 +976,12 @@ out:
     return ret;
 }
 
-static int start_monitored()
-{
-    int ret = 0;
-    int monitored_exitcode = 0;
-    sem_t monitord_sem;
-    struct monitord_sync_data msync = { 0 };
-
-    msync.monitord_sem = &monitord_sem;
-    msync.exit_code = &monitored_exitcode;
-    if (sem_init(msync.monitord_sem, 0, 0)) {
-        isulad_set_error_message("Failed to init monitor sem");
-        ret = -1;
-        goto out;
-    }
-
-    if (new_monitord(&msync)) {
-        isulad_set_error_message("Create monitored thread failed");
-        ret = -1;
-        sem_destroy(msync.monitord_sem);
-        goto out;
-    }
-
-    sem_wait(msync.monitord_sem);
-    sem_destroy(msync.monitord_sem);
-    if (monitored_exitcode) {
-        isulad_set_error_message("Monitored start failed");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
 int events_module_init(char **msg)
 {
     int ret = 0;
 
     if (newcollector()) {
         *msg = "Create collector thread failed";
-        ret = -1;
-        goto out;
-    }
-
-    if (start_monitored()) {
-        *msg = g_isulad_errmsg ? g_isulad_errmsg : "Failed to init cgroups path";
         ret = -1;
         goto out;
     }
