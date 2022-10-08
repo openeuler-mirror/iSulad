@@ -74,7 +74,10 @@ typedef enum {
 typedef struct {
     uint32_t cookie;
     pthread_mutex_t udev_mutex;
+    bool mutex_init;
     int state; // 0: ok 1:err_udev_wait  2: err_udev_wait_timeout
+    pthread_cond_t wait_cond;
+    bool cond_init;
 } udev_wait_pth_t;
 
 char *dev_strerror(int errnum);
