@@ -1,3 +1,20 @@
+2022-10-08 ubuntu release 2.0.17
+    - !1650 add static for udev_wait_pth_t function
+    - !1644 fix maybe uwait use after free
+    - !1625 add timezone CI test
+    - !1622 add hostname env for container
+    - !1618 calculate timezone by tm_gmtoff
+    - !1616 invalid free default-runtime and cri-runtime after free json-confs
+    - !1613 add isulad args Merge pull request !1613 from zhangxiaoyu/stable-v2.0.x
+    - !1611 Remove redundant header files
+    - !1609 adapt to openssl 3.0
+    - !1605 cleancode about rest register container
+    - !1601 fix memleak
+
+    dev stats:
+      - 21 files changed, 585 insertions(+), 218 deletions(-)
+      - contributors: zhangxiaoyu, haozi007, wujing, WangFengTu, zhongtao
+
 2022-08-23 root release 2.0.16
     - !1590 [codecheck] cleancode about big function and magic number
     - !1591 【codecheck】handle some warnings
