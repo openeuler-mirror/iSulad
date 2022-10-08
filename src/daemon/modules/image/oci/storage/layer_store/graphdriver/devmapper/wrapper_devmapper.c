@@ -359,7 +359,7 @@ out:
     return ret;
 }
 
-void free_udev_wait_pth_t(udev_wait_pth_t* uwait)
+static void free_udev_wait_pth_t(udev_wait_pth_t* uwait)
 {
     if (uwait->cond_init) {
         pthread_cond_destroy(&uwait->wait_cond);
@@ -399,7 +399,7 @@ out:
     return NULL;
 }
 
-udev_wait_pth_t *init_udev_wait_pth_t(uint32_t cookie)
+static udev_wait_pth_t *init_udev_wait_pth_t(uint32_t cookie)
 {
     udev_wait_pth_t *uwait = NULL;
 
