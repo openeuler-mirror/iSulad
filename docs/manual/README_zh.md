@@ -15,3 +15,7 @@ Device Mapper 是一个基于内核的框架，它支持 Linux 上的许多高�
 ## native network使用指南
 
 关于如何在iSulad中使用本地网络请参考[native_network](native_network_zh.md)。
+
+## rootless支持
+
+关于如何以非root用户运行iSulad，详细参考[rootless](rootless_zh.md)。
