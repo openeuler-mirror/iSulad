@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <sys/mount.h>
 #include <sys/eventfd.h>
+#include <sys/epoll.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <isula_libutils/container_config.h>
@@ -668,23 +669,40 @@ static int verify_mounts(const container_t *cont)
 
 static void wait_exit_fifo(const char *id, const int exit_fifo_fd)
 {
+#define MAX_EVENTS 100
     int nret = 0;
     int exit_code = 0;
-    const int WAIT_TIMEOUT = 3;
-    fd_set set;
-    struct timeval timeout;
+    int epoll_fd = 0;
+    const int WAIT_TIMEOUT = 3000;
+    struct epoll_event ev = { 0 };
+    struct epoll_event evs[MAX_EVENTS];
 
-    FD_ZERO(&set);
-    FD_SET(exit_fifo_fd, &set);
+    epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+    if (epoll_fd < 0) {
+        ERROR("Failed to create epoll for container %s", id);
+        return;
+    }
 
-    timeout.tv_sec = WAIT_TIMEOUT;
-    timeout.tv_usec = 0;
+    ev.events = EPOLLIN;
+    ev.data.fd = exit_fifo_fd;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, exit_fifo_fd, &ev) < 0) {
+        ERROR("Failed to add epoll event for container %s", id);
+        goto out;
+    }
 
-    nret = select(exit_fifo_fd + 1, &set, NULL, NULL, &timeout);
+    while (1) {
+        nret = epoll_wait(epoll_fd, evs, MAX_EVENTS, WAIT_TIMEOUT);
+        if (nret < 0 && errno == EINTR) {
+            continue;
+        }
+
+        break;
+    }
+
     if (nret < 0) {
         ERROR("Wait containers %s 's monitor on fd %d error: %s", id, exit_fifo_fd,
               errno ? strerror(errno) : "");
-        return;
+        goto out;
     }
 
     if (nret == 0) {
@@ -692,11 +710,18 @@ static void wait_exit_fifo(const char *id, const int exit_fifo_fd)
         // maybe monitor still cleanup cgroup and processes,
         // or monitor doesn't step in cleanup at all
         ERROR("Wait containers %s 's monitor on fd %d timeout", id, exit_fifo_fd);
-        return;
+        goto out;
     }
 
-    (void)util_read_nointr(exit_fifo_fd, &exit_code, sizeof(int));
+    nret = util_read_nointr(exit_fifo_fd, &exit_code, sizeof(int));
+    if (nret <= 0) {
+        ERROR("Failed to read exit fifo fd for container %s", id);
+        goto out;
+    }
     ERROR("The container %s 's monitor on fd %d has exited: %d", id, exit_fifo_fd, exit_code);
+
+out:
+    close(epoll_fd);
 }
 
 static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm, pid_ppid_info_t *pid_info)
