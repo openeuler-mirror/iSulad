@@ -1,5 +1,5 @@
-%global _version 2.0.16
-%global _release 8
+%global _version 2.0.17
+%global _release 1
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -12,18 +12,6 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
-
-Patch0001: 0001-fix-memleak.patch
-Patch0002: 0002-cleancode-about-rest-register-container.patch
-Patch0003: 0003-adapt-to-openssl-3.0.patch
-Patch0004: 0004-remove-redundant-header-files.patch
-Patch0005: 0005-add-isulad-args.patch
-Patch0006: 0006-invalid-free-default-runtime-and-cri-runtime-after-f.patch
-Patch0007: 0007-calculate-timezone-by-tm_gmtoff.patch
-Patch0008: 0008-fixbug-add-hostname-env-for-container.patch
-Patch0009: 0009-add-testcase-for-check-env-HOSTNAME.patch
-Patch0010: 0010-Add-timezone-CI-test.patch
-Patch0011: 0011-fix-maybe-uwait-use-after-free.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -246,6 +234,12 @@ fi
 %endif
 
 %changelog
+* Sun Oct 09 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-1
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: update iSulad version to 2.0.17-1
+
 * Thu Sep 29 2022 haozi007 <liuhao27@huawei.com> - 2.0.16-8
 - Type: enhancement
 - ID: NA
