@@ -18,9 +18,13 @@
 #include <stdint.h>
 #include "linked_list.h"
 
+typedef void (*epoll_timeout_callback_t)(void *data);
+
 struct epoll_descr {
     int fd;
     struct linked_list handler_list;
+    epoll_timeout_callback_t timeout_cb;
+    void *timeout_cbdata;
 };
 
 #define EPOLL_LOOP_HANDLE_CONTINUE 0

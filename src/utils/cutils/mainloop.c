@@ -56,6 +56,9 @@ int epoll_loop(struct epoll_descr *descr, int t)
         }
 
         if (ep_fds == 0 && t != 0) {
+            if (descr->timeout_cb != NULL) {
+                descr->timeout_cb(descr->timeout_cbdata);
+            }
             goto out;
         }
 
@@ -139,6 +142,8 @@ int epoll_loop_open(struct epoll_descr *descr)
     }
 
     linked_list_init(&(descr->handler_list));
+    descr->timeout_cb = NULL;
+    descr->timeout_cbdata = NULL;
     return 0;
 }
 
