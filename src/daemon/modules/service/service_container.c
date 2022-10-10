@@ -52,6 +52,7 @@
 #include "runtime_api.h"
 #include "error.h"
 #include "io_handler.h"
+#include "mainloop.h"
 #include "constants.h"
 #include "event_type.h"
 #include "utils_array.h"
@@ -662,37 +663,69 @@ static int verify_mounts(const container_t *cont)
     return 0;
 }
 
+static int wait_exit_fifo_epoll_callback(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+{
+    int ret = EPOLL_LOOP_HANDLE_CLOSE;
+    int exit_code = 0;
+    char *container_id = cbdata;
+
+    if (util_read_nointr(fd, &exit_code, sizeof(int)) <= 0) {
+        ERROR("Failed to read exit fifo fd for container %s", container_id);
+        return ret;
+    }
+
+    ERROR("The container %s 's monitor on fd %d has exited: %d", container_id, fd, exit_code);
+    return ret;
+}
+
+static void wait_exit_fifo_timeout_callback(void *cbdata)
+{
+    char *container_id = NULL;
+
+    if (cbdata == NULL) {
+        ERROR("Invalid cbdata");
+        return;
+    }
+    container_id = (char *)cbdata;
+
+    // timeout
+    // maybe monitor still cleanup cgroup and processes,
+    // or monitor doesn't step in cleanup at all
+    ERROR("Wait container %s 's monitor timeout", container_id);
+}
+
 static void wait_exit_fifo(const char *id, const int exit_fifo_fd)
 {
     int nret = 0;
-    int exit_code = 0;
-    const int WAIT_TIMEOUT = 3;
-    fd_set set;
-    struct timeval timeout;
+    const int WAIT_TIMEOUT = 3000;
+    char *container_id = NULL;
+    struct epoll_descr descr = { 0 };
 
-    FD_ZERO(&set);
-    FD_SET(exit_fifo_fd, &set);
+    nret = epoll_loop_open(&descr);
+    if (nret != 0) {
+        ERROR("Failed to create epoll for container %s", id);
+        return;
+    }
 
-    timeout.tv_sec = WAIT_TIMEOUT;
-    timeout.tv_usec = 0;
+    container_id = util_strdup_s(id);
+    nret = epoll_loop_add_handler(&descr, exit_fifo_fd, wait_exit_fifo_epoll_callback, container_id);
+    if (nret != 0) {
+        ERROR("Failed to add epoll handler for container %s", id);
+        goto out;
+    }
 
-    nret = select(exit_fifo_fd + 1, &set, NULL, NULL, &timeout);
-    if (nret < 0) {
-        ERROR("Wait containers %s 's monitor on fd %d error: %s", id, exit_fifo_fd,
+    descr.timeout_cb = wait_exit_fifo_timeout_callback;
+    descr.timeout_cbdata = container_id;
+    nret = epoll_loop(&descr, WAIT_TIMEOUT);
+    if (nret != 0) {
+        ERROR("Wait container %s 's monitor on fd %d error: %s", id, exit_fifo_fd,
               errno ? strerror(errno) : "");
-        return;
+        goto out;
     }
 
-    if (nret == 0) {
-        // timeout
-        // maybe monitor still cleanup cgroup and processes,
-        // or monitor doesn't step in cleanup at all
-        ERROR("Wait containers %s 's monitor on fd %d timeout", id, exit_fifo_fd);
-        return;
-    }
-
-    (void)util_read_nointr(exit_fifo_fd, &exit_code, sizeof(int));
-    ERROR("The container %s 's monitor on fd %d has exited: %d", id, exit_fifo_fd, exit_code);
+out:
+    free(container_id);
+    epoll_loop_close(&descr);
 }
 
 static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm, pid_ppid_info_t *pid_info)
