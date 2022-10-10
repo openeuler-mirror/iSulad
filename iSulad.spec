@@ -1,5 +1,5 @@
 %global _version 2.0.17
-%global _release 1
+%global _release 2
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -12,6 +12,8 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
+
+Patch0001: 0001-use-epoll-instead-of-select-for-wait_exit_fifo.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -234,6 +236,12 @@ fi
 %endif
 
 %changelog
+* Mon Oct 10 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-2
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: use epoll instead of select for wait_exit_fifo
+
 * Sun Oct 09 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-1
 - Type: enhancement
 - ID: NA
