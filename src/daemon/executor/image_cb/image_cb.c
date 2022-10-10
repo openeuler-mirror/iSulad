@@ -34,6 +34,8 @@
 #include <isula_libutils/image_tag_image_response.h>
 #include <isula_libutils/image_pull_image_request.h>
 #include <isula_libutils/image_pull_image_response.h>
+#include <isula_libutils/image_history_request.h>
+#include <isula_libutils/image_history_response.h>
 #include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/imagetool_images_list.h>
 #include <isula_libutils/json_common.h>
@@ -1055,6 +1057,143 @@ out:
     return (ret < 0) ? ECOMMON : ret;
 }
 
+int history_request_from_rest(const image_history_request *request, im_history_request **im_req)
+{
+    *im_req = util_common_calloc_s(sizeof(im_history_request));
+    if (*im_req == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    (*im_req)->image.image = util_strdup_s(request->image_name);
+
+    return 0;
+}
+
+
+static int trans_im_history_images(const im_history_response *im_history, image_history_response *response)
+{
+    int ret = 0;
+    size_t i = 0;
+    size_t history_num = 0;
+    image_history_response_t *info = NULL;
+
+    if (im_history == NULL || im_history->history_info == NULL) {
+        return -1;
+    }
+
+    history_num = im_history->history_info_len;
+    if (history_num == 0) {
+        return 0;
+    }
+
+    
+    response->history_info = util_smart_calloc_s(sizeof(image_history_info *), history_num);
+    if (response->history_info == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < history_num; i++) {
+        info = im_history->history_info[i];
+        response->history_info[i] = util_common_calloc_s(sizeof(image_history_info));
+        if (response->history_info[i] == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        response->history_info[i]->comment = util_strdup_s(info->comment);
+        response->history_info[i]->create_by = util_strdup_s(info->created_by);
+        
+        if (info->created != NULL) {
+            int64_t created_nanos = 0;
+            types_timestamp_t timestamp;
+
+            if (util_to_unix_nanos_from_str(info->created, &created_nanos) != 0) {
+                ERROR("Failed to translate created time to nanos");
+                ret = -1;
+                goto out;
+            }
+
+            if (!unix_nanos_to_timestamp(created_nanos, &timestamp) != 0) {
+                ERROR("Failed to translate nanos to timestamp");
+                ret = -1;
+                goto out;
+            }
+
+            response->history_info[i]->created_at = util_common_calloc_s(sizeof(timestamp));
+            if (response->history_info[i]->created_at == NULL) {
+                ERROR("Out of memory");
+                ret = -1;
+                goto out;
+            }
+            response->history_info[i]->created_at->seconds = timestamp.seconds;
+            response->history_info[i]->created_at->nanos = timestamp.nanos;
+        }
+
+        response->history_info[i]->id = util_strdup_s(info->id);
+        response->history_info[i]->size = (int64_t)info->size;
+        response->history_info_len += 1;
+    }
+
+out:
+    return ret;
+}
+
+/* image history cb */
+static int image_history_cb(const image_history_request *request, image_history_response **response)
+{
+    int ret = -1;
+    im_history_request *im_req = NULL;
+    im_history_response *im_rsp = NULL;
+    uint32_t cc = ISULAD_SUCCESS;
+
+    DAEMON_CLEAR_ERRMSG();
+
+    if (request == NULL || request->image_name == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    *response = util_common_calloc_s(sizeof(image_history_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return ISULAD_ERR_MEMOUT;
+    }
+
+    EVENT("Image Event: {Object: %s, Type:Executing History}", request->image_name);
+    ret = history_request_from_rest(request, &im_req);
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = im_history_image(im_req, &im_rsp);
+    if (ret != 0) {
+        ERROR("im_history_image errror");
+        cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+
+    ret = trans_im_history_images(im_rsp, *response);
+    if (ret) {
+        ERROR("Failed to translate list images info");
+        cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    EVENT("Image Event: {Object: %s, Type: Executed History}", request->image_name);
+
+out:
+    (*response)->cc = cc;
+    if (im_rsp != NULL) {
+        (*response)->errmsg = util_strdup_s(im_rsp->errmsg);        
+    }
+    free_im_history_request(im_req);
+    free_im_history_response(im_rsp);
+
+    return (ret < 0) ? ECOMMON : ret;
+}
+
 /* image callback init */
 void image_callback_init(service_image_callback_t *cb)
 {
@@ -1072,4 +1211,5 @@ void image_callback_init(service_image_callback_t *cb)
     cb->logout = logout_cb;
     cb->tag = image_tag_cb;
     cb->pull = image_pull_cb;
+    cb->history = image_history_cb;
 }

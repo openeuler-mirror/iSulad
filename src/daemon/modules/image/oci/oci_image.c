@@ -30,6 +30,7 @@
 #include "oci_load.h"
 #include "oci_import.h"
 #include "oci_export.h"
+#include "oci_history.h"
 #include "err_msg.h"
 #include "oci_common_operators.h"
 #include "utils_array.h"
@@ -325,6 +326,22 @@ int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
     }
 
     return oci_do_pull_image(request, response);
+}
+
+int oci_history_rf(const im_history_request *request, im_history_response *response)
+{
+    if (request == NULL || request->image.image == NULL || response == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    if (!util_valid_image_name(request->image.image)) {
+        ERROR("Invalid image name: %s", request->image.image);
+        isulad_try_set_error_message("Invalid image name: %s", request->image.image);
+        return -1;
+    }
+
+    return oci_do_history(request, response);
 }
 
 int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs)

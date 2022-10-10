@@ -1088,6 +1088,59 @@ void isula_tag_response_free(struct isula_tag_response *response)
     free(response);
 }
 
+
+/* isula images history free */
+void isula_images_history_free(size_t history_num, struct isula_history_info *history_list)
+{
+    int i = 0;
+    struct isula_history_info *in = NULL;
+
+    if (history_list == NULL) {
+        return;
+    }
+
+    for (i = 0, in = history_list; i < (int)history_num; i++, in++) {
+        free(in->comment);
+        free(in->create_by);
+        free(in->id);
+        free(in->tags);
+    }
+
+    free(history_list);
+}
+
+
+/* isula history request free */
+void isula_history_request_free(struct isula_history_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->image_name);
+    request->image_name = NULL;
+
+    free(request);
+}
+
+/* isula history response free */
+void isula_history_response_free(struct isula_history_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    isula_images_history_free(response->history_num,response->history_list);
+    response->history_num = 0;
+    response->history_list = NULL;
+    free(response);
+  
+}
+
+
 /* isula pull response free */
 void isula_pull_request_free(struct isula_pull_request *request)
 {

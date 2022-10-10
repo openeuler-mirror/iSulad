@@ -899,6 +899,108 @@ out:
     free_image_import_response(cresponse);
 }
 
+/* image history request check */
+static int image_history_request_check(image_history_request *req)
+{
+    int ret = 0;
+
+    if (req->image_name == NULL) {
+        DEBUG("recive NULL Request image name");
+        return -1;
+    }
+
+    return ret;
+}
+
+/* image history request from rest */
+static int image_history_request_from_rest(evhtp_request_t *req, image_history_request **crequest)
+{
+    parser_error err = NULL;
+    int ret = 0;
+    char *body = NULL;
+    size_t body_len;
+
+    if (get_body(req, &body_len, &body) != 0) {
+        ERROR("Failed to get body");
+        return -1;
+    }
+
+    *crequest = image_history_request_parse_data(body, NULL, &err);
+    if (*crequest == NULL) {
+        ERROR("Invalid history request body:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (image_history_request_check(*crequest) < 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    put_body(body);
+    free(err);
+    return ret;
+}
+
+/* evhtp send image history repsponse */
+static void evhtp_send_image_history_repsponse(evhtp_request_t *req, image_history_response *response, int rescode)
+{
+    parser_error err = NULL;
+    char *responsedata = NULL;
+
+    responsedata = image_history_response_generate_json(response, NULL, &err);
+    if (responsedata != NULL) {
+        evhtp_send_response(req, responsedata, rescode);
+        goto out;
+    }
+
+    ERROR("History: failed to generate request json:%s", err);
+    evhtp_send_reply(req, RESTFUL_RES_ERROR);
+
+out:
+    free(responsedata);
+    free(err);
+    return;
+}
+
+/* rest image history cb */
+static void rest_image_history_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    image_history_request *crequest = NULL;
+    image_history_response *cresponse = NULL;
+
+    prctl(PR_SET_NAME, "ImageHistory");
+
+    // only deal with POST request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+    cb = get_service_executor();
+    if (cb == NULL || cb->image.history == NULL) {
+        ERROR("Unimplemented history callback");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = image_history_request_from_rest(req, &crequest);
+    if (tret < 0) {
+        ERROR("Bad request");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->image.history(crequest, &cresponse);
+
+    evhtp_send_image_history_repsponse(req, cresponse, RESTFUL_RES_OK);
+
+out:
+    free_image_history_request(crequest);
+    free_image_history_response(cresponse);
+}
 
 /* rest register images handler */
 int rest_register_images_handler(evhtp_t *htp)
@@ -939,12 +1041,17 @@ int rest_register_images_handler(evhtp_t *htp)
     }
 
     if (evhtp_set_cb(htp, ImagesServiceTag, rest_image_tag_cb, NULL) == NULL) {
-        ERROR("Failed to register image logout callback");
+        ERROR("Failed to register image tag callback");
         return -1;
     }
 
     if (evhtp_set_cb(htp, ImagesServiceImport, rest_image_import_cb, NULL) == NULL) {
-        ERROR("Failed to register image logout callback");
+        ERROR("Failed to register image import callback");
+        return -1;
+    }
+
+    if (evhtp_set_cb(htp, ImagesServiceHistory, rest_image_history_cb, NULL) == NULL) {
+        ERROR("Failed to register image history callback");
         return -1;
     }
 
