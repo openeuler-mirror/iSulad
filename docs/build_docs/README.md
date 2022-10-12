@@ -4,6 +4,58 @@
 
 This section contains some guides for iSulad project users who want to contribute code to the isulad project. 
 
+## Automate compilation scripts
+
+### OpenEuler
+
+You can automatically install isulad on openEuler directly by compiling dependencies (other rpm distributions can also refer to this method, but some package names are inconsistent).
+
+```bash
+dnf builddep iSulad.spec
+```
+
+`tips`：[iSulad.spec](../../iSulad.spec) directly uses the files in the isulad source code.
+
+Then, you should build and install iSulad:
+
+```sh
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad
+$ mkdir build
+$ cd build
+$ sudo -E cmake ..
+$ sudo -E make
+$ sudo -E make install
+```
+`tips`： The communication between isula and isulad uses grpc by default. If you want to use rest for communication, you can replace it with the following compilation options：
+
+```c
+cmake -DENABLE_GRPC=OFF ../
+```
+
+### Centos
+
+We provided a [script](./guide/script/install_iSulad_on_Centos_7.sh) to auto install iSulad on centos7, you can just execute the script to install iSulad.
+
+```sh
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad/docs/build_docs/guide/script
+$ sudo ./install_iSulad_on_Centos_7.sh
+```
+
+### Ubuntu
+
+We also provided a [script](./guide/script/install_iSulad_on_Ubuntu_20_04_LTS.sh) to auto install iSulad on Ubuntu20.04, you can just execute the script to install iSulad.
+
+```sh
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad/docs/build_docs/guide/script
+$ sudo chmod +x ./install_iSulad_on_Ubuntu_20_04_LTS.sh
+$ sudo ./install_iSulad_on_Ubuntu_20_04_LTS.sh
+```
+
+`tips`:  If you want to keep the source of all dependencies, you can comment `rm -rf $BUILD_DIR` in the script.
+
 ## Build guide
 
 We provide multiple ways to build iSulad:

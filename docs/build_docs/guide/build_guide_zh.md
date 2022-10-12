@@ -14,6 +14,23 @@
 
 **注意**：iSulad.spec直接用源码中的文件即可。
 
+之后源码编译安装isulad：
+
+```bash
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad
+$ mkdir build
+$ cd build
+$ sudo -E cmake ..
+$ sudo -E make -j $(nproc)
+$ sudo -E make install
+```
+**注意：** isula与isulad之间的通信默认使用grpc，若想要使用rest进行通信，可使用如下编译选项更换：
+
+```c
+cmake -DENABLE_GRPC=OFF ../
+```
+
 ### Centos的安装命令
 
 我们在代码仓中提供了在Centos7上自动化安装的脚本，您只需要执行这个脚本就可以自动编译安装iSulad以及其依赖的组件。
@@ -57,7 +74,7 @@ $ export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH
 $ sudo -E echo "/usr/local/lib" >> /etc/ld.so.conf
 ```
 
-**注意：**若编译中断，再次进入系统进行源码编译之前，必须重新利用上述命令设置ldconfig和pkgconfig的路径。
+**注意：** 若编译中断，再次进入系统进行源码编译之前，必须重新利用上述命令设置ldconfig和pkgconfig的路径。
 
 #### 编译安装protobuf
 
@@ -218,4 +235,9 @@ $ cd build
 $ sudo -E cmake ..
 $ sudo -E make -j $(nproc)
 $ sudo -E make install
+```
+**注意：** isula与isulad之间的通信默认使用grpc，若想要使用rest进行通信，可使用如下编译选项更换：
+
+```c
+cmake -DENABLE_GRPC=OFF ../
 ```

@@ -65,7 +65,7 @@ qemu-system-riscv64 \
 
 ## 源码编译及安装
 
-> Build and install iSulad from source by yourself，之后参考[build_guide](https://gitee.com/openeuler/iSulad/blob/master/docs/build_docs/guide/build_guide.md)的`逐步源码构建和安装iSulad`进行编译和安装,以下给出了编译过程中可能出现的错误以及其解决方案。
+> 首先使用yum安装依赖的软件包，之后参考[build_guide](https://gitee.com/openeuler/iSulad/blob/master/docs/build_docs/guide/build_guide.md)的`逐步源码构建和安装iSulad`进行编译和安装,以下给出了编译过程中可能出现的错误以及其解决方案。
 
 ### 依赖软件包安装
 
