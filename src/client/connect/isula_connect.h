@@ -91,6 +91,7 @@ typedef struct {
     int (*logout)(const struct isula_logout_request *request, struct isula_logout_response *response, void *arg);
     int (*tag)(const struct isula_tag_request *request, struct isula_tag_response *response, void *arg);
     int (*import)(const struct isula_import_request *request, struct isula_import_response *response, void *arg);
+    int (*history)(const struct isula_history_request *request, struct isula_history_response *response, void *arg);
 } image_ops;
 
 typedef struct {

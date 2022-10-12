@@ -55,6 +55,7 @@
 #include "remove.h"
 #include "prune.h"
 #include "list.h"
+#include "history.h"
 #ifdef ENABLE_NATIVE_NETWORK
 #include "network.h"
 #include "port.h"
@@ -204,6 +205,10 @@ struct command g_commands[] = {
     {
         // `import` sub-command
         "import", false, cmd_import_main, g_cmd_import_desc, NULL, &g_cmd_import_args
+    },
+    {
+        // `history` sub-command
+        "history", false, cmd_history_main, g_cmd_history_desc, NULL, &g_cmd_history_args
     },
     {
         // `volume` sub-command

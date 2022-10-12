@@ -81,6 +81,8 @@
 #include "isula_libutils/image_logout_response.h"
 #include "isula_libutils/image_pull_image_request.h"
 #include "isula_libutils/image_pull_image_response.h"
+#include "isula_libutils/image_history_request.h"
+#include "isula_libutils/image_history_response.h"
 #include "isula_libutils/volume_list_volume_request.h"
 #include "isula_libutils/volume_list_volume_response.h"
 #include "isula_libutils/volume_remove_volume_request.h"
@@ -280,7 +282,10 @@ typedef struct {
     int (*logout)(const image_logout_request *request, image_logout_response **response);
 
     int (*tag)(const image_tag_image_request *request, image_tag_image_response **response);
+
     int (*pull)(const image_pull_image_request *request, image_pull_image_response **response);
+
+    int (*history)(const image_history_request *request, image_history_response **response);
 } service_image_callback_t;
 
 typedef struct {

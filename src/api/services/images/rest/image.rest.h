@@ -33,6 +33,8 @@
 #include "isula_libutils/image_tag_image_response.h"
 #include "isula_libutils/image_import_request.h"
 #include "isula_libutils/image_import_response.h"
+#include "isula_libutils/image_history_request.h"
+#include "isula_libutils/image_history_response.h"
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
@@ -47,6 +49,7 @@
 #define ImagesServiceLogout "/ImagesService/Logout"
 #define ImagesServiceTag "/ImagesService/Tag"
 #define ImagesServiceImport "/ImagesService/Import"
+#define ImagesServiceHistory "/ImagesService/History"
 
 #endif
 

@@ -82,6 +82,9 @@ struct bim_ops {
     /* pull image */
     int (*pull_image)(const im_pull_request *request, im_pull_response *response);
 
+    /* history image */
+    int (*history_image)(const im_history_request *request, im_history_response *response);
+
     /* login */
     int (*login)(const im_login_request *request);
 
@@ -145,7 +148,7 @@ static const struct bim_ops g_embedded_ops = {
     .image_status = NULL,
     .load_image = embedded_load_image,
     .pull_image = NULL,
-
+    .history_image = NULL,
     .login = NULL,
     .logout = NULL,
     .tag_image = NULL,
@@ -179,6 +182,7 @@ static const struct bim_ops g_oci_ops = {
     .image_status = oci_status_image,
     .load_image = oci_load_image,
     .pull_image = oci_pull_rf,
+    .history_image = oci_history_rf,
     .login = oci_login,
     .logout = oci_logout,
     .tag_image = oci_tag,
@@ -212,6 +216,7 @@ static const struct bim_ops g_ext_ops = {
     .get_filesystem_info = NULL,
     .load_image = ext_load_image,
     .pull_image = NULL,
+    .history_image = NULL,
     .login = ext_login,
     .logout = ext_logout,
     .tag_image = NULL,
@@ -995,6 +1000,66 @@ void free_im_pull_response(im_pull_response *resp)
     }
     free(resp->image_ref);
     resp->image_ref = NULL;
+    free(resp->errmsg);
+    resp->errmsg = NULL;
+    free(resp);
+}
+
+int im_history_image(const im_history_request *request, im_history_response **response)
+{
+    int ret = 0;
+    size_t i;
+    im_history_response *tmp_res = NULL;
+
+    DAEMON_CLEAR_ERRMSG();
+
+    tmp_res = (im_history_response *)util_common_calloc_s(sizeof(im_history_response));
+    if (tmp_res == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
+    EVENT("Event: {Object: %s, Type: Executing History}", request->image.image);
+    for (i = 0; i < g_numbims; i++) {
+        if (g_bims[i].ops->history_image == NULL) {
+            DEBUG("bim %s umimplements history images operator", g_bims[i].image_type);
+            continue;
+        }
+        ret = g_bims[i].ops->history_image(request, tmp_res);
+        if (ret != 0) {
+            ERROR("Failed to list all images with type:%s", g_bims[i].image_type);
+            continue;
+        }
+       
+    }
+    EVENT("Event: {Object: %s, Type: Executed History}", request->image.image);
+
+out:
+    if (ret != 0 && tmp_res != NULL && g_isulad_errmsg != NULL) {
+        tmp_res->errmsg = util_strdup_s(g_isulad_errmsg);
+    }
+    DAEMON_CLEAR_ERRMSG();
+    *response = tmp_res;
+    return ret;
+}
+
+void free_im_history_request(im_history_request *req)
+{
+    if (req == NULL) {
+        return;
+    }
+    free(req->image.image);
+    req->image.image = NULL;
+    free(req);
+}
+
+void free_im_history_response(im_history_response *resp)
+{
+    if (resp == NULL) {
+        return;
+    }
+    free(resp->history_info);
+    resp->history_info = NULL;
     free(resp->errmsg);
     resp->errmsg = NULL;
     free(resp);

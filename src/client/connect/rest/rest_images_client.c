@@ -959,6 +959,144 @@ out:
     return ret;
 }
 
+/* image history request to rest */
+static int image_history_request_to_rest(const struct isula_history_request *request, char **body, size_t *body_len)
+{
+    image_history_request *crequest = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    crequest = util_common_calloc_s(sizeof(image_history_request));
+    if (crequest == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    crequest->image_name = util_strdup_s(request->image_name);
+
+    *body = image_history_request_generate_json(crequest, NULL, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate image history request json:%s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_image_history_request(crequest);
+    return ret;
+}
+
+static int unpack_image_info_to_history_response(image_history_response *cresponse,
+                                              struct isula_history_response *response)
+{
+    size_t num = 0;
+    struct isula_history_info *history_info = NULL;
+
+    if (cresponse == NULL || response == NULL) {
+        return -1;
+    }
+
+    num = cresponse->history_info_len;
+    if (num > 0) {
+        size_t i;
+        history_info = (struct isula_history_info *)util_smart_calloc_s(sizeof(struct isula_history_info), num);
+        if (history_info == NULL) {
+            ERROR("out of memory");
+            return -1;
+        }
+        response->history_num = num;
+        response->history_list = history_info;
+        for (i = 0; i < num; i++) {
+            if (cresponse->history_info[i]->created_at != NULL) {
+                history_info[i].created = cresponse->history_info[i]->created_at->seconds;
+            }
+            history_info[i].comment = cresponse->history_info[i]->comment ? util_strdup_s(cresponse->history_info[i]->comment) :
+                                     util_strdup_s("-");
+            history_info[i].create_by = cresponse->history_info[i]->create_by ? util_strdup_s(cresponse->history_info[i]->create_by) :
+                                     util_strdup_s("-");
+            history_info[i].id = cresponse->history_info[i]->id ? util_strdup_s(cresponse->history_info[i]->id) :
+                                     util_strdup_s("-");
+            history_info[i].size = cresponse->history_info[i]->size;
+        }
+    }
+    return 0;
+}
+
+/* unpack image history response */
+static int unpack_image_history_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_history_response *c_history_response = (struct isula_history_response *)arg;
+    image_history_response *history_response = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        ERROR("History image check status code failed.\n");
+        goto out;
+    }
+
+    history_response = image_history_response_parse_data(message->body, NULL, &err);
+    if (history_response == NULL) {
+        ERROR("Invalid history image response:%s", err);
+        ret = -1;
+        goto out;
+    }
+    if (history_response->errmsg != NULL) {
+        c_history_response->errmsg = util_strdup_s(history_response->errmsg);
+    }
+
+    ret = (history_response->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+    if (unpack_image_info_to_history_response(history_response, c_history_response)) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(err);
+    free_image_history_response(history_response);
+    return ret;
+}
+
+/* rest image history */
+static int rest_image_history(const struct isula_history_request *request, struct isula_history_response *response, void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len = 0;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    Buffer *output = NULL;
+    ret = image_history_request_to_rest(request, &body, &len);
+    if (ret != 0) {
+        goto out;
+    }
+    ret = rest_send_request(socketname, RestHttpHead ImagesServiceHistory, body, len, &output);
+    if (ret != 0) {
+        ERROR("Send history request failed.");
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    ret = get_response(output, unpack_image_history_response, (void *)response);
+    if (ret != 0) {
+        ERROR("Get history response failed.");
+        goto out;
+    }
+
+out:
+    buffer_free(output);
+    put_body(body);
+    return ret;
+}
+
+
 /* rest images client ops init */
 int rest_images_client_ops_init(isula_connect_ops *ops)
 {
@@ -975,6 +1113,7 @@ int rest_images_client_ops_init(isula_connect_ops *ops)
     ops->image.logout = &rest_image_logout;
     ops->image.tag = &rest_image_tag;
     ops->image.import = &rest_image_import;
+    ops->image.history = &rest_image_history;
 
     return 0;
 }

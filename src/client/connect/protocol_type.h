@@ -459,6 +459,28 @@ struct isula_list_images_response {
     char *errmsg;
 };
 
+struct isula_history_info {
+    char *comment;
+    char *create_by;
+    char *id;
+    int64_t created; /* seconds */
+    char **tags;
+    int64_t size; /* Bytes */
+};
+
+struct isula_history_request {
+    char *image_name;
+};
+
+struct isula_history_response {
+    uint32_t cc;
+    size_t history_num;
+    uint32_t server_errono;
+    struct isula_history_info *history_list;
+    char *errmsg;
+};
+
+
 struct isula_rmi_request {
     char *image_name;
     bool force;
@@ -722,6 +744,10 @@ void isula_delete_response_free(struct isula_delete_response *response);
 void isula_list_request_free(struct isula_list_request *request);
 
 void isula_list_response_free(struct isula_list_response *response);
+
+void isula_history_request_free(struct isula_history_request *request);
+
+void isula_history_response_free(struct isula_history_response *response);
 
 void isula_exec_request_free(struct isula_exec_request *request);
 
