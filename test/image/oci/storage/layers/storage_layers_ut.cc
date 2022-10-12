@@ -153,7 +153,8 @@ protected:
         MockDriverQuota_SetMock(&m_driver_quota_mock);
         struct storage_module_init_options opts = {0};
 
-        std::string isulad_dir = "/var/lib/isulad/";
+        std::string isulad_dir = "/tmp/isulad/";
+        mkdir(isulad_dir.c_str(), 0755);
         std::string root_dir = isulad_dir + "data";
         std::string run_dir = isulad_dir + "data/run";
         std::string data_dir = GetDirectory() + "/data";
@@ -167,6 +168,9 @@ protected:
         ASSERT_STRNE(util_clean_path(run_dir.c_str(), real_run_path, sizeof(real_run_path)), nullptr);
         opts.storage_run_root = strdup(real_run_path);
         opts.driver_name = strdup("overlay");
+        opts.driver_opts = static_cast<char **>(util_smart_calloc_s(sizeof(char *), 1));
+        opts.driver_opts[0] = strdup("overlay2.skip_mount_home=true");
+        opts.driver_opts_len = 1;
 
         EXPECT_CALL(m_driver_quota_mock, QuotaCtl(_, _, _, _)).WillRepeatedly(Invoke(invokeQuotaCtl));
         ASSERT_EQ(layer_store_init(&opts), 0);
@@ -174,6 +178,8 @@ protected:
         free(opts.storage_root);
         free(opts.storage_run_root);
         free(opts.driver_name);
+        free(opts.driver_opts[0]);
+        free(opts.driver_opts);
     }
 
     void TearDown() override
@@ -183,7 +189,7 @@ protected:
         layer_store_exit();
         layer_store_cleanup();
 
-        std::string rm_command = "rm -rf /var/lib/isulad/data";
+        std::string rm_command = "rm -rf /tmp/isulad/";
         ASSERT_EQ(system(rm_command.c_str()), 0);
     }
 

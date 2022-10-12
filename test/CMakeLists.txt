@@ -1,5 +1,7 @@
 project(iSulad_UT)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-maybe-uninitialized")
+
 function(gmock_find_library _name)
   find_library(${_name}
     NAMES ${ARGN}
