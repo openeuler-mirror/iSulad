@@ -1447,30 +1447,25 @@ bool container_has_mount_for(container_t *cont, const char *mpath)
     return false;
 }
 
-int container_module_init(char **msg)
+int container_module_init()
 {
-    int ret = 0;
-
     if (new_gchandler()) {
-        *msg = "Create garbage handler thread failed";
-        ret = -1;
-        goto out;
+        ERROR("Create garbage handler thread failed");
+        return -1;
     }
 
     if (new_supervisor()) {
-        *msg = "Create supervisor thread failed";
-        ret = -1;
-        goto out;
+        ERROR("Create supervisor thread failed");
+        return -1;
     }
 
     containers_restore();
 
     if (start_gchandler()) {
-        *msg = "Failed to start garbage collecotor handler";
-        ret = -1;
-        goto out;
+        ERROR("Failed to start garbage collecotor handler");
+        return -1;
     }
 
-out:
-    return ret;
+    INFO("Container module started");
+    return 0;
 }

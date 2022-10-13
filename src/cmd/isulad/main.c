@@ -569,16 +569,16 @@ static void update_isulad_rlimits()
     limit.rlim_cur = __ULIMIT_CONFIG_VAL_;
     limit.rlim_max = __ULIMIT_CONFIG_VAL_;
     if (setrlimit(RLIMIT_NOFILE, &limit)) {
-        WARN("Can not set ulimit of RLIMIT_NOFILE: %s", strerror(errno));
+        SYSWARN("Can not set ulimit of RLIMIT_NOFILE");
     }
 
     if (setrlimit(RLIMIT_NPROC, &limit)) {
-        WARN("Can not set ulimit of RLIMIT_NPROC: %s", strerror(errno));
+        SYSWARN("Can not set ulimit of RLIMIT_NPROC");
     }
     limit.rlim_cur = RLIM_INFINITY;
     limit.rlim_max = RLIM_INFINITY;
     if (setrlimit(RLIMIT_CORE, &limit)) {
-        WARN("Can not set ulimit of RLIMIT_CORE: %s", strerror(errno));
+        SYSWARN("Can not set ulimit of RLIMIT_CORE");
     }
 }
 
@@ -1055,7 +1055,7 @@ static int init_log_gather_thread(const char *log_full_path, struct isula_libuti
     lgconf.max_file = args->max_file;
     lgconf.exitcode = &log_gather_exitcode;
     if (pthread_create(&log_thread, NULL, log_gather, &lgconf)) {
-        printf("Failed to create log monitor thread\n");
+        ERROR("Failed to create log monitor thread");
         return -1;
     }
     while (1) {
@@ -1070,20 +1070,17 @@ static int init_log_gather_thread(const char *log_full_path, struct isula_libuti
 
 static int isulad_get_log_path(char **log_full_path, char **fifo_full_path)
 {
-    int ret = 0;
-
     *log_full_path = conf_get_isulad_log_file();
     if (*log_full_path == NULL) {
-        ret = -1;
-        goto out;
+        return -1;
     }
+
     *fifo_full_path = conf_get_isulad_log_gather_fifo_path();
     if (*fifo_full_path == NULL) {
-        ret = -1;
-        goto out;
+        return -1;
     }
-out:
-    return ret;
+
+    return 0;
 }
 
 static int isulad_server_init_log(const struct service_arguments *args, const char *log_full_path,
@@ -1217,6 +1214,7 @@ static int isulad_server_init_common()
     char *fifo_full_path = NULL;
 
     if (isulad_get_log_path(&log_full_path, &fifo_full_path) != 0) {
+        ERROR("Get log path failed");
         goto out;
     }
 
@@ -1226,6 +1224,7 @@ static int isulad_server_init_common()
         goto out;
     }
 
+    // starting log server of iSulad
     if (isulad_server_pre_init(args, log_full_path, fifo_full_path) != 0) {
         goto out;
     }
@@ -1387,16 +1386,16 @@ out:
 static void set_mallopt()
 {
     if (mallopt(M_ARENA_TEST, 8) == 0) {
-        fprintf(stderr, "change M_ARENA_TEST to 8\n");
+        SYSERROR("Failed to change M_ARENA_TEST to 8");
     }
     if (mallopt(M_TOP_PAD, 32 * 1024) == 0) {
-        fprintf(stderr, "chagne M_TOP_PAD to 32KB");
+        SYSERROR("Failed to chagne M_TOP_PAD to 32KB");
     }
     if (mallopt(M_TRIM_THRESHOLD, 64 * 1024) == 0) {
-        fprintf(stderr, "change M_TRIM_THRESHOLD to 64KB");
+        SYSERROR("Failed to change M_TRIM_THRESHOLD to 64KB");
     }
     if (mallopt(M_MMAP_THRESHOLD, 64 * 1024) == 0) {
-        fprintf(stderr, "change M_MMAP_THRESHOLD to 64KB");
+        SYSERROR("Failed to change M_MMAP_THRESHOLD to 64KB");
     }
 }
 
@@ -1437,20 +1436,20 @@ out:
     return ret;
 }
 
-static int start_daemon_threads(char **msg)
+static int start_daemon_threads()
 {
     int ret = -1;
 
     if (new_shutdown_handler()) {
-        *msg = "Create new shutdown handler thread failed";
+        ERROR("Create new shutdown handler thread failed");
         goto out;
     }
 
-    if (events_module_init(msg) != 0) {
+    if (events_module_init() != 0) {
         goto out;
     }
 
-    if (container_module_init(msg) != 0) {
+    if (container_module_init() != 0) {
         goto out;
     }
 
@@ -1468,42 +1467,42 @@ static int pre_init_daemon_log()
     lconf.priority = "ERROR";
     lconf.driver = "stdout";
     if (isula_libutils_log_enable(&lconf)) {
-        fprintf(stderr, "log init failed\n");
+        COMMAND_ERROR("Enable isula default log failed");
         return -1;
     }
 
     return 0;
 }
 
-static int pre_init_daemon(int argc, char **argv, char **msg)
+static int pre_init_daemon(int argc, char **argv)
 {
     int ret = -1;
     /*
      * must call isulad by root
      */
     if (geteuid() != 0) {
-        *msg = "iSulad must be called by root";
+        SYSERROR("iSulad must be called by root");
         goto out;
     }
 
     if (server_conf_parse_save(argc, (const char **)argv)) {
-        *msg = g_isulad_errmsg ? g_isulad_errmsg : "Failed to parse and save server conf";
+        ERROR("%s", g_isulad_errmsg ? g_isulad_errmsg : "Failed to parse and save server conf");
         goto out;
     }
 
     if (init_isulad_daemon_constants() != 0) {
-        *msg = "Failed to parse isulad daemon constants";
+        ERROR("Failed to parse isulad daemon constants");
         goto out;
     }
 
     /* note: daemonize will close all fds */
     if (daemonize()) {
-        *msg = "Failed to become a daemon";
+        ERROR("Failed to become a daemon");
         goto out;
     }
 
     if (runtime_init() != 0) {
-        *msg = "Failed to init runtime";
+        ERROR("Failed to init runtime");
         goto out;
     }
 
@@ -1511,7 +1510,7 @@ static int pre_init_daemon(int argc, char **argv, char **msg)
      * change the current working dir to root.
      */
     if (chdir("/") < 0) {
-        *msg = "Failed to change dir to /";
+        SYSERROR("Failed to change dir to /");
         goto out;
     }
 
@@ -1527,7 +1526,7 @@ static int set_locale()
 
     /* Change from the standard (C) to en_US.UTF-8 locale, so libarchive can handle filename conversions.*/
     if (setlocale(LC_CTYPE, "en_US.UTF-8") == NULL) {
-        COMMAND_ERROR("Could not set locale to en_US.UTF-8:%s", strerror(errno));
+        SYSERROR("Could not set locale to en_US.UTF-8");
         ret = -1;
         goto out;
     }
@@ -1544,10 +1543,10 @@ int main(int argc, char **argv)
 {
     struct timespec t_start, t_end;
     double use_time = 0;
-    char *msg = NULL;
 
     prctl(PR_SET_NAME, "isulad");
 
+    // set default log driver to stdout, before get config of iSulad log
     if (pre_init_daemon_log() != 0) {
         exit(ECOMMON);
     }
@@ -1568,7 +1567,7 @@ int main(int argc, char **argv)
 
     clock_gettime(CLOCK_MONOTONIC, &t_start);
 
-    if (pre_init_daemon(argc, argv, &msg) != 0) {
+    if (pre_init_daemon(argc, argv) != 0) {
         goto failure;
     }
 
@@ -1577,21 +1576,21 @@ int main(int argc, char **argv)
     }
 
     if (add_sighandler()) {
-        msg = "Failed to add sig handlers";
+        ERROR("Failed to add sig handlers");
         goto failure;
     }
 
-    if (start_daemon_threads(&msg)) {
+    if (start_daemon_threads()) {
         goto failure;
     }
 
     if (isulad_server_init_service()) {
-        msg = "Failed to init services";
+        ERROR("Failed to init services");
         goto failure;
     }
 
     if (start_plugin_manager()) {
-        msg = "Failed to init plugin_manager";
+        ERROR("Failed to init plugin_manager");
         goto failure;
     }
 
@@ -1607,7 +1606,7 @@ int main(int argc, char **argv)
 
 #ifdef SYSTEMD_NOTIFY
     if (sd_notify(0, "READY=1") < 0) {
-        msg = "Failed to send notify the service manager about state changes";
+        SYSERROR("Failed to send notify the service manager about state changes");
         goto failure;
     }
 #endif
@@ -1620,9 +1619,7 @@ int main(int argc, char **argv)
     return 0;
 
 failure:
-    if (msg != NULL) {
-        fprintf(stderr, "Start failed: %s\n", msg);
-    }
+    ERROR("Starting failed...");
     DAEMON_CLEAR_ERRMSG();
     exit(1);
 }

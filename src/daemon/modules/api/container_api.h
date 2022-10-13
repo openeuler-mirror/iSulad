@@ -275,7 +275,7 @@ void container_stop_health_checks(container_t *cont);
 
 bool container_is_in_gc_progress(const char *id);
 
-int container_module_init(char **msg);
+int container_module_init();
 
 #if defined(__cplusplus) || defined(c_plusplus)
 }
