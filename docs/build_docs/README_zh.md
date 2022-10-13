@@ -4,6 +4,53 @@
 
 如果您想要参与iSulad的开发，可以参考以下指南。
 
+## 自动化构建脚本
+
+### OpenEuler
+
+我们在代码仓中提供了spec文件：[iSulad.spec](../../iSulad.spec) , 您可以直接执行以下命令编译安装isulad的基本依赖：
+
+```bash
+ dnf builddep iSulad.spec
+```
+之后源码编译安装isulad：
+
+```bash
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad
+$ mkdir build
+$ cd build
+$ sudo -E cmake ..
+$ sudo -E make -j $(nproc)
+$ sudo -E make install
+```
+**注意：** isula与isulad之间的通信默认使用grpc，若想要使用rest进行通信，可使用如下编译选项更换：
+
+```c
+cmake -DENABLE_GRPC=OFF ../
+```
+
+### Centos
+
+我们在代码仓中提供了在Centos7上自动化安装的脚本: [install_iSulad_on_Centos_7](./guide/script/install_iSulad_on_Centos_7.sh)，您只需要执行这个脚本就可以自动编译安装iSulad以及其依赖的组件。
+
+```sh
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad/docs/build_docs/guide/script
+$ sudo ./install_iSulad_on_Centos_7.sh
+```
+
+### Ubuntu
+
+我们同样在代码仓中提供了在Ubuntu上自动化安装的脚本: [install_iSulad_on_Ubuntu_20_04_LTS](./guide/script/install_iSulad_on_Ubuntu_20_04_LTS.sh)，您只需要执行这个脚本就可以自动编译安装iSulad以及其依赖的组件。
+
+```sh
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad/docs/build_docs/guide/script
+$ sudo chmod +x ./install_iSulad_on_Ubuntu_20_04_LTS.sh
+$ sudo ./install_iSulad_on_Ubuntu_20_04_LTS.sh
+```
+
 ## 构建指南
 
 我们提供了多种构建iSulad的方式：
