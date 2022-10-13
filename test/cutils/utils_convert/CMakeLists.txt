@@ -3,17 +3,6 @@ project(iSulad_UT)
 SET(EXE utils_convert_ut)
 
 add_executable(${EXE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_string.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_array.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_convert.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_verify.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_regex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
     utils_convert_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
@@ -24,5 +13,5 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
     )
-target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
+target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)

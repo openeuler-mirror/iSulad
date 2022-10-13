@@ -8,9 +8,9 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: hejunjie
- * Create: 2022-04-08
- * Description: utils_pwgr unit test
+ * Author: haozi007
+ * Create: 2022-10-13
+ * Description: utils namespace unit test
  *******************************************************************************/
 
 #include <gtest/gtest.h>
