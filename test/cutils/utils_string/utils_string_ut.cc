@@ -807,3 +807,27 @@ TEST(utils_string_ut, test_parse_percent_string)
     ret = util_parse_percent_string(wrong6, &converted);
     ASSERT_NE(ret, 0);
 }
+
+TEST(utils_string_ut, test_str_token)
+{
+    char *token = nullptr;
+    char *string = (char *)"abc:def:gh";
+    char *tmp = string;
+
+    token = util_str_token(&tmp, nullptr);
+    ASSERT_STREQ(token, nullptr);
+    token = util_str_token(nullptr, ":");
+    ASSERT_STREQ(token, nullptr);
+
+    token = util_str_token(&tmp, ",");
+    ASSERT_STREQ(tmp, nullptr);
+    ASSERT_STREQ(token, string);
+    tmp = string;
+    free(token);
+    token = nullptr;
+
+    token = util_str_token(&tmp, ":");
+    ASSERT_STREQ(tmp, "def:gh");
+    ASSERT_STREQ(token, "abc");
+    free(token);
+}
