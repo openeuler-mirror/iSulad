@@ -26,7 +26,7 @@ extern "C" {
 #define AES_256_CFB_KEY_LEN 32
 #define AES_256_CFB_IV_LEN 16
 
-int util_aes_key(char *key_path, bool create, unsigned char *aeskey);
+int util_aes_key(const char *key_path, bool create, unsigned char *aeskey);
 
 // note: Input bytes is "IV+data", "bytes+AES_256_CFB_IV_LEN" is the real data to be encoded.
 //       The output length is the input "len" and add the '\0' after end of the length.
