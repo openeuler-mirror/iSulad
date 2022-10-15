@@ -20,9 +20,8 @@
 
 char *namespace_get_connected_container(const char *mode)
 {
-    const char *p = mode != NULL ? (mode + strlen(SHARE_NAMESPACE_PREFIX)) : NULL;
-
     if (namespace_is_container(mode)) {
+        const char *p = mode + strlen(SHARE_NAMESPACE_PREFIX);
         return util_strdup_s(p);
     }
 
