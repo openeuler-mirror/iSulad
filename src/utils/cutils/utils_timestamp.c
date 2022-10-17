@@ -39,7 +39,7 @@ bool unix_nanos_to_timestamp(int64_t nanos, types_timestamp_t *timestamp)
     return true;
 }
 
-int types_timestamp_cmp_check(const types_timestamp_t *t1, const types_timestamp_t *t2)
+static int types_timestamp_cmp_check(const types_timestamp_t *t1, const types_timestamp_t *t2)
 {
     if (t1 == NULL && t2 == NULL) {
         return 0;
@@ -54,7 +54,7 @@ int types_timestamp_cmp_check(const types_timestamp_t *t1, const types_timestamp
     return 2;
 }
 
-int types_timestamp_cmp_nanos(const types_timestamp_t *t1, const types_timestamp_t *t2)
+static int types_timestamp_cmp_nanos(const types_timestamp_t *t1, const types_timestamp_t *t2)
 {
     if (t1->has_nanos && t2->has_nanos) {
         if (t1->nanos > t2->nanos) {
@@ -147,7 +147,7 @@ bool util_get_timestamp(const char *str_time, types_timestamp_t *timestamp)
     return true;
 }
 
-bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, size_t maxsize, bool local_utc)
+static bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, size_t maxsize, bool local_utc)
 {
     int nret = 0;
     int tm_zone_hour = 0;
@@ -221,6 +221,11 @@ bool util_get_now_time_stamp(types_timestamp_t *timestamp)
 {
     int err = 0;
     struct timespec ts;
+
+    if (timestamp == NULL) {
+        ERROR("Invalid arguments");
+        return false;
+    }
 
     err = clock_gettime(CLOCK_REALTIME, &ts);
     if (err != 0) {
@@ -586,10 +591,11 @@ static bool get_tm_zone_from_str(const char *str, struct tm *tm, int32_t *nanos,
     char *tmstr = NULL;
     char *zp = NULL;
     char *zonestr = NULL;
+    bool ret = false;
 
     if (hasnil(str, tm, nanos, tz)) {
         ERROR("Get tm and timezone from str input error");
-        goto err_out;
+        return false;
     }
 
     tmstr = util_strdup_s(str);
@@ -610,15 +616,12 @@ static bool get_tm_zone_from_str(const char *str, struct tm *tm, int32_t *nanos,
         ERROR("init tz failed");
         goto err_out;
     }
-
-    free(tmstr);
-    free(zonestr);
-    return true;
+    ret = true;
 
 err_out:
     free(tmstr);
     free(zonestr);
-    return false;
+    return ret;
 }
 
 static int64_t get_minmus_time(struct tm *tm1, struct tm *tm2)
