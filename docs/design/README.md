@@ -32,6 +32,8 @@ This section contains some design documents for users who want to learn more abo
 
 - You can see how the registry modules are designed in [registry_degisn](./detailed/Image/registry_degisn.md).
 
+- You can see how the isula search are designed in [image_search_design](./detailed/Image/image_search_design_zh.md)
+
 ## Network
 
 - You can see how the cni operator modules are designed in [cni_operator_design](./detailed/Network/cni_operator_design.md).

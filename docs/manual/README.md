@@ -14,8 +14,12 @@ Device Mapper is a kernel-based framework that underpins many advanced volume ma
 
 ## Native Network Manual
 
-If you want to use native network in iSulad, please refer to [native_network](native_network.md)
+If you want to use native network in iSulad, please refer to [native_network](native_network.md).
 
 ## Rootless Manual
 
 If you want to run iSulad with a non-root user, please refer to [rootless](rootless.md).
+
+## isula search Manual
+
+If you want to use isula search, please refer to [isula_search](isula_search.md).

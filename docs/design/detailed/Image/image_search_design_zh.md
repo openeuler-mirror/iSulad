@@ -1,4 +1,25 @@
-# Docker Registry API
+| Author | 钟涛                                           |
+| ------ | ---------------------------------------------- |
+| Date   | 2022-10-17                                     |
+| Email  | [zhongtao17@huawei.com](zhongtao17@huawei.com) |
+
+# 1. 方案目标
+
+若用户不知道自己需要下载的镜像的具体名称，或者想要了解包含指定名称的不同镜像信息，则需要一个命令可以根据用户输入的镜像名称查询相关的镜像信息。isula search 这个命令就用于帮助用户在命令行中方便的搜索 registry 中的镜像。
+
+例如：
+
+```shell
+isula search --limit=1 ubuntu
+NAME                            DESCRIPTION                                             STARS   OFFICIAL        AUTOMATED
+ubuntu                          Ubuntu is a Debian-based Linux operating system         15005   [OK]
+```
+
+
+
+# 2. 业界调研
+
+## 2.1 Docker Registry API
 
 相关概念：
 
@@ -10,18 +31,18 @@ Docker Registry API 是Docker Registry的REST API，用于自由的自动化、�
 
 Docker Registry API规范涵盖了docker registry和docker核心之间通信的URL布局和协议。
 
-## Docker Registry HTTP API V1
+### 2.1.1 Docker Registry HTTP API V1
 
 Docker Registry HTTP API V1使用python实现，存在以下缺陷：
 
-### **layer id** 
+#### **layer id** 
 
 1. Docker build镜像时，客户端会为每个layer都生成随机的id字符串，layer的id与layer的内容无关，若重新build则会为其生成与之前不一样的id，通过随机生成的layer id判断镜像是否存在，需不需要重新push，不能实现layer的复用，浪费存储空间；
 2. 需要文件记录layer id与layer的内容的对应关系，记录保存麻烦，也浪费存储空间。
 3. layer id由32个字节组成，但是仍存在id碰撞的可能，碰撞情况下无法push layer，会导致数据丢失；
 4. 若程序恶意伪造大量layer push到registry中占位，则会导致新的layer无法push到registry中。
 
-### **安全性**
+#### **安全性**
 
 Docker Registry HTTP API V1中鉴定client端有没有registry的操作权限的方式如下：
 
@@ -29,27 +50,28 @@ Docker Registry HTTP API V1中鉴定client端有没有registry的操作权限的
     <img src="../../../images/registry_v1.jpg" width="357" align="center"/>
 </div>
 
+
 当下载一个镜像的时候，如上图所示，首先会去index服务上做认证，然后查找镜像所在的registry的地址并放回给docker客户端，最终docker客户端再从registry下载镜像，当然在下载过程中 registry会去index校验客户端token的合法性。每次 client 端和 registry 的交互都要通过 index ，流程复杂。
 
 并且在Docker Registry HTTP API V1， registry 对 layer 没有任何权限控制，所有的权限相关内容都要通过 index ，registry中layer的安全性低。
 
-### **pull速度**
+#### **pull速度**
 
 Docker Registry HTTP API V1的 registry 中镜像的每个 layer 都只包含父亲 layer 的信息，因此当 pull 镜像时需要**串行**下载，下载完一个 layer 后才知道下一个 layer 的 id 是多少再去下载。
 
-## Docker Registry HTTP API V2
+### 2.1.2 Docker Registry HTTP API V2
 
 docker1.6版本开始支持registry 2.0。Docker Registry HTTP API V2使用go语言实现，在安全性和性能上做了很多优化，并且重新设计了镜像的存储格式，实现了内容可寻址的镜像，同时设计了记录镜像详细信息的manifest文件，文件中列出了addressable id ,history,runtime configuration和signatures。
 
 daemon在一个镜像被published时初始化manifest文件，镜像被构建或提交时也更新manifest文件，每个manifest都要记录构建镜像的client签名，签名用来区分构建镜像的人并且验证镜像是否符合安装者的预期。
 
-### V2相较于V1的优点
+#### V2相较于V1的优点
 
-#### **layer id** 
+##### **layer id** 
 
 Docker Registry HTTP API V2中会在服务端对镜像的内容进行哈希（一般采用sha256），通过内容的哈希值被称为digest，是每个layer唯一的标识，用于判断layer在registry中是否存在，是否需要重新传输，通过将id与内容对应可以减少存储空间的浪费，且由于digest是由服务端生成的，用户无法伪造digest，很大程度上保证了registry内容的安全性。
 
-#### **安全性**
+##### **安全性**
 
 Docker Registry HTTP API V2中鉴定client端有没有registry的操作权限只需要 registry 和 auth service 在部署时分别配置好彼此的信息，并将对方信息作为生成 token 的字符串，就可以减少后续的交互操作。client端只需要和 auth service 进行一次交互获得对应 token 即可和 registry 进行交互，减少了复杂的流程。同时 registry 和 auth service 一一对应的方式也降低了被攻击的可能。
 
@@ -57,13 +79,14 @@ Docker Registry HTTP API V2中鉴定client端有没有registry的操作权限只
     <img src="../../../images/registry_v2.jpg" width="357" align="center"/>
 </div>
 
+
 且在V2的 registry 中加入了对 layer 的权限控制，每个 layer 都有一个 manifest 来标识该 layer 由哪些 repository 共享，安全性提升。
 
-#### **pull速度**
+##### **pull速度**
 
 Docker Registry HTTP API V2 的 registry 在 image 的 manifest 中包含了所有 layer 的信息，client端可以**并行**下载所有的 layer 。
 
-### V2中的endpoint
+#### V2中的endpoint
 
 所有的endpoint都以API 版本和仓库的名称为前缀：利用URL结构能够包含更丰富的身份验证以及授权模式。
 
@@ -73,7 +96,7 @@ Docker Registry HTTP API V2 的 registry 在 image 的 manifest 中包含了所�
 
 通常而言，仓库名称通常都由两个部分路径组件，每个部分都小于30个字符。但是在Docker Registry HTTP API V2中并不一定要遵循这种格式，只要将仓库名称分解为路径组件，并且每一个路径组件都符合正则表达式[a-z0-9]+(?:[._-][a-z0-9]+)*即可，若存在两个和两个以上的路径组件，则需要使用/分隔，仓库名称的总长度需小于256字符。
 
-### API list
+#### API list
 
 | method | path                             | Entity               | Description                                                  |
 | ------ | -------------------------------- | -------------------- | ------------------------------------------------------------ |
@@ -93,9 +116,9 @@ Docker Registry HTTP API V2 的 registry 在 image 的 manifest 中包含了所�
 
 **blob（Binary Large Object）：表示二进制的大对象**
 
-# Docker search的关键实现流程分析
+## 2.2 Docker search的关键实现流程分析
 
-## docker search 用法
+### 2.2.1 docker search 用法
 
 ```shell
 #语法
@@ -107,12 +130,12 @@ docker search [OPTIONS] TERM
 
 --no-trunc :Dont't truncate output
 
--f,--filter filter :Filter output base oncondition provided(e.g. --filter is-automated=true --filter stars=3 --is-official=true)
+-f,--filter filter :Filter output base oncondition provided(e.g. --filter is-automated=true --filter stars=3 --filter is-official=true)
 
 --format :pretty-prints search output using Go template
 ```
 
-## 实现流程
+### 2.2.2 实现流程
 
 ```mermaid
 graph TD;
@@ -134,9 +157,9 @@ graph TD;
 	id8 --> |返回unfilteSearchResults|id7;
 ```
 
-## 关键实现分析
+#### 关键实现分析
 
-### 重要的数据结构
+##### 重要的数据结构
 
 **RepositoryInfo**：用于描述一个仓库
 
@@ -187,31 +210,6 @@ type IndexInfo struct {
 
 ```
 
-**AuthConfig**：认证配置
-
-```go
-// AuthConfig contains authorization information for connecting to a Registry
-type AuthConfig struct {
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
-	Auth     string `json:"auth,omitempty"`
-
-	// Email is an optional value associated with the username.
-	// This field is deprecated and will be removed in a later
-	// version of docker.
-	Email string `json:"email,omitempty"`
-
-	ServerAddress string `json:"serveraddress,omitempty"`
-
-	// IdentityToken is used to authenticate the user and get
-	// an access token for the registry.
-	IdentityToken string `json:"identitytoken,omitempty"`
-
-	// RegistryToken is a bearer token to be sent to a registry
-	RegistryToken string `json:"registrytoken,omitempty"`
-}
-```
-
 **searchOptions**  ：search的命令行的选项
 
 ```go
@@ -246,7 +244,28 @@ type ImageSearchOptions struct {
 }
 ```
 
-### docker-cli
+**SearchResults**：search 的结果
+```go
+// SearchResults lists a collection search results returned from a registry
+
+type SearchResults struct {
+
+	// Query contains the query string that generated the search results
+
+    Query string `json:"query"`
+
+	// NumResults indicates the number of results the query returned
+
+    NumResults int `json:"num_results"`
+
+	// Results is a slice containing the actual results for the search
+
+    Results []SearchResult `json:"results"`
+
+}
+```
+
+##### docker-cli
 
 **runSearch函数**
 
@@ -292,7 +311,7 @@ func runSearch(dockerCli command.Cli, options searchOptions) error {
 
 ```
 
-### client
+##### client
 
 **ImageSearch函数**
 
@@ -314,7 +333,7 @@ func (cli *Client) ImageSearch(ctx context.Context, term string, options types.I
 		}
 		query.Set("filters", filterJSON)
 	}
-	//将封装好的query和认证信息
+	//封装好query和认证信息
 	resp, err := cli.tryImageSearch(ctx, query, options.RegistryAuth)
 	defer ensureReaderClosed(resp)
 	if errdefs.IsUnauthorized(err) && options.PrivilegeFunc != nil {
@@ -344,7 +363,7 @@ func (cli *Client) tryImageSearch(ctx context.Context, query url.Values, registr
 }
 ```
 
-### Service
+##### Service
 
 **getImagesSearch函数**
 
@@ -387,7 +406,7 @@ func (ir *imageRouter) getImagesSearch(ctx context.Context, w http.ResponseWrite
 }
 ```
 
-### daemon
+##### daemon
 
 **SearchRegistryForImages函数**
 
@@ -468,7 +487,7 @@ func (i *ImageService) SearchRegistryForImages(ctx context.Context, searchFilter
 }
 ```
 
-### registryService
+##### registryService
 
 **Search函数**
 
@@ -495,14 +514,14 @@ func (s *defaultService) Search(ctx context.Context, term string, limit int, aut
 		// If pull "library/foo", it's stored locally under "foo"
 		remoteName = strings.TrimPrefix(remoteName, "library/")
 	}
-	//利用userAgent、head和index创建一个 registry V1 的Endpoint
+	//利用userAgent、head和index创建一个 registry V1 的Endpoint，在其中会ping一下看host是否解析成功
 	endpoint, err := newV1Endpoint(index, userAgent, headers)
 	if err != nil {
 		return nil, err
 	}
 
 	var client *http.Client
-    //若存在验证的设置，则采用registry V2 的带有认证功能的client端，否则使用V1
+    //若存在Auth的配置，则采用registry V2 的带有认证功能的client端，否则使用V1
 	if authConfig != nil && authConfig.IdentityToken != "" && authConfig.Username != "" {
 		//创建一个用于身份验证的creds
         creds := NewStaticCredentialStore(authConfig)
@@ -550,7 +569,7 @@ func (r *session) searchRepositories(term string, limit int) (*registry.SearchRe
 		return nil, invalidParamf("limit %d is outside the range of [1, 100]", limit)
 	}
 	logrus.Debugf("Index server: %s", r.indexEndpoint)
-    //拼接请求的url：V2时：https://index.docker.io/v2/search?q=remoteName/&n=limit
+    //拼接请求的url：不管是V1还是V2均为：https://index.docker.io/v1/search?q=remoteName/&n=limit
 	u := r.indexEndpoint.String() + "search?q=" + url.QueryEscape(term) + "&n=" + url.QueryEscape(fmt.Sprintf("%d", limit))
 	//创建新的Request
 	req, err := http.NewRequest(http.MethodGet, u, nil)
@@ -576,9 +595,11 @@ func (r *session) searchRepositories(term string, limit int) (*registry.SearchRe
 }
 ```
 
-# isula search设计建议
 
-## isula search实现的功能
+
+## 2.3 isula search设计建议
+
+### 2.3.1 isula search实现的功能
 
 isula search的使用方式如下：
 
@@ -597,8 +618,184 @@ isula search [OPTIONS] TERM
 --format :Output search results according to the input format
 ```
 
-## isula search 支持的registry版本
+### 2.3.2 isula search 支持的registry版本
 
-docker1.6版本开始支持registry 2.0，而docker 1.6版本发布时间为2015-04-07，距今已经7年多，由于V1版本存在的缺陷，现在的registry大多都使用registry 2.0。
+由于registry  2.0中没有提供search相应的接口，为了实现效果与docker中一致，使用v1的search接口进行查询，因此只能查询提供registry apiv1的registry中的镜像。
 
-同时，由于现有iSulad中的registry模块只实现了registry 2.0部分的代码，若需要isula search兼容V1版本，则会增加很多处理成本，因此，isula search功能初步只支持registry  2.0。
+# 3. 总体设计
+
+## 3.1 时序图
+
+```mermaid
+sequenceDiagram
+	participant isula
+	participant isulad
+	participant image
+	participant registry
+	participant registry_apiv1
+	participant http_request
+	isula -->> isula:cmd_search_main()
+	isula ->> isulad:isula_search_request
+	isulad ->> image:im_search_request
+	image -->> image:search_image()
+	image -->> registry:registry_search()
+	registry -->> registry:prepare_search_desc()
+	registry -->> registry_apiv1:fetch_search_result()
+	registry_apiv1 -->>registry_apiv1:registryv1_request()
+	registry_apiv1 -->> http_request:ping:host/v1/_ping
+	http_request -->>registry_apiv1 :success
+	registry_apiv1 -->> http_request:GET host/v1/search?q=search_name&n=limit
+	http_request -->>registry_apiv1 :search result
+	registry_apiv1 -->>registry :search result
+	registry -->>image:search_result
+	image -->> image :append_result_to_response():filter result
+	image-->>isulad:im_search_response
+	isulad -->> isula:isula_search_response
+	isula -->> isula:show filter results with option
+```
+
+# 4. 接口描述
+
+## 4.1 isula端
+
+```c
+#define SEARCH_OPTIONS(cmdargs)                                                                                        \
+    {                                                                                                                  \
+        CMD_OPT_TYPE_CALLBACK,                                                                                       \
+        false,                                                                                                         \
+        "limit",                                                                                                       \
+        0,                                                                                                             \
+        &((cmdargs).limit),                                                                                            \
+        "Max number of search results(default 25)",                                                                    \
+        command_convert_uint                                                                                                           \
+    },                                                                                                                 \
+    {                                                                                                                  \
+        CMD_OPT_TYPE_CALLBACK,                                                                                         \
+        false,                                                                                                         \
+        "filter",                                                                                                      \
+        'f',                                                                                                           \
+        &((cmdargs).filters),                                                                                          \
+        "Filter output based on conditions provided",                                                                  \
+        command_append_array                                                                                           \
+    },                                                                                                                 \
+    {                                                                                                                  \
+        CMD_OPT_TYPE_BOOL,                                                                                             \
+        false,                                                                                                         \
+        "no-trunc",                                                                                                    \
+        0,                                                                                                             \
+        &((cmdargs).no_trunc),                                                                                         \
+        "Dont't truncate output",                                                                                      \
+        NULL                                                                                                           \
+    },                                                                                                                 \
+    {                                                                                                                  \
+        CMD_OPT_TYPE_STRING,                                                                                             \
+        false,                                                                                                         \
+        "format",                                                                                                    \
+        0,                                                                                                             \
+        &((cmdargs).format),                                                                                         \
+        "Format the output using the given go template",                                                              \
+        NULL                                                                                                           \
+    },       
+
+extern const char g_cmd_search_desc[];
+extern const char g_cmd_search_usage[];
+extern struct client_arguments g_cmd_search_args;
+
+int cmd_search_main(int argc, const char **argv);
+```
+
+发送和接收的isula_search_request与isula_search_response的定义如下：
+
+```c
+struct search_image_info {
+    uint32_t star_count;
+    bool is_official;
+    char *name;
+    bool is_automated;
+    char *description;
+};
+
+struct isula_search_request {
+    char *search_name;
+    uint32_t limit;
+    struct isula_filters *filters;
+};
+
+struct isula_search_response {
+    uint32_t result_num;
+    struct search_image_info *search_result;
+    uint32_t cc;
+    char *errmsg;
+    uint32_t server_errono;
+};
+```
+
+## 4.2 GRPC
+
+```cc
+ ops->image.search = container_func<isula_search_request, isula_search_response, ImageSearch>;
+```
+
+## 4.3 REST
+
+```c
+ ops->image.search = &rest_image_search;
+```
+
+## 4.4 callback函数
+
+```c
+ cb->search = image_search_cb;
+```
+
+## 4.5 image模块
+
+```c
+typedef struct {
+    char *type;
+    char *search_name;
+    uint32_t limit;
+    struct filters_args *filter;
+} im_search_request;
+
+typedef struct {
+    imagetool_search_result *result;
+    char *errmsg;
+} im_search_response;
+
+int im_search_images(im_search_request *request, im_search_response **response);
+```
+
+## 4.6 oci模块
+
+```c
+int oci_search(const im_search_request *request, imagetool_search_result **result);
+```
+
+## 4.7 registry模块
+
+```c
+typedef struct {
+    char *search_name;
+    uint32_t limit;
+
+    bool skip_tls_verify;
+    bool insecure_registry;
+} registry_search_options;
+
+int registry_search(registry_search_options *options, imagetool_search_result **result);
+```
+
+## 4.7 registry_apiv1模块
+
+```c
+int registry_pingv1(pull_descriptor *desc, char *protocol);
+
+int fetch_search_result(pull_descriptor *desc, imagetool_search_result **result);
+```
+
+# 5. 详细设计
+
+## 5.1流程图
+
+![isula-search-flowchart](../../../images/isula_search.png)

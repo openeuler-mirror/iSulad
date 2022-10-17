@@ -4,7 +4,7 @@ This manual is mainly about how to use native network for iSulad community devel
 
 ## Compile
 
-The code of native network code is only exists in the master branch of lcr and iSulad. It is isolated by compilation macro `ENABLE_NATIVE_NETWORK`, and it is enabled by default. For the installation of the dependent environment of iSulad, please refer to the document `docs/build_guide_zh.md`, and it will not be repeated here. The following only describes the compilation of lcr and iSulad.
+The code of native network code is only exists in the master branch of lcr and iSulad. It is isolated by compilation macro `ENABLE_NATIVE_NETWORK`, and it is enabled by default. For the installation of the dependent environment of iSulad, please refer to the document ``docs/build_docs/guide/build_guide_zh.md``, and it will not be repeated here. The following only describes the compilation of lcr and iSulad.
 
 ```bash
 # build and install lcr
