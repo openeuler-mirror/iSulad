@@ -16,6 +16,7 @@ target_include_directories(libutils_ut
 )
 
 add_subdirectory(mainloop)
+add_subdirectory(path)
 add_subdirectory(utils_string)
 add_subdirectory(utils_convert)
 add_subdirectory(utils_array)
