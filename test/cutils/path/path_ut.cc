@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2019-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -375,4 +375,72 @@ TEST(path_ut, test_preserve_trailing_dot_or_separator)
     ASSERT_STREQ(res, "/home/test/");
     free(res);
     res = nullptr;
+}
+
+TEST(path_ut, test_split_path_dir_entry)
+{
+    std::string str;
+    char *dir = nullptr;
+    char *base = nullptr;
+    char **null_dir = nullptr;
+
+    str = "/home/dir/file";
+    ASSERT_EQ(util_split_path_dir_entry(nullptr, &dir, &base), -1);
+    ASSERT_EQ(util_split_path_dir_entry(str.c_str(), null_dir, &base), 0);
+    ASSERT_EQ(null_dir, nullptr);
+
+    str = "/home/dir/../file";
+    ASSERT_EQ(util_split_path_dir_entry(str.c_str(), &dir, &base), 0);
+    ASSERT_NE(dir, nullptr);
+    ASSERT_STREQ(dir, "/home");
+    ASSERT_NE(base, nullptr);
+    ASSERT_STREQ(base, "file");
+
+    str = "/home/dir/./file";
+    ASSERT_EQ(util_split_path_dir_entry(str.c_str(), &dir, &base), 0);
+    ASSERT_NE(dir, nullptr);
+    ASSERT_STREQ(dir, "/home/dir");
+    ASSERT_NE(base, nullptr);
+    ASSERT_STREQ(base, "file");
+
+    str = "./dir/file";
+    MOCK_SET_V(getcwd, getcwd_specify);
+    ASSERT_EQ(util_split_path_dir_entry(str.c_str(), &dir, &base), 0);
+    ASSERT_NE(dir, nullptr);
+    ASSERT_STREQ(dir, "/home/dir");
+    ASSERT_NE(base, nullptr);
+    ASSERT_STREQ(base, "file");
+}
+
+TEST(path_ut, test_realpath_in_scope)
+{
+    std::string rootfs;
+    std::string path;
+    char *realpath = nullptr;
+    char *null_roofs = nullptr;
+
+    ASSERT_EQ(util_realpath_in_scope(null_roofs, path.c_str(), &realpath), -1);
+
+    rootfs = "/home/dir";
+    path = "/file";
+    ASSERT_EQ(util_realpath_in_scope(rootfs.c_str(), path.c_str(), &realpath), 0);
+    ASSERT_NE(realpath, nullptr);
+    ASSERT_STREQ(realpath, "/home/dir/file");
+
+    rootfs = "/home/dir";
+    path = "/../file";
+    ASSERT_EQ(util_realpath_in_scope(rootfs.c_str(), path.c_str(), &realpath), -1);
+
+    rootfs = "/home/dir";
+    path = "/./file";
+    ASSERT_EQ(util_realpath_in_scope(rootfs.c_str(), path.c_str(), &realpath), 0);
+    ASSERT_NE(realpath, nullptr);
+    ASSERT_STREQ(realpath, "/home/dir/file");
+
+    rootfs = "";
+    path = "./dir/file";
+    MOCK_SET_V(getcwd, getcwd_specify);
+    ASSERT_EQ(util_realpath_in_scope(rootfs.c_str(), path.c_str(), &realpath), 0);
+    ASSERT_NE(realpath, nullptr);
+    ASSERT_STREQ(realpath, "/home/dir/file");
 }

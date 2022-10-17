@@ -14,6 +14,7 @@ target_include_directories(libutils_ut
     PUBLIC ${CMAKE_SOURCE_DIR}/src/utils/cutils/map
 )
 
+add_subdirectory(path)
 add_subdirectory(utils_string)
 add_subdirectory(utils_convert)
 add_subdirectory(utils_array)
