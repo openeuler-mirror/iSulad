@@ -8,15 +8,18 @@ add_library(libutils_ut STATIC
     ${local_cutils_map_srcs}
     )
 set_target_properties(libutils_ut PROPERTIES PREFIX "")
+target_link_libraries(libutils_ut ${ISULA_LIBUTILS_LIBRARY})
 target_include_directories(libutils_ut
     PUBLIC ${CMAKE_SOURCE_DIR}/src/common
     PUBLIC ${CMAKE_SOURCE_DIR}/src/utils/cutils
     PUBLIC ${CMAKE_SOURCE_DIR}/src/utils/cutils/map
 )
 
+add_subdirectory(mainloop)
 add_subdirectory(utils_string)
 add_subdirectory(utils_convert)
 add_subdirectory(utils_array)
 add_subdirectory(utils_base64)
 add_subdirectory(utils_pwgr)
 add_subdirectory(utils_namespace)
+add_subdirectory(utils_network)
