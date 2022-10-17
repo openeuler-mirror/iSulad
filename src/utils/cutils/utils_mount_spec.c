@@ -458,14 +458,22 @@ int util_parse_mount_spec(char *mount_str, mount_spec **spec, char **errmsg_out)
 
     if (mount_str == NULL) {
         CACHE_ERRMSG(errmsg, "Invalid mount specification: can't be empty");
-        ret = -1;
-        goto out;
+        return -1;
     }
     if (!mount_str[0]) {
         CACHE_ERRMSG(errmsg, "Invalid mount specification: can't be empty");
-        ret = -1;
-        goto out;
+        return -1;
     }
+
+    if(spec == NULL){
+        CACHE_ERRMSG(errmsg, "Invalid spec: can't be NULL");
+        return -1;
+    }
+
+    if(errmsg_out == NULL){
+        CACHE_ERRMSG(errmsg, "Invalid errmsg_out: can't be NULL");
+        return -1;
+    } 
 
     m = util_common_calloc_s(sizeof(mount_spec));
     if (m == NULL) {
