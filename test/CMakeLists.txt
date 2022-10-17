@@ -62,6 +62,7 @@ IF(ENABLE_COVERAGE)
 
         COMMAND lcov --directory . --capture --output-file coverage.info
         COMMAND lcov -a coverage.base -a coverage.info --output-file coverage.total
+        COMMAND lcov --remove coverage.total '/usr/include/*' --output-file coverage.total
         COMMAND lcov --remove coverage.total ${COVERAGE_EXCLUDES} --output-file ${PROJECT_BINARY_DIR}/coverage.info.cleaned
         COMMAND genhtml -o coverage ${PROJECT_BINARY_DIR}/coverage.info.cleaned
         COMMAND ${CMAKE_COMMAND} -E remove coverage.base coverage.total ${PROJECT_BINARY_DIR}/coverage.info.cleaned

@@ -28,11 +28,16 @@
 #include "utils.h"
 #include "utils_file.h"
 
-int util_aes_key(char *key_file, bool create, unsigned char *aeskey)
+int util_aes_key(const char *key_file, bool create, unsigned char *aeskey)
 {
     char *key_dir = NULL;
     int fd = 0;
     int ret = 0;
+
+    if (key_file == NULL || aeskey == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
 
     if (!util_file_exists(key_file)) {
         if (!create) {
@@ -102,6 +107,11 @@ size_t util_aes_encode_buf_len(size_t len)
     return AES_256_CFB_IV_LEN + util_aes_decode_buf_len(len);
 }
 
+static bool invalid_ase_args(unsigned char *aeskey, unsigned char *bytes, size_t len, unsigned char **out)
+{
+    return aeskey == NULL || out == NULL || bytes == NULL || len == 0;
+}
+
 int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, unsigned char **out)
 {
     int ret = 0;
@@ -110,22 +120,34 @@ int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     int size = 0;
     int expected_size = len;
     unsigned char *iv = NULL;
+    EVP_CIPHER_CTX *ctx = NULL;
 #ifdef OPENSSL_IS_BORINGSSL
     const EVP_CIPHER *cipher = EVP_aes_256_ofb();
 #else
     const EVP_CIPHER *cipher = EVP_aes_256_cfb();
 #endif
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
-    if (ctx == NULL || cipher == NULL) {
+    if (cipher == NULL) {
         ERROR("EVP init failed");
+        return -1;
+    }
+
+    if (invalid_ase_args(aeskey, bytes, len, out)) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    ctx = EVP_CIPHER_CTX_new();
+    if (ctx == NULL) {
+        ERROR("Ctx create failed");
         return -1;
     }
 
     *out = util_common_calloc_s(util_aes_encode_buf_len(len) + 1);
     if (*out == NULL) {
         ERROR("out of memory");
-        return -1;
+        ret = -1;
+        goto out;
     }
     iv = *out;
 
@@ -192,15 +214,20 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     int size = 0;
     int expected_size = 0;
     unsigned char *iv = NULL;
+    EVP_CIPHER_CTX *ctx = NULL;
 #ifdef OPENSSL_IS_BORINGSSL
     const EVP_CIPHER *cipher = EVP_aes_256_ofb();
 #else
     const EVP_CIPHER *cipher = EVP_aes_256_cfb();
 #endif
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
-    if (ctx == NULL || cipher == NULL) {
+    if (cipher == NULL) {
         ERROR("EVP init failed");
+        return -1;
+    }
+
+    if (invalid_ase_args(aeskey, bytes, len, out)) {
+        ERROR("Invalid arguments");
         return -1;
     }
 
@@ -209,10 +236,17 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
         return -1;
     }
 
+    ctx = EVP_CIPHER_CTX_new();
+    if (ctx == NULL) {
+        ERROR("Ctx create failed");
+        return -1;
+    }
+
     *out = util_common_calloc_s(util_aes_decode_buf_len(len) + 1);
     if (*out == NULL) {
         ERROR("out of memory");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     iv = bytes;
