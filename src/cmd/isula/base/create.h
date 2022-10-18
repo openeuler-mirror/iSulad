@@ -306,6 +306,13 @@ extern "C" {
       &(cmdargs).restart,                                                                                                                                 \
       "Restart policy to apply when a container exits(no, always, on-reboot, on-failure[:max-retries])",                                                  \
       NULL },                                                                                                                                             \
+    { CMD_OPT_TYPE_BOOL,                                                                                                                                  \
+      false,                                                                                                                                              \
+      "rm",                                                                                                                                               \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.auto_remove,                                                                                                                 \
+      "Automatically remove the container when it exits",                                                                                                 \
+      NULL },                                                                                                                                             \
     { CMD_OPT_TYPE_STRING,                                                                                                                                \
       false,                                                                                                                                              \
       "host-channel",                                                                                                                                     \
