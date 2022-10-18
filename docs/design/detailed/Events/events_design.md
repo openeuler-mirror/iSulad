@@ -9,7 +9,7 @@ The events module mainly records the relevant operation events of the container 
 ```bash
 $ isula events --help
 
-Usage: isula events [command options]
+Usage: isula events [OPTIONS]
 
 Get real time events from the server
 

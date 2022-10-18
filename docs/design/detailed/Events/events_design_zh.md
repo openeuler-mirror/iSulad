@@ -9,7 +9,7 @@ events模块，主要记录了容器或镜像的相关操作事件。用户可�
 ```bash
 $ isula events --help
 
-Usage:  isula events [command options]
+Usage:  isula events [OPTIONS]
 
 Get real time events from the server
 

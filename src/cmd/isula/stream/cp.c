@@ -41,7 +41,7 @@
 const char g_cmd_cp_desc[] = "Copy files/folders between a container and the local filesystem";
 
 const char g_cmd_cp_usage[] = "cp [OPTIONS] CONTAINER:SRC_PATH DEST_PATH\n"
-                              "  cp [OPTIONS] SRC_PATH CONTAINER:DEST_PATH";
+                              "              cp [OPTIONS] SRC_PATH CONTAINER:DEST_PATH";
 
 struct client_arguments g_cmd_cp_args = {};
 

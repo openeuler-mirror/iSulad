@@ -27,7 +27,7 @@
 #include "constants.h"
 
 const char g_cmd_version_desc[] = "Display information about isula";
-const char g_cmd_version_usage[] = "version";
+const char g_cmd_version_usage[] = "version [OPTIONS]";
 
 struct client_arguments g_cmd_version_args = {};
 

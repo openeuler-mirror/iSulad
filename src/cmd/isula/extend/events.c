@@ -27,7 +27,7 @@
 #include "utils_timestamp.h"
 
 const char g_cmd_events_desc[] = "Get real time events from the server";
-const char g_cmd_events_usage[] = "events [command options]";
+const char g_cmd_events_usage[] = "events [OPTIONS]";
 
 struct client_arguments g_cmd_events_args = {
     .since = NULL,
