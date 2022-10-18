@@ -1,0 +1,28 @@
+From a4afe26b46c62d2750415908c4f99eb0f919fc6b Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Fri, 4 Jun 2021 17:04:53 +0800
+Subject: [PATCH] suppress proxy connect headers message
+
+we need the real server message but not proxy's, so
+ignore proxy's message
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/utils/http/http.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/utils/http/http.c b/src/utils/http/http.c
+index e502bb83..0937a77e 100644
+--- a/src/utils/http/http.c
++++ b/src/utils/http/http.c
+@@ -429,6 +429,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
+     /* provide a buffer to store errors in */
+     curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, errbuf);
+     curl_easy_setopt(curl_handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
++    curl_easy_setopt(curl_handle, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
+ 
+     ret = http_custom_options(curl_handle, options);
+     if (ret) {
+-- 
+2.25.1
+
