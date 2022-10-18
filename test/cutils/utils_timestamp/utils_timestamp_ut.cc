@@ -133,6 +133,8 @@ TEST(utils_timestamp, test_util_get_time_interval)
 TEST(utils_timestamp, test_util_get_tm_from_str)
 {
     std::string invalid_str = "2016-01-02T15:04:01:03";
+    struct tm got = { 0 };
+    int32_t nano = 0;
 
     std::vector<std::tuple<std::string, int, int, int, int, int, int, int>> cases = {
         std::make_tuple("1970-01-01T01", 0, 0, 0, 1, 1, 0, 70),
@@ -140,9 +142,7 @@ TEST(utils_timestamp, test_util_get_tm_from_str)
         std::make_tuple("1990-03-03T03:03:03", 0, 3, 3, 3, 3, 2, 90),
     };
 
-    for (const auto &cs : cases) {
-        struct tm got = { 0 };
-        int32_t nano = 0;
+    for (const auto &elem : cases) {
         ASSERT_EQ(util_get_tm_from_str(std::get<0>(elem).c_str(), &got, &nano), true);
         ASSERT_EQ(nano, std::get<1>(elem));
         ASSERT_EQ(got.tm_sec, std::get<2>(elem));
