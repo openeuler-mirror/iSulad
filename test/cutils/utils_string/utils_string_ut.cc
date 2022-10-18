@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 #include "mock.h"
 #include "utils_string.h"
+#include "utils_array.h"
 
 extern "C" {
     DECLARE_WRAPPER(util_strdup_s, char *, (const char *str));
@@ -830,4 +831,28 @@ TEST(utils_string_ut, test_str_token)
     ASSERT_STREQ(tmp, "def:gh");
     ASSERT_STREQ(token, "abc");
     free(token);
+}
+
+TEST(utils_string_ut, test_string_split_multi)
+{
+    char **result = nullptr;
+
+    ASSERT_EQ(util_string_split_multi(nullptr, ':'), nullptr);
+
+    result = util_string_split_multi("", ':');
+    ASSERT_STREQ(result[0], "");
+    ASSERT_EQ(result[1], nullptr);
+    util_free_array(result);
+
+    result = util_string_split_multi("abcd;", ':');
+    ASSERT_STREQ(result[0], "abcd;");
+    ASSERT_EQ(result[1], nullptr);
+    util_free_array(result);
+
+    result = util_string_split_multi("abc:dd:e", ':');
+    ASSERT_STREQ(result[0], "abc");
+    ASSERT_STREQ(result[1], "dd");
+    ASSERT_STREQ(result[2], "e");
+    ASSERT_EQ(result[3], nullptr);
+    util_free_array(result);
 }
