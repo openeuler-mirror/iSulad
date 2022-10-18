@@ -1,5 +1,5 @@
 %global _version 2.0.8
-%global _release 20210518.144540.git5288ed92
+%global _release 20221018.110323.gita792f081
 %global is_systemd 1
 
 Name:      iSulad
@@ -116,6 +116,7 @@ Patch101: 0101-CI-use-docker.io-registry.patch
 Patch102: 0102-CI-fix-integration_check.sh.patch
 Patch103: 0103-optimize-token-generation.patch
 Patch104: 0104-fix-string-array-initialization-failure.patch
+Patch105: 0105-suppress-proxy-connect-headers-message.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -318,6 +319,12 @@ fi
 %endif
 
 %changelog
+* Tue Oct 18 2022 huangsong <huangsong14@huawei.com> - 2.0.8-20221018.110323.gita792f081
+- Type: sync from upstream
+- ID: NA
+- SUG: NA
+- DESC: update from master
+
 * Tue May 18 2021 wangfengtu <wangfengtu@huawei.com> - 2.0.8-20210518.144540.git5288ed92
 - Type: sync from upstream
 - ID: NA
