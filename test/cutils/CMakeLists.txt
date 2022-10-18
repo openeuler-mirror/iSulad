@@ -15,6 +15,8 @@ target_include_directories(libutils_ut
 )
 
 add_subdirectory(path)
+add_subdirectory(map)
+add_subdirectory(util_atomic)
 add_subdirectory(utils_string)
 add_subdirectory(utils_convert)
 add_subdirectory(utils_array)
