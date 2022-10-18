@@ -32,7 +32,7 @@
 #include "utils_timestamp.h"
 
 const char g_cmd_list_desc[] = "List containers";
-const char g_cmd_list_usage[] = "ps [command options]";
+const char g_cmd_list_usage[] = "ps [OPTIONS]";
 
 #define COMMAND_LENGTH_MAX 22
 #define TIME_DURATION_MAX_LEN 32

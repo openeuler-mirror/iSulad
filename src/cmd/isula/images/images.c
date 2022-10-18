@@ -44,7 +44,7 @@
 #define SHORT_DIGEST_LEN 12
 
 const char g_cmd_images_desc[] = "List images";
-const char g_cmd_images_usage[] = "images";
+const char g_cmd_images_usage[] = "images [OPTIONS]";
 
 struct client_arguments g_cmd_images_args = {};
 /* keep track of field widths for printing. */
