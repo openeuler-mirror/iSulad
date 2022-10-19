@@ -461,7 +461,7 @@ bool util_process_alive(pid_t pid, unsigned long long start_time)
     bool alive = true;
     proc_t *pid_info = NULL;
 
-    if (pid == 0) {
+    if (pid <= 0) {
         return false;
     }
 
