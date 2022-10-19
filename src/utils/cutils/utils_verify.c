@@ -143,24 +143,21 @@ bool util_validate_unix_socket(const char *socket)
     }
 
     if (strncmp("unix://", socket, strlen("unix://"))) {
-        nret = -1;
-        goto err_out;
+        return false;
     }
 
     name = socket + strlen("unix://");
 
     if (name[0] == '\0') {
-        nret = -1;
-        goto err_out;
+        return false;
     }
 
     nret = util_validate_absolute_path(name);
     if (nret != 0) {
-        nret = -1;
-        goto err_out;
+        return false;
     }
-err_out:
-    return nret == 0;
+
+    return true;
 }
 
 bool util_validate_socket(const char *socket)
@@ -219,7 +216,6 @@ size_t util_get_all_caps_len()
 
 bool util_valid_cap(const char *cap)
 {
-    bool cret = true;
     int nret = 0;
     char tmpcap[32] = { 0 };
     size_t all_caps_len = util_get_all_caps_len();
@@ -231,16 +227,13 @@ bool util_valid_cap(const char *cap)
     nret = snprintf(tmpcap, sizeof(tmpcap), "CAP_%s", cap);
     if (nret < 0 || nret >= sizeof(tmpcap)) {
         ERROR("Failed to print string");
-        cret = false;
-        goto err_out;
+        return false;
     }
     if (!util_strings_in_slice(g_all_caps, all_caps_len, tmpcap)) {
-        cret = false;
-        goto err_out;
+        return false;
     }
 
-err_out:
-    return cret;
+    return true;
 }
 
 bool util_valid_container_id(const char *id)
@@ -570,16 +563,27 @@ bool util_valid_value_false(const char *value)
 
 bool util_valid_rw_mode(const char *mode)
 {
+    if (mode == NULL){
+        return false;
+    }
+
     return !strcmp(mode, "rw") || !strcmp(mode, "ro");
 }
 
 bool util_valid_label_mode(const char *mode)
 {
+    if (mode == NULL){
+        return false;
+    }
+
     return !strcmp(mode, "z") || !strcmp(mode, "Z");
 }
 
 bool util_valid_copy_mode(const char *mode)
 {
+    if (mode == NULL){
+        return false;
+    }
     return !strcmp(mode, "nocopy");
 }
 
@@ -681,7 +685,7 @@ bool util_valid_positive_interger(const char *value)
 {
     const char *patten = "^[0-9]*$";
 
-    if (value == NULL) {
+    if (value == NULL || strcmp(value, "") == 0) {
         return false;
     }
 
@@ -703,6 +707,11 @@ int util_valid_env(const char *env, char **dst)
 {
     int ret = 0;
     char *value = NULL;
+
+    if (dst == NULL){
+        ERROR("NULL dst");
+        return -1;
+    }
 
     char **arr = util_string_split_multi(env, '=');
     if (arr == NULL) {
