@@ -369,7 +369,7 @@ static bool shim_alive(const char *workdir)
 
     file_read_int(fpid, &pid);
 
-    if (pid == 0) {
+    if (pid <= 0) {
         ERROR("failed read shim-pid file %s", fpid);
         return false;
     }
@@ -806,7 +806,7 @@ static void shim_kill_force(const char *workdir)
 
     file_read_int(fpid, &pid);
 
-    if (pid == 0) {
+    if (pid <= 0) {
         goto out;
     }
 

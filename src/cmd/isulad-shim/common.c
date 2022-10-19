@@ -175,7 +175,7 @@ int cmd_combined_output(const char *binary, const char *params[], void *output, 
     ret = SHIM_OK;
 
 out:
-    if (ret != SHIM_OK && pid != 0) {
+    if (ret != SHIM_OK) {
         kill(pid, 9);
     }
 
