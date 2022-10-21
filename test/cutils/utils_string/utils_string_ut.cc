@@ -833,26 +833,33 @@ TEST(utils_string_ut, test_str_token)
     free(token);
 }
 
-TEST(utils_string_ut, test_string_split_multi)
+TEST(utils_string_ut, test_string_split_n)
 {
     char **result = nullptr;
 
-    ASSERT_EQ(util_string_split_multi(nullptr, ':'), nullptr);
+    ASSERT_EQ(util_string_split_n(nullptr, ':', 3), nullptr);
+    ASSERT_EQ(util_string_split_n("aa:bb", ':', 0), nullptr);
 
-    result = util_string_split_multi("", ':');
+    result = util_string_split_n("", ':', 3);
     ASSERT_STREQ(result[0], "");
     ASSERT_EQ(result[1], nullptr);
     util_free_array(result);
 
-    result = util_string_split_multi("abcd;", ':');
+    result = util_string_split_n("abcd;", ':', 3);
     ASSERT_STREQ(result[0], "abcd;");
     ASSERT_EQ(result[1], nullptr);
     util_free_array(result);
 
-    result = util_string_split_multi("abc:dd:e", ':');
+    result = util_string_split_n("abc:dd:e", ':', 3);
     ASSERT_STREQ(result[0], "abc");
     ASSERT_STREQ(result[1], "dd");
     ASSERT_STREQ(result[2], "e");
     ASSERT_EQ(result[3], nullptr);
+    util_free_array(result);
+
+    result = util_string_split_n("abc:dd:e", ':', 2);
+    ASSERT_STREQ(result[0], "abc");
+    ASSERT_STREQ(result[1], "dd:e");
+    ASSERT_EQ(result[2], nullptr);
     util_free_array(result);
 }
