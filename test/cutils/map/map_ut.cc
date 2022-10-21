@@ -18,7 +18,12 @@
 #include <gtest/gtest.h>
 #include "map.h"
 
-TEST(map_map_ut, test_map)
+static void ptr_ptr_map_kefree(void *key, void *value)
+{
+    return;
+}
+
+TEST(map_map_ut, test_map_string)
 {
     // map[string][bool]
     map_t *map_test = nullptr;
@@ -36,4 +41,47 @@ TEST(map_map_ut, test_map)
 
     map_itor_free(itor);
     map_clear(map_test);
+}
+
+TEST(map_map_ut, test_map_int)
+{
+    int key = 3;
+    int value = 5;
+    int *value_ptr = nullptr;
+    // map[int][int]
+    map_t *map_test = nullptr;
+
+    map_test = map_new(MAP_INT_INT, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    ASSERT_NE(map_test, nullptr);
+    ASSERT_EQ(map_insert(map_test, &key, &value), true);
+
+    key = 22;
+    value = 33;
+    ASSERT_EQ(map_insert(map_test, &key, &value), true);
+
+    value_ptr = (int *)map_search(map_test, &key);
+    ASSERT_EQ(*value_ptr, 33);
+
+    key = 44;
+    ASSERT_EQ(map_search(map_test, &key), nullptr);
+
+    map_clear(map_test);
+}
+
+TEST(map_map_ut, test_map_ptr)
+{
+    int *key_ptr = new int(3);
+    int *value_ptr = new int(5);
+    // map[ptr][ptr]
+    map_t *map_test = nullptr;
+
+    map_test = map_new(MAP_PTR_PTR, MAP_DEFAULT_CMP_FUNC, ptr_ptr_map_kefree);
+    ASSERT_NE(map_test, nullptr);
+    ASSERT_EQ(map_insert(map_test, key_ptr, value_ptr), true);
+    ASSERT_EQ(map_search(map_test, key_ptr), value_ptr);
+    ASSERT_EQ(map_search(map_test, nullptr), nullptr);
+
+    map_clear(map_test);
+    delete key_ptr;
+    delete value_ptr;
 }
