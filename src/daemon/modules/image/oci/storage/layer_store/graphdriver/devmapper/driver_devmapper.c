@@ -105,7 +105,13 @@ static int do_create(const char *id, const char *parent, const struct graphdrive
         goto out;
     }
 
-    ret = add_device(id, parent, driver->devset, create_opts->storage_opt);
+    if (add_device(id, parent, driver->devset, create_opts->storage_opt) != 0) {
+        ERROR("Failed to add device");
+        ret = -1;
+        if (util_path_remove(mnt_point_dir) != 0) {
+            ERROR("Remove path:%s failed", mnt_point_dir);
+        }
+    }
 
 out:
     free(mnt_parent_dir);
