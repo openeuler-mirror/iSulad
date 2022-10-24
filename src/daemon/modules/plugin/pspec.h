@@ -19,6 +19,10 @@
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/oci_runtime_pspec.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * extract pspec from oci.
  * return NULL when failed. oci not modified.
@@ -38,6 +42,10 @@ int set_pspec(oci_runtime_spec *oci, const char *data);
  * if field in base and missing in data, using base.
  */
 char *merge_pspec(const char *base, const char *data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DAEMON_MODULES_PLUGIN_PSPEC_H
 

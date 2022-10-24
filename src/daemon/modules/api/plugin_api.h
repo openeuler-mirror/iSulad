@@ -41,6 +41,10 @@
 #define PLUGIN_EVENT_CONTAINER_POST_STOP (1UL << 2)
 #define PLUGIN_EVENT_CONTAINER_POST_REMOVE (1UL << 3)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct plugin_manifest {
     uint64_t init_type;
     uint64_t watch_event;
@@ -108,5 +112,9 @@ int plugin_event_container_pre_start(const container_t *cont);
 int plugin_event_container_post_stop(const container_t *cont);
 int plugin_event_container_post_remove(const container_t *cont);
 int plugin_event_container_post_remove2(const char *cid, const oci_runtime_spec *oci);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DAEMON_MODULES_API_PLUGIN_API_H

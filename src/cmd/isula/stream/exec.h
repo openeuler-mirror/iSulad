@@ -22,6 +22,10 @@
 #include "attach.h"
 #include "command_parser.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define EXEC_OPTIONS(cmdargs)                                                                                    \
     {                                                                                                            \
         CMD_OPT_TYPE_CALLBACK, false, "env", 'e', &(cmdargs).extra_env, "Set environment variables",             \
@@ -50,5 +54,9 @@ extern const char g_cmd_exec_desc[];
 extern const char g_cmd_exec_usage[];
 extern struct client_arguments g_cmd_exec_args;
 int cmd_exec_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // CMD_ISULA_STREAM_EXEC_H

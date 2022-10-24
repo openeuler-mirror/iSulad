@@ -18,6 +18,10 @@
 #include "libcni_result_type.h"
 #include "isula_libutils/cni_result_curr.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct cni_opt_result *(*new_result_t)(const char *json_data);
 
 struct cni_opt_result_factories {
@@ -32,5 +36,9 @@ struct cni_opt_result *new_curr_result(const char *json_data);
 cni_result_curr *cni_result_curr_to_json_result(const struct cni_opt_result *src);
 
 struct cni_opt_result *copy_result_from_current(const cni_result_curr *curr_result);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

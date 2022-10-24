@@ -20,6 +20,10 @@
 
 #include "map.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct filters_args {
     // A map of map[string][map[string][bool]]
     map_t *fields;
@@ -47,6 +51,10 @@ bool filters_args_match_kv_list(const struct filters_args *filters, const char *
 bool filters_args_exact_match(const struct filters_args *filters, const char *field, const char *source);
 
 bool filters_args_match(const struct filters_args *filters, const char *field, const char *source);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

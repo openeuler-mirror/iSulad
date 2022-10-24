@@ -19,6 +19,10 @@
 #include "linked_list.h"
 #include "snapshot_def.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct snapshot_plugin ebd_plugin();
 
 int ebd_create_layer(char *id, char *parent, uint32_t layer_attribute,
@@ -30,6 +34,10 @@ int ebd_apply_diff(char *id, char *parent, char *archive, char *metadata);
 
 int ebd_generate_mount_string(struct db_image *imginfo,
                               struct db_sninfo **sninfos, char **mount_string);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

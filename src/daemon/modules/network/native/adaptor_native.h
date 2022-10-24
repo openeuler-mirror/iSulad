@@ -18,6 +18,10 @@
 
 #include "network_api.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int native_init(const char *conf_dir, const char **bin_paths, const size_t bin_paths_len);
 
 bool native_ready();
@@ -39,5 +43,9 @@ int native_config_list(const struct filters_args *filters, network_network_info 
 int native_config_remove(const char *name, char **res_name);
 
 int native_network_add_container_list(const char *network_name, const char *cont_id);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DAEMON_MODULES_NETWORK_ADAPTOR_NATIVE_H

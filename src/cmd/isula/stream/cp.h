@@ -17,9 +17,17 @@
 
 #include "client_arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char g_cmd_cp_desc[];
 extern const char g_cmd_cp_usage[];
 extern struct client_arguments g_cmd_cp_args;
 int cmd_cp_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // CMD_ISULA_STREAM_CP_H

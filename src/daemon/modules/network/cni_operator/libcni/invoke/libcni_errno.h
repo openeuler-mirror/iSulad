@@ -15,6 +15,10 @@
 #ifndef CLIBCNI_INVOKE_ERRNO_H
 #define CLIBCNI_INVOKE_ERRNO_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * [ -255, -1 ] are errors define by us;
  * 0 is success;
@@ -56,5 +60,9 @@ enum CNI_WELL_KNOW_ERROR {
 };
 
 const char *get_cni_err_msg(unsigned int errcode);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

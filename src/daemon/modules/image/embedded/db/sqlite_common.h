@@ -19,6 +19,10 @@
 
 #define DBNAME "sqlite.db"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef int(*sqlite_callback_t)(void *, int, char **, char **);
 
 sqlite3 *get_global_db();
@@ -31,6 +35,10 @@ int db_sqlite_request(const char *stmt);
 
 int db_sqlite_request_callback(const char *stmt,
                                sqlite_callback_t callback, void *data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

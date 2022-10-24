@@ -17,6 +17,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* common interface definition for database */
 
 struct db_single_image_info {
@@ -31,6 +35,10 @@ struct db_all_images_info {
     int imagesnum;
     struct db_single_image_info **images_info;
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

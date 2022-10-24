@@ -25,8 +25,16 @@
 #define DB_DEREF_ONLY 4
 #define DB_NOT_EXIST 5
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int db_common_init(const char *rootpath);
 
 void db_common_finish(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DAEMON_MODULES_IMAGE_EMBEDDED_DB_DB_COMMON_H
