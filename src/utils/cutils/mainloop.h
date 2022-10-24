@@ -18,6 +18,10 @@
 #include <stdint.h>
 #include "linked_list.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void (*epoll_timeout_callback_t)(void *data);
 
 struct epoll_descr {
@@ -41,5 +45,9 @@ extern int epoll_loop_del_handler(struct epoll_descr *descr, int fd);
 extern int epoll_loop_open(struct epoll_descr *descr);
 
 extern int epoll_loop_close(struct epoll_descr *descr);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
