@@ -22,6 +22,10 @@
 #define IMAGE_DATA_TYPE_CONFIG "config"
 #define IMAGE_DATA_TYPE_CONFIG_PATH "config_path"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct image_creator {
     char *name;
     char *type;
@@ -55,6 +59,10 @@ int lim_query_image_data(const char *name, const char *type,
 
 int lim_create_rw_layer(char *name, const char *id, char **options,
                         char **mount_string);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

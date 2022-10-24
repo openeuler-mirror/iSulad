@@ -25,6 +25,10 @@
 #include "isula_libutils/container_config_v2.h"
 #include "isula_libutils/oci_runtime_spec.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const defs_process_capabilities *capabilities);
 int merge_caps(oci_runtime_spec *oci_spec, const char **adds, size_t adds_len, const char **drops, size_t drops_len);
 int refill_oci_process_capabilities(defs_process_capabilities **caps, const char **src_caps, size_t src_caps_len);
@@ -34,6 +38,10 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
 int merge_seccomp(oci_runtime_spec *oci_spec, const char *seccomp_profile);
 #ifdef ENABLE_SELINUX
 int merge_selinux(oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

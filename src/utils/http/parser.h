@@ -55,6 +55,10 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct parsed_http_message {
     enum http_method method;
     int status_code;
@@ -87,6 +91,10 @@ struct parsed_http_message {
 int parse_http(const char *buf, size_t len, struct parsed_http_message *m,
                enum http_parser_type type);
 char *get_header_value(const struct parsed_http_message *m, const char *header);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

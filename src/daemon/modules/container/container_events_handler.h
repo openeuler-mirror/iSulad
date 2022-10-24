@@ -22,10 +22,18 @@
 #include "container_api.h"
 #include "events_format.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 container_events_handler_t *container_events_handler_new();
 
 void container_events_handler_free(container_events_handler_t *handler);
 
 int container_events_handler_post_events(const struct isulad_events_format *event);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DAEMON_MODULES_CONTAINER_CONTAINER_EVENTS_HANDLER_H

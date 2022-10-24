@@ -26,6 +26,10 @@
 
 #include "image_api.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 bool ext_detect(const char *image_name);
 int ext_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage);
 
@@ -45,5 +49,9 @@ int ext_login(const im_login_request *request);
 int ext_logout(const im_logout_request *request);
 
 int ext_init(const isulad_daemon_configs *args);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

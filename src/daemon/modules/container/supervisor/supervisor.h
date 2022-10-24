@@ -19,8 +19,16 @@
 
 #include "container_unix.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern char *exit_fifo_name(const char *cont_state_path);
 
 extern int new_supervisor();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
