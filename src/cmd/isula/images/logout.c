@@ -64,7 +64,6 @@ int client_logout(const struct client_arguments *args)
         ret = ESERVERERROR;
         goto out;
     }
-
     COMMAND_ERROR("Logout Succeeded");
 
 out:
@@ -79,6 +78,7 @@ int cmd_logout_main(int argc, const char **argv)
     int exit_code = 1; /* exit 1 if failed to logout */
     command_t cmd;
     struct command_option options[] = {
+        LOG_OPTIONS(lconf)
         COMMON_OPTIONS(g_cmd_logout_args)
     };
 
