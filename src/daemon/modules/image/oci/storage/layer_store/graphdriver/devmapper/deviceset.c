@@ -2483,6 +2483,7 @@ static void cleanup_deleted_devices(struct graphdriver *driver)
         device_info = lookup_device(driver->devset, idsarray[i]);
         if (device_info == NULL || device_info->info == NULL) {
             DEBUG("devmapper: no such device with hash(%s), just skip cleanup", idsarray[i]);
+            devmapper_device_info_ref_dec(device_info);
             continue;
         }
 
@@ -2900,21 +2901,20 @@ static int grow_device_fs(struct device_set *devset, const char *hash, uint64_t 
 
     if (size <= base_size) {
         return 0;
-    } else {
-        DEBUG("devmapper: new fs size is larger than old basesize, start to grow fs");
-        device_info = lookup_device(devset, hash);
-        if (device_info == NULL) {
-            ERROR("devmapper: lookup device %s failed", hash);
-            ret = -1;
-            goto out;
-        }
-
-        if (grow_fs(devset, device_info->info) != 0) {
-            ret = -1;
-            goto out;
-        }
     }
-out:
+
+    DEBUG("devmapper: new fs size is larger than old basesize, start to grow fs");
+    device_info = lookup_device(devset, hash);
+    if (device_info == NULL) {
+        ERROR("devmapper: lookup device %s failed", hash);
+        return -1;
+    }
+
+    if (grow_fs(devset, device_info->info) != 0) {
+        ret = -1;
+    }
+
+    devmapper_device_info_ref_dec(device_info);
     return ret;
 }
 
