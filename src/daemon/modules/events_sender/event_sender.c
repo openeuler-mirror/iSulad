@@ -27,48 +27,7 @@
 #include "event_type.h"
 #include "utils.h"
 #include "utils_file.h"
-
-/* isulad monitor fifo send */
-static void isulad_monitor_fifo_send(const struct monitord_msg *msg)
-{
-    int fd = -1;
-    ssize_t ret = 0;
-    char *fifo_path = NULL;
-
-    fifo_path = conf_get_isulad_monitor_fifo_path();
-    if (fifo_path == NULL) {
-        return;
-    }
-
-    /* Open the fifo nonblock in case the monitor is dead, we don't want the
-     * open to wait for a reader since it may never come.
-     */
-    fd = util_open(fifo_path, O_WRONLY | O_NONBLOCK, 0);
-    if (fd < 0) {
-        /* It is normal for this open() to fail with ENXIO when there is
-         * no monitor running, so we don't log it.
-         */
-        if (errno == ENXIO || errno == ENOENT) {
-            goto out;
-        }
-
-        ERROR("Failed to open fifo to send message: %s.", strerror(errno));
-        goto out;
-    }
-
-    do {
-        ret = util_write_nointr(fd, msg, sizeof(struct monitord_msg));
-        if (ret != sizeof(struct monitord_msg)) {
-            util_usleep_nointerupt(1000);
-        }
-    } while (ret != sizeof(struct monitord_msg));
-
-out:
-    free(fifo_path);
-    if (fd >= 0) {
-        close(fd);
-    }
-}
+#include "events_collector_api.h"
 
 /* isulad monitor send container event */
 int isulad_monitor_send_container_event(const char *name, runtime_state_t state, int pid, int exit_code,
@@ -110,7 +69,7 @@ int isulad_monitor_send_container_event(const char *name, runtime_state_t state,
         msg.exit_code = exit_code;
     }
 
-    isulad_monitor_fifo_send(&msg);
+    events_handler(&msg);
 
 out:
     return ret;
@@ -137,7 +96,7 @@ int isulad_monitor_send_image_event(const char *name, image_state_t state)
     (void)strncpy(msg.name, name, sizeof(msg.name) - 1);
     msg.name[sizeof(msg.name) - 1] = '\0';
 
-    isulad_monitor_fifo_send(&msg);
+    events_handler(&msg);
 
 out:
     return ret;
