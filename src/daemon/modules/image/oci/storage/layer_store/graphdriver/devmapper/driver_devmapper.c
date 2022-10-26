@@ -230,6 +230,9 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     if (rootfs == NULL) {
         ERROR("Failed to join devmapper rootfs %s", mnt_point_dir);
         ret = -1;
+        if (unmount_device(id, mnt_point_dir, driver->devset) != 0) {
+            DEBUG("devmapper: unmount %s failed", mnt_point_dir);
+        }
         goto out;
     }
 
@@ -245,6 +248,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     id_file = util_path_join(mnt_point_dir, "id");
     if (!util_file_exists(id_file)) {
         if (util_atomic_write_file(id_file, id, strlen(id), SECURE_CONFIG_FILE_MODE, true) != 0) {
+            ret = -1;
             if (unmount_device(id, mnt_point_dir, driver->devset) != 0) {
                 DEBUG("devmapper: unmount %s failed", mnt_point_dir);
             }
@@ -349,13 +353,14 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
     if (archive_unpack(content, layer_fs, &options, &err) != 0) {
         ERROR("devmapper: failed to unpack to %s: %s", layer_fs, err);
         ret = -1;
-        goto out;
+        goto umount_out;
     }
 
+umount_out:
+    // umount layer if devmapper_mount_layer success
     if (devmapper_umount_layer(id, driver) != 0) {
         ERROR("devmapper: failed to umount layer %s", id);
         ret = -1;
-        goto out;
     }
 
 out:

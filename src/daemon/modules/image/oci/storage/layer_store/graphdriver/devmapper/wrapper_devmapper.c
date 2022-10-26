@@ -26,10 +26,10 @@
 #include "utils.h"
 #include "err_msg.h"
 
-static bool g_dm_saw_busy = false;
-static bool g_dm_saw_exist = false;
-static bool g_dm_saw_enxio = false; // no such device or address
-static bool g_dm_saw_eno_data = false; // no data available
+static __thread bool g_dm_saw_busy = false;
+static __thread bool g_dm_saw_exist = false;
+static __thread bool g_dm_saw_enxio = false; // no such device or address
+static __thread bool g_dm_saw_eno_data = false; // no data available
 static int64_t dm_udev_wait_timeout = 0;
 
 char *dev_strerror(int errnum)
