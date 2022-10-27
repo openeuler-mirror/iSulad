@@ -181,6 +181,8 @@ char *storage_rootfs_mount(const char *container_id);
 
 int storage_rootfs_umount(const char *container_id, bool force);
 
+char *storage_rootfs_get_dir();
+
 container_inspect_graph_driver *storage_get_metadata_by_container_id(const char *id);
 
 #ifdef __cplusplus
