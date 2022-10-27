@@ -686,6 +686,11 @@ int oci_export_rf(const im_export_request *request)
     return ret;
 }
 
+char *oci_get_dir_rf(void)
+{
+    return storage_rootfs_get_dir();
+}
+
 int oci_login(const im_login_request *request)
 {
     int ret = 0;
