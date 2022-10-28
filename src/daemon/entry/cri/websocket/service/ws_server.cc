@@ -250,6 +250,7 @@ void WebsocketServer::CloseAllWsSession()
         close(it->second->pipes.at(0));
         close(it->second->pipes.at(1));
         (void)sem_destroy(it->second->syncCloseSem);
+        delete it->second->syncCloseSem;
         delete it->second->sessionMutex;
         delete it->second;
     }
