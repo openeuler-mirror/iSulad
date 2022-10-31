@@ -26,6 +26,10 @@
 
 #define LAYER_NUM_MAX 125
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef int(*create_layer_cb)(char *id, char *parent, uint32_t layer_attribute,
                               char **options, char **mount_string);
 
@@ -43,6 +47,10 @@ struct snapshot_plugin {
     apply_diff_cb ad;
     generate_mount_string_cb gms;
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif

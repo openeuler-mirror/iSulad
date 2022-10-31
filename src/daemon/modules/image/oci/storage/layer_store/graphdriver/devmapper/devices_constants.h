@@ -35,6 +35,10 @@
 
 #define DEFAULT_DEVICE_SET_MODE 0700
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     map_t *map; // map string image_devmapper_device_info*   key string will be strdup  value ptr will not
 } metadata_store_t;
@@ -72,5 +76,9 @@ struct device_set {
 
     bool user_base_size;
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

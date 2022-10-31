@@ -22,6 +22,10 @@
 
 #define REV_BUF_SIZE 4096
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct log_gather_conf {
     const char *fifo_path;
     int *exitcode;
@@ -39,6 +43,10 @@ enum log_gather_driver {
 };
 
 void *log_gather(void *arg);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

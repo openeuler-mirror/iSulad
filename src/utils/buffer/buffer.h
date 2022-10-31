@@ -17,6 +17,10 @@
 
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct Buffer {
     char *contents;
     size_t bytes_used;
@@ -30,4 +34,9 @@ size_t buffer_strlen(const Buffer *buf);
 void buffer_free(Buffer *buf);
 int buffer_append(Buffer *buf, const char *append, size_t len);
 void buffer_empty(Buffer *buf);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

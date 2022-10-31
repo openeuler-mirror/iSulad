@@ -29,6 +29,10 @@
 #define MAX_LAYER_NUM 125
 #define ROOTFS_TYPE "layers"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     char *schema;
     char *realm;
@@ -131,5 +135,9 @@ typedef struct {
 void free_challenge(challenge *c);
 void free_layer_blob(layer_blob *layer);
 void free_pull_desc(pull_descriptor *desc);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DAEMON_MODULES_IMAGE_OCI_REGISTRY_TYPE_H

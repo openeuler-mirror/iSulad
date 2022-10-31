@@ -83,5 +83,13 @@
 #define OCI_IMAGE_LAYER_ND_TAR "application/vnd.oci.image.layer.nondistributable.v1.tar"
 #define OCI_IMAGE_LAYER_ND_TAR_GZIP "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
 

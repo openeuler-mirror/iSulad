@@ -26,6 +26,10 @@
 #include "isula_libutils/oci_runtime_hooks.h"
 #include "isula_libutils/oci_runtime_spec.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int adapt_settings_for_mounts(oci_runtime_spec *oci_spec, container_config *container_spec);
 
 int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
@@ -42,5 +46,9 @@ bool mount_run_tmpfs(oci_runtime_spec *container, const host_config *host_spec, 
 int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec);
 
 int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2_spec);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

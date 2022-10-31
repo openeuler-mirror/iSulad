@@ -22,6 +22,10 @@
 #include "isula_libutils/host_config.h"
 #include "container_api.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void restart_policy_free(host_config_restart_policy *policy);
 
 restart_manager_t *restart_manager_new(const host_config_restart_policy *policy, int failure_count);
@@ -42,5 +46,9 @@ int restart_manager_cancel(restart_manager_t *rm);
 int restart_manager_wait_cancel(restart_manager_t *rm, uint64_t timeout);
 
 int container_restart_in_thread(const char *id, uint64_t timeout, int exit_code);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DAEMON_MODULES_CONTAINER_RESTART_MANAGER_RESTARTMANAGER_H

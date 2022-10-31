@@ -18,6 +18,10 @@
 #include <stdbool.h>
 #include <yajl/yajl_tree.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     yajl_val tree_root; /* Should be free by yajl_tree_free() */
     yajl_val tree_print; /* Point to the object be printf */
@@ -34,6 +38,10 @@ bool inspect_filter_done(yajl_val root, const char *filter, container_tree_t *tr
 void inspect_show_result(int show_nums, const container_tree_t *tree_array, const char *format, bool *json_format);
 
 void inspect_free_trees(int tree_nums, container_tree_t *tree_array);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // CMD_ISULA_INSPECT_FORMAT_H
 
