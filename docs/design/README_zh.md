@@ -32,6 +32,8 @@
 
 - 查看 registry 模块的设计文档： [registry_degisn](./detailed/Image/registry_degisn_zh.md) 。
 
+- 查看 isula search 的设计文档：[image_search_design](./detailed/Image/image_search_design_zh.md)
+
 ## Network
 
 - 查看 cni operator 模块的设计文档： [cni_operator_design](./detailed/Network/cni_operator_design_zh.md) 。

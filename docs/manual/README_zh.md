@@ -19,3 +19,7 @@ Device Mapper 是一个基于内核的框架，它支持 Linux 上的许多高�
 ## rootless支持
 
 关于如何以非root用户运行iSulad，详细参考[rootless](rootless_zh.md)。
+
+## isula search使用指南
+
+关于如何使用isula search请参考[isula_search](isula_search_zh.md)

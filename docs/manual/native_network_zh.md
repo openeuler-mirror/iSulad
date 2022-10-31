@@ -4,7 +4,7 @@
 
 ## 编译
 
-目前native network的代码，仅存在在于iSulad和lcr的master分支进行迭代演进。在iSulad中使用了编译宏进行隔离，且默认编译已开启。iSulad依赖环境的安装请参考文档`docs/build_guide_zh.md`，此处不再赘述。下面仅对lcr和iSulad的编译进行说明。
+目前native network的代码，仅存在在于iSulad和lcr的master分支进行迭代演进。在iSulad中使用了编译宏进行隔离，且默认编译已开启。iSulad依赖环境的安装请参考文档`docs/build_docs/guide/build_guide_zh.md`，此处不再赘述。下面仅对lcr和iSulad的编译进行说明。
 
 ```bash
 
