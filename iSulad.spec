@@ -1,5 +1,5 @@
 %global _version 2.0.17
-%global _release 3
+%global _release 4
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -14,6 +14,11 @@ Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar
 BuildRoot: {_tmppath}/iSulad-%{version}
 
 Patch0001: 0001-use-epoll-instead-of-select-for-wait_exit_fifo.patch
+Patch0002: 0002-add-namespace-util-UT.patch
+Patch0003: 0003-refactor-build-system-of-cutils-ut.patch
+Patch0004: 0004-run-storage-layers-ut-with-non-root.patch
+Patch0005: 0005-add-extern-C-for-mainloop-header.patch
+Patch0006: 0006-add-UT-for-mainloop-and-network.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -240,6 +245,12 @@ fi
 %endif
 
 %changelog
+* Mon Oct 31 2022 wujing <wujing50@huawei.com> - 2.0.17-4
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: sync from openEuler
+
 * Wed Oct 19 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-3
 - Type: enhancement
 - ID: NA
