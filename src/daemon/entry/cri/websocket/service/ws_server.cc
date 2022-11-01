@@ -126,6 +126,32 @@ void SessionData::CloseSession()
     sessionMutex->unlock();
 }
 
+bool SessionData::IsStdinComplete()
+{
+    bool c = true;
+
+    if (sessionMutex == nullptr) {
+        return true;
+    }
+
+    sessionMutex->lock();
+    c = completeStdin;
+    sessionMutex->unlock();
+
+    return c;
+}
+
+void SessionData::SetStdinComplete(bool complete)
+{
+    if (sessionMutex == nullptr) {
+        return;
+    }
+
+    sessionMutex->lock();
+    completeStdin = complete;
+    sessionMutex->unlock();
+}
+
 void SessionData::EraseAllMessage()
 {
     if (sessionMutex == nullptr) {
@@ -330,6 +356,7 @@ int WebsocketServer::GenerateSessionData(SessionData *session, const std::string
     session->sessionMutex = bufMutex;
     session->syncCloseSem = syncCloseSem;
     session->close = false;
+    session->completeStdin = true;
     session->containerID = containerID;
     session->suffix = std::string(suffix);
 
@@ -524,28 +551,44 @@ int WebsocketServer::ResizeTerminal(int socketID, const char *jsonData, size_t l
     return ret;
 }
 
-void WebsocketServer::Receive(int socketID, void *in, size_t len)
+void WebsocketServer::Receive(int socketID, void *in, size_t len, bool complete)
 {
     auto it = m_wsis.find(socketID);
     if (it == m_wsis.end()) {
-        ERROR("invailed websocket session!");
+        ERROR("Invailed websocket session!");
         return;
+    }
+
+    if (!it->second->IsStdinComplete()) {
+        DEBUG("Receive remaning stdin data with length %zu", len);
+        // Too much data may cause error 'resource temporarily unavaliable' by using 'write'
+        if (util_write_nointr_in_total(m_wsis[socketID]->pipes.at(1), (char *)in, len) < 0) {
+            ERROR("Sub write over! err msg: %s", strerror(errno));
+        }
+        goto out;
     }
 
     if (*static_cast<char *>(in) == WebsocketChannel::RESIZECHANNEL) {
         if (ResizeTerminal(socketID, (char *)in + 1, len, it->second->containerID, it->second->suffix) != 0) {
             ERROR("Failed to resize terminal tty");
-            return;
         }
-    } else if (*static_cast<char *>(in) == WebsocketChannel::STDINCHANNEL) {
-        if (write(m_wsis[socketID]->pipes.at(1), (void *)((char *)in + 1), len - 1) < 0) {
-            ERROR("sub write over!");
-            return;
+        if (!complete) {
+            ERROR("Resize data too long");
         }
-    } else {
-        ERROR("invalid data: %s", (char *)in);
         return;
     }
+
+    if (*static_cast<char *>(in) == WebsocketChannel::STDINCHANNEL) {
+        if (util_write_nointr_in_total(m_wsis[socketID]->pipes.at(1), (char *)in + 1, len - 1) < 0) {
+            ERROR("Sub write over! err msg: %s", strerror(errno));
+        }
+        goto out;
+    }
+
+    ERROR("Invalid data: %s", (char *)in);
+
+out:
+    it->second->SetStdinComplete(complete);
 }
 
 int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
@@ -605,7 +648,9 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
             break;
         case LWS_CALLBACK_RECEIVE: {
                 ReadGuard<RWMutex> lock(m_mutex);
-                WebsocketServer::GetInstance()->Receive(lws_get_socket_fd(wsi), static_cast<char *>(in), len);
+                size_t bytesLen = lws_remaining_packet_payload(wsi);
+                WebsocketServer::GetInstance()->Receive(lws_get_socket_fd(wsi), static_cast<char *>(in),
+                                                        len, bytesLen == 0);
             }
             break;
         case LWS_CALLBACK_CLOSED: {
