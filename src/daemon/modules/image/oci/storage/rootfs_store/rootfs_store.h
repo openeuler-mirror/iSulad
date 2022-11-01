@@ -65,6 +65,9 @@ storage_rootfs *rootfs_store_get_rootfs(const char *id);
 // Return a slice enumerating the known containers.
 int rootfs_store_get_all_rootfs(struct rootfs_list *all_rootfs);
 
+// Return rootfs store data dir
+char *rootfs_store_get_data_dir();
+
 // Free memory of container store, but will not delete the persisted files
 void rootfs_store_free();
 

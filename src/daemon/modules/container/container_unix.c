@@ -46,6 +46,7 @@
 #include "utils_string.h"
 #include "volume_api.h"
 #include "namespace.h"
+#include "cleanup.h"
 
 static int parse_container_log_configs(container_t *cont);
 
@@ -1278,6 +1279,7 @@ int container_module_init(char **msg)
     }
 
     containers_restore();
+    clean_leftover();
 
     if (start_gchandler()) {
         *msg = "Failed to start garbage collecotor handler";
