@@ -339,28 +339,28 @@ static void supplement_annotations_for_container_msg(const container_t *cont, co
                                                      struct isulad_events_format *format_msg)
 {
     if (supplement_pid_for_container_msg(cont, msg, format_msg) != 0) {
-        ERROR("Failed to supplement pid info");
+        WARN("Failed to supplement pid info");
     }
 
     if (supplement_exitcode_for_container_msg(cont, msg, format_msg) != 0) {
-        ERROR("Failed to supplement exitCode info");
+        WARN("Failed to supplement exitCode info");
     }
 
     if (supplement_image_for_container_msg(cont, msg, format_msg) != 0) {
-        ERROR("Failed to supplement image info");
+        WARN("Failed to supplement image info");
     }
 
     if (supplement_name_for_container_msg(cont, msg, format_msg) != 0) {
-        ERROR("Failed to supplement name info");
+        WARN("Failed to supplement name info");
     }
 
     if (supplement_labels_for_container_msg(cont, msg, format_msg) != 0) {
-        ERROR("Failed to supplement label info");
+        WARN("Failed to supplement label info");
     }
 
     if (strlen(msg->extra_annations) != 0) {
         if (util_array_append(&format_msg->annotations, msg->extra_annations) != 0) {
-            ERROR("Failed to supplement extra annations info");
+            WARN("Failed to supplement extra annations info");
         }
     }
 

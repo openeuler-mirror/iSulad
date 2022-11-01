@@ -100,7 +100,7 @@ static int console_writer_write_data(const struct io_write_wrapper *writer, cons
     }
     ret = writer->write_func(writer->context, buf, (size_t)len);
     if (ret <= 0 || ret != len) {
-        ERROR("failed to write, error:%s", strerror(errno));
+        ERROR("Failed to write, type: %d, expect: %zd, wrote: %zd, error: %s!", writer->io_type, len, ret, strerror(errno));
         return -1;
     }
     return 0;
@@ -401,6 +401,7 @@ int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoin
     if (fifoinfd >= 0) {
         ts.stdin_reader = stdinfd;
         ts.stdin_writer.context = &fifoinfd;
+        ts.stdin_writer.io_type = FIFO_IN_IO;
         ts.stdin_writer.write_func = fd_write_function;
         if (tty) {
             ret = epoll_loop_add_handler(&descr, ts.stdin_reader, console_cb_tty_stdin_with_escape, &ts);
@@ -418,6 +419,7 @@ int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoin
     if (fifooutfd >= 0) {
         ts.stdout_reader = fifooutfd;
         ts.stdout_writer.context = &stdoutfd;
+        ts.stdin_writer.io_type = FIFO_OUT_IO;
         ts.stdout_writer.write_func = fd_write_function;
         ret = epoll_loop_add_handler(&descr, ts.stdout_reader, console_cb_stdio_copy, &ts);
         if (ret) {
@@ -429,6 +431,7 @@ int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoin
     if (fifoerrfd >= 0) {
         ts.stderr_reader = fifoerrfd;
         ts.stderr_writer.context = &stderrfd;
+        ts.stdin_writer.io_type = FIFO_ERR_IO;
         ts.stderr_writer.write_func = fd_write_function;
         ret = epoll_loop_add_handler(&descr, ts.stderr_reader, console_cb_stdio_copy, &ts);
         if (ret) {
@@ -477,18 +480,21 @@ int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper
             ts[i].stdin_reader = srcfds[i];
             ts[i].stdin_writer.context = writers[i].context;
             ts[i].stdin_writer.write_func = writers[i].write_func;
+            ts[i].stdin_writer.io_type = FUNC_IN_IO;
             ret = epoll_loop_add_handler(&descr, ts[i].stdin_reader, console_cb_stdio_copy, &ts[i]);
         } else if (channels[i] == STDOUT_CHANNEL) {
             // Reusing ts.stdout_reader and ts.stdout_writer for coping io
             ts[i].stdout_reader = srcfds[i];
             ts[i].stdout_writer.context = writers[i].context;
             ts[i].stdout_writer.write_func = writers[i].write_func;
+            ts[i].stdin_writer.io_type = FUNC_OUT_IO;
             ret = epoll_loop_add_handler(&descr, ts[i].stdout_reader, console_cb_stdio_copy, &ts[i]);
         } else {
             // Reusing ts.stderr_reader and ts.stderr_writer for coping io
             ts[i].stderr_reader = srcfds[i];
             ts[i].stderr_writer.context = writers[i].context;
             ts[i].stderr_writer.write_func = writers[i].write_func;
+            ts[i].stdin_writer.io_type = FUNC_ERR_IO;
             ret = epoll_loop_add_handler(&descr, ts[i].stderr_reader, console_cb_stdio_copy, &ts[i]);
         }
         if (ret != 0) {

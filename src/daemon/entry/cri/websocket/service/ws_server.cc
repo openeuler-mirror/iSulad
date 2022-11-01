@@ -79,17 +79,25 @@ int SessionData::PushMessage(unsigned char *message)
 
     sessionMutex->lock();
 
-    // In extreme scenarios, websocket data cannot be processed,
-    // ignore the data coming in later to prevent iSulad from getting stuck
-    if (close || buffer.size() >= FIFO_LIST_BUFFER_MAX_LEN) {
-        free(message);
+    if (!close && buffer.size() < FIFO_LIST_BUFFER_MAX_LEN) {
+        buffer.push_back(message);
         sessionMutex->unlock();
-        return -1;
+        return 0;
     }
 
-    buffer.push_back(message);
+    // In extreme scenarios, websocket data cannot be processed,
+    // ignore the data coming in later to prevent iSulad from getting stuck
+    free(message);
     sessionMutex->unlock();
-    return 0;
+
+    if (close) {
+        DEBUG("Closed session");
+    }
+    if (buffer.size() >= FIFO_LIST_BUFFER_MAX_LEN) {
+        ERROR("Too large: %zu message!", buffer.size());
+    }
+
+    return -1;
 }
 
 bool SessionData::IsClosed()
