@@ -44,6 +44,7 @@ struct SessionData {
     std::list<unsigned char *> buffer;
     std::string containerID;
     std::string suffix;
+    volatile bool completeStdin;
 
     unsigned char *FrontMessage();
     void PopMessage();
@@ -51,6 +52,8 @@ struct SessionData {
     bool IsClosed();
     void CloseSession();
     void EraseAllMessage();
+    bool IsStdinComplete();
+    void SetStdinComplete(bool complete);
 };
 
 class WebsocketServer {
@@ -72,7 +75,7 @@ private:
     std::vector<std::string> split(std::string str, char r);
 
     int CreateContext();
-    inline void Receive(int socketID, void *in, size_t len);
+    inline void Receive(int socketID, void *in, size_t len, bool complete);
     int Wswrite(struct lws *wsi, const unsigned char *message);
     inline void DumpHandshakeInfo(struct lws *wsi) noexcept;
     int RegisterStreamTask(struct lws *wsi) noexcept;
