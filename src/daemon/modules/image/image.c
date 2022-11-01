@@ -48,6 +48,7 @@ struct bim_ops {
     int (*delete_rf)(const im_delete_rootfs_request *request);
     int (*export_rf)(const im_export_request *request);
     char *(*resolve_image_name)(const char *image_name);
+    char *(*get_dir_rf)(void);
 
     /* merge image config ops */
     int (*merge_conf)(const char *img_name, container_config *container_spec);
@@ -131,6 +132,7 @@ static const struct bim_ops g_embedded_ops = {
     .umount_rf = embedded_umount_rf,
     .delete_rf = embedded_delete_rf,
     .export_rf = NULL,
+    .get_dir_rf = NULL,
 
     .merge_conf = embedded_merge_conf,
     .get_user_conf = embedded_get_user_conf,
@@ -165,6 +167,7 @@ static const struct bim_ops g_oci_ops = {
     .umount_rf = oci_umount_rf,
     .delete_rf = oci_delete_rf,
     .export_rf = oci_export_rf,
+    .get_dir_rf = oci_get_dir_rf,
 
     .merge_conf = oci_merge_conf_rf,
     .get_user_conf = oci_get_user_conf,
@@ -198,6 +201,7 @@ static const struct bim_ops g_ext_ops = {
     .umount_rf = ext_umount_rf,
     .delete_rf = ext_delete_rf,
     .export_rf = NULL,
+    .get_dir_rf = NULL,
 
     .merge_conf = ext_merge_conf,
     .get_user_conf = ext_get_user_conf,
@@ -1764,6 +1768,28 @@ out:
 int im_container_export(const im_export_request *request)
 {
     return 0;
+}
+#endif
+
+#ifdef ENABLE_OCI_IMAGE
+char *im_get_rootfs_dir(const im_get_rf_dir_request *request) {
+    if (request->type == NULL) {
+        ERROR("Missing image type");
+        return NULL;
+    }
+
+    struct bim *bim = NULL;
+    bim = bim_get(request->type, NULL, NULL, NULL);
+    if (bim->ops->get_dir_rf == NULL) {
+        ERROR("Unimplemnts get rootfs dir in %s", bim->type);
+        return NULL;
+    }
+
+    return bim->ops->get_dir_rf();
+}
+#else
+char *im_get_rootfs_dir(const im_get_rf_dir_request *request) {
+    return NULL;
 }
 #endif
 

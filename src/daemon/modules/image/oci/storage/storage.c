@@ -1868,3 +1868,8 @@ int storage_module_init(struct storage_module_init_options *opts)
 out:
     return ret;
 }
+
+char *storage_rootfs_get_dir()
+{
+    return rootfs_store_get_data_dir();
+}

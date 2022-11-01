@@ -185,6 +185,10 @@ typedef struct {
 } im_export_request;
 
 typedef struct {
+    char *type;
+} im_get_rf_dir_request;
+
+typedef struct {
     char *name_id;
     bool force;
 } im_umount_request;
@@ -324,6 +328,8 @@ void free_im_image_count_request(im_image_count_request *ptr);
 int im_container_export(const im_export_request *request);
 
 void free_im_export_request(im_export_request *ptr);
+
+char *im_get_rootfs_dir(const im_get_rf_dir_request *request);
 
 int im_resolv_image_name(const char *image_type, const char *image_name, char **resolved_name);
 

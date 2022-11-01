@@ -1317,3 +1317,8 @@ out:
     rootfs_store_unlock();
     return ret;
 }
+
+char *rootfs_store_get_data_dir()
+{
+    return g_rootfs_store->dir;
+}

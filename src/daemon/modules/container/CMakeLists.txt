@@ -5,6 +5,7 @@ add_subdirectory(supervisor)
 add_subdirectory(health_check)
 add_subdirectory(container_gc)
 add_subdirectory(restart_manager)
+add_subdirectory(leftover_cleanup)
 
 set(MANAGER_SRCS
     ${local_manager_srcs}
@@ -13,6 +14,7 @@ set(MANAGER_SRCS
     ${HEALTH_CHECK_SRCS}
     ${GC_SRCS}
     ${RESTART_MANAGER_SRCS}
+    ${LEFTOVER_CLEANUP_SRCS}
     PARENT_SCOPE
     )
 
@@ -23,5 +25,6 @@ set(MANAGER_INCS
     ${HEALTH_CHECK_INCS}
     ${GC_INCS}
     ${RESTART_MANAGER_INCS}
+    ${LEFTOVER_CLEANUP_INCS}
     PARENT_SCOPE
     )
