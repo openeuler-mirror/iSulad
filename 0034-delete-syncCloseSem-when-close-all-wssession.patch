@@ -1,0 +1,25 @@
+From 1111a16537bddf5d272f58bd1b67969f105a426d Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Fri, 28 Oct 2022 11:21:19 +0800
+Subject: [PATCH 34/39] delete syncCloseSem when close all wssession
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/daemon/entry/cri/websocket/service/ws_server.cc | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/daemon/entry/cri/websocket/service/ws_server.cc b/src/daemon/entry/cri/websocket/service/ws_server.cc
+index 6438c4d7..a9b58685 100644
+--- a/src/daemon/entry/cri/websocket/service/ws_server.cc
++++ b/src/daemon/entry/cri/websocket/service/ws_server.cc
+@@ -250,6 +250,7 @@ void WebsocketServer::CloseAllWsSession()
+         close(it->second->pipes.at(0));
+         close(it->second->pipes.at(1));
+         (void)sem_destroy(it->second->syncCloseSem);
++        delete it->second->syncCloseSem;
+         delete it->second->sessionMutex;
+         delete it->second;
+     }
+-- 
+2.25.1
+
