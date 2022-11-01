@@ -1,5 +1,5 @@
 %global _version 2.0.17
-%global _release 4
+%global _release 5
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -19,6 +19,39 @@ Patch0003: 0003-refactor-build-system-of-cutils-ut.patch
 Patch0004: 0004-run-storage-layers-ut-with-non-root.patch
 Patch0005: 0005-add-extern-C-for-mainloop-header.patch
 Patch0006: 0006-add-UT-for-mainloop-and-network.patch
+Patch0007: 0007-add-check-for-aes-apis.patch
+Patch0008: 0008-add-ut-for-cutils-aes.patch
+Patch0009: 0009-add-ut-for-cutils-error.patch
+Patch0010: 0010-ensure-argument-is-not-null.patch
+Patch0011: 0011-add-ut-for-utils_fs.patch
+Patch0012: 0012-Add-adaptation-code-for-filters.patch
+Patch0013: 0013-Add-parameter-check-to-path.patch
+Patch0014: 0014-Add-ut-for-utils_convert.patch
+Patch0015: 0015-Add-ut-for-path.patch
+Patch0016: 0016-Add-ut-for-filters.patch
+Patch0017: 0017-add-static-for-unexport-function.patch
+Patch0018: 0018-add-ut-for-cutils-timestamp.patch
+Patch0019: 0019-fix-timestamp-ut-error.patch
+Patch0020: 0020-improve-code-in-utils_mount_spec.patch
+Patch0021: 0021-Add-ut-for-utils_mount_spec.patch
+Patch0022: 0022-Add-ut-for-utils_regex.patch
+Patch0023: 0023-improve-code-in-utils.c.patch
+Patch0024: 0024-add-ut-for-cutils-utils.patch
+Patch0025: 0025-make-sure-kill-pid-not-negative.patch
+Patch0026: 0026-add-UT-for-atomic-and-map.patch
+Patch0027: 0027-remove-unnecessary-goto-and-add-parameter-check-for-.patch
+Patch0028: 0028-Add-ut-for-verify.patch
+Patch0029: 0029-fix-error-in-utils_verify_ut.patch
+Patch0030: 0030-add-more-test-for-string-and-map.patch
+Patch0031: 0031-remove-mnt-point-if-add-device-mapper-device-failed.patch
+Patch0032: 0032-dec-device-info-ref-in-grow-device-fs.patch
+Patch0033: 0033-device-mapper-bugfix.patch
+Patch0034: 0034-delete-syncCloseSem-when-close-all-wssession.patch
+Patch0035: 0035-improve-debug-information-for-console-io.patch
+Patch0036: 0036-add-ut-for-file.patch
+Patch0037: 0037-Add-extend-C-for-header-files.patch
+Patch0038: 0038-feat-add-container-cleanup-module.patch
+Patch0039: 0039-bugfix-for-websocket-receive-data-too-long.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -245,6 +278,12 @@ fi
 %endif
 
 %changelog
+* Tue Nov 01 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-5
+- Type: enhancement
+- ID: NA
+- SUG: NA
+- DESC: add ut and bugfix for device mapper and websocket
+
 * Mon Oct 31 2022 wujing <wujing50@huawei.com> - 2.0.17-4
 - Type: enhancement
 - ID: NA
