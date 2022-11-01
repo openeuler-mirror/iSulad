@@ -1,0 +1,100 @@
+From e43af2dc017a63a772c7dea2583d7d58506d7608 Mon Sep 17 00:00:00 2001
+From: zhongtao <taozh97@163.com>
+Date: Tue, 18 Oct 2022 11:50:37 +0800
+Subject: [PATCH 22/39] Add ut for utils_regex
+
+Signed-off-by: zhongtao <taozh97@163.com>
+---
+ test/cutils/CMakeLists.txt                |  1 +
+ test/cutils/utils_regex/CMakeLists.txt    | 16 ++++++++
+ test/cutils/utils_regex/utils_regex_ut.cc | 46 +++++++++++++++++++++++
+ 3 files changed, 63 insertions(+)
+ create mode 100644 test/cutils/utils_regex/CMakeLists.txt
+ create mode 100644 test/cutils/utils_regex/utils_regex_ut.cc
+
+diff --git a/test/cutils/CMakeLists.txt b/test/cutils/CMakeLists.txt
+index f159aacb..4b235a09 100644
+--- a/test/cutils/CMakeLists.txt
++++ b/test/cutils/CMakeLists.txt
+@@ -30,3 +30,4 @@ add_subdirectory(utils_fs)
+ add_subdirectory(utils_filters)
+ add_subdirectory(utils_timestamp)
+ add_subdirectory(utils_mount_spec)
++add_subdirectory(utils_regex)
+diff --git a/test/cutils/utils_regex/CMakeLists.txt b/test/cutils/utils_regex/CMakeLists.txt
+new file mode 100644
+index 00000000..3f6410b2
+--- /dev/null
++++ b/test/cutils/utils_regex/CMakeLists.txt
+@@ -0,0 +1,16 @@
++project(iSulad_UT)
++
++SET(EXE utils_regex_ut)
++
++add_executable(${EXE}
++    utils_regex_ut.cc)
++
++target_include_directories(${EXE} PUBLIC
++    ${GTEST_INCLUDE_DIR}
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/common
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
++    )
++target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
++add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+diff --git a/test/cutils/utils_regex/utils_regex_ut.cc b/test/cutils/utils_regex/utils_regex_ut.cc
+new file mode 100644
+index 00000000..1b4414de
+--- /dev/null
++++ b/test/cutils/utils_regex/utils_regex_ut.cc
+@@ -0,0 +1,46 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: zhongtao
++ * Create: 2022-10-18
++ * Description: utils regex unit test
++ *******************************************************************************/
++
++#include <gtest/gtest.h>
++#include "utils_regex.h"
++
++TEST(utils_regex, test_util_reg_match)
++{
++    const char *pattern = "^[a-f0-9]{64}$";
++    const char *valid = "c8da28a6cea7443b648ec70a1c947b6cb920ee0ef3c4a691d4252ff6e1888036";
++    const char *invalid = "g8da28a6cea7443b648ec70a1c947b6cb920ee0ef3c4a691d4252ff6e1888036";
++
++    ASSERT_EQ(util_reg_match(pattern, valid), 0);
++    ASSERT_EQ(util_reg_match(pattern, invalid), 1);
++
++    ASSERT_EQ(util_reg_match(pattern, nullptr), -1);
++    ASSERT_EQ(util_reg_match(nullptr, pattern), -1);
++}
++
++TEST(utils_regex, test_util_wildcard_to_regex)
++{
++    std::string wildcard = "*hello?";
++    char *value = NULL;
++
++    ASSERT_EQ(util_wildcard_to_regex(wildcard.c_str(), &value), 0);
++    ASSERT_STREQ(value, "^.*hello.$");
++
++    wildcard = "file{1,2,3}";
++    ASSERT_EQ(util_wildcard_to_regex(wildcard.c_str(), &value), 0);
++    ASSERT_STREQ(value, "^file\\{1,2,3\\}$");
++
++    ASSERT_EQ(util_wildcard_to_regex(nullptr, &value), -1);
++    ASSERT_EQ(util_wildcard_to_regex(wildcard.c_str(), nullptr), -1);
++}
+-- 
+2.25.1
+
