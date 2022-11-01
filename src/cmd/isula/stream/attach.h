@@ -18,9 +18,18 @@
 #include "client_arguments.h"
 #include "isula_libutils/container_inspect.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char g_cmd_attach_desc[];
 extern const char g_cmd_attach_usage[];
 extern struct client_arguments g_cmd_attach_args;
 int inspect_container(const struct client_arguments *args, container_inspect **inspect_data);
 int cmd_attach_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif // CMD_ISULA_STREAM_ATTACH_H

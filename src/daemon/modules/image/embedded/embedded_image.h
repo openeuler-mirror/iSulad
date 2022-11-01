@@ -18,6 +18,10 @@
 #include <stdint.h>
 #include "image_api.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 bool embedded_detect(const char *image_name);
 
 int embedded_prepare_rf(const im_prepare_request *request, char **real_rootfs);
@@ -47,5 +51,9 @@ int embedded_load_image(const im_load_request *request);
 int embedded_init(const isulad_daemon_configs *args);
 
 void embedded_exit();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

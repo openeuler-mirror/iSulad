@@ -22,11 +22,19 @@
 
 #include "db_all.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int snapshot_init(uint32_t driver_type);
 
 int snapshot_generate_mount_string(uint32_t driver_type,
                                    struct db_image *imginfo,
                                    struct db_sninfo **sninfos, char **mount_string);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

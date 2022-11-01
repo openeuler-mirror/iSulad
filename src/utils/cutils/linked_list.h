@@ -17,6 +17,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct linked_list {
     void *elem;
     struct linked_list *next;
@@ -121,6 +125,10 @@ static inline size_t linked_list_len(struct linked_list *list)
 
     return i;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

@@ -20,11 +20,19 @@
 
 #include "utils.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct monitord_sync_data {
     sem_t *monitord_sem;
     int *exit_code;
 };
 
 int new_monitord(struct monitord_sync_data *msync);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
