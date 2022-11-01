@@ -1,0 +1,100 @@
+From b2f293d1777ba3846ea4bcab5754b66ebfe4094c Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Sat, 15 Oct 2022 17:01:02 +0800
+Subject: [PATCH 09/39] add ut for cutils error
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ test/cutils/CMakeLists.txt                |  1 +
+ test/cutils/utils_error/CMakeLists.txt    | 16 ++++++++
+ test/cutils/utils_error/utils_error_ut.cc | 45 +++++++++++++++++++++++
+ 3 files changed, 62 insertions(+)
+ create mode 100644 test/cutils/utils_error/CMakeLists.txt
+ create mode 100644 test/cutils/utils_error/utils_error_ut.cc
+
+diff --git a/test/cutils/CMakeLists.txt b/test/cutils/CMakeLists.txt
+index 93c73fb8..d3e1038a 100644
+--- a/test/cutils/CMakeLists.txt
++++ b/test/cutils/CMakeLists.txt
+@@ -24,3 +24,4 @@ add_subdirectory(utils_pwgr)
+ add_subdirectory(utils_namespace)
+ add_subdirectory(utils_network)
+ add_subdirectory(utils_aes)
++add_subdirectory(utils_error)
+diff --git a/test/cutils/utils_error/CMakeLists.txt b/test/cutils/utils_error/CMakeLists.txt
+new file mode 100644
+index 00000000..28016605
+--- /dev/null
++++ b/test/cutils/utils_error/CMakeLists.txt
+@@ -0,0 +1,16 @@
++project(iSulad_UT)
++
++SET(EXE utils_error_ut)
++
++add_executable(${EXE}
++    utils_error_ut.cc)
++
++target_include_directories(${EXE} PUBLIC
++    ${GTEST_INCLUDE_DIR}
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/common
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
++    )
++target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
++add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+diff --git a/test/cutils/utils_error/utils_error_ut.cc b/test/cutils/utils_error/utils_error_ut.cc
+new file mode 100644
+index 00000000..d4585d70
+--- /dev/null
++++ b/test/cutils/utils_error/utils_error_ut.cc
+@@ -0,0 +1,45 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: haozi007
++ * Create: 2022-10-13
++ * Description: utils namespace unit test
++ *******************************************************************************/
++
++#include <gtest/gtest.h>
++#include "error.h"
++
++TEST(utils_error, test_errno_to_error_message)
++{
++    const char *ret = nullptr;
++    std::string internal_err = "Server internal error";
++    std::string unknow_err = "Unknown error";
++
++    ret = errno_to_error_message(ISULAD_SUCCESS);
++    ASSERT_EQ(strcmp(ret, DEF_SUCCESS_STR), 0);
++
++    ret = errno_to_error_message(ISULAD_ERR_INTERNAL);
++    ASSERT_EQ(strcmp(ret, internal_err.c_str()), 0);
++
++    ret = errno_to_error_message(ISULAD_ERR_UNKNOWN);
++    ASSERT_EQ(strcmp(ret, unknow_err.c_str()), 0);
++}
++
++TEST(utils_error, test_format_errorf)
++{
++    char *out = nullptr;
++    std::string target = "hello world";
++
++    format_errorf(&out, "hello %s", "world");
++    ASSERT_EQ(strcmp(out, target.c_str()), 0);
++
++    format_errorf(nullptr, "hello %s", "world");
++    format_errorf(&out, nullptr);
++}
+\ No newline at end of file
+-- 
+2.25.1
+
