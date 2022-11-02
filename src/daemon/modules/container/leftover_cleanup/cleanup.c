@@ -48,7 +48,7 @@ static void destroy_cleaners(struct cleaners *clns)
     free(clns);
 }
 
-static int add_clean_node(struct cleaners * clns, clean_func_t f, char * desc)
+static int add_clean_node(struct cleaners *clns, clean_func_t f, const char *desc)
 {
     struct linked_list *new_node = NULL;
     struct clean_node *c_node = NULL;
