@@ -1,0 +1,240 @@
+From d9eb77bbe430fa74ca1c55c0c6907afaeb559499 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Tue, 18 Oct 2022 19:19:23 +0800
+Subject: [PATCH 26/39] add UT for atomic and map
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ test/cutils/CMakeLists.txt                  |  2 +
+ test/cutils/map/CMakeLists.txt              | 16 ++++++
+ test/cutils/map/map_ut.cc                   | 39 ++++++++++++++
+ test/cutils/util_atomic/CMakeLists.txt      | 18 +++++++
+ test/cutils/util_atomic/util_atomic_ut.cc   | 56 +++++++++++++++++++++
+ test/cutils/utils_string/utils_string_ut.cc | 25 +++++++++
+ test/mocks/utils_network_mock.cc            |  2 +-
+ 7 files changed, 157 insertions(+), 1 deletion(-)
+ create mode 100644 test/cutils/map/CMakeLists.txt
+ create mode 100644 test/cutils/map/map_ut.cc
+ create mode 100644 test/cutils/util_atomic/CMakeLists.txt
+ create mode 100644 test/cutils/util_atomic/util_atomic_ut.cc
+
+diff --git a/test/cutils/CMakeLists.txt b/test/cutils/CMakeLists.txt
+index 23426015..28e37b27 100644
+--- a/test/cutils/CMakeLists.txt
++++ b/test/cutils/CMakeLists.txt
+@@ -17,6 +17,8 @@ target_include_directories(libutils_ut
+ 
+ add_subdirectory(mainloop)
+ add_subdirectory(path)
++add_subdirectory(map)
++add_subdirectory(util_atomic)
+ add_subdirectory(utils_string)
+ add_subdirectory(utils_convert)
+ add_subdirectory(utils_array)
+diff --git a/test/cutils/map/CMakeLists.txt b/test/cutils/map/CMakeLists.txt
+new file mode 100644
+index 00000000..4059559f
+--- /dev/null
++++ b/test/cutils/map/CMakeLists.txt
+@@ -0,0 +1,16 @@
++project(iSulad_UT)
++
++SET(EXE map_ut)
++
++add_executable(${EXE}
++    map_ut.cc)
++
++target_include_directories(${EXE} PUBLIC
++    ${GTEST_INCLUDE_DIR}
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/common
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
++    )
++
++target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} libutils_ut -lcrypto -lyajl -lz)
++add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+diff --git a/test/cutils/map/map_ut.cc b/test/cutils/map/map_ut.cc
+new file mode 100644
+index 00000000..fd75da28
+--- /dev/null
++++ b/test/cutils/map/map_ut.cc
+@@ -0,0 +1,39 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Description: map unit test
++ * Author: zhangxiaoyu
++ * Create: 2022-10-19
++ */
++
++#include <stdlib.h>
++#include <stdio.h>
++#include <gtest/gtest.h>
++#include "map.h"
++
++TEST(map_map_ut, test_map)
++{
++    // map[string][bool]
++    map_t *map_test = nullptr;
++    bool exist = true;
++
++    map_test = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
++    ASSERT_NE(map_test, nullptr);
++    ASSERT_EQ(map_insert(map_test, (void *)"key", &exist), true);
++
++    map_itor *itor = map_itor_new(map_test);
++    ASSERT_NE(itor, nullptr);
++    ASSERT_EQ(map_itor_first(itor), true);
++    ASSERT_EQ(map_itor_last(itor), true);
++    ASSERT_EQ(map_itor_prev(itor), false);
++
++    map_itor_free(itor);
++    map_clear(map_test);
++}
+diff --git a/test/cutils/util_atomic/CMakeLists.txt b/test/cutils/util_atomic/CMakeLists.txt
+new file mode 100644
+index 00000000..071b2a04
+--- /dev/null
++++ b/test/cutils/util_atomic/CMakeLists.txt
+@@ -0,0 +1,18 @@
++project(iSulad_UT)
++
++SET(EXE util_atomic_ut)
++
++add_executable(${EXE}
++    util_atomic_ut.cc)
++
++target_include_directories(${EXE} PUBLIC
++    ${GTEST_INCLUDE_DIR}
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/common
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
++    )
++
++target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
++add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+diff --git a/test/cutils/util_atomic/util_atomic_ut.cc b/test/cutils/util_atomic/util_atomic_ut.cc
+new file mode 100644
+index 00000000..29772a1e
+--- /dev/null
++++ b/test/cutils/util_atomic/util_atomic_ut.cc
+@@ -0,0 +1,56 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Description: util_atomic unit test
++ * Author: zhangxiaoyu
++ * Create: 2022-10-15
++ */
++
++#include <stdlib.h>
++#include <stdio.h>
++#include <gtest/gtest.h>
++#include "mock.h"
++#include "util_atomic.h"
++
++TEST(utils_atomic_ut, test_atomic_inc_dec)
++{
++    uint64_t atomic = 0;
++    uint64_t atomic_image = 0;
++
++    atomic_int_set(&atomic, 10);
++    ASSERT_EQ(atomic_int_get(&atomic), 10);
++    ASSERT_EQ(atomic_int_inc(&atomic), 11);
++    ASSERT_EQ(atomic_int_dec_test(&atomic), false);
++
++    atomic_int_set_image(&atomic_image, 1);
++    ASSERT_EQ(atomic_int_inc_image(&atomic_image), 2);
++    ASSERT_EQ(atomic_int_dec_test_image(&atomic_image), false);
++    ASSERT_EQ(atomic_int_dec_test_image(&atomic_image), true);
++}
++
++TEST(utils_atomic_ut, test_atomic_calculate)
++{
++    uint64_t atomic = 0;
++
++    ASSERT_EQ(atomic_int_compare_exchange(&atomic, 1, 2), false);
++
++
++    ASSERT_EQ(atomic_int_compare_exchange(&atomic, 0, 2), true);
++    // atomic = 2
++    ASSERT_EQ(atomic_int_add(&atomic, 3), 2);
++    // atomic = 5
++    ASSERT_EQ(atomic_int_and(&atomic, 4), 5);
++    // atomic = 4
++    ASSERT_EQ(atomic_int_or(&atomic, 8), 4);
++    // atomic = 12
++    ASSERT_EQ(atomic_int_xor(&atomic, 3), 12);
++    // atomic = 15
++    ASSERT_EQ(atomic_int_get(&atomic), 15);
++}
+diff --git a/test/cutils/utils_string/utils_string_ut.cc b/test/cutils/utils_string/utils_string_ut.cc
+index b488a09f..8b6c61a6 100644
+--- a/test/cutils/utils_string/utils_string_ut.cc
++++ b/test/cutils/utils_string/utils_string_ut.cc
+@@ -18,6 +18,7 @@
+ #include <gtest/gtest.h>
+ #include "mock.h"
+ #include "utils_string.h"
++#include "utils_array.h"
+ 
+ extern "C" {
+     DECLARE_WRAPPER(util_strdup_s, char *, (const char *str));
+@@ -831,3 +832,27 @@ TEST(utils_string_ut, test_str_token)
+     ASSERT_STREQ(token, "abc");
+     free(token);
+ }
++
++TEST(utils_string_ut, test_string_split_multi)
++{
++    char **result = nullptr;
++
++    ASSERT_EQ(util_string_split_multi(nullptr, ':'), nullptr);
++
++    result = util_string_split_multi("", ':');
++    ASSERT_STREQ(result[0], "");
++    ASSERT_EQ(result[1], nullptr);
++    util_free_array(result);
++
++    result = util_string_split_multi("abcd;", ':');
++    ASSERT_STREQ(result[0], "abcd;");
++    ASSERT_EQ(result[1], nullptr);
++    util_free_array(result);
++
++    result = util_string_split_multi("abc:dd:e", ':');
++    ASSERT_STREQ(result[0], "abc");
++    ASSERT_STREQ(result[1], "dd");
++    ASSERT_STREQ(result[2], "e");
++    ASSERT_EQ(result[3], nullptr);
++    util_free_array(result);
++}
+diff --git a/test/mocks/utils_network_mock.cc b/test/mocks/utils_network_mock.cc
+index afa346b5..01027a62 100644
+--- a/test/mocks/utils_network_mock.cc
++++ b/test/mocks/utils_network_mock.cc
+@@ -57,4 +57,4 @@ int pthread_join(pthread_t thread, void **retval)
+         return g_utils_network_mock->PthreadJoin(thread, retval);
+     }
+     return 0;
+-}
+\ No newline at end of file
++}
+-- 
+2.25.1
+
