@@ -1774,6 +1774,8 @@ int im_container_export(const im_export_request *request)
 
 #ifdef ENABLE_OCI_IMAGE
 char *im_get_rootfs_dir(const im_get_rf_dir_request *request) {
+    char *dir = NULL;
+
     if (request->type == NULL) {
         ERROR("Missing image type");
         return NULL;
@@ -1785,8 +1787,10 @@ char *im_get_rootfs_dir(const im_get_rf_dir_request *request) {
         ERROR("Unimplemnts get rootfs dir in %s", bim->type);
         return NULL;
     }
+    dir = bim->ops->get_dir_rf();
+    bim_put(bim);
 
-    return bim->ops->get_dir_rf();
+    return dir;
 }
 #else
 char *im_get_rootfs_dir(const im_get_rf_dir_request *request) {
