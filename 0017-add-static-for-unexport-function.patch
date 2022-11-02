@@ -1,7 +1,7 @@
 From 5b7c5fd4d856ad222dc51d79f8cf972730e48a54 Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Mon, 17 Oct 2022 14:31:39 +0800
-Subject: [PATCH 17/39] add static for unexport function
+Subject: [PATCH 17/43] add static for unexport function
 
 1. add static for inner function;
 2. add check for aguments;
