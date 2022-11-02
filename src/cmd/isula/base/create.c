@@ -2149,6 +2149,15 @@ out:
     return ret;
 }
 
+static int create_check_auto_remove(const struct client_arguments *args)
+{
+    if (args->custom_conf.auto_remove && ((args->restart != NULL) && (strcmp("no", args->restart) != 0))) {
+        COMMAND_ERROR("Conflicting options: --restart and --rm");
+        return -1;
+    }
+    return 0;
+}
+
 int create_checker(struct client_arguments *args)
 {
     int ret = 0;
@@ -2232,6 +2241,11 @@ int create_checker(struct client_arguments *args)
     }
 
     if (create_check_env_target_file(args)) {
+        ret = -1;
+        goto out;
+    }
+
+    if (create_check_auto_remove(args)) {
         ret = -1;
         goto out;
     }

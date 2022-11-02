@@ -34,14 +34,7 @@ extern "C" {
         'd',                                                        \
         &(cmdargs).detach,                                          \
         "Run container in background and print container ID",       \
-        NULL },                                                     \
-    { CMD_OPT_TYPE_BOOL,                                  \
-      false,                                              \
-      "rm",                                               \
-      0,                                                  \
-      &(cmdargs).custom_conf.auto_remove,                 \
-      "Automatically remove the container when it exits", \
-      NULL },
+        NULL },                                                   
 
 extern const char g_cmd_run_desc[];
 extern const char g_cmd_run_usage[];

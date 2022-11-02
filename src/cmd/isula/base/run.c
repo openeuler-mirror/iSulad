@@ -195,11 +195,8 @@ free_out:
 
 static int run_checker(struct client_arguments *args)
 {
-    int ret = 0;
-
-    ret = create_checker(args);
-    if (ret) {
-        goto out;
+    if (create_checker(args)) {
+        return -1;
     }
 
     /* Make detach option a high priority than terminal */
@@ -208,13 +205,5 @@ static int run_checker(struct client_arguments *args)
         args->custom_conf.attach_stdout = false;
         args->custom_conf.attach_stderr = false;
     }
-
-    if (args->custom_conf.auto_remove && ((args->restart != NULL) && (strcmp("no", args->restart) != 0))) {
-        COMMAND_ERROR("Conflicting options: --restart and --rm");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
+    return 0;
 }
