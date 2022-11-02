@@ -31,6 +31,7 @@ static bool walk_dir_cb(const char *path_name, const struct dirent *sub_dir, voi
     int rm_rootfs_ret = 0;
 
     if (cont != NULL) {
+        container_unref(cont);
         return true;
     }
 
@@ -58,6 +59,7 @@ int oci_rootfs_cleaner(void)
     }
 
     ret = util_scan_subdirs(rf_dir, walk_dir_cb, &res);
+    free(rf_dir);
     if (ret != 0) {
         ERROR("failed to scan subdirs");
         return -1;
