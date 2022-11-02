@@ -1320,5 +1320,5 @@ out:
 
 char *rootfs_store_get_data_dir()
 {
-    return g_rootfs_store->dir;
+    return util_strdup_s(g_rootfs_store->dir);
 }
