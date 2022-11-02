@@ -27,7 +27,7 @@
 #include "connect.h"
 
 const char g_cmd_inspect_desc[] = "Return low-level information on a container or image";
-const char g_cmd_inspect_usage[] = "inspect [options] CONTAINER|IMAGE [CONTAINER|IMAGE...]";
+const char g_cmd_inspect_usage[] = "inspect [OPTIONS] CONTAINER|IMAGE [CONTAINER|IMAGE...]";
 
 struct client_arguments g_cmd_inspect_args = {
     .format = NULL,

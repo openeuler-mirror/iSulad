@@ -28,7 +28,7 @@
 #include "connect.h"
 
 const char g_cmd_export_desc[] = "export container";
-const char g_cmd_export_usage[] = "export [command options] [ID|NAME]";
+const char g_cmd_export_usage[] = "export [OPTIONS] [ID|NAME]";
 
 struct client_arguments g_cmd_export_args = {};
 

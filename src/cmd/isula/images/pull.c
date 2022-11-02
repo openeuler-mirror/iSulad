@@ -63,7 +63,6 @@ int client_pull(const struct client_arguments *args)
         ret = ESERVERERROR;
         goto out;
     }
-
     COMMAND_ERROR("Image \"%s\" pulled", response->image_ref);
 
 out:
@@ -78,6 +77,7 @@ int cmd_pull_main(int argc, const char **argv)
     int exit_code = 1; /* exit 1 if failed to pull */
     command_t cmd;
     struct command_option options[] = {
+        LOG_OPTIONS(lconf)
         COMMON_OPTIONS(g_cmd_pull_args)
     };
 
