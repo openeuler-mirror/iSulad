@@ -1,5 +1,5 @@
 %global _version 2.0.17
-%global _release 5
+%global _release 6
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -50,8 +50,12 @@ Patch0034: 0034-delete-syncCloseSem-when-close-all-wssession.patch
 Patch0035: 0035-improve-debug-information-for-console-io.patch
 Patch0036: 0036-add-ut-for-file.patch
 Patch0037: 0037-Add-extend-C-for-header-files.patch
-Patch0038: 0038-feat-add-container-cleanup-module.patch
-Patch0039: 0039-bugfix-for-websocket-receive-data-too-long.patch
+Patch0038: 0038-add-isula-create-rm-option.patch 
+Patch0039: 0039-feat-add-container-cleanup-module.patch 
+Patch0040: 0040-bugfix-for-websocket-receive-data-too-long.patch 
+Patch0041: 0041-fix-call-bim_put-in-im_get_rootfs_dir.patch 
+Patch0042: 0042-isula-usage-consistency-optimization.patch 
+Patch0043: 0043-fix-do-container_unref-in-oci_rootfs_clean.patch 
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -278,6 +282,12 @@ fi
 %endif
 
 %changelog
+* Wed Nov 02 2022 wangrunze <wangrunze13@huawei.com> - 2.0.17-6
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: fix cleanup module memory leak
+
 * Tue Nov 01 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-5
 - Type: enhancement
 - ID: NA
