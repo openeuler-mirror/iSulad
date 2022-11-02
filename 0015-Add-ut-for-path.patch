@@ -1,0 +1,187 @@
+From eb122520ccdcd71dee4e93d3bf9e6c296e3af315 Mon Sep 17 00:00:00 2001
+From: zhongtao <taozh97@163.com>
+Date: Mon, 17 Oct 2022 11:43:18 +0800
+Subject: [PATCH 15/39] Add ut for path
+
+Signed-off-by: zhongtao <taozh97@163.com>
+---
+ test/CMakeLists.txt               |  1 -
+ test/cutils/CMakeLists.txt        |  1 +
+ test/cutils/path/CMakeLists.txt   | 17 ++++++++
+ test/{ => cutils}/path/path_ut.cc | 70 ++++++++++++++++++++++++++++++-
+ test/path/CMakeLists.txt          | 28 -------------
+ 5 files changed, 87 insertions(+), 30 deletions(-)
+ create mode 100644 test/cutils/path/CMakeLists.txt
+ rename test/{ => cutils}/path/path_ut.cc (82%)
+ delete mode 100644 test/path/CMakeLists.txt
+
+diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
+index 034aaf97..92a4e969 100644
+--- a/test/CMakeLists.txt
++++ b/test/CMakeLists.txt
+@@ -42,7 +42,6 @@ include_directories(${GMOCK_INCLUDE_DIRS})
+ IF(ENABLE_UT)
+     add_subdirectory(cutils)
+     add_subdirectory(image)
+-    add_subdirectory(path)
+     add_subdirectory(cmd)
+     add_subdirectory(runtime)
+     add_subdirectory(specs)
+diff --git a/test/cutils/CMakeLists.txt b/test/cutils/CMakeLists.txt
+index 9073a68d..00753e64 100644
+--- a/test/cutils/CMakeLists.txt
++++ b/test/cutils/CMakeLists.txt
+@@ -16,6 +16,7 @@ target_include_directories(libutils_ut
+ )
+ 
+ add_subdirectory(mainloop)
++add_subdirectory(path)
+ add_subdirectory(utils_string)
+ add_subdirectory(utils_convert)
+ add_subdirectory(utils_array)
+diff --git a/test/cutils/path/CMakeLists.txt b/test/cutils/path/CMakeLists.txt
+new file mode 100644
+index 00000000..745258a1
+--- /dev/null
++++ b/test/cutils/path/CMakeLists.txt
+@@ -0,0 +1,17 @@
++project(iSulad_UT)
++
++SET(EXE path_ut)
++
++add_executable(${EXE}
++    path_ut.cc)
++
++target_include_directories(${EXE} PUBLIC
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/common
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256
++    )
++set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,getcwd -Wl,--wrap,readlink")
++target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
++add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+diff --git a/test/path/path_ut.cc b/test/cutils/path/path_ut.cc
+similarity index 82%
+rename from test/path/path_ut.cc
+rename to test/cutils/path/path_ut.cc
+index 0068ecb4..8601fa07 100644
+--- a/test/path/path_ut.cc
++++ b/test/cutils/path/path_ut.cc
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
++ * Copyright (c) Huawei Technologies Co., Ltd. 2019-2022. All rights reserved.
+  * iSulad licensed under the Mulan PSL v2.
+  * You can use this software according to the terms and conditions of the Mulan PSL v2.
+  * You may obtain a copy of Mulan PSL v2 at:
+@@ -376,3 +376,71 @@ TEST(path_ut, test_preserve_trailing_dot_or_separator)
+     free(res);
+     res = nullptr;
+ }
++
++TEST(path_ut, test_split_path_dir_entry)
++{
++    std::string str;
++    char *dir = nullptr;
++    char *base = nullptr;
++    char **null_dir = nullptr;
++
++    str = "/home/dir/file";
++    ASSERT_EQ(util_split_path_dir_entry(nullptr, &dir, &base), -1);
++    ASSERT_EQ(util_split_path_dir_entry(str.c_str(), null_dir, &base), 0);
++    ASSERT_EQ(null_dir, nullptr);
++
++    str = "/home/dir/../file";
++    ASSERT_EQ(util_split_path_dir_entry(str.c_str(), &dir, &base), 0);
++    ASSERT_NE(dir, nullptr);
++    ASSERT_STREQ(dir, "/home");
++    ASSERT_NE(base, nullptr);
++    ASSERT_STREQ(base, "file");
++
++    str = "/home/dir/./file";
++    ASSERT_EQ(util_split_path_dir_entry(str.c_str(), &dir, &base), 0);
++    ASSERT_NE(dir, nullptr);
++    ASSERT_STREQ(dir, "/home/dir");
++    ASSERT_NE(base, nullptr);
++    ASSERT_STREQ(base, "file");
++
++    str = "./dir/file";
++    MOCK_SET_V(getcwd, getcwd_specify);
++    ASSERT_EQ(util_split_path_dir_entry(str.c_str(), &dir, &base), 0);
++    ASSERT_NE(dir, nullptr);
++    ASSERT_STREQ(dir, "/home/dir");
++    ASSERT_NE(base, nullptr);
++    ASSERT_STREQ(base, "file");
++}
++
++TEST(path_ut, test_realpath_in_scope)
++{
++    std::string rootfs;
++    std::string path;
++    char *realpath = nullptr;
++    char *null_roofs = nullptr;
++
++    ASSERT_EQ(util_realpath_in_scope(null_roofs, path.c_str(), &realpath), -1);
++
++    rootfs = "/home/dir";
++    path = "/file";
++    ASSERT_EQ(util_realpath_in_scope(rootfs.c_str(), path.c_str(), &realpath), 0);
++    ASSERT_NE(realpath, nullptr);
++    ASSERT_STREQ(realpath, "/home/dir/file");
++
++    rootfs = "/home/dir";
++    path = "/../file";
++    ASSERT_EQ(util_realpath_in_scope(rootfs.c_str(), path.c_str(), &realpath), -1);
++
++    rootfs = "/home/dir";
++    path = "/./file";
++    ASSERT_EQ(util_realpath_in_scope(rootfs.c_str(), path.c_str(), &realpath), 0);
++    ASSERT_NE(realpath, nullptr);
++    ASSERT_STREQ(realpath, "/home/dir/file");
++
++    rootfs = "";
++    path = "./dir/file";
++    MOCK_SET_V(getcwd, getcwd_specify);
++    ASSERT_EQ(util_realpath_in_scope(rootfs.c_str(), path.c_str(), &realpath), 0);
++    ASSERT_NE(realpath, nullptr);
++    ASSERT_STREQ(realpath, "/home/dir/file");
++}
+diff --git a/test/path/CMakeLists.txt b/test/path/CMakeLists.txt
+deleted file mode 100644
+index dcb69130..00000000
+--- a/test/path/CMakeLists.txt
++++ /dev/null
+@@ -1,28 +0,0 @@
+-project(iSulad_UT)
+-
+-SET(EXE path_ut)
+-
+-add_executable(${EXE}
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/map.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/rb_tree.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_string.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_array.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_file.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_convert.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_regex.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_verify.c
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256/sha256.c
+-    path_ut.cc)
+-
+-target_include_directories(${EXE} PUBLIC
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/common
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils
+-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256
+-    )
+-set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,getcwd -Wl,--wrap,readlink")
+-target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
+-add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+-- 
+2.25.1
+

@@ -1,0 +1,55 @@
+From f1313b04f60672a1aae1a3d36df5f0b8abcdd06f Mon Sep 17 00:00:00 2001
+From: zhongtao <taozh97@163.com>
+Date: Mon, 17 Oct 2022 15:04:01 +0800
+Subject: [PATCH 12/39] Add adaptation code for filters
+
+Signed-off-by: zhongtao <taozh97@163.com>
+---
+ src/utils/cutils/filters.c | 3 ++-
+ src/utils/cutils/filters.h | 8 ++++++++
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/src/utils/cutils/filters.c b/src/utils/cutils/filters.c
+index 1885e9cc..21f5db7c 100644
+--- a/src/utils/cutils/filters.c
++++ b/src/utils/cutils/filters.c
+@@ -315,9 +315,10 @@ bool filters_args_valid_key(const char **accepted, size_t len, const char *field
+ {
+     size_t i;
+ 
+-    if (field == NULL) {
++    if (accepted == NULL || field == NULL) {
+         return false;
+     }
++    
+     for (i = 0; i < len; i++) {
+         if (accepted[i] != NULL && strcmp(accepted[i], field) == 0) {
+             return true;
+diff --git a/src/utils/cutils/filters.h b/src/utils/cutils/filters.h
+index 021704d1..c6e5a618 100644
+--- a/src/utils/cutils/filters.h
++++ b/src/utils/cutils/filters.h
+@@ -20,6 +20,10 @@
+ 
+ #include "map.h"
+ 
++#ifdef __cplusplus
++extern "C" {
++#endif
++
+ struct filters_args {
+     // A map of map[string][map[string][bool]]
+     map_t *fields;
+@@ -48,5 +52,9 @@ bool filters_args_exact_match(const struct filters_args *filters, const char *fi
+ 
+ bool filters_args_match(const struct filters_args *filters, const char *field, const char *source);
+ 
++#ifdef __cplusplus
++}
++#endif
++
+ #endif
+ 
+-- 
+2.25.1
+
