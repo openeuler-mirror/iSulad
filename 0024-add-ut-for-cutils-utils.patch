@@ -1,7 +1,7 @@
 From fef883b9716bf8b71dd10152d9dea1b4e6952530 Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Tue, 18 Oct 2022 17:11:04 +0800
-Subject: [PATCH 24/39] add ut for cutils utils
+Subject: [PATCH 24/43] add ut for cutils utils
 
 Signed-off-by: haozi007 <liuhao27@huawei.com>
 ---

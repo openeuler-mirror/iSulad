@@ -1,7 +1,7 @@
 From 1111a16537bddf5d272f58bd1b67969f105a426d Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Fri, 28 Oct 2022 11:21:19 +0800
-Subject: [PATCH 34/39] delete syncCloseSem when close all wssession
+Subject: [PATCH 34/43] delete syncCloseSem when close all wssession
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
