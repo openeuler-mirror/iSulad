@@ -27,7 +27,7 @@ extern "C" {
 typedef int clean_func_t(void);
 
 struct clean_node {
-    char *desc;
+    const char *desc;
     clean_func_t *cleaner;
     int error_code;
 };
