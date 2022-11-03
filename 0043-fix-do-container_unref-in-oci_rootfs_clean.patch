@@ -1,0 +1,74 @@
+From a04bf6abc54f6516d5181fbfa7e08cc1095bc72e Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Wed, 2 Nov 2022 00:01:43 -0700
+Subject: [PATCH 43/43] fix do container_unref in oci_rootfs_clean
+
+Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
+---
+ src/daemon/modules/container/leftover_cleanup/cleanup.c         | 2 +-
+ src/daemon/modules/container/leftover_cleanup/cleanup.h         | 2 +-
+ .../modules/container/leftover_cleanup/oci_rootfs_clean.c       | 2 ++
+ .../modules/image/oci/storage/rootfs_store/rootfs_store.c       | 2 +-
+ 4 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/src/daemon/modules/container/leftover_cleanup/cleanup.c b/src/daemon/modules/container/leftover_cleanup/cleanup.c
+index 29fa4bfa..ec9517cf 100644
+--- a/src/daemon/modules/container/leftover_cleanup/cleanup.c
++++ b/src/daemon/modules/container/leftover_cleanup/cleanup.c
+@@ -48,7 +48,7 @@ static void destroy_cleaners(struct cleaners *clns)
+     free(clns);
+ }
+ 
+-static int add_clean_node(struct cleaners * clns, clean_func_t f, char * desc)
++static int add_clean_node(struct cleaners *clns, clean_func_t f, const char *desc)
+ {
+     struct linked_list *new_node = NULL;
+     struct clean_node *c_node = NULL;
+diff --git a/src/daemon/modules/container/leftover_cleanup/cleanup.h b/src/daemon/modules/container/leftover_cleanup/cleanup.h
+index 26fc1b0b..efae99d0 100644
+--- a/src/daemon/modules/container/leftover_cleanup/cleanup.h
++++ b/src/daemon/modules/container/leftover_cleanup/cleanup.h
+@@ -27,7 +27,7 @@ extern "C" {
+ typedef int clean_func_t(void);
+ 
+ struct clean_node {
+-    char *desc;
++    const char *desc;
+     clean_func_t *cleaner;
+     int error_code;
+ };
+diff --git a/src/daemon/modules/container/leftover_cleanup/oci_rootfs_clean.c b/src/daemon/modules/container/leftover_cleanup/oci_rootfs_clean.c
+index db56870b..fbef4ce0 100644
+--- a/src/daemon/modules/container/leftover_cleanup/oci_rootfs_clean.c
++++ b/src/daemon/modules/container/leftover_cleanup/oci_rootfs_clean.c
+@@ -31,6 +31,7 @@ static bool walk_dir_cb(const char *path_name, const struct dirent *sub_dir, voi
+     int rm_rootfs_ret = 0;
+ 
+     if (cont != NULL) {
++        container_unref(cont);
+         return true;
+     }
+ 
+@@ -58,6 +59,7 @@ int oci_rootfs_cleaner(void)
+     }
+ 
+     ret = util_scan_subdirs(rf_dir, walk_dir_cb, &res);
++    free(rf_dir);
+     if (ret != 0) {
+         ERROR("failed to scan subdirs");
+         return -1;
+diff --git a/src/daemon/modules/image/oci/storage/rootfs_store/rootfs_store.c b/src/daemon/modules/image/oci/storage/rootfs_store/rootfs_store.c
+index 0270f6a7..97cc39e8 100644
+--- a/src/daemon/modules/image/oci/storage/rootfs_store/rootfs_store.c
++++ b/src/daemon/modules/image/oci/storage/rootfs_store/rootfs_store.c
+@@ -1322,5 +1322,5 @@ out:
+ 
+ char *rootfs_store_get_data_dir()
+ {
+-    return g_rootfs_store->dir;
++    return util_strdup_s(g_rootfs_store->dir);
+ }
+\ No newline at end of file
+-- 
+2.25.1
+

@@ -1,7 +1,7 @@
 From f9cb1b86511fac1c3a7f11fdaa4c9c20dc889068 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Sun, 9 Oct 2022 19:00:38 +0800
-Subject: [PATCH 01/39] use epoll instead of select for wait_exit_fifo
+Subject: [PATCH 01/43] use epoll instead of select for wait_exit_fifo
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
