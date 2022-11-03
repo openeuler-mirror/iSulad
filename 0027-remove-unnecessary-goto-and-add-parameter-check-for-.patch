@@ -1,7 +1,7 @@
 From d9f2f58a5c8952fe0f03c8f6fbbed7f741a41e68 Mon Sep 17 00:00:00 2001
 From: zhongtao <taozh97@163.com>
 Date: Wed, 19 Oct 2022 15:12:27 +0800
-Subject: [PATCH 27/39] remove unnecessary goto and add parameter check for
+Subject: [PATCH 27/43] remove unnecessary goto and add parameter check for
  verify
 
 Signed-off-by: zhongtao <taozh97@163.com>
