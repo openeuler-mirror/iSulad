@@ -1,7 +1,7 @@
 From d7b324c04b4b353270216887b05e245337942b97 Mon Sep 17 00:00:00 2001
 From: zhongtao <taozh97@163.com>
 Date: Mon, 24 Oct 2022 20:46:47 +0800
-Subject: [PATCH 37/39] Add extend C for header files
+Subject: [PATCH 37/43] Add extend C for header files
 
 Signed-off-by: zhongtao <taozh97@163.com>
 ---

@@ -1,0 +1,119 @@
+From a27582c9e626d01c47ff29d4b2480813a69fa3a6 Mon Sep 17 00:00:00 2001
+From: songbuhuang <544824346@qq.com>
+Date: Tue, 18 Oct 2022 17:19:00 +0800
+Subject: [PATCH 38/43] add isula create --rm option
+
+Signed-off-by: songbuhuang <544824346@qq.com>
+---
+ src/cmd/isula/base/create.c | 14 ++++++++++++++
+ src/cmd/isula/base/create.h |  7 +++++++
+ src/cmd/isula/base/run.c    | 17 +++--------------
+ src/cmd/isula/base/run.h    |  9 +--------
+ 4 files changed, 25 insertions(+), 22 deletions(-)
+
+diff --git a/src/cmd/isula/base/create.c b/src/cmd/isula/base/create.c
+index 97da80ac..8cef5d17 100644
+--- a/src/cmd/isula/base/create.c
++++ b/src/cmd/isula/base/create.c
+@@ -2149,6 +2149,15 @@ out:
+     return ret;
+ }
+ 
++static int create_check_auto_remove(const struct client_arguments *args)
++{
++    if (args->custom_conf.auto_remove && ((args->restart != NULL) && (strcmp("no", args->restart) != 0))) {
++        COMMAND_ERROR("Conflicting options: --restart and --rm");
++        return -1;
++    }
++    return 0;
++}
++
+ int create_checker(struct client_arguments *args)
+ {
+     int ret = 0;
+@@ -2236,6 +2245,11 @@ int create_checker(struct client_arguments *args)
+         goto out;
+     }
+ 
++    if (create_check_auto_remove(args)) {
++        ret = -1;
++        goto out;
++    }
++
+ out:
+     return ret;
+ }
+diff --git a/src/cmd/isula/base/create.h b/src/cmd/isula/base/create.h
+index 467fefe8..4f63d92f 100644
+--- a/src/cmd/isula/base/create.h
++++ b/src/cmd/isula/base/create.h
+@@ -306,6 +306,13 @@ extern "C" {
+       &(cmdargs).restart,                                                                                                                                 \
+       "Restart policy to apply when a container exits(no, always, on-reboot, on-failure[:max-retries])",                                                  \
+       NULL },                                                                                                                                             \
++    { CMD_OPT_TYPE_BOOL,                                                                                                                                  \
++      false,                                                                                                                                              \
++      "rm",                                                                                                                                               \
++      0,                                                                                                                                                  \
++      &(cmdargs).custom_conf.auto_remove,                                                                                                                 \
++      "Automatically remove the container when it exits",                                                                                                 \
++      NULL },                                                                                                                                             \
+     { CMD_OPT_TYPE_STRING,                                                                                                                                \
+       false,                                                                                                                                              \
+       "host-channel",                                                                                                                                     \
+diff --git a/src/cmd/isula/base/run.c b/src/cmd/isula/base/run.c
+index 53e89c3d..73486c95 100644
+--- a/src/cmd/isula/base/run.c
++++ b/src/cmd/isula/base/run.c
+@@ -195,11 +195,8 @@ free_out:
+ 
+ static int run_checker(struct client_arguments *args)
+ {
+-    int ret = 0;
+-
+-    ret = create_checker(args);
+-    if (ret) {
+-        goto out;
++    if (create_checker(args)) {
++        return -1;
+     }
+ 
+     /* Make detach option a high priority than terminal */
+@@ -208,13 +205,5 @@ static int run_checker(struct client_arguments *args)
+         args->custom_conf.attach_stdout = false;
+         args->custom_conf.attach_stderr = false;
+     }
+-
+-    if (args->custom_conf.auto_remove && ((args->restart != NULL) && (strcmp("no", args->restart) != 0))) {
+-        COMMAND_ERROR("Conflicting options: --restart and --rm");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-out:
+-    return ret;
++    return 0;
+ }
+diff --git a/src/cmd/isula/base/run.h b/src/cmd/isula/base/run.h
+index 2658c33d..efca28a9 100644
+--- a/src/cmd/isula/base/run.h
++++ b/src/cmd/isula/base/run.h
+@@ -34,14 +34,7 @@ extern "C" {
+         'd',                                                        \
+         &(cmdargs).detach,                                          \
+         "Run container in background and print container ID",       \
+-        NULL },                                                     \
+-    { CMD_OPT_TYPE_BOOL,                                  \
+-      false,                                              \
+-      "rm",                                               \
+-      0,                                                  \
+-      &(cmdargs).custom_conf.auto_remove,                 \
+-      "Automatically remove the container when it exits", \
+-      NULL },
++        NULL },                                                   
+ 
+ extern const char g_cmd_run_desc[];
+ extern const char g_cmd_run_usage[];
+-- 
+2.25.1
+

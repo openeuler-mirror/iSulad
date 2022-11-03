@@ -1,7 +1,7 @@
 From 60ef94806076e728b6f76d5b9b874e375182233c Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Tue, 18 Oct 2022 15:47:36 +0800
-Subject: [PATCH 23/39] improve code in utils.c
+Subject: [PATCH 23/43] improve code in utils.c
 
 Signed-off-by: haozi007 <liuhao27@huawei.com>
 ---
