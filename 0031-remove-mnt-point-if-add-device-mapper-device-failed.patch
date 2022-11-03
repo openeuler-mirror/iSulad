@@ -1,7 +1,7 @@
 From 81cf4edd6aa0c4170eb0ec48a6934ef3262a920d Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Sat, 22 Oct 2022 11:48:48 +0800
-Subject: [PATCH 31/39] remove mnt point if add device mapper device failed
+Subject: [PATCH 31/43] remove mnt point if add device mapper device failed
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
