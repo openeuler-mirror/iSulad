@@ -24,4 +24,7 @@ fi
 check_valgrind_log
 [[ $? -ne 0 ]] && msg_err "cleanup leftover - memory leak, please check...." && ((ret++))
 
+start_isulad_with_valgrind
+wait_isulad_running
+
 show_result $ret "${curr_path}/${0}"
