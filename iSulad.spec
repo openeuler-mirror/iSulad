@@ -18,6 +18,7 @@ ExclusiveArch:  x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
 Provides:       libisula.so()(64bit)
 Provides:       libisulad_img.so()(64bit)
+Provides:       libisulad_tools.so()(64bit)
 %endif
 
 %if 0%{?is_systemd}
@@ -79,6 +80,7 @@ cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
 install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
 install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+install -m 0644 ./src/libisulad_tools.so  %{buildroot}/%{_libdir}/libisulad_tools.so
 install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
 chmod +x %{buildroot}/%{_libdir}/libisula.so
 chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
