@@ -1,5 +1,5 @@
 %global _version 2.0.17
-%global _release 6
+%global _release 7
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -281,6 +281,12 @@ fi
 %endif
 
 %changelog
+* Wed Nov 16 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-7
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: update tar package from source
+
 * Wed Nov 02 2022 wangrunze <wangrunze13@huawei.com> - 2.0.17-6
 - Type: bugfix
 - ID: NA
