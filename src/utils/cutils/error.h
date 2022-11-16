@@ -61,6 +61,10 @@ static inline void format_errorf(char **err, const char *format, ...)
     va_list argp;
     va_start(argp, format);
 
+    if (err == NULL) {
+        return;
+    }
+
     ret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
     if (ret < 0) {

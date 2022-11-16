@@ -733,6 +733,12 @@ int util_realpath_in_scope(const char *rootfs, const char *path, char **real_pat
     char cleaned[PATH_MAX] = { 0 };
     char *tmp = NULL;
 
+    if (rootfs == NULL || path == NULL || real_path == NULL) {
+        ERROR("Null parameter");
+        ret = -1;
+        goto out;
+    }
+
     int nret = snprintf(full_path, sizeof(full_path), "%s%s", rootfs, path);
     if (nret < 0 || (size_t)nret >= sizeof(full_path)) {
         ERROR("sprintf error: %s", strerror(errno));

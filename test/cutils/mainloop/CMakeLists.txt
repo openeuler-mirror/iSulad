@@ -1,9 +1,10 @@
 project(iSulad_UT)
 
-SET(EXE utils_string_ut)
+SET(EXE mainloop_ut)
 
 add_executable(${EXE}
-    utils_string_ut.cc)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/mainloop_mock.cc
+    mainloop_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
@@ -12,7 +13,15 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks
     )
-set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_strdup_s -Wl,--wrap,calloc -Wl,--wrap,strcat_s")
-target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+
+target_link_libraries(${EXE}
+    ${GTEST_BOTH_LIBRARIES}
+    ${GMOCK_LIBRARY}
+    ${GMOCK_MAIN_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${ISULA_LIBUTILS_LIBRARY}
+    libutils_ut -lcrypto -lyajl -lz)
+
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)

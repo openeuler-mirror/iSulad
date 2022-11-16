@@ -62,13 +62,13 @@ int util_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize
     void *tmp = NULL;
 
     if (newptr == NULL || newsize == 0) {
-        goto err_out;
+        return -1;
     }
 
     tmp = util_common_calloc_s(newsize);
     if (tmp == NULL) {
         ERROR("Failed to malloc memory");
-        goto err_out;
+        return -1;
     }
 
     if (oldptr != NULL) {
@@ -80,9 +80,6 @@ int util_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize
 
     *newptr = tmp;
     return 0;
-
-err_out:
-    return -1;
 }
 
 static int util_read_pipe(int pipe_fd, char **out_buf, size_t *out_buf_size, size_t *out_real_size)
@@ -351,8 +348,6 @@ void util_contain_errmsg(const char *errmsg, int *exit_code)
     } else if (strcasestr(errmsg, "not a directory")) {
         *exit_code = 127;
     }
-
-    return;
 }
 
 char *util_short_digest(const char *digest)
@@ -821,6 +816,9 @@ bool util_raw_exec_cmd(exec_func_t cb_func, void *cb_args, exitcode_deal_func_t 
     close(in_fd[1]);
     in_fd[1] = -1;
 
+    if (cmd_args->stdout_msg == NULL) {
+        stdout_close_flag = 1;
+    }
     for (;;) {
         if (stdout_close_flag == 0) {
             stdout_close_flag = util_read_pipe(out_fd[0], &stdout_buffer, &stdout_buf_size, &stdout_real_size);
@@ -845,10 +843,12 @@ bool util_raw_exec_cmd(exec_func_t cb_func, void *cb_args, exitcode_deal_func_t 
 out:
     if (cmd_args->stdout_msg != NULL) {
         *(cmd_args->stdout_msg) = stdout_buffer;
-        stdout_buffer = NULL;
     }
-    free(stdout_buffer);
-    *(cmd_args->stderr_msg) = stderr_buffer;
+    if (cmd_args->stderr_msg != NULL) {
+        *(cmd_args->stderr_msg) = stderr_buffer;
+    } else {
+        free(stderr_buffer);
+    }
     return ret;
 }
 
@@ -965,8 +965,8 @@ int util_env_insert(char ***penv, size_t *penv_len, const char *key, size_t key_
     env = *penv;
     env_len = *penv_len;
 
-    if (env_len > (SIZE_MAX / sizeof(char *)) - 1) {
-        ERROR("Failed to realloc memory for envionment variables");
+    if (env_len > (MAX_MEMORY_SIZE / sizeof(char *)) - 1) {
+        ERROR("Too large envionment variables");
         return -1;
     }
 
@@ -1126,7 +1126,7 @@ static int set_echo_back(bool echo_back)
     return 0;
 }
 
-int util_input_notty(char *buf, size_t maxlen)
+static int util_input_notty(char *buf, size_t maxlen)
 {
     size_t i = 0;
     int ret = 0;
@@ -1447,9 +1447,9 @@ int util_read_pid_ppid_info(uint32_t pid, pid_ppid_info_t *pid_info)
     proc_t *proc = NULL;
     proc_t *p_proc = NULL;
 
-    if (pid == 0) {
-        ret = -1;
-        goto out;
+    if (pid == 0 || pid_info == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
     }
 
     proc = util_get_process_proc_info((pid_t)pid);
@@ -1529,8 +1529,8 @@ defs_map_string_object *dup_map_string_empty_object(defs_map_string_object *src)
         return NULL;
     }
 
-    dst->keys = util_common_calloc_s(src->len * sizeof(char *));
-    dst->values = util_common_calloc_s(src->len * sizeof(defs_map_string_object_element *));
+    dst->keys = util_smart_calloc_s(sizeof(char *), src->len);
+    dst->values = util_smart_calloc_s(sizeof(defs_map_string_object_element *), src->len);
     if (dst->keys == NULL || dst->values == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -1561,12 +1561,16 @@ int convert_v2_runtime(const char *runtime, char *binary)
     size_t parts_len = 0;
     char buf[PATH_MAX]  = {0};
     int ret = 0;
+    int nret;
+
+    if (binary == NULL) {
+        return -1;
+    }
 
     parts = util_string_split_multi(runtime, '.');
     if (parts == NULL) {
         ERROR("split failed: %s", runtime);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     parts_len = util_array_len((const char **)parts);
@@ -1576,15 +1580,13 @@ int convert_v2_runtime(const char *runtime, char *binary)
         goto out;
     }
 
-    if (binary != NULL) {
-        int nret = snprintf(buf, sizeof(buf), "%s-%s-%s-%s", "containerd", "shim", parts[2], parts[3]);
-        if (nret < 0 || (size_t)nret >= sizeof(buf)) {
-            ERROR("Failed to snprintf string");
-            ret = -1;
-            goto out;
-        }
-        strcpy(binary, buf);
+    nret = snprintf(buf, sizeof(buf), "%s-%s-%s-%s", "containerd", "shim", parts[2], parts[3]);
+    if (nret < 0 || (size_t)nret >= sizeof(buf)) {
+        ERROR("Failed to snprintf string");
+        ret = -1;
+        goto out;
     }
+    (void)strcpy(binary, buf);
 
 out:
     util_free_array(parts);

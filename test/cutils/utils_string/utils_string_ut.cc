@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 #include "mock.h"
 #include "utils_string.h"
+#include "utils_array.h"
 
 extern "C" {
     DECLARE_WRAPPER(util_strdup_s, char *, (const char *str));
@@ -806,4 +807,59 @@ TEST(utils_string_ut, test_parse_percent_string)
 
     ret = util_parse_percent_string(wrong6, &converted);
     ASSERT_NE(ret, 0);
+}
+
+TEST(utils_string_ut, test_str_token)
+{
+    char *token = nullptr;
+    char *string = (char *)"abc:def:gh";
+    char *tmp = string;
+
+    token = util_str_token(&tmp, nullptr);
+    ASSERT_STREQ(token, nullptr);
+    token = util_str_token(nullptr, ":");
+    ASSERT_STREQ(token, nullptr);
+
+    token = util_str_token(&tmp, ",");
+    ASSERT_STREQ(tmp, nullptr);
+    ASSERT_STREQ(token, string);
+    tmp = string;
+    free(token);
+    token = nullptr;
+
+    token = util_str_token(&tmp, ":");
+    ASSERT_STREQ(tmp, "def:gh");
+    ASSERT_STREQ(token, "abc");
+    free(token);
+}
+
+TEST(utils_string_ut, test_string_split_n)
+{
+    char **result = nullptr;
+
+    ASSERT_EQ(util_string_split_n(nullptr, ':', 3), nullptr);
+    ASSERT_EQ(util_string_split_n("aa:bb", ':', 0), nullptr);
+
+    result = util_string_split_n("", ':', 3);
+    ASSERT_STREQ(result[0], "");
+    ASSERT_EQ(result[1], nullptr);
+    util_free_array(result);
+
+    result = util_string_split_n("abcd;", ':', 3);
+    ASSERT_STREQ(result[0], "abcd;");
+    ASSERT_EQ(result[1], nullptr);
+    util_free_array(result);
+
+    result = util_string_split_n("abc:dd:e", ':', 3);
+    ASSERT_STREQ(result[0], "abc");
+    ASSERT_STREQ(result[1], "dd");
+    ASSERT_STREQ(result[2], "e");
+    ASSERT_EQ(result[3], nullptr);
+    util_free_array(result);
+
+    result = util_string_split_n("abc:dd:e", ':', 2);
+    ASSERT_STREQ(result[0], "abc");
+    ASSERT_STREQ(result[1], "dd:e");
+    ASSERT_EQ(result[2], nullptr);
+    util_free_array(result);
 }

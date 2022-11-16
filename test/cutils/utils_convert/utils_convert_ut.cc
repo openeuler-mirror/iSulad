@@ -239,3 +239,115 @@ TEST(utils_convert, test_util_str_to_bool)
     ret = util_str_to_bool("nullptr", &converted);
     ASSERT_NE(ret, 0);
 }
+
+TEST(utils_convert, test_util_safe_uint64)
+{
+    int ret;
+    uint64_t converted;
+    ret = util_safe_uint64("255", &converted);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(converted, 255);
+
+    ret = util_safe_uint64("255", nullptr);
+    ASSERT_NE(ret, 0);
+
+    ret = util_safe_uint64("-1", &converted);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(converted, UINT64_MAX);
+
+    ret = util_safe_uint64("0", &converted);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(converted, 0);
+
+    ret = util_safe_uint64("1.23", &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_safe_uint64("1x", &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_safe_uint64("18446744073709551616", &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_safe_uint64("nullptr", &converted);
+    ASSERT_NE(ret, 0);
+}
+
+TEST(utils_convert, test_util_parse_octal_uint32)
+{
+    int ret;
+    uint32_t converted;
+    ret = util_parse_octal_uint32("50", &converted);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(converted, 40);
+
+    ret = util_parse_octal_uint32("50", nullptr);
+    ASSERT_NE(ret, 0);
+
+    ret = util_parse_octal_uint32("-1", &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_parse_octal_uint32("0", &converted);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(converted, 0);
+
+    ret = util_parse_octal_uint32("1.23", &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_parse_octal_uint32("1x", &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_parse_octal_uint32("40000000000", &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_parse_octal_uint32("nullptr", &converted);
+    ASSERT_NE(ret, 0);
+}
+
+TEST(utils_convert, test_util_uint_to_string)
+{
+    char *converted;
+    long long unsigned int ret;
+
+    ret = 123456;
+    converted = util_uint_to_string(ret);
+    ASSERT_STREQ(converted, "123456");
+
+    ret = 0;
+    converted = util_uint_to_string(ret);
+    ASSERT_STREQ(converted, "0");
+
+    ret = ULLONG_MAX;
+    converted = util_uint_to_string(ret);
+    ASSERT_NE(converted, nullptr);
+    ASSERT_STREQ(converted, std::to_string((long long unsigned int)ULLONG_MAX).c_str());
+
+    ret = -1;
+    converted = util_uint_to_string(ret);
+    ASSERT_NE(converted, nullptr);
+    ASSERT_STREQ(converted, std::to_string((long long unsigned int)ULLONG_MAX).c_str());
+}
+
+TEST(utils_convert, test_util_int_to_string)
+{
+    char *converted;
+    long long int ret;
+
+    ret = 123456;
+    converted = util_int_to_string(ret);
+    ASSERT_STREQ(converted, "123456");
+
+    ret = 0;
+    converted = util_int_to_string(ret);
+    ASSERT_STREQ(converted, "0");
+
+    ret = LLONG_MAX;
+    converted = util_int_to_string(ret);
+    ASSERT_NE(converted, nullptr);
+    ASSERT_STREQ(converted, std::to_string((long long)LLONG_MAX).c_str());
+
+    ret = LLONG_MIN;
+    converted = util_int_to_string(ret);
+    ASSERT_NE(converted, nullptr);
+    ASSERT_STREQ(converted, std::to_string((long long)LLONG_MIN).c_str());
+
+}

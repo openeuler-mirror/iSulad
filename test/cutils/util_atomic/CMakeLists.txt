@@ -1,9 +1,9 @@
 project(iSulad_UT)
 
-SET(EXE utils_string_ut)
+SET(EXE util_atomic_ut)
 
 add_executable(${EXE}
-    utils_string_ut.cc)
+    util_atomic_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
@@ -13,6 +13,6 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
     )
-set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_strdup_s -Wl,--wrap,calloc -Wl,--wrap,strcat_s")
+
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
