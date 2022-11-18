@@ -82,15 +82,25 @@ static int default_cleaner()
 
 static struct cleaners *cleaner_init()
 {
+    int ret = 0;
     struct cleaners *clns = create_cleaners();
     
     if (clns == NULL) {
         return NULL;
     }
 
-    add_clean_node(clns, default_cleaner, "default clean");
+    ret = add_clean_node(clns, default_cleaner, "default clean");
+    if (ret != 0) {
+        ERROR("add default_cleaner error");
+        return clns;
+    }
+
 #ifdef ENABLE_OCI_IMAGE
-    add_clean_node(clns, oci_rootfs_cleaner, "clean rootfs");
+    ret = add_clean_node(clns, oci_rootfs_cleaner, "clean rootfs");
+    if (ret != 0) {
+        ERROR("add oci_rootfs_cleaner error");
+        return clns;
+    }
 #endif
 
     return clns;
@@ -101,11 +111,10 @@ static void do_clean(struct cleaners * clns)
     struct linked_list *it = NULL;
     struct linked_list *next = NULL;
     struct clean_node *c_node = NULL;
-    int ret = 0;
 
     linked_list_for_each_safe(it, &(clns->cleaner_list), next) {
         c_node = (struct clean_node *)it->elem;
-        if ((ret = c_node->cleaner()) != 0) {
+        if (c_node->cleaner() != 0) {
             ERROR("failed to clean for: %s", c_node->desc);
         } else {
             DEBUG("do clean success for: %s", c_node->desc);
