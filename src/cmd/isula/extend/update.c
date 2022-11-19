@@ -180,7 +180,7 @@ int cmd_update_main(int argc, const char **argv)
         exit(EINVALIDARGS);
     }
     if (argc <= 3) {
-        COMMAND_ERROR("You must provide one or more udpate flags when using this command\n");
+        COMMAND_ERROR("You must provide one or more update flags when using this command\n");
         exit(ECOMMON);
     }
     if (isula_libutils_log_enable(&lconf)) {
