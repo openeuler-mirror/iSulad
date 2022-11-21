@@ -1,0 +1,25 @@
+From a81cc3350766a352ab29c2d884b5542c5207f93f Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Mon, 21 Nov 2022 16:16:41 +0800
+Subject: [PATCH 45/45] remove unknown option wno-maybe-uninitialized
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ test/CMakeLists.txt | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
+index 92a4e969..6b6cd5de 100644
+--- a/test/CMakeLists.txt
++++ b/test/CMakeLists.txt
+@@ -1,7 +1,5 @@
+ project(iSulad_UT)
+ 
+-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-maybe-uninitialized")
+-
+ function(gmock_find_library _name)
+   find_library(${_name}
+     NAMES ${ARGN}
+-- 
+2.25.1
+
