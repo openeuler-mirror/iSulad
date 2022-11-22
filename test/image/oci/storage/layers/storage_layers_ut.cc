@@ -59,6 +59,28 @@ std::string GetDirectory()
     return static_cast<std::string>(abs_path) + "../../../../../../test/image/oci/storage/layers";
 }
 
+bool check_support_overlay(std::string root_dir)
+{
+    if (!util_support_overlay()) {
+        std::cout << "Cannot support overlay, skip storage driver ut test." << std::endl;
+        return false;
+    }
+
+    char *backing_fs = util_get_fs_name(root_dir.c_str());
+    if (backing_fs == NULL) {
+        std::cout << "Failed to get fs name for " << root_dir << ", skip storage driver ut test." << std::endl;
+        return false;
+    }
+
+    if (strcmp(backing_fs, "aufs") == 0 || strcmp(backing_fs, "zfs") == 0 || strcmp(backing_fs, "overlayfs") == 0 ||
+        strcmp(backing_fs, "ecryptfs") == 0) {
+        std::cout << "Backing fs cannot support overlay, skip storage driver ut test." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
 bool dirExists(const char *path)
 {
     DIR *dp = nullptr;
@@ -159,6 +181,11 @@ protected:
         std::string run_dir = isulad_dir + "data/run";
         std::string data_dir = GetDirectory() + "/data";
 
+        support_overlay = check_support_overlay(root_dir);
+        if (!support_overlay) {
+            return;
+        }
+
         ASSERT_STRNE(util_clean_path(data_dir.c_str(), data_path, sizeof(data_path)), nullptr);
         std::string cp_command = "cp -r " + std::string(data_path) + " " + isulad_dir;
         ASSERT_EQ(system(cp_command.c_str()), 0);
@@ -186,8 +213,10 @@ protected:
     {
         MockDriverQuota_SetMock(nullptr);
 
-        layer_store_exit();
-        layer_store_cleanup();
+        if (support_overlay) {
+            layer_store_exit();
+            layer_store_cleanup();
+        }
 
         std::string rm_command = "rm -rf /tmp/isulad/";
         ASSERT_EQ(system(rm_command.c_str()), 0);
@@ -197,10 +226,15 @@ protected:
     char real_path[PATH_MAX] = { 0x00 };
     char real_run_path[PATH_MAX] = { 0x00 };
     char data_path[PATH_MAX] = { 0x00 };
+    bool support_overlay;
 };
 
 TEST_F(StorageLayersUnitTest, test_layers_load)
 {
+    if (!support_overlay) {
+        return;
+    }
+
     struct layer_list *layer_list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
     ASSERT_NE(layer_list, nullptr);
 
@@ -246,6 +280,10 @@ TEST_F(StorageLayersUnitTest, test_layers_load)
 
 TEST_F(StorageLayersUnitTest, test_layer_store_exists)
 {
+    if (!support_overlay) {
+        return;
+    }
+
     std::string id { "7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b" };
     std::string incorrectId { "50551ff67da98ab8540d7132" };
 
@@ -255,6 +293,10 @@ TEST_F(StorageLayersUnitTest, test_layer_store_exists)
 
 TEST_F(StorageLayersUnitTest, test_layer_store_create)
 {
+    if (!support_overlay) {
+        return;
+    }
+
     struct layer_opts *layer_opt = (struct layer_opts *)util_common_calloc_s(sizeof(struct layer_opts));
     layer_opt->parent = strdup("9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
     layer_opt->writable = true;
@@ -278,6 +320,10 @@ TEST_F(StorageLayersUnitTest, test_layer_store_create)
 
 TEST_F(StorageLayersUnitTest, test_layer_store_by_compress_digest)
 {
+    if (!support_overlay) {
+        return;
+    }
+
     std::string compress { "sha256:0e03bdcc26d7a9a57ef3b6f1bf1a210cff6239bff7c8cac72435984032851689" };
     std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
     struct layer_list *layer_list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
@@ -294,6 +340,10 @@ TEST_F(StorageLayersUnitTest, test_layer_store_by_compress_digest)
 
 TEST_F(StorageLayersUnitTest, test_layer_store_by_uncompress_digest)
 {
+    if (!support_overlay) {
+        return;
+    }
+
     std::string uncompress { "sha256:9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
     std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
     struct layer_list *layer_list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
