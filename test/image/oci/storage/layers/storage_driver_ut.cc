@@ -58,6 +58,28 @@ std::string GetDirectory()
     return static_cast<std::string>(abs_path) + "../../../../../../test/image/oci/storage/layers";
 }
 
+bool check_support_overlay(std::string root_dir)
+{
+    if (!util_support_overlay()) {
+        std::cout << "Cannot support overlay, skip storage driver ut test." << std::endl;
+        return false;
+    }
+
+    char *backing_fs = util_get_fs_name(root_dir.c_str());
+    if (backing_fs == NULL) {
+        std::cout << "Failed to get fs name for " << root_dir << ", skip storage driver ut test." << std::endl;
+        return false;
+    }
+
+    if (strcmp(backing_fs, "aufs") == 0 || strcmp(backing_fs, "zfs") == 0 || strcmp(backing_fs, "overlayfs") == 0 ||
+        strcmp(backing_fs, "ecryptfs") == 0) {
+        std::cout << "Backing fs cannot support overlay, skip storage driver ut test." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
 bool dirExists(const char *path)
 {
     DIR *dp = nullptr;
@@ -99,11 +121,16 @@ protected:
     void SetUp() override
     {
         MockDriverQuota_SetMock(&m_driver_quota_mock);
-        std::string isulad_dir { "/var/lib/isulad/" };
+        std::string isulad_dir { "/tmp/isulad/" };
+        mkdir(isulad_dir.c_str(), 0755);
         std::string root_dir = isulad_dir + "data";
         std::string run_dir = isulad_dir + "data/run";
         std::string data_dir = GetDirectory() + "/data";
-        struct storage_module_init_options *opts;
+
+        support_overlay = check_support_overlay(root_dir);
+        if (!support_overlay) {
+            return;
+        }
 
         ASSERT_STRNE(util_clean_path(data_dir.c_str(), data_path, sizeof(data_path)), nullptr);
         std::string cp_command = "cp -r " + std::string(data_path) + " " + isulad_dir;
@@ -117,15 +144,16 @@ protected:
                             + root_dir + "/overlay/9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63/work ";
         ASSERT_EQ(system(mkdir.c_str()), 0);
 
-        opts = (struct storage_module_init_options *)util_common_calloc_s(sizeof(struct storage_module_init_options));
+        struct storage_module_init_options *opts = (struct storage_module_init_options *)util_common_calloc_s(sizeof(struct storage_module_init_options));
         opts->storage_root = strdup(root_dir.c_str());
         opts->storage_run_root = strdup(run_dir.c_str());
         opts->driver_name = strdup("overlay");
-        opts->driver_opts = (char **)util_common_calloc_s(4 * sizeof(char *));
+        opts->driver_opts = (char **)util_common_calloc_s(5 * sizeof(char *));
         opts->driver_opts[0] = strdup("overlay2.basesize=128M");
         opts->driver_opts[1] = strdup("overlay2.override_kernel_check=true");
         opts->driver_opts[2] = strdup("overlay2.skip_mount_home=false");
         opts->driver_opts[3] = strdup("overlay2.mountopt=rw");
+        opts->driver_opts[4] = strdup("overlay2.skip_mount_home=true");
         opts->driver_opts_len = 4;
 
         EXPECT_CALL(m_driver_quota_mock, QuotaCtl(_, _, _, _)).WillRepeatedly(Invoke(invokeQuotaCtl));
@@ -141,18 +169,25 @@ protected:
     void TearDown() override
     {
         MockDriverQuota_SetMock(nullptr);
-        ASSERT_EQ(graphdriver_cleanup(), 0);
-        std::string rm_command = "rm -rf /var/lib/isulad/data";
+        if (support_overlay) {
+            ASSERT_EQ(graphdriver_cleanup(), 0);
+        }
+        std::string rm_command = "rm -rf /tmp/isulad/";
         ASSERT_EQ(system(rm_command.c_str()), 0);
     }
 
     NiceMock<MockDriverQuota> m_driver_quota_mock;
     char data_path[PATH_MAX] = { 0x00 };
+    bool support_overlay;
 };
 
 
 TEST_F(StorageDriverUnitTest, test_graphdriver_layer_exists)
 {
+    if (!support_overlay) {
+        return;
+    }
+
     std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
     std::string incorrectId { "eb29745b8228e1e97c01b1d5c2554a319c00a94d8dd5746a3904222ad65a13f8" };
     ASSERT_TRUE(graphdriver_layer_exists(id.c_str()));
@@ -161,6 +196,10 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_layer_exists)
 
 TEST_F(StorageDriverUnitTest, test_graphdriver_create_rw)
 {
+    if (!support_overlay) {
+        return;
+    }
+
     std::string id { "eb29745b8228e1e97c01b1d5c2554a319c00a94d8dd5746a3904222ad65a13f8" };
     struct driver_create_opts *create_opts;
 
@@ -186,8 +225,12 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_create_rw)
 
 TEST_F(StorageDriverUnitTest, test_graphdriver_mount_layer)
 {
+    if (!support_overlay) {
+        return;
+    }
+
     std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
-    std::string merged_dir = "/var/lib/isulad/data/overlay/" + id + "/merged";
+    std::string merged_dir = "/tmp/isulad/data/overlay/" + id + "/merged";
     struct driver_mount_opts *mount_opts = nullptr;
     char* mount_dir = nullptr;
 
@@ -219,6 +262,10 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_mount_layer)
 
 TEST_F(StorageDriverUnitTest, test_graphdriver_try_repair_lowers)
 {
+    if (!support_overlay) {
+        return;
+    }
+
     std::string id { "1be74353c3d0fd55fb5638a52953e6f1bc441e5b1710921db9ec2aa202725569" };
     ASSERT_EQ(graphdriver_try_repair_lowers(id.c_str(), nullptr), 0);
 }
