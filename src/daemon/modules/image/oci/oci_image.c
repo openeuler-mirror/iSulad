@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2019-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -36,6 +36,9 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "isulad_config.h"
+#ifdef ENABLE_IMAGE_SEARCH
+#include "oci_search.h"
+#endif
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
 
@@ -53,7 +56,8 @@ static void free_oci_image_data(void)
     g_oci_image_module_data.registry_mirrors = NULL;
     g_oci_image_module_data.registry_mirrors_len = 0;
 
-    util_free_array_by_len(g_oci_image_module_data.insecure_registries, g_oci_image_module_data.insecure_registries_len);
+    util_free_array_by_len(g_oci_image_module_data.insecure_registries,
+                           g_oci_image_module_data.insecure_registries_len);
     g_oci_image_module_data.insecure_registries = NULL;
     g_oci_image_module_data.insecure_registries_len = 0;
 }
@@ -724,3 +728,29 @@ int oci_logout(const im_logout_request *request)
 
     return ret;
 }
+#ifdef ENABLE_IMAGE_SEARCH
+int oci_search(const im_search_request *request, imagetool_search_result **result)
+{
+    int ret;
+
+    if (request == NULL || request->search_name == NULL || result == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    if (!util_valid_search_name(request->search_name)) {
+        ERROR("Invalid search name: %s", request->search_name);
+        isulad_try_set_error_message("Invalid search name: %s", request->search_name);
+        return -1;
+    }
+
+    ret = oci_do_search_image(request, result);
+    if (ret != 0) {
+        ERROR("Oci do search image %s failed", request->search_name);
+        isulad_set_error_message("Failed to do search image %s with error: %s", request->search_name, g_isulad_errmsg);
+        return -1;
+    }
+
+    return ret;
+}
+#endif

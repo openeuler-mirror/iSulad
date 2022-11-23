@@ -53,12 +53,12 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
 #endif
 
 #if (defined GRPC_CONNECTOR) && (defined ENABLE_METRICS)
-#define METRICS_PORT_OPT(cmdargs)                                           \
-    { CMD_OPT_TYPE_CALLBACK,                                            \
-        false, "metrics-port", 0, &(cmdargs)->json_confs->metrics_port,   \
-        "The metric service listening port (default 9090)",               \
-        command_convert_uint                                              \
-    },                                                                  \
+#define METRICS_PORT_OPT(cmdargs)                                                                                 \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                      \
+        false, "metrics-port", 0, &(cmdargs)->json_confs->metrics_port,                                           \
+        "The metric service listening port (default 9090)",                                                       \
+        command_convert_uint                                                                                      \
+    },                                                                                                            \
 
 #else
 #define METRICS_PORT_OPT(cmdargs)
@@ -305,8 +305,8 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
     METRICS_PORT_OPT(cmdargs)                                                                                     \
     USERNS_REMAP_OPT(cmdargs)                                                                                     \
     { CMD_OPT_TYPE_BOOL,                                                                                          \
-      false, "selinux-enabled", 0, &(cmdargs)->json_confs->selinux_enabled,                                       \
-      "Enable selinux support", NULL                                                                              \
+        false, "selinux-enabled", 0, &(cmdargs)->json_confs->selinux_enabled,                                     \
+        "Enable selinux support", NULL                                                                            \
     },                                                                                                            \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false, "default-runtime", 0, &(cmdargs)->json_confs->default_runtime,                                       \

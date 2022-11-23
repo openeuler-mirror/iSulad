@@ -25,7 +25,10 @@
 #include "utils_network.h"
 #include "service_container_api.h"
 
-const char *g_accept_network_filter[] = { "name", "plugin", NULL };
+static const struct filter_opt g_network_list_filter[] = {
+    {.name = "name", .valid = util_validate_network_name, .pre = NULL},
+    {.name = "plugin", .valid = NULL, .pre = NULL},
+};
 
 static pthread_rwlock_t g_network_rwlock = PTHREAD_RWLOCK_INITIALIZER;
 enum lock_type { SHARED = 0, EXCLUSIVE };
@@ -198,26 +201,20 @@ out:
     return ret;
 }
 
-static int do_add_filters(const char *filter_key, const json_map_string_bool *filter_value,
-                          struct filters_args *filters)
+static int do_add_network_list_filters(const char *filter_key, const json_map_string_bool *filter_value,
+                                       struct filters_args *filters)
 {
-    size_t i;
+    size_t i, len;
 
-    for (i = 0; i < filter_value->len; i++) {
-        if (strcmp(filter_key, "name") == 0) {
-            if (!util_validate_network_name(filter_value->keys[i])) {
-                ERROR("Unrecognised filter value for name: %s", filter_value->keys[i]);
-                isulad_set_error_message("Unrecognised filter value for name: %s", filter_value->keys[i]);
-                return -1;
-            }
+    len = sizeof(g_network_list_filter) / sizeof(struct filter_opt);
+    for (i = 0; i < len; i++) {
+        if (strcmp(filter_key,  g_network_list_filter[i].name) != 0) {
+            continue;
         }
-        if (!filters_args_add(filters, filter_key, filter_value->keys[i])) {
-            ERROR("Add filter args failed");
-            return -1;
-        }
+        return do_add_filters(filter_key, filter_value, filters,  g_network_list_filter[i].valid,
+                              g_network_list_filter[i].pre);
     }
-
-    return 0;
+    return -1;
 }
 
 static int fold_filter(const network_list_request *request, struct filters_args **filters)
@@ -235,13 +232,9 @@ static int fold_filter(const network_list_request *request, struct filters_args 
     }
 
     for (i = 0; i < request->filters->len; i++) {
-        if (!filters_args_valid_key(g_accept_network_filter, sizeof(g_accept_network_filter) / sizeof(char *),
-                                    request->filters->keys[i])) {
+        if (do_add_network_list_filters(request->filters->keys[i], request->filters->values[i], tmp_filters) != 0) {
             ERROR("Invalid filter '%s'", request->filters->keys[i]);
             isulad_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
-            goto error_out;
-        }
-        if (do_add_filters(request->filters->keys[i], request->filters->values[i], tmp_filters) != 0) {
             goto error_out;
         }
     }

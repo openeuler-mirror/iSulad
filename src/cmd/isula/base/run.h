@@ -27,14 +27,14 @@
 extern "C" {
 #endif
 
-#define RUN_OPTIONS(cmdargs)                                      \
-    { CMD_OPT_TYPE_BOOL,                                          \
+#define RUN_OPTIONS(cmdargs)                                        \
+    { CMD_OPT_TYPE_BOOL,                                            \
         false,                                                      \
         "detach",                                                   \
         'd',                                                        \
         &(cmdargs).detach,                                          \
         "Run container in background and print container ID",       \
-        NULL },                                                   
+        NULL },
 
 extern const char g_cmd_run_desc[];
 extern const char g_cmd_run_usage[];

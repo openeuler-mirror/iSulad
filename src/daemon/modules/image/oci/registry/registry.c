@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -32,12 +32,16 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "registry_apiv2.h"
+#include "registry_apiv1.h"
 #include "certs.h"
 #include "auths.h"
 #include "isula_libutils/registry_manifest_schema2.h"
 #include "isula_libutils/registry_manifest_schema1.h"
 #include "isula_libutils/docker_image_config_v2.h"
 #include "isula_libutils/image_manifest_v1_compatibility.h"
+#ifdef ENABLE_IMAGE_SEARCH
+#include "isula_libutils/image_search_image.h"
+#endif
 #include "sha256.h"
 #include "map.h"
 #include "linked_list.h"
@@ -56,6 +60,9 @@
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define MAX_CONCURRENT_DOWNLOAD_NUM 5
 #define DEFAULT_WAIT_TIMEOUT 15
+#ifdef ENABLE_IMAGE_SEARCH
+#define INDEX_PREFIX "index."
+#endif
 
 typedef struct {
     pull_descriptor *desc;
@@ -2221,6 +2228,104 @@ static void free_registry_auth(registry_auth *auth)
     auth->password = NULL;
     return;
 }
+#ifdef ENABLE_IMAGE_SEARCH
+static void update_search_host(pull_descriptor *desc)
+{
+    isulad_daemon_constants *config = NULL;
+    char *default_host = NULL;
+
+    config = get_isulad_daemon_constants();
+    if (config == NULL) {
+        ERROR("Invalid NULL param");
+        return;
+    }
+
+    default_host = config->default_host;
+    if (default_host == NULL) {
+        return;
+    }
+
+    // replace defaulthost to a specific registry
+    if (strcmp(desc->host, default_host) == 0) {
+        free(desc->host);
+        desc->host = util_string_append(default_host, INDEX_PREFIX);
+    }
+}
+
+static int prepare_search_desc(pull_descriptor *desc, registry_search_options *options)
+{
+    int ret = 0;
+    struct oci_image_module_data *oci_image_data = NULL;
+
+    ret = oci_split_search_name(options->search_name, &desc->host, &desc->search_name);
+    if (ret != 0) {
+        ERROR("split search name %s failed", options->search_name);
+        return -1;
+    }
+
+    if (desc->host == NULL || desc->search_name == NULL) {
+        ERROR("Invalid image %s, host or name not found", options->search_name);
+        return -1;
+    }
+
+    update_search_host(desc);
+    oci_image_data = get_oci_image_data();
+
+    desc->limit = options->limit;
+    desc->use_decrypted_key = oci_image_data->use_decrypted_key;
+    desc->skip_tls_verify = options->skip_tls_verify;
+    desc->insecure_registry = options->insecure_registry;
+    desc->cancel = false;
+
+    return ret;
+}
+
+int registry_search(registry_search_options *options, imagetool_search_result **result)
+{
+    int ret = 0;
+    pull_descriptor *desc = NULL;
+
+    if (options == NULL || options->search_name == NULL || result == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    if (!util_valid_search_name(options->search_name)) {
+        ERROR("Invalid search name %s", options->search_name);
+        isulad_try_set_error_message("Invalid search name");
+        return -1;
+    }
+
+    desc = util_common_calloc_s(sizeof(pull_descriptor));
+    if (desc == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    ret = prepare_search_desc(desc, options);
+    if (ret != 0) {
+        ERROR("Prepare search desc failed");
+        isulad_try_set_error_message("Prepare search desc failed");
+        ret = -1;
+        goto out;
+    }
+
+    ret = registry_apiv1_fetch_search_result(desc, result);
+    if (ret != 0) {
+        ERROR("Fail to fetching %s", options->search_name);
+        isulad_try_set_error_message("Fail to fetching %s", options->search_name);
+        ret = -1;
+        goto out;
+    }
+
+    INFO("Search images %s success", options->search_name);
+
+out:
+    free_pull_desc(desc);
+
+    return ret;
+}
+#endif
 
 void free_registry_pull_options(registry_pull_options *options)
 {
@@ -2235,3 +2340,14 @@ void free_registry_pull_options(registry_pull_options *options)
     free(options);
     return;
 }
+#ifdef ENABLE_IMAGE_SEARCH
+void free_registry_search_options(registry_search_options *options)
+{
+    if (options == NULL) {
+        return;
+    }
+    UTIL_FREE_AND_SET_NULL(options->search_name);
+    free(options);
+    return;
+}
+#endif

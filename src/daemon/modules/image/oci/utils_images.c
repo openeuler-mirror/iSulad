@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -612,3 +612,39 @@ out:
 
     return ret;
 }
+
+#ifdef ENABLE_IMAGE_SEARCH
+int oci_split_search_name(const char *search_name, char **host, char **name)
+{
+    size_t split_arr_len;
+    char **split_arr = NULL;
+
+    if (search_name == NULL || host == NULL || name == NULL) {
+        ERROR("Invalid NULL search_name or host or name");
+        return -1;
+    }
+
+    if (!util_valid_search_name(search_name)) {
+        ERROR("Invalid full search name %s", search_name);
+        return -1;
+    }
+
+    split_arr = util_string_split(search_name, '/');
+    if (split_arr == NULL) {
+        ERROR("Search name split failed");
+        return -1;
+    }
+
+    split_arr_len = util_array_len((const char **)split_arr);
+    if (split_arr_len != 2) {
+        ERROR("Bad search name: %s", search_name);
+        util_free_array(split_arr);
+        return -1;
+    }
+
+    *host = util_strdup_s(split_arr[0]);
+    *name = util_strdup_s(split_arr[1]);
+
+    return 0;
+}
+#endif

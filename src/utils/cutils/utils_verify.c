@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -561,6 +561,15 @@ bool util_valid_value_false(const char *value)
     return !strcmp(value, "0") || !strcmp(value, "false");
 }
 
+bool util_valid_bool_string(const char *val)
+{
+    if (val == NULL) {
+        return false;
+    }
+
+    return strcmp(val, "true") == 0 || strcmp(val, "false") == 0;
+}
+
 bool util_valid_rw_mode(const char *mode)
 {
     if (mode == NULL){
@@ -796,3 +805,23 @@ bool util_valid_volume_name(const char *name)
 
     return util_reg_match(patten, name) == 0;
 }
+
+#ifdef ENABLE_IMAGE_SEARCH
+bool util_valid_search_name(const char *name)
+{
+    bool ret = false;
+
+    if (name == NULL) {
+        ERROR("invalid NULL param");
+        return false;
+    }
+
+    ret = util_strings_contains_word(name, "://");
+    if (ret == true) {
+        ERROR("invalid repository name: repository name %s should not have a scheme", name);
+        return false;
+    }
+
+    return true;
+}
+#endif

@@ -250,6 +250,11 @@ void client_arguments_free(struct client_arguments *args)
     free(args->key_file);
     args->key_file = NULL;
 
+#ifdef ENABLE_IMAGE_SEARCH
+    free(args->search_name);
+    args->search_name = NULL;
+#endif
+
     util_free_array(custom_conf->blkio_throttle_read_bps_device);
     custom_conf->blkio_throttle_read_bps_device = NULL;
 

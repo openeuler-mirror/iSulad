@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "grpc_client_mock.h"
+#include "client_show_format.h"
 #include "utils.h"
 
 using ::testing::Args;

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -545,6 +545,29 @@ struct isula_logout_response {
     char *errmsg;
 };
 
+#ifdef ENABLE_IMAGE_SEARCH
+struct search_image_info {
+    uint32_t star_count;
+    bool is_official;
+    char *name;
+    bool is_automated;
+    char *description;
+};
+
+struct isula_search_request {
+    char *search_name;
+    uint32_t limit;
+    struct isula_filters *filters;
+};
+
+struct isula_search_response {
+    uint32_t result_num;
+    struct search_image_info *search_result;
+    uint32_t cc;
+    char *errmsg;
+    uint32_t server_errono;
+};
+#endif
 struct isula_export_request {
     char *name;
     char *file;
@@ -805,7 +828,16 @@ void isula_login_response_free(struct isula_login_response *response);
 
 void isula_logout_response_free(struct isula_logout_response *response);
 
+#ifdef ENABLE_IMAGE_SEARCH
+void search_image_info_free(struct search_image_info *info);
+
+void isula_search_request_free(struct isula_search_request *request);
+
+void isula_search_response_free(struct isula_search_response *response);
+#endif
+
 void isula_pull_request_free(struct isula_pull_request *request);
+
 void isula_pull_response_free(struct isula_pull_response *response);
 
 void isula_export_request_free(struct isula_export_request *request);

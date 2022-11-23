@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -553,3 +553,132 @@ Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *re
 
     return Status::OK;
 }
+
+#ifdef ENABLE_IMAGE_SEARCH
+int ImagesServiceImpl::search_request_from_grpc(const SearchRequest *grequest, image_search_images_request **request)
+{
+    size_t len = 0;
+    auto *tmpreq = (image_search_images_request *)util_common_calloc_s(sizeof(image_search_images_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    tmpreq->limit = grequest->limit();
+    if (!grequest->search_name().empty()) {
+        tmpreq->search_name = util_strdup_s(grequest->search_name().c_str());
+    }
+
+    len = (size_t)grequest->filters_size();
+    if (len == 0) {
+        *request = tmpreq;
+        return 0;
+    }
+
+    tmpreq->filters = (defs_filters *)util_common_calloc_s(sizeof(defs_filters));
+    if (tmpreq->filters == nullptr) {
+        ERROR("Out of memory");
+        goto cleanup;
+    }
+
+    tmpreq->filters->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
+    if (tmpreq->filters->keys == nullptr) {
+        ERROR("Null filters keys");
+        goto cleanup;
+    }
+    tmpreq->filters->values = (json_map_string_bool **)util_smart_calloc_s(sizeof(json_map_string_bool *), len);
+    if (tmpreq->filters->values == nullptr) {
+        free(tmpreq->filters->keys);
+        tmpreq->filters->keys = nullptr;
+        ERROR("Null filters values");
+        goto cleanup;
+    }
+
+    for (const auto &iter : grequest->filters()) {
+        tmpreq->filters->values[tmpreq->filters->len] =
+            (json_map_string_bool *)util_common_calloc_s(sizeof(json_map_string_bool));
+        if (tmpreq->filters->values[tmpreq->filters->len] == nullptr) {
+            ERROR("Out of memory");
+            goto cleanup;
+        }
+        if (append_json_map_string_bool(tmpreq->filters->values[tmpreq->filters->len],
+                                        iter.second.empty() ? "" : iter.second.c_str(), true) != 0) {
+            free(tmpreq->filters->values[tmpreq->filters->len]);
+            tmpreq->filters->values[tmpreq->filters->len] = nullptr;
+            ERROR("Append filters failed");
+            goto cleanup;
+        }
+        tmpreq->filters->keys[tmpreq->filters->len] = util_strdup_s(iter.first.empty() ? "" : iter.first.c_str());
+        tmpreq->filters->len++;
+    }
+    *request = tmpreq;
+    return 0;
+
+cleanup:
+    free_image_search_images_request(tmpreq);
+    return -1;
+}
+
+void ImagesServiceImpl::search_response_to_grpc(const image_search_images_response *response, SearchResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
+        return;
+    }
+
+    gresponse->set_cc(response->cc);
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+
+    gresponse->set_result_num(response->search_result_len);
+
+    for (size_t i = 0; i < response->search_result_len; i++) {
+        SearchImage *image = gresponse->add_search_result();
+        if (response->search_result[i]->name != nullptr) {
+            image->set_name(response->search_result[i]->name);
+        }
+        if (response->search_result[i]->description != nullptr) {
+            image->set_description(response->search_result[i]->description);
+        }
+        image->set_star_count(response->search_result[i]->star_count);
+        image->set_is_official(response->search_result[i]->is_official);
+        image->set_is_automated(response->search_result[i]->is_automated);
+    }
+}
+
+Status ImagesServiceImpl::Search(ServerContext *context, const SearchRequest *request, SearchResponse *reply)
+{
+    int tret;
+    service_executor_t *cb = nullptr;
+    image_search_images_request *image_req = nullptr;
+    image_search_images_response *image_res = nullptr;
+
+    prctl(PR_SET_NAME, "ImageSearch");
+
+    Status status = GrpcServerTlsAuth::auth(context, "image_search");
+    if (!status.ok()) {
+        return status;
+    }
+
+    cb = get_service_executor();
+    if (cb == nullptr || cb->image.search == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    tret = search_request_from_grpc(request, &image_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(ISULAD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    (void)cb->image.search(image_req, &image_res);
+    search_response_to_grpc(image_res, reply);
+
+    free_image_search_images_request(image_req);
+    free_image_search_images_response(image_res);
+
+    return Status::OK;
+}
+#endif

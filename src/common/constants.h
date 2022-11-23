@@ -163,6 +163,12 @@ extern "C" {
 #define GROUPS_STR_LEN_MAX 5
 #endif
 
+#ifdef ENABLE_IMAGE_SEARCH
+#define MIN_LIMIT 1
+#define MAX_LIMIT 100
+#define DEFAULT_LIMIT 25
+#endif
+
 typedef enum {
     CONTAINER_STATUS_UNKNOWN = 0,
     CONTAINER_STATUS_CREATED = 1,

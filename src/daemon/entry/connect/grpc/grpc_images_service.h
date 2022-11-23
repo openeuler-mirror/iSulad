@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -58,6 +58,10 @@ public:
 
     Status Logout(ServerContext *context, const LogoutRequest *request, LogoutResponse *reply) override;
 
+#ifdef ENABLE_IMAGE_SEARCH
+    Status Search(ServerContext *context, const SearchRequest *request, SearchResponse *reply) override;
+#endif
+
 private:
     template <class T1, class T2>
     void response_to_grpc(const T1 *response, T2 *gresponse)
@@ -94,6 +98,12 @@ private:
     int image_login_request_from_grpc(const LoginRequest *grequest, image_login_request **request);
 
     int image_logout_request_from_grpc(const LogoutRequest *grequest, image_logout_request **request);
+
+#ifdef ENABLE_IMAGE_SEARCH
+    int search_request_from_grpc(const SearchRequest *grequest, image_search_images_request **request);
+
+    void search_response_to_grpc(const image_search_images_response *response, SearchResponse *gresponse);
+#endif
 };
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_IMAGES_SERVICE_H

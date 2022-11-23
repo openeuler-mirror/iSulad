@@ -16,6 +16,7 @@
 
 #include "isula_libutils/log.h"
 #include "inspect_format.h"
+#include "template_string_parse.h"
 #include "utils.h"
 
 const char g_cmd_network_inspect_desc[] = "Inspect networks";
@@ -134,7 +135,7 @@ int cmd_network_inspect_main(int argc, const char **argv)
             exit(ECOMMON);
         }
 
-        filter_string = inspect_parse_filter(g_cmd_network_inspect_args.format);
+        filter_string = parse_single_template_string(g_cmd_network_inspect_args.format);
         if (filter_string == NULL) {
             COMMAND_ERROR("Inspect format parameter invalid: %s", g_cmd_network_inspect_args.format);
             free(tree_array);

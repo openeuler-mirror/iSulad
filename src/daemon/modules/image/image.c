@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2017-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -22,6 +22,10 @@
 #include <isula_libutils/imagetool_fs_info.h>
 #include <isula_libutils/imagetool_image_status.h>
 #include <isula_libutils/imagetool_images_list.h>
+#ifdef ENABLE_IMAGE_SEARCH
+#include <isula_libutils/image_search_image.h>
+#include "constants.h"
+#endif
 #include <isula_libutils/isulad_daemon_configs.h>
 #include <isula_libutils/json_common.h>
 #include <stdbool.h>
@@ -94,6 +98,9 @@ struct bim_ops {
 
     /* Get summary of the image */
     int (*image_summary)(im_summary_request *request, im_summary_response *response);
+#ifdef ENABLE_IMAGE_SEARCH
+    int (*search_image)(const im_search_request *request, imagetool_search_result **results);
+#endif
 };
 
 struct bim {
@@ -153,6 +160,9 @@ static const struct bim_ops g_embedded_ops = {
     .tag_image = NULL,
     .import = NULL,
     .image_summary = NULL,
+#ifdef ENABLE_IMAGE_SEARCH
+    .search_image = NULL;
+#endif
 };
 #endif
 
@@ -187,6 +197,9 @@ static const struct bim_ops g_oci_ops = {
     .tag_image = oci_tag,
     .import = oci_import,
     .image_summary = oci_summary_image,
+#ifdef ENABLE_IMAGE_SEARCH
+    .search_image = oci_search,
+#endif
 };
 #endif
 
@@ -221,6 +234,9 @@ static const struct bim_ops g_ext_ops = {
     .tag_image = NULL,
     .import = NULL,
     .image_summary = NULL,
+#ifdef ENABLE_IMAGE_SEARCH
+    .search_image = NULL,
+#endif
 };
 
 static const struct bim_type g_bims[] = {
@@ -235,6 +251,7 @@ static const struct bim_type g_bims[] = {
     { .image_type = IMAGE_TYPE_EMBEDDED, .ops = &g_embedded_ops },
 #endif
 };
+
 
 static const size_t g_numbims = sizeof(g_bims) / sizeof(struct bim_type);
 
@@ -1921,6 +1938,34 @@ void free_im_fs_info_response(im_fs_info_response *ptr)
 
     free(ptr);
 }
+#ifdef ENABLE_IMAGE_SEARCH
+void free_im_search_request(im_search_request *req)
+{
+    if (req == NULL) {
+        return;
+    }
+    free(req->type);
+    req->type = NULL;
+    free(req->search_name);
+    req->search_name = NULL;
+    filters_args_free(req->filter);
+    req->filter = NULL;
+    free(req);
+}
+
+void free_im_search_response(im_search_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free_imagetool_search_result(ptr->result);
+    ptr->result = NULL;
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
+
+    free(ptr);
+}
+#endif
 
 container_inspect_graph_driver *im_graphdriver_get_metadata_by_container_id(const char *id)
 {
@@ -1945,10 +1990,32 @@ struct graphdriver_status *im_graphdriver_get_status(void)
 #endif
 }
 
-bool im_oci_image_exist(const char *image_or_id)
+bool im_oci_image_exist(const char *name)
 {
+    if (name == NULL) {
+        ERROR("Invalid NULL name");
+        return false;
+    }
 #ifdef ENABLE_OCI_IMAGE
-    return storage_image_exist(image_or_id);
+    bool ret = true;
+    char *resolved_name = NULL;
+    int nret;
+
+    nret = im_resolv_image_name(IMAGE_TYPE_OCI, name, &resolved_name);
+    if (nret != 0) {
+        ERROR("Failed to resolve image name");
+        ret = false;
+        goto out;
+    }
+    if (!storage_image_exist(resolved_name)) {
+        ERROR("No such image: %s", name);
+        ret = false;
+        goto out;
+    }
+
+out:
+    free(resolved_name);
+    return ret;
 #else
     return false;
 #endif
@@ -2072,3 +2139,189 @@ pack_response:
     bim_put(bim);
     return ret;
 }
+
+#ifdef ENABLE_IMAGE_SEARCH
+static bool check_im_search_args(const im_search_request *req, im_search_response * const *resp)
+{
+    if (req == NULL || resp == NULL) {
+        ERROR("Request or response is NULL");
+        return false;
+    }
+
+    if (req->search_name == NULL || strcmp(req->search_name, "") == 0) {
+        ERROR("Empty search name required");
+        isulad_set_error_message("Empty search name required");
+        return false;
+    }
+
+    if (req->limit < MIN_LIMIT || req->limit > MAX_LIMIT) {
+        ERROR("Limit %d is outside the range of [1, 100]", req->limit);
+        isulad_set_error_message("Limit is outside the range of [1, 100]");
+        return false;
+    }
+    return true;
+}
+
+static bool search_image_match_filter(image_search_image *image, struct filters_args *filters)
+{
+    char **star = NULL;
+    const char *true_flag = "true";
+    const char *false_flag = "false";
+    unsigned int star_num;
+    const char *match_flag = NULL;
+
+    match_flag = image->is_automated ? true_flag : false_flag;
+    if (!filters_args_match(filters, "is-automated", match_flag)) {
+        return false;
+    }
+
+    match_flag = image->is_official ? true_flag : false_flag;
+    if (!filters_args_match(filters, "is-official", match_flag)) {
+        return false;
+    }
+
+    star = filters_args_get(filters, "stars");
+    star_num = util_safe_uint(*star, &star_num);
+    if (star == NULL || util_safe_uint(*star, &star_num) != 0 || image->star_count < star_num) {
+        return false;
+    }
+
+    return true;
+}
+
+static int append_result_to_response(struct filters_args *filters, imagetool_search_result *result,
+                                     im_search_response *response)
+{
+    size_t i = 0;
+    size_t old_results_len = 0;
+    size_t new_results_len = 0;
+    image_search_image **tmp_array = NULL;
+    image_search_image *tmp;
+
+    if (result == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    if (response->result == NULL) {
+        response->result = util_common_calloc_s(sizeof(imagetool_search_result));
+        if (response->result == NULL) {
+            ERROR("Out of memeory");
+            return -1;
+        }
+    }
+
+    old_results_len = result->results_len;
+
+    if (old_results_len == 0) {
+        return 0;
+    }
+    if (old_results_len > MAX_LIMIT) {
+        ERROR("Too many search results to append!");
+        return -1;
+    }
+
+    response->result->num_pages = result->num_pages;
+    response->result->num_results = result->num_results;
+    response->result->page = result->page;
+    response->result->page_size = result->page_size;
+    response->result->page_size = result->page_size;
+    response->result->query = util_strdup_s(result->query);
+
+    tmp_array = (image_search_image **)util_smart_calloc_s(sizeof(image_search_image *), old_results_len);
+    if (tmp_array == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < old_results_len; i++) {
+        if (filters != NULL && !search_image_match_filter(result->results[i], filters)) {
+            continue;
+        }
+        tmp = util_common_calloc_s(sizeof(image_search_image));
+        if (tmp == NULL) {
+            ERROR("Out of memory");
+            goto err_out;
+        }
+
+        tmp->description = util_strdup_s(result->results[i]->description);
+        tmp->is_automated = result->results[i]->is_automated;
+        tmp->is_official = result->results[i]->is_official;
+        tmp->is_trusted = result->results[i]->is_trusted;
+        tmp->name = util_strdup_s(result->results[i]->name);
+        tmp->pull_count = result->results[i]->pull_count;
+        tmp->star_count = result->results[i]->star_count;
+        tmp_array[new_results_len] = tmp;
+        tmp = NULL;
+        new_results_len++;
+    }
+    response->result->results = tmp_array;
+    response->result->results_len = new_results_len;
+
+    return 0;
+err_out:
+    for (i = 0; i < new_results_len; i++) {
+        free_image_search_image(tmp_array[i]);
+    }
+    free(tmp_array);
+    return -1;
+}
+
+int im_search_images(im_search_request *request, im_search_response **response)
+{
+    int ret = 0;
+    struct bim *bim = NULL;
+    imagetool_search_result *result = NULL;
+
+    DAEMON_CLEAR_ERRMSG();
+
+    if (!check_im_search_args(request, response)) {
+        return ret;
+    }
+
+    *response = (im_search_response *)util_common_calloc_s(sizeof(im_search_response));
+    if (response == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    bim = bim_get(request->type, NULL, NULL, NULL);
+    if (bim == NULL) {
+        ERROR("Failed to init bim, image type: %s", request->type);
+        return -1;
+    }
+
+    if (bim->ops->search_image == NULL) {
+        ERROR("Unimplements search image in %s", bim->type);
+        ret = -1;
+        goto out;
+    }
+
+    EVENT("Event: {Object: %s, Type: Searching}", request->search_name);
+    ret = bim->ops->search_image(request, &result);
+    if (ret != 0) {
+        ERROR("Search image %s failed", request->search_name);
+        ret = -1;
+        goto out;
+    }
+
+    ret = append_result_to_response(request->filter, result, *response);
+    if (ret != 0) {
+        ERROR("Failed to append search %s result to response", request->search_name);
+        ret = -1;
+        goto out;
+    }
+    EVENT("Event: {Object: %s, Type: Searched}", request->search_name);
+
+out:
+    bim_put(bim);
+    if (ret != 0 && g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+    }
+    DAEMON_CLEAR_ERRMSG();
+    if (result != NULL) {
+        free_imagetool_search_result(result);
+    }
+    return ret;
+}
+#endif
