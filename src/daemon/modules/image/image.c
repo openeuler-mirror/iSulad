@@ -1775,21 +1775,29 @@ int im_container_export(const im_export_request *request)
 #ifdef ENABLE_OCI_IMAGE
 char *im_get_rootfs_dir(const im_get_rf_dir_request *request) {
     char *dir = NULL;
+    struct bim *bim = NULL;
 
     if (request->type == NULL) {
         ERROR("Missing image type");
         return NULL;
     }
 
-    struct bim *bim = NULL;
     bim = bim_get(request->type, NULL, NULL, NULL);
-    if (bim->ops->get_dir_rf == NULL) {
-        ERROR("Unimplemnts get rootfs dir in %s", bim->type);
+
+    if (bim == NULL) {
+        ERROR("Failed to init bim, image type:%s", request->type);
         return NULL;
     }
-    dir = bim->ops->get_dir_rf();
-    bim_put(bim);
 
+    if (bim->ops->get_dir_rf == NULL) {
+        ERROR("Unimplemnts get rootfs dir in %s", bim->type);
+        goto out;
+    }
+
+    dir = bim->ops->get_dir_rf();
+
+out:
+    bim_put(bim);
     return dir;
 }
 #else
