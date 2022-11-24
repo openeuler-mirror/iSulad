@@ -161,7 +161,7 @@ static const struct bim_ops g_embedded_ops = {
     .import = NULL,
     .image_summary = NULL,
 #ifdef ENABLE_IMAGE_SEARCH
-    .search_image = NULL;
+    .search_image = NULL,
 #endif
 };
 #endif
