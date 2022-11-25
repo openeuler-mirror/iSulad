@@ -546,6 +546,13 @@ int get_user_from_image_roofs(const char *basefs, const host_config *hc, const c
         }
     }
 
+    // CVE-2022-36109
+    // add primary group to additional groups
+    ret = append_additional_gids(puser->gid, &puser->additional_gids, &puser->additional_gids_len);
+    if (ret != 0) {
+        goto cleanup;
+    }
+
 cleanup:
     if (f_passwd != NULL) {
         fclose(f_passwd);
