@@ -56,7 +56,7 @@ function test_network_list()
     isula network ls ${name1} 2>&1 | grep "\"isula network ls\" requires 0 arguments"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - list network and catch error msg failed" && return ${FAILURE}
 
-    isula network ls -f name=.xx 2>&1 | grep "Unrecognised filter value for name"
+    isula network ls -f name=.xx 2>&1 | grep "Invalid filter"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - list network and catch error msg failed" && return ${FAILURE}
 
     isula network ls -f aa=bb 2>&1 | grep "Invalid filter"
