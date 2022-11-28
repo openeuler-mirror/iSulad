@@ -1,5 +1,5 @@
 %global _version 2.0.17
-%global _release 9
+%global _release 10
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -59,6 +59,7 @@ Patch0043: 0043-fix-do-container_unref-in-oci_rootfs_clean.patch
 Patch0044: 0044-fix-can-not-install-isulad-rpm-because-of-spec.patch
 Patch0045: 0045-remove-unknown-option-wno-maybe-uninitialized.patch
 Patch0046: 0046-add-primary-group-to-additional-groups.patch
+Patch0047: 0047-remove-chmod-751-permission-for-dirs-by-engine-when-.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -285,6 +286,12 @@ fi
 %endif
 
 %changelog
+* Mon Nov 28 2022 yangjiaqi <yangjiaqi16@huawei.com> - 2.0.17-10
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: remove chmod 751 permission for dirs by engine when user-remap enabled
+
 * Fri Nov 25 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-9
 - Type: bugfix
 - ID: NA
