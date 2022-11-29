@@ -48,7 +48,9 @@ sem_t g_attach_waitopen_sem;
 sem_t g_attach_waitexit_sem;
 #endif
 
-struct client_arguments g_cmd_attach_args = { 0 };
+struct client_arguments g_cmd_attach_args = { 
+    .time = INSPECT_TIMEOUT_SEC,
+};
 
 
 static int check_tty(bool tty, struct termios *oldtios, bool *reset_tty)
@@ -116,6 +118,7 @@ int inspect_container(const struct client_arguments *args, container_inspect **i
     }
 
     inspect_request.name = args->name;
+    inspect_request.timeout = args->time;
     ops = get_connect_client_ops();
     if (ops == NULL || !ops->container.inspect) {
         COMMAND_ERROR("Unimplemented ops");
