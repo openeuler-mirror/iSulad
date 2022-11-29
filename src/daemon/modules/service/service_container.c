@@ -413,54 +413,6 @@ static int mount_host_channel(const host_config_host_channel *host_channel, cons
     return 0;
 }
 
-static int chmod_runtime_bundle_permission(const char *runtime)
-{
-    int ret = 0;
-    char *bundle_dir = NULL;
-    char *engine_dir = NULL;
-    char *root_dir = NULL;
-
-    bundle_dir = conf_get_routine_rootdir(runtime);
-    if (bundle_dir == NULL) {
-        ret = -1;
-        goto error_out;
-    }
-
-    engine_dir = conf_get_engine_rootpath();
-    if (engine_dir == NULL) {
-        ret = -1;
-        goto error_out;
-    }
-
-    root_dir = conf_get_isulad_rootdir();
-    if (root_dir == NULL) {
-        ret = -1;
-        goto error_out;
-    }
-
-    ret = chmod(bundle_dir, USER_REMAP_DIRECTORY_MODE);
-    if (ret != 0) {
-        ERROR("Failed to chmod bundle dir '%s' for user remap", bundle_dir);
-        goto error_out;
-    }
-    ret = chmod(engine_dir, USER_REMAP_DIRECTORY_MODE);
-    if (ret != 0) {
-        ERROR("Failed to chmod engine dir '%s' for user remap", engine_dir);
-        goto error_out;
-    }
-    ret = chmod(root_dir, USER_REMAP_DIRECTORY_MODE);
-    if (ret != 0) {
-        ERROR("Failed to chmod root dir '%s' for user remap", root_dir);
-        goto error_out;
-    }
-
-error_out:
-    free(bundle_dir);
-    free(engine_dir);
-    free(root_dir);
-    return ret;
-}
-
 static int prepare_user_remap_config(const container_t *cont)
 {
     if (cont == NULL) {
@@ -469,13 +421,6 @@ static int prepare_user_remap_config(const container_t *cont)
 
     if (cont->hostconfig == NULL) {
         return 0;
-    }
-
-    if (cont->hostconfig->user_remap != NULL) {
-        if (chmod_runtime_bundle_permission(cont->runtime)) {
-            ERROR("Failed to chmod bundle permission for user remap");
-            return -1;
-        }
     }
 
     if (cont->hostconfig->host_channel != NULL) {
