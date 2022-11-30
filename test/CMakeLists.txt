@@ -45,6 +45,7 @@ IF(ENABLE_UT)
     add_subdirectory(specs)
     add_subdirectory(services)
     add_subdirectory(sha256)
+    add_subdirectory(buffer)
 ENDIF(ENABLE_UT)
 
 IF(ENABLE_FUZZ)
