@@ -1216,6 +1216,7 @@ void util_usleep_nointerupt(unsigned long usec)
         request = remain;
     } while (ret == -1 && errno == EINTR);
 }
+
 int util_generate_random_str(char *id, size_t len)
 {
     int fd = -1;
