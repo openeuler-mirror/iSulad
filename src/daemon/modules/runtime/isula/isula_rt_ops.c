@@ -954,6 +954,7 @@ int rt_isula_restart(const char *name, const char *runtime, const rt_restart_par
 int rt_isula_clean_resource(const char *id, const char *runtime, const rt_clean_params_t *params)
 {
     char workdir[PATH_MAX] = { 0 };
+    int nret;
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -974,8 +975,17 @@ int rt_isula_clean_resource(const char *id, const char *runtime, const rt_clean_
         shim_kill_force(workdir);
     }
 
-    (void)runtime_call_kill_force(workdir, runtime, id);
-    (void)runtime_call_delete_force(workdir, runtime, id);
+    // retry 10 count call runtime kill, every call sleep 1s
+    DO_RETYR_CALL(10, 1000000, nret, runtime_call_kill_force, workdir, runtime, id);
+    if (nret != 0) {
+        WARN("call runtime force kill failed");
+    }
+
+    // retry 10 count call runtime delete, every call sleep 1s
+    DO_RETYR_CALL(10, 1000000, nret, runtime_call_delete_force, workdir, runtime, id);
+    if (nret != 0) {
+        WARN("call runtime force delete failed");
+    }
 
     if (util_recursive_rmdir(workdir, 0) != 0) {
         ERROR("failed rmdir -r shim workdir");

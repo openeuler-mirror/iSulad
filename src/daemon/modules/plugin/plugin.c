@@ -71,7 +71,7 @@
 // suffix is '.sock'
 #define PLUGIN_SOCKET_FILE_SUFFIX_LEN 5
 
-#define PLUGIN_ACTIVATE_MAX_RETRY 3
+#define PLUGIN_ACTIVATE_MAX_RETRY 5
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
@@ -403,22 +403,6 @@ out:
     return -1;
 }
 
-static int pm_activate_plugin_with_retry(plugin_t *plugin, size_t retry)
-{
-    size_t i = 0;
-    int err = 0;
-
-    for (i = 0; i < retry; i++) {
-        err = pm_activate_plugin(plugin);
-        if (!err) {
-            return 0;
-        }
-        sleep((unsigned int)i + 1);
-    }
-
-    return err;
-}
-
 static void pm_rdlock(void)
 {
     int errcode;
@@ -500,7 +484,8 @@ static int pm_register_plugin(const char *name, const char *addr)
         ERROR("alloc plugin failed");
         goto failed;
     }
-    err = pm_activate_plugin_with_retry(plugin, PLUGIN_ACTIVATE_MAX_RETRY);
+
+    DO_RETYR_CALL(PLUGIN_ACTIVATE_MAX_RETRY, 1000000, err, pm_activate_plugin, plugin);
     if (err != 0) {
         ERROR("active plugin failed");
         goto failed;
