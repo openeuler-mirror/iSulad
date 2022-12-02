@@ -1,6 +1,6 @@
 [中文版入口](README_zh.md)
 
-<img src="./logo/isula-logo.png" alt="iSulad" style="zoom:80%;" />
+<img src="./logo/iSulad-logo.svg" alt="iSulad" style="max-width: 50%;" />
 
 <a href="https://github.com/openeuler-mirror/iSulad"><img src="https://img.shields.io/badge/github-iSulad-blue"/></a> ![license](https://img.shields.io/badge/license-Mulan%20PSL%20v2-blue) ![language](https://img.shields.io/badge/language-C%2FC%2B%2B-blue)
 
