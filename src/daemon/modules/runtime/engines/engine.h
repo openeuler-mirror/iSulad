@@ -71,6 +71,7 @@ typedef struct _engine_exec_request_t {
     const char **console_fifos;
 
     const char *user;
+    const char *add_gids;
 
     const char **env;
     size_t env_len;
