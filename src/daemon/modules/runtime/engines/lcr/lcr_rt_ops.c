@@ -352,12 +352,76 @@ static int generate_user_string_by_uid_gid(const defs_process_user *puser, char 
     return 0;
 }
 
+static char **covert_gids_to_string(const gid_t *gids, const size_t gids_len)
+{
+    int nret = 0;
+    size_t i = 0;
+    size_t len = 0;
+    char **result = NULL;
+
+    result = util_smart_calloc_s(sizeof(char *), gids_len);
+    if (result == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    for (i = 0; i < gids_len; i++) {
+        char gid_str[ISULAD_NUMSTRLEN32] = { 0 };
+
+        nret = snprintf(gid_str, ISULAD_NUMSTRLEN32, "%u", (unsigned int)gids[i]);
+        if (nret < 0 || nret >= ISULAD_NUMSTRLEN32) {
+            ERROR("Invalid gid :%u", (unsigned int)gids[i]);
+            util_free_array_by_len(result, len);
+            return NULL;
+        }
+
+        result[i] = util_strdup_s(gid_str);
+        len++;
+    }
+
+    return result;
+}
+
+// additional gids string(GID[,GID])
+static int generate_add_gids_string(const defs_process_user *puser, char **add_gids)
+{
+    const size_t max_gids = 100;
+    char **gids = NULL;
+
+    if (puser->additional_gids == NULL || puser->additional_gids_len == 0) {
+        INFO("None attach additional gids");
+        return 0;
+    }
+
+    if (puser->additional_gids_len > max_gids) {
+        ERROR("Too many additional gids");
+        return -1;
+    }
+
+    gids = covert_gids_to_string(puser->additional_gids, puser->additional_gids_len);
+    if (gids == NULL) {
+        ERROR("Failed to covert gids to string");
+        return -1;
+    }
+
+    *add_gids = util_string_join(",", (const char **)gids, puser->additional_gids_len);
+    if (*add_gids == NULL) {
+        ERROR("Failed to string join");
+        util_free_array_by_len(gids, puser->additional_gids_len);
+        return -1;
+    }
+
+    util_free_array_by_len(gids, puser->additional_gids_len);
+    return 0;
+}
+
 int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *params, int *exit_code)
 {
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
     engine_exec_request_t request = { 0 };
     char *user = NULL;
+    char *add_gids = NULL;
 
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_exec_op == NULL) {
@@ -385,6 +449,12 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
             goto out;
         }
         request.user = user;
+
+        if (generate_add_gids_string(params->spec->user, &add_gids) != 0) {
+            ret = -1;
+            goto out;
+        }
+        request.add_gids = add_gids;
     }
 
     request.open_stdin = params->attach_stdin;
@@ -412,6 +482,7 @@ out:
         engine_ops->engine_clear_errmsg_op();
     }
     free(user);
+    free(add_gids);
     return ret;
 }
 
