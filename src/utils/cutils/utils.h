@@ -381,6 +381,25 @@ defs_map_string_object * dup_map_string_empty_object(defs_map_string_object *src
 
 int convert_v2_runtime(const char *runtime, char *binary);
 
+/**
+ * retry_cnt: max count of call cb;
+ * interval_us: how many us to sleep, after call cb;
+ * cb: retry call function;
+ * return:
+ *  0 is cb successful at least once;
+ *  1 is all cb are failure;
+*/
+#define DO_RETYR_CALL(retry_cnt, interval_us, ret, cb, ...) do {    \
+        size_t i = 0;                                               \
+        for(; i < retry_cnt; i++) {                                 \
+            ret = cb(__VA_ARGS__);                                  \
+            if (ret == 0) {                                         \
+                break;                                              \
+            }                                                       \
+            util_usleep_nointerupt(interval_us);                    \
+        }                                                           \
+    } while(0)
+
 #ifdef __cplusplus
 }
 #endif

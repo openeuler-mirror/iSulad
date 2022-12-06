@@ -270,3 +270,30 @@ TEST(utils_utils, test_convert_v2_runtime)
     ASSERT_EQ(convert_v2_runtime(valid_str.c_str(), nullptr), -1);
     ASSERT_EQ(convert_v2_runtime(valid_str.c_str(), buff), 0);
 }
+
+int global_total = 0;
+int retry_call_test(int success_idx) {
+    if (global_total == success_idx) {
+        return 0;
+    }
+    global_total++;
+    return -1;
+}
+
+TEST(utils_utils, test_do_retry_call)
+{
+    int nret;
+
+    global_total = 0;
+    DO_RETYR_CALL(10, 100, nret, retry_call_test, 0);
+    ASSERT_EQ(nret, 0);
+    ASSERT_EQ(global_total, 0);
+    global_total = 0;
+    DO_RETYR_CALL(10, 100, nret, retry_call_test, 5);
+    ASSERT_EQ(nret, 0);
+    ASSERT_EQ(global_total, 5);
+    global_total = 0;
+    DO_RETYR_CALL(10, 100, nret, retry_call_test, 11);
+    ASSERT_EQ(global_total, 10);
+    ASSERT_EQ(nret, -1);
+}
