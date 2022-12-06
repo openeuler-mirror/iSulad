@@ -1,5 +1,5 @@
 %global _version 2.0.17
-%global _release 10
+%global _release 11
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -58,8 +58,15 @@ Patch0042: 0042-isula-usage-consistency-optimization.patch
 Patch0043: 0043-fix-do-container_unref-in-oci_rootfs_clean.patch
 Patch0044: 0044-fix-can-not-install-isulad-rpm-because-of-spec.patch
 Patch0045: 0045-remove-unknown-option-wno-maybe-uninitialized.patch
-Patch0046: 0046-add-primary-group-to-additional-groups.patch
-Patch0047: 0047-remove-chmod-751-permission-for-dirs-by-engine-when-.patch
+Patch0046: 0046-fix-storage-layer-and-driver-ut-failed-in-container.patch
+Patch0047: 0047-handle-security-warning-for-cleanup-module.patch
+Patch0048: 0048-add-unit-test-for-util-sha256.patch
+Patch0049: 0049-add-primary-group-to-additional-groups.patch
+Patch0050: 0050-add-unit-test-for-buffer.patch
+Patch0051: 0051-remove-chmod-751-permission-for-dirs-by-engine-when-.patch
+Patch0052: 0052-add-console-ut.patch
+Patch0053: 0053-fix-additional-gids-for-exec-user.patch
+Patch0054: 0054-add-CI-for-additional-gid.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -286,6 +293,12 @@ fi
 %endif
 
 %changelog
+* Tue Dec 06 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-11
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: update from upstream
+
 * Mon Nov 28 2022 yangjiaqi <yangjiaqi16@huawei.com> - 2.0.17-10
 - Type: bugfix
 - ID: NA
