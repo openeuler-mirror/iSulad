@@ -42,7 +42,9 @@ const char g_cmd_exec_usage[] = "exec [OPTIONS] CONTAINER COMMAND [ARG...]";
 sem_t g_command_waitopen_sem;
 sem_t g_command_waitexit_sem;
 
-struct client_arguments g_cmd_exec_args = {};
+struct client_arguments g_cmd_exec_args = {
+    .time = INSPECT_TIMEOUT_SEC,
+};
 
 static int fill_exec_request(const struct client_arguments *args, const struct command_fifo_config *fifos,
                              struct isula_exec_request *request)

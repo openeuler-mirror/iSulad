@@ -124,6 +124,9 @@ int malloc_trim(size_t pad);
 
 #define TIME_STR_SIZE 512
 
+// client inspect container timeout
+#define INSPECT_TIMEOUT_SEC 120
+
 // native umask value
 #define ANNOTATION_UMAKE_KEY "native.umask"
 #define UMASK_NORMAL "normal"
