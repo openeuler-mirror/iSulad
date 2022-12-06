@@ -1,7 +1,7 @@
-From 4814ce0283857e1d07c491dab3876136a0a6a714 Mon Sep 17 00:00:00 2001
+From 7c1c3107fffbfd208acccce8f3c077e10babed3d Mon Sep 17 00:00:00 2001
 From: yangjiaqi <yangjiaqi16@huawei.com>
-Date: Mon, 28 Nov 2022 18:36:10 +0800
-Subject: [PATCH] remove chmod 751 permission for dirs by engine when
+Date: Mon, 28 Nov 2022 21:03:19 +0800
+Subject: [PATCH 51/54] remove chmod 751 permission for dirs by engine when
  user-remap enabled
 
 ---
@@ -9,7 +9,7 @@ Subject: [PATCH] remove chmod 751 permission for dirs by engine when
  1 file changed, 55 deletions(-)
 
 diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
-index 2b3c879..85a8ab5 100644
+index 2b3c8794..85a8ab52 100644
 --- a/src/daemon/modules/service/service_container.c
 +++ b/src/daemon/modules/service/service_container.c
 @@ -413,54 +413,6 @@ static int mount_host_channel(const host_config_host_channel *host_channel, cons
@@ -82,5 +82,5 @@ index 2b3c879..85a8ab5 100644
          if (mount_host_channel(cont->hostconfig->host_channel, cont->hostconfig->user_remap)) {
              ERROR("Failed to mount host channel");
 -- 
-2.30.0
+2.25.1
 
