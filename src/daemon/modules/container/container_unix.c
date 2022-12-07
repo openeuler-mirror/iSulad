@@ -46,7 +46,6 @@
 #include "utils_string.h"
 #include "volume_api.h"
 #include "namespace.h"
-#include "cleanup.h"
 
 static int init_container_mutex(container_t *cont)
 {
@@ -1461,7 +1460,6 @@ int container_module_init()
     }
 
     containers_restore();
-    clean_leftover();
 
     if (start_gchandler()) {
         ERROR("Failed to start garbage collecotor handler");

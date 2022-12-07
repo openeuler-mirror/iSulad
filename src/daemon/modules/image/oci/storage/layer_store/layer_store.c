@@ -553,6 +553,7 @@ static int update_layer_datas(const char *id, const struct layer_opts *opts, lay
 
     slayer->id = util_strdup_s(id);
     slayer->parent = util_strdup_s(opts->parent);
+    slayer->writable = opts->writable;
     if (opts->opts != NULL) {
         slayer->mountlabel = util_strdup_s(opts->opts->mount_label);
     }
@@ -1430,6 +1431,7 @@ static void copy_json_to_layer(const layer_t *jl, struct layer *l)
         l->mount_point = util_strdup_s(jl->smount_point->path);
         l->mount_count = jl->smount_point->count;
     }
+    l->writable = jl->slayer->writable;
 }
 
 int layer_store_list(struct layer_list *resp)

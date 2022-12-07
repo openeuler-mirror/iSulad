@@ -42,6 +42,7 @@ struct layer {
     int64_t compress_size;
     char *uncompressed_digest;
     int64_t uncompress_size;
+    bool writable;
 };
 
 struct layer_list {
@@ -162,6 +163,8 @@ int storage_dec_hold_refs(const char *layer_id);
 struct layer_list *storage_layers_get_by_compress_digest(const char *digest);
 
 struct layer *storage_layer_get(const char *layer_id);
+
+int storage_broken_rw_layer_delete(const char *layer_id);
 
 int storage_layer_try_repair_lowers(const char *layer_id, const char *last_layer_id);
 
