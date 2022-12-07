@@ -56,66 +56,10 @@
 #include "utils_verify.h"
 #include "selinux_label.h"
 #include "opt_log.h"
+#include "runtime_api.h"
 
 static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
                                       int64_t cpu_rt_period, int64_t cpu_rt_runtime);
-
-static int runtime_check(const char *name, bool *runtime_res)
-{
-    int ret = 0;
-    struct service_arguments *args = NULL;
-    defs_map_string_object_runtimes *runtimes = NULL;
-
-    if (isulad_server_conf_rdlock()) {
-        ret = -1;
-        goto out;
-    }
-
-    args = conf_get_server_conf();
-    if (args == NULL) {
-        ERROR("Failed to get isulad server config");
-        ret = -1;
-        goto unlock_out;
-    }
-
-    if (args->json_confs != NULL) {
-        runtimes = args->json_confs->runtimes;
-    }
-    if (runtimes == NULL) {
-        goto unlock_out;
-    }
-
-    size_t runtime_nums = runtimes->len;
-    size_t i;
-    for (i = 0; i < runtime_nums; i++) {
-        if (strcmp(name, runtimes->keys[i]) == 0) {
-            *runtime_res = true;
-            goto unlock_out;
-        }
-    }
-unlock_out:
-    if (isulad_server_conf_unlock()) {
-        ERROR("Failed to unlock isulad server config");
-        ret = -1;
-    }
-out:
-    if (strcmp(name, "runc") == 0 || strcmp(name, "lcr") == 0 || strcmp(name, "kata-runtime") == 0) {
-        *runtime_res = true;
-        return ret;
-    }
-
-#ifdef ENABLE_GVISOR
-    if (strcmp(name, "runsc") == 0) {
-        *runtime_res = true;
-        return ret;
-    }
-#endif
-    if (convert_v2_runtime(name, NULL) == 0) {
-        *runtime_res = true;
-    }
-
-    return ret;
-}
 
 static int create_request_check(const container_create_request *request)
 {
@@ -1069,6 +1013,58 @@ static int get_request_image_info(const container_create_request *request, char 
     }
 
     return 0;
+}
+
+static bool is_customized_runtime(const char* name)
+{
+    bool ret = true;
+    struct service_arguments *args = NULL;
+    defs_map_string_object_runtimes *runtimes = NULL;
+
+    if (isulad_server_conf_rdlock()) {
+        return false;
+    }
+
+    args = conf_get_server_conf();
+    if (args == NULL) {
+        ERROR("Failed to get isulad server config");
+        ret = false;
+        goto unlock_out;
+    }
+
+    if (args->json_confs != NULL) {
+        runtimes = args->json_confs->runtimes;
+    }
+    if (runtimes == NULL) {
+        ret = false;
+        goto unlock_out;
+    }
+
+    size_t runtime_nums = runtimes->len;
+    size_t i;
+    for (i = 0; i < runtime_nums; i++) {
+        if (strcmp(name, runtimes->keys[i]) == 0) {
+            ret = true;
+            goto unlock_out;
+        }
+    }
+unlock_out:
+    if (isulad_server_conf_unlock()) {
+        ERROR("Failed to unlock isulad server config");
+        ret = false;
+    }
+
+    return ret;
+}
+
+static int runtime_check(const char *name, bool *runtime_res)
+{
+    if (is_customized_runtime(name) || is_default_runtime(name)) {
+        *runtime_res = true;
+        return 0;
+    }
+
+    return -1;
 }
 
 static int preparate_runtime_environment(const container_create_request *request, const char *id, char **runtime,

@@ -248,6 +248,7 @@ int runtime_listpids(const char *name, const char *runtime, const rt_listpids_pa
 void free_rt_listpids_out_t(rt_listpids_out_t *out);
 int runtime_resize(const char *name, const char *runtime, const rt_resize_params_t *params);
 int runtime_exec_resize(const char *name, const char *runtime, const rt_exec_resize_params_t *params);
+bool is_default_runtime(const char *name);
 
 int runtime_init();
 #ifdef __cplusplus

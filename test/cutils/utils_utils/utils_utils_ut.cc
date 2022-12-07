@@ -258,19 +258,6 @@ TEST(utils_utils, test_dup_map_string_empty_object)
     ASSERT_EQ(dup_map_string_empty_object(nullptr), nullptr);
 }
 
-TEST(utils_utils, test_convert_v2_runtime)
-{
-    std::string valid_str = "io.containerd.runc.v1";
-    std::string valid_ret = "containerd-shim-runc-v1";
-    std::string invalid_str = "xxx.xxx.xxx.xxx";
-    char buff[32] = { 0 };
-
-    ASSERT_EQ(convert_v2_runtime(invalid_str.c_str(), buff), -1);
-    ASSERT_EQ(convert_v2_runtime(nullptr, buff), -1);
-    ASSERT_EQ(convert_v2_runtime(valid_str.c_str(), nullptr), -1);
-    ASSERT_EQ(convert_v2_runtime(valid_str.c_str(), buff), 0);
-}
-
 int global_total = 0;
 int retry_call_test(int success_idx) {
     if (global_total == success_idx) {

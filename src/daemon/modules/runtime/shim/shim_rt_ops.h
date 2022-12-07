@@ -60,6 +60,8 @@ int rt_shim_resize(const char *id, const char *runtime, const rt_resize_params_t
 
 int rt_shim_exec_resize(const char *id, const char *runtime, const rt_exec_resize_params_t *params);
 
+bool is_valid_v2_runtime(const char* name);
+
 #ifdef __cplusplus
 }
 #endif

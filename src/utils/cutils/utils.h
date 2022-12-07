@@ -391,8 +391,6 @@ void util_parse_user_group(const char *username, char **user, char **group, char
 
 defs_map_string_object * dup_map_string_empty_object(defs_map_string_object *src);
 
-int convert_v2_runtime(const char *runtime, char *binary);
-
 /**
  * retry_cnt: max count of call cb;
  * interval_us: how many us to sleep, after call cb;

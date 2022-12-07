@@ -2580,7 +2580,9 @@ static char *get_prepare_share_shm_path(const char *truntime, const char *cid)
     int nret = 0;
 
     if (truntime == NULL) {
-        truntime = "lcr";
+        // caller ensures truntime not to be NULL
+        ERROR("Failed to set runtime");
+        return NULL;
     }
     c_root_path = conf_get_routine_rootdir(truntime);
     if (c_root_path == NULL) {

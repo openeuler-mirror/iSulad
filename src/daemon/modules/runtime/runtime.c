@@ -513,6 +513,33 @@ out:
     return ret;
 }
 
+bool is_default_runtime(const char *name)
+{
+    const char *runtimes[] = { "lcr", "runc", "kata-runtime" };
+    int i = 0;
+
+    for (; i < sizeof(runtimes) / sizeof(runtimes[0]); ++i) {
+        if (strcmp(name, runtimes[i]) == 0) {
+            return true;
+        }
+    }
+
+#ifdef ENABLE_GVISOR
+    if (strcmp(name, "runsc") == 0) {
+        return true;
+    }
+#endif
+
+#ifdef ENABLE_SHIM_V2
+    if (is_valid_v2_runtime(name)) {
+        return true;
+    }
+#endif
+    ERROR("runtime %s is not supported", name);
+
+    return false;
+}
+
 int runtime_init()
 {
     int ret = 0;
