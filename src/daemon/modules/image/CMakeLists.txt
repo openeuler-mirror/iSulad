@@ -117,7 +117,7 @@ target_link_libraries(${LIB_ISULAD_IMG}
     ${ZLIB_LIBRARY}
     libhttpclient)
 
-if (NOT ANDROID)
+if ((NOT ANDROID) AND (NOT MUSL))
     target_link_libraries(${LIB_ISULAD_IMG} -lpthread)
 endif()
 

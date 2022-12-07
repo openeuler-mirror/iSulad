@@ -142,6 +142,18 @@ if (ENABLE_SUP_GROUPS)
     message("${Green}--  Enable sup groups${ColourReset}")
 endif()
 
+option(MUSL "available for musl" OFF)
+if (MUSL)
+    add_definitions(-D__MUSL__)
+    message("${Green}--  Available for MUSL${ColourReset}")
+endif()
+
+option(ANDROID "available for android" OFF)
+if (ANDROID)
+    add_definitions(-D__ANDROID__)
+    message("${Green}--  Available for ANDROID${ColourReset}")
+endif()
+
 if (NOT RUNPATH)
     set(RUNPATH "/var/run")
 endif()

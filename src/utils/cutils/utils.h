@@ -47,7 +47,7 @@
 extern "C" {
 #endif
 
-#ifdef __ANDROID__
+#if defined (__ANDROID__) || defined(__MUSL__)
 #define M_TRIM_THRESHOLD    -1
 #define M_TOP_PAD           -2
 #define M_MMAP_THRESHOLD    -3
