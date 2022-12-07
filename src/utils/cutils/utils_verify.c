@@ -811,7 +811,7 @@ bool util_valid_search_name(const char *name)
 {
     bool ret = false;
 
-    if (name == NULL) {
+    if (name == NULL || strcmp(name, "") == 0) {
         ERROR("invalid NULL param");
         return false;
     }

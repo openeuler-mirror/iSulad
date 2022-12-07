@@ -2181,8 +2181,7 @@ static bool search_image_match_filter(image_search_image *image, struct filters_
     }
 
     star = filters_args_get(filters, "stars");
-    star_num = util_safe_uint(*star, &star_num);
-    if (star == NULL || util_safe_uint(*star, &star_num) != 0 || image->star_count < star_num) {
+    if (star != NULL && (util_safe_uint(*star, &star_num) != 0 || image->star_count < star_num)) {
         return false;
     }
 
