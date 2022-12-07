@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 #include "filters.h"
 #include "utils.h"
+#include <isula_libutils/json_common.h>
 
 TEST(utils_filters, test_filters)
 {
@@ -99,5 +100,41 @@ TEST(utils_filters, test_filters_args_valid_key)
     ASSERT_EQ(filters_args_valid_key(nullptr, 3, valid), false);
     ASSERT_EQ(filters_args_valid_key(accepted_filters, 1, valid), false);
     ASSERT_EQ(filters_args_valid_key(accepted_filters, 5, valid), true);
+}
 
+TEST(utils_filters, test_do_add_filters)
+{
+    const char *filter_key_bool = "test_bool";
+    const char *filter_key_str = "test_str";
+    char **value = NULL;
+
+    json_map_string_bool *filter_value_bool = (json_map_string_bool *)(util_common_calloc_s(sizeof(json_map_string_bool)));
+    ASSERT_EQ(append_json_map_string_bool(filter_value_bool, "true", true), 0);
+
+    json_map_string_bool *filter_value_str = (json_map_string_bool *)(util_common_calloc_s(sizeof(json_map_string_bool)));
+    ASSERT_EQ(append_json_map_string_bool(filter_value_str, "inner", true), 0);
+
+    struct filters_args *filters = filters_args_new();
+    ASSERT_NE(filters, nullptr);
+
+    ASSERT_EQ(do_add_filters(filter_key_bool, filter_value_bool, filters, util_valid_bool_string, nullptr), 0);
+    ASSERT_EQ(filters_args_len(filters), 1);
+    value = filters_args_get(filters, filter_key_bool);
+    ASSERT_NE(value, nullptr);
+    ASSERT_STREQ(*value, filter_value_bool->keys[0]);
+
+    ASSERT_EQ(do_add_filters(filter_key_str, filter_value_str, filters, nullptr, util_strings_to_upper), 0);
+    ASSERT_EQ(filters_args_len(filters), 2);
+    value = filters_args_get(filters, filter_key_str);
+    ASSERT_NE(value, nullptr);
+    ASSERT_STREQ(*value, "INNER");
+
+    ASSERT_EQ(do_add_filters(filter_key_bool, filter_value_str, filters, util_valid_bool_string, nullptr), -1);
+    ASSERT_EQ(do_add_filters(nullptr, filter_value_bool, filters, util_valid_bool_string, nullptr), -1);
+    ASSERT_EQ(do_add_filters(filter_key_bool, nullptr, filters, util_valid_bool_string, nullptr), -1);
+    ASSERT_EQ(do_add_filters(filter_key_bool, filter_value_bool, nullptr, util_valid_bool_string, nullptr), -1);
+
+    free_json_map_string_bool(filter_value_bool);
+    free_json_map_string_bool(filter_value_str);
+    filters_args_free(filters);
 }
