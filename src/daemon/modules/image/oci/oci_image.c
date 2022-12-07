@@ -368,6 +368,16 @@ out:
     return ret;
 }
 
+int oci_delete_broken_rf(const im_delete_rootfs_request *request)
+{
+    if (request == NULL) {
+        ERROR("Request is NULL");
+        return -1;
+    }
+
+    return storage_broken_rw_layer_delete(request->name_id);
+}
+
 int oci_delete_rf(const im_delete_rootfs_request *request)
 {
     if (request == NULL) {

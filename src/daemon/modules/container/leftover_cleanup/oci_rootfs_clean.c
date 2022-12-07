@@ -19,6 +19,7 @@
 #include "image_api.h"
 #include "utils_file.h"
 #include "utils.h"
+#include "linked_list.h"
 
 struct cb_result {
     int clean_err_cnt;
@@ -45,7 +46,7 @@ static bool walk_dir_cb(const char *path_name, const struct dirent *sub_dir, voi
 }
 
 
-int oci_rootfs_cleaner(void)
+int oci_rootfs_cleaner(struct clean_ctx *ctx)
 {
     struct cb_result res = { 0 };
     im_get_rf_dir_request request = { 0 };
@@ -67,7 +68,36 @@ int oci_rootfs_cleaner(void)
 
     if (res.clean_err_cnt == 0) {
         return 0;
-    } 
+    }
 
     return -1;
+}
+
+int oci_broken_rootfs_cleaner(struct clean_ctx *ctx)
+{
+    int rm_fail_cnt = 0;
+    struct linked_list *it = NULL;
+    struct linked_list *next = NULL;
+    char *id = NULL;
+
+    if (ctx == NULL) {
+        return -1;
+    }
+
+    linked_list_for_each_safe(it, &(ctx->broken_rootfs_list), next) {
+        id = (char *)it->elem;
+        if (im_remove_broken_rootfs(IMAGE_TYPE_OCI, id) != 0) {
+            ERROR("Failed to clean broken rootfs %s", id);
+            rm_fail_cnt++;
+        } else {
+            EVENT("clean broken rootfs succeed %s", id);
+        }
+    }
+
+    if (rm_fail_cnt != 0) {
+        DEBUG("can't clean some broken rootfs, %d left", rm_fail_cnt);
+        return -1;
+    }
+
+    return 0;
 }

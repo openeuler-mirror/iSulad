@@ -53,6 +53,7 @@ int oci_merge_conf_rf(const char *img_name, container_config *container_spec);
 int oci_mount_rf(const im_mount_request *request);
 int oci_umount_rf(const im_umount_request *request);
 int oci_delete_rf(const im_delete_rootfs_request *request);
+int oci_delete_broken_rf(const im_delete_rootfs_request *request);
 int oci_export_rf(const im_export_request *request);
 char *oci_get_dir_rf(void);
 int oci_container_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage);
