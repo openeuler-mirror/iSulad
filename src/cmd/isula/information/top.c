@@ -29,7 +29,9 @@
 const char g_cmd_top_desc[] = "Display the running processes of a container";
 const char g_cmd_top_usage[] = "top [OPTIONS] CONTAINER [ps OPTIONS]";
 
-struct client_arguments g_cmd_top_args = {};
+struct client_arguments g_cmd_top_args = {
+    .time = INSPECT_TIMEOUT_SEC,
+};
 static void client_top_info_server(const struct isula_top_response *response)
 {
     size_t i;
