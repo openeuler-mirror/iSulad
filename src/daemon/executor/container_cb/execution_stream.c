@@ -63,7 +63,7 @@
 #include "utils_file.h"
 #include "utils_verify.h"
 
-#ifdef __ANDROID__
+#if defined (__ANDROID__) || defined(__MUSL__)
 #define SIG_CANCEL_SIGNAL     SIGUSR1
 #define PTHREAD_CANCEL_ENABLE    1
 #define PTHREAD_CANCEL_DISABLE    0

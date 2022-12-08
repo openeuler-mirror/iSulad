@@ -1307,7 +1307,7 @@ out:
     return ret;
 }
 
-#ifdef __ANDROID__
+#if defined (__ANDROID__) || defined(__MUSL__)
 static bool cgroup2_no_controller()
 {
     char *controllers_str = NULL;
@@ -1335,7 +1335,7 @@ static int make_sure_cgroup2_isulad_path_exist()
         return -1;
     }
 
-#ifdef __ANDROID__
+#if defined (__ANDROID__) || defined(__MUSL__)
     if (cgroup2_no_controller()) {
         DEBUG("no cgroup controller found");
         return 0;
