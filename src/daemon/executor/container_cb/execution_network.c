@@ -762,9 +762,38 @@ out:
     return ret;
 }
 
+static int check_readonly_fs_for_etc(const char *rootfs, bool *ro)
+{
+    char *path = NULL;
+
+    if (util_realpath_in_scope(rootfs, "/etc", &path) < 0) {
+        SYSERROR("Failed to get real path '/etc' under rootfs '%s'", rootfs);
+        isulad_set_error_message("Failed to get real path '/etc' under rootfs '%s'", rootfs);
+        return -1;
+    }
+
+    *ro = util_check_readonly_fs(path);
+
+    free(path);
+    return 0;
+}
+
+// modify network file in rootfs
+// make sure network file saved if rootfs migrate to another host
 static int merge_network_for_syscontainer(const host_config *host_spec, const char *rootfs, const char *hostname)
 {
     int ret = 0;
+    bool ro = false;
+
+    if (check_readonly_fs_for_etc(rootfs, &ro) != 0) {
+        ERROR("Failed to check network path");
+        return -1;
+    }
+
+    if (ro) {
+        WARN("Readonly filesystem for etc under %s. Skip merge network for syscontainer", rootfs);
+        return 0;
+    }
 
     ret = write_hostname_to_file(rootfs, hostname);
     if (ret) {
