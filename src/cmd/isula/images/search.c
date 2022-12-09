@@ -134,6 +134,8 @@ static void printf_enable_interpretation_of_backslash_escapes(const char *str)
     ch = *s++;
     while (ch != '\0') {
         if (*s == '\0' || ch != '\\') {
+            putchar(ch);
+            ch = *s++;
             continue;
         }
 
@@ -369,7 +371,7 @@ int cmd_search_main(int argc, const char **argv)
         format_str = DEFAULT_SEARCH_TABLE_FORMAT;
     }
 
-    if (get_format_filters_field(format_str, format, support_field, sizeof(support_field) / sizeof(char *), false) != 0) {
+    if (get_format_filters_field(format_str, format, support_field, sizeof(support_field) / sizeof(char *), true) != 0) {
         free_format_filters(format);
         COMMAND_ERROR("Failed to get valid format");
         exit(EXIT_FAILURE);

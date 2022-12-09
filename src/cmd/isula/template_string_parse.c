@@ -26,6 +26,10 @@ char *parse_single_template_string(const char *arg)
     char *ret_string = NULL;
     char *next_context = NULL;
 
+    if(arg == NULL) {
+        return ret_string;
+    }
+
     input_str = util_strdup_s(arg);
 
     p = strtok_r(input_str, ".", &next_context);

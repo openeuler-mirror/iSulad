@@ -46,7 +46,7 @@ static int append_header_field(const char **index, struct format_filters *format
     int ret = 0;
     struct filters_field *tmp = NULL;
 
-    if (strncmp(*index, "table", strlen("table")) != 0){
+    if (strncmp(*index, "table", strlen("table")) != 0) {
         return 0;
     }
 
