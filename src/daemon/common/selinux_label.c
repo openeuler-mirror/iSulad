@@ -592,7 +592,7 @@ static int container_label(char **process_label, char **file_label)
         return 0;
     }
 
-#ifdef __ANDROID__
+#if defined (__ANDROID__) || defined(__MUSL__)
     lxc_path = ISULAD_DAEMON_CONTAINER_CONTEXTS;
 #else
     lxc_path = selinux_lxc_contexts_path();

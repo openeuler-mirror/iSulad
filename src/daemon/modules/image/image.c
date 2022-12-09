@@ -1773,7 +1773,8 @@ int im_container_export(const im_export_request *request)
 #endif
 
 #ifdef ENABLE_OCI_IMAGE
-char *im_get_rootfs_dir(const im_get_rf_dir_request *request) {
+char *im_get_rootfs_dir(const im_get_rf_dir_request *request)
+{
     char *dir = NULL;
     struct bim *bim = NULL;
 
@@ -1801,7 +1802,8 @@ out:
     return dir;
 }
 #else
-char *im_get_rootfs_dir(const im_get_rf_dir_request *request) {
+char *im_get_rootfs_dir(const im_get_rf_dir_request *request)
+{
     return NULL;
 }
 #endif

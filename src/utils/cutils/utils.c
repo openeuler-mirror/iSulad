@@ -16,7 +16,7 @@
 #define _GNU_SOURCE
 #include "utils.h"
 #include <errno.h>
-#ifndef __ANDROID__
+#if !defined (__ANDROID__) && !defined(__MUSL__)
 #include <execinfo.h>
 #endif
 #include <stdint.h>
@@ -47,7 +47,7 @@
 #include "utils_string.h"
 #include "utils_verify.h"
 
-#ifdef __ANDROID__
+#if defined (__ANDROID__) || defined(__MUSL__)
 int mallopt(int param, int value)
 {
     return 1;
@@ -427,7 +427,12 @@ proc_t *util_stat2proc(const char *s, size_t len)
 
     /* parse these two strings separately, skipping the leading "(". */
     /* comm[16] in kernel */
+    /* https://www.openwall.com/lists/musl/2013/11/15/5: musl's sscanf("%15c",cmd) requires exactly 15 characters; anything shorter is a matching failure. */
+#ifdef __MUSL__
+    num = sscanf(s, "%d (%15s", &p->pid, p->cmd);
+#else
     num = sscanf(s, "%d (%15c", &p->pid, p->cmd);
+#endif
     if (num != 2) {
         ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
         free(p);
@@ -851,8 +856,8 @@ out:
 
 char **util_get_backtrace(void)
 {
-#ifdef __ANDROID__
-    /* android has no backtrace */
+#if defined (__ANDROID__) || defined(__MUSL__)
+    /* android and musl has no backtrace */
     return NULL;
 #else
 #define BACKTRACE_SIZE 16

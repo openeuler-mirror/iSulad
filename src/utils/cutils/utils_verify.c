@@ -563,7 +563,7 @@ bool util_valid_value_false(const char *value)
 
 bool util_valid_rw_mode(const char *mode)
 {
-    if (mode == NULL){
+    if (mode == NULL) {
         return false;
     }
 
@@ -572,7 +572,7 @@ bool util_valid_rw_mode(const char *mode)
 
 bool util_valid_label_mode(const char *mode)
 {
-    if (mode == NULL){
+    if (mode == NULL) {
         return false;
     }
 
@@ -581,7 +581,7 @@ bool util_valid_label_mode(const char *mode)
 
 bool util_valid_copy_mode(const char *mode)
 {
-    if (mode == NULL){
+    if (mode == NULL) {
         return false;
     }
     return !strcmp(mode, "nocopy");
@@ -708,7 +708,7 @@ int util_valid_env(const char *env, char **dst)
     int ret = 0;
     char *value = NULL;
 
-    if (dst == NULL){
+    if (dst == NULL) {
         ERROR("NULL dst");
         return -1;
     }
