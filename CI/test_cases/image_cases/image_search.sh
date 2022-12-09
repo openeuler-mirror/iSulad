@@ -34,7 +34,7 @@ function test_image_search()
 
   msg_info "${test} starting..."
   cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
-  sed -i "/registry-mirrors/a\        \"docker.io\"" /etc/isulad/daemon.json
+  sed -i "/registry-mirrors/a\        \"docker.io\"," /etc/isulad/daemon.json
 
   start_isulad_with_valgrind
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && return ${FAILURE}
