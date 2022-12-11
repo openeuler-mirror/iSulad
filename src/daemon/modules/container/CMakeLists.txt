@@ -5,7 +5,9 @@ add_subdirectory(supervisor)
 add_subdirectory(health_check)
 add_subdirectory(container_gc)
 add_subdirectory(restart_manager)
+IF (NOT DISABLE_CLEANUP)
 add_subdirectory(leftover_cleanup)
+ENDIF()
 
 set(MANAGER_SRCS
     ${local_manager_srcs}

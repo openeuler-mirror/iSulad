@@ -31,11 +31,15 @@ static struct cleaners *create_cleaners()
     return ret;
 }
 
-static void destroy_cleaners(struct cleaners *clns)
+void destroy_cleaners(struct cleaners *clns)
 {
     struct linked_list *it = NULL;
     struct linked_list *next = NULL;
     struct clean_node *c_node = NULL;
+
+    if (clns == NULL) {
+        return;
+    }
 
     linked_list_for_each_safe(it, &(clns->cleaner_list), next) {
         c_node = (struct clean_node *)it->elem;
@@ -80,25 +84,31 @@ static int default_cleaner()
     return 0;
 }
 
-static struct cleaners *cleaner_init()
+struct cleaners *cleaners_init()
 {
     int ret = 0;
     struct cleaners *clns = create_cleaners();
-    
+
     if (clns == NULL) {
         return NULL;
     }
 
     ret = add_clean_node(clns, default_cleaner, "default clean");
     if (ret != 0) {
-        ERROR("add default_cleaner error");
+        ERROR("Add default_cleaner error");
         return clns;
     }
 
 #ifdef ENABLE_OCI_IMAGE
+    ret = add_clean_node(clns, oci_broken_rootfs_cleaner, "clean broken rootfs");
+    if (ret != 0) {
+        ERROR("Clean broken rootfs failed");
+        return clns;
+    }
+
     ret = add_clean_node(clns, oci_rootfs_cleaner, "clean rootfs");
     if (ret != 0) {
-        ERROR("add oci_rootfs_cleaner error");
+        ERROR("Add oci_rootfs_cleaner error");
         return clns;
     }
 #endif
@@ -106,7 +116,7 @@ static struct cleaners *cleaner_init()
     return clns;
 }
 
-static void do_clean(struct cleaners * clns)
+void cleaners_do_clean(struct cleaners *clns, struct clean_ctx *ctx)
 {
     struct linked_list *it = NULL;
     struct linked_list *next = NULL;
@@ -114,31 +124,11 @@ static void do_clean(struct cleaners * clns)
 
     linked_list_for_each_safe(it, &(clns->cleaner_list), next) {
         c_node = (struct clean_node *)it->elem;
-        if (c_node->cleaner() != 0) {
-            ERROR("failed to clean for: %s", c_node->desc);
+        if (c_node->cleaner(ctx) != 0) {
+            ERROR("Failed to clean for: %s", c_node->desc);
         } else {
             DEBUG("do clean success for: %s", c_node->desc);
             clns->done_clean++;
         }
     }
-}
-
-void clean_leftover()
-{
-    struct cleaners *clns = cleaner_init();
-
-    if (clns == NULL) {
-        ERROR("failed to clean leftovers, because cleaner init error");
-        return;
-    }
-
-    do_clean(clns);
-
-    if (clns->count == clns->done_clean) {
-        DEBUG("all clean up success");
-    } else {
-        ERROR("Aim to do %d clean, %d clean sucess\n", clns->count, clns->done_clean);
-    }
-
-    destroy_cleaners(clns);
 }

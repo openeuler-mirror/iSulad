@@ -2,6 +2,8 @@ project(iSulad_UT)
 
 SET(EXE storage_rootfs_ut)
 
+add_definitions(-DDISABLE_CLEANUP)
+
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_regex.c

@@ -261,6 +261,8 @@ int im_umount_container_rootfs(const char *image_type, const char *image_name, c
 
 int im_remove_container_rootfs(const char *image_type, const char *container_id);
 
+int im_remove_broken_rootfs(const char *image_type, const char *container_id);
+
 int im_merge_image_config(const char *image_type, const char *image_name, container_config *container_spec);
 
 int im_get_user_conf(const char *image_type, const char *basefs, host_config *hc, const char *userstr,

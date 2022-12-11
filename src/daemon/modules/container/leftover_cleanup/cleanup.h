@@ -12,19 +12,20 @@
  * Create: 2022-10-31
  * Description: provide cleanup definition
  *********************************************************************************/
-#ifndef DAEMON_MODULES_CONTAINER_LEFTOVER_CLEANUP_H
-#define DAEMON_MODULES_CONTAINER_LEFTOVER_CLEANUP_H
+#ifndef DAEMON_MODULES_CONTAINER_LEFTOVER_CLEANUP_CLEANERS_H
+#define DAEMON_MODULES_CONTAINER_LEFTOVER_CLEANUP_CLEANERS_H
 
 #include <stdlib.h>
 
 #include "linked_list.h"
 #include "isula_libutils/log.h"
+#include "clean_context.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
 #endif
 
-typedef int clean_func_t(void);
+typedef int clean_func_t(struct clean_ctx *ctx);
 
 struct clean_node {
     const char *desc;
@@ -38,8 +39,11 @@ struct cleaners {
     struct linked_list cleaner_list;
 };
 
+struct cleaners *cleaners_init();
 
-void clean_leftover();
+void destroy_cleaners(struct cleaners *clns);
+
+void cleaners_do_clean(struct cleaners *clns, struct clean_ctx *ctx);
 
 
 #if defined(__cplusplus) || defined(c_plusplus)
