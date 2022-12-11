@@ -9,21 +9,25 @@
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
  * Author: wangrunze
- * Create: 2022-10-31
- * Description: provide rootfs cleaner definition
+ * Create: 2022-12-7
+ * Description: provide cleanup functions
  *********************************************************************************/
-#ifndef DAEMON_MODULES_CONTAINER_ROOTFS_CLEAN_H
-#define DAEMON_MODULES_CONTAINER_ROOTFS_CLEAN_H
-
-#include "cleanup.h"
+#ifndef DAEMON_MODULES_API_LEFTOVER_CLEANUP_API_H
+#define DAEMON_MODULES_API_LEFTOVER_CLEANUP_API_H
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
 #endif
 
-int oci_rootfs_cleaner(struct clean_ctx *ctx);
+typedef enum {
+    BROKEN_ROOTFS = 1
+} cleanup_ctx_data_t;
 
-int oci_broken_rootfs_cleaner(struct clean_ctx *ctx);
+int clean_module_init();
+
+void clean_module_fill_ctx(cleanup_ctx_data_t data_type, void *data);
+
+void clean_module_do_clean();
 
 #if defined(__cplusplus) || defined(c_plusplus)
 }

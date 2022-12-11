@@ -38,6 +38,10 @@
 #include "utils_string.h"
 #include "utils_timestamp.h"
 
+#ifndef DISABLE_CLEANUP
+#include "leftover_cleanup_api.h"
+#endif
+
 #define CONTAINER_JSON "container.json"
 
 typedef struct rootfs_store {
@@ -170,6 +174,7 @@ static int append_container_by_directory(const char *container_dir)
 
     nret = snprintf(container_path, sizeof(container_path), "%s/%s", container_dir, CONTAINER_JSON);
     if (nret < 0 || (size_t)nret >= sizeof(container_path)) {
+        // snprintf error, not append, but outside should not delete the rootfs
         ERROR("Failed to get container path");
         return -1;
     }
@@ -182,6 +187,7 @@ static int append_container_by_directory(const char *container_dir)
     }
 
     if (do_append_container(c) != 0) {
+        // append error should not return -1, outside should not remove rootfs
         ERROR("Failed to append container");
         ret = -1;
         goto out;
@@ -199,6 +205,7 @@ static int get_containers_from_json()
 {
     int ret = 0;
     int nret;
+    int append_ret = 0;
     char **container_dirs = NULL;
     size_t container_dirs_num = 0;
     size_t i;
@@ -231,7 +238,11 @@ static int get_containers_from_json()
             continue;
         }
 
-        if (append_container_by_directory(container_path) != 0) {
+        append_ret = append_container_by_directory(container_path);
+        if (append_ret != 0) {
+#ifndef DISABLE_CLEANUP
+            clean_module_fill_ctx(BROKEN_ROOTFS, (void *)container_dirs[i]);
+#endif
             ERROR("Found container path but load json failed: %s, deleting...", container_path);
             if (util_recursive_rmdir(container_path, 0) != 0) {
                 ERROR("Failed to delete rootfs directory : %s", container_path);

@@ -50,6 +50,7 @@ struct bim_ops {
     int (*export_rf)(const im_export_request *request);
     char *(*resolve_image_name)(const char *image_name);
     char *(*get_dir_rf)(void);
+    int (*delete_broken_rf)(const im_delete_rootfs_request *request);
 
     /* merge image config ops */
     int (*merge_conf)(const char *img_name, container_config *container_spec);
@@ -132,6 +133,7 @@ static const struct bim_ops g_embedded_ops = {
     .mount_rf = embedded_mount_rf,
     .umount_rf = embedded_umount_rf,
     .delete_rf = embedded_delete_rf,
+    .delete_broken_rf = NULL,
     .export_rf = NULL,
     .get_dir_rf = NULL,
 
@@ -167,6 +169,7 @@ static const struct bim_ops g_oci_ops = {
     .mount_rf = oci_mount_rf,
     .umount_rf = oci_umount_rf,
     .delete_rf = oci_delete_rf,
+    .delete_broken_rf = oci_delete_broken_rf,
     .export_rf = oci_export_rf,
     .get_dir_rf = oci_get_dir_rf,
 
@@ -201,6 +204,7 @@ static const struct bim_ops g_ext_ops = {
     .mount_rf = ext_mount_rf,
     .umount_rf = ext_umount_rf,
     .delete_rf = ext_delete_rf,
+    .delete_broken_rf = NULL,
     .export_rf = NULL,
     .get_dir_rf = NULL,
 
@@ -461,6 +465,50 @@ int im_get_container_filesystem_usage(const char *image_type, const char *id, im
 out:
     free_im_container_fs_usage_request(request);
     free_imagetool_fs_info(filesystemusage);
+    return ret;
+}
+
+int im_remove_broken_rootfs(const char *image_type, const char *container_id)
+{
+    int ret = 0;
+    im_delete_rootfs_request *request = NULL;
+    struct bim *bim = NULL;
+
+    if (container_id == NULL || image_type == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    bim = bim_get(image_type, NULL, NULL, container_id);
+    if (bim == NULL) {
+        ERROR("Failed to init bim when deleting broken rootfs %s", container_id);
+        return -1;
+    }
+
+    if (bim->ops->delete_broken_rf == NULL) {
+        ERROR("Unimplements delete in %s", bim->type);
+        ret = -1;
+        goto out;
+    }
+
+    request = util_common_calloc_s(sizeof(im_delete_rootfs_request));
+    if (request == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    request->name_id = util_strdup_s(container_id);
+
+    ret = bim->ops->delete_broken_rf(request);
+    if (ret != 0) {
+        ERROR("Failed to delete rootfs for container %s", container_id);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    bim_put(bim);
+    free_im_delete_request(request);
     return ret;
 }
 

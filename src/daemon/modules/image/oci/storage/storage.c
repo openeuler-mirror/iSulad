@@ -306,6 +306,38 @@ struct layer *storage_layer_get(const char *layer_id)
     return layer_store_lookup(layer_id);
 }
 
+int storage_broken_rw_layer_delete(const char *layer_id)
+{
+    int ret = 0;
+    struct layer *layer_info = NULL;
+
+    if (layer_id == NULL) {
+        return -1;
+    }
+
+    layer_info = layer_store_lookup(layer_id);
+    if (layer_info == NULL) {
+        ERROR("Failed to get layer info for layer %s", layer_id);
+        return -1;
+    }
+
+    if (!layer_info->writable) {
+        ERROR("Broken rootfs should only delete rw layer, layer %s is ro layer", layer_id);
+        ret = -1;
+        goto out;
+    }
+
+    // delete rootfs and rw layer, rw layer has the same name as rootfs
+    if (layer_store_delete(layer_info->id) != 0) {
+        ERROR("Can't delete layer of broken rootfs");
+        ret = -1;
+    }
+
+out:
+    free_layer(layer_info);
+    return ret;
+}
+
 void free_layer(struct layer *ptr)
 {
     if (ptr == NULL) {

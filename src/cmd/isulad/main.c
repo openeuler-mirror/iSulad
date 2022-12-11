@@ -73,6 +73,9 @@
 #include "utils_string.h"
 #include "utils_verify.h"
 #include "volume_api.h"
+#ifndef DISABLE_CLEANUP
+#include "leftover_cleanup_api.h"
+#endif
 #include "opt_log.h"
 
 #ifdef GRPC_CONNECTOR
@@ -1235,6 +1238,14 @@ static int isulad_server_init_common()
         goto out;
     }
 
+#ifndef DISABLE_CLEANUP
+    // to cleanup leftover, init clean module before other modules.
+    if (clean_module_init() != 0) {
+        ERROR("Failed to init clean module");
+        goto out;
+    }
+#endif
+
     if (volume_init(args->json_confs->graph) != 0) {
         ERROR("Failed to init volume");
         goto out;
@@ -1450,6 +1461,10 @@ static int start_daemon_threads(char **msg)
     if (container_module_init(msg) != 0) {
         goto out;
     }
+
+#ifndef DISABLE_CLEANUP
+    clean_module_do_clean();
+#endif
 
     ret = 0;
 out:

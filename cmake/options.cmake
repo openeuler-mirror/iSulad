@@ -115,6 +115,12 @@ if (ENABLE_SUP_GROUPS)
     message("${Green}--  Enable sup groups${ColourReset}")
 endif()
 
+option(DISABLE_CLEANUP "disable cleanup module" OFF)
+if (DISABLE_CLEANUP STREQUAL "ON")
+    add_definitions(-DDISABLE_CLEANUP)
+    message("${Green}--  Disable cleanup module")
+endif()
+
 option(MUSL "available for musl" OFF)
 if (MUSL)
     add_definitions(-D__MUSL__)
