@@ -486,6 +486,43 @@ out:
     return exist;
 }
 
+// return true if find the metadata
+// or the argument is wrong
+// or can't decide
+bool has_metadata(const char *hash, struct device_set *devset)
+{
+    char metadata_file[PATH_MAX] = { 0 };
+    char *metadata_path = NULL;
+    bool ret = true;
+    int nret = 0;
+
+    if (hash == NULL) {
+        return true;
+    }
+
+    metadata_path = metadata_dir(devset);
+    if (metadata_path == NULL) {
+        ERROR("Failed to get meta data directory");
+        goto out;
+    }
+
+    nret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, util_valid_str(hash) ? hash : "base");
+    if (nret < 0 || (size_t)nret >= sizeof(metadata_file)) {
+        ERROR("Failed to snprintf metadata file path with hash:%s, path is too long", hash);
+        goto out;
+    }
+
+    if (!util_file_exists(metadata_file)) {
+        WARN("No such file:%s, need not to load", metadata_file);
+        ret = false;
+        goto out;
+    }
+
+out:
+    free(metadata_path);
+    return ret;
+}
+
 static image_devmapper_device_info *load_metadata(const struct device_set *devset, const char *hash)
 {
     image_devmapper_device_info *info = NULL;

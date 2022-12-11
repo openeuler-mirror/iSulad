@@ -144,28 +144,11 @@ int devmapper_create_ro(const char *id, const char *parent, const struct graphdr
     return do_create(id, parent, driver, create_opts);
 }
 
-// Remove removes a device with a given id, unmounts the filesystem.
-int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
+static int devmapper_try_rm_layer_mnt(const char *id, const struct graphdriver *driver)
 {
+    int ret = 0;
     char *mnt_parent_dir = NULL;
     char *mnt_point_dir = NULL;
-    int ret = 0;
-
-    if (!util_valid_str(id) || driver == NULL) {
-        ERROR("invalid argument");
-        return -1;
-    }
-
-    if (!has_device(id, driver->devset)) {
-        DEBUG("Device with id:%s is not exist", id);
-        goto out;
-    }
-
-    if (delete_device(id, false, driver->devset) != 0) {
-        ERROR("failed to remove device %s", id);
-        ret = -1;
-        goto out;
-    }
 
     mnt_parent_dir = util_path_join(driver->home, "mnt");
     if (mnt_parent_dir == NULL) {
@@ -191,6 +174,40 @@ out:
     free(mnt_parent_dir);
     free(mnt_point_dir);
     return ret;
+}
+
+// Remove removes a device with a given id, unmounts the filesystem.
+int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
+{
+    if (!util_valid_str(id) || driver == NULL) {
+        ERROR("invalid argument");
+        return -1;
+    }
+
+    if (!has_device(id, driver->devset)) {
+        DEBUG("Device with id:%s is not exist", id);
+        if (!has_metadata(id, driver->devset)) {
+            // this means metadata is lost
+            // if we can rm mnt, then the layer is removed
+            EVENT("try clean lost metadata and its mnt: %s", id);
+            return devmapper_try_rm_layer_mnt(id, driver);
+        }
+        // if has_metadata and not rm successfully, return -1
+        // so next start up of isulad will retry delete the layer.
+        return -1;
+    }
+
+    if (delete_device(id, false, driver->devset) != 0) {
+        ERROR("failed to remove device %s", id);
+        return -1;
+    }
+
+    if (devmapper_try_rm_layer_mnt(id, driver) != 0) {
+        ERROR("failed to remove mnt dir of Device: %s", id);
+        return -1;
+    }
+
+    return 0;
 }
 
 // devmapper_mount_layer mounts a device with given id into the root filesystem
