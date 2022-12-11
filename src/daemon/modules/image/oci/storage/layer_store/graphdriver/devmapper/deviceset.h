@@ -83,6 +83,8 @@ int delete_device(const char *hash, bool sync_delete, struct device_set *devset)
 
 int export_device_metadata(struct device_metadata *dev_metadata, const char *hash, struct device_set *devset);
 
+bool has_metadata(const char *hash, struct device_set *devset);
+
 struct status *device_set_status(struct device_set *devset);
 
 void free_devmapper_status(struct status *st);
