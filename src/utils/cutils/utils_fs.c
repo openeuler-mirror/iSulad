@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/statvfs.h>
 #include <linux/magic.h>
 #include <sys/statfs.h>
 #include <dirent.h>
@@ -619,4 +620,30 @@ child_out:
 
 cleanup:
     return ret;
+}
+
+bool util_check_readonly_fs(const char *path)
+{
+    int i;
+    const int max_retry = 10;
+    struct statfs fsbuf;
+
+    for (i = 0; i < max_retry; i++) {
+        if (statfs(path, &fsbuf) == 0) {
+            break;
+        }
+        if (errno == EINTR) {
+            continue;
+        }
+
+        ERROR("Stat fs failed: %s", strerror(errno));
+        return false;
+    }
+
+    if (i >= max_retry) {
+        ERROR("Too much interrupted");
+        return false;
+    }
+
+    return (fsbuf.f_flags & ST_RDONLY) != 0;
 }
