@@ -645,6 +645,8 @@ int oci_split_search_name(const char *search_name, char **host, char **name)
     *host = util_strdup_s(split_arr[0]);
     *name = util_strdup_s(split_arr[1]);
 
+    free(split_arr);
+
     return 0;
 }
 #endif
