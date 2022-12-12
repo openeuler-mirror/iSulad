@@ -2214,6 +2214,7 @@ static bool check_im_search_args(const im_search_request *req, im_search_respons
 
 static bool search_image_match_filter(image_search_image *image, struct filters_args *filters)
 {
+    bool ret = true;
     char **star = NULL;
     const char *true_flag = "true";
     const char *false_flag = "false";
@@ -2232,10 +2233,11 @@ static bool search_image_match_filter(image_search_image *image, struct filters_
 
     star = filters_args_get(filters, "stars");
     if (star != NULL && (util_safe_uint(*star, &star_num) != 0 || image->star_count < star_num)) {
-        return false;
+        ret = false;
     }
 
-    return true;
+    util_free_array(star);
+    return ret;
 }
 
 static int append_result_to_response(struct filters_args *filters, imagetool_search_result *result,
