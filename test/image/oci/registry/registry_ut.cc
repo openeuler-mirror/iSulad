@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -33,6 +33,7 @@
 #include "path.h"
 #include "isula_libutils/imagetool_images_list.h"
 #include "isula_libutils/imagetool_image.h"
+#include "isula_libutils/imagetool_search_result.h"
 #include "isula_libutils/log.h"
 #include "http_request.h"
 #include "registry.h"
@@ -347,6 +348,57 @@ int invokeHttpRequestLogin(const char *url, struct http_get_options *options, lo
 
     return 0;
 }
+
+int invokeHttpRequestSearch(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
+{
+#define RETRY_TIMES 3
+#define SEARCH_TEST_NOT_FOUND 2
+#define SEARCH_TEST_SERVER_ERROR 5
+#define SEARCH_TEST_RETRY_SUCCESS 8
+    std::string file;
+    char *data = nullptr;
+    Buffer *output_buffer = (Buffer *)options->output;
+    static int search_count = 0;
+
+    ERROR("url is %s", url);
+    ERROR("search_count is %d", search_count);
+
+    std::string data_path = get_dir() + "/data/oci/";
+    if (!strcmp(url, "https://index.docker.io/v1/_ping")) {
+        file = data_path + "ping_v1_head";
+    } else if (util_has_prefix(url, "https://index.docker.io/v1/search?q=busybox")) {
+        search_count++;
+        // test not find
+        if (search_count >= SEARCH_TEST_NOT_FOUND && search_count < SEARCH_TEST_NOT_FOUND + RETRY_TIMES) {
+            file = data_path + "search_result_404";
+        } 
+        // test server error and restry
+        else if ((search_count >= SEARCH_TEST_SERVER_ERROR && search_count < SEARCH_TEST_SERVER_ERROR + RETRY_TIMES) || 
+                  (search_count == SEARCH_TEST_RETRY_SUCCESS)) {
+            file = data_path + "search_server_error";
+        } else {
+            file = data_path + "search_result";
+        }
+    }else {
+        ERROR("%s not match failed", url);
+        return -1;
+    }
+
+    data = util_read_text_file(file.c_str());
+    if (data == nullptr) {
+        ERROR("read file %s failed", file.c_str());
+        return -1;
+    }
+
+    if (options->outputtype == HTTP_REQUEST_STRBUF) {
+        free(output_buffer->contents);
+        output_buffer->contents = util_strdup_s(data);
+    }
+    free(data);
+
+    return 0;
+}
+
 
 int invokeStorageImgCreate(const char *id, const char *parent_id, const char *metadata,
                            struct storage_img_create_options *opts)
@@ -760,4 +812,45 @@ TEST_F(RegistryUnitTest, test_cleanup)
     ASSERT_EQ(util_path_remove(auths_key.c_str()), 0);
     ASSERT_EQ(util_path_remove(auths_file.c_str()), 0);
     ASSERT_EQ(remove_certs(mirror_dir), 0);
+}
+
+TEST_F(RegistryUnitTest, test_search_image)
+{
+    registry_search_options *options = nullptr;
+    imagetool_search_result *result = nullptr;
+
+    options = (registry_search_options *)util_common_calloc_s(sizeof(registry_search_options));
+    ASSERT_NE(options, nullptr);
+
+    options->search_name = util_strdup_s("index.docker.io/busybox");
+    options->limit = 1;
+    options->insecure_registry = false;
+    options->skip_tls_verify = true;
+
+    EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly(Invoke(invokeHttpRequestSearch));
+
+    ASSERT_EQ(registry_search(options, &result), 0);
+    ASSERT_NE(result, nullptr);
+    ASSERT_STREQ(result->query ,"busybox");
+    ASSERT_EQ(result->results_len, 1);
+    ASSERT_NE(result->results, nullptr);
+    ASSERT_STREQ(result->results[0]->description, "Busybox base image.");
+    ASSERT_STREQ(result->results[0]->name, "busybox");
+    ASSERT_EQ(result->results[0]->pull_count, 7072573546);
+    ASSERT_EQ(result->results[0]->star_count, 2781);
+    ASSERT_EQ(result->results[0]->is_trusted, false);
+    ASSERT_EQ(result->results[0]->is_automated, false);
+    ASSERT_EQ(result->results[0]->is_official, true);
+
+    free_imagetool_search_result(result);
+
+    // test not found
+    ASSERT_EQ(registry_search(options, &result), -1);
+    // test server error
+    ASSERT_EQ(registry_search(options, &result), -1);
+    // test retry success
+    ASSERT_EQ(registry_search(options, &result), 0);
+
+    free_registry_search_options(options);
 }

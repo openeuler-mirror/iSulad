@@ -1,0 +1,26 @@
+HTTP/1.1 200 OK
+content-type: application/json
+x-trace-id: 8bc4273df5838a3e79534502f6257448
+date: Wed, 19 Oct 2022 04:40:22 GMT
+content-length: 247
+strict-transport-security: max-age=31536000
+
+{
+  "num_pages":7388,
+  "num_results":7388,
+  "page_size":1,
+  "page":1,
+  "query":"busybox",
+  "results":
+  [
+    {
+      "name":"busybox",
+      "description":"Busybox base image.",
+      "pull_count":7072573546,
+      "star_count":2781,
+      "is_trusted":false,
+      "is_automated":false,
+      "is_official":true
+    }
+  ]
+}

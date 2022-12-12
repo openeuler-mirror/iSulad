@@ -430,3 +430,14 @@ TEST(utils_verify, test_util_valid_volume_name)
     ASSERT_EQ(util_valid_volume_name(""), false);
     ASSERT_EQ(util_valid_volume_name("a"), false);
 }
+
+#ifdef ENABLE_IMAGE_SEARCH
+TEST(utils_verify, test_util_valid_search_name)
+{
+    ASSERT_EQ(util_valid_search_name("ubuntu"), true);
+    ASSERT_EQ(util_valid_search_name("https://test.com/ubuntu"), false);
+
+    ASSERT_EQ(util_valid_search_name(nullptr), false);
+    ASSERT_EQ(util_valid_search_name(""), false);
+}
+#endif
