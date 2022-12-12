@@ -80,6 +80,7 @@ static int search_image_with_config_host(struct oci_image_module_data *oci_image
             continue;
         }
 
+        free(options->search_name);
         options->search_name = util_strdup_s(temp_search_name);
 
         update_search_option_insecure_registry(options, insecure_registries, host);
