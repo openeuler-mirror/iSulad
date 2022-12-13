@@ -272,15 +272,15 @@ TEST(utils_utils, test_do_retry_call)
     int nret;
 
     global_total = 0;
-    DO_RETYR_CALL(10, 100, nret, retry_call_test, 0);
+    DO_RETRY_CALL(10, 100, nret, retry_call_test, 0);
     ASSERT_EQ(nret, 0);
     ASSERT_EQ(global_total, 0);
     global_total = 0;
-    DO_RETYR_CALL(10, 100, nret, retry_call_test, 5);
+    DO_RETRY_CALL(10, 100, nret, retry_call_test, 5);
     ASSERT_EQ(nret, 0);
     ASSERT_EQ(global_total, 5);
     global_total = 0;
-    DO_RETYR_CALL(10, 100, nret, retry_call_test, 11);
+    DO_RETRY_CALL(10, 100, nret, retry_call_test, 11);
     ASSERT_EQ(global_total, 10);
     ASSERT_EQ(nret, -1);
 }
