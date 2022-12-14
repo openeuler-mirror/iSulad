@@ -85,7 +85,7 @@ bool util_file_exists(const char *f)
     struct stat buf;
     int nret;
 
-    if (f == NULL) {
+    if (f == NULL || strlen(f) == 0) {
         return false;
     }
 

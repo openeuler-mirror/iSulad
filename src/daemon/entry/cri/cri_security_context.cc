@@ -162,7 +162,8 @@ static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::Namespace
         free(hostConfig->uts_mode);
         hostConfig->uts_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
     }
-    // Note: default networkMode is file
+
+    // Set networkMode to file or "" in SetHostConfigDefaultValue
 }
 
 static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts,

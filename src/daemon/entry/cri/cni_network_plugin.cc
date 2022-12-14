@@ -479,6 +479,27 @@ cleanup:
     return result;
 }
 
+auto CniNetworkPlugin::GetNetNSPath(const std::string &id, const std::map<std::string, std::string> &annotations,
+                                    Errors &err) -> std::string
+{
+    std::string netnsPath;
+
+    if (CRIHelpers::SetupNetworkFront(annotations)) {
+        auto iter = annotations.find(CRIHelpers::Constants::POD_SANDBOX_KEY);
+        if (iter == annotations.end()) {
+            ERROR("Failed to find sandbox key from annotations");
+            return netnsPath;
+        }
+        return iter->second;
+    }
+
+    netnsPath = GetNetNS(id, err);
+    if (err.NotEmpty()) {
+        ERROR("CNI failed to retrieve network namespace path: %s", err.GetCMessage());
+    }
+
+    return netnsPath;
+}
 
 void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
                                 const std::string &id, const std::map<std::string, std::string> &annotations,
@@ -489,12 +510,7 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         return;
     }
 
-    auto iter = annotations.find(CRIHelpers::Constants::POD_SANDBOX_KEY);
-    if (iter == annotations.end()) {
-        ERROR("Failed to find sandbox key from annotations");
-        return;
-    }
-    const std::string netnsPath = iter->second;
+    std::string netnsPath = GetNetNSPath(id, annotations, err);
     if (netnsPath.length() == 0) {
         ERROR("Failed to get network namespace path");
         return;
@@ -600,21 +616,14 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
     }
     Errors tmpErr;
 
-    auto iter = annotations.find(CRIHelpers::Constants::POD_SANDBOX_KEY);
-    if (iter == annotations.end()) {
-        ERROR("Failed to find sandbox key from annotations");
-        return;
-    }
-    std::string netnsPath = iter->second;
-    if (netnsPath.length() == 0) {
-        ERROR("Failed to get network namespace path");
-        return;
-    }
+    std::string netnsPath = GetNetNSPath(id, annotations, err);
 
     // When netns file does not exist, netnsPath is assigned to an
     // empty string so that lxc can handle the path properly
-    if (!util_file_exists(netnsPath.c_str())) {
+    if (!util_file_exists(netnsPath.c_str()) || err.NotEmpty()) {
+        ERROR("Failed to get network namespace path, maybe podsandbox '%s' has been stopped", id.c_str());
         netnsPath = "";
+        err.Clear();
     }
 
     RLockNetworkMap(err);

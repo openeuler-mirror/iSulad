@@ -49,6 +49,8 @@ const std::string Constants::DOCKER_IMAGEID_PREFIX { "docker://" };
 const std::string Constants::DOCKER_PULLABLE_IMAGEID_PREFIX { "docker-pullable://" };
 const std::string Constants::RUNTIME_READY { "RuntimeReady" };
 const std::string Constants::NETWORK_READY { "NetworkReady" };
+// Kata 2.x need create network namespace and setup network befoce run podsandbox
+const std::string Constants::NETWORK_SETUP_ANNOTATION_KEY { "cri.sandbox.network.setup.v2" };
 const std::string Constants::POD_CHECKPOINT_KEY { "cri.sandbox.isulad.checkpoint" };
 const std::string Constants::CONTAINER_TYPE_ANNOTATION_KEY { "io.kubernetes.cri.container-type" };
 const std::string Constants::CONTAINER_NAME_ANNOTATION_KEY { "io.kubernetes.cri.container-name" };
@@ -1007,6 +1009,16 @@ char *cri_runtime_convert(const char *runtime)
 out:
     (void)isulad_server_conf_unlock();
     return runtime_val;
+}
+
+bool SetupNetworkFront(const std::map<std::string, std::string> &annotations)
+{
+    auto iter = annotations.find(CRIHelpers::Constants::NETWORK_SETUP_ANNOTATION_KEY);
+    if (iter == annotations.end()) {
+        return false;
+    }
+
+    return iter->second == std::string("true");
 }
 
 } // namespace CRIHelpers
