@@ -485,7 +485,7 @@ static int pm_register_plugin(const char *name, const char *addr)
         goto failed;
     }
 
-    DO_RETYR_CALL(PLUGIN_ACTIVATE_MAX_RETRY, 1000000, err, pm_activate_plugin, plugin);
+    DO_RETRY_CALL(PLUGIN_ACTIVATE_MAX_RETRY, 1000000, err, pm_activate_plugin, plugin);
     if (err != 0) {
         ERROR("active plugin failed");
         goto failed;

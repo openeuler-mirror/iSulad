@@ -39,6 +39,7 @@
 #include "terminal.h"
 #include "utils_array.h"
 #include "utils_string.h"
+#include "utils.h"
 
 #define MAX_EVENTS 100
 #define DEFAULT_IO_COPY_BUF (16 * 1024)
@@ -1211,10 +1212,20 @@ out:
     return ret;
 }
 
+static int try_wait_all_child() {
+    if (waitpid(-1, NULL, WNOHANG) == -1 && errno == ECHILD) {
+        // all child handled
+        return 0;
+    }
+
+    return 1;
+}
+
 int process_signal_handle_routine(process_t *p)
 {
     int ret = SHIM_ERR;
     bool exit_shim = false;
+    int nret = 0;
     int i;
 
     for (;;) {
@@ -1240,6 +1251,13 @@ int process_signal_handle_routine(process_t *p)
         }
         if (exit_shim) {
             process_kill_all(p);
+            
+            // wait atmost 120 seconds
+            DO_RETRY_CALL(120, 1000000, nret, try_wait_all_child, 0);
+            if (nret != 0) {
+                write_message(g_log_fd, ERR_MSG, "Failed to wait all child after 120 seconds");
+            }
+
             process_delete(p);
             if (p->exit_fd > 0) {
                 (void)write_nointr(p->exit_fd, &status, sizeof(int));

@@ -399,7 +399,7 @@ defs_map_string_object * dup_map_string_empty_object(defs_map_string_object *src
  *  0 is cb successful at least once;
  *  1 is all cb are failure;
 */
-#define DO_RETYR_CALL(retry_cnt, interval_us, ret, cb, ...) do {    \
+#define DO_RETRY_CALL(retry_cnt, interval_us, ret, cb, ...) do {    \
         size_t i = 0;                                               \
         for(; i < retry_cnt; i++) {                                 \
             ret = cb(__VA_ARGS__);                                  \
