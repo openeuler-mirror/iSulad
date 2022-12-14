@@ -968,13 +968,13 @@ int rt_isula_clean_resource(const char *id, const char *runtime, const rt_clean_
     }
 
     // retry 10 count call runtime kill, every call sleep 1s
-    DO_RETYR_CALL(10, 1000000, nret, runtime_call_kill_force, workdir, runtime, id);
+    DO_RETRY_CALL(10, 1000000, nret, runtime_call_kill_force, workdir, runtime, id);
     if (nret != 0) {
         WARN("call runtime force kill failed");
     }
 
     // retry 10 count call runtime delete, every call sleep 1s
-    DO_RETYR_CALL(10, 1000000, nret, runtime_call_delete_force, workdir, runtime, id);
+    DO_RETRY_CALL(10, 1000000, nret, runtime_call_delete_force, workdir, runtime, id);
     if (nret != 0) {
         WARN("call runtime force delete failed");
     }
