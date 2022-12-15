@@ -54,6 +54,9 @@
 #define RESIZE_DATA_SIZE 100
 #define PID_WAIT_TIME 120
 
+// handle string from stderr output.
+typedef int(*handle_output_callback_t)(const char *output);
+
 static void copy_process(shim_client_process_state *p, defs_process *dp)
 {
     p->args = dp->args;
@@ -584,7 +587,7 @@ out:
 }
 
 static int runtime_call_simple(const char *workdir, const char *runtime, const char *subcmd, const char **opts,
-                               size_t opts_len, const char *id)
+                               size_t opts_len, const char *id, handle_output_callback_t cb)
 {
     runtime_exec_info rei = { 0 };
     char *stdout = NULL;
@@ -596,24 +599,65 @@ static int runtime_call_simple(const char *workdir, const char *runtime, const c
     if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout, &stderr)) {
         ERROR("call runtime %s failed stderr %s", subcmd, stderr);
         ret = -1;
-        goto out;
+        // additional handler for the stderr, 
+        // this intend to change the ret val of this function
+        // for example, if output string contains some specific content, 
+        // we consider the runtime call simple succeeded, 
+        // even if the process exit with failure.
+        if (stderr != NULL && cb != NULL) {
+            ret = cb(stderr);
+        }
     }
 
-out:
     UTIL_FREE_AND_SET_NULL(stdout);
     UTIL_FREE_AND_SET_NULL(stderr);
     return ret;
 }
 
-static int runtime_call_kill_force(const char *workdir, const char *runtime, const char *id)
+// oci runtime return -1 if the container 'does not exist'
+// if output contains 'does not exist', means nothing to kill, return 0
+// this will change the exit status of kill command
+static int kill_output_check(const char *output)
 {
-    return runtime_call_simple(workdir, runtime, "kill", NULL, 0, id);
+    char *pattern = "does not exist";
+
+    if (output == NULL) {
+        return -1;
+    }
+
+    // container not exist, kill success, return 0
+    if (util_strings_contains_word(output, pattern)) {
+        return 0;
+    }
+
+    // kill failed, return -1
+    return -1;
+}
+
+// kill success or kill_output_check succeed return 0, DO_RETRY_CALL will break;
+// if kill failed, recheck on shim alive, if not alive, kill succeed,  still return 0;
+// else, return -1, DO_RETRY_CALL will call this again; 
+static int runtime_call_kill_and_check(const char *workdir, const char *runtime, const char *id)
+{
+    int ret = -1;
+
+    // kill succeed, return 0; kill_output_check succeed, return 0;
+    ret = runtime_call_simple(workdir, runtime, "kill", NULL, 0, id, kill_output_check);
+    if (ret == 0) {
+        return 0;
+    }
+
+    if (!shim_alive(workdir)) {
+        ret = 0;
+    }
+
+    return ret;
 }
 
 static int runtime_call_delete_force(const char *workdir, const char *runtime, const char *id)
 {
     const char *opts[1] = { "--force" };
-    return runtime_call_simple(workdir, runtime, "delete", opts, 1, id);
+    return runtime_call_simple(workdir, runtime, "delete", opts, 1, id, NULL);
 }
 
 #define ExitSignalOffset 128
@@ -919,7 +963,7 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
     pid_info->ppid = shim_pid;
     pid_info->pstart_time = p_proc->start_time;
 
-    if (runtime_call_simple(workdir, runtime, "start", NULL, 0, id) != 0) {
+    if (runtime_call_simple(workdir, runtime, "start", NULL, 0, id, NULL) != 0) {
         ERROR("call runtime start id failed");
         ret = -1;
         goto out;
@@ -967,14 +1011,14 @@ int rt_isula_clean_resource(const char *id, const char *runtime, const rt_clean_
         shim_kill_force(workdir);
     }
 
-    // retry 10 count call runtime kill, every call sleep 1s
-    DO_RETRY_CALL(10, 1000000, nret, runtime_call_kill_force, workdir, runtime, id);
+    // retry 10 count call runtime kill, every call sleep 0.5s
+    DO_RETRY_CALL(10, 500000, nret, runtime_call_kill_and_check, workdir, runtime, id);
     if (nret != 0) {
         WARN("call runtime force kill failed");
     }
 
-    // retry 10 count call runtime delete, every call sleep 1s
-    DO_RETRY_CALL(10, 1000000, nret, runtime_call_delete_force, workdir, runtime, id);
+    // retry 10 count call runtime delete, every call sleep 0.1s
+    DO_RETRY_CALL(10, 100000, nret, runtime_call_delete_force, workdir, runtime, id);
     if (nret != 0) {
         WARN("call runtime force delete failed");
     }
@@ -1204,7 +1248,7 @@ int rt_isula_pause(const char *id, const char *runtime, const rt_pause_params_t 
         return -1;
     }
 
-    return runtime_call_simple(workdir, runtime, "pause", NULL, 0, id);
+    return runtime_call_simple(workdir, runtime, "pause", NULL, 0, id, NULL);
 }
 
 int rt_isula_resume(const char *id, const char *runtime, const rt_resume_params_t *params)
@@ -1221,7 +1265,7 @@ int rt_isula_resume(const char *id, const char *runtime, const rt_resume_params_
         return -1;
     }
 
-    return runtime_call_simple(workdir, runtime, "resume", NULL, 0, id);
+    return runtime_call_simple(workdir, runtime, "resume", NULL, 0, id, NULL);
 }
 
 int rt_isula_listpids(const char *name, const char *runtime, const rt_listpids_params_t *params, rt_listpids_out_t *out)
