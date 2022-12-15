@@ -26,7 +26,7 @@ std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadat
 std::string MakeContainerName(const runtime::v1alpha2::PodSandboxConfig &s,
                               const runtime::v1alpha2::ContainerConfig &c);
 
-void ParseSandboxName(const google::protobuf::Map<std::string, std::string> &annotations,
+void ParseSandboxName(const std::string &name, const google::protobuf::Map<std::string, std::string> &annotations,
                       runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &err);
 
 void ParseContainerName(const google::protobuf::Map<std::string, std::string> &annotations,

@@ -1188,7 +1188,11 @@ void PodSandboxManagerServiceImpl::PodSandboxStatusToGRPC(
 
     CRIHelpers::ExtractLabels(inspect->config->labels, *podStatus->mutable_labels());
     CRIHelpers::ExtractAnnotations(inspect->config->annotations, *podStatus->mutable_annotations());
-    CRINaming::ParseSandboxName(podStatus->annotations(), *podStatus->mutable_metadata(), error);
+    std::string name;
+    if (inspect->name != nullptr) {
+        name = std::string(inspect->name);
+    }
+    CRINaming::ParseSandboxName(name, podStatus->annotations(), *podStatus->mutable_metadata(), error);
     if (error.NotEmpty()) {
         return;
     }
@@ -1301,7 +1305,11 @@ void PodSandboxManagerServiceImpl::ListPodSandboxToGRPC(
 
         CRIHelpers::ExtractAnnotations(response->containers[i]->annotations, *pod->mutable_annotations());
 
-        CRINaming::ParseSandboxName(pod->annotations(), *pod->mutable_metadata(), error);
+        std::string name;
+        if (response->containers[i]->name != nullptr) {
+            name = std::string(response->containers[i]->name);
+        }
+        CRINaming::ParseSandboxName(name, pod->annotations(), *pod->mutable_metadata(), error);
 
         if (filterOutReadySandboxes && pod->state() == runtime::v1alpha2::SANDBOX_READY) {
             continue;
