@@ -118,6 +118,8 @@ public:
 private:
     auto GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string;
 
+    auto GetNetNSPath(const std::string &id, const std::map<std::string, std::string> &annotations,
+                      Errors &err) -> std::string;
 
 private:
     virtual void PlatformInit(Errors &error);
