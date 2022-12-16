@@ -1,5 +1,5 @@
 %global _version 2.0.17
-%global _release 11
+%global _release 12
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -67,6 +67,18 @@ Patch0051: 0051-remove-chmod-751-permission-for-dirs-by-engine-when-.patch
 Patch0052: 0052-add-console-ut.patch
 Patch0053: 0053-fix-additional-gids-for-exec-user.patch
 Patch0054: 0054-add-CI-for-additional-gid.patch
+Patch0055: 0055-retry-call-runtime-ops.patch
+Patch0056: 0056-add-ut-test-for-retry-macro.patch
+Patch0057: 0057-1749-set-inspect_container-timeout.patch
+Patch0058: 0058-1757-add-adaption-code-for-musl.patch
+Patch0059: 0059-deleting-broken-rootfs.patch
+Patch0060: 0060-1761-fix-leftover-devicemapper-mnt-dir.patch
+Patch0061: 0061-check-file-system-ro-before-merge-network-for-syscon.patch
+Patch0062: 0062-isulad-shim-wait-for-all-child-process.patch
+Patch0063: 0063-When-run-options-rm-is-set-delete-the-stoped-contain.patch
+Patch0064: 0064-recheck-kill-command-exit-status.patch
+Patch0065: 0065-start-sandbox-before-setup-network-by-default.patch
+Patch0066: 0066-compatibility-for-manage-pods-which-created-by-old-i.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -292,6 +304,12 @@ fi
 %endif
 
 %changelog
+* Fri Dec 16 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-12
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: update from upstream
+
 * Tue Dec 06 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-11
 - Type: bugfix
 - ID: NA
