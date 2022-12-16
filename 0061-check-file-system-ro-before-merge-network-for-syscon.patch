@@ -1,0 +1,113 @@
+From fa7428d0baf2c310c852b1ece41736b21ea441f9 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Fri, 9 Dec 2022 17:26:10 +0800
+Subject: [PATCH 61/65] check file system ro before merge network for
+ syscontainer
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ .../executor/container_cb/execution_network.c | 29 +++++++++++++++++++
+ src/utils/cutils/utils_fs.c                   | 27 +++++++++++++++++
+ src/utils/cutils/utils_fs.h                   |  1 +
+ 3 files changed, 57 insertions(+)
+
+diff --git a/src/daemon/executor/container_cb/execution_network.c b/src/daemon/executor/container_cb/execution_network.c
+index bbc35e80..b738d02f 100644
+--- a/src/daemon/executor/container_cb/execution_network.c
++++ b/src/daemon/executor/container_cb/execution_network.c
+@@ -761,9 +761,38 @@ out:
+     return ret;
+ }
+ 
++static int check_readonly_fs_for_etc(const char *rootfs, bool *ro)
++{
++    char *path = NULL;
++
++    if (util_realpath_in_scope(rootfs, "/etc", &path) < 0) {
++        SYSERROR("Failed to get real path '/etc' under rootfs '%s'", rootfs);
++        isulad_set_error_message("Failed to get real path '/etc' under rootfs '%s'", rootfs);
++        return -1;
++    }
++
++    *ro = util_check_readonly_fs(path);
++
++    free(path);
++    return 0;
++}
++
++// modify network file in rootfs
++// make sure network file saved if rootfs migrate to another host
+ static int merge_network_for_syscontainer(const host_config *host_spec, const char *rootfs, const char *hostname)
+ {
+     int ret = 0;
++    bool ro = false;
++
++    if (check_readonly_fs_for_etc(rootfs, &ro) != 0) {
++        ERROR("Failed to check network path");
++        return -1;
++    }
++
++    if (ro) {
++        WARN("Readonly filesystem for etc under %s. Skip merge network for syscontainer", rootfs);
++        return 0;
++    }
+ 
+     ret = write_hostname_to_file(rootfs, hostname);
+     if (ret) {
+diff --git a/src/utils/cutils/utils_fs.c b/src/utils/cutils/utils_fs.c
+index 218e2fe8..e7165f26 100644
+--- a/src/utils/cutils/utils_fs.c
++++ b/src/utils/cutils/utils_fs.c
+@@ -22,6 +22,7 @@
+ #include <stdlib.h>
+ #include <unistd.h>
+ #include <sys/types.h>
++#include <sys/statvfs.h>
+ #include <linux/magic.h>
+ #include <sys/statfs.h>
+ #include <dirent.h>
+@@ -620,3 +621,29 @@ child_out:
+ cleanup:
+     return ret;
+ }
++
++bool util_check_readonly_fs(const char *path)
++{
++    int i;
++    const int max_retry = 10;
++    struct statfs fsbuf;
++
++    for (i = 0; i < max_retry; i++) {
++        if (statfs(path, &fsbuf) == 0) {
++            break;
++        }
++        if (errno == EINTR) {
++            continue;
++        }
++
++        ERROR("Stat fs failed: %s", strerror(errno));
++        return false;
++    }
++
++    if (i >= max_retry) {
++        ERROR("Too much interrupted");
++        return false;
++    }
++
++    return (fsbuf.f_flags & ST_RDONLY) != 0;
++}
+diff --git a/src/utils/cutils/utils_fs.h b/src/utils/cutils/utils_fs.h
+index 6ab6b78e..6ad64a1a 100644
+--- a/src/utils/cutils/utils_fs.h
++++ b/src/utils/cutils/utils_fs.h
+@@ -38,6 +38,7 @@ int util_ensure_mounted_as(const char *dst, const char *mntopts);
+ int util_mount_from(const char *base, const char *src, const char *dst, const char *mtype, const char *mntopts);
+ typedef int (*mount_info_call_back_t)(const char *, const char *);
+ bool util_deal_with_mount_info(mount_info_call_back_t cb, const char *);
++bool util_check_readonly_fs(const char *path);
+ #ifdef __cplusplus
+ }
+ #endif
+-- 
+2.25.1
+
