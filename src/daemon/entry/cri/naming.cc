@@ -26,6 +26,33 @@
 #include "utils.h"
 
 namespace CRINaming {
+static int parseName(const std::string &name, std::vector<std::string> &items, unsigned int &attempt, Errors &err)
+{
+    std::istringstream f(name);
+    std::string part;
+
+    while (getline(f, part, CRI::Constants::nameDelimiterChar)) {
+        items.push_back(part);
+    }
+
+    if (items.size() != 6) {
+        err.Errorf("failed to parse the sandbox name: %s", name.c_str());
+        return -1;
+    }
+
+    if (items[0] != CRI::Constants::kubePrefix) {
+        err.Errorf("container is not managed by kubernetes: %s", name.c_str());
+        return -1;
+    }
+
+    if (util_safe_uint(items[5].c_str(), &attempt)) {
+        err.Errorf("failed to parse the sandbox name %s: %s", name.c_str(), strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
 std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadata)
 {
     std::string sname;
@@ -44,9 +71,12 @@ std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadat
     return sname;
 }
 
-void ParseSandboxName(const google::protobuf::Map<std::string, std::string> &annotations,
+void ParseSandboxName(const std::string &name, const google::protobuf::Map<std::string, std::string> &annotations,
                       runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &err)
 {
+    // need check uid and attemp 2 items
+    int needSetUidOrAttemp = 2;
+
     if (annotations.count(CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY) == 0) {
         err.Errorf("annotation don't contains the sandbox name, failed to parse it");
         return;
@@ -57,21 +87,35 @@ void ParseSandboxName(const google::protobuf::Map<std::string, std::string> &ann
         return;
     }
 
-    if (annotations.count(CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY) == 0) {
-        err.Errorf("annotation don't contains the sandbox uid, failed to parse it");
-        return;
-    }
-
-    if (annotations.count(CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY) == 0) {
-        err.Errorf("annotation don't contains the sandbox attempt, failed to parse it");
-        return;
-    }
-
     metadata.set_name(annotations.at(CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY));
     metadata.set_namespace_(annotations.at(CRIHelpers::Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY));
-    metadata.set_uid(annotations.at(CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY));
-    auto sandboxAttempt = annotations.at(CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY);
-    metadata.set_attempt(static_cast<google::protobuf::uint32>(std::stoul(sandboxAttempt)));
+
+    if (annotations.count(CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY) != 0) {
+        metadata.set_uid(annotations.at(CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY));
+        needSetUidOrAttemp--;
+    }
+
+    if (annotations.count(CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY) != 0) {
+        auto sandboxAttempt = annotations.at(CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY);
+        metadata.set_attempt(static_cast<google::protobuf::uint32>(std::stoul(sandboxAttempt)));
+        needSetUidOrAttemp--;
+    }
+
+    if (needSetUidOrAttemp == 0) {
+        return;
+    }
+
+    // get uid and attempt from name,
+    // compatibility to new iSulad manage pods created by old version iSulad
+    // maybe should remove in next version of iSulad
+    std::vector<std::string> items;
+    unsigned int attempt;
+
+    if (parseName(name, items, attempt, err) != 0) {
+        return;
+    }
+    metadata.set_uid(items[4]);
+    metadata.set_attempt(static_cast<google::protobuf::uint32>(attempt));
 }
 
 std::string MakeContainerName(const runtime::v1alpha2::PodSandboxConfig &s, const runtime::v1alpha2::ContainerConfig &c)
