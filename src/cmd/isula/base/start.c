@@ -23,6 +23,7 @@
 
 #include "error.h"
 #include "isula_libutils/log.h"
+#include "isula_libutils/container_inspect.h"
 #include "isula_connect.h"
 #include "console.h"
 #include "utils.h"
@@ -30,6 +31,7 @@
 #include "command_parser.h"
 #include "connect.h"
 #include "wait.h"
+#include "client_helpers.h"
 
 #define START_OPTIONS(cmdargs)\
     {                                             \
@@ -169,7 +171,7 @@ int client_start(const struct client_arguments *args, bool *reset_tty, struct te
 
     ret = start_cmd_init(args);
     if (ret != 0) {
-        return ret;
+        return -1;
     }
 
     if (oldtios != NULL && console_fifos != NULL && reset_tty != NULL) {
@@ -274,6 +276,39 @@ out:
     return ret;
 }
 
+static int update_container_id()
+{
+    int ret = 0;
+    container_inspect *inspect_data = NULL;
+    int start_timeout = g_cmd_start_args.time;
+
+    g_cmd_start_args.time = 120;
+
+    if (inspect_container(&g_cmd_start_args, &inspect_data)) {
+        ERROR("Inspect data error");
+        ret = -1;
+        goto out;
+    }
+
+    if (inspect_data == NULL) {
+        ERROR("Inspect data is null");
+        ret = -1;
+        goto out;
+    }
+
+    if (inspect_data->id == NULL) {
+        ERROR("Fail to get container id");
+        ret = -1;
+        goto out;
+    }
+    g_cmd_start_args.name = util_strdup_s(inspect_data->id);
+
+out:
+    g_cmd_start_args.time = start_timeout;
+    free_container_inspect(inspect_data);
+    return ret;
+}
+
 static int local_attach_start()
 {
     int ret = 0;
@@ -281,6 +316,13 @@ static int local_attach_start()
     bool reset_tty = false;
     struct termios oldtios;
     struct command_fifo_config *console_fifos = NULL;
+
+    // Seting the FIFO dir as complete ID of the container to ensure that the FIFO directory is deleted correctly.
+    ret = update_container_id();
+    if (ret != 0) {
+        COMMAND_ERROR("Update container %s failed, please check container name.", g_cmd_start_args.name);
+        goto free_out;
+    }
 
     ret = client_start(&g_cmd_start_args, &reset_tty, &oldtios, &console_fifos);
     if (ret != 0) {
@@ -295,6 +337,10 @@ static int local_attach_start()
 
     client_wait_fifo_exit(&g_cmd_start_args);
 free_out:
+    // delete the created fifo dir when container start failed.
+    if (ret != 0 && delete_client_fifo_home_dir(g_cmd_start_args.name) != 0) {
+        WARN("Failed to delete client fifo home dir");
+    }
     client_restore_console(reset_tty, &oldtios, console_fifos);
     return ret;
 }

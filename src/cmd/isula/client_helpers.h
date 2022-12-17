@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -8,27 +8,25 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: lifeng
- * Create: 2017-11-22
- * Description: provide container attach definition
+ * Author: zhongtao
+ * Create: 2022-12-17
+ * Description: provide client helpers function definition
  ******************************************************************************/
-#ifndef CMD_ISULA_STREAM_ATTACH_H
-#define CMD_ISULA_STREAM_ATTACH_H
+#ifndef CMD_ISULA_CLIENT_HELPERS_H
+#define CMD_ISULA_CLIENT_HELPERS_H
 
+#include "isula_libutils/container_inspect.h"
 #include "client_arguments.h"
 
-#ifdef __cplusplus
+#if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
 #endif
 
-extern const char g_cmd_attach_desc[];
-extern const char g_cmd_attach_usage[];
-extern struct client_arguments g_cmd_attach_args;
+int inspect_container(const struct client_arguments *args, container_inspect **inspect_data);
 
-int cmd_attach_main(int argc, const char **argv);
-
-#ifdef __cplusplus
+#if defined(__cplusplus) || defined(c_plusplus)
 }
 #endif
 
-#endif // CMD_ISULA_STREAM_ATTACH_H
+#endif // CMD_ISULA_CLIENT_HELPERS_H
+

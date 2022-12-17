@@ -375,6 +375,9 @@ void isula_stop_response_free(struct isula_stop_response *response)
         return;
     }
 
+    free(response->id);
+    response->id = NULL;
+
     free(response->errmsg);
     response->errmsg = NULL;
 
