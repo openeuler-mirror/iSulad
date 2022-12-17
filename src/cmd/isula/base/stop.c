@@ -22,6 +22,7 @@
 #include "utils.h"
 #include "isula_connect.h"
 #include "connect.h"
+#include "client_console.h"
 
 const char g_cmd_stop_desc[] = "Stop one or more containers";
 const char g_cmd_stop_usage[] = "stop [OPTIONS] CONTAINER [CONTAINER...]";
@@ -68,6 +69,9 @@ static int client_stop(const struct client_arguments *args)
     }
 
 out:
+    if (delete_client_fifo_home_dir(response->id) != 0) {
+        WARN("Failed to delete client fifo home dir");
+    }
     isula_stop_response_free(response);
     return ret;
 }

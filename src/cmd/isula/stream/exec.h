@@ -19,7 +19,7 @@
 #include <stddef.h>
 
 #include "client_arguments.h"
-#include "attach.h"
+#include "client_helpers.h"
 #include "command_parser.h"
 
 #ifdef __cplusplus

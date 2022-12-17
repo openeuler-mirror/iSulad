@@ -45,6 +45,8 @@ void delete_command_fifo(struct command_fifo_config *fifos);
 
 int start_client_console_resize_thread(struct client_arguments *args);
 
+int delete_client_fifo_home_dir(const char *name);
+
 #ifdef __cplusplus
 }
 #endif

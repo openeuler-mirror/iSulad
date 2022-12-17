@@ -317,3 +317,22 @@ int start_client_console_resize_thread(struct client_arguments *args)
 
     return 0;
 }
+
+int delete_client_fifo_home_dir(const char *name)
+{
+    char *client_fifo_home_dir = NULL;
+
+    client_fifo_home_dir = util_path_join(CLIENT_RUNDIR, name);
+    if (client_fifo_home_dir == NULL) {
+        ERROR("Fail to get fifo home dir");
+        return -1;
+    }
+
+    if (util_recursive_rmdir(client_fifo_home_dir, 0)) {
+        WARN("Failed to delete client fifo home path:%s", client_fifo_home_dir);
+    }
+    free(client_fifo_home_dir);
+    
+    return 0;
+}
+
