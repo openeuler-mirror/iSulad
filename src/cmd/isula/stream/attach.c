@@ -36,6 +36,7 @@
 #include "command_parser.h"
 #include "connect.h"
 #include "constants.h"
+#include "client_helpers.h"
 #ifndef GRPC_CONNECTOR
 #include "client_console.h"
 #endif
@@ -97,61 +98,6 @@ static int attach_prepare_console(bool tty, struct isula_attach_request *request
 }
 #endif
 
-int inspect_container(const struct client_arguments *args, container_inspect **inspect_data)
-{
-    int ret = 0;
-    struct isula_inspect_request inspect_request = { 0 };
-    struct isula_inspect_response *inspect_response = NULL;
-    client_connect_config_t config = { 0 };
-    isula_connect_ops *ops = NULL;
-    parser_error perr = NULL;
-
-    if (inspect_data == NULL) {
-        COMMAND_ERROR("Empty inspect data");
-        return -1;
-    }
-
-    inspect_response = util_common_calloc_s(sizeof(struct isula_inspect_response));
-    if (inspect_response == NULL) {
-        COMMAND_ERROR("Out of memory");
-        return -1;
-    }
-
-    inspect_request.name = args->name;
-    inspect_request.timeout = args->time;
-    ops = get_connect_client_ops();
-    if (ops == NULL || !ops->container.inspect) {
-        COMMAND_ERROR("Unimplemented ops");
-        ret = -1;
-        goto out;
-    }
-
-    config = get_connect_config(args);
-    ret = ops->container.inspect(&inspect_request, inspect_response, &config);
-    if (ret) {
-        client_print_error(inspect_response->cc, inspect_response->server_errono, inspect_response->errmsg);
-        goto out;
-    }
-
-    /* parse oci container json */
-    if (inspect_response == NULL || inspect_response->json == NULL) {
-        COMMAND_ERROR("Inspect data is empty");
-        ret = -1;
-        goto out;
-    }
-
-    *inspect_data = container_inspect_parse_data(inspect_response->json, NULL, &perr);
-    if (*inspect_data == NULL) {
-        COMMAND_ERROR("Can not parse inspect json: %s", perr);
-        ret = -1;
-        goto out;
-    }
-
-out:
-    isula_inspect_response_free(inspect_response);
-    free(perr);
-    return ret;
-}
 static int inspect_container_and_check_state(const struct client_arguments *args,
                                              container_inspect **container_inspect_data)
 {

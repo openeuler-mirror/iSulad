@@ -59,6 +59,10 @@ void ContainerStopService::FillResponseTogRPC(void *containerRes, StopResponse *
     const container_stop_response *response = static_cast<const container_stop_response *>(containerRes);
 
     ResponseToGrpc(response, gresponse);
+
+    if (response->id != nullptr) {
+        gresponse->set_id(response->id);
+    }
 }
 
 void ContainerStopService::CleanUp(void *containerReq, void *containerRes)

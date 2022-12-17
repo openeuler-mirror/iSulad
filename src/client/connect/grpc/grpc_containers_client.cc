@@ -550,6 +550,9 @@ public:
 
     auto response_from_grpc(StopResponse *gresponse, isula_stop_response *response) -> int override
     {
+        if (!gresponse->id().empty()) {
+            response->id = util_strdup_s(gresponse->id().c_str());
+        }
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
             response->errmsg = util_strdup_s(gresponse->errmsg().c_str());

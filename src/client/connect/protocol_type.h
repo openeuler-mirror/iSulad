@@ -90,6 +90,7 @@ struct isula_stop_request {
 };
 
 struct isula_stop_response {
+    char *id;
     uint32_t cc;
     uint32_t server_errono;
     char *errmsg;
