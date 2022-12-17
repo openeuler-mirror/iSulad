@@ -262,6 +262,23 @@ int ContainerServiceImpl::stop_request_from_grpc(const StopRequest *grequest, co
     return 0;
 }
 
+void ContainerServiceImpl::stop_response_to_grpc(const container_stop_response *response, StopResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
+        return;
+    }
+    
+    gresponse->set_cc(response->cc);
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+    
+    if (response->id != nullptr) {
+        gresponse->set_id(response->id);
+    }
+}
+
 int ContainerServiceImpl::restart_request_from_grpc(const RestartRequest *grequest, container_restart_request **request)
 {
     container_restart_request *tmpreq =

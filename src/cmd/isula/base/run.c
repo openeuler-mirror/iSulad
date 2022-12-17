@@ -42,29 +42,6 @@ struct client_arguments g_cmd_run_args = {
     .pull = "missing"
 };
 
-/*
- * --rm option will result in no time to delete the directory created by the client, resulting in residue. 
- * This function is used to delete the client's fifo file and home directory.
- */
-static void delete_client_fifo_and_home_dir(const char *rundir, const char *name,
-                                            struct command_fifo_config *console_fifos)
-{
-    char client_fifo_home_dir[PATH_MAX] = { 0 };
-    int nret = 0;
-
-    nret = snprintf(client_fifo_home_dir, sizeof(client_fifo_home_dir), "%s/%s/", rundir, name);
-    if (nret < 0 || (size_t)nret >= sizeof(client_fifo_home_dir)) {
-        ERROR("Client fifo home path:%s/%s/ is too long.", rundir, name);
-        return;
-    }
-
-    delete_command_fifo(console_fifos);
-
-    if (util_recursive_rmdir(client_fifo_home_dir, 0)) {
-        WARN("Failed to delete client fifo home path:%s", client_fifo_home_dir);
-    }
-}
-
 static int local_cmd_start(const struct client_arguments *args)
 {
     int ret = 0;
@@ -89,9 +66,10 @@ static int local_cmd_start(const struct client_arguments *args)
     client_wait_fifo_exit(args);
 
 free_out:
-    if (args->custom_conf.auto_remove && !args->detach) {
-        delete_client_fifo_and_home_dir(CLIENT_RUNDIR, args->name, console_fifos);
-        console_fifos = NULL;
+    // when container is auto-remove, it will be deleted when stopped. In this case, the fifo dir residual.
+    // when container is detach, no fifo directory will be created.
+    if (args->custom_conf.auto_remove && !args->detach && delete_client_fifo_home_dir(args->name) != 0) {
+        WARN("Failed to delete client fifo home dir");
     }
     client_restore_console(reset_tty, &oldtios, console_fifos);
     return ret;

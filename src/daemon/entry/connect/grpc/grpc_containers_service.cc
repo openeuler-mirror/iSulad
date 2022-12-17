@@ -465,7 +465,8 @@ Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *req
     }
 
     (void)cb->container.stop(container_req, &container_res);
-    response_to_grpc(container_res, reply);
+    
+    stop_response_to_grpc(container_res, reply);
 
     free_container_stop_request(container_req);
     free_container_stop_response(container_res);

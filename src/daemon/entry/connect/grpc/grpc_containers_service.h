@@ -140,6 +140,8 @@ private:
 
     int stop_request_from_grpc(const StopRequest *grequest, container_stop_request **request);
 
+    void stop_response_to_grpc(const container_stop_response *response, StopResponse *gresponse);
+
     int restart_request_from_grpc(const RestartRequest *grequest, container_restart_request **request);
 
     int kill_request_from_grpc(const KillRequest *grequest, container_kill_request **request);

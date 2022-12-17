@@ -22,7 +22,7 @@
 #include "isula_connect.h"
 #include "utils.h"
 #include "isula_libutils/container_inspect.h"
-#include "attach.h"
+#include "client_helpers.h"
 #include "command_parser.h"
 #include "connect.h"
 
