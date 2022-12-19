@@ -276,47 +276,38 @@ out:
     return ret;
 }
 
-static char *get_container_id(const char *name)
+static int update_container_id()
 {
+    int ret = 0;
     container_inspect *inspect_data = NULL;
-    char *id = NULL;
+    int start_timeout = g_cmd_start_args.time;
 
-    if (name == NULL) {
-        ERROR("Input name is null");
-        return NULL;
-    }
+    g_cmd_start_args.time = 120;
 
-    struct client_arguments args = {
-        .format = NULL,
-        .time = 120, // timeout time
-    };
-
-    if (client_arguments_init(&args)) {
-        ERROR("Client arguments init failed");
-        return NULL;
-    }
-    args.name = util_strdup_s(name);
-
-    if (inspect_container(&args, &inspect_data)) {
+    if (inspect_container(&g_cmd_start_args, &inspect_data)) {
         ERROR("Inspect data error");
+        ret = -1;
         goto out;
     }
 
     if (inspect_data == NULL) {
         ERROR("Inspect data is null");
+        ret = -1;
         goto out;
     }
 
     if (inspect_data->id == NULL) {
         ERROR("Fail to get container id");
+        ret = -1;
         goto out;
     }
-    id = util_strdup_s(inspect_data->id);
-out:
-    free_container_inspect(inspect_data);
-    return id;
-}
+    g_cmd_start_args.name = util_strdup_s(inspect_data->id);
 
+out:
+    g_cmd_start_args.time = start_timeout;
+    free_container_inspect(inspect_data);
+    return ret;
+}
 
 static int local_attach_start()
 {
@@ -325,17 +316,13 @@ static int local_attach_start()
     bool reset_tty = false;
     struct termios oldtios;
     struct command_fifo_config *console_fifos = NULL;
-    char *id = NULL;
 
     // Seting the FIFO dir as complete ID of the container to ensure that the FIFO directory is deleted correctly.
-    id = get_container_id(g_cmd_start_args.name);
-    if (id == NULL) {
-        COMMAND_ERROR("get container %s failed, please check container name.", g_cmd_start_args.name);
-        return -1;
+    ret = update_container_id();
+    if (ret != 0) {
+        COMMAND_ERROR("Update container %s failed, please check container name.", g_cmd_start_args.name);
+        goto free_out;
     }
-
-    g_cmd_start_args.name = id;
-    id = NULL;
 
     ret = client_start(&g_cmd_start_args, &reset_tty, &oldtios, &console_fifos);
     if (ret != 0) {

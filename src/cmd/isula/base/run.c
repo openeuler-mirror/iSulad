@@ -66,11 +66,6 @@ static int local_cmd_start(const struct client_arguments *args)
     client_wait_fifo_exit(args);
 
 free_out:
-    // when container is auto-remove, it will be deleted when stopped. In this case, the fifo dir residual.
-    // when container is detach, no fifo directory will be created.
-    if (args->custom_conf.auto_remove && !args->detach && delete_client_fifo_home_dir(args->name) != 0) {
-        WARN("Failed to delete client fifo home dir");
-    }
     client_restore_console(reset_tty, &oldtios, console_fifos);
     return ret;
 }
