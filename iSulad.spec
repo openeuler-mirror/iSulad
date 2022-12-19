@@ -1,5 +1,5 @@
 %global _version 2.0.17
-%global _release 12
+%global _release 13
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -103,8 +103,8 @@ BuildRequires: sqlite-devel
 Requires: sqlite
 %endif
 
-%define lcrver_lower 2.0.8-0
-%define lcrver_upper 2.0.9-0
+%define lcrver_lower 2.0.9-0
+%define lcrver_upper 2.0.10-0
 %define clibcniver_lower 2.0.7-0
 %define clibcniver_upper 2.0.8-0
 
@@ -304,6 +304,12 @@ fi
 %endif
 
 %changelog
+* Mon Dec 19 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-13
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: update lcr dependence version
+
 * Fri Dec 16 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-12
 - Type: bugfix
 - ID: NA
