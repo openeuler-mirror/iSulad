@@ -315,6 +315,23 @@ int ContainerServiceImpl::kill_request_from_grpc(const KillRequest *grequest, co
     return 0;
 }
 
+void ContainerServiceImpl::kill_response_to_grpc(const container_kill_response *response, KillResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
+        return;
+    }
+    
+    gresponse->set_cc(response->cc);
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+    
+    if (response->id != nullptr) {
+        gresponse->set_id(response->id);
+    }
+}
+
 int ContainerServiceImpl::delete_request_from_grpc(const DeleteRequest *grequest, container_delete_request **request)
 {
     container_delete_request *tmpreq =

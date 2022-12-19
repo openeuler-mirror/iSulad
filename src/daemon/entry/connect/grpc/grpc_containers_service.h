@@ -146,6 +146,8 @@ private:
 
     int kill_request_from_grpc(const KillRequest *grequest, container_kill_request **request);
 
+    void kill_response_to_grpc(const container_kill_response *response, KillResponse *gresponse);
+
     int delete_request_from_grpc(const DeleteRequest *grequest, container_delete_request **request);
 
     void delete_response_to_grpc(const container_delete_response *response, DeleteResponse *gresponse);
