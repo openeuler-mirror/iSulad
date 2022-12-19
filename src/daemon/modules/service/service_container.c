@@ -1074,6 +1074,31 @@ int release_volumes(container_config_v2_common_config_mount_points *mount_points
     return ret;
 }
 
+static int delete_client_fifo_home_dir(const char *name)
+{
+    char *client_fifo_home_dir = NULL;
+
+    client_fifo_home_dir = util_path_join(CLIENT_RUNDIR, name);
+    if (client_fifo_home_dir == NULL) {
+        ERROR("Fail to get fifo home dir");
+        return -1;
+    }
+
+    // Do not delete if the directory does not exist.
+    if (!util_file_exists(client_fifo_home_dir)) {
+        free(client_fifo_home_dir);
+        return 0;
+    }
+
+    if (util_recursive_rmdir(client_fifo_home_dir, 0)) {
+        WARN("Failed to delete client fifo home path:%s", client_fifo_home_dir);
+    }
+    free(client_fifo_home_dir);
+    
+    return 0;
+}
+
+
 static int do_delete_container(container_t *cont)
 {
     int ret = 0;
@@ -1168,6 +1193,14 @@ static int do_delete_container(container_t *cont)
     if (!container_name_index_remove(name)) {
         ERROR("Failed to remove '%s' from name index", name);
         ret = -1;
+    }
+
+    // when container is auto-remove, it will be deleted when stopped.
+    // isula has no suitable time to delete fifo dir, so isulad delete it here to avoid the client fifo dir residual.
+    // When isula and isulad use tcp to connect, fifo files will not be created. 
+    // Because restart will set auto_remove to false, using auto_remove_bak to ensure delete Policy.
+    if (cont->hostconfig->auto_remove_bak && delete_client_fifo_home_dir(id) != 0) {
+        WARN("Failed to delete client fifo home dir");
     }
 
 out:

@@ -534,7 +534,7 @@ Status ContainerServiceImpl::Kill(ServerContext *context, const KillRequest *req
     }
 
     (void)cb->container.kill(container_req, &container_res);
-    response_to_grpc(container_res, reply);
+    kill_response_to_grpc(container_res, reply);
 
     free_container_kill_request(container_req);
     free_container_kill_response(container_res);

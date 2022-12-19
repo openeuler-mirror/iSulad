@@ -328,6 +328,12 @@ int delete_client_fifo_home_dir(const char *name)
         return -1;
     }
 
+    // Do not delete if the directory does not exist.
+    if (!util_file_exists(client_fifo_home_dir)) {
+        free(client_fifo_home_dir);
+        return 0;
+    }
+
     if (util_recursive_rmdir(client_fifo_home_dir, 0)) {
         WARN("Failed to delete client fifo home path:%s", client_fifo_home_dir);
     }

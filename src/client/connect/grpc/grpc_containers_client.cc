@@ -767,6 +767,10 @@ public:
             response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
         }
 
+        if (!gresponse->id().empty()) {
+            response->id = util_strdup_s(gresponse->id().c_str());
+        }
+
         return 0;
     }
 
