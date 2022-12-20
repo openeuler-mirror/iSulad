@@ -1199,7 +1199,7 @@ static int do_delete_container(container_t *cont)
     // isula has no suitable time to delete fifo dir, so isulad delete it here to avoid the client fifo dir residual.
     // When isula and isulad use tcp to connect, fifo files will not be created. 
     // Because restart will set auto_remove to false, using auto_remove_bak to ensure delete Policy.
-    if (cont->hostconfig->auto_remove_bak && delete_client_fifo_home_dir(id) != 0) {
+    if (cont->hostconfig != NULL && cont->hostconfig->auto_remove_bak && delete_client_fifo_home_dir(id) != 0) {
         WARN("Failed to delete client fifo home dir");
     }
 
