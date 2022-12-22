@@ -238,7 +238,7 @@ static int get_containers_from_json()
 
         append_ret = append_container_by_directory(container_path);
         if (append_ret != 0) {
-#ifndef DISABLE_CLEANUP
+#if !defined (DISABLE_CLEANUP) && !defined(LIB_ISULAD_IMG_SO)
             clean_module_fill_ctx(BROKEN_ROOTFS, (void *)container_dirs[i]);
 #endif
             ERROR("Found container path but load json failed: %s, deleting...", container_path);
