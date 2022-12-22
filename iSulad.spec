@@ -1,5 +1,5 @@
 %global _version 2.0.17
-%global _release 13
+%global _release 14
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -79,6 +79,7 @@ Patch0063: 0063-When-run-options-rm-is-set-delete-the-stoped-contain.patch
 Patch0064: 0064-recheck-kill-command-exit-status.patch
 Patch0065: 0065-start-sandbox-before-setup-network-by-default.patch
 Patch0066: 0066-compatibility-for-manage-pods-which-created-by-old-i.patch
+Patch0067: 0067-remove-clean_module_fill_ctx-for-libisulad_img.so.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -305,6 +306,12 @@ fi
 %endif
 
 %changelog
+* Thu Dec 22 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-14
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: remove clean_module_fill_ctx for libisulad_img.so
+
 * Mon Dec 19 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-13
 - Type: bugfix
 - ID: NA
