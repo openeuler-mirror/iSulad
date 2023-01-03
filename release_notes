@@ -1,3 +1,67 @@
+2023-01-03 root release 2.0.18
+    - !1791 remove residual dir if exec failed with runc and add CI Merge pull request !1791 from zhangxiaoyu/stable-v2.0.x
+    - !1789 add void parameter for function try_wait_all_child Merge pull request !1789 from zhangxiaoyu/stable-v2.0.x
+    - !1786 remove clean_module_fill_ctx for libisulad_img.so
+    - !1785 move the delete fifo dir function to the out branch Merge pull request !1785 from zhongtao/fifo
+    - !1783 ensure hostconfig is not null. Merge pull request !1783 from zhongtao/fifo
+    - !1780 Delete client fifo dir on isulad to prevent file residue Merge pull request !1780 from zhongtao/fifo
+    - !1778 fix isula fifo dir residue bug. Merge pull request !1778 from zhongtao/fifo
+    - !1775 compatibility for manage pods which created by old iSulad
+    - !1769 start sandbox before setup network by default
+    - !1772 recheck kill command exit status Merge pull request !1772 from DriedYellowPeach/stable-v2.0.x
+    - !1773 When run options rm is set, delete the stoped container's fifo directory. Merge pull request !1773 from zhongtao/autorm_stable
+    - !1768 isulad shim wait for all child process Merge pull request !1768 from DriedYellowPeach/stable-v2.0.x
+    - !1764 check file system ro before merge network for syscontainer Merge pull request !1764 from zhangxiaoyu/stable-v2.0.x
+    - !1762 fix leftover devicemapper mnt dir and deleting broken rootfs Merge pull request !1762 from DriedYellowPeach/stable-v2.0.x
+    - !1757 add adaption code for musl. * add adaption code for musl.
+    - !1749 set inspect_container timeout * update function inspect_container timeout
+    - !1741 retry call runtime ops
+    - !1748 fix additional gids for exec user
+    - !1743 console ut Merge pull request !1743 from DriedYellowPeach/stable-v2.0.x
+    - !1740 add unit test for buffer
+    - !1738 remove chmod 751 permission for dirs by engine when user-remap enabled
+    - !1737 add unit test for util/sha256 Merge pull request !1737 from czrz/stable-v2.0.x
+    - !1734 add primary group to additional groups Merge pull request !1734 from zhangxiaoyu/stable-v2.0.x
+    - !1729 fix storage layer and driver ut failed in container Merge pull request !1729 from zhangxiaoyu/stable-v2.0.x
+    - !1726 handle security warning for cleanup module Merge pull request !1726 from DriedYellowPeach/stable-v2.0.x
+    - !1727 remove unknown option wno-maybe-uninitialized Merge pull request !1727 from zhangxiaoyu/stable-v2.0.x
+    - !1719 update spec
+    - !1712 fix memory leak for not unref container in oci_rootfs_clean
+    - !1705 isula usage一致性优化
+    - !1704 add isula create --rm option
+    - !1709 cleanup_leftover内存泄漏
+    - !1708 bugfix for websocket receive data too long
+    - !1706 cleanup the leftover created after abnormal exit of isulad
+    - !1690 Add extend C for header files
+    - !1701 Add ut for file
+    - !1699 [improve] add debug information for console io
+    - !1696 delete syncCloseSem when close all wssession
+    - !1693 device mapper bugfix
+    - !1691 dec device info ref in grow device fs
+    - !1688 remove mnt point if add device mapper device failed
+    - !1686 add more test for string and map
+    - !1685 fix error in utils_verify_ut
+    - !1683 Add ut for verify
+    - !1678 add UT for atomic and map
+    - !1682 make sure kill pid not negative
+    - !1676 【UT】add ut for cutils utils
+    - !1675 Add ut for mount_spec and regex
+    - !1674 fix timestamp ut error
+    - !1673 add ut for cutils timestamp
+    - !1668 Add ut for filters
+    - !1669 Add ut for path.c
+    - !1672 Add ut for utils_convert
+    - !1671 Add parameter check to path
+    - !1670 Add adaptation code for filters
+    - !1665 add ut for cutils aes
+    - !1666 add UT for mainloop and utils_network
+    - !1664 refactor ut of cutils
+    - !1656 use epoll instead of select for wait_exit_fifo
+
+    dev stats:
+      - 189 files changed, 5660 insertions(+), 561 deletions(-)
+      - contributors: zhangxiaoyu, zhongtao, haozi007, Neil.wrz, songbuhuang, chengzrz, DriedYellowPeach, Mig Yang, ger202, yangjiaqi
+
 2022-10-08 ubuntu release 2.0.17
     - !1650 add static for udev_wait_pth_t function
     - !1644 fix maybe uwait use after free
