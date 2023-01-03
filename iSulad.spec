@@ -1,5 +1,5 @@
-%global _version 2.0.17
-%global _release 14
+%global _version 2.0.18
+%global _release 1
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -12,74 +12,6 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
-
-Patch0001: 0001-use-epoll-instead-of-select-for-wait_exit_fifo.patch
-Patch0002: 0002-add-namespace-util-UT.patch
-Patch0003: 0003-refactor-build-system-of-cutils-ut.patch
-Patch0004: 0004-run-storage-layers-ut-with-non-root.patch
-Patch0005: 0005-add-extern-C-for-mainloop-header.patch
-Patch0006: 0006-add-UT-for-mainloop-and-network.patch
-Patch0007: 0007-add-check-for-aes-apis.patch
-Patch0008: 0008-add-ut-for-cutils-aes.patch
-Patch0009: 0009-add-ut-for-cutils-error.patch
-Patch0010: 0010-ensure-argument-is-not-null.patch
-Patch0011: 0011-add-ut-for-utils_fs.patch
-Patch0012: 0012-Add-adaptation-code-for-filters.patch
-Patch0013: 0013-Add-parameter-check-to-path.patch
-Patch0014: 0014-Add-ut-for-utils_convert.patch
-Patch0015: 0015-Add-ut-for-path.patch
-Patch0016: 0016-Add-ut-for-filters.patch
-Patch0017: 0017-add-static-for-unexport-function.patch
-Patch0018: 0018-add-ut-for-cutils-timestamp.patch
-Patch0019: 0019-fix-timestamp-ut-error.patch
-Patch0020: 0020-improve-code-in-utils_mount_spec.patch
-Patch0021: 0021-Add-ut-for-utils_mount_spec.patch
-Patch0022: 0022-Add-ut-for-utils_regex.patch
-Patch0023: 0023-improve-code-in-utils.c.patch
-Patch0024: 0024-add-ut-for-cutils-utils.patch
-Patch0025: 0025-make-sure-kill-pid-not-negative.patch
-Patch0026: 0026-add-UT-for-atomic-and-map.patch
-Patch0027: 0027-remove-unnecessary-goto-and-add-parameter-check-for-.patch
-Patch0028: 0028-Add-ut-for-verify.patch
-Patch0029: 0029-fix-error-in-utils_verify_ut.patch
-Patch0030: 0030-add-more-test-for-string-and-map.patch
-Patch0031: 0031-remove-mnt-point-if-add-device-mapper-device-failed.patch
-Patch0032: 0032-dec-device-info-ref-in-grow-device-fs.patch
-Patch0033: 0033-device-mapper-bugfix.patch
-Patch0034: 0034-delete-syncCloseSem-when-close-all-wssession.patch
-Patch0035: 0035-improve-debug-information-for-console-io.patch
-Patch0036: 0036-add-ut-for-file.patch
-Patch0037: 0037-Add-extend-C-for-header-files.patch
-Patch0038: 0038-add-isula-create-rm-option.patch
-Patch0039: 0039-feat-add-container-cleanup-module.patch
-Patch0040: 0040-bugfix-for-websocket-receive-data-too-long.patch
-Patch0041: 0041-fix-call-bim_put-in-im_get_rootfs_dir.patch
-Patch0042: 0042-isula-usage-consistency-optimization.patch
-Patch0043: 0043-fix-do-container_unref-in-oci_rootfs_clean.patch
-Patch0044: 0044-fix-can-not-install-isulad-rpm-because-of-spec.patch
-Patch0045: 0045-remove-unknown-option-wno-maybe-uninitialized.patch
-Patch0046: 0046-fix-storage-layer-and-driver-ut-failed-in-container.patch
-Patch0047: 0047-handle-security-warning-for-cleanup-module.patch
-Patch0048: 0048-add-unit-test-for-util-sha256.patch
-Patch0049: 0049-add-primary-group-to-additional-groups.patch
-Patch0050: 0050-add-unit-test-for-buffer.patch
-Patch0051: 0051-remove-chmod-751-permission-for-dirs-by-engine-when-.patch
-Patch0052: 0052-add-console-ut.patch
-Patch0053: 0053-fix-additional-gids-for-exec-user.patch
-Patch0054: 0054-add-CI-for-additional-gid.patch
-Patch0055: 0055-retry-call-runtime-ops.patch
-Patch0056: 0056-add-ut-test-for-retry-macro.patch
-Patch0057: 0057-1749-set-inspect_container-timeout.patch
-Patch0058: 0058-1757-add-adaption-code-for-musl.patch
-Patch0059: 0059-deleting-broken-rootfs.patch
-Patch0060: 0060-1761-fix-leftover-devicemapper-mnt-dir.patch
-Patch0061: 0061-check-file-system-ro-before-merge-network-for-syscon.patch
-Patch0062: 0062-isulad-shim-wait-for-all-child-process.patch
-Patch0063: 0063-When-run-options-rm-is-set-delete-the-stoped-contain.patch
-Patch0064: 0064-recheck-kill-command-exit-status.patch
-Patch0065: 0065-start-sandbox-before-setup-network-by-default.patch
-Patch0066: 0066-compatibility-for-manage-pods-which-created-by-old-i.patch
-Patch0067: 0067-remove-clean_module_fill_ctx-for-libisulad_img.so.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -306,6 +238,12 @@ fi
 %endif
 
 %changelog
+* Tue Jan 03 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-1
+- Type: update
+- ID: NA
+- SUG: NA
+- DESC: update to v2.0.18
+
 * Thu Dec 22 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.17-14
 - Type: bugfix
 - ID: NA
