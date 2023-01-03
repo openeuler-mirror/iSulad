@@ -1112,7 +1112,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     ret = snprintf(bundle, sizeof(bundle), "%s/%s", params->rootpath, id);
     if (ret < 0) {
         ERROR("failed join bundle path for exec");
-        goto out;
+        return -1;
     }
 
     if (params->suffix != NULL) {
@@ -1123,8 +1123,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
 
     if (exec_id == NULL) {
         ERROR("Out of memory or generate exec id failed");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s/exec/%s", params->state, id, exec_id);
@@ -1141,13 +1140,13 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     ret = snprintf(resize_fifo_dir, sizeof(resize_fifo_dir), "%s/%s", workdir, RESIZE_FIFO_NAME);
     if (ret < 0) {
         ERROR("failed join resize fifo full path");
-        goto out;
+        goto del_out;
     }
 
     ret = console_fifo_create(resize_fifo_dir);
     if (ret < 0) {
         ERROR("failed create resize fifo file");
-        goto out;
+        goto del_out;
     }
 
     p.exec = true;
@@ -1162,32 +1161,35 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     ret = create_process_json_file(workdir, &p);
     if (ret != 0) {
         ERROR("%s: failed create exec json file", id);
-        goto out;
+        goto del_out;
     }
 
     get_runtime_cmd(runtime, &cmd);
     ret = shim_create(fg_exec(params), id, workdir, bundle, cmd, exit_code);
     if (ret != 0) {
         ERROR("%s: failed create shim process for exec %s", id, exec_id);
-        goto out;
+        goto errlog_out;
     }
 
     pid = get_container_process_pid(workdir);
     if (pid < 0) {
         ERROR("%s: failed get exec process id", workdir);
         ret = -1;
-        goto out;
+        goto errlog_out;
+    }
+
+errlog_out:
+    if (ret != 0) {
+        show_shim_runtime_errlog(workdir);
+    }
+
+del_out:
+    if (util_recursive_rmdir(workdir, 0)) {
+        ERROR("rmdir %s failed", workdir);
     }
 
 out:
     UTIL_FREE_AND_SET_NULL(exec_id);
-    if (ret != 0) {
-        show_shim_runtime_errlog(workdir);
-    } else {
-        if (util_recursive_rmdir(workdir, 0)) {
-            ERROR("rmdir %s failed", workdir);
-        }
-    }
     return ret;
 }
 
