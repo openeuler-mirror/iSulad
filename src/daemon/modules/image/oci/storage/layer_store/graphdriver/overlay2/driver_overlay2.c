@@ -12,6 +12,7 @@
  * Create: 2020-04-02
  * Description: provide overlay2 function definition
  ******************************************************************************/
+#define _GNU_SOURCE
 #include "driver_overlay2.h"
 
 #include <string.h>
@@ -44,6 +45,9 @@
 #include "utils_timestamp.h"
 #include "selinux_label.h"
 #include "err_msg.h"
+#ifdef ENABLE_REMOTE_LAYER_STORE
+#include "ro_symlink_maintain.h"
+#endif
 
 struct io_read_wrapper;
 
@@ -343,6 +347,13 @@ int overlay2_init(struct graphdriver *driver, const char *driver_home, const cha
         return -1;
     }
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    if (driver->enable_remote_layer && remote_overlay_init(driver_home) != 0) {
+        ERROR("Failed to init overlay remote");
+        return -1;
+    }
+#endif
+
     driver->home = util_strdup_s(driver_home);
 
     root_dir = util_path_dir(driver_home);
@@ -423,7 +434,7 @@ static int mk_diff_directory(const char *layer_dir)
     int ret = 0;
     char *diff_dir = NULL;
 #ifdef ENABLE_USERNS_REMAP
-    char* userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = conf_get_isulad_userns_remap();
 #endif
 
     diff_dir = util_path_join(layer_dir, OVERLAY_LAYER_DIFF);
@@ -538,7 +549,7 @@ static int mk_work_directory(const char *layer_dir)
     int ret = 0;
     char *work_dir = NULL;
 #ifdef ENABLE_USERNS_REMAP
-    char* userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = conf_get_isulad_userns_remap();
 #endif
 
     work_dir = util_path_join(layer_dir, OVERLAY_LAYER_WORK);
@@ -575,7 +586,7 @@ static int mk_merged_directory(const char *layer_dir)
     int ret = 0;
     char *merged_dir = NULL;
 #ifdef ENABLE_USERNS_REMAP
-    char* userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = conf_get_isulad_userns_remap();
 #endif
 
     merged_dir = util_path_join(layer_dir, OVERLAY_LAYER_MERGED);
@@ -852,13 +863,115 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+static int do_create_remote_ro(const char *id, const char *parent, const struct graphdriver *driver,
+                               const struct driver_create_opts *create_opts)
+{
+    int ret = 0;
+    int get_err = 0;
+    char *ro_symlink = NULL;
+    char *ro_home = NULL;
+    char *layer_dir = NULL;
+#ifdef ENABLE_USERNS_REMAP
+    char *userns_remap = conf_get_isulad_userns_remap();
+#endif
+
+    ro_home = util_path_join(driver->home, OVERLAY_RO_DIR);
+    if (ro_home == NULL) {
+        ERROR("Failed to join ro_home");
+        ret = -1;
+        goto out;
+    }
+
+    layer_dir = util_path_join(ro_home, id);
+    if (layer_dir == NULL) {
+        ERROR("Failed to join layer_dir");
+        ret = -1;
+        goto out;
+    }
+
+    ro_symlink = util_path_join(driver->home, id);
+    if (ro_symlink == NULL) {
+        ERROR("Failed to join ro_symlink");
+        ret = -1;
+        goto out;
+    }
+
+    if (layer_dir == NULL) {
+        ERROR("Failed to join layer dir:%s", id);
+        ret = -1;
+        goto out;
+    }
+
+    if (check_parent_valid(parent, driver) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (util_mkdir_p(layer_dir, 0700) != 0) {
+        ERROR("Unable to create layer directory %s.", layer_dir);
+        ret = -1;
+        goto out;
+    }
+
+    // mk symbol link
+    if (symlink(layer_dir, ro_symlink) != 0) {
+        SYSERROR("Unable to create symbol link to layer directory %s", layer_dir);
+        ret = -1;
+        goto err_out;
+    }
+
+#ifdef ENABLE_USERNS_REMAP
+    if (set_file_owner_for_userns_remap(layer_dir, userns_remap) != 0) {
+        ERROR("Unable to change directory %s owner for user remap.", layer_dir);
+        ret = -1;
+        goto out;
+    }
+#endif
+
+    if (create_opts->storage_opt != NULL && create_opts->storage_opt->len != 0) {
+        if (set_layer_quota(layer_dir, create_opts->storage_opt, driver) != 0) {
+            ERROR("Unable to set layer quota %s", layer_dir);
+            ret = -1;
+            goto err_out;
+        }
+    }
+
+    if (mk_sub_directories(id, parent, layer_dir, driver->home) != 0) {
+        ret = -1;
+        goto err_out;
+    }
+
+    goto out;
+
+err_out:
+    if (util_recursive_rmdir(layer_dir, 0)) {
+        ERROR("Failed to delete layer path: %s", layer_dir);
+    }
+
+    // to remove a file
+    if (util_fileself_exists(ro_symlink) && !util_force_remove_file(ro_symlink, &get_err)) {
+        ERROR("Failed to remove symbol link %s", ro_symlink);
+    }
+
+out:
+    free(layer_dir);
+    free(ro_home);
+    free(ro_symlink);
+#ifdef ENABLE_USERNS_REMAP
+    free(userns_remap);
+#endif
+    return ret;
+}
+#endif
+
 static int do_create(const char *id, const char *parent, const struct graphdriver *driver,
                      const struct driver_create_opts *create_opts)
 {
     int ret = 0;
     char *layer_dir = NULL;
 #ifdef ENABLE_USERNS_REMAP
-    char* userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = conf_get_isulad_userns_remap();
 #endif
 
     layer_dir = util_path_join(driver->home, id);
@@ -1002,7 +1115,15 @@ int overlay2_create_ro(const char *id, const char *parent, const struct graphdri
         return -1;
     }
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    if (driver->enable_remote_layer) {
+        return do_create_remote_ro(id, parent, driver, create_opts);
+    } else {
+        return do_create(id, parent, driver, create_opts);
+    }
+#else
     return do_create(id, parent, driver, create_opts);
+#endif
 }
 
 static char *read_layer_link_file(const char *layer_dir)
@@ -1047,6 +1168,9 @@ int overlay2_rm_layer(const char *id, const struct graphdriver *driver)
     char *link_id = NULL;
     char link_path[PATH_MAX] = { 0 };
     char clean_path[PATH_MAX] = { 0 };
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    struct stat stat_buf;
+#endif
 
     if (id == NULL || driver == NULL) {
         ERROR("Invalid input arguments");
@@ -1079,11 +1203,34 @@ int overlay2_rm_layer(const char *id, const struct graphdriver *driver)
         }
     }
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    if (lstat(layer_dir, &stat_buf) < 0) {
+        SYSERROR("Failed to lstat path: %s", layer_dir);
+        ret = -1;
+        goto out;
+    }
+
+    if (driver->enable_remote_layer && S_ISLNK(stat_buf.st_mode)) {
+        // jusdge if the dir is symlink?
+        if (remote_overlay_remove_ro_dir(id) != 0) {
+            ERROR("Failed to delete symlink to layer dir: %s", layer_dir);
+            ret = -1;
+            goto out;
+        }
+    } else {
+        if (util_recursive_rmdir(layer_dir, 0) != 0) {
+            SYSERROR("Failed to remove layer directory %s", layer_dir);
+            ret = -1;
+            goto out;
+        }
+    }
+#else
     if (util_recursive_rmdir(layer_dir, 0) != 0) {
         SYSERROR("Failed to remove layer directory %s", layer_dir);
         ret = -1;
         goto out;
     }
+#endif
 
 out:
     free(layer_dir);
@@ -1747,7 +1894,7 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
     int ret = 0;
 #ifdef ENABLE_USERNS_REMAP
     unsigned int size = 0;
-    char* userns_remap = conf_get_isulad_userns_remap();
+    char *userns_remap = conf_get_isulad_userns_remap();
 #endif
     char *layer_dir = NULL;
     char *layer_diff = NULL;
@@ -2166,3 +2313,4 @@ out:
     free(layer_diff);
     return ret;
 }
+

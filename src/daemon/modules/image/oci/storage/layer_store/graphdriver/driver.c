@@ -141,7 +141,9 @@ int graphdriver_init(const struct storage_module_init_options *opts)
                 ret = -1;
                 goto out;
             }
-
+#ifdef ENABLE_REMOTE_LAYER_STORE
+            g_drivers[i].enable_remote_layer = opts->enable_remote_layer;
+#endif
             if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)opts->driver_opts,
                                        opts->driver_opts_len) != 0) {
                 ret = -1;

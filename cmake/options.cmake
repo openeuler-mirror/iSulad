@@ -148,6 +148,12 @@ if (DISABLE_CLEANUP STREQUAL "ON")
     message("${Green}--  Disable cleanup module")
 endif()
 
+option(ENABLE_REMOTE_LAYER_STORE "enable remote layer store" OFF)
+if (ENABLE_REMOTE_LAYER_STORE STREQUAL "ON")
+    add_definitions(-DENABLE_REMOTE_LAYER_STORE)
+    message("${Green}--  Enable remote layer store")
+endif()
+
 option(MUSL "available for musl" OFF)
 if (MUSL)
     add_definitions(-D__MUSL__)
