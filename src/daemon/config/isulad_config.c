@@ -1515,6 +1515,7 @@ static int merge_authorization_conf_into_global(struct service_arguments *args, 
 static int merge_storage_conf_into_global(struct service_arguments *args, isulad_daemon_configs *tmp_json_confs)
 {
     override_string_value(&args->json_confs->storage_driver, &tmp_json_confs->storage_driver);
+    args->json_confs->storage_enable_remote_layer = tmp_json_confs->storage_enable_remote_layer;
 
     if (string_array_append(tmp_json_confs->storage_opts, tmp_json_confs->storage_opts_len,
                             &(args->json_confs->storage_opts_len), &(args->json_confs->storage_opts)) != 0) {

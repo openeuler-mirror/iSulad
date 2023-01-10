@@ -70,6 +70,9 @@ struct storage_module_init_options {
     char **driver_opts;
     size_t driver_opts_len;
     bool integration_check;
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    bool enable_remote_layer;
+#endif
 };
 
 struct storage_img_create_options {

@@ -23,6 +23,10 @@
 
 #include "storage.h"
 #include "io_wrapper.h"
+#include "map.h"
+#ifdef ENABLE_REMOTE_LAYER_STORE
+#include "remote_support.h"
+#endif
 
 struct io_read_wrapper;
 struct layer_list;
@@ -78,6 +82,13 @@ int layer_store_get_layer_fs_info(const char *layer_id, imagetool_fs_info *fs_in
 int layer_store_check(const char *id);
 
 container_inspect_graph_driver *layer_store_get_metadata_by_layer_id(const char *id);
+
+#ifdef ENABLE_REMOTE_LAYER_STORE
+remote_support *layer_store_impl_remote_support();
+bool layer_remote_layer_valid(const char *layer_id);
+int load_one_layer(const char *id);
+int remove_memory_stores_with_lock(const char *id);
+#endif
 
 #ifdef __cplusplus
 }
