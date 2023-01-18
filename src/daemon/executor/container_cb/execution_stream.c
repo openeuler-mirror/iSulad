@@ -68,7 +68,9 @@
 #define PTHREAD_CANCEL_ENABLE    1
 #define PTHREAD_CANCEL_DISABLE    0
 
+#if defined __ANDROID__
 typedef long pthread_t;
+#endif
 
 static int pthread_setcancelstate(int state, int *oldstate)
 {
