@@ -48,39 +48,18 @@ void util_free_ipnet(struct ipnet *val)
     free(val);
 }
 
-static int get_ip_from_in6_addr(const struct in6_addr *ipv6, uint8_t **ip, size_t *len)
-{
-    uint8_t *result = NULL;
-
-    if (ipv6 == NULL) {
-        return 0;
-    }
-    result = util_smart_calloc_s(IPV6LEN, sizeof(uint8_t));
-    if (result == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    (void)memcpy(result, ipv6->s6_addr, IPV6LEN * sizeof(uint8_t));
-
-    *ip = result;
-    *len = IPV6LEN;
-    return 0;
-}
-
 static int get_ip_from_in_addr(const struct in_addr *ipv4, uint8_t **ip, size_t *len)
 {
     uint8_t *result = NULL;
     size_t i = 0;
     uint32_t work = 0;
 
-    if (ipv4 == NULL) {
-        return 0;
-    }
-    result = util_smart_calloc_s(IPV4LEN, sizeof(uint8_t));
+    result = (uint8_t *)util_smart_calloc_s(sizeof(uint8_t), IPV4LEN);
     if (result == NULL) {
         ERROR("Out of memory");
         return -1;
     }
+
     work = ipv4->s_addr;
     for (i = 0; i < IPV4LEN; i++) {
         result[i] = (uint8_t)(work & 0x0ff);
@@ -92,26 +71,18 @@ static int get_ip_from_in_addr(const struct in_addr *ipv4, uint8_t **ip, size_t 
     return 0;
 }
 
-static int do_parse_ipv6_from_str(const char *addr, struct in6_addr *ipv6, uint8_t **ips, size_t *len, int *ret)
+static int get_ip_from_in6_addr(const struct in6_addr *ipv6, uint8_t **ip, size_t *len)
 {
-    int nret = 0;
-
-    if (addr == NULL) {
-        ERROR("Empty address");
-        return -1;
-    }
-    nret = inet_pton(AF_INET6, addr, ipv6);
-    if (nret < 0) {
-        SYSERROR("get ipv6 info");
-        return -1;
-    } else if (nret == 0) {
-        ERROR("Invalid ip address: %s", addr);
+    *ip = (uint8_t *)util_smart_calloc_s(sizeof(uint8_t), IPV6LEN);
+    if (*ip == NULL) {
+        ERROR("Out of memory");
         return -1;
     }
 
-    *ret = get_ip_from_in6_addr(ipv6, ips, len);
+    (void)memcpy(*ip, ipv6->s6_addr, IPV6LEN * sizeof(uint8_t));
+    *len = IPV6LEN;
 
-    return *ret;
+    return 0;
 }
 
 int util_parse_ip_from_str(const char *addr, uint8_t **ips, size_t *len)
@@ -119,434 +90,162 @@ int util_parse_ip_from_str(const char *addr, uint8_t **ips, size_t *len)
     int nret = 0;
     struct in_addr ipv4;
     struct in6_addr ipv6;
-    int ret = -1;
 
-    if (addr == NULL) {
-        ERROR("Empty address");
+    if (addr == NULL || ips == NULL || len == NULL) {
+        ERROR("Invalid args");
         return -1;
     }
+
     nret = inet_pton(AF_INET, addr, &ipv4);
     if (nret < 0) {
+        // error
         SYSERROR("get ipv4 info");
-        goto free_out;
-    } else if (nret == 0) {
-        /* check ipv6 */
-        nret = do_parse_ipv6_from_str(addr, &ipv6, ips, len, &ret);
-        if (nret != 0) {
-            goto free_out;
-        }
-    } else {
-        nret = get_ip_from_in_addr(&ipv4, ips, len);
-        if (nret != 0) {
-            goto free_out;
-        }
-    }
-    ret = 0;
-free_out:
-    return ret;
-}
-
-static int do_parse_mask_in_cidr(unsigned int mask_num, struct ipnet *result)
-{
-    uint8_t full_mask = 0xff;
-    size_t j = 0;
-    size_t i = 0;
-    unsigned int mask_cnt = mask_num;
-
-    j = result->ip_len;
-
-    result->ip_mask = util_smart_calloc_s(j, sizeof(uint8_t));
-    if (result->ip_mask == NULL) {
-        ERROR("Out of memory");
         return -1;
     }
-    result->ip_mask_len = j;
-    for (i = 0; i < j; i++) {
-        if (mask_cnt >= 8) {
-            result->ip_mask[i] = full_mask;
-            mask_cnt -= 8;
-            continue;
-        }
-        result->ip_mask[i] = ~(full_mask >> mask_cnt);
-        mask_cnt = 0;
+
+    if (nret > 0) {
+        // ipv4
+        return get_ip_from_in_addr(&ipv4, ips, len);
     }
-    return 0;
+
+    // nret == 0, ipv6
+    nret = inet_pton(AF_INET6, addr, &ipv6);
+    if (nret < 0) {
+        SYSERROR("get ipv6 info");
+        return -1;
+    }
+    if (nret == 0) {
+        ERROR("Invalid ip address: %s", addr);
+        return -1;
+    }
+
+    return get_ip_from_in6_addr(&ipv6, ips, len);
 }
 
-int util_parse_cidr(const char *cidr_str, struct ipnet **ipnet_val)
+static char *do_uint8_join(const char *sep, const char *type, const uint8_t *parts, const size_t parts_len,
+                           const size_t result_len)
 {
-    char *pos = NULL;
-    char *addr = NULL;
-    char *mask = NULL;
-    char *work_cidr = NULL;
     int nret = 0;
-    unsigned int mask_num = 0;
-    int ret = -1;
-    struct ipnet *result = NULL;
+    size_t iter;
+    char *res_string = NULL;
+    char buffer[MAX_UINT_LEN + 1] = { 0 };
 
-    if (cidr_str == NULL) {
-        return -1;
+    if (result_len > (SIZE_MAX - 1)) {
+        ERROR("Large string");
+        return NULL;
     }
 
-    work_cidr = util_strdup_s(cidr_str);
-
-    result = util_common_calloc_s(sizeof(struct ipnet));
-    if (result == NULL) {
+    res_string = util_common_calloc_s(result_len + 1);
+    if (res_string == NULL) {
         ERROR("Out of memory");
-        goto free_out;
-    }
-    pos = strchr(work_cidr, '/');
-    if (pos == NULL) {
-        ERROR("invalid CIDR address %s", work_cidr);
-        goto free_out;
-    }
-    *pos = '\0';
-    addr = work_cidr;
-    mask = pos + 1;
-
-    nret = util_parse_ip_from_str(addr, &(result->ip), &(result->ip_len));
-    if (nret != 0) {
-        ret = -1;
-        goto free_out;
+        return NULL;
     }
 
-    nret = util_safe_uint(mask, &mask_num);
-    if (nret != 0 || (size_t)mask_num > (result->ip_len << 3)) {
-        ERROR("Invalid CIDR address %s", cidr_str);
-        goto free_out;
+    for (iter = 0; iter < parts_len; iter++) {
+        nret = snprintf(buffer, MAX_UINT_LEN + 1, type, parts[iter]);
+        if (nret < 0 || (size_t)nret >= MAX_UINT_LEN + 1) {
+            ERROR("Sprint failed");
+            free(res_string);
+            return NULL;
+        }
+        (void)strcat(res_string, buffer);
+        if (iter != parts_len - 1) {
+            (void)strcat(res_string, sep);
+        }
     }
 
-    /* parse mask */
-    if (do_parse_mask_in_cidr(mask_num, result) != 0) {
-        ret = -1;
-        goto free_out;
-    }
-    *ipnet_val = result;
-    result = NULL;
-    ret = 0;
-
-free_out:
-    free(work_cidr);
-    if (result != NULL) {
-        free(result->ip);
-        free(result->ip_mask);
-        free(result);
-    }
-    return ret;
+    return res_string;
 }
 
-static bool is_ipv4(const uint8_t *ip, size_t len)
+static char *uint8_join(const char *sep, const char *type, const uint8_t *parts, const size_t len)
 {
-    size_t i = 0;
-    bool invalid_arg = (ip == NULL || len < 10);
+    size_t sep_len, result_len;
 
-    if (invalid_arg) {
-        return false;
+    if (sep == NULL || type == NULL || parts == NULL || len == 0) {
+        ERROR("Invalid arguments");
+        return NULL;
     }
+
+    sep_len = strlen(sep);
+    if (len > SIZE_MAX / (sep_len + MAX_UINT_LEN)) {
+        ERROR("Large string");
+        return NULL;
+    }
+    result_len = (len - 1) * sep_len + MAX_UINT_LEN * len;
+
+    return do_uint8_join(sep, type, parts, len, result_len);
+}
+
+// format
+// 16bits  16bits  16bits  16bits  16bits  16bits  32bits
+// 0       0       0       0       0       FFFF    IPv4 Address
+static bool is_ipv4_mapped_address(const uint8_t *ip, const size_t len)
+{
+    size_t i;
+
     for (i = 0; i < 10; i++) {
         if (ip[i] != 0) {
             return false;
         }
     }
 
-    return true;
+    return ip[10] == 0xff && ip[11] == 0xff;
 }
 
-static size_t to_ipv4(const uint8_t *src, size_t src_len, uint8_t **ipv4)
+// return value
+// -1: error
+//  0: parse ipv4 success
+//  1: not ipv4 address
+static int parse_ipv4_to_string(const uint8_t *ip, const size_t len, char **result)
 {
-    uint8_t *ip = NULL;
-    bool invalid_arg = (src == NULL || ipv4 == NULL);
-
-    if (invalid_arg) {
-        return 0;
-    }
-    if (src_len == IPV4LEN) {
-        ip = util_smart_calloc_s(IPV4LEN, sizeof(uint8_t));
-        if (ip == NULL) {
-            return 0;
-        }
-        (void)memcpy(ip, src, IPV4LEN);
-        *ipv4 = ip;
-        return IPV4LEN;
-    }
-
-    if (src_len == IPV6LEN && is_ipv4(src, src_len) && src[10] == 0xff && src[11] == 0xff) {
-        ip = util_smart_calloc_s(IPV4LEN, sizeof(uint8_t));
-        if (ip == NULL) {
-            return 0;
-        }
-        size_t i = 0;
-        for (i = 0; i < IPV4LEN; i++) {
-            ip[i] = src[i + 12];
-        }
-        *ipv4 = ip;
-        return IPV4LEN;
-    }
-    return 0;
-}
-
-static size_t try_to_ipv4(const struct ipnet *value, uint8_t **pip)
-{
-    size_t iplen = 0;
-
-    iplen = to_ipv4(value->ip, value->ip_len, pip);
-    if (iplen == 0) {
-        if (value->ip_len == IPV6LEN) {
-            *pip = util_smart_calloc_s(IPV6LEN, sizeof(uint8_t));
-            if (*pip == NULL) {
-                ERROR("Out of memory");
-                return 0;
-            }
-            (void)memcpy(*pip, value->ip, IPV6LEN);
-            iplen = IPV6LEN;
-        } else {
-            ERROR("Invalid ip, len=%zu", iplen);
-            return 0;
-        }
-    }
-    return iplen;
-}
-
-static int get_ipv4_mask(const struct ipnet *value, size_t iplen, uint8_t **mask)
-{
-    if (iplen != IPV4LEN) {
-        ERROR("len of IP: %zu diffrent to len of mask: %zu", iplen, value->ip_mask_len);
-        return 0;
-    }
-    *mask = util_smart_calloc_s(IPV4LEN, sizeof(uint8_t));
-    if (*mask == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    (void)memcpy(*mask, value->ip_mask, IPV4LEN);
-    return IPV4LEN;
-}
-
-static int get_ipv6_mask(const struct ipnet *value, size_t iplen, uint8_t **mask)
-{
-    if (iplen == IPV4LEN) {
-        *mask = util_smart_calloc_s(IPV4LEN, sizeof(uint8_t));
-        if (*mask == NULL) {
-            ERROR("Out of memory");
-            return 0;
-        }
-        (void)memcpy(*mask, (value->ip_mask + IPV4_TO_V6_EMPTY_PREFIX_BYTES), IPV4LEN);
-        return IPV4LEN;
-    } else {
-        *mask = util_smart_calloc_s(IPV6LEN, sizeof(uint8_t));
-        if (*mask == NULL) {
-            ERROR("Out of memory");
-            return 0;
-        }
-        (void)memcpy(*mask, value->ip_mask, IPV6LEN);
-        return IPV6LEN;
-    }
-}
-
-static size_t try_get_mask(const struct ipnet *value, size_t iplen, uint8_t **mask)
-{
-    size_t masklen = 0;
-    int nret = 0;
-
-    switch (value->ip_mask_len) {
-        case IPV4LEN:
-            nret = get_ipv4_mask(value, iplen, mask);
-            if (nret == 0) {
-                return 0;
-            } else if (nret < 0) {
-                goto free_out;
-            }
-            masklen = (size_t)nret;
-            break;
-        case IPV6LEN:
-            nret = get_ipv6_mask(value, iplen, mask);
-            if (nret == 0) {
-                return 0;
-            } else if (nret < 0) {
-                goto free_out;
-            }
-            masklen = (size_t)nret;
-            break;
-        default:
-            ERROR("Invalid mask len: %zu", value->ip_mask_len);
-            goto free_out;
-    }
-    return masklen;
-free_out:
-    free(*mask);
-    *mask = NULL;
-    return 0;
-}
-
-static int simple_mask_len(const uint8_t *mask, size_t len)
-{
-    size_t i = 0;
     int ret = 0;
+    size_t i;
+    uint8_t *tmp = NULL;
 
-    for (i = 0; i < len; i++) {
-        uint8_t work = mask[i];
-        if (work == 0xff) {
-            ret += 8;
-            continue;
-        }
-
-        while ((work & 0x80) != 0) {
-            ret++;
-            work <<= 1;
-        }
-
-        if (work != 0) {
+    if (len == IPV4LEN) {
+        *result = uint8_join(".", "%u", ip, IPV4LEN);
+        if (*result == NULL) {
+            ERROR("ip join failed");
             return -1;
         }
 
-        size_t j = i;
-        for (j++; j < len; j++) {
-            if (mask[j] != 0) {
-                return -1;
-            }
-        }
-        break;
+        return 0;
     }
+
+    if (!is_ipv4_mapped_address(ip, len)) {
+        return 1;
+    }
+
+    tmp = (uint8_t *)util_smart_calloc_s(sizeof(uint8_t), IPV4LEN);
+    if (tmp == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < IPV4LEN; i++) {
+        tmp[i] = ip[i + 12];
+    }
+
+    *result = uint8_join(".", "%u", tmp, IPV4LEN);
+    if (*result == NULL) {
+        ERROR("ip join failed");
+        ret = -1;
+    }
+
+    free(tmp);
     return ret;
 }
 
-static char *mask_hex_string(const uint8_t *mask, size_t len)
+static int generate_ipv6_string(const uint8_t *ip, int e0, int e1, char **result)
 {
-    char *result = NULL;
-    size_t res_len = 0;
-    size_t i = 0;
-    size_t j = 0;
+    int i, j;
 
-    if (len == 0) {
-        return util_strdup_s("<nil>");
-    }
-
-    if (len > ((SIZE_MAX - 1) / 2)) {
-        return NULL;
-    }
-    res_len = (len * 2) + 1;
-
-    result = util_common_calloc_s(res_len);
-    if (result == NULL) {
-        return NULL;
-    }
-    for (i = 0, j = 0; i < len; i++) {
-        int tmp = (mask[i] >> 4);
-        result[j++] = g_HEX_DICT[tmp];
-        tmp = (mask[i] & 0x0f);
-        result[j++] = g_HEX_DICT[tmp];
-    }
-    return result;
-}
-
-static char *do_generate_ip_with_mask(const uint8_t *mask, size_t masklen, const char *ip)
-{
-    char *tmp_mask = NULL;
-    char *result = NULL;
-    int nret = 0;
-    size_t res_len = 0;
-
-    if (ip == NULL) {
-        return NULL;
-    }
-    tmp_mask = mask_hex_string(mask, masklen);
-    if (tmp_mask == NULL) {
-        ERROR("Mask toString failed");
-        goto free_out;
-    }
-
-    if (strlen(ip) > ((SIZE_MAX - 2) - strlen(tmp_mask))) {
-        ERROR("Too long ips");
-        goto free_out;
-    }
-
-    res_len = strlen(ip) + 1 + strlen(tmp_mask) + 1;
-    result = util_common_calloc_s(res_len);
-    if (result == NULL) {
-        ERROR("Out of memory");
-        goto free_out;
-    }
-    nret = snprintf(result, res_len, "%s/%s", ip, tmp_mask);
-    if (nret < 0 || (size_t)nret >= res_len) {
-        ERROR("Sprintf first type failed");
-        free(result);
-        result = NULL;
-    }
-free_out:
-    free(tmp_mask);
-    return result;
-}
-
-char *util_ipnet_to_string(const struct ipnet *value)
-{
-    char *result = NULL;
-    char *tmp_ip = NULL;
-    uint8_t *ip = NULL;
-    uint8_t *mask = NULL;
-    size_t iplen = 0;
-    size_t masklen = 0;
-    int slen = 0;
-    int nret = 0;
-    size_t res_len = 0;
-
-    if (value == NULL) {
-        return NULL;
-    }
-    iplen = try_to_ipv4(value, &ip);
-    if (iplen == 0) {
-        goto free_out;
-    }
-
-    masklen = try_get_mask(value, iplen, &mask);
-    if (masklen == 0) {
-        goto free_out;
-    }
-
-    slen = simple_mask_len(mask, masklen);
-    tmp_ip = util_ip_to_string(ip, iplen);
-    if (tmp_ip == NULL) {
-        ERROR("IP toString failed");
-        goto free_out;
-    }
-    if (slen == -1) {
-        result = do_generate_ip_with_mask(mask, masklen, tmp_ip);
-        goto free_out;
-    }
-
-    if (strlen(tmp_ip) > (SIZE_MAX - 5)) {
-        ERROR("Too long ips");
-        goto free_out;
-    }
-
-    res_len = strlen(tmp_ip) + 1 + 3 + 1;
-    result = util_common_calloc_s(res_len);
-    if (result == NULL) {
-        ERROR("Out of memory");
-        goto free_out;
-    }
-    nret = snprintf(result, res_len, "%s/%d", tmp_ip, slen);
-    if (nret < 0 || (size_t)nret >= res_len) {
-        ERROR("Sprintf second type failed");
-        free(result);
-        result = NULL;
-    }
-
-free_out:
-    free(tmp_ip);
-    free(mask);
-    free(ip);
-    return result;
-}
-
-static void generate_ip_string(const uint8_t *ip, int e0, int e1, char **result)
-{
-    int i = 0;
-    int j = 0;
-
-    *result = util_common_calloc_s(IPV6_MAX_ADDR_LEN);
+    *result = (char *)util_common_calloc_s(IPV6_MAX_ADDR_LEN);
     if (*result == NULL) {
-        return;
+        ERROR("Out of memory");
+        return -1;
     }
+
     for (i = 0, j = 0; i < IPV6LEN; i += 2) {
         if (i == e0) {
             (*result)[j++] = ':';
@@ -580,156 +279,17 @@ static void generate_ip_string(const uint8_t *ip, int e0, int e1, char **result)
             skip = false;
         }
     }
+
+    return 0;
 }
 
-static inline bool check_clibcni_util_uint8_join_args(const char *sep, const uint8_t *parts, size_t len)
+static int parse_ipv6_to_string(const uint8_t *ip, const size_t len, char **result)
 {
-    return (sep == NULL || strlen(sep) == 0 || len == 0 || parts == NULL);
-}
+    int i, j, e0, e1;
 
-static char *do_uint8_join(const char *sep, const char *type, const uint8_t *parts, size_t parts_len, size_t result_len)
-{
-    char *res_string = NULL;
-    size_t iter = 0;
-    char buffer[MAX_UINT_LEN + 1] = { 0 };
-    int nret = 0;
-
-    if (result_len > (SIZE_MAX - 1)) {
-        ERROR("Large string");
-        return NULL;
-    }
-
-    res_string = util_common_calloc_s(result_len + 1);
-    if (res_string == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    for (iter = 0; iter < parts_len - 1; iter++) {
-        nret = snprintf(buffer, MAX_UINT_LEN + 1, type, parts[iter]);
-        if (nret < 0 || nret >= MAX_UINT_LEN + 1) {
-            ERROR("Sprint failed");
-            free(res_string);
-            return NULL;
-        }
-        (void)strcat(res_string, buffer);
-        (void)strcat(res_string, sep);
-    }
-    nret = snprintf(buffer, sizeof(buffer), type, parts[parts_len - 1]);
-    if (nret < 0 || nret >= MAX_UINT_LEN + 1) {
-        ERROR("Sprint failed");
-        free(res_string);
-        return NULL;
-    }
-    (void)strcat(res_string, buffer);
-
-    return res_string;
-}
-
-static char *clibcni_util_uint8_join(const char *sep, const char *type, const uint8_t *parts, size_t len)
-{
-    size_t sep_len = 0;
-    size_t result_len = 0;
-
-    if (check_clibcni_util_uint8_join_args(sep, parts, len)) {
-        ERROR("Invalid arguments");
-        return NULL;
-    }
-
-    sep_len = strlen(sep);
-    if (len > SIZE_MAX / sep_len) {
-        ERROR("Large string");
-        return NULL;
-    }
-    result_len = (len - 1) * sep_len;
-
-    if (len > SIZE_MAX / MAX_UINT_LEN) {
-        ERROR("Large string");
-        return NULL;
-    }
-    result_len += (MAX_UINT_LEN * len);
-
-    return do_uint8_join(sep, type, parts, len, result_len);
-}
-
-/*
- * return:
- *    0 means continue to find ip
- *    1 means get right ip
- *    -1 means something wrong
- * */
-static int do_parse_util_ip_to_string(const uint8_t *ip, size_t len, char **result)
-{
-    char *tmp = NULL;
-    int ret = 0;
-    int nret = 0;
-    size_t res_len = 0;
-
-    tmp = clibcni_util_uint8_join("", "%x", ip, len);
-    if (tmp == NULL) {
-        return -1;
-    }
-
-    if (strlen(tmp) > (SIZE_MAX - 2)) {
-        ret = -1;
-        goto free_out;
-    }
-
-    res_len = 1 + strlen(tmp) + 1;
-    *result = util_common_calloc_s(res_len);
-    if (*result == NULL) {
-        ret = -1;
-        goto free_out;
-    }
-    nret = snprintf(*result, res_len, "%s%s", "?", tmp);
-    if (nret < 0 || (size_t)nret >= res_len) {
-        free(*result);
-        *result = NULL;
-        ret = -1;
-    } else {
-        ret = 1;
-    }
-
-free_out:
-    free(tmp);
-    return ret;
-}
-
-static int get_ip_string(const uint8_t *ip, size_t len, char **result)
-{
-    size_t work_ip_len = 0;
-    uint8_t *work_ip = NULL;
-    int ret = 0;
-
-    work_ip_len = to_ipv4(ip, len, &work_ip);
-    if (work_ip_len == IPV4LEN) {
-        *result = clibcni_util_uint8_join(".", "%u", work_ip, work_ip_len);
-        ret = 1; // get right result
-        goto free_out;
-    }
     if (len != IPV6LEN) {
-        ret = do_parse_util_ip_to_string(ip, len, result);
-    }
-
-free_out:
-    free(work_ip);
-    return ret;
-}
-
-char *util_ip_to_string(const uint8_t *ip, size_t len)
-{
-    char *result = NULL;
-    int i = 0;
-    int j = 0;
-    int e0 = 0;
-    int e1 = 0;
-
-    if (len == 0) {
-        return util_strdup_s("<nil>");
-    }
-
-    if (get_ip_string(ip, len, &result) != 0) {
-        goto free_out;
+        ERROR("Invalid ipv6 length");
+        return -1;
     }
 
     /* find zeros */
@@ -751,9 +311,384 @@ char *util_ip_to_string(const uint8_t *ip, size_t len)
         e0 = -1;
     }
 
-    generate_ip_string(ip, e0, e1, &result);
+    return generate_ipv6_string(ip, e0, e1, result);
+}
+
+static int parse_standard_ip_to_string(const uint8_t *ip, const size_t len, char **result)
+{
+    int nret = 0;
+
+    if (len != IPV4LEN && len != IPV6LEN) {
+        ERROR("Invalid ip length: %zu", len);
+        return -1;
+    }
+
+    nret = parse_ipv4_to_string(ip, len, result);
+    if (nret == 0) {
+        return 0;
+    }
+    if (nret < 0) {
+        ERROR("Failed to parse ipv4");
+        return -1;
+    }
+
+    if (parse_ipv6_to_string(ip, len, result) != 0) {
+        ERROR("Failed to parse ipv6");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int parse_nonstandard_ip_to_string(const uint8_t *ip, const size_t len, char **result)
+{
+    int ret = 0;
+    int nret = 0;
+    size_t res_len = 0;
+    char *tmp = NULL;
+
+    tmp = uint8_join("", "%02x", ip, len);
+    if (tmp == NULL) {
+        ERROR("ip join failed");
+        return -1;
+    }
+
+    if (strlen(tmp) > (SIZE_MAX - 2)) {
+        ERROR("ip is too long");
+        ret = -1;
+        goto free_out;
+    }
+
+    res_len = 1 + strlen(tmp) + 1;
+    *result = (char *)util_common_calloc_s(res_len);
+    if (*result == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto free_out;
+    }
+
+    nret = snprintf(*result, res_len, "%s%s", "?", tmp);
+    if (nret < 0 || (size_t)nret >= res_len) {
+        free(*result);
+        *result = NULL;
+        ret = -1;
+    }
 
 free_out:
+    free(tmp);
+    return ret;
+}
+
+char *util_ip_to_string(const uint8_t *ip, const size_t len)
+{
+    char *result = NULL;
+
+    if (ip == NULL || len == 0) {
+        WARN("Empty ip args");
+        return util_strdup_s("<nil>");
+    }
+
+    if (len != IPV4LEN && len != IPV6LEN) {
+        // ? return error
+        if (parse_nonstandard_ip_to_string(ip, len, &result) != 0) {
+            ERROR("Failed to parse nonstandard ip");
+            return NULL;
+        }
+        return result;
+    }
+
+    if (parse_standard_ip_to_string(ip, len, &result) != 0) {
+        return NULL;
+    }
+
+    return result;
+}
+
+static int do_parse_mask_in_cidr(const unsigned int mask_num, struct ipnet *result)
+{
+    uint8_t full_mask = 0xff;
+    size_t i;
+    size_t ip_len = result->ip_len;
+    unsigned int mask_cnt = mask_num;
+
+    result->ip_mask = (uint8_t *)util_smart_calloc_s(sizeof(uint8_t), ip_len);
+    if (result->ip_mask == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    result->ip_mask_len = ip_len;
+    for (i = 0; i < ip_len; i++) {
+        if (mask_cnt >= 8) {
+            result->ip_mask[i] = full_mask;
+            mask_cnt -= 8;
+            continue;
+        }
+        result->ip_mask[i] = ~(full_mask >> mask_cnt);
+        mask_cnt = 0;
+    }
+    return 0;
+}
+
+int util_parse_ipnet_from_str(const char *cidr_str, struct ipnet **ipnet_val)
+{
+    int ret = 0;
+    unsigned int mask_num = 0;
+    char *pos = NULL;
+    char *addr = NULL;
+    char *mask = NULL;
+    char *work_cidr = NULL;
+    struct ipnet *result = NULL;
+
+    if (cidr_str == NULL || ipnet_val == NULL) {
+        ERROR("Invalid args");
+        return -1;
+    }
+
+    work_cidr = util_strdup_s(cidr_str);
+    pos = strchr(work_cidr, '/');
+    if (pos == NULL) {
+        ERROR("invalid CIDR address %s", work_cidr);
+        ret = -1;
+        goto free_out;
+    }
+    *pos = '\0';
+    addr = work_cidr;
+    mask = pos + 1;
+
+    result = (struct ipnet *)util_common_calloc_s(sizeof(struct ipnet));
+    if (result == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto free_out;
+    }
+
+    if (util_parse_ip_from_str(addr, &(result->ip), &(result->ip_len)) != 0) {
+        ret = -1;
+        goto free_out;
+    }
+
+    /* parse mask */
+    ret = util_safe_uint(mask, &mask_num);
+    if (ret != 0 || (size_t)mask_num > (result->ip_len << 3)) {
+        ERROR("Invalid CIDR address %s", cidr_str);
+        ret = -1;
+        goto free_out;
+    }
+    if (do_parse_mask_in_cidr(mask_num, result) != 0) {
+        ret = -1;
+        goto free_out;
+    }
+
+    *ipnet_val = result;
+    result = NULL;
+
+free_out:
+    free(work_cidr);
+    util_free_ipnet(result);
+    return ret;
+}
+
+static int get_ipv4_mask(const struct ipnet *value, uint8_t **mask, size_t *mask_len)
+{
+    *mask = (uint8_t *)util_smart_calloc_s(sizeof(uint8_t), IPV4LEN);
+    if (*mask == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    (void)memcpy(*mask, value->ip_mask, IPV4LEN);
+    *mask_len = IPV4LEN;
+    return 0;
+}
+
+static int get_ipv6_mask(const struct ipnet *value, uint8_t **mask, size_t *mask_len)
+{
+
+    if (is_ipv4_mapped_address(value->ip, value->ip_len)) {
+        *mask = (uint8_t *)util_smart_calloc_s(sizeof(uint8_t), IPV4LEN);
+        if (*mask == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+
+        (void)memcpy(*mask, (value->ip_mask + IPV4_TO_V6_EMPTY_PREFIX_BYTES), IPV4LEN);
+        *mask_len = IPV4LEN;
+        return 0;
+    }
+
+    *mask = (uint8_t *)util_smart_calloc_s(sizeof(uint8_t), IPV6LEN);
+    if (*mask == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    (void)memcpy(*mask, value->ip_mask, IPV6LEN);
+    *mask_len = IPV6LEN;
+    return 0;
+}
+
+static int get_mask(const struct ipnet *value, uint8_t **mask, size_t *mask_len)
+{
+    if (value->ip_mask_len != IPV4LEN && value->ip_mask_len != IPV6LEN) {
+        ERROR("Invalid mask length %zu", value->ip_mask_len);
+        return -1;
+    }
+
+    if (value->ip_len != value->ip_mask_len) {
+        ERROR("IP length %zu is diffrent from mask length %zu", value->ip_len, value->ip_mask_len);
+        return -1;
+    }
+
+    if (value->ip_mask_len == IPV4LEN) {
+        if (get_ipv4_mask(value, mask, mask_len) != 0) {
+            ERROR("Failed to get ipv4 mask");
+            return -1;
+        }
+
+        return 0;
+    }
+
+    if (get_ipv6_mask(value, mask, mask_len) != 0) {
+        ERROR("Failed to get ipv6 mask");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int generate_mask_string(const uint8_t *mask, const size_t len, char **result)
+{
+    size_t i = 0;
+    int ret = 0;
+
+    for (i = 0; i < len; i++) {
+        uint8_t work = mask[i];
+        if (work == 0xff) {
+            ret += 8;
+            continue;
+        }
+
+        while ((work & 0x80) != 0) {
+            ret++;
+            work <<= 1;
+        }
+
+        if (work != 0) {
+            ERROR("Invalid mask");
+            return -1;
+        }
+
+        size_t j = i;
+        for (j++; j < len; j++) {
+            if (mask[j] != 0) {
+                ERROR("Invalid mask");
+                return -1;
+            }
+        }
+        break;
+    }
+
+    *result = util_int_to_string(ret);
+    if (*result == NULL) {
+        ERROR("Failed to convert %d to string", ret);
+        return -1;
+    }
+
+    return 0;
+}
+
+static int parse_nonstandard_mask_to_string(const uint8_t *mask, size_t masklen, char **result)
+{
+    size_t res_len = 0;
+    size_t i, j;
+
+    if (masklen > ((SIZE_MAX - 1) / 2)) {
+        ERROR("mask is too long");
+        return -1;
+    }
+
+    res_len = (masklen * 2) + 1;
+    *result = (char *)util_common_calloc_s(res_len);
+    if (*result == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0, j = 0; i < masklen; i++) {
+        int tmp = (mask[i] >> 4);
+        (*result)[j++] = g_HEX_DICT[tmp];
+        tmp = (mask[i] & 0x0f);
+        (*result)[j++] = g_HEX_DICT[tmp];
+    }
+
+    return 0;
+}
+
+static int parse_mask_to_string(const struct ipnet *value, char **result)
+{
+    int ret = 0;
+    uint8_t *mask = NULL;
+    size_t mask_len = 0;
+
+    if (get_mask(value, &mask, &mask_len) != 0) {
+        ERROR("Failed to get mask");
+        return -1;
+    }
+
+    if (generate_mask_string(mask, mask_len, result) != 0) {
+        ERROR("Failed to generate mask string");
+        // ? return error
+        if (parse_nonstandard_mask_to_string(mask, mask_len, result) != 0) {
+            ERROR("Failed to generate nonstandard mask");
+            ret = -1;
+        }
+    }
+
+    free(mask);
+    return ret;
+}
+
+char *util_ipnet_to_string(const struct ipnet *value)
+{
+    int nret = 0;
+    size_t res_len = 0;
+    char *result = NULL;
+    char *ip_str = NULL;
+    char *mask_str = NULL;
+
+    if (value == NULL) {
+        ERROR("Invalid args");
+        return NULL;
+    }
+
+    if (parse_standard_ip_to_string(value->ip, value->ip_len, &ip_str) != 0) {
+        ERROR("Failed to parse ip to string");
+        return NULL;
+    }
+
+    if (parse_mask_to_string(value, &mask_str) != 0) {
+        ERROR("Failed to parse mask to string");
+        goto out;
+    }
+
+    res_len = strlen(ip_str) + 1 + sizeof(mask_str) + 1;
+    result = (char *)util_common_calloc_s(res_len);
+    if (result == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
+    nret = snprintf(result, res_len, "%s/%s", ip_str, mask_str);
+    if (nret < 0 || (size_t)nret >= res_len) {
+        ERROR("Sprintf failed");
+        free(result);
+        result = NULL;
+    }
+
+out:
+    free(ip_str);
+    free(mask_str);
     return result;
 }
 

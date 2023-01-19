@@ -712,14 +712,14 @@ static int check_subnet_available(const char *subnet, const string_array *subnet
     struct ipnet *net = NULL;
     struct ipnet *tmp = NULL;
 
-    ret = util_parse_cidr(subnet, &net);
+    ret = util_parse_ipnet_from_str(subnet, &net);
     if (ret != 0 || net == NULL) {
         ERROR("Parse CIDR %s failed", subnet);
         return -1;
     }
 
     for (i = 0; i < subnets->len; i++) {
-        ret = util_parse_cidr(subnets->items[i], &tmp);
+        ret = util_parse_ipnet_from_str(subnets->items[i], &tmp);
         if (ret != 0 || tmp == NULL) {
             ERROR("Parse CIDR %s failed", subnets->items[i]);
             ret = 0;
@@ -885,7 +885,7 @@ static char *find_private_network(char *subnet)
         }
     }
 
-    nret = util_parse_cidr(subnet, &ipnet);
+    nret = util_parse_ipnet_from_str(subnet, &ipnet);
     if (nret != 0 || ipnet == NULL) {
         ERROR("Parse IP %s failed", subnet);
         return NULL;
@@ -972,7 +972,7 @@ static char *find_gateway(const char *subnet)
     char *gateway = NULL;
     struct ipnet *ipnet = NULL;
 
-    nret = util_parse_cidr(subnet, &ipnet);
+    nret = util_parse_ipnet_from_str(subnet, &ipnet);
     if (nret != 0 || ipnet == NULL) {
         ERROR("Parse IP %s failed", subnet);
         return NULL;
@@ -1055,7 +1055,7 @@ static cni_net_conf_ipam *conf_bridge_plugin_ipam(const network_create_request *
 
     if (request->subnet != NULL) {
         // reduce subnet, e.g. 192.168.2.5/16 -> 192.168.0.0/16
-        if (util_parse_cidr(request->subnet, &ipnet) != 0) {
+        if (util_parse_ipnet_from_str(request->subnet, &ipnet) != 0) {
             ERROR("Failed to parse cide subnet %s", request->subnet);
             goto err_out;
         }

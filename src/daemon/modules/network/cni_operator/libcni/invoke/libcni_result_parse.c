@@ -91,7 +91,7 @@ static int do_parse_ipnet(const char *cidr_str, const char *ip_str, uint8_t **ip
 {
     int ret = 0;
 
-    ret = util_parse_cidr(cidr_str, ipnet_val);
+    ret = util_parse_ipnet_from_str(cidr_str, ipnet_val);
     if (ret != 0) {
         ERROR("Parse cidr: %s failed", cidr_str);
         return -1;
