@@ -80,7 +80,7 @@ static int check_parameter(const network_create_request *request)
         return ret;
     }
 
-    ret = util_parse_cidr(request->subnet, &net);
+    ret = util_parse_ipnet_from_str(request->subnet, &net);
     if (ret != 0 || net == NULL) {
         ERROR("Parse CIDR %s failed", request->subnet);
         isulad_set_error_message("Invalid subnet %s", request->subnet);

@@ -84,7 +84,7 @@ static std::string ParseIPFromLine(const char *line, const char *stdout_str)
         goto out;
     }
 
-    if (util_parse_cidr(fields[3], &ipnet_val) != 0) {
+    if (util_parse_ipnet_from_str(fields[3], &ipnet_val) != 0) {
         ERROR("CNI failed to parse ip from output %s", stdout_str);
         goto out;
     }

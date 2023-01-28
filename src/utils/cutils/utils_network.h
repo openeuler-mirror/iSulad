@@ -26,7 +26,6 @@ extern "C" {
 #endif
 
 #define IPV4LEN 4
-
 #define IPV6LEN 16
 
 #define NETWORK_VALID_NAME_CHARS "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$"
@@ -40,15 +39,15 @@ struct ipnet {
     size_t ip_mask_len;
 };
 
-void util_free_ipnet(struct ipnet *val);
-
 int util_parse_ip_from_str(const char *addr, uint8_t **ips, size_t *len);
 
-int util_parse_cidr(const char *cidr_str, struct ipnet **ipnet_val);
+char *util_ip_to_string(const uint8_t *ip, const size_t len);
+
+int util_parse_ipnet_from_str(const char *cidr_str, struct ipnet **ipnet_val);
 
 char *util_ipnet_to_string(const struct ipnet *value);
 
-char *util_ip_to_string(const uint8_t *ip, size_t len);
+void util_free_ipnet(struct ipnet *val);
 
 int util_reduce_ip_by_mask(const struct ipnet *val);
 
