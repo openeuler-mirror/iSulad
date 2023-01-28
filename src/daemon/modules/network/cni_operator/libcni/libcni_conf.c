@@ -272,17 +272,17 @@ static int do_check_file_is_valid(const char *fname)
 
     nret = lstat(fname, &tmp_fstat);
     if (nret != 0) {
-        SYSERROR("lstat %s failed", fname);
+        SYSWARN("Lstat %s failed", fname);
         return -1;
     }
 
     if (S_ISDIR(tmp_fstat.st_mode)) {
-        ERROR("conf file %s is dir", fname);
+        WARN("Conf file %s is dir", fname);
         return -1;
     }
 
     if (tmp_fstat.st_size > SIZE_MB) {
-        ERROR("Too large config file: %s", fname);
+        WARN("Too large config file: %s", fname);
         return -1;
     }
 
