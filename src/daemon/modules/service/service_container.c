@@ -1187,7 +1187,7 @@ static int delete_client_fifo_home_dir(const char *name)
     if (util_recursive_rmdir(client_fifo_home_dir, 0)) {
         WARN("Failed to delete client fifo home path:%s", client_fifo_home_dir);
     }
-    
+
     free(client_fifo_home_dir);
     return 0;
 }
@@ -1287,7 +1287,7 @@ out:
     // when container is auto-remove, it will be deleted when stopped.
     // isula has no suitable time to delete fifo dir, so isulad delete it here.
     // Whether the delete container operation fails or not, delete the client's fifo dir to avoid it residual.
-    // When isula and isulad use tcp to connect, fifo files will not be created. 
+    // When isula and isulad use tcp to connect, fifo files will not be created.
     // Because restart will set auto_remove to false, using auto_remove_bak to ensure delete Policy.
     if (cont->hostconfig != NULL && cont->hostconfig->auto_remove_bak && delete_client_fifo_home_dir(id) != 0) {
         WARN("Failed to delete client fifo home dir");

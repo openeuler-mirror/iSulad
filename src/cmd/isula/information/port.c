@@ -25,7 +25,7 @@
 const char g_cmd_port_desc[] = "List port mappings of the container";
 const char g_cmd_port_usage[] = "port CONTAINER [PRIVATE_PORT[/PROTO]]";
 
-struct client_arguments g_cmd_port_args = { 
+struct client_arguments g_cmd_port_args = {
     .time = INSPECT_TIMEOUT_SEC,
 };
 

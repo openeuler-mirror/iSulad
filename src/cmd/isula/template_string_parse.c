@@ -26,7 +26,7 @@ char *parse_single_template_string(const char *arg)
     char *ret_string = NULL;
     char *next_context = NULL;
 
-    if(arg == NULL) {
+    if (arg == NULL) {
         return ret_string;
     }
 

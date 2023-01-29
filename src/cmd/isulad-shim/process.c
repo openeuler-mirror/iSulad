@@ -1212,7 +1212,8 @@ out:
     return ret;
 }
 
-static int try_wait_all_child(void) {
+static int try_wait_all_child(void)
+{
     if (waitpid(-1, NULL, WNOHANG) == -1 && errno == ECHILD) {
         // all child handled
         return 0;
@@ -1251,7 +1252,7 @@ int process_signal_handle_routine(process_t *p)
         }
         if (exit_shim) {
             process_kill_all(p);
-            
+
             // wait atmost 120 seconds
             DO_RETRY_CALL(120, 1000000, nret, try_wait_all_child);
             if (nret != 0) {

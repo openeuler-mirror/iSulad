@@ -371,15 +371,15 @@ int invokeHttpRequestSearch(const char *url, struct http_get_options *options, l
         // test not find
         if (search_count >= SEARCH_TEST_NOT_FOUND && search_count < SEARCH_TEST_NOT_FOUND + RETRY_TIMES) {
             file = data_path + "search_result_404";
-        } 
+        }
         // test server error and restry
-        else if ((search_count >= SEARCH_TEST_SERVER_ERROR && search_count < SEARCH_TEST_SERVER_ERROR + RETRY_TIMES) || 
-                  (search_count == SEARCH_TEST_RETRY_SUCCESS)) {
+        else if ((search_count >= SEARCH_TEST_SERVER_ERROR && search_count < SEARCH_TEST_SERVER_ERROR + RETRY_TIMES) ||
+                 (search_count == SEARCH_TEST_RETRY_SUCCESS)) {
             file = data_path + "search_server_error";
         } else {
             file = data_path + "search_result";
         }
-    }else {
+    } else {
         ERROR("%s not match failed", url);
         return -1;
     }
@@ -832,7 +832,7 @@ TEST_F(RegistryUnitTest, test_search_image)
 
     ASSERT_EQ(registry_search(options, &result), 0);
     ASSERT_NE(result, nullptr);
-    ASSERT_STREQ(result->query ,"busybox");
+    ASSERT_STREQ(result->query, "busybox");
     ASSERT_EQ(result->results_len, 1);
     ASSERT_NE(result->results, nullptr);
     ASSERT_STREQ(result->results[0]->description, "Busybox base image.");

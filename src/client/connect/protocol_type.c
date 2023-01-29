@@ -709,7 +709,7 @@ void isula_kill_response_free(struct isula_kill_response *response)
     }
     free(response->id);
     response->id = NULL;
-    
+
     free(response->errmsg);
     response->errmsg = NULL;
     free(response);

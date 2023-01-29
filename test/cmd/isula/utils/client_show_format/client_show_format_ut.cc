@@ -44,10 +44,10 @@ TEST(client_show_format, test_valid_format_filters_field)
     const char *invalid = "Create";
     const char *support_field[] = {"State", "Name", "Id", "Image"};
     size_t len = sizeof(support_field) / sizeof(char *);
-    ASSERT_EQ(valid_format_filters_field(valid ,support_field, len), true);
+    ASSERT_EQ(valid_format_filters_field(valid, support_field, len), true);
 
-    ASSERT_EQ(valid_format_filters_field(invalid ,support_field, len), false);
-    ASSERT_EQ(valid_format_filters_field(valid ,nullptr, len), false);
+    ASSERT_EQ(valid_format_filters_field(invalid, support_field, len), false);
+    ASSERT_EQ(valid_format_filters_field(valid, nullptr, len), false);
     ASSERT_EQ(valid_format_filters_field(nullptr, support_field, len), false);
 }
 

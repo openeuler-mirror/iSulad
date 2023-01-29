@@ -692,7 +692,7 @@ out:
     return result;
 }
 
-bool util_net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const size_t ip_len, bool critical)
+bool util_net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const size_t ip_len, const bool closed_interval)
 {
     bool ret = false;
     bool is_first = true;
@@ -702,19 +702,19 @@ bool util_net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const siz
     uint8_t *last_ip = NULL;
 
     if (ipnet == NULL || ip == NULL || ip_len == 0) {
-        return ret;
+        return false;
     }
 
     if (ipnet->ip_len != ip_len || ipnet->ip_mask_len != ip_len) {
-        return ret;
+        return false;
     }
 
-    first_ip = util_common_calloc_s(sizeof(uint8_t) * ip_len);
+    first_ip = (uint8_t *)util_smart_calloc_s(sizeof(uint8_t), ip_len);
     if (first_ip == NULL) {
         ERROR("Out of memory");
-        return ret;
+        return false;
     }
-    last_ip = util_common_calloc_s(sizeof(uint8_t) * ip_len);
+    last_ip = (uint8_t *)util_smart_calloc_s(sizeof(uint8_t), ip_len);
     if (last_ip == NULL) {
         ERROR("Out of memory");
         goto out;
@@ -726,23 +726,23 @@ bool util_net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const siz
     }
 
     for (i = 0; i < ip_len; i++) {
-        if (first_ip[i] <= ip[i] && ip[i] <= last_ip[i]) {
-            if (ip[i] != first_ip[i]) {
-                is_first = false;
-            }
-            if (ip[i] != last_ip[i]) {
-                is_last = false;
-            }
-            continue;
+        if (ip[i] < first_ip[i] || ip[i] > last_ip[i]) {
+            goto out;
         }
-        goto out;
+
+        if (ip[i] != first_ip[i]) {
+            is_first = false;
+        }
+        if (ip[i] != last_ip[i]) {
+            is_last = false;
+        }
     }
 
-    // whether or not allow ip is critical value (frist_ip and last_ip)
-    if (critical) {
+    // close interval ip range [first_ip, last_ip]
+    if (closed_interval) {
         ret = true;
     } else {
-        ret = !(is_first || is_last);
+        ret = !is_first && !is_last;
     }
 
 out:
