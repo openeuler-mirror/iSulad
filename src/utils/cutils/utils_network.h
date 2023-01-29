@@ -51,7 +51,7 @@ void util_free_ipnet(struct ipnet *val);
 
 int util_reduce_ip_by_mask(const struct ipnet *val);
 
-bool util_net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const size_t ip_len, bool critical);
+bool util_net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const size_t ip_len, const bool closed_interval);
 
 bool util_validate_network_name(const char *name);
 

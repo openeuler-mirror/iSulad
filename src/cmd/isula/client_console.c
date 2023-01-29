@@ -337,7 +337,7 @@ int delete_client_fifo_home_dir(const char *name)
     if (util_recursive_rmdir(client_fifo_home_dir, 0)) {
         WARN("Failed to delete client fifo home path:%s", client_fifo_home_dir);
     }
-    
+
     free(client_fifo_home_dir);
     return 0;
 }

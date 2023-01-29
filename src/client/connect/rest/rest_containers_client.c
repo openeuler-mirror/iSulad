@@ -1333,7 +1333,7 @@ static int unpack_kill_response(const struct parsed_http_message *message, void 
     if (cresponse->id != NULL) {
         kill_response->id = util_strdup_s(cresponse->id);
     }
-    
+
     kill_response->server_errono = cresponse->cc;
     if (cresponse->errmsg != NULL) {
         kill_response->errmsg = util_strdup_s(cresponse->errmsg);
