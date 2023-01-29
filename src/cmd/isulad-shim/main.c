@@ -98,6 +98,7 @@ int main(int argc, char **argv)
     int ret = SHIM_ERR;
     int efd = -1;
     process_t *p = NULL;
+    pthread_t tid_accept;
 
     g_log_fd = open_no_inherit(SHIM_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0640);
     if (g_log_fd < 0) {
@@ -151,7 +152,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    ret = open_io(p);
+    ret = open_io(p, &tid_accept);
     if (ret != SHIM_OK) {
         exit(EXIT_FAILURE);
     }
@@ -166,5 +167,5 @@ int main(int argc, char **argv)
 
     released_timeout_exit();
 
-    return process_signal_handle_routine(p);
+    return process_signal_handle_routine(p, tid_accept);
 }

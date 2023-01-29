@@ -423,6 +423,14 @@ static int start_io_copy_threads(process_t *p)
 
     /* 4 threads for stdin, stdout, stderr and exec resize */
     for (i = 0; i < 4; i++) {
+        /*
+        * if the terminal is used, we do not need to active the io copy of stderr pipe,
+        * for stderr and stdout are mixed together
+        */
+        if (i == STDID_ERR && p->state->terminal) {
+            continue;
+        }
+
         ret = create_io_copy_thread(p, i);
         if (ret != SHIM_OK) {
             return SHIM_ERR;
@@ -512,11 +520,6 @@ static void *task_console_accept(void *data)
     int ret = SHIM_ERR;
     console_accept_t *ac = (console_accept_t *)data;
 
-    if ((pthread_detach(pthread_self())) != 0) {
-        write_message(g_log_fd, ERR_MSG, "detach thread failed");
-        return NULL;
-    }
-
     conn_fd = accept(ac->listen_fd, NULL, NULL);
     if (conn_fd < 0) {
         write_message(g_log_fd, ERR_MSG, "accept from fd %d failed:%d", ac->listen_fd, SHIM_SYS_ERR(errno));
@@ -548,12 +551,6 @@ static void *task_console_accept(void *data)
     if (ret != SHIM_OK) {
         goto out;
     }
-
-    /*
-     * if the terminal is used, we do not need to active the io copy of stderr pipe,
-     * for stderr and stdout are mixed together
-     */
-    destroy_io_thread(ac->p, STDID_ERR);
 
 out:
     /* release listen socket at the first time */
@@ -634,7 +631,7 @@ static int new_temp_console_path(process_t *p)
     return SHIM_OK;
 }
 
-static int console_init(process_t *p)
+static int console_init(process_t *p, pthread_t *tid_accept)
 {
     int ret = SHIM_ERR;
     int fd = -1;
@@ -670,8 +667,7 @@ static int console_init(process_t *p)
     ac->p = p;
     ac->listen_fd = fd;
 
-    pthread_t tid_accept;
-    ret = pthread_create(&tid_accept, NULL, task_console_accept, ac);
+    ret = pthread_create(tid_accept, NULL, task_console_accept, ac);
     if (ret != SHIM_OK) {
         goto failure;
     }
@@ -762,7 +758,7 @@ failure:
     return NULL;
 }
 
-static int open_terminal_io(process_t *p)
+static int open_terminal_io(process_t *p, pthread_t *tid_accept)
 {
     int ret = SHIM_ERR;
 
@@ -773,7 +769,7 @@ static int open_terminal_io(process_t *p)
     }
 
     /* begin listen and accept fd from p->console_sock_path */
-    return console_init(p);
+    return console_init(p, tid_accept);
 }
 
 static int open_generic_io(process_t *p)
@@ -916,7 +912,7 @@ failure:
     return NULL;
 }
 
-int open_io(process_t *p)
+int open_io(process_t *p, pthread_t *tid_accept)
 {
     int ret = SHIM_ERR;
 
@@ -926,7 +922,7 @@ int open_io(process_t *p)
     }
 
     if (p->state->terminal) {
-        return open_terminal_io(p);
+        return open_terminal_io(p, tid_accept);
     }
 
     return open_generic_io(p);
@@ -1222,12 +1218,13 @@ static int try_wait_all_child(void)
     return 1;
 }
 
-int process_signal_handle_routine(process_t *p)
+int process_signal_handle_routine(process_t *p, const pthread_t tid_accept)
 {
     int ret = SHIM_ERR;
     bool exit_shim = false;
     int nret = 0;
     int i;
+    struct timespec ts;
 
     for (;;) {
         int status;
@@ -1263,6 +1260,23 @@ int process_signal_handle_routine(process_t *p)
             if (p->exit_fd > 0) {
                 (void)write_nointr(p->exit_fd, &status, sizeof(int));
             }
+            // wait for task_console_accept thread termination. In order to make sure that
+            // the io_copy connection is established and io_thread is not used by multiple threads.
+            if (p->state->terminal) {
+                if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+                    write_message(g_log_fd, ERR_MSG, "Failed to get realtime");
+                    nret = pthread_join(tid_accept, NULL);
+                } else {
+                    // Set the maximum waiting time to 60s to prevent stuck.
+                    ts.tv_sec += 60;
+                    nret = pthread_timedjoin_np(tid_accept, NULL, &ts);
+                }
+
+                if (nret != 0) {
+                    write_message(g_log_fd, ERR_MSG, "Failed to join task_console_accept thread");
+                }
+            }
+
             for (i = 0; i < 3; i++) {
                 destroy_io_thread(p, i);
             }
