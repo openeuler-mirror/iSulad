@@ -20,7 +20,7 @@
 TEST(volume_ut, test_volume_api)
 {
     const char *root_dir = static_cast<const char*>("/var/lib/isulad");
-    
+
     int init = volume_init(root_dir);
     EXPECT_EQ(init, 0);
 

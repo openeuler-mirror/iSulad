@@ -159,7 +159,7 @@ TEST(utils_verify, test_util_valid_file)
 
     ASSERT_EQ(util_path_remove(isulad_dir.c_str()), 0);
 
-    ASSERT_EQ(util_valid_file(nullptr, S_IFDIR),false);
+    ASSERT_EQ(util_valid_file(nullptr, S_IFDIR), false);
 }
 
 TEST(utils_verify, test_util_valid_digest)

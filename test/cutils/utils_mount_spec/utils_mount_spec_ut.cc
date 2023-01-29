@@ -18,7 +18,8 @@
 
 TEST(utils_mount_spec, test_util_valid_mount_spec)
 {
-    char *base_valid = (char *)"type=bind,source=/home,target=/vol3,readonly=true,bind-selinux-opts=z,bind-propagation=rprivate";
+    char *base_valid = (char *)
+                       "type=bind,source=/home,target=/vol3,readonly=true,bind-selinux-opts=z,bind-propagation=rprivate";
     char *oci_valid = (char *)"type=tmpfs,dst=/tmpfs,tmpfs-size=1m,tmpfs-mode=1700";
     char *invalid1 = (char *)"type=volume,src=vol,dst=/vol,ro=true,red=false";
     char *invalid2 = (char *)"type,src,dst";
@@ -35,7 +36,8 @@ TEST(utils_mount_spec, test_util_valid_mount_spec)
 
 TEST(utils_mount_spec, test_util_parse_mount_spec)
 {
-    char *base_valid = (char *)"type=bind,source=/home,target=/vol3,readonly=true,bind-selinux-opts=z,bind-propagation=rprivate";
+    char *base_valid = (char *)
+                       "type=bind,source=/home,target=/vol3,readonly=true,bind-selinux-opts=z,bind-propagation=rprivate";
     char *oci_valid = (char *)"type=tmpfs,dst=/tmpfs,tmpfs-size=1m,tmpfs-mode=1700";
     char *invalid1 = (char *)"type=volume,src=vol,dst=/vol,ro=true,red=false";
     char *invalid2 = (char *)"type,src,dst";
