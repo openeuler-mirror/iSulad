@@ -266,19 +266,25 @@ static void clean_residual_files()
 
 static void daemon_shutdown()
 {
+    EVENT("Begin shutdown daemon");
+
     /* shutdown server */
     server_common_shutdown();
 
     /* clean resource first, left time to wait finish */
     image_module_exit();
+    EVENT("Image module exit completed");
 
     umount_daemon_mntpoint();
+    EVENT("Umount daemon mntpoint completed");
 
 #ifdef ENABLE_NETWORK
     network_module_exit();
+    EVENT("Network module exit completed");
 #endif
 
     clean_residual_files();
+    EVENT("Clean residual files completed");
 
     sem_post(&g_daemon_wait_shutdown_sem);
 }

@@ -16,6 +16,7 @@
 #include "service_common.h"
 
 #include <stddef.h>
+#include <isula_libutils/log.h>
 
 #include "daemon_arguments.h"
 #ifdef GRPC_CONNECTOR
@@ -25,7 +26,6 @@
 #endif
 #else
 #include "rest_service.h"
-#include "isula_libutils/log.h"
 #endif
 
 /* server common init */
@@ -64,11 +64,14 @@ void server_common_shutdown(void)
 {
 #ifdef GRPC_CONNECTOR
     grpc_server_shutdown();
+    EVENT("Grpc Server shutdown completed");
 #ifdef ENABLE_METRICS
     metrics_service_shutdown();
+    EVENT("Metrics service shutdown complete");
 #endif
 #else
     rest_server_shutdown();
+    EVENT("Rest Server shutdown completed");
 #endif
 }
 

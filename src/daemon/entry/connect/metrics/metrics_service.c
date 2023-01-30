@@ -164,7 +164,5 @@ void metrics_service_shutdown()
 
     free(g_metrics_htp_param);
     g_metrics_htp_param = NULL;
-
-    DEBUG("metrics service shutdown ok.\n");
 }
 #endif

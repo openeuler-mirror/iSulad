@@ -3418,9 +3418,13 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
 
         device_info = lookup_device(devset, entry->d_name);
         if (device_info == NULL) {
-            DEBUG("devmapper: shutdown lookup device %s err", entry->d_name);
-        } else if (deactivate_device(devset, device_info->info) != 0) {
-            DEBUG("devmapper: shutdown deactivate device %s err", entry->d_name);
+            WARN("devmapper: shutdown lookup device %s err", entry->d_name);
+            continue;
+        }
+        if (deactivate_device(devset, device_info->info) != 0) {
+            WARN("devmapper: shutdown deactivate device %s err", entry->d_name);
+        } else {
+            INFO("devmapper: shutdown deactivate device %s complete", entry->d_name);
         }
         devmapper_device_info_ref_dec(device_info);
     }
@@ -3428,7 +3432,9 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
     device_info = lookup_device(devset, "base");
     if (device_info != NULL) {
         if (deactivate_device(devset, device_info->info) != 0) {
-            DEBUG("devmapper: shutdown deactivate base device err");
+            WARN("devmapper: shutdown deactivate base device err");
+        } else {
+            INFO("devmapper: shutdown deactivate base device complete");
         }
         devmapper_device_info_ref_dec(device_info);
     }
@@ -3452,15 +3458,18 @@ int device_set_shutdown(struct device_set *devset, const char *home)
         return -1;
     }
 
+    EVENT("Devmapper: begin shutdown device set");
     if (save_deviceset_matadata(devset)) {
         DEBUG("devmapper: save deviceset metadata failed");
     }
+    EVENT("Devmapper: save deviceset metadata completed");
 
     if (umount_deactivate_dev_all(devset) != 0) {
         ERROR("devmapper: Shutdown umount device failed");
         ret = -1;
         goto free_out;
     }
+    EVENT("Devmapper: Shutdown umount device completed");
 
 free_out:
     if (pthread_rwlock_unlock(&(devset->devmapper_driver_rwlock)) != 0) {
