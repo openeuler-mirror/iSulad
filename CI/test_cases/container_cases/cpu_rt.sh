@@ -102,7 +102,7 @@ function test_kernel_without_cpu_rt_spec()
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    isula run -itd --cpu-rt-period 1000000 --cpu-rt-runtime 900000 $image /bin/sh 2>&1 | grep "Your kernel does not support cgroup rt runtime"
+    isula run -itd --cpu-rt-period 1000000 --cpu-rt-runtime 900000 $image /bin/sh 2>&1 | grep "Your kernel does not support cgroup rt"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - kernel does not support cpu-rt" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
