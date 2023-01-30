@@ -514,6 +514,8 @@ int graphdriver_cleanup(void)
     // notes, do not call driver_unlock and destroy the lock, becase the other threads may wait for it
     // if we unlock and destroy the lock, may cause the lock failure, and result to coredump
 
+    EVENT("Graph driver %s cleanup completed", g_graphdriver->name);
+
 out:
     return ret;
 }
