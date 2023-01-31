@@ -1909,6 +1909,7 @@ void image_module_exit()
             continue;
         }
         g_bims[i].ops->clean_resource();
+        EVENT("Image %s clean resource completed", g_bims[i].image_type);
     }
 }
 
