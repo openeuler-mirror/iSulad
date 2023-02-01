@@ -1844,8 +1844,34 @@ out:
     return ret;
 }
 
+static int append_rlimit_from_oci_spec(defs_process *spec, const oci_runtime_spec *oci_spec)
+{
+    size_t j;
+
+    spec->rlimits = (defs_process_rlimits_element **)util_smart_calloc_s(sizeof(defs_process_rlimits_element *),
+                                                                         (size_t)oci_spec->process->rlimits_len);
+    if (spec->rlimits == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (j = 0; j < oci_spec->process->rlimits_len; j++) {
+        spec->rlimits[j] = util_common_calloc_s(sizeof(defs_process_rlimits_element));
+        if (spec->rlimits[j] == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        spec->rlimits[j]->type = util_strdup_s(oci_spec->process->rlimits[j]->type);
+        spec->rlimits[j]->hard = oci_spec->process->rlimits[j]->hard;
+        spec->rlimits[j]->soft = oci_spec->process->rlimits[j]->soft;
+        spec->rlimits_len++;
+    }
+
+    return 0;
+}
+
 static defs_process *make_exec_process_spec(const container_config *container_spec, defs_process_user *puser,
-                                            const char *runtime, const container_exec_request *request)
+                                            const char *runtime, const container_exec_request *request, const oci_runtime_spec *oci_spec)
 {
     int ret = 0;
     defs_process *spec = NULL;
@@ -1856,25 +1882,38 @@ static defs_process *make_exec_process_spec(const container_config *container_sp
     }
 
     if (strcasecmp(runtime, "lcr") != 0) {
+        // for oci runtime:
+        // step 1: merge env from container;
         ret = merge_exec_from_container_env(spec, container_spec);
         if (ret != 0) {
             ERROR("Failed to dup args for exec process spec");
             goto err_out;
         }
-    }
 
-    ret = merge_envs_from_request_env(spec, (const char **)request->env, request->env_len);
-    if (ret != 0) {
-        ERROR("Failed to dup args for exec process spec");
-        goto err_out;
-    }
-
-    if (strcasecmp(runtime, "lcr") != 0) {
+        // step 2: merge process env including PATH, HOATNAME and TERM(if tty is true);
         ret = append_necessary_process_env(request->tty, container_spec, spec);
         if (ret != 0) {
             ERROR("Failed to append necessary for exec process spec");
             goto err_out;
         }
+
+        ret = append_rlimit_from_oci_spec(spec, oci_spec);
+        if (ret != 0) {
+            ERROR("Failed to append rlimit for exec process spec");
+            goto err_out;
+        }
+
+        spec->no_new_privileges = oci_spec->process->no_new_privileges;
+    }
+
+    // for oci runtime:
+    // step 3 : Finally, merge env from request to ensure that the env in the request is not overwritten;
+    // for lcr:
+    // since the container env and the process env have been stored in the config file, lcr only needs to merge the env in the request.
+    ret = merge_envs_from_request_env(spec, (const char **)request->env, request->env_len);
+    if (ret != 0) {
+        ERROR("Failed to dup args for exec process spec");
+        goto err_out;
     }
 
     ret = util_dup_array_of_strings((const char **)request->argv, request->argv_len, &(spec->args), &(spec->args_len));
@@ -1911,6 +1950,8 @@ static int do_exec_container(const container_t *cont, const char *runtime, char 
     char *engine_log_path = NULL;
     char *loglevel = NULL;
     char *logdriver = NULL;
+    const char *id = cont->common_config->id;
+    oci_runtime_spec *oci_spec = NULL;
     defs_process *process_spec = NULL;
     rt_exec_params_t params = { 0 };
 
@@ -1933,7 +1974,18 @@ static int do_exec_container(const container_t *cont, const char *runtime, char 
         goto out;
     }
 
-    process_spec = make_exec_process_spec(cont->common_config->config, puser, runtime, request);
+    // lcr reads the config from the file and will not lose it.
+    // so there is no need to get the config from oci_spec.
+    if (strcasecmp(runtime, "lcr") != 0) {
+        oci_spec = load_oci_config(cont->root_path, id);
+        if (oci_spec == NULL) {
+            ERROR("Failed to load oci config");
+            ret = -1;
+            goto out;
+        }
+    }
+
+    process_spec = make_exec_process_spec(cont->common_config->config, puser, runtime, request, oci_spec);
     if (process_spec == NULL) {
         ERROR("Exec: Failed to make process spec");
         ret = -1;
@@ -1962,6 +2014,7 @@ out:
     free(engine_log_path);
     free(logdriver);
     free_defs_process(process_spec);
+    free_oci_runtime_spec(oci_spec);
 
     return ret;
 }
