@@ -35,9 +35,10 @@ else()
 endif()
 
 # check depends library and headers
+message("---------------Check libraries and headers-----------------------")
 include(cmake/checker.cmake)
 if (CHECKER_RESULT)
-    message(FATAL_ERROR "ERROR: Check library and headers failed")
+    message(FATAL_ERROR "ERROR: Check libraries and headers failed")
 endif()
 
 configure_file(
@@ -51,21 +52,22 @@ configure_file(
 )
 
 # parse .proto files
+message("---------------Generate GRPC iSulad proto-----------------------")
 include(cmake/protoc.cmake)
 
 # unit test and coverage
 SET(CMAKE_VERBOSE_MAKEFILE OFF)
 IF(ENABLE_COVERAGE)
     IF(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-        message(WARNING "Debugging mode should be turned on when generating code coverage reports, otherwise coverage may be inaccurate")
+        message(WARNING "Debugging mode should be turned on when code coverage reports are being generated; otherwise coverage may be inaccurate.")
     ENDIF()
-    MESSAGE(STATUS "Enable coverage compile option")
+    MESSAGE(STATUS "Enable coverage compiler option")
     SET(COVERAGE_C_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage -fkeep-static-functions -fkeep-inline-functions")
     SET(COVERAGE_CXX_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage")
 ENDIF(ENABLE_COVERAGE)
 
 IF(ENABLE_ASAN)
-    MESSAGE(STATUS "Enable asan compile option")
+    MESSAGE(STATUS "Enable asan compiler option")
     SET(ASAN_OPTIONS "${ASAN_OPTION} -fsanitize=address -fsanitize-recover=address -fno-omit-frame-pointer")
 ENDIF(ENABLE_ASAN)
 
