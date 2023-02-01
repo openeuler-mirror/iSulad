@@ -64,7 +64,19 @@ if (GRPC_CONNECTOR)
     execute_process(COMMAND ${CMD_PROTOC} -I ${PROTOS_PATH}/cri --grpc_out=${CRI_PROTOS_OUT_PATH} 
         --plugin=protoc-gen-grpc=${CMD_GRPC_CPP_PLUGIN} ${PROTOS_PATH}/cri/api.proto ERROR_VARIABLE cri_err)
     if (cri_err)
-        message("Parse cri.proto plugin failed: ")
+        message("Parse cri-api.proto plugin failed: ")
+        message(FATAL_ERROR ${cri_err})
+    endif()
+    execute_process(COMMAND ${CMD_PROTOC} -I ${PROTOS_PATH}/cri --cpp_out=${CRI_PROTOS_OUT_PATH} ${PROTOS_PATH}/cri/gogo.proto
+            ERROR_VARIABLE cri_err)
+    if (cri_err)
+        message("Parse cri-gogo.proto failed: ")
+        message(FATAL_ERROR ${cri_err})
+    endif()
+    execute_process(COMMAND ${CMD_PROTOC} -I ${PROTOS_PATH}/cri --grpc_out=${CRI_PROTOS_OUT_PATH}
+            --plugin=protoc-gen-grpc=${CMD_GRPC_CPP_PLUGIN} ${PROTOS_PATH}/cri/gogo.proto ERROR_VARIABLE cri_err)
+    if (cri_err)
+        message("Parse cri-gogo.proto plugin failed: ")
         message(FATAL_ERROR ${cri_err})
     endif()
 
