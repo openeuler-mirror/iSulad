@@ -20,7 +20,7 @@
 const char g_cmd_network_remove_desc[] = "Remove networks";
 const char g_cmd_networ_remove_usage[] = "rm [OPTIONS] NETWORK [NETWORK...]";
 
-struct client_arguments g_cmd_network_remove_args = {};
+struct client_arguments g_cmd_network_remove_args = { 0 };
 
 int network_remove(const struct client_arguments *args)
 {
@@ -66,7 +66,6 @@ out:
 int cmd_network_remove_main(int argc, const char **argv)
 {
     size_t i;
-    bool success = true;
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
     struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_network_remove_args)
@@ -102,14 +101,9 @@ int cmd_network_remove_main(int argc, const char **argv)
     for (i = 0; i < g_cmd_network_remove_args.argc; i++) {
         g_cmd_network_remove_args.network_name = g_cmd_network_remove_args.argv[i];
         if (network_remove(&g_cmd_network_remove_args) != 0) {
-            ERROR("Remove network %s failed", g_cmd_network_remove_args.network_name);
-            success = false;
-            break;
+            COMMAND_ERROR("Remove network %s failed", g_cmd_network_remove_args.network_name);
+            exit(ECOMMON);
         }
-    }
-
-    if (!success) {
-        exit(ECOMMON);
     }
 
     exit(EXIT_SUCCESS);

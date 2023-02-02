@@ -311,7 +311,6 @@ int network_module_detach(const network_api_conf *conf, const char *type)
 int network_module_conf_create(const char *type, const network_create_request *request, char **name, uint32_t *cc)
 {
     const struct net_type *pnet = NULL;
-    int ret = 0;
 
     if (request == NULL || name == NULL || cc == NULL) {
         ERROR("Invalid arguments");
@@ -324,15 +323,12 @@ int network_module_conf_create(const char *type, const network_create_request *r
         return -1;
     }
 
-    ret = pnet->ops->conf_create(request, name, cc);
-
-    return ret;
+    return pnet->ops->conf_create(request, name, cc);
 }
 
 int network_module_conf_inspect(const char *type, const char *name, char **network_json)
 {
     const struct net_type *pnet = NULL;
-    int ret = 0;
 
     if (name == NULL || network_json == NULL) {
         ERROR("Invalid arguments");
@@ -345,16 +341,13 @@ int network_module_conf_inspect(const char *type, const char *name, char **netwo
         return -1;
     }
 
-    ret = pnet->ops->conf_inspect(name, network_json);
-
-    return ret;
+    return pnet->ops->conf_inspect(name, network_json);
 }
 
 int network_module_conf_list(const char *type, const struct filters_args *filters, network_network_info ***networks,
                              size_t *networks_len)
 {
     const struct net_type *pnet = NULL;
-    int ret = 0;
 
     if (networks == NULL || networks_len == NULL) {
         ERROR("Invalid arguments");
@@ -367,15 +360,12 @@ int network_module_conf_list(const char *type, const struct filters_args *filter
         return -1;
     }
 
-    ret = pnet->ops->conf_list(filters, networks, networks_len);
-
-    return ret;
+    return pnet->ops->conf_list(filters, networks, networks_len);
 }
 
 int network_module_conf_rm(const char *type, const char *name, char **res_name)
 {
     const struct net_type *pnet = NULL;
-    int ret = 0;
 
     if (name == NULL || res_name == NULL) {
         ERROR("Invalid arguments");
@@ -388,9 +378,7 @@ int network_module_conf_rm(const char *type, const char *name, char **res_name)
         return -1;
     }
 
-    ret = pnet->ops->conf_rm(name, res_name);
-
-    return ret;
+    return pnet->ops->conf_rm(name, res_name);
 }
 
 bool network_module_ready(const char *type)

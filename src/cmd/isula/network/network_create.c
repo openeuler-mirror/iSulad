@@ -66,6 +66,7 @@ int network_create(const struct client_arguments *args)
     ret = ops->network.create(&request, response, &config);
     if (ret != 0 || response->name == NULL) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
+        ret = -1;
         goto out;
     }
     if (response->errmsg != NULL) {

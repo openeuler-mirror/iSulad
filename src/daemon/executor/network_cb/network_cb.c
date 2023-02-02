@@ -155,7 +155,6 @@ static int network_inspect_cb(const network_inspect_request *request, network_in
 {
     int ret = 0;
     uint32_t cc = ISULAD_SUCCESS;
-    char *network_json = NULL;
 
     if (request == NULL || response == NULL) {
         ERROR("Invalid input arguments");
@@ -184,7 +183,7 @@ static int network_inspect_cb(const network_inspect_request *request, network_in
         goto out;
     }
 
-    ret = network_module_conf_inspect(NETWOKR_API_TYPE_NATIVE, request->name, &network_json);
+    ret = network_module_conf_inspect(NETWOKR_API_TYPE_NATIVE, request->name, &(*response)->network_json);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
     }
@@ -195,8 +194,6 @@ out:
         (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
-    (*response)->network_json = util_strdup_s(network_json);
-    free(network_json);
 
     return ret;
 }

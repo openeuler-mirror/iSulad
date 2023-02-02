@@ -172,6 +172,7 @@ int network_list(const struct client_arguments *args)
     }
 
 out:
+    isula_filters_free(request.filters);
     isula_network_list_response_free(response);
     return ret;
 }

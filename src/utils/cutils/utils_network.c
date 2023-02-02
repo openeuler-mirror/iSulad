@@ -738,7 +738,7 @@ bool util_net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const siz
         }
     }
 
-    // close interval ip range [first_ip, last_ip]
+    // closed interval ip range [first_ip, last_ip]
     if (closed_interval) {
         ret = true;
     } else {
