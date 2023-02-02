@@ -168,7 +168,6 @@ if (ENABLE_OCI_IMAGE)
 endif()
 
 if (GRPC_CONNECTOR)
-    message("GRPC iSulad")
     target_link_libraries(isulad -Wl,--as-needed -lstdc++)
     target_link_libraries(isulad -Wl,--as-needed ${WEBSOCKET_LIBRARY} ${PROTOBUF_LIBRARY})
     target_link_libraries(isulad -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
