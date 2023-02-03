@@ -126,6 +126,10 @@ extern "C" {
 #define ISULAD_ENABLE_PLUGINS_SEPERATOR ","
 #define ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR ','
 
+#ifdef ENABLE_SHIM_V2
+#define SHIM_V2_LOG "/log"
+#endif
+
 #define MAX_HOSTS 10
 
 #define OPT_MAX_LEN 255
