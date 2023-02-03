@@ -14,8 +14,9 @@
  ******************************************************************************/
 #include "volume.h"
 
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/log.h>
 #include "isula_commands.h"
-#include "isula_libutils/log.h"
 #include "utils.h"
 #include "prune.h"
 #include "list.h"
@@ -42,7 +43,7 @@ struct command g_volume_commands[] = {
 int cmd_volume_main(int argc, const char **argv)
 {
     const struct command *command = NULL;
-    char *program = NULL;
+    __isula_auto_free char *program = NULL;
 
     program = util_string_join(" ", argv, 2);
 

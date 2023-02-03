@@ -14,8 +14,9 @@
  ******************************************************************************/
 #include "network.h"
 
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/log.h>
 #include "isula_commands.h"
-#include "isula_libutils/log.h"
 #include "utils.h"
 
 struct command g_network_commands[] = {
@@ -44,7 +45,7 @@ const char g_cmd_network_usage[] = "isula network COMMAND";
 int cmd_network_main(int argc, const char **argv)
 {
     const struct command *command = NULL;
-    char *program = NULL;
+    __isula_auto_free char *program = NULL;
 
     program = util_string_join(" ", argv, 2);
 

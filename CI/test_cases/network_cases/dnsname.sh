@@ -36,10 +36,6 @@ function test_network_dnsname()
     local cont2="cont2"
     local test="network dnsname test => (${FUNCNAME[@]})"
 
-    # TODO: enable dnsname testcase
-    # skip dnsname testcase, because of dnsname plugin bug
-    return 0
-
     msg_info "${test} starting..."
 
     check_valgrind_log

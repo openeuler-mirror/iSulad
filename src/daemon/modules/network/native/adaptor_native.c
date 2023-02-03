@@ -703,7 +703,7 @@ static int net_conflict(const struct ipnet *net, const struct ipnet *ipnet)
  * 1        : subnet not avaliable
  * others   : error
  */
-static int check_subnet_available(const char *subnet, const string_array *subnets, string_array *hostIP)
+static int check_subnet_available(const char *subnet, const string_array *subnets, const string_array *host_ip)
 {
     int ret = 0;
     size_t i = 0;
@@ -721,7 +721,7 @@ static int check_subnet_available(const char *subnet, const string_array *subnet
     for (i = 0; i < subnets->len; i++) {
         ret = util_parse_ipnet_from_str(subnets->items[i], &tmp);
         if (ret != 0 || tmp == NULL) {
-            ERROR("Parse CIDR %s failed", subnets->items[i]);
+            WARN("Parse CIDR %s failed", subnets->items[i]);
             ret = 0;
             continue;
         }
@@ -733,12 +733,12 @@ static int check_subnet_available(const char *subnet, const string_array *subnet
         tmp = NULL;
     }
 
-    for (i = 0; i < hostIP->len; i++) {
-        ret = util_parse_ip_from_str(hostIP->items[i], &ip, &ip_len);
+    for (i = 0; i < host_ip->len; i++) {
+        ret = util_parse_ip_from_str(host_ip->items[i], &ip, &ip_len);
         if (ret != 0 || ip == NULL || ip_len == 0) {
-            ERROR("Parse IP %s failed", hostIP->items[i]);
-            ret = -1;
-            goto out;
+            WARN("Parse host IP %s failed", host_ip->items[i]);
+            ret = 0;
+            continue;
         }
         if (util_net_contain_ip(net, ip, ip_len, true)) {
             ret = 1;
@@ -761,9 +761,10 @@ static int check_bridge(const network_create_request *request)
     int ret = 0;
     string_array *net_names = NULL;
     string_array *subnets = NULL;
-    string_array *hostIP = NULL;
+    string_array *host_ip = NULL;
 
     if (request->name != NULL) {
+        // check name conflict
         ret = get_cni_config(get_config_net_name, &net_names);
         if (ret != 0) {
             goto out;
@@ -784,12 +785,12 @@ static int check_bridge(const network_create_request *request)
         goto out;
     }
 
-    ret = get_host_net_ip(&hostIP);
+    ret = get_host_net_ip(&host_ip);
     if (ret != 0) {
         goto out;
     }
 
-    ret = check_subnet_available(request->subnet, subnets, hostIP);
+    ret = check_subnet_available(request->subnet, subnets, host_ip);
     if (ret == 1) {
         isulad_set_error_message("Subnet \"%s\" conflict with CNI config or host network", request->subnet);
         ret = EINVALIDARGS;
@@ -798,7 +799,7 @@ static int check_bridge(const network_create_request *request)
 out:
     util_free_string_array(net_names);
     util_free_string_array(subnets);
-    util_free_string_array(hostIP);
+    util_free_string_array(host_ip);
     return ret;
 }
 
@@ -915,7 +916,7 @@ static char *find_subnet()
     int nret = 0;
     char *subnet = NULL;
     string_array *config_subnet = NULL;
-    string_array *hostIP = NULL;
+    string_array *host_ip = NULL;
 
     size_t len = sizeof(g_private_networks) / sizeof(g_private_networks[0]);
     const char *end = g_private_networks[len - 1].end;
@@ -925,7 +926,7 @@ static char *find_subnet()
         return NULL;
     }
 
-    nret = get_host_net_ip(&hostIP);
+    nret = get_host_net_ip(&host_ip);
     if (nret != 0) {
         goto out;
     }
@@ -941,7 +942,7 @@ static char *find_subnet()
             subnet = nx_subnet;
         }
 
-        nret = check_subnet_available(subnet, config_subnet, hostIP);
+        nret = check_subnet_available(subnet, config_subnet, host_ip);
         if (nret == 0) {
             goto out;
         }
@@ -960,7 +961,7 @@ static char *find_subnet()
 
 out:
     util_free_string_array(config_subnet);
-    util_free_string_array(hostIP);
+    util_free_string_array(host_ip);
     return subnet;
 }
 
@@ -1202,7 +1203,7 @@ static cni_net_conf *conf_dnsname_plugin(const network_create_request *request)
         return NULL;
     }
     plugin->type = util_strdup_s("dnsname");
-    plugin->domain_name = util_strdup_s("dns.isulad");
+    plugin->domain_name = util_strdup_s(ISULAD_DNS_DOMAIN_NAME);
 
     plugin->capabilities = util_common_calloc_s(sizeof(json_map_string_bool));
     if (plugin->capabilities == NULL) {
@@ -1275,11 +1276,6 @@ static cni_net_conf_list *conf_bridge(const network_create_request *request, str
     for (i = 0; i < BRIDGE_DRIVER_PLUGINS_LEN; i++) {
         cni_net_conf *plugin = NULL;
 
-        if (strcmp(g_bridge_driver_plugins[i]->plugin, g_dnsname_plugin.plugin) == 0) {
-            // TODO: add dnsname in network conflist
-            // skip conf dnsname now, because of dnsname plugin bug
-            continue;
-        }
         if (!cni_bin_detect(g_bridge_driver_plugins[i]->plugin)) {
             // skip conf dnsname if dnsname plugin not exist
             if (strcmp(g_bridge_driver_plugins[i]->plugin, g_dnsname_plugin.plugin) == 0) {
@@ -1422,21 +1418,19 @@ int native_config_create(const network_create_request *request, char **name, uin
         ERROR("Cannot support driver %s", request->driver);
         isulad_set_error_message("Cannot support driver: %s", request->driver);
         *cc = ISULAD_ERR_INPUT;
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (pnet->ops->check == NULL || pnet->ops->conf == NULL) {
         ERROR("net type: %s unsupport ops", pnet->driver);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     ret = pnet->ops->check(request);
     if (ret != 0) {
         ERROR("Failed to check %s", pnet->driver);
         *cc = ISULAD_ERR_INPUT;
-        goto out;
+        return -1;
     }
 
     missing = (string_array *)util_common_calloc_s(sizeof(string_array));

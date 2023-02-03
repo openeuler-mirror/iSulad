@@ -855,6 +855,12 @@ static int append_dns_content(const char *hostname, defs_map_string_object_netwo
         return -1;
     }
 
+    ret = util_append_string_array(dns, ISULAD_DNS_DOMAIN_NAME);
+    if (ret != 0) {
+        ERROR("Failed to append dns string array");
+        goto out;
+    }
+
     size = strlen("nameserver") + 1 + strlen(gateway) + 1;
     tmp_str = util_common_calloc_s(size);
     if (tmp_str == NULL) {
@@ -882,14 +888,14 @@ out:
 
 static int do_update_internal_file(const char *id, const char *file_path,
                                    const defs_map_string_object_networks *networks,
-                                   const append_content_callback_t op)
+                                   const append_content_callback_t op, const bool append_back)
 {
     int ret = 0;
     int nret = 0;
     size_t i = 0;
     char *str = NULL;
     char *content = NULL;
-    char *tmp_content = NULL;
+    char *tmp = NULL;
     string_array *array = NULL;
     char hostname[MAX_HOST_NAME_LEN] = { 0x00 };
 
@@ -933,13 +939,17 @@ static int do_update_internal_file(const char *id, const char *file_path,
         goto out;
     }
 
-    tmp_content = util_string_append(str, content);
-    free(content);
-    content = tmp_content;
+    tmp = util_string_append("\n", str);
+    free(str);
+    str = tmp;
 
-    tmp_content = util_string_append("\n", content);
+    if (append_back) {
+        tmp = util_string_append(str, content);
+    } else {
+        tmp = util_string_append(content, str);
+    }
     free(content);
-    content = tmp_content;
+    content = tmp;
 
     ret = util_write_file(file_path, content, strlen(content), NETWORK_MOUNT_FILE_MODE);
     if (ret == 0) {
@@ -973,13 +983,13 @@ static int update_internal_file(const container_t *cont)
     }
 
     if (do_update_internal_file(cont->common_config->id, cont->common_config->hosts_path, cont->network_settings->networks,
-                                append_hosts_content) != 0) {
+                                append_hosts_content, true) != 0) {
         ERROR("Failed to update hosts");
         return -1;
     }
 
     if (do_update_internal_file(cont->common_config->id, cont->common_config->resolv_conf_path,
-                                cont->network_settings->networks, append_dns_content) != 0) {
+                                cont->network_settings->networks, append_dns_content, false) != 0) {
         ERROR("Failed to update resolv.conf");
         (void)drop_internal_file(cont);
         return -1;

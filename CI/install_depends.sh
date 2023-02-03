@@ -61,10 +61,10 @@ function make_cni_plugins()
        cp /usr/libexec/cni/* ${builddir}/cni/bin/
        return 0
     fi
-    local CNI_PLUGINS_COMMIT=b93d284d18dfc8ba93265fa0aa859c7e92df411b
     cd ~
     git clone https://gitee.com/duguhaotian/plugins.git
     cd plugins
+    git checkout v1.2.0
     ./build_linux.sh
     mkdir -p ${builddir}/cni/bin/
     cp bin/* ${builddir}/cni/bin/
@@ -76,7 +76,7 @@ function make_cni_dnsname()
     cd ~
     git clone https://gitee.com/zh_xiaoyu/dnsname.git
     cd dnsname
-    git checkout v1.1.1
+    git checkout v1.3.1
     make
     mkdir -p ${builddir}/cni/bin/
     cp bin/* ${builddir}/cni/bin/

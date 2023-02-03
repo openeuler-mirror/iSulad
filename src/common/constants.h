@@ -128,6 +128,8 @@ extern "C" {
 
 #ifdef ENABLE_NETWORK
 #define ISULAD_CNI_NETWORK_CONF_FILE_PRE "isulacni-"
+
+#define ISULAD_DNS_DOMAIN_NAME "dns.isulad"
 #endif
 
 #ifdef ENABLE_SHIM_V2
