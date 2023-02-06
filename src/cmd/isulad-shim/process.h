@@ -94,10 +94,10 @@ typedef struct {
 
 process_t* new_process(char *id, char *bundle, char *runtime);
 
-int open_io(process_t *p);
+int open_io(process_t *p, pthread_t *tid_accept);
 int process_io_init(process_t *p);
 int create_process(process_t *p);
-int process_signal_handle_routine(process_t *p);
+int process_signal_handle_routine(process_t *p, const pthread_t tid_accept);
 
 #ifdef __cplusplus
 }
