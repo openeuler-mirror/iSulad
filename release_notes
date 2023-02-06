@@ -1,3 +1,309 @@
+2023-02-06 root release 2.1.1
+    - !1801 ensure that the task_console_accept thread ends before destroying the io_thread Merge pull request !1801 from zhongtao/io_thread
+    - !1816 ensure isula exec inherits the config of create Merge pull request !1816 from zhongtao/rlimit
+    - !1815 enable dnsname and cleancode for native network Merge pull request !1815 from zhangxiaoyu/master
+    - !1809 refresh cmake messages
+    - !1807 Refresh-api.proto-cri-1.25
+    - !1804 add info log when isulad shutdown Merge pull request !1804 from zhangxiaoyu/master_dev
+    - !1802 fix cpu-rt CI Merge pull request !1802 from ger202/master
+    - !1799 add cpu-rt ut Merge pull request !1799 from ger202/master
+    - !1800 fix code style and add network ut
+    - !1795 add omitted musl adaption code
+    - !1797 do not report error message in ignore situation Merge pull request !1797 from haozi007/fixbug
+    - !1796 cleancode for util network and add ut
+    - !1790 remove residual dir if exec failed with runc and add CI
+    - !1788 add void parameter for function try_wait_all_child Merge pull request !1788 from zhangxiaoyu/master
+    - !1787 remove clean_module_fill_ctx for libisulad_img.so Merge pull request !1787 from zhangxiaoyu/master
+    - !1784 move the delete fifo dir function to the out branch Merge pull request !1784 from zhongtao/isulad_fifo
+    - !1777 Websockets in kubectl research * Add more description and diagrams * Add some more HTTP/2 related info * Remove possible regressions. * fix issues * add initial websockets description
+    - !1782 ensure hostconfig is not null. Merge pull request !1782 from zhongtao/isulad_fifo
+    - !1781 Delete client fifo dir on isulad to prevent file residue
+    - !1776 fix isula fifo dir residue bug
+    - !1771 recheck kill command exit status
+    - !1770 When run options rm is set, delete the stoped container's fifo directory. Merge pull request !1770 from zhongtao/autorm
+    - !1767 isulad shim wait for all child process Merge pull request !1767 from DriedYellowPeach/master
+    - !1766 change free method to util_free_array method Merge pull request !1766 from zhongtao/search_fix
+    - !1765 fix omit memory leak for search Merge pull request !1765 from zhongtao/search_fix
+    - !1758 add ut for search
+    - !1760 check file system ro before merge network for syscontainer Merge pull request !1760 from zhangxiaoyu/master
+    - !1763 fix memory leak for search Merge pull request !1763 from zhongtao/search_ci
+    - !1761 fix leftover devicemapper mnt dir * fix leftover devicemapper mnt dir
+    - !1751 deleting broken rootfs Merge pull request !1751 from DriedYellowPeach/master
+    - !1759 add comma for image_search.sh * add comma for image_search.sh
+    - !1755 add param check and customize delimiter for isula search. * add param check for parse_single_template_string and add customize del…
+    - !1754 add ci for isula search * add ci for isula search
+    - !1752 add adaption code for musl
+    - !1753 bugfix for isula search * bugfix for search
+    - !1747 refactor runtime check and fix a bug in shim v2 runtime conversion * refactor runtime check and fix a bug in shim v2 runtime conversion
+    - !1750 add cri 1.25 interface change docs * add cri 1.25 interface change docs
+    - !1739 set inspect_container timeout
+    - !1746 fix additional gids for exec user Merge pull request !1746 from zhangxiaoyu/master
+    - !1742 retry call runtime ops
+    - !1744 update logo of iSulad
+    - !1735 Remove chmod 751 permission for dirs by engine when user-remap enabled.
+    - !1736 [docs] add different with other engins
+    - !1722 关于CRI版本升级后新增的CRI字段
+    - !1733 add primary group to additional groups
+    - !1732 change print message of network_list.sh
+    - !1731 fix error in image.c for isula search
+    - !1667 Add isula search API
+    - !1724 【轻量级 PR】：fix typo in update.c
+    - !1728 fix storage layer and driver ut failed in container
+    - !1723 handle security warning for cleanup module
+    - !1725 remove unknown option wno-maybe-uninitialized
+    - !1713 Add state check document
+    - !1718 sync patches from stable
+    - !1715 make cleanup CI to restart isulad at the end
+    - !1714 add CI test for cleanup module
+    - !1711 fix memory leak for not unref container in oci_rootfs_clean
+    - !1710 cleanup_leftover内存泄漏
+    - !1703 bugfix for websocket receive data too long
+    - !1700 cleanup the leftover created after abnormal exit of isulad
+    - !1702 [improve] debug information for console io
+    - !1694 Add isula search document
+    - !1689 Add extern C for header files
+    - !1695 delete syncCloseSem when close all wssession
+    - !1692 remove mnt point if add device mapper device failed
+    - !1687 add extern C for mainloop header
+    - !1679 isula usage一致性优化
+    - !1684 dec device info ref in grow device fs
+    - !1681 make sure kill pid not negative
+    - !1677 add isula create --rm option
+    - !1680 add setup bridge network document
+    - !1636 improve log before started log server
+    - !1662 docs: add guid detail
+    - !1661 run storage layers ut with non-root
+    - !1657 use epoll loop for wait_exit_fifo
+    - !1655 use epoll instead of select for wait_exit_fifo
+    - !1654  docs:add rootless english docs
+    - !1653 add rootless doc
+    - !1652 add design doc of layer store
+    - !1645 fix maybe uwait use after free
+    - !1647 refactoring version and info service
+    - !1646 refactoring gPRC resize service
+    - !1643 docs：change image to mermaid
+    - !1642 doc add health_check and restart_manager design
+    - !1641 Add english docs for Network
+    - !1640 Add english docs for Events and Image
+    - !1639 Add english doc for Runtime, Security and Volume
+    - !1638 Add english docs for Container and CRI
+    - !1637 Add README doc for manual and design
+    - !1635 Add README doc for build_docs
+    - !1632 add volume unit test
+    - !1633 add detailed doc for isulad runtime
+    - !1634 Modify some function parameters of the volume module to const char*
+    - !1631 doc add design doc for restore
+    - !1630 modify local volume design docs
+    - !1628 document optimization: Content optimization and add English version
+    - !1629 add events design docs
+    - !1627 add gc and supervisor design doc
+    - !1626 添加一个依赖解决脚本编译grpc错误
+    - !1624 Modify timezone CI test
+    - !1623 add hostname env for container
+    - !1621 add timezone CI test
+    - !1620  add isula search research docs
+    - !1619 calculate timezone by tm_gmtoff
+    - !1617 fix timezone error
+    - !1615 add isulad args
+    - !1612 remove unused includes
+    - !1610 document optimization:document classfication
+    - !1607  [REST]: Add rest volume prune api
+    - !1604  [REST]: Add rest volume rm api
+    - !1606 [clang-analyzer] sync code fix from stable
+    - !1603 cleancode about rest register container
+    - !1602  [REST]: Add rest volume ls api
+    - !1592 document optimization:modify README.
+    - !1599 [codecheck] cleancode about big function and magic number
+    - !1600 【codecheck】handle some warnings about magic number and style
+    - !1598 the right brace should take a single line
+    - !1597 [codecheck] improve code
+    - !1564 format codes of isulad
+    - !1596 copy cri-tools bin from build directory
+    - !1595 update CI crictl tools version
+    - !1582 doc add build and install guide using rpm
+    - !1587 add debug info and remove unuse head file
+    - !1585 use existing micro OPENSSL_IS_BORINGSSL
+    - !1584 fix snprintf hostname failed
+    - !1583 add ENABLE_BORINGSSL to support android with openssl
+    - !1580 check snprintf return value
+    - !1570 update seccomp profile interface of cri
+    - !1576 do clean path and check if file exist
+    - !1574 remove unused header and clear err_msg after attach network module
+    - !1572 change default umask to 0022
+    - !1567 exec_request_to_rest forget to handle suffix
+    - !1565 Add read and execute permissions for libhttpclient.so and libisulad_tools.so for other users
+    - !1563 add fuzz dict
+    - !1561 remove unused include files of quota and net util
+    - !1559 use newest runc to run testcase of master branch
+    - !1557 ensure read string must have space store null char
+    - !1556 revert fifo modification
+    - !1537 refactor gRPC top/stat/update/export container management operation service
+    - !1554 set dup_option null after free
+    - !1548 stop health check monitor before stopping container
+    - !1549 fix a memory free err in normalized_host_variant
+    - !1547 fix cri attach when stdout and stderr are false
+    - !1545 Add a Provides in SPEC
+    - !1544 install pidof for testcase
+    - !1541 tolerate arch unspecified seccomp profiles
+    - !1540 支持cgroupns 选项
+    - !1531 create a log file for shim v2 and remove 10,229 device from the default config
+    - !1542 do not report error if not return
+    - !1532 make a modification on stdout and stderr fifo creation to support shimv2
+    - !1539 fix cpu-quota out of range when update to -1
+    - !1536 don't mount shareable dirs if user set mount for dev shm
+    - !1535 add check testcase for HOME env of container
+    - !1529 use only TLS v1.2 or later
+    - !1527 do not use tmpfile()
+    - !1521 refactor gRPC exec/rename/list/inspect container management operation service
+    - !1519 add rest stats api
+    - !1517 stop health check monitor before stopping container
+    - !1515 Add rest resize api
+    - !1516 fix check for used by container
+    - !1514 micro refactor: image name check
+    - !1513 make sure threads to be either joined or detached
+    - !1511 micro-refactor codes From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1510 Strengthen sandbox log positioning From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1505 refactor fuzz From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1508 Delete extra space or tab indent in CI directory From: @linuxkernelAnalyse Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1507 Correct Misspelled Word 'requst' To 'request' From: @driedyellowpeach Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1506 modify native network docs From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1504 Delete extra space or tab indent From: @linuxkernelAnalyse Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @jingwoo
+    - !1503 remove indirect dependencies From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1501 initializer fd_set using FD_ZERO From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1496 wait fifo if runtime start failed From: @zh_xiaoyu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1497 fix isula load --tag take no effect From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1493 refactor huge method - setup_ipc_dirs From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1494 fix use after free From: @songbuhuang Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1492 Refactoring the remaining container lifecycle management operations services From: @jingwoo Reviewed-by: @zh_xiaoyu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1488 support set groups From: @wangfengtu Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1491 refactor grpc start and stop service From: @leizhongkai Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1486 [v2.0.14]可能的double free （src/cmd/isula/information/ps.c:856) From: @songbuhuang Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1487 refactor gRPC create service From: @leizhongkai Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1484 gc considers stored monitor pid From: @vegbir Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1482 fix misuse of BUFSIZ From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1480 increase websocket lws_lookup size From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1477 use util_smart_calloc_t to prevent overflow From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1472 fix inspect -f error when bionic From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1469 set the name of each container and image operation thread for restful version From: @jingwoo Reviewed-by: @wangfengtu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1468 set the name of each container and image operation thread From: @jingwoo Reviewed-by: @wangfengtu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1466 fix shm size set invalid when reboot From: @zh_xiaoyu Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1465 fix isulad-shim coredump when remove ioc fd node From: @zh_xiaoyu Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1401 function refactor (util_normalized_host_os_arch) From: @chengzrz Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1461 add null terminal at end of gr mem list From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1460 fix memory leak of remove layer From: @duguhaotian Reviewed-by: @zh_xiaoyu, @jingwoo Signed-off-by: @jingwoo
+    - !1458 do not fail if gr is NULL From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1457 do not fail if pw is not NULL From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1456 bugfix for double free and use after free From: @zh_xiaoyu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @jingwoo, @duguhaotian
+    - !1452 fix invalid convert and format From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1449 remove check parameter label_opts in init_label From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1450 update seccomp to Linux 5.10 syscall list From: @vegbir Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1447 remove static of strlncat From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1444 【安全】add check to arguments From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1443 add pointer parameters NULL check From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1442 fix different type convert From: @duguhaotian Reviewed-by: @jingwoo, @zh_xiaoyu Signed-off-by: @jingwoo
+    - !1439 improve fuzz test From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1438 Add fuzz test for parser of pw gr obj From: @chegJH Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1436 fix install error when android From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1434 do not mkdir of isulad if no controller found From: @wangfengtu Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1430 add invalid gid and uid From: @duguhaotian Reviewed-by: @wangfengtu, @jingwoo Signed-off-by: @jingwoo
+    - !1428 修复 portMappings 空值产生的错误 From: @v6543210 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1427 add x permission when create directory From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1424 fix pwgr issues From: @chegJH Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @jingwoo
+    - !1423 fix parse volume failed From: @zh_xiaoyu Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @jingwoo
+    - !1415 refactor devmapper_parse_options function From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1420 support lxc_contexts configurable From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1421 can't delete container console fifo dir in /run/isula/ on removing the container From: @firstadream Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1418 add check result argument ut From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1417 允许bridge模式下创建系统容器 From: @firstadream Reviewed-by: @duguhaotian, @zh_xiaoyu Signed-off-by: @duguhaotian
+    - !1416 refactor util_getgrent_r and util_getpwent_r From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1414 refactor parse_volume function From: @jingwoo Reviewed-by: @wangfengtu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1412 fix ut bug and arguments check From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1406 adapt to openssl 3.0 From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1404 Adapt bionic libc, increase testcase coverage From: @chegJH Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1378 Adopt bionic libc, parser for passwd and group ojbect From: @chegJH Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1399 add isula import restful mode From: @chengzrz Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1397 support isula wait even if it's not oci image From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1394 refactor mount parse in spec module From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1393 cleancode: http request From: @zh_xiaoyu Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @jingwoo
+    - !1391 add native network detail From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1390 增加riscv64的seccomp信息 From: @chenhongji Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1387 【CRI】ignore portmapping config with invalid hostport From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1388 set default sig handler for sigchld From: @duguhaotian Reviewed-by: @wangfengtu, @jingwoo Signed-off-by: @jingwoo
+    - !1373 fix restful iSulad no response for signal 15 and 2 From: @duguhaotian Reviewed-by: @wangfengtu, @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1383 add isula tag restful mode From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1382 add errno infomation when archive failed From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1380 fix no status of health check when restfull From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1377 fix wrong use of DST(Daylight Saving Time) and timezone From: @wangfengtu Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1375 run cri stream test without valgrind From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1374 make static link libhttpclient.a work From: @firstadream Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1372 fix cricli command not found From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1370 fix cricli command not found in CI test From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1369 update performance data use ptcr tool From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1362 fix cri attach coredump From: @zh_xiaoyu Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1365 adapt to the enabled selinux host environment From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1366 fix fedora Dockerfile errors From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1357 Add restful interface isula pull/login/logout. From: @firstadream Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1364 using /user/sbin/init as init process in CI environment From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1363 support multi-linux distribution CI environment From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1356 support isula attach when restfull From: @wangfengtu Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1359 fix user take no effect when restfull From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1355 fix openssl-verify invalid disable metadata From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1352 fix podSandbox management operation failure From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1351 Refactored CRI module to remove over-engineering From: @jingwoo Reviewed-by: @duguhaotian, @wangfengtu Signed-off-by: @duguhaotian
+    - !1349 remove temporary file only when write file failed From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1347 remove temporary file if write atomic file failed From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1345 support rename subcommand in restful mode From: @duguhaotian Reviewed-by: @wangfengtu, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1343 Modify error message thrown when User defined network is default network for disambiguation From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1335 fix bugs of userns-remap and add -DENABLE_USERNS_REMAP From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1341 remove unnecessary wrong message From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1339 fix uid/gid error when load image From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1337 enlarge rest buffer limit to support --security-opt From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1333 optimize remove container process From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1332 [network] fix invalid check for empty ip ranges From: @duguhaotian Reviewed-by: @jingxiaolu, @jingwoo, @wangfengtu Signed-off-by: @jingxiaolu
+    - !1331 fixbug restful interface isula pause/unpause From: @xiaochaowang Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1329 add api change item for pull template From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1322 delete isulad engine param From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1327 support default network setting From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1325 add -DSYSCONFDIR_PREFIX as prefix when read config From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1319 add restful interface isula export From: @xiaochaowang Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1324 fix lose default hostname error From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1323 fix exec --workdir take no effect when restfull From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1320 do not fail even if no cgroup controller found when cgroupv2 From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1318  fix coding irregularities From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1317 fix coding irregularities of entry module From: @jingwoo Reviewed-by: @wangfengtu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1316 fix coding irregularities of core module From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1315 remove redundant code From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1282 clean the gRPC client module code From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1313 let isulad root path configable when userns-remap From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1310  Refactor procedure of setting default value for network namespace mode From: @chengzrz Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1307 add restful interface  isula info From: @xiaochaowang Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1306 continue pulling even if no Docker-Distribution-Api-Version found From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1303 disable image related command if disable oci and disable embedded From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1301 support change CLIENT_RUNDIR when compile From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1300 fix lose regexec for android From: @duguhaotian Reviewed-by: @wangfengtu, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1296 support regexec on android From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1294 adapt android compile From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1292 use unify regexec From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1291 Fix the third party license relative path error From: @smartsyoung Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1287 remove unnecessary arguments From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1289 print error when dlsym failed From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1286 do not timeout when use restfull to connect to daemon From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1284 compliance: modify licensing compliance issues in repository Merge pull request !1284 from SmartsYoung/master
+    - !1165 iSulad: Added the ability to display n last created containers Merge pull request !1165 from lauk/master
+    - !1281 fix utils module encoding problem Merge pull request !1281 from JingWoo/My2022
+    - !1280 fix cmd/isulad-shim module encoding problem Merge pull request !1280 from JingWoo/My2022
+    - !1277 引入gvisor支持 Merge pull request !1277 from Tiamo0/master
+    - !1279 support devicemapper ci testcases Merge pull request !1279 from haozi007/master
+    - !1275 fix compile error of isula-transform Merge pull request !1275 from wangfengtu/isula-transform
+    - !1270 refactor build system of iSulad Merge pull request !1270 from haozi007/refactor
+    - !1274 Add test design doc for CRI modification feature Merge pull request !1274 from czrz/master
+    - !1271 fix compile error with grpc 1.41.x Merge pull request !1271 from zhangxiaoyu/master
+    - !1265 improve CI build step Merge pull request !1265 from haozi007/work
+
+    dev stats:
+      - 778 files changed, 37423 insertions(+), 8882 deletions(-)
+      - contributors: haozi007, zhangxiaoyu, zhongtao, WangFengTu, wujing, Neil.wrz, chengzrz, songbuhuang, chegJH, SmartsYoung, ger202, root, William Dean, ilya.kuksenok, leizhongkai, liyanshui, shijiaqi1, vegbir, wangxiaochao, yanshui.li, 5233693, ChenHongJi, DriedYellowPeach, Ikko Ashimine, Luo Yifan, Mig Yang, Song Zhang, along, czrz, ilyakuksenok, lauk001, tiamo0
+
 2021-12-31 root release 2.1.0
     - !1268 modify readme Merge pull request !1268 from zhangxiaoyu/master
     - !1266 enable NATIVE_NETWORK and add documentation Merge pull request !1266 from zhangxiaoyu/master
