@@ -1,4 +1,4 @@
-%global _version 2.0.18
+%global _version 2.1.1
 %global _release 1
 %global is_systemd 1
 %global enable_shimv2 1
@@ -36,14 +36,10 @@ BuildRequires: sqlite-devel
 Requires: sqlite
 %endif
 
-%define lcrver_lower 2.0.9-0
-%define lcrver_upper 2.0.10-0
-%define clibcniver_lower 2.0.7-0
-%define clibcniver_upper 2.0.8-0
-
+%define lcrver_lower 2.1.1-0
+%define lcrver_upper 2.1.2-0
 
 BuildRequires: lcr-devel > %{lcrver_lower} lcr-devel < %{lcrver_upper}
-BuildRequires: clibcni-devel > %{clibcniver_lower} clibcni-devel < %{clibcniver_upper}
 BuildRequires: cmake gcc-c++ yajl-devel lxc lxc-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel libarchive-devel device-mapper-devel
@@ -56,7 +52,6 @@ BuildRequires: lib-shim-v2 lib-shim-v2-devel
 
 
 Requires:      lcr > %{lcrver_lower} lcr < %{lcrver_upper}
-Requires:      clibcni > %{clibcniver_lower} clibcni < %{clibcniver_upper}
 Requires:      grpc protobuf lxc
 Requires:      libcurl
 Requires:      http-parser libseccomp
@@ -238,6 +233,12 @@ fi
 %endif
 
 %changelog
+* Mon Feb 06 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.1.1-1
+- Type: update
+- ID: NA
+- SUG: NA
+- DESC: update to v2.1.1
+
 * Tue Jan 03 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-1
 - Type: update
 - ID: NA
