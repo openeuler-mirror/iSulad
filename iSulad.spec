@@ -1,5 +1,5 @@
 %global _version 2.1.1
-%global _release 1
+%global _release 2
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -13,9 +13,11 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 
+Patch0001:	0001-modify-dependence-from-lcr-to-libisula.patch
+
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
-Provides:       libisula.so()(64bit)
+Provides:       libisula_client.so()(64bit)
 Provides:       libisulad_img.so()(64bit)
 Provides:       libisulad_tools.so()(64bit)
 %endif
@@ -40,6 +42,7 @@ Requires: sqlite
 %define lcrver_upper 2.1.2-0
 
 BuildRequires: lcr-devel > %{lcrver_lower} lcr-devel < %{lcrver_upper}
+BuildRequires: libisula-devel > %{lcrver_lower} libisula-devel < %{lcrver_upper}
 BuildRequires: cmake gcc-c++ yajl-devel lxc lxc-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel libarchive-devel device-mapper-devel
@@ -51,6 +54,7 @@ BuildRequires: lib-shim-v2 lib-shim-v2-devel
 %endif
 
 
+Requires:      libisula > %{lcrver_lower} libisula < %{lcrver_upper}
 Requires:      lcr > %{lcrver_lower} lcr < %{lcrver_upper}
 Requires:      grpc protobuf lxc
 Requires:      libcurl
@@ -82,7 +86,7 @@ cd build
 rm -rf %{buildroot}
 cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
-install -m 0755 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
+install -m 0755 ./src/libisula_client.so             %{buildroot}/%{_libdir}/libisula_client.so
 install -m 0755 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
 install -m 0755 ./src/libisulad_tools.so  %{buildroot}/%{_libdir}/libisulad_tools.so
 install -m 0755 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
@@ -233,6 +237,12 @@ fi
 %endif
 
 %changelog
+* Mon Feb 06 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.1.1-2
+- Type: update
+- ID: NA
+- SUG: NA
+- DESC: modify dependence from lcr to libisula
+
 * Mon Feb 06 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.1.1-1
 - Type: update
 - ID: NA

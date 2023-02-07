@@ -1,0 +1,206 @@
+From d3d13f374bb341e7e4d389feb1780e43fec91945 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Tue, 7 Feb 2023 14:27:51 +0800
+Subject: [PATCH] modify dependence from lcr to libisula
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ cmake/checker.cmake                  |  2 +-
+ iSulad.spec                          | 10 ++++-----
+ isulad.pc.in                         |  6 +++---
+ src/CMakeLists.txt                   | 32 ++++++++++++++--------------
+ src/daemon/modules/runtime/runtime.c | 14 ++----------
+ 5 files changed, 27 insertions(+), 37 deletions(-)
+
+diff --git a/cmake/checker.cmake b/cmake/checker.cmake
+index 0a4b6fb6..a1ca9360 100644
+--- a/cmake/checker.cmake
++++ b/cmake/checker.cmake
+@@ -92,7 +92,7 @@ if (ENABLE_SELINUX)
+ endif()
+ 
+ # check iSula libutils
+-pkg_check_modules(PC_ISULA_LIBUTILS REQUIRED "lcr")
++pkg_check_modules(PC_ISULA_LIBUTILS REQUIRED "libisula")
+ find_path(ISULA_LIBUTILS_INCLUDE_DIR isula_libutils/log.h
+ 	HINTS ${PC_ISULA_LIBUTILS_INCLUDEDIR} ${PC_ISULA_LIBUTILS_INCLUDE_DIRS})
+ _CHECK(ISULA_LIBUTILS_INCLUDE_DIR "ISULA_LIBUTILS_INCLUDE_DIR-NOTFOUND" "isula_libutils/log.h")
+diff --git a/iSulad.spec b/iSulad.spec
+index 79275885..3cff9c25 100644
+--- a/iSulad.spec
++++ b/iSulad.spec
+@@ -16,7 +16,7 @@ ExclusiveArch:  x86_64 aarch64
+ 
+ %ifarch x86_64 aarch64
+ Provides:       libhttpclient.so()(64bit)
+-Provides:       libisula.so()(64bit)
++Provides:       libisula_client.so()(64bit)
+ Provides:       libisulad_img.so()(64bit)
+ Provides:       libisulad_tools.so()(64bit)
+ %endif
+@@ -42,14 +42,14 @@ BuildRequires: lib-shim-v2-devel
+ Requires:      lib-shim-v2
+ %endif
+ 
+-BuildRequires: cmake gcc-c++ lxc-devel lcr-devel yajl-devel
++BuildRequires: cmake gcc-c++ lxc-devel lcr-devel yajl-devel libisula-devel
+ BuildRequires: grpc-plugins grpc-devel protobuf-devel
+ BuildRequires: libcurl-devel libarchive-devel device-mapper-devel
+ BuildRequires: http-parser-devel
+ BuildRequires: libselinux-devel libwebsockets-devel
+ BuildRequires: systemd-devel git
+ 
+-Requires:      lcr lxc
++Requires:      libisula lxc
+ Requires:      grpc libcurl http-parser
+ Requires:      libselinux libwebsockets libarchive device-mapper
+ Requires:      systemd
+@@ -78,13 +78,13 @@ cd build
+ rm -rf %{buildroot}
+ cd build
+ install -d $RPM_BUILD_ROOT/%{_libdir}
+-install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
++install -m 0644 ./src/libisula_client.so             %{buildroot}/%{_libdir}/libisula_client.so
+ install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+ chrpath -d ./src/libisulad_tools.so
+ install -m 0644 ./src/libisulad_tools.so  %{buildroot}/%{_libdir}/libisulad_tools.so
+ chrpath -d ./src/daemon/modules/image/libisulad_img.so
+ install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
+-chmod +x %{buildroot}/%{_libdir}/libisula.so
++chmod +x %{buildroot}/%{_libdir}/libisula_client.so
+ chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
+ chmod +x %{buildroot}/%{_libdir}/libisulad_img.so
+ 
+diff --git a/isulad.pc.in b/isulad.pc.in
+index 695ba364..016e406d 100644
+--- a/isulad.pc.in
++++ b/isulad.pc.in
+@@ -3,10 +3,10 @@ libdir=@CMAKE_INSTALL_PREFIX@/lib
+ localstatedir=@CMAKE_INSTALL_PREFIX@/var
+ includedir=@CMAKE_INSTALL_PREFIX@/include
+ 
+-Name: libisula
+-Description: light-weighted container runtime daemon library
++Name: libisula_client
++Description: light-weighted container client library
+ Version: @ISULAD_VERSION@
+ URL: iSulad
+-Libs: -L@CMAKE_INSTALL_PREFIX@/lib -lisula
++Libs: -L@CMAKE_INSTALL_PREFIX@/lib -lisula_client
+ Cflags: -I@CMAKE_INSTALL_PREFIX@/include
+ 
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index abce1284..8de18082 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -60,40 +60,40 @@ endif()
+ # get all c and header files
+ list(REMOVE_DUPLICATES SHARED_INCS)
+ 
+-# ------ build libisula ------
++# ------ build libisula_client ------
+ 
+ add_subdirectory(client)
+ if (OPENSSL_VERIFY)
+     list(APPEND CLIENT_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/utils/http/certificate.c)
+ endif()
+ 
+-add_library(libisula ${LIBTYPE}
++add_library(libisula_client ${LIBTYPE}
+     ${CLIENT_SRCS}
+     )
+ 
+-target_include_directories(libisula PUBLIC
++target_include_directories(libisula_client PUBLIC
+     ${SHARED_INCS}
+     ${CLIENT_INCS}
+     ${CMAKE_CURRENT_SOURCE_DIR}/utils/http
+     )
+ 
+-# set libisula FLAGS
+-set_target_properties(libisula PROPERTIES PREFIX "")
++# set libisula_client FLAGS
++set_target_properties(libisula_client PROPERTIES PREFIX "")
+ 
+-target_link_libraries(libisula libisulad_tools)
++target_link_libraries(libisula_client libisulad_tools)
+ 
+ if (GRPC_CONNECTOR)
+-    target_link_libraries(libisula -Wl,--as-needed -lstdc++)
+-    target_link_libraries(libisula -Wl,--as-needed ${PROTOBUF_LIBRARY})
+-    target_link_libraries(libisula -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
++    target_link_libraries(libisula_client -Wl,--as-needed -lstdc++)
++    target_link_libraries(libisula_client -Wl,--as-needed ${PROTOBUF_LIBRARY})
++    target_link_libraries(libisula_client -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
+     if(ABSL_SYNC_LIB)
+-        target_link_libraries(libisula -Wl,--no-as-needed ${ABSL_SYNC_LIB})
++        target_link_libraries(libisula_client -Wl,--no-as-needed ${ABSL_SYNC_LIB})
+     endif()
+ else()
+-    target_link_libraries(libisula -ldl libhttpclient)
+-    set_target_properties(libisula PROPERTIES LINKER_LANGUAGE "C")
++    target_link_libraries(libisula_client -ldl libhttpclient)
++    set_target_properties(libisula_client PROPERTIES LINKER_LANGUAGE "C")
+ endif()
+-# ------ build libisula finish -----
++# ------ build libisula_client finish -----
+ 
+ add_subdirectory(cmd)
+ # ------ build isula -------
+@@ -101,7 +101,7 @@ add_executable(isula
+     ${ISULA_SRCS}
+     )
+ target_include_directories(isula PUBLIC ${ISULA_INCS} ${SHARED_INCS})
+-target_link_libraries(isula libisula ${LIBYAJL_LIBRARY})
++target_link_libraries(isula libisula_client ${LIBYAJL_LIBRARY})
+ if (ANDROID OR MUSL)
+     target_link_libraries(isula ${LIBSSL_LIBRARY})
+ else()
+@@ -192,7 +192,7 @@ endif()
+ 
+ if (ISULAD_GCOV)
+     target_link_libraries(isula -lgcov)
+-    target_link_libraries(libisula -lgcov)
++    target_link_libraries(libisula_client -lgcov)
+     target_link_libraries(isulad -lgcov)
+ endif()
+ 
+@@ -201,7 +201,7 @@ endif()
+ # ------ install binary --------
+ install(TARGETS libisulad_tools
+     ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+-install(TARGETS libisula
++install(TARGETS libisula_client
+     ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+ install(TARGETS isula
+     RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+diff --git a/src/daemon/modules/runtime/runtime.c b/src/daemon/modules/runtime/runtime.c
+index 23a4d60f..7a3ed87f 100644
+--- a/src/daemon/modules/runtime/runtime.c
++++ b/src/daemon/modules/runtime/runtime.c
+@@ -542,20 +542,10 @@ bool is_default_runtime(const char *name)
+ 
+ int runtime_init()
+ {
+-    int ret = 0;
+-
+     if (engines_global_init()) {
+         ERROR("Init engines global failed");
+-        ret = -1;
+-        goto out;
++        return -1;
+     }
+ 
+-    /* Init default engine, now is lcr */
+-    if (engines_discovery(DEFAULT_RUNTIME_NAME)) {
+-        ERROR("Failed to discovery engine %s", DEFAULT_RUNTIME_NAME);
+-        ret = -1;
+-    }
+-
+-out:
+-    return ret;
++    return 0;
+ }
+-- 
+2.25.1
+
