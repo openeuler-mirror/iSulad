@@ -16,7 +16,7 @@ ExclusiveArch:  x86_64 aarch64
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
-Provides:       libisula.so()(64bit)
+Provides:       libisula_client.so()(64bit)
 Provides:       libisulad_img.so()(64bit)
 Provides:       libisulad_tools.so()(64bit)
 %endif
@@ -42,14 +42,14 @@ BuildRequires: lib-shim-v2-devel
 Requires:      lib-shim-v2
 %endif
 
-BuildRequires: cmake gcc-c++ lxc-devel lcr-devel yajl-devel
+BuildRequires: cmake gcc-c++ lxc-devel lcr-devel yajl-devel libisula-devel
 BuildRequires: grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libselinux-devel libwebsockets-devel
 BuildRequires: systemd-devel git
 
-Requires:      lcr lxc
+Requires:      libisula lxc
 Requires:      grpc libcurl http-parser
 Requires:      libselinux libwebsockets libarchive device-mapper
 Requires:      systemd
@@ -78,13 +78,13 @@ cd build
 rm -rf %{buildroot}
 cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
-install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
+install -m 0644 ./src/libisula_client.so             %{buildroot}/%{_libdir}/libisula_client.so
 install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
 chrpath -d ./src/libisulad_tools.so
 install -m 0644 ./src/libisulad_tools.so  %{buildroot}/%{_libdir}/libisulad_tools.so
 chrpath -d ./src/daemon/modules/image/libisulad_img.so
 install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
-chmod +x %{buildroot}/%{_libdir}/libisula.so
+chmod +x %{buildroot}/%{_libdir}/libisula_client.so
 chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
 chmod +x %{buildroot}/%{_libdir}/libisulad_img.so
 
