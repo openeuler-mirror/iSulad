@@ -60,40 +60,40 @@ endif()
 # get all c and header files
 list(REMOVE_DUPLICATES SHARED_INCS)
 
-# ------ build libisula ------
+# ------ build libisula_client ------
 
 add_subdirectory(client)
 if (OPENSSL_VERIFY)
     list(APPEND CLIENT_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/utils/http/certificate.c)
 endif()
 
-add_library(libisula ${LIBTYPE}
+add_library(libisula_client ${LIBTYPE}
     ${CLIENT_SRCS}
     )
 
-target_include_directories(libisula PUBLIC
+target_include_directories(libisula_client PUBLIC
     ${SHARED_INCS}
     ${CLIENT_INCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/http
     )
 
-# set libisula FLAGS
-set_target_properties(libisula PROPERTIES PREFIX "")
+# set libisula_client FLAGS
+set_target_properties(libisula_client PROPERTIES PREFIX "")
 
-target_link_libraries(libisula libisulad_tools)
+target_link_libraries(libisula_client libisulad_tools)
 
 if (GRPC_CONNECTOR)
-    target_link_libraries(libisula -Wl,--as-needed -lstdc++)
-    target_link_libraries(libisula -Wl,--as-needed ${PROTOBUF_LIBRARY})
-    target_link_libraries(libisula -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
+    target_link_libraries(libisula_client -Wl,--as-needed -lstdc++)
+    target_link_libraries(libisula_client -Wl,--as-needed ${PROTOBUF_LIBRARY})
+    target_link_libraries(libisula_client -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
     if(ABSL_SYNC_LIB)
-        target_link_libraries(libisula -Wl,--no-as-needed ${ABSL_SYNC_LIB})
+        target_link_libraries(libisula_client -Wl,--no-as-needed ${ABSL_SYNC_LIB})
     endif()
 else()
-    target_link_libraries(libisula -ldl libhttpclient)
-    set_target_properties(libisula PROPERTIES LINKER_LANGUAGE "C")
+    target_link_libraries(libisula_client -ldl libhttpclient)
+    set_target_properties(libisula_client PROPERTIES LINKER_LANGUAGE "C")
 endif()
-# ------ build libisula finish -----
+# ------ build libisula_client finish -----
 
 add_subdirectory(cmd)
 # ------ build isula -------
@@ -101,7 +101,7 @@ add_executable(isula
     ${ISULA_SRCS}
     )
 target_include_directories(isula PUBLIC ${ISULA_INCS} ${SHARED_INCS})
-target_link_libraries(isula libisula ${LIBYAJL_LIBRARY})
+target_link_libraries(isula libisula_client ${LIBYAJL_LIBRARY})
 if (ANDROID OR MUSL)
     target_link_libraries(isula ${LIBSSL_LIBRARY})
 else()
@@ -192,7 +192,7 @@ endif()
 
 if (ISULAD_GCOV)
     target_link_libraries(isula -lgcov)
-    target_link_libraries(libisula -lgcov)
+    target_link_libraries(libisula_client -lgcov)
     target_link_libraries(isulad -lgcov)
 endif()
 
@@ -201,7 +201,7 @@ endif()
 # ------ install binary --------
 install(TARGETS libisulad_tools
     ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-install(TARGETS libisula
+install(TARGETS libisula_client
     ${INSTALL_TYPE} DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 install(TARGETS isula
     RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)

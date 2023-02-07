@@ -542,20 +542,10 @@ bool is_default_runtime(const char *name)
 
 int runtime_init()
 {
-    int ret = 0;
-
     if (engines_global_init()) {
         ERROR("Init engines global failed");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-    /* Init default engine, now is lcr */
-    if (engines_discovery(DEFAULT_RUNTIME_NAME)) {
-        ERROR("Failed to discovery engine %s", DEFAULT_RUNTIME_NAME);
-        ret = -1;
-    }
-
-out:
-    return ret;
+    return 0;
 }
