@@ -1179,6 +1179,25 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
     if (!resources.cpuset_mems().empty()) {
         hostconfig->cpuset_mems = util_strdup_s(resources.cpuset_mems().c_str());
     }
+    if (resources.hugepage_limits_size() != 0) {
+        hostconfig->hugetlbs = (host_config_hugetlbs_element **)util_smart_calloc_s(
+                sizeof(host_config_hugetlbs_element *), resources.hugepage_limits_size());
+        if (hostconfig->hugetlbs == nullptr) {
+            error.SetError("Out of memory");
+            return;
+        }
+	for (int i = 0; i < resources.hugepage_limits_size(); i++) {
+            hostconfig->hugetlbs[i] =
+                    (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
+            if (hostconfig->hugetlbs[i] == nullptr) {
+                error.SetError("Out of memory");
+                goto cleanup;
+            }
+            hostconfig->hugetlbs[i]->page_size = util_strdup_s(resources.hugepage_limits(i).page_size().c_str());
+            hostconfig->hugetlbs[i]->limit = resources.hugepage_limits(i).limit();
+            hostconfig->hugetlbs_len++;
+        }
+    }
 
     request->host_config = host_config_generate_json(hostconfig, &ctx, &perror);
     if (request->host_config == nullptr) {
