@@ -447,8 +447,27 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
             hc->cpuset_mems = util_strdup_s(rOpts.cpuset_mems().c_str());
         }
         hc->oom_score_adj = rOpts.oom_score_adj();
-    }
 
+        if (rOpts.hugepage_limits_size() != 0) {
+            hc->hugetlbs = (host_config_hugetlbs_element **)util_smart_calloc_s(sizeof(host_config_hugetlbs_element *),
+                                                                                rOpts.hugepage_limits_size());
+            if (hc->hugetlbs == nullptr) {
+                error.SetError("Out of memory");
+                return;
+            }
+            for (int i = 0; i < rOpts.hugepage_limits_size(); i++) {
+                hc->hugetlbs[i] =
+                        (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
+                if (hc->hugetlbs[i] == nullptr) {
+                    error.SetError("Out of memory");
+                    return;
+                }
+                hc->hugetlbs[i]->page_size = util_strdup_s(rOpts.hugepage_limits(i).page_size().c_str());
+                hc->hugetlbs[i]->limit = rOpts.hugepage_limits(i).limit();
+                hc->hugetlbs_len++;
+            }
+        }
+    }
     createConfig->open_stdin = config.stdin();
     createConfig->tty = config.tty();
 }
