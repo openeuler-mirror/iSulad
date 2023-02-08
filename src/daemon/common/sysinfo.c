@@ -743,7 +743,8 @@ static void check_cgroup_mem(struct layer **layers, bool quiet, cgroup_mem_info_
         return;
     }
 
-    meminfo->limit = true;
+    meminfo->limit = cgroup_enabled(mountpoint, CGROUP_MEMORY_LIMIT);
+    cgroup_do_log(quiet, !(meminfo->limit), "Your kernel does not support memory limit");
 
     meminfo->swap = cgroup_enabled(mountpoint, CGROUP_MEMORY_SWAP);
     cgroup_do_log(quiet, !(meminfo->swap), "Your kernel does not support swap memory limit");
