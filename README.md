@@ -70,7 +70,7 @@ CRI interface is implemented based on gRPC. iSulad implemented CRI gRPC Server f
 
 - [user manual](./docs/manual/README.md)
 
-- [desgin docs](./docs/design/README.md)
+- [design docs](./docs/design/README.md)
 
 ### Installing
 
