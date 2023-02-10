@@ -52,6 +52,9 @@ public:
                                     const runtime::v1alpha2::ListContainerStatsRequest *request,
                                     runtime::v1alpha2::ListContainerStatsResponse *reply) override;
 
+    grpc::Status ContainerStats(grpc::ServerContext *context, const runtime::v1alpha2::ContainerStatsRequest *request,
+                                runtime::v1alpha2::ContainerStatsResponse *reply) override;
+
     grpc::Status ContainerStatus(grpc::ServerContext *context, const runtime::v1alpha2::ContainerStatusRequest *request,
                                  runtime::v1alpha2::ContainerStatusResponse *reply) override;
 

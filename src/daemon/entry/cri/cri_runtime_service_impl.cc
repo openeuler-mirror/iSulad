@@ -70,6 +70,12 @@ void CRIRuntimeServiceImpl::ListContainerStats(
     m_containerManager->ListContainerStats(filter, containerstats, error);
 }
 
+auto CRIRuntimeServiceImpl::ContainerStats(const std::string &containerID, Errors &error)
+-> std::unique_ptr<runtime::v1alpha2::ContainerStats>
+{
+    return m_containerManager->ContainerStats(containerID, error);
+}
+
 auto CRIRuntimeServiceImpl::ContainerStatus(const std::string &containerID, Errors &error)
 -> std::unique_ptr<runtime::v1alpha2::ContainerStatus>
 {

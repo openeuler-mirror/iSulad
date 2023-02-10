@@ -429,7 +429,7 @@ int oci_summary_image(im_summary_request *request, im_summary_response *response
         goto pack_response;
     }
 
-    WARN("Event: {Object: %s, Type: statusing image summary}", resolved_name);
+    INFO("Event: {Object: %s, Type: statusing image summary}", resolved_name);
 
     image_summary = storage_img_get_summary(resolved_name);
     if (image_summary == NULL) {
@@ -442,7 +442,7 @@ int oci_summary_image(im_summary_request *request, im_summary_response *response
     response->image_summary = image_summary;
     image_summary = NULL;
 
-    WARN("Event: {Object: %s, Type: statused image summary}", resolved_name);
+    INFO("Event: {Object: %s, Type: statused image summary}", resolved_name);
 
 pack_response:
     free(resolved_name);
@@ -493,7 +493,7 @@ int oci_status_image(im_status_request *request, im_status_response *response)
         goto pack_response;
     }
 
-    WARN("Event: {Object: %s, Type: statusing image}", resolved_name);
+    INFO("Event: {Object: %s, Type: statusing image}", resolved_name);
 
     image_info = storage_img_get(resolved_name);
     if (image_info == NULL) {
@@ -506,7 +506,7 @@ int oci_status_image(im_status_request *request, im_status_response *response)
     response->image_info->image = image_info;
     image_info = NULL;
 
-    WARN("Event: {Object: %s, Type: statused image}", resolved_name);
+    INFO("Event: {Object: %s, Type: statused image}", resolved_name);
 
 pack_response:
     free(resolved_name);
