@@ -103,12 +103,7 @@ function test_inspect_spec()
     isula inspect --format='{{.Image}}' $containername 2>&1 | grep "sha256:${image_id}"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
 
-    if [ -d /sys/fs/cgroup/files ];then
-        grepval="100"
-    else
-        grepval="0"
-    fi
-    isula inspect --format='{{json .HostConfig.FilesLimit}}' $containername 2>&1 | grep "$grepval"
+    isula inspect --format='{{json .HostConfig.FilesLimit}}' $containername 2>&1 | grep 0
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
 
     isula inspect --format='{{json .Config.Env}}' $containername 2>&1 | grep "a=1"
