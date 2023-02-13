@@ -313,6 +313,45 @@ rep:
     return 0;
 }
 
+/*
+ * If timeout <= 0, blocking wait pid.
+ * If timeout > 0, non-blocking wait pid with timeout.
+ * When waitpid timeout, calling handle_timeout_callback_t.
+ */
+int util_waitpid_with_timeout(pid_t pid, const int64_t timeout, handle_timeout_callback_t cb)
+{
+    int nret = 0;
+    time_t start_time = time(NULL);
+    time_t end_time;
+    double interval;
+
+    if (timeout <= 0) {
+        return util_wait_for_pid_status(pid);
+    }
+
+    for (;;) {
+        nret = waitpid(pid, NULL, WNOHANG);
+        if (nret == pid) {
+            break;
+        }
+        if (nret == -1 && errno != EINTR) {
+            return -1;
+        }
+        end_time = time(NULL);
+        interval = difftime(end_time, start_time);
+        if (nret == 0 && interval >= timeout) {
+            INFO("Wait %d timeout", pid);
+            if (cb != NULL) {
+                cb(pid);
+            }
+            return -1;
+        }
+        // sleep some time instead to avoid cpu full running and then retry.
+        sleep(0.1);
+    }
+    return 0;
+}
+
 int util_wait_for_pid_status(pid_t pid)
 {
     int st;

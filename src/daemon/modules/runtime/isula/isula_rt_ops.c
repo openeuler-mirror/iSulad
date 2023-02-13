@@ -205,6 +205,10 @@ static void show_shim_runtime_errlog(const char *workdir)
     char buf1[SHIM_LOG_SIZE] = { 0 };
     char buf2[SHIM_LOG_SIZE] = { 0 };
 
+    if (g_isulad_errmsg != NULL) {
+        return;
+    }
+
     get_err_message(buf1, sizeof(buf1), workdir, "shim-log.json");
     get_err_message(buf2, sizeof(buf2), workdir, "log.json");
     ERROR("shim-log: %s", buf1);
@@ -678,8 +682,29 @@ static int status_to_exit_code(int status)
     return exit_code;
 }
 
+static int try_wait_pid(pid_t pid)
+{
+    if (waitpid(pid, NULL, WNOHANG) == pid) {
+        return 0;
+    }
+
+    return 1;
+}
+
+static void kill_and_show_err(pid_t pid)
+{
+    int nret = 0;
+    kill(pid, SIGKILL);
+    // wait atmost 0.5 seconds
+    DO_RETRY_CALL(5, 100000, nret, try_wait_pid, pid);
+    if (nret != 0) {
+        WARN("Fail to wait isulad-shim");
+    }
+    isulad_set_error_message("Exec container error;exec timeout");
+}
+
 static int shim_create(bool fg, const char *id, const char *workdir, const char *bundle, const char *runtime_cmd,
-                       int *exit_code)
+                       int *exit_code, const int64_t timeout)
 {
     pid_t pid = 0;
     int exec_fd[2] = { -1, -1 };
@@ -770,7 +795,7 @@ realexec:
         goto out;
     }
 
-    status = util_wait_for_pid_status(pid);
+    status = util_waitpid_with_timeout(pid, timeout, kill_and_show_err);
     if (status < 0) {
         ERROR("failed wait shim-parent %d exit %s", pid, strerror(errno));
         ret = -1;
@@ -784,7 +809,9 @@ realexec:
 out:
     if (ret != 0) {
         show_shim_runtime_errlog(workdir);
-        kill(pid, SIGKILL); /* can kill other process? */
+        if (timeout <= 0) {
+            kill(pid, SIGKILL); /* can kill other process? */
+        }
     }
 
     return ret;
@@ -893,7 +920,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     }
 
     get_runtime_cmd(runtime, &cmd);
-    ret = shim_create(false, id, workdir, params->bundle, cmd, NULL);
+    ret = shim_create(false, id, workdir, params->bundle, cmd, NULL, -1);
     if (ret != 0) {
         runtime_call_delete_force(workdir, runtime, id);
         ERROR("%s: failed create shim process", id);
@@ -1165,7 +1192,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     }
 
     get_runtime_cmd(runtime, &cmd);
-    ret = shim_create(fg_exec(params), id, workdir, bundle, cmd, exit_code);
+    ret = shim_create(fg_exec(params), id, workdir, bundle, cmd, exit_code, params->timeout);
     if (ret != 0) {
         ERROR("%s: failed create shim process for exec %s", id, exec_id);
         goto errlog_out;
