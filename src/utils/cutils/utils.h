@@ -302,6 +302,9 @@ typedef struct _proc_t {
         processor; /* current (or most recent?) CPU */
 } proc_t;
 
+// handle waitpid timeout.
+typedef void(*handle_timeout_callback_t)(pid_t pid);
+
 struct signame {
     int num;
     const char *name;
@@ -328,6 +331,8 @@ void *util_common_calloc_s(size_t size);
 char *util_strdup_s(const char *src);
 
 int util_wait_for_pid(pid_t pid);
+
+int util_waitpid_with_timeout(pid_t pid, const int64_t timeout, handle_timeout_callback_t cb);
 
 void util_contain_errmsg(const char *errmsg, int *exit_code);
 
