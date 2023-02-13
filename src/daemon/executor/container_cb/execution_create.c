@@ -1295,7 +1295,7 @@ static int save_container_config_before_create(const char *id, const char *runti
 static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const char *path)
 {
     int ret;
-    int fd = 0;
+    int fd = -1;
     ssize_t nwrite;
     char fpath[PATH_MAX] = { 0 };
     char buf[ISULAD_NUMSTRLEN64] = { 0 };
@@ -1310,13 +1310,13 @@ static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const
         return -1;
     }
 
-    int nret = snprintf(fpath, sizeof(fpath), "%s/%s", path, file);
-    if (nret < 0 || nret >= sizeof(fpath)) {
+    ret = snprintf(fpath, sizeof(fpath), "%s/%s", path, file);
+    if (ret < 0 || ret >= sizeof(fpath)) {
         ERROR("Failed to print string");
         return -1;
     }
-    nret = snprintf(buf, sizeof(buf), "%lld", (long long int)value);
-    if (nret < 0 || (size_t)nret >= sizeof(buf)) {
+    ret = snprintf(buf, sizeof(buf), "%lld", (long long int)value);
+    if (ret < 0 || (size_t)ret >= sizeof(buf)) {
         ERROR("Failed to print string");
         return -1;
     }
