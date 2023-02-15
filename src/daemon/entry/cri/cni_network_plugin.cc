@@ -296,7 +296,7 @@ void CniNetworkPlugin::GetDefaultCNINetwork(const std::string &confDir, std::vec
             continue;
         }
 
-        if (n_list == nullptr || n_list->plugin_len == 0) {
+        if (n_list == nullptr || n_list->name == nullptr || n_list->plugin_len == 0) {
             WARN("CNI config list %s has no networks, skipping", elem.c_str());
             free_cni_network_list_conf(n_list);
             n_list = nullptr;
