@@ -314,7 +314,7 @@ char *conf_get_routine_rootdir(const char *runtime)
     }
 
     /* path = conf->rootpath + / + engines + / + runtime + /0 */
-    if (strlen(conf->json_confs->graph) > (SIZE_MAX - strlen(ENGINE_ROOTPATH_NAME)) - 3) {
+    if (strlen(conf->json_confs->graph) > (SIZE_MAX - strlen(ENGINE_ROOTPATH_NAME) - strlen(runtime)) - 3) {
         ERROR("Graph path is too long");
         goto out;
     }

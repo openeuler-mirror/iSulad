@@ -533,7 +533,7 @@ static char *try_generate_id()
     int i = 0;
     int max_time = 10;
     char *id = NULL;
-    char *value = NULL;
+    container_t *value = NULL;
 
     id = util_smart_calloc_s(sizeof(char), (CONTAINER_ID_MAX_LEN + 1));
     if (id == NULL) {
@@ -547,9 +547,9 @@ static char *try_generate_id()
             goto err_out;
         }
 
-        value = container_name_index_get(id);
+        value = containers_store_get(id);
         if (value != NULL) {
-            free(value);
+            container_unref(value);
             value = NULL;
             continue;
         } else {
