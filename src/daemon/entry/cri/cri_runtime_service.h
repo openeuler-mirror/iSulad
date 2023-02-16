@@ -49,6 +49,9 @@ public:
                                     std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
                                     Errors &error) = 0;
 
+    virtual auto ContainerStats(const std::string &containerID,
+                                Errors &error) -> std::unique_ptr<runtime::v1alpha2::ContainerStats> = 0;
+
     virtual auto ContainerStatus(const std::string &containerID,
                                  Errors &error) -> std::unique_ptr<runtime::v1alpha2::ContainerStatus> = 0;
 
