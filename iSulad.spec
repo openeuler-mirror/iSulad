@@ -1,5 +1,5 @@
 %global _version 2.1.1
-%global _release 2
+%global _release 3
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -36,6 +36,10 @@ Requires(preun): initscripts
 %if 0%{?is_embedded}
 BuildRequires: sqlite-devel
 Requires: sqlite
+%endif
+
+%if %{defined openeuler}
+BuildRequires: gtest-devel gmock-devel
 %endif
 
 %define lcrver_lower 2.1.1-0
@@ -76,11 +80,26 @@ Runtime Daemon, written by C.
 mkdir -p build
 cd build
 %if 0%{?enable_shimv2}
+%if %{defined openeuler}
+%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=ON -DENABLE_UT=ON ../
+%else
 %cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=ON ../
+%endif
+%else
+%if %{defined openeuler}
+%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON ../
 %else
 %cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
 %endif
+%endif
 %make_build
+
+%check
+%if %{defined openeuler}
+cd build
+# registry_images_ut and volume_ut must run with root user
+ctest -E "registry_images_ut|volume_ut"
+%endif
 
 %install
 rm -rf %{buildroot}
@@ -237,6 +256,12 @@ fi
 %endif
 
 %changelog
+* Thu Feb 16 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.1.1-3
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: add check
+
 * Mon Feb 06 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.1.1-2
 - Type: update
 - ID: NA
