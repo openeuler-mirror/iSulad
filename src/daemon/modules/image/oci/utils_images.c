@@ -42,6 +42,26 @@
 // nanos of 2038-01-19T03:14:07, the max valid linux time
 #define MAX_NANOS 2147483647000000000
 
+char *oci_image_digest_pos(const char *name)
+{
+    char *pos = NULL;
+
+    if (name == NULL) {
+        return NULL;
+    }
+
+    pos = strrchr(name, '@');
+    if (pos == NULL) {
+        return NULL;
+    }
+
+    if (util_reg_match(__DIGESTPattern, pos) != 0) {
+        return NULL;
+    }
+
+    return pos;
+}
+
 char *get_last_part(char **parts)
 {
     char *last_part = NULL;
@@ -98,6 +118,7 @@ char *oci_default_tag(const char *name)
     }
 
     last_part = get_last_part(parts);
+    // will pass image name with digest and with tag
     if (last_part != NULL && strrchr(last_part, ':') == NULL) {
         add_default_tag = DEFAULT_TAG;
     }
@@ -181,9 +202,9 @@ char *oci_normalize_image_name(const char *name)
     return result;
 }
 
-int oci_split_image_name(const char *image_name, char **host, char **name, char **tag)
+int oci_split_image_name(const char *image_name, char **host, char **name, char **tag_digest)
 {
-    char *tag_pos = NULL;
+    char *tag_digest_pos = NULL;
     char *name_pos = NULL;
     char *tmp_image_name = NULL;
 
@@ -193,18 +214,24 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
     }
 
     tmp_image_name = util_strdup_s(image_name);
-    tag_pos = util_tag_pos(tmp_image_name);
-    if (tag_pos != NULL) {
-        *tag_pos = 0;
-        tag_pos++;
-        if (tag != NULL) {
-            *tag = util_strdup_s(tag_pos);
+
+    // check digest first
+    tag_digest_pos = oci_image_digest_pos(tmp_image_name);
+    if (tag_digest_pos == NULL) {
+        tag_digest_pos = util_tag_pos(tmp_image_name);
+    }
+
+    if (tag_digest_pos != NULL) {
+        *tag_digest_pos = '\0';
+        tag_digest_pos++;
+        if (tag_digest != NULL) {
+            *tag_digest = util_strdup_s(tag_digest_pos);
         }
     }
 
     name_pos = strchr(tmp_image_name, '/');
     if (name_pos != NULL) {
-        *name_pos = 0;
+        *name_pos = '\0';
         name_pos++;
         if (name != NULL) {
             *name = util_strdup_s(name_pos);
