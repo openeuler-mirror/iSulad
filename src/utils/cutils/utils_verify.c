@@ -359,7 +359,7 @@ cleanup:
 bool util_valid_image_name(const char *name)
 {
     char *copy = NULL;
-    char *tag_pos = NULL;
+    char *check_pos = NULL;
     bool bret = false;
 
     if (name == NULL) {
@@ -372,13 +372,26 @@ bool util_valid_image_name(const char *name)
     }
 
     copy = util_strdup_s(name);
-    tag_pos = util_tag_pos(copy);
-    if (tag_pos != NULL) {
-        if (util_reg_match(__TagPattern, tag_pos)) {
+
+    // 1. first, check digest or not
+    check_pos = strrchr(copy, '@');
+    if (check_pos != NULL) {
+        // image name with digest
+        if (util_reg_match(__DIGESTPattern, check_pos)) {
             goto cleanup;
         }
+        *check_pos = '\0';
+    } else {
+        // image name without digest
+        // 2. check tag or not
+        check_pos = util_tag_pos(copy);
+        if (check_pos != NULL) {
+            if (util_reg_match(__TagPattern, check_pos)) {
+                goto cleanup;
+            }
 
-        *tag_pos = '\0';
+            *check_pos = '\0';
+        }
     }
 
     if (util_reg_match(__NamePattern, copy)) {

@@ -1979,6 +1979,7 @@ static int resort_image_names(const char **names, size_t names_len, char **first
                                      MAX_IMAGE_NAME_LENGTH - MAX_IMAGE_DIGEST_LENGTH);
         }
 
+        // TODO: maybe should support other digest
         if (prefix != NULL && strcmp(prefix, DIGEST_PREFIX) == 0) {
             if (util_array_append(image_digests, names[i]) != 0) {
                 ERROR("Failed to append image to digest: %s", names[i]);
@@ -2172,6 +2173,7 @@ static int get_image_repo_digests(char ***old_repo_digests, char **image_tags, i
         goto out;
     }
 
+    // get repo digest from images which with tag
     if (pack_repo_digest(old_repo_digests, (const char **)image_tags, digest, repo_digests) != 0) {
         ERROR("Failed to pack repo digest");
         ret = -1;
@@ -2194,12 +2196,17 @@ static int pack_image_tags_and_repo_digest(image_t *img, imagetool_image *info)
     char *image_digest = NULL;
     char **repo_digests = NULL;
 
+    // get names from image-store names:
+    // 1. image names with tag;
+    // 2. image names with digests;
+    // 3. get first image name, current unused;
     if (resort_image_names((const char **)img->simage->names, img->simage->names_len, &name, &tags, &digests) != 0) {
         ERROR("Failed to resort image names");
         ret = -1;
         goto out;
     }
 
+    // update repo digests from tags
     if (get_image_repo_digests(&digests, tags, img, &image_digest, &repo_digests) != 0) {
         ERROR("Failed to get image repo digests");
         ret = -1;
