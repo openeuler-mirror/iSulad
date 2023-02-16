@@ -1,5 +1,5 @@
 %global _version 2.0.8
-%global _release 20221018.110323.gita792f081
+%global _release 20230216.115406.git40ea936a
 %global is_systemd 1
 
 Name:      iSulad
@@ -142,6 +142,10 @@ BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git chrpath
 
+%if %{defined openeuler}
+BuildRequires: gtest-devel gmock-devel
+%endif
+
 Requires:      lcr lxc clibcni
 Requires:      grpc protobuf
 Requires:      libcurl
@@ -159,8 +163,18 @@ Runtime Daemon, written by C.
 %build
 mkdir -p build
 cd build
+%if %{defined openeuler}
+%cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON ../
+%else
 %cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
+%endif
 %make_build
+
+%check
+%if %{defined openeuler}
+cd build
+ctest -E "storage_driver_ut|storage_layers_ut|registry_images_ut"
+%endif
 
 %install
 rm -rf %{buildroot}
@@ -319,6 +333,12 @@ fi
 %endif
 
 %changelog
+* Thu Feb 16 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.8-20230216.115406.git40ea936a
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: add check
+
 * Tue Oct 18 2022 huangsong <huangsong14@huawei.com> - 2.0.8-20221018.110323.gita792f081
 - Type: sync from upstream
 - ID: NA
