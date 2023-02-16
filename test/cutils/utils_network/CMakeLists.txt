@@ -20,3 +20,4 @@ target_link_libraries(${EXE}
     libutils_ut -lcrypto -lyajl -lz)
 
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
