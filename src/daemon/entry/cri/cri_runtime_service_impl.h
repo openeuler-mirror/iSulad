@@ -58,6 +58,9 @@ public:
                             std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
                             Errors &error) override;
 
+    auto ContainerStats(const std::string &containerID,
+                        Errors &error) -> std::unique_ptr<runtime::v1alpha2::ContainerStats> override;
+
     auto ContainerStatus(const std::string &containerID,
                          Errors &error) -> std::unique_ptr<runtime::v1alpha2::ContainerStatus> override;
 

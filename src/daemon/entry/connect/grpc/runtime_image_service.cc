@@ -54,7 +54,7 @@ grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
     std::vector<std::unique_ptr<runtime::v1alpha2::Image>> images;
     Errors error;
 
-    WARN("Event: {Object: CRI, Type: Listing all images}");
+    INFO("Event: {Object: CRI, Type: Listing all images}");
 
     rService->ListImages(request->filter(), &images, error);
     if (!error.Empty()) {
@@ -70,7 +70,7 @@ grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
         *image = *(iter->get());
     }
 
-    WARN("Event: {Object: CRI, Type: Listed all images}");
+    INFO("Event: {Object: CRI, Type: Listed all images}");
 
     return grpc::Status::OK;
 }
@@ -82,7 +82,7 @@ grpc::Status RuntimeImageServiceImpl::ImageStatus(grpc::ServerContext *context,
     std::unique_ptr<runtime::v1alpha2::Image> image_info = nullptr;
     Errors error;
 
-    WARN("Event: {Object: CRI, Type: Statusing image %s}", request->image().image().c_str());
+    INFO("Event: {Object: CRI, Type: Statusing image %s}", request->image().image().c_str());
 
     image_info = rService->ImageStatus(request->image(), error);
     if (!error.Empty() && !CRIHelpers::IsImageNotFoundError(error.GetMessage())) {
@@ -96,7 +96,7 @@ grpc::Status RuntimeImageServiceImpl::ImageStatus(grpc::ServerContext *context,
         *image = *image_info;
     }
 
-    WARN("Event: {Object: CRI, Type: Statused image %s}", request->image().image().c_str());
+    INFO("Event: {Object: CRI, Type: Statused image %s}", request->image().image().c_str());
 
     return grpc::Status::OK;
 }
@@ -108,7 +108,7 @@ grpc::Status RuntimeImageServiceImpl::ImageFsInfo(grpc::ServerContext *context,
     std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> usages;
     Errors error;
 
-    WARN("Event: {Object: CRI, Type: Statusing image fs info}");
+    INFO("Event: {Object: CRI, Type: Statusing image fs info}");
 
     rService->ImageFsInfo(&usages, error);
     if (!error.Empty()) {
@@ -125,7 +125,7 @@ grpc::Status RuntimeImageServiceImpl::ImageFsInfo(grpc::ServerContext *context,
         *fs_info = *(iter->get());
     }
 
-    WARN("Event: {Object: CRI, Type: Statused image fs info}");
+    INFO("Event: {Object: CRI, Type: Statused image fs info}");
     return grpc::Status::OK;
 }
 

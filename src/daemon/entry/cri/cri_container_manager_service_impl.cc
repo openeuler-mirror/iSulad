@@ -891,6 +891,60 @@ cleanup:
     free_container_stats_response(response);
 }
 
+auto ContainerManagerServiceImpl::ContainerStats(const std::string &containerID, Errors &error)
+-> std::unique_ptr<runtime::v1alpha2::ContainerStats>
+{
+    container_stats_request *request { nullptr };
+    container_stats_response *response { nullptr };
+    std::unique_ptr<runtime::v1alpha2::ContainerStats> contStats { nullptr };
+    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> contStatsVec;
+
+    if (containerID.empty()) {
+        error.SetError("Empty container id");
+        return nullptr;
+    }
+
+    if (m_cb == nullptr || m_cb->container.stats == nullptr) {
+        error.SetError("Unimplemented callback");
+        return nullptr;
+    }
+
+    request = (container_stats_request *)util_common_calloc_s(sizeof(container_stats_request));
+    if (request == nullptr) {
+        error.SetError("Out of memory");
+        return nullptr;
+    }
+
+    request->containers = (char **)util_smart_calloc_s(sizeof(char *), 1);
+    if (request->containers == nullptr) {
+        error.SetError("Out of memory");
+        goto cleanup;
+    }
+
+    request->containers[0] = util_strdup_s(containerID.c_str());
+    request->containers_len = 1;
+
+    if (m_cb->container.stats(request, &response) != 0) {
+        if (response != nullptr && response->errmsg != nullptr) {
+            error.SetError(response->errmsg);
+        } else {
+            error.SetError("Failed to call stats container callback");
+        }
+        goto cleanup;
+    }
+
+    ContainerStatsToGRPC(response, &contStatsVec, error);
+    if (error.NotEmpty()) {
+        goto cleanup;
+    }
+    contStats = std::move(contStatsVec[0]);
+
+cleanup:
+    free_container_stats_request(request);
+    free_container_stats_response(response);
+    return contStats;
+}
+
 void ContainerManagerServiceImpl::PackContainerImageToStatus(
     container_inspect *inspect, std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error)
 {
