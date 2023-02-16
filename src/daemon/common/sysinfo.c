@@ -24,8 +24,10 @@
 #include <linux/magic.h>
 #include <sys/stat.h>
 
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/log.h>
+
 #include "err_msg.h"
-#include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_array.h"
 #include "utils_file.h"
@@ -1626,4 +1628,46 @@ free_out:
         minfos = NULL;
     }
     return minfos;
+}
+
+char *sysinfo_cgroup_controller_cpurt_mnt_path()
+{
+    int nret = 0;
+    __isula_auto_free char *mnt = NULL;
+    __isula_auto_free char *root = NULL;
+    char fpath[PATH_MAX] = { 0 };
+    sysinfo_t *sysinfo = NULL;
+
+    sysinfo = get_sys_info(true);
+    if (sysinfo == NULL) {
+        ERROR("Can not get system info");
+        return NULL;
+    }
+
+    if (!(sysinfo->cgcpuinfo.cpu_rt_period)) {
+        ERROR("Daemon-scoped cpu-rt-period and cpu-rt-runtime are not supported by kernel");
+        isulad_set_error_message("Daemon-scoped cpu-rt-period and cpu-rt-runtime are not supported by kernel");
+        return NULL;
+    }
+
+    nret = find_cgroup_mountpoint_and_root("cpu", &mnt, &root);
+    if (nret != 0 || mnt == NULL || root == NULL) {
+        ERROR("Can not find cgroup mnt and root path for subsystem 'cpu'");
+        isulad_set_error_message("Can not find cgroup mnt and root path for subsystem 'cpu'");
+        return NULL;
+    }
+
+    // When iSulad is run inside docker, the root is based of the host cgroup.
+    // Replace root to "/"
+    if (strncmp(root, "/docker/", strlen("/docker/")) == 0) {
+        root[1] = '\0';
+    }
+
+    nret = snprintf(fpath, sizeof(fpath), "%s/%s", mnt, root);
+    if (nret < 0 || (size_t)nret >= sizeof(fpath)) {
+        ERROR("Failed to print string");
+        return NULL;
+    }
+
+    return util_strdup_s(fpath);
 }

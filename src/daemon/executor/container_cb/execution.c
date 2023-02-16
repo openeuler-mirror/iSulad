@@ -18,6 +18,12 @@
 #include <pthread.h>
 #include <malloc.h>
 #include <sys/eventfd.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <libgen.h>
+
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/container_config_v2.h>
 #include <isula_libutils/container_delete_request.h>
@@ -34,13 +40,13 @@
 #include <isula_libutils/container_stop_request.h>
 #include <isula_libutils/container_stop_response.h>
 #include <isula_libutils/json_common.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/log.h>
 
-#include "isula_libutils/log.h"
+#include "isulad_config.h"
+#include "sysinfo.h"
 #include "container_api.h"
+#include "specs_api.h"
 #include "execution_extend.h"
 #include "execution_information.h"
 #include "execution_stream.h"
@@ -302,6 +308,135 @@ static void pack_start_response(container_start_response *response, uint32_t cc,
     }
 }
 
+static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
+                                      int64_t cpu_rt_period, int64_t cpu_rt_runtime);
+
+/* maybe create cpu realtime file */
+static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const char *path)
+{
+    int ret;
+    __isula_auto_close int fd = -1;
+    ssize_t nwrite;
+    char fpath[PATH_MAX] = { 0 };
+    char buf[ISULAD_NUMSTRLEN64] = { 0 };
+
+    if (value == 0) {
+        return 0;
+    }
+
+    ret = util_mkdir_p(path, CONFIG_DIRECTORY_MODE);
+    if (ret != 0) {
+        ERROR("Failed to mkdir: %s", path);
+        return -1;
+    }
+
+    ret = snprintf(fpath, sizeof(fpath), "%s/%s", path, file);
+    if (ret < 0 || ret >= sizeof(fpath)) {
+        ERROR("Failed to print string");
+        return -1;
+    }
+    ret = snprintf(buf, sizeof(buf), "%lld", (long long int)value);
+    if (ret < 0 || (size_t)ret >= sizeof(buf)) {
+        ERROR("Failed to print string");
+        return -1;
+    }
+
+    fd = util_open(fpath, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0700);
+    if (fd < 0) {
+        ERROR("Failed to open file: %s: %s", fpath, strerror(errno));
+        isulad_set_error_message("Failed to open file: %s: %s", fpath, strerror(errno));
+        return -1;
+    }
+    nwrite = util_write_nointr(fd, buf, strlen(buf));
+    if (nwrite < 0 || nwrite != strlen(buf)) {
+        ERROR("Failed to write %s to %s: %s", buf, fpath, strerror(errno));
+        isulad_set_error_message("Failed to write '%s' to '%s': %s", buf, fpath, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int recursively_create_cgroup(const char *path, const char *mnt_root, int recursive_depth, int64_t cpu_rt_period,
+                                     int64_t cpu_rt_runtime)
+{
+    int ret = 0;
+    __isula_auto_free char *dup = NULL;
+    char *dirpath = NULL;
+    char fpath[PATH_MAX] = { 0 };
+
+    dup = util_strdup_s(path);
+    dirpath = dirname(dup);
+    ret = do_init_cpurt_cgroups_path(dirpath, (recursive_depth + 1), mnt_root, cpu_rt_period, cpu_rt_runtime);
+    if (ret != 0) {
+        return ret;
+    }
+
+    int nret = snprintf(fpath, sizeof(fpath), "%s/%s", mnt_root, path);
+    if (nret < 0 || (size_t)nret >= sizeof(fpath)) {
+        ERROR("Failed to print string");
+        return ret;
+    }
+
+    ret = maybe_create_cpu_realtime_file(cpu_rt_period, "cpu.rt_period_us", fpath);
+    if (ret != 0) {
+        return ret;
+    }
+
+    return maybe_create_cpu_realtime_file(cpu_rt_runtime, "cpu.rt_runtime_us", fpath);
+}
+
+/* init cgroups path */
+static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
+                                      int64_t cpu_rt_period, int64_t cpu_rt_runtime)
+{
+    if ((recursive_depth + 1) > MAX_PATH_DEPTH) {
+        ERROR("Reach the max cgroup depth:%s", path);
+        return -1;
+    }
+
+    if (path == NULL || strcmp(path, "/") == 0 || strcmp(path, ".") == 0) {
+        return 0;
+    }
+
+    // Recursively create cgroup to ensure that the system and all parent cgroups have values set
+    // for the period and runtime as this limits what the children can be set to.
+    return recursively_create_cgroup(path, mnt_root, recursive_depth, cpu_rt_period, cpu_rt_runtime);
+}
+
+// TODO: maybe we should adapt to cgroup v2
+static int cpurt_controller_init(const char *id, const host_config *host_spec)
+{
+    __isula_auto_free char *mnt_root = NULL;
+    __isula_auto_free char *cgroups_path = NULL;
+    char *dirpath = NULL;
+    int64_t cpu_rt_period = 0;
+    int64_t cpu_rt_runtime = 0;
+
+    cgroups_path = merge_container_cgroups_path(id, host_spec);
+    if (cgroups_path == NULL || strcmp(cgroups_path, "/") == 0 || strcmp(cgroups_path, ".") == 0) {
+        return 0;
+    }
+
+    if (conf_get_cgroup_cpu_rt(&cpu_rt_period, &cpu_rt_runtime)) {
+        return -1;
+    }
+
+    if (cpu_rt_period == 0 && cpu_rt_runtime == 0) {
+        return 0;
+    }
+
+    mnt_root = sysinfo_cgroup_controller_cpurt_mnt_path();
+    if (mnt_root == NULL) {
+        ERROR("Failed to get cpu rt controller mnt root path");
+        return -1;
+    }
+
+    dirpath = dirname(cgroups_path);
+
+    return do_init_cpurt_cgroups_path(dirpath, 0, mnt_root, cpu_rt_period, cpu_rt_runtime);
+}
+
 static int container_start_prepare(container_t *cont, const container_start_request *request, int stdinfd,
                                    struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
                                    char **fifopath, char *fifos[], int *sync_fd, pthread_t *thread_id)
@@ -311,6 +446,19 @@ static int container_start_prepare(container_t *cont, const container_start_requ
     if (container_state_to_disk_locking(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
         isulad_set_error_message("Failed to save container \"%s\" to disk", id);
+        return -1;
+    }
+
+    // init cgroup path for cpu_rt_runtime and cpu_rt_period
+    // we should do this in start container, not create container
+    // because, in scenarios: 
+    // 1. enable cpu-rt of isulad;
+    // 2. then run container with --cpu-rt-runtime
+    // 3. then reboot machine;
+    // 4. finally, start before container, it will failed...
+    // cause of no one to set value into cgroup/isulad/cpu-rt-runtime and cpu-rt-period.
+    if (cpurt_controller_init(id, cont->hostconfig) != 0) {
+        isulad_set_error_message("Failed to init controller of cpu-rt for container \"%s\".", id);
         return -1;
     }
 
