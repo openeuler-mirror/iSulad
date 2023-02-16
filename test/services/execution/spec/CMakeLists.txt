@@ -74,4 +74,6 @@ target_include_directories(${MOCK_EXE} PUBLIC
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
 target_link_libraries(${MOCK_EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
 add_test(NAME ${MOCK_EXE} COMMAND ${MOCK_EXE} --gtest_output=xml:${MOCK_EXE}-Results.xml)
+set_tests_properties(${MOCK_EXE} PROPERTIES TIMEOUT 120)
