@@ -139,6 +139,8 @@ mountinfo_t *find_mount_info(mountinfo_t **minfos, const char *dir);
 
 void free_mounts_info(mountinfo_t **minfos);
 
+char *sysinfo_cgroup_controller_cpurt_mnt_path(void);
+
 #ifdef __cplusplus
 }
 #endif
