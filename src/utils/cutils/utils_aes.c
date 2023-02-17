@@ -77,7 +77,7 @@ int util_aes_key(const char *key_file, bool create, unsigned char *aeskey)
             goto out;
         }
 
-        if (read(fd, aeskey, AES_256_CFB_KEY_LEN) != AES_256_CFB_KEY_LEN) {
+        if (util_read_nointr(fd, aeskey, AES_256_CFB_KEY_LEN) != AES_256_CFB_KEY_LEN) {
             ERROR("read key file %s failed: %s", key_file, strerror(errno));
             ret = -1;
             goto out;

@@ -1429,6 +1429,7 @@ static int do_add_checked_layer(const char *lid, int fd, map_t *checked_layers)
     bool default_value = true;
     char buf[PATH_MAX] = { 0 };
     int ret = 0;
+    int nret;
 
     if (strlen(lid) >= PATH_MAX - 1) {
         ERROR("Invalid layer id: %s", lid);
@@ -1438,7 +1439,8 @@ static int do_add_checked_layer(const char *lid, int fd, map_t *checked_layers)
     (void)memcpy(buf, lid, strlen(lid));
     buf[strlen(lid)] = '\n';
     // save checked layer ids into file
-    if (util_write_nointr(fd, buf, strlen(lid) + 1) < 0) {
+    nret = util_write_nointr(fd, buf, strlen(lid) + 1);
+    if (nret < 0 || (size_t)nret != strlen(lid) + 1) {
         ERROR("Write checked layer data failed: %s", strerror(errno));
         ret = -1;
         goto out;

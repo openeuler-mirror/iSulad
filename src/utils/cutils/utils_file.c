@@ -1012,7 +1012,7 @@ int util_file2str(const char *filename, char *buf, size_t len)
     if (fd == -1) {
         return -1;
     }
-    num_read = (int)read(fd, buf, len - 1);
+    num_read = (int)util_read_nointr(fd, buf, len - 1);
     if (num_read <= 0) {
         num_read = -1;
     } else {

@@ -196,7 +196,7 @@ int generate_random_str(char *id, size_t len)
     }
     for (i = 0; i < len; i++) {
         int nret;
-        if (read(fd, &num, sizeof(int)) < 0) {
+        if (read_nointr(fd, &num, sizeof(int)) < 0) {
             close(fd);
             return SHIM_ERR;
         }
@@ -232,8 +232,8 @@ void write_message(int fd, const char *level, const char *fmt, ...)
     va_end(arg_list);
 
     snprintf(msg, MAX_MESSAGE_LEN - 1, "{\"level\": \"%s\", \"msg\": \"%s\"}\n", level, buf);
-    nwrite = write(fd, msg, strlen(msg));
-    if (nwrite != strlen(msg)) {
+    nwrite = write_nointr_in_total(fd, msg, strlen(msg));
+    if (nwrite < 0 || (size_t)nwrite != strlen(msg)) {
         return;
     }
 }

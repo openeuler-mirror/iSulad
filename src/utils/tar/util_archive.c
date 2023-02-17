@@ -659,7 +659,7 @@ child_out:
     if (ret != 0) {
         ERROR("Wait archive_untar_handler failed with error:%s", strerror(errno));
         fcntl(pipe_stderr[0], F_SETFL, O_NONBLOCK);
-        if (read(pipe_stderr[0], errbuf, BUFSIZ) < 0) {
+        if (util_read_nointr(pipe_stderr[0], errbuf, BUFSIZ) < 0) {
             ERROR("read error message from child failed");
         }
     }
@@ -1054,7 +1054,7 @@ child_out:
     if (ret != 0) {
         ERROR("tar failed");
         fcntl(pipe_for_read[0], F_SETFL, O_NONBLOCK);
-        if (read(pipe_for_read[0], errbuf, BUFSIZ) < 0) {
+        if (util_read_nointr(pipe_for_read[0], errbuf, BUFSIZ) < 0) {
             ERROR("read error message from child failed");
         }
     }

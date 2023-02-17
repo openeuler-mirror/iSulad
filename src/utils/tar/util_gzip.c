@@ -212,7 +212,7 @@ int gzip(const char *filename, size_t len)
         return -1;
     }
 
-    size_read = read(pipefd[0], buffer, BUFSIZ);
+    size_read = util_read_nointr(pipefd[0], buffer, BUFSIZ);
     close(pipefd[0]);
 
     if (size_read) {

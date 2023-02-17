@@ -340,7 +340,7 @@ static ssize_t write_to_fd(void *context, const void *data, size_t len)
 {
     ssize_t ret;
     ret = util_write_nointr(*(int *)context, data, len);
-    if ((ret <= 0) || (ret != (ssize_t)len)) {
+    if (ret < 0 || (size_t)ret != len) {
         ERROR("Failed to write: %s", strerror(errno));
         return -1;
     }
