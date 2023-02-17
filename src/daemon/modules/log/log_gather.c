@@ -183,9 +183,9 @@ static int write_into_file(const void *buf, size_t g_log_size)
             return -1;
         }
     }
-    ret = (int)write(g_log_fd, buf, g_log_size);
-    if (ret <= 0) {
-        return ret;
+    ret = util_write_nointr_in_total(g_log_fd, buf, g_log_size);
+    if (ret < 0 || (size_t)ret != g_log_size) {
+        return -1;
     }
 
     write_size += ret;

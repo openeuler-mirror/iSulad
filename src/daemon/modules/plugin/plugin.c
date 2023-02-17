@@ -618,7 +618,7 @@ static int process_plugin_events(int inotify_fd, const char *plugin_dir)
     struct inotify_event *plugin_event = NULL;
     char buffer[8192 + 1] = { 0 };
     int action = 0;
-    events_length = read(inotify_fd, buffer, 8192);
+    events_length = util_read_nointr(inotify_fd, buffer, 8192);
 
     if (events_length <= 0) {
         ERROR("Failed to wait events");
