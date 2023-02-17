@@ -49,6 +49,7 @@
 ## Runtime
 
 - 查看 runtime 模块的设计文档： [runtime_design](./detailed/Runtime/runtime_design_zh.md) 。
+- 查看 isulad 支持runc 的设计文档：[runc_design](./detailed/Runtime/runc_design_zh.md)。
 
 ## Security
 
