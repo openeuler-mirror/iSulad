@@ -348,7 +348,7 @@ static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const
         return -1;
     }
     nwrite = util_write_nointr(fd, buf, strlen(buf));
-    if (nwrite < 0 || nwrite != strlen(buf)) {
+    if (nwrite < 0 || (size_t)nwrite != strlen(buf)) {
         ERROR("Failed to write %s to %s: %s", buf, fpath, strerror(errno));
         isulad_set_error_message("Failed to write '%s' to '%s': %s", buf, fpath, strerror(errno));
         return -1;
@@ -451,7 +451,7 @@ static int container_start_prepare(container_t *cont, const container_start_requ
 
     // init cgroup path for cpu_rt_runtime and cpu_rt_period
     // we should do this in start container, not create container
-    // because, in scenarios: 
+    // because, in scenarios:
     // 1. enable cpu-rt of isulad;
     // 2. then run container with --cpu-rt-runtime
     // 3. then reboot machine;

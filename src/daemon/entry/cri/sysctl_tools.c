@@ -99,7 +99,7 @@ int set_sysctl(const char *sysctl, int new_value, char **err)
         goto free_out;
     }
     rsize = util_write_nointr(fd, buff, strlen(buff));
-    if (rsize <= 0) {
+    if (rsize < 0 || (size_t)rsize != strlen(buff)) {
         if (asprintf(err, "Write new value failed: %s", strerror(errno)) < 0) {
             *err = util_strdup_s("Out of memory");
         }

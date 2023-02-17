@@ -345,7 +345,7 @@ static int write_env_content(const char *env_path, const char **env, size_t env_
                 goto out;
             }
             nret = util_write_nointr(fd, env_content, strlen(env_content));
-            if (nret < 0 || nret != len - 1) {
+            if (nret < 0 || (size_t)nret != strlen(env_content)) {
                 SYSERROR("Write env file failed");
                 free(env_content);
                 ret = -1;

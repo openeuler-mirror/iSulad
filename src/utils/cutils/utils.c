@@ -1251,7 +1251,7 @@ int util_generate_random_str(char *id, size_t len)
     }
     for (i = 0; i < len; i++) {
         int nret;
-        if (read(fd, &num, sizeof(int)) < 0) {
+        if (util_read_nointr(fd, &num, sizeof(int)) < 0) {
             ERROR("Failed to read urandom value");
             close(fd);
             return -1;

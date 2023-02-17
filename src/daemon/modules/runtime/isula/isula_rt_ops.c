@@ -1363,8 +1363,8 @@ int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resi
         goto out;
     }
 
-    count = write(fd, data, RESIZE_DATA_SIZE);
-    if (count <= 0) {
+    count = util_write_nointr(fd, data, strlen(data));
+    if (count < 0 || (size_t)count != strlen(data)) {
         ERROR("write exec resize data error");
         ret = -1;
         goto out;

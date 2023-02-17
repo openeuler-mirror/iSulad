@@ -88,7 +88,8 @@ static int save_gc_config(const char *json_gc_config)
         goto out;
     }
 
-    if (write(fd, json_gc_config, strlen(json_gc_config)) == -1) {
+    nret = util_write_nointr(fd, json_gc_config, strlen(json_gc_config));
+    if (nret < 0 || (size_t)nret != strlen(json_gc_config)) {
         ERROR("write %s failed: %s", filename, strerror(errno));
         ret = -1;
     }
