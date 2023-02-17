@@ -232,41 +232,36 @@ char *invoke_conf_get_isulad_cgroup_parent()
     return util_strdup_s("/var/lib/isulad/engines/lcr");
 }
 
-TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_1)
+TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_1)
 {
-    ASSERT_EQ(merge_oci_cgroups_path(nullptr, nullptr, nullptr), -1);
+    ASSERT_EQ(merge_container_cgroups_path(nullptr, nullptr), nullptr);
 }
 
-TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_2)
+TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_2)
 {
-    oci_runtime_spec *oci_spec = nullptr;
     host_config *host_spec = nullptr;
-
-    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != nullptr);
+    char *merged_cp = nullptr;
 
     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
     ASSERT_TRUE(host_spec != nullptr);
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent_null));
 
-    ASSERT_EQ(merge_oci_cgroups_path("123", oci_spec, host_spec), 0);
+    merged_cp = merge_container_cgroups_path("123", host_spec);
+    ASSERT_NE(merged_cp, nullptr);
 
-    ASSERT_STREQ(oci_spec->linux->cgroups_path, "/isulad/123");
+    ASSERT_STREQ(merged_cp, "/isulad/123");
 
-    free_oci_runtime_spec(oci_spec);
     free_host_config(host_spec);
+    free(merged_cp);
 
     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
 }
 
-TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_3)
+TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_3)
 {
-    oci_runtime_spec *oci_spec = nullptr;
     host_config *host_spec = nullptr;
-
-    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != nullptr);
+    char *merged_cp = nullptr;
 
     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
     ASSERT_TRUE(host_spec != nullptr);
@@ -275,46 +270,42 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_3)
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent_null));
 
-    ASSERT_EQ(merge_oci_cgroups_path("123", oci_spec, host_spec), 0);
+    merged_cp = merge_container_cgroups_path("123", host_spec);
+    ASSERT_NE(merged_cp, nullptr);
 
-    ASSERT_STREQ(oci_spec->linux->cgroups_path, "/test/123");
+    ASSERT_STREQ(merged_cp, "/test/123");
 
-    free_oci_runtime_spec(oci_spec);
     free_host_config(host_spec);
+    free(merged_cp);
 
     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
 }
 
-TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_4)
+TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_4)
 {
-    oci_runtime_spec *oci_spec = nullptr;
     host_config *host_spec = nullptr;
-
-    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != nullptr);
+    char *merged_cp = nullptr;
 
     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
     ASSERT_TRUE(host_spec != nullptr);
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent));
 
-    ASSERT_EQ(merge_oci_cgroups_path("123", oci_spec, host_spec), 0);
+    merged_cp = merge_container_cgroups_path("123", host_spec);
+    ASSERT_NE(merged_cp, nullptr);
 
-    ASSERT_STREQ(oci_spec->linux->cgroups_path, "/var/lib/isulad/engines/lcr/123");
+    ASSERT_STREQ(merged_cp, "/var/lib/isulad/engines/lcr/123");
 
-    free_oci_runtime_spec(oci_spec);
     free_host_config(host_spec);
+    free(merged_cp);
 
     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
 }
 
-TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_5)
+TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_5)
 {
-    oci_runtime_spec *oci_spec = nullptr;
     host_config *host_spec = nullptr;
-
-    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != nullptr);
+    char *merged_cp = nullptr;
 
     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
     ASSERT_TRUE(host_spec != nullptr);
@@ -323,12 +314,13 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_5)
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent));
 
-    ASSERT_EQ(merge_oci_cgroups_path("123", oci_spec, host_spec), 0);
+    merged_cp = merge_container_cgroups_path("123", host_spec);
+    ASSERT_NE(merged_cp, nullptr);
 
-    ASSERT_STREQ(oci_spec->linux->cgroups_path, "/test/123");
+    ASSERT_STREQ(merged_cp, "/test/123");
 
-    free_oci_runtime_spec(oci_spec);
     free_host_config(host_spec);
+    free(merged_cp);
 
     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
 }

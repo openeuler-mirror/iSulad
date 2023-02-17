@@ -165,36 +165,45 @@ out:
     return ret;
 }
 
-static int make_annotations_cgroup_dir(const container_config *container_spec, const host_config *host_spec)
+static char *do_get_container_cgroup_path(const host_config *host_spec)
 {
-    int ret = 0;
-    char cleaned[PATH_MAX] = { 0 };
-    char *default_cgroup_parent = NULL;
     char *path = NULL;
 
-    default_cgroup_parent = conf_get_isulad_cgroup_parent();
     if (host_spec->cgroup_parent != NULL) {
-        path = host_spec->cgroup_parent;
-    } else if (default_cgroup_parent != NULL) {
-        path = default_cgroup_parent;
-    }
-    if (path == NULL) {
-        path = "/isulad";
-    }
-    if (util_clean_path(path, cleaned, sizeof(cleaned)) == NULL) {
-        ERROR("Failed to clean path: %s", path);
-        ret = -1;
-        goto out;
-    }
-    if (append_json_map_string_string(container_spec->annotations, "cgroup.dir", cleaned)) {
-        ERROR("Realloc annotations failed");
-        ret = -1;
-        goto out;
+        // first, use user setting
+        path = util_strdup_s(host_spec->cgroup_parent);
+    } else {
+        // second, if user donot set, use setting from daemon config
+        path = conf_get_isulad_cgroup_parent();
     }
 
-out:
-    free(default_cgroup_parent);
-    return ret;
+    if (path == NULL) {
+        // third, all faild, just use default '/isulad'
+        path = util_strdup_s("/isulad");
+    }
+
+    return path;
+}
+
+static int make_annotations_cgroup_dir(const container_config *container_spec, const host_config *host_spec)
+{
+    char cleaned[PATH_MAX] = { 0 };
+    char *path = NULL;
+
+    path = do_get_container_cgroup_path(host_spec);
+    if (util_clean_path(path, cleaned, sizeof(cleaned)) == NULL) {
+        ERROR("Failed to clean path: %s", path);
+        free(path);
+        return -1;
+    }
+    free(path);
+
+    if (append_json_map_string_string(container_spec->annotations, "cgroup.dir", cleaned)) {
+        ERROR("Realloc annotations failed");
+        return -1;
+    }
+
+    return 0;
 }
 
 static int make_annotations_oom_score_adj(const container_config *container_spec, const host_config *host_spec)
@@ -2048,42 +2057,45 @@ out:
     return ret;
 }
 
-int merge_oci_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *host_spec)
+char *merge_container_cgroups_path(const char *id, const host_config *host_spec)
 {
-    int ret = 0;
-    char *default_cgroup_parent = NULL;
     char *path = NULL;
+    char *ret = NULL;
 
+    if (id == NULL || host_spec == NULL) {
+        ERROR("Invalid arguments");
+        return NULL;
+    }
+
+    path = do_get_container_cgroup_path(host_spec);
+
+    ret = util_path_join(path, id);
+    free(path);
+
+    return ret;
+}
+
+static int merge_oci_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *host_spec)
+{
     if (id == NULL || oci_spec == NULL || host_spec == NULL) {
         ERROR("Invalid arguments");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (make_sure_oci_spec_linux(oci_spec) != 0) {
         ERROR("Failed to make oci spec linux");
-        ret = -1;
-        goto out;
-    }
-
-    default_cgroup_parent = conf_get_isulad_cgroup_parent();
-    path = default_cgroup_parent;
-    if (host_spec->cgroup_parent != NULL) {
-        path = host_spec->cgroup_parent;
-    }
-
-    if (path == NULL) {
-        free(oci_spec->linux->cgroups_path);
-        oci_spec->linux->cgroups_path = util_path_join("/isulad", id);
-        return 0;
+        return -1;
     }
 
     free(oci_spec->linux->cgroups_path);
-    oci_spec->linux->cgroups_path = util_path_join(path, id);
 
-out:
-    free(default_cgroup_parent);
-    return ret;
+    oci_spec->linux->cgroups_path = merge_container_cgroups_path(id, host_spec);
+    if (oci_spec->linux->cgroups_path == NULL) {
+        ERROR("Failed to merge OCI spec cgroups path");
+        return -1;
+    }
+
+    return 0;
 }
 
 int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_config_v2_common_config *v2_spec,

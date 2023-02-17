@@ -1627,3 +1627,51 @@ free_out:
     }
     return minfos;
 }
+
+char *sysinfo_cgroup_controller_cpurt_mnt_path(void)
+{
+    char *res = NULL;
+    int nret = 0;
+    char *mnt = NULL;
+    char *root = NULL;
+    char fpath[PATH_MAX] = { 0 };
+    sysinfo_t *sysinfo = NULL;
+
+    sysinfo = get_sys_info(true);
+    if (sysinfo == NULL) {
+        ERROR("Can not get system info");
+        return NULL;
+    }
+
+    if (!(sysinfo->cgcpuinfo.cpu_rt_period)) {
+        ERROR("Daemon-scoped cpu-rt-period and cpu-rt-runtime are not supported by kernel");
+        isulad_set_error_message("Daemon-scoped cpu-rt-period and cpu-rt-runtime are not supported by kernel");
+        return NULL;
+    }
+
+    nret = find_cgroup_mountpoint_and_root("cpu", &mnt, &root);
+    if (nret != 0 || mnt == NULL || root == NULL) {
+        ERROR("Can not find cgroup mnt and root path for subsystem 'cpu'");
+        isulad_set_error_message("Can not find cgroup mnt and root path for subsystem 'cpu'");
+        goto out;
+    }
+
+    // When iSulad is run inside docker, the root is based of the host cgroup.
+    // Replace root to "/"
+    if (strncmp(root, "/docker/", strlen("/docker/")) == 0) {
+        root[1] = '\0';
+    }
+
+    nret = snprintf(fpath, sizeof(fpath), "%s/%s", mnt, root);
+    if (nret < 0 || (size_t)nret >= sizeof(fpath)) {
+        ERROR("Failed to print string");
+        goto out;
+    }
+
+    res = util_strdup_s(fpath);
+
+out:
+    free(mnt);
+    free(root);
+    return res;
+}
