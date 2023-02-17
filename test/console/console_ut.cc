@@ -26,7 +26,7 @@ TEST(utils_console, test_console_fifo_create)
 
     ASSERT_EQ(S_ISFIFO(buf.st_mode), true);
 
-    ret = access(FIFO_NAME, R_OK|W_OK);
+    ret = access(FIFO_NAME, R_OK | W_OK);
     ASSERT_EQ(ret, 0);
 
     remove(FIFO_NAME);
@@ -47,7 +47,7 @@ TEST(utils_console, test_console_fifo_delete)
 
     memset(path_buf, 'a', LONGER_PATH_MAX);
     path_buf[LONGER_PATH_MAX - 1] = 0;
-    ASSERT_EQ(strlen(path_buf), LONGER_PATH_MAX-1)<< "strlen is " << strlen(path_buf);
+    ASSERT_EQ(strlen(path_buf), LONGER_PATH_MAX - 1) << "strlen is " << strlen(path_buf);
 
     ret = console_fifo_create(FIFO_NAME);
     if (ret != 0) {

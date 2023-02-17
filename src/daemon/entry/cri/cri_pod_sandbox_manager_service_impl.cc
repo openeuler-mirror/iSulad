@@ -99,8 +99,8 @@ void PodSandboxManagerServiceImpl::ApplySandboxResources(const runtime::v1alpha2
 }
 
 
-void PodSandboxManagerServiceImpl::SetHostConfigDefaultValue(const google::protobuf::Map<std::string, std::string> &annotations, 
-                                                             host_config *hc)
+void PodSandboxManagerServiceImpl::SetHostConfigDefaultValue(
+    const google::protobuf::Map<std::string, std::string> &annotations, host_config *hc)
 {
     free(hc->network_mode);
 
@@ -525,7 +525,7 @@ void PodSandboxManagerServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::
             return;
         }
         stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY,
-                        std::string(sandbox_key)));
+                                                            std::string(sandbox_key)));
         free(sandbox_key);
     }
     m_pluginManager->SetUpPod(config.metadata().namespace_(), config.metadata().name(),
@@ -775,12 +775,12 @@ auto PodSandboxManagerServiceImpl::ClearCniNetwork(const std::string &realSandbo
             // not return and make sure teardown network
         } else {
             stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY,
-                                                    std::string(netnsPath)));
+                                                                std::string(netnsPath)));
         }
     }
 
     m_pluginManager->TearDownPod(ns, name, Network::DEFAULT_NETWORK_INTERFACE_NAME, realSandboxID, stdAnnos,
-                                    pluginErr);
+                                 pluginErr);
     if (pluginErr.NotEmpty()) {
         WARN("TearDownPod cni network failed: %s", pluginErr.GetCMessage());
         errlist.push_back(pluginErr.GetMessage());

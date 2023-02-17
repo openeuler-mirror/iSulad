@@ -338,7 +338,7 @@ int delete_client_fifo_home_dir(const char *name)
         WARN("Failed to delete client fifo home path:%s", client_fifo_home_dir);
     }
     free(client_fifo_home_dir);
-    
+
     return 0;
 }
 

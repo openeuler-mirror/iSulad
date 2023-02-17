@@ -49,7 +49,7 @@ TEST(CgroupCpuUnitTest, test_conf_get_cgroup_cpu_rt)
     ASSERT_EQ(conf_get_cgroup_cpu_rt(nullptr, nullptr), -1);
     ASSERT_EQ(conf_get_cgroup_cpu_rt(&cpu_rt_period, nullptr), -1);
     ASSERT_EQ(conf_get_cgroup_cpu_rt(nullptr, &cpu_rt_runtime), -1);
-    
+
     struct service_arguments *args = new_args(cpu_rt_period, cpu_rt_runtime);
     ASSERT_EQ(save_args_to_conf(args), 0);
     ASSERT_EQ(conf_get_cgroup_cpu_rt(&cpu_rt_period, &cpu_rt_runtime), 0);

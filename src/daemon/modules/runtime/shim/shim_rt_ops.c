@@ -289,7 +289,7 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
         goto out;
     }
     close(fd);
-    
+
     if (shim_bin_v2_create(runtime, id, params->bundle, NULL, addr, state_path) != 0) {
         ERROR("%s: failed to create v2 shim", id);
         ret = -1;

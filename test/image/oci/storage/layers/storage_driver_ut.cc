@@ -144,7 +144,8 @@ protected:
                             + root_dir + "/overlay/9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63/work ";
         ASSERT_EQ(system(mkdir.c_str()), 0);
 
-        struct storage_module_init_options *opts = (struct storage_module_init_options *)util_common_calloc_s(sizeof(struct storage_module_init_options));
+        struct storage_module_init_options *opts = (struct storage_module_init_options *)util_common_calloc_s(sizeof(
+                                                                                                                  struct storage_module_init_options));
         opts->storage_root = strdup(root_dir.c_str());
         opts->storage_run_root = strdup(run_dir.c_str());
         opts->driver_name = strdup("overlay");

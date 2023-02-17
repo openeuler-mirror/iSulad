@@ -599,10 +599,10 @@ static int runtime_call_simple(const char *workdir, const char *runtime, const c
     if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout, &stderr)) {
         ERROR("call runtime %s failed stderr %s", subcmd, stderr);
         ret = -1;
-        // additional handler for the stderr, 
+        // additional handler for the stderr,
         // this intend to change the ret val of this function
-        // for example, if output string contains some specific content, 
-        // we consider the runtime call simple succeeded, 
+        // for example, if output string contains some specific content,
+        // we consider the runtime call simple succeeded,
         // even if the process exit with failure.
         if (stderr != NULL && cb != NULL) {
             ret = cb(stderr);
@@ -636,7 +636,7 @@ static int kill_output_check(const char *output)
 
 // kill success or kill_output_check succeed return 0, DO_RETRY_CALL will break;
 // if kill failed, recheck on shim alive, if not alive, kill succeed,  still return 0;
-// else, return -1, DO_RETRY_CALL will call this again; 
+// else, return -1, DO_RETRY_CALL will call this again;
 static int runtime_call_kill_and_check(const char *workdir, const char *runtime, const char *id)
 {
     int ret = -1;
