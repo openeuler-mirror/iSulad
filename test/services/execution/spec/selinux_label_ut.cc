@@ -179,11 +179,13 @@ protected:
     void SetUp() override
     {
         CreateTestedObjects();
+        selinux_state_init();
     }
 
     void TearDown() override
     {
         ClearTestedObjects();
+        selinux_state_free();
     }
 
 private:
