@@ -67,7 +67,7 @@ TEST(sha256, test_sha256_digest_str)
     EXPECT_STREQ(digest, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 
     digest = sha256_digest_str(
-            "^cvdgfdgghaswere3575676y&*`~cx,xfdgdvcvdfd][';./?.,<>|\\!@#$%^&*()_+=-090wvvs3sdfel33cxvdf***$");
+                 "^cvdgfdgghaswere3575676y&*`~cx,xfdgdvcvdfd][';./?.,<>|\\!@#$%^&*()_+=-090wvvs3sdfel33cxvdf***$");
     EXPECT_STREQ(digest, "899a57a99c14c047eab26f8d6719da256a0737f6c28728ba5777b4fc5398c657");
 }
 

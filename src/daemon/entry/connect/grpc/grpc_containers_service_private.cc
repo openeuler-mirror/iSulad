@@ -268,12 +268,12 @@ void ContainerServiceImpl::stop_response_to_grpc(const container_stop_response *
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return;
     }
-    
+
     gresponse->set_cc(response->cc);
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    
+
     if (response->id != nullptr) {
         gresponse->set_id(response->id);
     }
@@ -321,12 +321,12 @@ void ContainerServiceImpl::kill_response_to_grpc(const container_kill_response *
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return;
     }
-    
+
     gresponse->set_cc(response->cc);
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    
+
     if (response->id != nullptr) {
         gresponse->set_id(response->id);
     }

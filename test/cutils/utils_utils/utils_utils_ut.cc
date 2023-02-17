@@ -134,7 +134,7 @@ TEST(utils_utils, test_util_env_ops)
     ASSERT_EQ(ret_len, 2);
     ASSERT_STREQ(ret[1], second_val.c_str());
 
-    
+
     got = util_env_get_val(ret, ret_len, key1.c_str(), key1.size());
     ASSERT_STREQ(got, "world");
     free(got);
@@ -272,7 +272,8 @@ TEST(utils_utils, test_convert_v2_runtime)
 }
 
 int global_total = 0;
-int retry_call_test(int success_idx) {
+int retry_call_test(int success_idx)
+{
     if (global_total == success_idx) {
         return 0;
     }

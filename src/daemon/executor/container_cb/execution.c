@@ -465,7 +465,7 @@ static int container_start_prepare(container_t *cont, const container_start_requ
 
     // init cgroup path for cpu_rt_runtime and cpu_rt_period
     // we should do this in start container, not create container
-    // because it will fail after the following steps: 
+    // because it will fail after the following steps:
     // 1. enable cpu-rt of isulad;
     // 2. then run container with --cpu-rt-runtime
     // 3. then reboot machine;

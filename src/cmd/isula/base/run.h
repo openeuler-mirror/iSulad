@@ -34,7 +34,7 @@ extern "C" {
         'd',                                                        \
         &(cmdargs).detach,                                          \
         "Run container in background and print container ID",       \
-        NULL },                                                   
+        NULL },
 
 extern const char g_cmd_run_desc[];
 extern const char g_cmd_run_usage[];

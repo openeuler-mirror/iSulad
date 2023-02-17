@@ -318,7 +318,7 @@ bool filters_args_valid_key(const char **accepted, size_t len, const char *field
     if (accepted == NULL || field == NULL) {
         return false;
     }
-    
+
     for (i = 0; i < len; i++) {
         if (accepted[i] != NULL && strcmp(accepted[i], field) == 0) {
             return true;

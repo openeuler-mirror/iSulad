@@ -49,7 +49,7 @@ sem_t g_attach_waitopen_sem;
 sem_t g_attach_waitexit_sem;
 #endif
 
-struct client_arguments g_cmd_attach_args = { 
+struct client_arguments g_cmd_attach_args = {
     .time = INSPECT_TIMEOUT_SEC,
 };
 
