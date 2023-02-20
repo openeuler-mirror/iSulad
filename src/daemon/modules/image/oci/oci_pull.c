@@ -117,10 +117,19 @@ static int pull_image(const im_pull_request *request, char **name)
     options->skip_tls_verify = oci_image_data->insecure_skip_verify_enforce;
     insecure_registries = oci_image_data->insecure_registries;
 
+    // key of image which save in image-store
+    options->dest_image_name = oci_normalize_image_name(request->image);
+
+    // add default tag if required
+    with_tag = oci_default_tag(request->image);
+
     host = oci_get_host(request->image);
     if (host != NULL) {
-        options->image_name = oci_default_tag(request->image);
-        options->dest_image_name = oci_normalize_image_name(request->image);
+        // 1. image_name use for split host/tag/name
+        // 2. user for tag of log
+        options->image_name = with_tag;
+        with_tag = NULL;
+
         update_option_insecure_registry(options, insecure_registries, host);
         ret = registry_pull(options);
         if (ret != 0) {
@@ -141,13 +150,12 @@ static int pull_image(const im_pull_request *request, char **name)
             }
             host = oci_host_from_mirror(*mirror);
             update_option_insecure_registry(options, insecure_registries, host);
-            with_tag = oci_default_tag(request->image);
+            // add current mirror to image name
+            free(options->image_name);
             options->image_name = oci_add_host(host, with_tag);
-            free(with_tag);
-            with_tag = NULL;
             free(host);
             host = NULL;
-            options->dest_image_name = oci_normalize_image_name(request->image);
+
             ret = registry_pull(options);
             if (ret != 0) {
                 continue;
@@ -159,10 +167,9 @@ static int pull_image(const im_pull_request *request, char **name)
     *name = util_strdup_s(options->dest_image_name);
 
 out:
+    free(with_tag);
     free(host);
-    host = NULL;
     free_registry_pull_options(options);
-    options = NULL;
 
     return ret;
 }

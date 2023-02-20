@@ -1861,7 +1861,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     }
 
     if (!util_valid_image_name(options->dest_image_name)) {
-        ERROR("Invalid dest image name %s", options->image_name);
+        ERROR("Invalid dest image name %s", options->dest_image_name);
         isulad_try_set_error_message("Invalid image name");
         return -1;
     }
