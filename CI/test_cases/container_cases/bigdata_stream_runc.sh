@@ -117,6 +117,7 @@ function test_cat_bigdata()
         pids[${#pids[@]}]=$!
     done
     wait ${pids[*]// /|}
+    sync && sync
 
     for index in $(seq 1 5); do
         ls -l /home/iocopy_stream_data_500M_$index
@@ -144,6 +145,7 @@ function test_cat_bigdata_without_pty()
         pids[${#pids[@]}]=$!
     done
     wait ${pids[*]// /|}
+    sync && sync
 
     for index in $(seq 1 5); do
         ls -l /home/iocopy_stream_data_500M_$index
@@ -173,6 +175,7 @@ function test_stream_with_stop_client()
     kill -18 $pid
 
     wait $pid
+    sync && sync
 
     ls -l /home/iocopy_stream_data_500M
     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
@@ -217,6 +220,7 @@ function test_stream_with_stop_isulad()
     kill -18 $(cat /var/run/isulad.pid)
 
     wait $pid
+    sync && sync
 
     ls -l /home/iocopy_stream_data_500M
     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
