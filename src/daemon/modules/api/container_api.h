@@ -175,7 +175,7 @@ void container_unlock(container_t *cont);
 
 char *container_get_env_nolock(const container_t *cont, const char *key);
 
-int container_v2_spec_merge_contaner_spec(container_config_v2_common_config *v2_spec);
+int container_v2_spec_merge_container_spec(container_config_v2_common_config *v2_spec);
 
 char *container_get_command(const container_t *cont);
 

@@ -569,7 +569,7 @@ err_out:
     return NULL;
 }
 
-static container_network_settings *dup_contaner_network_settings(const container_network_settings *settings)
+static container_network_settings *dup_container_network_settings(const container_network_settings *settings)
 {
     char *jstr = NULL;
     container_network_settings *res = NULL;
@@ -1278,7 +1278,7 @@ static int update_container_network_settings(container_t *cont, const cni_anno_p
     bool to_disk = false;
     container_network_settings *backup = NULL;
 
-    backup = dup_contaner_network_settings(cont->network_settings);
+    backup = dup_container_network_settings(cont->network_settings);
     if (backup == NULL) {
         ERROR("Failed to dup container network settings");
         return -1;
@@ -1509,7 +1509,7 @@ static int drop_container_network_settings(container_t *cont)
         return -1;
     }
 
-    backup = dup_contaner_network_settings(cont->network_settings);
+    backup = dup_container_network_settings(cont->network_settings);
     if (backup == NULL) {
         ERROR("Failed to dup container network settings");
         return -1;

@@ -299,7 +299,7 @@ cache:::unFinish
 
 ## 4.2 adaptor模块
 
-1. 查看 CRI adapter 模块的设计文档： [CRI_adapter_design](./cni_operator_design_zh.md) 。
+1. 查看 CRI adapter 模块的设计文档： [CRI_adapter_design](./CRI_adapter_design_zh.md) 。
 
 2. 查看 native network adapter 模块的设计文档： [native_network_adapter_design](./native_network_adapter_design_zh.md) 。
 
