@@ -69,7 +69,10 @@ function testcontainer() {
 
 function crictl() {
     CRICTL=$(which crictl)
-    "$CRICTL" -i unix:///var/run/isulad.sock -r unix:///var/run/isulad.sock "$@"
+    # Default timeout is 2s.
+    # In some high IO testcase, isulad handle CRI request time maybe more than 2s.
+    # And the crictl will print error message "context deadline exceeded"
+    "$CRICTL" -i unix:///var/run/isulad.sock -r unix:///var/run/isulad.sock --timeout 5s "$@"
 }
 
 function msg_ok()

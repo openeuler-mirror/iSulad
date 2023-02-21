@@ -283,7 +283,7 @@ static void *do_io_copy(void *data)
             break;
         }
 
-        int r_count = util_read_nointr(ioc->fd_from, buf, DEFAULT_IO_COPY_BUF);
+        int r_count = read(ioc->fd_from, buf, DEFAULT_IO_COPY_BUF);
         if (r_count == -1) {
             if (errno == EAGAIN || errno == EINTR) {
                 continue;

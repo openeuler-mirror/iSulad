@@ -409,7 +409,7 @@ public:
             for (int i = 0; i < request.cmd_size(); i++) {
                 std::string command = request.cmd(i);
                 int nret = util_write_nointr_in_total(m_read_pipe_fd, command.c_str(), command.length());
-                if (nret < 0 || (size_t)nret !=  command.length()) {
+                if (nret < 0 || (size_t)nret != command.length()) {
                     ERROR("sub write over!");
                     return;
                 }

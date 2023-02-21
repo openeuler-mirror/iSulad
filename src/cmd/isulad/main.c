@@ -483,7 +483,7 @@ int check_and_save_pid(const char *fn)
     }
 
     len = util_write_nointr(fd, pidbuf, strlen(pidbuf));
-    if (len < 0 || len != strlen(pidbuf)) {
+    if (len < 0 || (size_t)len != strlen(pidbuf)) {
         ERROR("Failed to write pid to file:%s: %s", fn, strerror(errno));
         ret = -1;
     }
