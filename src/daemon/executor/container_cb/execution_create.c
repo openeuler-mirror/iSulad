@@ -1481,7 +1481,7 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_channel;
     }
 
-    if (container_v2_spec_merge_contaner_spec(v2_spec) != 0) {
+    if (container_v2_spec_merge_container_spec(v2_spec) != 0) {
         ERROR("Failed to merge container settings");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;
