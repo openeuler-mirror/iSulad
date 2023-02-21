@@ -310,7 +310,7 @@ static int get_random_value(unsigned int range, unsigned int *val)
         return -1;
     }
 
-    if (read(fd, &num, sizeof(int)) < 0) {
+    if (util_read_nointr(fd, &num, sizeof(int)) < 0) {
         ERROR("Failed to read urandom value\n");
         ret = -1;
         goto out;

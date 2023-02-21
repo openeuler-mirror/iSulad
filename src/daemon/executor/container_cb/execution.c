@@ -342,7 +342,7 @@ static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const
         return -1;
     }
     nwrite = util_write_nointr(fd, buf, strlen(buf));
-    if (nwrite < 0 || nwrite != strlen(buf)) {
+    if (nwrite < 0 || (size_t)nwrite != strlen(buf)) {
         ERROR("Failed to write %s to %s: %s", buf, fpath, strerror(errno));
         isulad_set_error_message("Failed to write '%s' to '%s': %s", buf, fpath, strerror(errno));
         close(fd);

@@ -124,6 +124,7 @@ function test_concurrent_bigdata_stream()
         pids[${#pids[@]}]=$!
     done
     wait ${pids[*]// /|}
+    sync && sync
 
     for index in $(seq 1 5); do
         ls -l /home/iocopy_stream_data_500M_$index
@@ -151,6 +152,7 @@ function test_concurrent_bigdata_stream_without_pty()
         pids[${#pids[@]}]=$!
     done
     wait ${pids[*]// /|}
+    sync && sync
 
     for index in $(seq 1 5); do
         ls -l /home/iocopy_stream_data_500M_$index
@@ -209,6 +211,7 @@ function test_stream_with_stop_client()
     kill -18 $pid
 
     wait $pid
+    sync && sync
 
     ls -l /home/iocopy_stream_data_500M
     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
@@ -254,6 +257,7 @@ function test_stream_with_stop_attach()
     kill -18 $pid
 
     wait $exec_pid
+    sync && sync
 
     ls -l /home/iocopy_stream_data_500M
     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
@@ -299,6 +303,7 @@ function test_stream_with_stop_lxc_monitor()
     kill -18 $pid
 
     wait $exec_pid
+    sync && sync
 
     ls -l /home/iocopy_stream_data_500M
     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
@@ -348,6 +353,7 @@ function test_stream_with_stop_isulad()
     kill -18 $(cat /var/run/isulad.pid)
 
     wait $pid
+    sync && sync
 
     ls -l /home/iocopy_stream_data_500M
     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
@@ -398,6 +404,7 @@ function test_stream_with_runc()
     isula exec -it $RUNCID cat test_500M > /home/iocopy_stream_data_500M
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cat bigdata" && ((ret++))
 
+    sync && sync
     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
     [[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
 
