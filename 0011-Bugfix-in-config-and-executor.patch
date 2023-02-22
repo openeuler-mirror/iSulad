@@ -1,0 +1,52 @@
+From 14d06efa2e5fad9986a12a067e1c6009bf58ad47 Mon Sep 17 00:00:00 2001
+From: Xuepeng Xu <xuxuepeng1@huawei.com>
+Date: Wed, 15 Feb 2023 12:19:40 +0800
+Subject: [PATCH 11/19] Bugfix in config and executor
+
+Signed-off-by: Xuepeng Xu <xuxuepeng1@huawei.com>
+---
+ src/daemon/config/isulad_config.c                   | 2 +-
+ src/daemon/executor/container_cb/execution_create.c | 6 +++---
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/daemon/config/isulad_config.c b/src/daemon/config/isulad_config.c
+index 86a9609a..ad82aeff 100644
+--- a/src/daemon/config/isulad_config.c
++++ b/src/daemon/config/isulad_config.c
+@@ -314,7 +314,7 @@ char *conf_get_routine_rootdir(const char *runtime)
+     }
+ 
+     /* path = conf->rootpath + / + engines + / + runtime + /0 */
+-    if (strlen(conf->json_confs->graph) > (SIZE_MAX - strlen(ENGINE_ROOTPATH_NAME)) - 3) {
++    if (strlen(conf->json_confs->graph) > (SIZE_MAX - strlen(ENGINE_ROOTPATH_NAME) - strlen(runtime)) - 3) {
+         ERROR("Graph path is too long");
+         goto out;
+     }
+diff --git a/src/daemon/executor/container_cb/execution_create.c b/src/daemon/executor/container_cb/execution_create.c
+index 04154765..0d03afcb 100644
+--- a/src/daemon/executor/container_cb/execution_create.c
++++ b/src/daemon/executor/container_cb/execution_create.c
+@@ -587,7 +587,7 @@ static char *try_generate_id()
+     int i = 0;
+     int max_time = 10;
+     char *id = NULL;
+-    char *value = NULL;
++    container_t *value = NULL;
+ 
+     id = util_smart_calloc_s(sizeof(char), (CONTAINER_ID_MAX_LEN + 1));
+     if (id == NULL) {
+@@ -601,9 +601,9 @@ static char *try_generate_id()
+             goto err_out;
+         }
+ 
+-        value = container_name_index_get(id);
++        value = containers_store_get(id);
+         if (value != NULL) {
+-            free(value);
++            container_unref(value);
+             value = NULL;
+             continue;
+         } else {
+-- 
+2.25.1
+
