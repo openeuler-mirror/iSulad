@@ -1,0 +1,148 @@
+From d6632459d8fe0e3ddbce6b360ecaf765cf646fa3 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Mon, 30 Jan 2023 17:41:19 +0800
+Subject: [PATCH 04/19] add info log when isulad shutdown
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/cmd/isulad/main.c                           |  5 +++++
+ src/daemon/entry/connect/service_common.c       |  4 +++-
+ src/daemon/modules/image/image.c                |  1 +
+ .../graphdriver/devmapper/deviceset.c           | 17 +++++++++++++----
+ .../storage/layer_store/graphdriver/driver.c    |  2 ++
+ 5 files changed, 24 insertions(+), 5 deletions(-)
+
+diff --git a/src/cmd/isulad/main.c b/src/cmd/isulad/main.c
+index 9b664bee..d22ab407 100644
+--- a/src/cmd/isulad/main.c
++++ b/src/cmd/isulad/main.c
+@@ -267,15 +267,20 @@ static void clean_residual_files()
+ 
+ static void daemon_shutdown()
+ {
++    EVENT("Begin shutdown daemon");
++
+     /* shutdown server */
+     server_common_shutdown();
+ 
+     /* clean resource first, left time to wait finish */
+     image_module_exit();
++    EVENT("Image module exit completed");
+ 
+     umount_daemon_mntpoint();
++    EVENT("Umount daemon mntpoint completed");
+ 
+     clean_residual_files();
++    EVENT("Clean residual files completed");
+ 
+     sem_post(&g_daemon_wait_shutdown_sem);
+ }
+diff --git a/src/daemon/entry/connect/service_common.c b/src/daemon/entry/connect/service_common.c
+index 162cec2b..093f05c0 100644
+--- a/src/daemon/entry/connect/service_common.c
++++ b/src/daemon/entry/connect/service_common.c
+@@ -16,13 +16,13 @@
+ #include "service_common.h"
+ 
+ #include <stddef.h>
++#include <isula_libutils/log.h>
+ 
+ #include "daemon_arguments.h"
+ #ifdef GRPC_CONNECTOR
+ #include "grpc_service.h"
+ #else
+ #include "rest_service.h"
+-#include "isula_libutils/log.h"
+ #endif
+ 
+ /* server common init */
+@@ -58,8 +58,10 @@ void server_common_shutdown(void)
+ {
+ #ifdef GRPC_CONNECTOR
+     grpc_server_shutdown();
++    EVENT("Grpc Server shutdown completed");
+ #else
+     rest_server_shutdown();
++    EVENT("Rest Server shutdown completed");
+ #endif
+ }
+ 
+diff --git a/src/daemon/modules/image/image.c b/src/daemon/modules/image/image.c
+index 6fac7cc4..158b3aa8 100644
+--- a/src/daemon/modules/image/image.c
++++ b/src/daemon/modules/image/image.c
+@@ -1909,6 +1909,7 @@ void image_module_exit()
+             continue;
+         }
+         g_bims[i].ops->clean_resource();
++        EVENT("Image %s clean resource completed", g_bims[i].image_type);
+     }
+ }
+ 
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
+index b157510a..76059b81 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
+@@ -3419,9 +3419,13 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
+ 
+         device_info = lookup_device(devset, entry->d_name);
+         if (device_info == NULL) {
+-            DEBUG("devmapper: shutdown lookup device %s err", entry->d_name);
+-        } else if (deactivate_device(devset, device_info->info) != 0) {
+-            DEBUG("devmapper: shutdown deactivate device %s err", entry->d_name);
++            WARN("devmapper: shutdown lookup device %s err", entry->d_name);
++            continue;
++        }
++        if (deactivate_device(devset, device_info->info) != 0) {
++            WARN("devmapper: shutdown deactivate device %s err", entry->d_name);
++        } else {
++            INFO("devmapper: shutdown deactivate device %s complete", entry->d_name);
+         }
+         devmapper_device_info_ref_dec(device_info);
+     }
+@@ -3429,7 +3433,9 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
+     device_info = lookup_device(devset, "base");
+     if (device_info != NULL) {
+         if (deactivate_device(devset, device_info->info) != 0) {
+-            DEBUG("devmapper: shutdown deactivate base device err");
++            WARN("devmapper: shutdown deactivate base device err");
++        } else {
++            INFO("devmapper: shutdown deactivate base device complete");
+         }
+         devmapper_device_info_ref_dec(device_info);
+     }
+@@ -3453,15 +3459,18 @@ int device_set_shutdown(struct device_set *devset, const char *home)
+         return -1;
+     }
+ 
++    EVENT("Devmapper: begin shutdown device set");
+     if (save_deviceset_matadata(devset)) {
+         DEBUG("devmapper: save deviceset metadata failed");
+     }
++    EVENT("Devmapper: save deviceset metadata completed");
+ 
+     if (umount_deactivate_dev_all(devset) != 0) {
+         ERROR("devmapper: Shutdown umount device failed");
+         ret = -1;
+         goto free_out;
+     }
++    EVENT("Devmapper: Shutdown umount device completed");
+ 
+ free_out:
+     if (pthread_rwlock_unlock(&(devset->devmapper_driver_rwlock)) != 0) {
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/driver.c b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/driver.c
+index 4d685bb6..d3b5209a 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/driver.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/driver.c
+@@ -514,6 +514,8 @@ int graphdriver_cleanup(void)
+     // notes, do not call driver_unlock and destroy the lock, becase the other threads may wait for it
+     // if we unlock and destroy the lock, may cause the lock failure, and result to coredump
+ 
++    EVENT("Graph driver %s cleanup completed", g_graphdriver->name);
++
+ out:
+     return ret;
+ }
+-- 
+2.25.1
+
