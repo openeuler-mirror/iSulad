@@ -1,5 +1,5 @@
 %global _version 2.0.18
-%global _release 2
+%global _release 3
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -12,6 +12,26 @@ License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
+
+Patch0001:	0001-add-omitted-musl-adaption-code.patch
+Patch0002:	0002-add-cpu-rt-CI.patch
+Patch0003:	0003-add-cpu-rt-ut.patch
+Patch0004:	0004-add-info-log-when-isulad-shutdown.patch
+Patch0005:	0005-create-a-log-file-for-shim-v2-and-remove-10-229-devi.patch
+Patch0006:	0006-ensure-isula-exec-inherits-the-config-of-create.patch
+Patch0007:	0007-Delete-meaningless-thread-creation-and-ensure-the-ta.patch
+Patch0008:	0008-fix-cpu-rt-review-comments.patch
+Patch0009:	0009-fix-inspect.sh-failed.patch
+Patch0010:	0010-ensure-list-name-is-not-null.patch
+Patch0011:	0011-Bugfix-in-config-and-executor.patch
+Patch0012:	0012-fix-isula-cpu-rt-CI.patch
+Patch0013:	0013-add-CRI-ContainerStats-Service.patch
+Patch0014:	0014-fix-selinux_label_ut-timeout-and-add-timeout-for-all.patch
+Patch0015:	0015-fix-cpu-rt-disable-after-reboot-machine.patch
+Patch0016:	0016-fix-code-style.patch
+Patch0017:	0017-add-retry-for-read-write.patch
+Patch0018:	0018-add-crictl-timeout-and-sync-for-CI.patch
+Patch0019:	0019-unlock-m_podsLock-if-new-failed.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -256,6 +276,12 @@ fi
 %endif
 
 %changelog
+* Wed Feb 22 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-3
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: upgrade from upstream
+
 * Thu Feb 16 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-2
 - Type: bugfix
 - ID: NA

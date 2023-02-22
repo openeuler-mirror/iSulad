@@ -1,0 +1,44 @@
+From 79a0eeae7ebfc2379917144befe5b0b5e39656e4 Mon Sep 17 00:00:00 2001
+From: zhongtao <zhongtao17@huawei.com>
+Date: Wed, 18 Jan 2023 10:08:22 +0800
+Subject: [PATCH 01/19] add omitted musl adaption code
+
+Signed-off-by: zhongtao <zhongtao17@huawei.com>
+---
+ cmake/set_build_flags.cmake                         | 4 ++--
+ src/daemon/executor/container_cb/execution_stream.c | 2 ++
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/cmake/set_build_flags.cmake b/cmake/set_build_flags.cmake
+index 89c9468c..aa1b1193 100644
+--- a/cmake/set_build_flags.cmake
++++ b/cmake/set_build_flags.cmake
+@@ -1,9 +1,9 @@
+ # set common FLAGS
+-set(CMAKE_C_FLAGS "-fPIC -fstack-protector-all -D_FORTIFY_SOURCE=2 -O2 -Wall -Werror -fPIE")
++set(CMAKE_C_FLAGS "-fPIC -fstack-protector-all -D_FORTIFY_SOURCE=2 -O2 -Wall -fPIE")
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
+ 
+ if (GRPC_CONNECTOR)
+-    set(CMAKE_CXX_FLAGS "-fPIC -std=c++11 -fstack-protector-all -D_FORTIFY_SOURCE=2 -O2 -Wall -Werror")
++    set(CMAKE_CXX_FLAGS "-fPIC -std=c++11 -fstack-protector-all -D_FORTIFY_SOURCE=2 -O2 -Wall")
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
+ endif()
+ set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-E -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -Wtrampolines -shared -pthread")
+diff --git a/src/daemon/executor/container_cb/execution_stream.c b/src/daemon/executor/container_cb/execution_stream.c
+index ebb9ee2b..fde0335e 100644
+--- a/src/daemon/executor/container_cb/execution_stream.c
++++ b/src/daemon/executor/container_cb/execution_stream.c
+@@ -68,7 +68,9 @@
+ #define PTHREAD_CANCEL_ENABLE    1
+ #define PTHREAD_CANCEL_DISABLE    0
+ 
++#if defined __ANDROID__
+ typedef long pthread_t;
++#endif
+ 
+ static int pthread_setcancelstate(int state, int *oldstate)
+ {
+-- 
+2.25.1
+
