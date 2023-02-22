@@ -55,6 +55,11 @@ struct runtime_container_resources_stats_info {
     /* Memory usage */
     uint64_t mem_used;
     uint64_t mem_limit;
+    uint64_t avaliable_bytes;
+    uint64_t usage_bytes;
+    uint64_t rss_bytes;
+    uint64_t page_faults;
+    uint64_t major_page_faults;
     /* Kernel Memory usage */
     uint64_t kmem_used;
     uint64_t kmem_limit;

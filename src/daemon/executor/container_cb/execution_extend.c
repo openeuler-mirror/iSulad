@@ -243,6 +243,11 @@ static container_info *get_container_stats(const container_t *cont,
     info->blkio_write = einfo->blkio_write;
     info->mem_used = einfo->mem_used;
     info->mem_limit = einfo->mem_limit;
+    info->avaliable_bytes = einfo->avaliable_bytes;
+    info->usage_bytes = einfo->usage_bytes;
+    info->rss_bytes = einfo->rss_bytes;
+    info->page_faults = einfo->page_faults;
+    info->major_page_faults = einfo->major_page_faults;
     info->kmem_used = einfo->kmem_used;
     info->kmem_limit = einfo->kmem_limit;
 
