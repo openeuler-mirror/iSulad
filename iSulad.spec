@@ -1,5 +1,5 @@
 %global _version 2.1.1
-%global _release 3
+%global _release 4
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -14,6 +14,27 @@ Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar
 BuildRoot: {_tmppath}/iSulad-%{version}
 
 Patch0001:	0001-modify-dependence-from-lcr-to-libisula.patch
+Patch0002:	0002-Add-unified-memory_swap_limit_in_bytes-fields-into-C.patch
+Patch0003:	0003-Add-macro-for-protoc-cmake.patch
+Patch0004:	0004-fix-design-typo.patch
+Patch0005:	0005-fix-cpu-rt-review-comments.patch
+Patch0006:	0006-fix-inspect.sh-failed.patch
+Patch0007:	0007-add-CRI-ContainerStats-Service.patch
+Patch0008:	0008-fix-isula-cpu-rt-CI.patch
+Patch0009:	0009-fix-cpu-rt-CI.patch
+Patch0010:	0010-fix-cpu-rt-CI.patch
+Patch0011:	0011-Bugfix-in-config-and-executor.patch
+Patch0012:	0012-fix-cpu-rt-disable-after-reboot-machine.patch
+Patch0013:	0013-fix-selinux_label_ut-timeout-and-add-timeout-for-all.patch
+Patch0014:	0014-add-retry-for-read-write.patch
+Patch0015:	0015-support-pull-image-with-digest.patch
+Patch0016:	0016-isulad-shim-support-execSync-with-timeout.patch
+Patch0017:	0017-Refine-the-commit-info.patch
+Patch0018:	0018-Refine-typo-of-word-container.patch
+Patch0019:	0019-cleancode-for-read-write.patch
+Patch0020:	0020-add-crictl-timeout-and-sync-for-CI.patch
+Patch0021:	0021-unlock-m_podsLock-if-new-failed.patch
+Patch0022:	0022-Update-CRI.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -256,6 +277,12 @@ fi
 %endif
 
 %changelog
+* Wed Feb 22 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.1.1-4
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: upgrade from upstream
+
 * Thu Feb 16 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.1.1-3
 - Type: bugfix
 - ID: NA

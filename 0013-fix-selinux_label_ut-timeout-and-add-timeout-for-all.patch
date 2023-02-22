@@ -1,0 +1,465 @@
+From af8fb9fcf604775f527b58e1b02f220dffd8ff35 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Thu, 16 Feb 2023 15:26:10 +0800
+Subject: [PATCH 13/22] fix selinux_label_ut timeout and add timeout for all ut
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ test/cgroup/cpu/CMakeLists.txt                                 | 1 +
+ test/cmd/isula/extend/pause/CMakeLists.txt                     | 1 +
+ test/cmd/isula/extend/resume/CMakeLists.txt                    | 2 +-
+ test/cmd/isula/information/info/CMakeLists.txt                 | 1 +
+ test/cmd/isula/information/ps/CMakeLists.txt                   | 1 +
+ test/cmd/isula/utils/client_show_format/CMakeLists.txt         | 1 +
+ test/cmd/isula/utils/template_string_parse/CMakeLists.txt      | 1 +
+ test/cmd/isulad-shim/CMakeLists.txt                            | 1 +
+ test/cutils/mainloop/CMakeLists.txt                            | 1 +
+ test/cutils/map/CMakeLists.txt                                 | 1 +
+ test/cutils/path/CMakeLists.txt                                | 1 +
+ test/cutils/util_atomic/CMakeLists.txt                         | 1 +
+ test/cutils/utils_aes/CMakeLists.txt                           | 1 +
+ test/cutils/utils_array/CMakeLists.txt                         | 1 +
+ test/cutils/utils_base64/CMakeLists.txt                        | 1 +
+ test/cutils/utils_convert/CMakeLists.txt                       | 1 +
+ test/cutils/utils_error/CMakeLists.txt                         | 1 +
+ test/cutils/utils_file/CMakeLists.txt                          | 1 +
+ test/cutils/utils_filters/CMakeLists.txt                       | 1 +
+ test/cutils/utils_fs/CMakeLists.txt                            | 1 +
+ test/cutils/utils_mount_spec/CMakeLists.txt                    | 1 +
+ test/cutils/utils_namespace/CMakeLists.txt                     | 1 +
+ test/cutils/utils_network/CMakeLists.txt                       | 1 +
+ test/cutils/utils_pwgr/CMakeLists.txt                          | 1 +
+ test/cutils/utils_regex/CMakeLists.txt                         | 1 +
+ test/cutils/utils_string/CMakeLists.txt                        | 1 +
+ test/cutils/utils_timestamp/CMakeLists.txt                     | 1 +
+ test/cutils/utils_utils/CMakeLists.txt                         | 1 +
+ test/cutils/utils_verify/CMakeLists.txt                        | 1 +
+ test/image/oci/oci_config_merge/CMakeLists.txt                 | 1 +
+ test/image/oci/registry/CMakeLists.txt                         | 1 +
+ test/image/oci/storage/images/CMakeLists.txt                   | 1 +
+ test/image/oci/storage/layers/CMakeLists.txt                   | 2 ++
+ test/image/oci/storage/rootfs/CMakeLists.txt                   | 1 +
+ test/network/CMakeLists.txt                                    | 1 +
+ test/runtime/isula/CMakeLists.txt                              | 1 +
+ test/runtime/lcr/CMakeLists.txt                                | 1 +
+ .../services/execution/execute/execution_extend/CMakeLists.txt | 1 +
+ test/services/execution/spec/CMakeLists.txt                    | 2 ++
+ test/services/execution/spec/selinux_label_ut.cc               | 2 ++
+ test/specs/specs/CMakeLists.txt                                | 1 +
+ test/specs/specs_extend/CMakeLists.txt                         | 1 +
+ test/volume/CMakeLists.txt                                     | 3 ++-
+ 43 files changed, 47 insertions(+), 2 deletions(-)
+
+diff --git a/test/cgroup/cpu/CMakeLists.txt b/test/cgroup/cpu/CMakeLists.txt
+index 159b0d85..6a8af719 100644
+--- a/test/cgroup/cpu/CMakeLists.txt
++++ b/test/cgroup/cpu/CMakeLists.txt
+@@ -26,3 +26,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cmd/isula/extend/pause/CMakeLists.txt b/test/cmd/isula/extend/pause/CMakeLists.txt
+index af48c23f..6eab5172 100644
+--- a/test/cmd/isula/extend/pause/CMakeLists.txt
++++ b/test/cmd/isula/extend/pause/CMakeLists.txt
+@@ -47,3 +47,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cmd/isula/extend/resume/CMakeLists.txt b/test/cmd/isula/extend/resume/CMakeLists.txt
+index 729c4d3b..0812a66e 100644
+--- a/test/cmd/isula/extend/resume/CMakeLists.txt
++++ b/test/cmd/isula/extend/resume/CMakeLists.txt
+@@ -48,4 +48,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+-
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cmd/isula/information/info/CMakeLists.txt b/test/cmd/isula/information/info/CMakeLists.txt
+index 2f134986..d8d8ddb7 100644
+--- a/test/cmd/isula/information/info/CMakeLists.txt
++++ b/test/cmd/isula/information/info/CMakeLists.txt
+@@ -49,3 +49,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cmd/isula/information/ps/CMakeLists.txt b/test/cmd/isula/information/ps/CMakeLists.txt
+index 81d4202c..436e611b 100644
+--- a/test/cmd/isula/information/ps/CMakeLists.txt
++++ b/test/cmd/isula/information/ps/CMakeLists.txt
+@@ -51,3 +51,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cmd/isula/utils/client_show_format/CMakeLists.txt b/test/cmd/isula/utils/client_show_format/CMakeLists.txt
+index 60d538ad..e19332cf 100644
+--- a/test/cmd/isula/utils/client_show_format/CMakeLists.txt
++++ b/test/cmd/isula/utils/client_show_format/CMakeLists.txt
+@@ -19,3 +19,4 @@ target_include_directories(${EXE} PUBLIC
+     
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cmd/isula/utils/template_string_parse/CMakeLists.txt b/test/cmd/isula/utils/template_string_parse/CMakeLists.txt
+index 32256b6b..25efd25c 100644
+--- a/test/cmd/isula/utils/template_string_parse/CMakeLists.txt
++++ b/test/cmd/isula/utils/template_string_parse/CMakeLists.txt
+@@ -19,3 +19,4 @@ target_include_directories(${EXE} PUBLIC
+     
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cmd/isulad-shim/CMakeLists.txt b/test/cmd/isulad-shim/CMakeLists.txt
+index 1c2de232..dc293f6d 100644
+--- a/test/cmd/isulad-shim/CMakeLists.txt
++++ b/test/cmd/isulad-shim/CMakeLists.txt
+@@ -30,3 +30,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/mainloop/CMakeLists.txt b/test/cutils/mainloop/CMakeLists.txt
+index 78e3f18d..61ea7ffc 100644
+--- a/test/cutils/mainloop/CMakeLists.txt
++++ b/test/cutils/mainloop/CMakeLists.txt
+@@ -25,3 +25,4 @@ target_link_libraries(${EXE}
+     libutils_ut -lcrypto -lyajl -lz)
+ 
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/map/CMakeLists.txt b/test/cutils/map/CMakeLists.txt
+index 4059559f..bd21ee3f 100644
+--- a/test/cutils/map/CMakeLists.txt
++++ b/test/cutils/map/CMakeLists.txt
+@@ -14,3 +14,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/path/CMakeLists.txt b/test/cutils/path/CMakeLists.txt
+index 745258a1..aa0c6c6e 100644
+--- a/test/cutils/path/CMakeLists.txt
++++ b/test/cutils/path/CMakeLists.txt
+@@ -15,3 +15,4 @@ target_include_directories(${EXE} PUBLIC
+ set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,getcwd -Wl,--wrap,readlink")
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/util_atomic/CMakeLists.txt b/test/cutils/util_atomic/CMakeLists.txt
+index 071b2a04..21b05c46 100644
+--- a/test/cutils/util_atomic/CMakeLists.txt
++++ b/test/cutils/util_atomic/CMakeLists.txt
+@@ -16,3 +16,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_aes/CMakeLists.txt b/test/cutils/utils_aes/CMakeLists.txt
+index f7535bb3..c4d175c8 100644
+--- a/test/cutils/utils_aes/CMakeLists.txt
++++ b/test/cutils/utils_aes/CMakeLists.txt
+@@ -14,3 +14,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_array/CMakeLists.txt b/test/cutils/utils_array/CMakeLists.txt
+index 71733e31..afe564bf 100644
+--- a/test/cutils/utils_array/CMakeLists.txt
++++ b/test/cutils/utils_array/CMakeLists.txt
+@@ -16,3 +16,4 @@ target_include_directories(${EXE} PUBLIC
+ set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,calloc")
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_base64/CMakeLists.txt b/test/cutils/utils_base64/CMakeLists.txt
+index d5b99361..35e6ba04 100644
+--- a/test/cutils/utils_base64/CMakeLists.txt
++++ b/test/cutils/utils_base64/CMakeLists.txt
+@@ -15,3 +15,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_convert/CMakeLists.txt b/test/cutils/utils_convert/CMakeLists.txt
+index 30068208..fcf70a7c 100644
+--- a/test/cutils/utils_convert/CMakeLists.txt
++++ b/test/cutils/utils_convert/CMakeLists.txt
+@@ -15,3 +15,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_error/CMakeLists.txt b/test/cutils/utils_error/CMakeLists.txt
+index 28016605..9607aeeb 100644
+--- a/test/cutils/utils_error/CMakeLists.txt
++++ b/test/cutils/utils_error/CMakeLists.txt
+@@ -14,3 +14,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_file/CMakeLists.txt b/test/cutils/utils_file/CMakeLists.txt
+index 20317e15..01b2ff47 100644
+--- a/test/cutils/utils_file/CMakeLists.txt
++++ b/test/cutils/utils_file/CMakeLists.txt
+@@ -16,3 +16,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_filters/CMakeLists.txt b/test/cutils/utils_filters/CMakeLists.txt
+index 31d3ac25..561ff4ef 100644
+--- a/test/cutils/utils_filters/CMakeLists.txt
++++ b/test/cutils/utils_filters/CMakeLists.txt
+@@ -16,3 +16,4 @@ target_include_directories(${EXE} PUBLIC
+     
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_fs/CMakeLists.txt b/test/cutils/utils_fs/CMakeLists.txt
+index 7ff3176a..e909aee6 100644
+--- a/test/cutils/utils_fs/CMakeLists.txt
++++ b/test/cutils/utils_fs/CMakeLists.txt
+@@ -14,3 +14,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_mount_spec/CMakeLists.txt b/test/cutils/utils_mount_spec/CMakeLists.txt
+index 24fb5add..099805d2 100644
+--- a/test/cutils/utils_mount_spec/CMakeLists.txt
++++ b/test/cutils/utils_mount_spec/CMakeLists.txt
+@@ -14,3 +14,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_namespace/CMakeLists.txt b/test/cutils/utils_namespace/CMakeLists.txt
+index 8add4a71..fb535e71 100644
+--- a/test/cutils/utils_namespace/CMakeLists.txt
++++ b/test/cutils/utils_namespace/CMakeLists.txt
+@@ -14,3 +14,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_network/CMakeLists.txt b/test/cutils/utils_network/CMakeLists.txt
+index cf0fc481..22e421ab 100644
+--- a/test/cutils/utils_network/CMakeLists.txt
++++ b/test/cutils/utils_network/CMakeLists.txt
+@@ -20,3 +20,4 @@ target_link_libraries(${EXE}
+     libutils_ut -lcrypto -lyajl -lz)
+ 
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_pwgr/CMakeLists.txt b/test/cutils/utils_pwgr/CMakeLists.txt
+index 5938991e..34acb92a 100644
+--- a/test/cutils/utils_pwgr/CMakeLists.txt
++++ b/test/cutils/utils_pwgr/CMakeLists.txt
+@@ -15,3 +15,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_regex/CMakeLists.txt b/test/cutils/utils_regex/CMakeLists.txt
+index 3f6410b2..45ba2604 100644
+--- a/test/cutils/utils_regex/CMakeLists.txt
++++ b/test/cutils/utils_regex/CMakeLists.txt
+@@ -14,3 +14,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_string/CMakeLists.txt b/test/cutils/utils_string/CMakeLists.txt
+index 1343f4e6..b9968c43 100644
+--- a/test/cutils/utils_string/CMakeLists.txt
++++ b/test/cutils/utils_string/CMakeLists.txt
+@@ -16,3 +16,4 @@ target_include_directories(${EXE} PUBLIC
+ set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_strdup_s -Wl,--wrap,calloc -Wl,--wrap,strcat_s")
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_timestamp/CMakeLists.txt b/test/cutils/utils_timestamp/CMakeLists.txt
+index 38aec640..6da3fcc9 100644
+--- a/test/cutils/utils_timestamp/CMakeLists.txt
++++ b/test/cutils/utils_timestamp/CMakeLists.txt
+@@ -14,3 +14,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_utils/CMakeLists.txt b/test/cutils/utils_utils/CMakeLists.txt
+index 7b3bd546..99a83e7a 100644
+--- a/test/cutils/utils_utils/CMakeLists.txt
++++ b/test/cutils/utils_utils/CMakeLists.txt
+@@ -14,3 +14,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_verify/CMakeLists.txt b/test/cutils/utils_verify/CMakeLists.txt
+index abf9596f..dd9ef78b 100644
+--- a/test/cutils/utils_verify/CMakeLists.txt
++++ b/test/cutils/utils_verify/CMakeLists.txt
+@@ -14,3 +14,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/image/oci/oci_config_merge/CMakeLists.txt b/test/image/oci/oci_config_merge/CMakeLists.txt
+index 88047fde..42cd2e78 100644
+--- a/test/image/oci/oci_config_merge/CMakeLists.txt
++++ b/test/image/oci/oci_config_merge/CMakeLists.txt
+@@ -73,3 +73,4 @@ target_include_directories(${EXE} PUBLIC
+ set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_common_calloc_s -Wl,--wrap,util_smart_calloc_s -Wl,--wrap,merge_env")
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/image/oci/registry/CMakeLists.txt b/test/image/oci/registry/CMakeLists.txt
+index 727a615a..13ed95b2 100644
+--- a/test/image/oci/registry/CMakeLists.txt
++++ b/test/image/oci/registry/CMakeLists.txt
+@@ -63,3 +63,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz libhttpclient)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/image/oci/storage/images/CMakeLists.txt b/test/image/oci/storage/images/CMakeLists.txt
+index b00c5a0e..3e6b69a4 100644
+--- a/test/image/oci/storage/images/CMakeLists.txt
++++ b/test/image/oci/storage/images/CMakeLists.txt
+@@ -45,3 +45,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/image/oci/storage/layers/CMakeLists.txt b/test/image/oci/storage/layers/CMakeLists.txt
+index 3fe8ab7c..952e9483 100644
+--- a/test/image/oci/storage/layers/CMakeLists.txt
++++ b/test/image/oci/storage/layers/CMakeLists.txt
+@@ -66,6 +66,7 @@ target_link_libraries(${DRIVER_EXE}
+     -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz)
+ 
+ add_test(NAME ${DRIVER_EXE} COMMAND ${DRIVER_EXE}  --gtest_output=xml:${DRIVER_EXE}-Results.xml)
++set_tests_properties(${DRIVER_EXE} PROPERTIES TIMEOUT 120)
+ 
+ # storage_layers_ut
+ SET(LAYER_EXE storage_layers_ut)
+@@ -141,3 +142,4 @@ target_link_libraries(${LAYER_EXE}
+     -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz)
+ 
+ add_test(NAME ${LAYER_EXE} COMMAND ${LAYER_EXE} --gtest_output=xml:${LAYER_EXE}-Results.xml)
++set_tests_properties(${LAYER_EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/image/oci/storage/rootfs/CMakeLists.txt b/test/image/oci/storage/rootfs/CMakeLists.txt
+index 5bf568f9..4d7d3533 100644
+--- a/test/image/oci/storage/rootfs/CMakeLists.txt
++++ b/test/image/oci/storage/rootfs/CMakeLists.txt
+@@ -45,3 +45,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/network/CMakeLists.txt b/test/network/CMakeLists.txt
+index e354bebc..be31fd0e 100644
+--- a/test/network/CMakeLists.txt
++++ b/test/network/CMakeLists.txt
+@@ -86,3 +86,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/runtime/isula/CMakeLists.txt b/test/runtime/isula/CMakeLists.txt
+index 38a454b0..f5821953 100644
+--- a/test/runtime/isula/CMakeLists.txt
++++ b/test/runtime/isula/CMakeLists.txt
+@@ -58,3 +58,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lpthread -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/runtime/lcr/CMakeLists.txt b/test/runtime/lcr/CMakeLists.txt
+index 6f8f784c..979cbe5a 100644
+--- a/test/runtime/lcr/CMakeLists.txt
++++ b/test/runtime/lcr/CMakeLists.txt
+@@ -58,3 +58,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/services/execution/execute/execution_extend/CMakeLists.txt b/test/services/execution/execute/execution_extend/CMakeLists.txt
+index aaff39ef..8588fac3 100644
+--- a/test/services/execution/execute/execution_extend/CMakeLists.txt
++++ b/test/services/execution/execute/execution_extend/CMakeLists.txt
+@@ -76,3 +76,4 @@ target_include_directories(${EXE} PUBLIC
+     )
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/services/execution/spec/CMakeLists.txt b/test/services/execution/spec/CMakeLists.txt
+index e1aa680e..d4a9d9b0 100644
+--- a/test/services/execution/spec/CMakeLists.txt
++++ b/test/services/execution/spec/CMakeLists.txt
+@@ -74,4 +74,6 @@ target_include_directories(${MOCK_EXE} PUBLIC
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
+ target_link_libraries(${MOCK_EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+ add_test(NAME ${MOCK_EXE} COMMAND ${MOCK_EXE} --gtest_output=xml:${MOCK_EXE}-Results.xml)
++set_tests_properties(${MOCK_EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/services/execution/spec/selinux_label_ut.cc b/test/services/execution/spec/selinux_label_ut.cc
+index c0e9ab1c..f9a73cca 100644
+--- a/test/services/execution/spec/selinux_label_ut.cc
++++ b/test/services/execution/spec/selinux_label_ut.cc
+@@ -179,11 +179,13 @@ protected:
+     void SetUp() override
+     {
+         CreateTestedObjects();
++        selinux_state_init();
+     }
+ 
+     void TearDown() override
+     {
+         ClearTestedObjects();
++        selinux_state_free();
+     }
+ 
+ private:
+diff --git a/test/specs/specs/CMakeLists.txt b/test/specs/specs/CMakeLists.txt
+index b730959c..c4b36c5f 100644
+--- a/test/specs/specs/CMakeLists.txt
++++ b/test/specs/specs/CMakeLists.txt
+@@ -83,3 +83,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/specs/specs_extend/CMakeLists.txt b/test/specs/specs_extend/CMakeLists.txt
+index 7d05deb4..06f46a37 100644
+--- a/test/specs/specs_extend/CMakeLists.txt
++++ b/test/specs/specs_extend/CMakeLists.txt
+@@ -79,3 +79,4 @@ target_include_directories(${EXE} PUBLIC
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/volume/CMakeLists.txt b/test/volume/CMakeLists.txt
+index 6eea3f76..e2045b19 100644
+--- a/test/volume/CMakeLists.txt
++++ b/test/volume/CMakeLists.txt
+@@ -39,4 +39,5 @@ target_include_directories(${EXE} PUBLIC
+     )
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
+-add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+\ No newline at end of file
++add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+-- 
+2.25.1
+

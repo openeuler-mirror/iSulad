@@ -1,0 +1,73 @@
+From 65c3b3c803128f92113f9f21bf41da1ad56017c8 Mon Sep 17 00:00:00 2001
+From: shijiaqi1 <jiaqi@isrc.iscas.ac.cn>
+Date: Wed, 8 Feb 2023 13:31:36 +0800
+Subject: [PATCH 22/22] Update-CRI
+
+---
+ .../cri/cri_container_manager_service.cc      | 19 +++++++++++++++++++
+ src/daemon/entry/cri/cri_helpers.cc           | 19 +++++++++++++++++++
+ 2 files changed, 38 insertions(+)
+
+diff --git a/src/daemon/entry/cri/cri_container_manager_service.cc b/src/daemon/entry/cri/cri_container_manager_service.cc
+index 710556a3..b02367c8 100644
+--- a/src/daemon/entry/cri/cri_container_manager_service.cc
++++ b/src/daemon/entry/cri/cri_container_manager_service.cc
+@@ -1179,6 +1179,25 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
+     if (!resources.cpuset_mems().empty()) {
+         hostconfig->cpuset_mems = util_strdup_s(resources.cpuset_mems().c_str());
+     }
++    if (resources.hugepage_limits_size() != 0) {
++        hostconfig->hugetlbs = (host_config_hugetlbs_element **)util_smart_calloc_s(
++                sizeof(host_config_hugetlbs_element *), resources.hugepage_limits_size());
++        if (hostconfig->hugetlbs == nullptr) {
++            error.SetError("Out of memory");
++            return;
++        }
++	for (int i = 0; i < resources.hugepage_limits_size(); i++) {
++            hostconfig->hugetlbs[i] =
++                    (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
++            if (hostconfig->hugetlbs[i] == nullptr) {
++                error.SetError("Out of memory");
++                goto cleanup;
++            }
++            hostconfig->hugetlbs[i]->page_size = util_strdup_s(resources.hugepage_limits(i).page_size().c_str());
++            hostconfig->hugetlbs[i]->limit = resources.hugepage_limits(i).limit();
++            hostconfig->hugetlbs_len++;
++        }
++    }
+ 
+     request->host_config = host_config_generate_json(hostconfig, &ctx, &perror);
+     if (request->host_config == nullptr) {
+diff --git a/src/daemon/entry/cri/cri_helpers.cc b/src/daemon/entry/cri/cri_helpers.cc
+index 2f6dcf78..6d59ec11 100644
+--- a/src/daemon/entry/cri/cri_helpers.cc
++++ b/src/daemon/entry/cri/cri_helpers.cc
+@@ -461,6 +461,25 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
+             }
+         }
+         hc->unified = unified;
++        if (rOpts.hugepage_limits_size() != 0) {
++            hc->hugetlbs = (host_config_hugetlbs_element **)util_smart_calloc_s(sizeof(host_config_hugetlbs_element *),
++                                                                                rOpts.hugepage_limits_size());
++            if (hc->hugetlbs == nullptr) {
++                error.SetError("Out of memory");
++                return;
++            }
++            for (int i = 0; i < rOpts.hugepage_limits_size(); i++) {
++                hc->hugetlbs[i] =
++                        (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
++                if (hc->hugetlbs[i] == nullptr) {
++                    error.SetError("Out of memory");
++                    return;
++                }
++                hc->hugetlbs[i]->page_size = util_strdup_s(rOpts.hugepage_limits(i).page_size().c_str());
++                hc->hugetlbs[i]->limit = rOpts.hugepage_limits(i).limit();
++                hc->hugetlbs_len++;
++            }
++        }
+     }
+     createConfig->open_stdin = config.stdin();
+     createConfig->tty = config.tty();
+-- 
+2.25.1
+
