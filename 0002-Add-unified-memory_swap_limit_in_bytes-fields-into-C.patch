@@ -1,0 +1,243 @@
+From 27c3d00f74c5641685d5781fe0c02c5eead92d23 Mon Sep 17 00:00:00 2001
+From: "ilya.kuksenok" <ilya.kuksenok@huawei.com>
+Date: Thu, 2 Feb 2023 14:41:16 +0300
+Subject: [PATCH 02/22] Add unified, memory_swap_limit_in_bytes fields into
+ ContainerStats; add unified and memory_swap_limit_in_bytes into
+ UpdateCreateConfig add nullptr for unified.
+
+---
+ src/daemon/common/sysinfo.c                   |  3 +-
+ .../cri/cri_container_manager_service.cc      | 19 ++++++++++++
+ src/daemon/entry/cri/cri_helpers.cc           | 17 ++++++++++-
+ src/daemon/modules/runtime/runtime.c          | 30 +++++++++----------
+ 4 files changed, 52 insertions(+), 17 deletions(-)
+
+diff --git a/src/daemon/common/sysinfo.c b/src/daemon/common/sysinfo.c
+index 8b5768db..38416db4 100644
+--- a/src/daemon/common/sysinfo.c
++++ b/src/daemon/common/sysinfo.c
+@@ -743,7 +743,8 @@ static void check_cgroup_mem(struct layer **layers, bool quiet, cgroup_mem_info_
+         return;
+     }
+ 
+-    meminfo->limit = true;
++    meminfo->limit = cgroup_enabled(mountpoint, CGROUP_MEMORY_LIMIT);
++    cgroup_do_log(quiet, !(meminfo->limit), "Your kernel does not support memory limit");
+ 
+     meminfo->swap = cgroup_enabled(mountpoint, CGROUP_MEMORY_SWAP);
+     cgroup_do_log(quiet, !(meminfo->swap), "Your kernel does not support swap memory limit");
+diff --git a/src/daemon/entry/cri/cri_container_manager_service.cc b/src/daemon/entry/cri/cri_container_manager_service.cc
+index d2f486cf..d044cca8 100644
+--- a/src/daemon/entry/cri/cri_container_manager_service.cc
++++ b/src/daemon/entry/cri/cri_container_manager_service.cc
+@@ -1084,6 +1084,12 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
+     struct parser_context ctx {
+         OPT_GEN_SIMPLIFY, 0
+     };
++    json_map_string_string *unified = nullptr;
++    unified = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
++    if (unified == nullptr) {
++        error.SetError("Out of memory");
++        goto cleanup;
++    }
+     request = (container_update_request *)util_common_calloc_s(sizeof(container_update_request));
+     if (request == nullptr) {
+         error.SetError("Out of memory");
+@@ -1100,6 +1106,18 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
+     hostconfig->cpu_period = resources.cpu_period();
+     hostconfig->cpu_quota = resources.cpu_quota();
+     hostconfig->cpu_shares = resources.cpu_shares();
++    hostconfig->memory_swap_limit_in_bytes = resources.memory_swap_limit_in_bytes();
++
++    if (!resources.unified().empty()) {
++        for (auto &iter : resources.unified()) {
++            if (append_json_map_string_string(unified, iter.first.c_str(), iter.second.c_str()) != 0) {
++                error.SetError("Failed to append string");
++                goto cleanup;
++            }
++        }
++    }
++    hostconfig->unified = unified;
++    unified = nullptr;
+     hostconfig->memory = resources.memory_limit_in_bytes();
+     if (!resources.cpuset_cpus().empty()) {
+         hostconfig->cpuset_cpus = util_strdup_s(resources.cpuset_cpus().c_str());
+@@ -1126,6 +1144,7 @@ cleanup:
+     free_container_update_request(request);
+     free_container_update_response(response);
+     free_host_config(hostconfig);
++    free_json_map_string_string(unified);
+     free(perror);
+ }
+ 
+diff --git a/src/daemon/entry/cri/cri_helpers.cc b/src/daemon/entry/cri/cri_helpers.cc
+index ddcc153f..2f6dcf78 100644
+--- a/src/daemon/entry/cri/cri_helpers.cc
++++ b/src/daemon/entry/cri/cri_helpers.cc
+@@ -445,8 +445,23 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
+             hc->cpuset_mems = util_strdup_s(rOpts.cpuset_mems().c_str());
+         }
+         hc->oom_score_adj = rOpts.oom_score_adj();
++        hc->memory_swap_limit_in_bytes = rOpts.memory_swap_limit_in_bytes();
++        auto *unified = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
++        if (unified == nullptr) {
++            error.SetError("Out of memory");
++            return;
++        }
++        if (!rOpts.unified().empty()) {
++            for (auto &iter : rOpts.unified()) {
++                if (append_json_map_string_string(unified, iter.first.c_str(), iter.second.c_str()) != 0) {
++                    error.SetError("Failed to append string");
++                    free_json_map_string_string(unified);
++                    return;
++                }
++            }
++        }
++        hc->unified = unified;
+     }
+-
+     createConfig->open_stdin = config.stdin();
+     createConfig->tty = config.tty();
+ }
+diff --git a/src/daemon/modules/runtime/runtime.c b/src/daemon/modules/runtime/runtime.c
+index 7a3ed87f..29a64ac1 100644
+--- a/src/daemon/modules/runtime/runtime.c
++++ b/src/daemon/modules/runtime/runtime.c
+@@ -122,7 +122,7 @@ int runtime_create(const char *name, const char *runtime, const rt_create_params
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL) {
+-        ERROR("Invalide arguments for runtime create");
++        ERROR("Invalid arguments for runtime create");
+         ret = -1;
+         goto out;
+     }
+@@ -146,7 +146,7 @@ int runtime_start(const char *name, const char *runtime, const rt_start_params_t
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || pid_info == NULL) {
+-        ERROR("Invalide arguments for runtime start");
++        ERROR("Invalid arguments for runtime start");
+         ret = -1;
+         goto out;
+     }
+@@ -194,7 +194,7 @@ int runtime_restart(const char *name, const char *runtime, const rt_restart_para
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL) {
+-        ERROR("Invalide arguments for runtime restart");
++        ERROR("Invalid arguments for runtime restart");
+         ret = -1;
+         goto out;
+     }
+@@ -218,7 +218,7 @@ int runtime_clean_resource(const char *name, const char *runtime, const rt_clean
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL) {
+-        ERROR("Invalide arguments for runtime clean");
++        ERROR("Invalid arguments for runtime clean");
+         ret = -1;
+         goto out;
+     }
+@@ -242,7 +242,7 @@ int runtime_rm(const char *name, const char *runtime, const rt_rm_params_t *para
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL) {
+-        ERROR("Invalide arguments for runtime rm");
++        ERROR("Invalid arguments for runtime rm");
+         ret = -1;
+         goto out;
+     }
+@@ -267,7 +267,7 @@ int runtime_status(const char *name, const char *runtime, const rt_status_params
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || status == NULL) {
+-        ERROR("Invalide arguments for runtime status");
++        ERROR("Invalid arguments for runtime status");
+         ret = -1;
+         goto out;
+     }
+@@ -292,7 +292,7 @@ int runtime_resources_stats(const char *name, const char *runtime, const rt_stat
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || rs_stats == NULL) {
+-        ERROR("Invalide arguments for runtime stats");
++        ERROR("Invalid arguments for runtime stats");
+         ret = -1;
+         goto out;
+     }
+@@ -316,7 +316,7 @@ int runtime_exec(const char *name, const char *runtime, const rt_exec_params_t *
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || exit_code == NULL) {
+-        ERROR("Invalide arguments for runtime exec");
++        ERROR("Invalid arguments for runtime exec");
+         ret = -1;
+         goto out;
+     }
+@@ -340,7 +340,7 @@ int runtime_pause(const char *name, const char *runtime, const rt_pause_params_t
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || params == NULL) {
+-        ERROR("Invalide arguments for runtime pause");
++        ERROR("Invalid arguments for runtime pause");
+         ret = -1;
+         goto out;
+     }
+@@ -364,7 +364,7 @@ int runtime_resume(const char *name, const char *runtime, const rt_resume_params
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || params == NULL) {
+-        ERROR("Invalide arguments for runtime resume");
++        ERROR("Invalid arguments for runtime resume");
+         ret = -1;
+         goto out;
+     }
+@@ -388,7 +388,7 @@ int runtime_attach(const char *name, const char *runtime, const rt_attach_params
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || params == NULL) {
+-        ERROR("Invalide arguments for runtime attach");
++        ERROR("Invalid arguments for runtime attach");
+         ret = -1;
+         goto out;
+     }
+@@ -412,7 +412,7 @@ int runtime_update(const char *name, const char *runtime, const rt_update_params
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || params == NULL) {
+-        ERROR("Invalide arguments for runtime update");
++        ERROR("Invalid arguments for runtime update");
+         ret = -1;
+         goto out;
+     }
+@@ -447,7 +447,7 @@ int runtime_listpids(const char *name, const char *runtime, const rt_listpids_pa
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || params == NULL || out == NULL) {
+-        ERROR("Invalide arguments for runtime listpids");
++        ERROR("Invalid arguments for runtime listpids");
+         ret = -1;
+         goto out;
+     }
+@@ -471,7 +471,7 @@ int runtime_resize(const char *name, const char *runtime, const rt_resize_params
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || params == NULL) {
+-        ERROR("Invalide arguments for runtime resize");
++        ERROR("Invalid arguments for runtime resize");
+         ret = -1;
+         goto out;
+     }
+@@ -495,7 +495,7 @@ int runtime_exec_resize(const char *name, const char *runtime, const rt_exec_res
+     const struct rt_ops *ops = NULL;
+ 
+     if (name == NULL || runtime == NULL || params == NULL) {
+-        ERROR("Invalide arguments for runtime exec resize");
++        ERROR("Invalid arguments for runtime exec resize");
+         ret = -1;
+         goto out;
+     }
+-- 
+2.25.1
+

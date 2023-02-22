@@ -1,0 +1,25 @@
+From a7df50dc3b51f961f3d2e48dd968cfb115c39fec Mon Sep 17 00:00:00 2001
+From: zhushy <zhushangyuan@foxmail.com>
+Date: Sat, 11 Feb 2023 00:05:53 +0800
+Subject: [PATCH 04/22] fix design typo
+
+---
+ README.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index 3d1fc7cb..7e4b6de1 100644
+--- a/README.md
++++ b/README.md
+@@ -70,7 +70,7 @@ CRI interface is implemented based on gRPC. iSulad implemented CRI gRPC Server f
+ 
+ - [user manual](./docs/manual/README.md)
+ 
+-- [desgin docs](./docs/design/README.md)
++- [design docs](./docs/design/README.md)
+ 
+ ### Installing
+ 
+-- 
+2.25.1
+

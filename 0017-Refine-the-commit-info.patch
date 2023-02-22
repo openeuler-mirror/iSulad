@@ -1,0 +1,30 @@
+From a1c06194fea99d1011551fd84b1fb1f28b974170 Mon Sep 17 00:00:00 2001
+From: sailorvii <chenw66@chinaunicom.cn>
+Date: Tue, 21 Feb 2023 02:40:50 +0000
+Subject: [PATCH 17/22] Refine the commit info.
+
+---
+ docs/design/detailed/Network/native_network_design_zh.md | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/docs/design/detailed/Network/native_network_design_zh.md b/docs/design/detailed/Network/native_network_design_zh.md
+index 0ca0f850..27c10c3e 100644
+--- a/docs/design/detailed/Network/native_network_design_zh.md
++++ b/docs/design/detailed/Network/native_network_design_zh.md
+@@ -299,10 +299,10 @@ cache:::unFinish
+ 
+ ## 4.2 adaptor模块
+ 
+-1. 查看 CRI adapter 模块的设计文档： [CRI_adapter_design](./cni_operator_design_zh.md) 。
++1. 查看 CRI adapter 模块的设计文档： [CRI_adapter_design](./CRI_adapter_design_zh.md) 。
+ 
+ 2. 查看 native network adapter 模块的设计文档： [native_network_adapter_design](./native_network_adapter_design_zh.md) 。
+ 
+ ## 4.3 cni-operator模块
+ 
+-- 查看 cni operator 模块的设计文档： [cni_operator_design](./cni_operator_design_zh.md) 。
+\ No newline at end of file
++- 查看 cni operator 模块的设计文档： [cni_operator_design](./cni_operator_design_zh.md) 。
+-- 
+2.25.1
+

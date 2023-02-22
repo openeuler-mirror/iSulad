@@ -1,0 +1,302 @@
+From aaf8dec80eff5390404d7da66dbb229e44c76b12 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Thu, 16 Feb 2023 18:22:02 +0800
+Subject: [PATCH 15/22] support pull image with digest
+
+usage: isula pull busybox@sha256:907ca53d7e2947e849b839b1cd258c98fd3916c60f2e6e70c30edbf741ab6754
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/daemon/executor/image_cb/image_cb.c       |  8 ++++
+ src/daemon/modules/image/oci/oci_pull.c       | 23 ++++++----
+ .../modules/image/oci/registry/registry.c     |  2 +-
+ .../oci/storage/image_store/image_store.c     |  7 +++
+ src/daemon/modules/image/oci/utils_images.c   | 45 +++++++++++++++----
+ src/daemon/modules/image/oci/utils_images.h   |  2 +
+ src/utils/cutils/utils_verify.c               | 25 ++++++++---
+ src/utils/cutils/utils_verify.h               |  3 ++
+ 8 files changed, 91 insertions(+), 24 deletions(-)
+
+diff --git a/src/daemon/executor/image_cb/image_cb.c b/src/daemon/executor/image_cb/image_cb.c
+index 06de7543..124feb21 100644
+--- a/src/daemon/executor/image_cb/image_cb.c
++++ b/src/daemon/executor/image_cb/image_cb.c
+@@ -561,6 +561,14 @@ static int trans_one_image(image_list_images_response *response, size_t image_in
+         out_image->name = util_strdup_s(im_image->repo_tags[repo_index]);
+     }
+ 
++    if (out_image->name == NULL && im_image->repo_digests != NULL && im_image->repo_digests_len > 0) {
++        // repo digest must valid, so just get lastest @
++        char *pod = strrchr(im_image->repo_digests[0], '@');
++        if (pod != NULL) {
++            out_image->name = util_sub_string(im_image->repo_digests[0], 0, (size_t)(pod - im_image->repo_digests[0]));
++        }
++    }
++
+     out_image->target = util_common_calloc_s(sizeof(image_descriptor));
+     if (out_image->target == NULL) {
+         ERROR("Out of memory");
+diff --git a/src/daemon/modules/image/oci/oci_pull.c b/src/daemon/modules/image/oci/oci_pull.c
+index 5e774c9e..5b35ca2b 100644
+--- a/src/daemon/modules/image/oci/oci_pull.c
++++ b/src/daemon/modules/image/oci/oci_pull.c
+@@ -117,10 +117,19 @@ static int pull_image(const im_pull_request *request, char **name)
+     options->skip_tls_verify = oci_image_data->insecure_skip_verify_enforce;
+     insecure_registries = oci_image_data->insecure_registries;
+ 
++    // key of image which save in image-store
++    options->dest_image_name = oci_normalize_image_name(request->image);
++
++    // add default tag if required
++    with_tag = oci_default_tag(request->image);
++
+     host = oci_get_host(request->image);
+     if (host != NULL) {
+-        options->image_name = oci_default_tag(request->image);
+-        options->dest_image_name = oci_normalize_image_name(request->image);
++        // 1. image_name use for split host/tag/name
++        // 2. user for tag of log
++        options->image_name = with_tag;
++        with_tag = NULL;
++
+         update_option_insecure_registry(options, insecure_registries, host);
+         ret = registry_pull(options);
+         if (ret != 0) {
+@@ -141,13 +150,12 @@ static int pull_image(const im_pull_request *request, char **name)
+             }
+             host = oci_host_from_mirror(*mirror);
+             update_option_insecure_registry(options, insecure_registries, host);
+-            with_tag = oci_default_tag(request->image);
++            // add current mirror to image name
++            free(options->image_name);
+             options->image_name = oci_add_host(host, with_tag);
+-            free(with_tag);
+-            with_tag = NULL;
+             free(host);
+             host = NULL;
+-            options->dest_image_name = oci_normalize_image_name(request->image);
++
+             ret = registry_pull(options);
+             if (ret != 0) {
+                 continue;
+@@ -159,10 +167,9 @@ static int pull_image(const im_pull_request *request, char **name)
+     *name = util_strdup_s(options->dest_image_name);
+ 
+ out:
++    free(with_tag);
+     free(host);
+-    host = NULL;
+     free_registry_pull_options(options);
+-    options = NULL;
+ 
+     return ret;
+ }
+diff --git a/src/daemon/modules/image/oci/registry/registry.c b/src/daemon/modules/image/oci/registry/registry.c
+index 143de6e4..62d0c35e 100644
+--- a/src/daemon/modules/image/oci/registry/registry.c
++++ b/src/daemon/modules/image/oci/registry/registry.c
+@@ -1861,7 +1861,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
+     }
+ 
+     if (!util_valid_image_name(options->dest_image_name)) {
+-        ERROR("Invalid dest image name %s", options->image_name);
++        ERROR("Invalid dest image name %s", options->dest_image_name);
+         isulad_try_set_error_message("Invalid image name");
+         return -1;
+     }
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+index 39bda87d..cf1e88ff 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+@@ -1979,6 +1979,7 @@ static int resort_image_names(const char **names, size_t names_len, char **first
+                                      MAX_IMAGE_NAME_LENGTH - MAX_IMAGE_DIGEST_LENGTH);
+         }
+ 
++        // TODO: maybe should support other digest
+         if (prefix != NULL && strcmp(prefix, DIGEST_PREFIX) == 0) {
+             if (util_array_append(image_digests, names[i]) != 0) {
+                 ERROR("Failed to append image to digest: %s", names[i]);
+@@ -2172,6 +2173,7 @@ static int get_image_repo_digests(char ***old_repo_digests, char **image_tags, i
+         goto out;
+     }
+ 
++    // get repo digest from images which with tag
+     if (pack_repo_digest(old_repo_digests, (const char **)image_tags, digest, repo_digests) != 0) {
+         ERROR("Failed to pack repo digest");
+         ret = -1;
+@@ -2194,12 +2196,17 @@ static int pack_image_tags_and_repo_digest(image_t *img, imagetool_image *info)
+     char *image_digest = NULL;
+     char **repo_digests = NULL;
+ 
++    // get names from image-store names:
++    // 1. image names with tag;
++    // 2. image names with digests;
++    // 3. get first image name, current unused;
+     if (resort_image_names((const char **)img->simage->names, img->simage->names_len, &name, &tags, &digests) != 0) {
+         ERROR("Failed to resort image names");
+         ret = -1;
+         goto out;
+     }
+ 
++    // update repo digests from tags
+     if (get_image_repo_digests(&digests, tags, img, &image_digest, &repo_digests) != 0) {
+         ERROR("Failed to get image repo digests");
+         ret = -1;
+diff --git a/src/daemon/modules/image/oci/utils_images.c b/src/daemon/modules/image/oci/utils_images.c
+index 9e7bb16f..ad7fe0f4 100644
+--- a/src/daemon/modules/image/oci/utils_images.c
++++ b/src/daemon/modules/image/oci/utils_images.c
+@@ -42,6 +42,26 @@
+ // nanos of 2038-01-19T03:14:07, the max valid linux time
+ #define MAX_NANOS 2147483647000000000
+ 
++char *oci_image_digest_pos(const char *name)
++{
++    char *pos = NULL;
++
++    if (name == NULL) {
++        return NULL;
++    }
++
++    pos = strrchr(name, '@');
++    if (pos == NULL) {
++        return NULL;
++    }
++
++    if (util_reg_match(__DIGESTPattern, pos) != 0) {
++        return NULL;
++    }
++
++    return pos;
++}
++
+ char *get_last_part(char **parts)
+ {
+     char *last_part = NULL;
+@@ -98,6 +118,7 @@ char *oci_default_tag(const char *name)
+     }
+ 
+     last_part = get_last_part(parts);
++    // will pass image name with digest and with tag
+     if (last_part != NULL && strrchr(last_part, ':') == NULL) {
+         add_default_tag = DEFAULT_TAG;
+     }
+@@ -181,9 +202,9 @@ char *oci_normalize_image_name(const char *name)
+     return result;
+ }
+ 
+-int oci_split_image_name(const char *image_name, char **host, char **name, char **tag)
++int oci_split_image_name(const char *image_name, char **host, char **name, char **tag_digest)
+ {
+-    char *tag_pos = NULL;
++    char *tag_digest_pos = NULL;
+     char *name_pos = NULL;
+     char *tmp_image_name = NULL;
+ 
+@@ -193,18 +214,24 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char
+     }
+ 
+     tmp_image_name = util_strdup_s(image_name);
+-    tag_pos = util_tag_pos(tmp_image_name);
+-    if (tag_pos != NULL) {
+-        *tag_pos = 0;
+-        tag_pos++;
+-        if (tag != NULL) {
+-            *tag = util_strdup_s(tag_pos);
++
++    // check digest first
++    tag_digest_pos = oci_image_digest_pos(tmp_image_name);
++    if (tag_digest_pos == NULL) {
++        tag_digest_pos = util_tag_pos(tmp_image_name);
++    }
++
++    if (tag_digest_pos != NULL) {
++        *tag_digest_pos = '\0';
++        tag_digest_pos++;
++        if (tag_digest != NULL) {
++            *tag_digest = util_strdup_s(tag_digest_pos);
+         }
+     }
+ 
+     name_pos = strchr(tmp_image_name, '/');
+     if (name_pos != NULL) {
+-        *name_pos = 0;
++        *name_pos = '\0';
+         name_pos++;
+         if (name != NULL) {
+             *name = util_strdup_s(name_pos);
+diff --git a/src/daemon/modules/image/oci/utils_images.h b/src/daemon/modules/image/oci/utils_images.h
+index daa8c040..97879e41 100644
+--- a/src/daemon/modules/image/oci/utils_images.h
++++ b/src/daemon/modules/image/oci/utils_images.h
+@@ -59,6 +59,8 @@ char *oci_get_isulad_tmpdir(const char *root_dir);
+ int makesure_isulad_tmpdir_perm_right(const char *root_dir);
+ char *get_hostname_to_strip();
+ 
++char *oci_image_digest_pos(const char *name);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/src/utils/cutils/utils_verify.c b/src/utils/cutils/utils_verify.c
+index d39d8da5..5868e890 100644
+--- a/src/utils/cutils/utils_verify.c
++++ b/src/utils/cutils/utils_verify.c
+@@ -359,7 +359,7 @@ cleanup:
+ bool util_valid_image_name(const char *name)
+ {
+     char *copy = NULL;
+-    char *tag_pos = NULL;
++    char *check_pos = NULL;
+     bool bret = false;
+ 
+     if (name == NULL) {
+@@ -372,13 +372,26 @@ bool util_valid_image_name(const char *name)
+     }
+ 
+     copy = util_strdup_s(name);
+-    tag_pos = util_tag_pos(copy);
+-    if (tag_pos != NULL) {
+-        if (util_reg_match(__TagPattern, tag_pos)) {
++
++    // 1. first, check digest or not
++    check_pos = strrchr(copy, '@');
++    if (check_pos != NULL) {
++        // image name with digest
++        if (util_reg_match(__DIGESTPattern, check_pos)) {
+             goto cleanup;
+         }
+-
+-        *tag_pos = '\0';
++        *check_pos = '\0';
++    } else {
++        // image name without digest
++        // 2. check tag or not
++        check_pos = util_tag_pos(copy);
++        if (check_pos != NULL) {
++            if (util_reg_match(__TagPattern, check_pos)) {
++                goto cleanup;
++            }
++
++            *check_pos = '\0';
++        }
+     }
+ 
+     if (util_reg_match(__NamePattern, copy)) {
+diff --git a/src/utils/cutils/utils_verify.h b/src/utils/cutils/utils_verify.h
+index a885250f..ad4466ef 100644
+--- a/src/utils/cutils/utils_verify.h
++++ b/src/utils/cutils/utils_verify.h
+@@ -33,6 +33,9 @@ extern "C" {
+     "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])"                             \
+     "((\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]))+)?(:[0-9]+)?/)?[a-z0-9]" \
+     "+((([._]|__|[-]*)[a-z0-9]+)+)?((/[a-z0-9]+((([._]|__|[-]*)[a-z0-9]+)+)?)+)?$"
++
++#define __DIGESTPattern "@[a-z0-9]+:[a-z0-9]{32,}"
++
+ #define VALID_VOLUME_NAME "[a-zA-Z0-9][a-zA-Z0-9_.-]{1,63}"
+ 
+ extern const char *g_all_caps[];
+-- 
+2.25.1
+

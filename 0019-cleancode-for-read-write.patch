@@ -1,0 +1,54 @@
+From f9224d47ddc4193678f7ffe501be144fedff0102 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Mon, 20 Feb 2023 17:28:33 +0800
+Subject: [PATCH 19/22] cleancode for read/write
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/cmd/isulad-shim/process.c                            | 2 +-
+ src/cmd/isulad/main.c                                    | 2 +-
+ src/daemon/entry/connect/grpc/grpc_containers_service.cc | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/cmd/isulad-shim/process.c b/src/cmd/isulad-shim/process.c
+index 02ce3c85..8a0aa142 100644
+--- a/src/cmd/isulad-shim/process.c
++++ b/src/cmd/isulad-shim/process.c
+@@ -283,7 +283,7 @@ static void *do_io_copy(void *data)
+             break;
+         }
+ 
+-        int r_count = util_read_nointr(ioc->fd_from, buf, DEFAULT_IO_COPY_BUF);
++        int r_count = read(ioc->fd_from, buf, DEFAULT_IO_COPY_BUF);
+         if (r_count == -1) {
+             if (errno == EAGAIN || errno == EINTR) {
+                 continue;
+diff --git a/src/cmd/isulad/main.c b/src/cmd/isulad/main.c
+index a75fb189..0cdbfb53 100644
+--- a/src/cmd/isulad/main.c
++++ b/src/cmd/isulad/main.c
+@@ -483,7 +483,7 @@ int check_and_save_pid(const char *fn)
+     }
+ 
+     len = util_write_nointr(fd, pidbuf, strlen(pidbuf));
+-    if (len < 0 || len != strlen(pidbuf)) {
++    if (len < 0 || (size_t)len != strlen(pidbuf)) {
+         ERROR("Failed to write pid to file:%s: %s", fn, strerror(errno));
+         ret = -1;
+     }
+diff --git a/src/daemon/entry/connect/grpc/grpc_containers_service.cc b/src/daemon/entry/connect/grpc/grpc_containers_service.cc
+index eb79223b..7340c3ed 100644
+--- a/src/daemon/entry/connect/grpc/grpc_containers_service.cc
++++ b/src/daemon/entry/connect/grpc/grpc_containers_service.cc
+@@ -409,7 +409,7 @@ public:
+             for (int i = 0; i < request.cmd_size(); i++) {
+                 std::string command = request.cmd(i);
+                 int nret = util_write_nointr_in_total(m_read_pipe_fd, command.c_str(), command.length());
+-                if (nret < 0 || (size_t)nret !=  command.length()) {
++                if (nret < 0 || (size_t)nret != command.length()) {
+                     ERROR("sub write over!");
+                     return;
+                 }
+-- 
+2.25.1
+
