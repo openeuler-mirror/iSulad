@@ -345,6 +345,9 @@ void PluginManager::Lock(const std::string &fullPodName, Errors &error)
         auto tmpLock = std::unique_ptr<PodLock>(new (std::nothrow) PodLock());
         if (tmpLock == nullptr) {
             error.SetError("Out of memory");
+            if (pthread_mutex_unlock(&m_podsLock) != 0) {
+                error.SetError("plugin manager unlock failed");
+            }
             return;
         }
         lock = tmpLock.get();
