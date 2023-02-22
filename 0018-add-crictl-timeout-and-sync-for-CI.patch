@@ -1,0 +1,127 @@
+From 4ca7a67fc6f9304239224e92d0ab15180cf48a10 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Mon, 20 Feb 2023 15:42:40 +0800
+Subject: [PATCH 18/19] add crictl timeout and sync for CI
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ CI/test_cases/container_cases/bigdata_stream.sh      | 7 +++++++
+ CI/test_cases/container_cases/bigdata_stream_runc.sh | 4 ++++
+ CI/test_cases/helpers.sh                             | 5 ++++-
+ 3 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/CI/test_cases/container_cases/bigdata_stream.sh b/CI/test_cases/container_cases/bigdata_stream.sh
+index 6c669503..4b2022af 100755
+--- a/CI/test_cases/container_cases/bigdata_stream.sh
++++ b/CI/test_cases/container_cases/bigdata_stream.sh
+@@ -124,6 +124,7 @@ function test_concurrent_bigdata_stream()
+         pids[${#pids[@]}]=$!
+     done
+     wait ${pids[*]// /|}
++    sync && sync
+ 
+     for index in $(seq 1 5); do
+         ls -l /home/iocopy_stream_data_500M_$index
+@@ -151,6 +152,7 @@ function test_concurrent_bigdata_stream_without_pty()
+         pids[${#pids[@]}]=$!
+     done
+     wait ${pids[*]// /|}
++    sync && sync
+ 
+     for index in $(seq 1 5); do
+         ls -l /home/iocopy_stream_data_500M_$index
+@@ -209,6 +211,7 @@ function test_stream_with_stop_client()
+     kill -18 $pid
+ 
+     wait $pid
++    sync && sync
+ 
+     ls -l /home/iocopy_stream_data_500M
+     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+@@ -254,6 +257,7 @@ function test_stream_with_stop_attach()
+     kill -18 $pid
+ 
+     wait $exec_pid
++    sync && sync
+ 
+     ls -l /home/iocopy_stream_data_500M
+     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+@@ -299,6 +303,7 @@ function test_stream_with_stop_lxc_monitor()
+     kill -18 $pid
+ 
+     wait $exec_pid
++    sync && sync
+ 
+     ls -l /home/iocopy_stream_data_500M
+     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+@@ -348,6 +353,7 @@ function test_stream_with_stop_isulad()
+     kill -18 $(cat /var/run/isulad.pid)
+ 
+     wait $pid
++    sync && sync
+ 
+     ls -l /home/iocopy_stream_data_500M
+     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+@@ -398,6 +404,7 @@ function test_stream_with_runc()
+     isula exec -it $RUNCID cat test_500M > /home/iocopy_stream_data_500M
+     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cat bigdata" && ((ret++))
+ 
++    sync && sync
+     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+     [[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+ 
+diff --git a/CI/test_cases/container_cases/bigdata_stream_runc.sh b/CI/test_cases/container_cases/bigdata_stream_runc.sh
+index 6933bef0..3a384cd8 100755
+--- a/CI/test_cases/container_cases/bigdata_stream_runc.sh
++++ b/CI/test_cases/container_cases/bigdata_stream_runc.sh
+@@ -117,6 +117,7 @@ function test_cat_bigdata()
+         pids[${#pids[@]}]=$!
+     done
+     wait ${pids[*]// /|}
++    sync && sync
+ 
+     for index in $(seq 1 5); do
+         ls -l /home/iocopy_stream_data_500M_$index
+@@ -144,6 +145,7 @@ function test_cat_bigdata_without_pty()
+         pids[${#pids[@]}]=$!
+     done
+     wait ${pids[*]// /|}
++    sync && sync
+ 
+     for index in $(seq 1 5); do
+         ls -l /home/iocopy_stream_data_500M_$index
+@@ -173,6 +175,7 @@ function test_stream_with_stop_client()
+     kill -18 $pid
+ 
+     wait $pid
++    sync && sync
+ 
+     ls -l /home/iocopy_stream_data_500M
+     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+@@ -217,6 +220,7 @@ function test_stream_with_stop_isulad()
+     kill -18 $(cat /var/run/isulad.pid)
+ 
+     wait $pid
++    sync && sync
+ 
+     ls -l /home/iocopy_stream_data_500M
+     total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
+diff --git a/CI/test_cases/helpers.sh b/CI/test_cases/helpers.sh
+index 5097217c..a11e676c 100755
+--- a/CI/test_cases/helpers.sh
++++ b/CI/test_cases/helpers.sh
+@@ -80,7 +80,10 @@ function wait_container() {
+ 
+ function crictl() {
+     CRICTL=$(which crictl)
+-    "$CRICTL" -i unix:///var/run/isulad.sock -r unix:///var/run/isulad.sock "$@"
++    # Default timeout is 2s.
++    # In some high IO testcase, isulad handle CRI request time maybe more than 2s.
++    # And the crictl will print error message "context deadline exceeded"
++    "$CRICTL" -i unix:///var/run/isulad.sock -r unix:///var/run/isulad.sock --timeout 5s "$@"
+ }
+ 
+ function msg_ok()
+-- 
+2.25.1
+
