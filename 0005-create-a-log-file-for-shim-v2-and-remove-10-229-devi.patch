@@ -1,0 +1,95 @@
+From 973c12fcddfb64bd14e0076bc5c21170f1feca6a Mon Sep 17 00:00:00 2001
+From: zhongtao <zhongtao17@huawei.com>
+Date: Thu, 2 Feb 2023 10:51:42 +0800
+Subject: [PATCH 05/19] create a log file for shim v2 and remove 10,229 device
+ from the default config
+
+Signed-off-by: zhongtao <zhongtao17@huawei.com>
+---
+ src/common/constants.h                        |  4 ++++
+ src/contrib/config/config.json                |  7 -------
+ src/daemon/modules/runtime/shim/shim_rt_ops.c | 18 ++++++++++++++++++
+ 3 files changed, 22 insertions(+), 7 deletions(-)
+
+diff --git a/src/common/constants.h b/src/common/constants.h
+index e6809998..93a069de 100644
+--- a/src/common/constants.h
++++ b/src/common/constants.h
+@@ -126,6 +126,10 @@ extern "C" {
+ #define ISULAD_ENABLE_PLUGINS_SEPERATOR ","
+ #define ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR ','
+ 
++#ifdef ENABLE_SHIM_V2
++#define SHIM_V2_LOG "/log"
++#endif
++
+ #define MAX_HOSTS 10
+ 
+ #define OPT_MAX_LEN 255
+diff --git a/src/contrib/config/config.json b/src/contrib/config/config.json
+index cfcdc375..f84f3394 100644
+--- a/src/contrib/config/config.json
++++ b/src/contrib/config/config.json
+@@ -210,13 +210,6 @@
+ 					"major": 10,
+ 					"minor": 200,
+ 					"access": "rwm"
+-				},
+-				{
+-					"allow": false,
+-					"type": "c",
+-					"major": 10,
+-					"minor": 229,
+-					"access": "rwm"
+ 				}
+ 			]
+ 		},
+diff --git a/src/daemon/modules/runtime/shim/shim_rt_ops.c b/src/daemon/modules/runtime/shim/shim_rt_ops.c
+index 9d23a0e7..1b497358 100644
+--- a/src/daemon/modules/runtime/shim/shim_rt_ops.c
++++ b/src/daemon/modules/runtime/shim/shim_rt_ops.c
+@@ -250,9 +250,11 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
+ {
+     int ret = 0;
+     int pid = 0;
++    int fd = -1;
+     char addr[PATH_MAX] = {0};
+     char *exit_fifo_path = NULL;
+     char *state_path = NULL;
++    char *log_path = NULL;
+ 
+     if (id == NULL || runtime == NULL || params == NULL) {
+         ERROR("Invalid input params");
+@@ -273,6 +275,21 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
+         goto out;
+     }
+ 
++    log_path = util_string_append(SHIM_V2_LOG, params->bundle);
++    if (log_path == NULL) {
++        ERROR("Fail to append log path");
++        ret = -1;
++        goto out;
++    }
++
++    fd = util_open(log_path, O_RDWR | O_CREAT | O_TRUNC, DEFAULT_SECURE_FILE_MODE);
++    if (fd < 0) {
++        ERROR("Failed to create log file for shim v2: %s", log_path);
++        ret = -1;
++        goto out;
++    }
++    close(fd);
++    
+     if (shim_bin_v2_create(runtime, id, params->bundle, NULL, addr, state_path) != 0) {
+         ERROR("%s: failed to create v2 shim", id);
+         ret = -1;
+@@ -294,6 +311,7 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
+     }
+ 
+ out:
++    free(log_path);
+     free(exit_fifo_path);
+     free(state_path);
+     return ret;
+-- 
+2.25.1
+

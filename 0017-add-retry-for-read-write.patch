@@ -1,0 +1,337 @@
+From 82f9d555929be506738a2113bb0f0034e402ccd0 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Fri, 17 Feb 2023 16:07:53 +0800
+Subject: [PATCH 17/19] add retry for read/write
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/cmd/isulad-shim/common.c                             | 6 +++---
+ src/cmd/isulad/main.c                                    | 4 ++--
+ src/daemon/common/selinux_label.c                        | 2 +-
+ src/daemon/entry/connect/grpc/grpc_containers_service.cc | 9 ++++++---
+ src/daemon/entry/cri/sysctl_tools.c                      | 2 +-
+ src/daemon/executor/container_cb/execution.c             | 2 +-
+ .../modules/container/container_gc/containers_gc.c       | 3 ++-
+ src/daemon/modules/events_sender/event_sender.c          | 2 +-
+ src/daemon/modules/image/oci/storage/storage.c           | 4 +++-
+ src/daemon/modules/log/log_gather.c                      | 6 +++---
+ src/daemon/modules/plugin/plugin.c                       | 2 +-
+ src/daemon/modules/runtime/isula/isula_rt_ops.c          | 4 ++--
+ src/daemon/modules/service/io_handler.c                  | 2 +-
+ src/daemon/modules/service/service_container.c           | 2 +-
+ src/utils/cutils/utils.c                                 | 2 +-
+ src/utils/cutils/utils_aes.c                             | 2 +-
+ src/utils/cutils/utils_file.c                            | 2 +-
+ src/utils/tar/util_archive.c                             | 4 ++--
+ src/utils/tar/util_gzip.c                                | 2 +-
+ 19 files changed, 34 insertions(+), 28 deletions(-)
+
+diff --git a/src/cmd/isulad-shim/common.c b/src/cmd/isulad-shim/common.c
+index bb8464bb..0c345187 100644
+--- a/src/cmd/isulad-shim/common.c
++++ b/src/cmd/isulad-shim/common.c
+@@ -196,7 +196,7 @@ int generate_random_str(char *id, size_t len)
+     }
+     for (i = 0; i < len; i++) {
+         int nret;
+-        if (read(fd, &num, sizeof(int)) < 0) {
++        if (read_nointr(fd, &num, sizeof(int)) < 0) {
+             close(fd);
+             return SHIM_ERR;
+         }
+@@ -232,8 +232,8 @@ void write_message(int fd, const char *level, const char *fmt, ...)
+     va_end(arg_list);
+ 
+     snprintf(msg, MAX_MESSAGE_LEN - 1, "{\"level\": \"%s\", \"msg\": \"%s\"}\n", level, buf);
+-    nwrite = write(fd, msg, strlen(msg));
+-    if (nwrite != strlen(msg)) {
++    nwrite = write_nointr_in_total(fd, msg, strlen(msg));
++    if (nwrite < 0 || (size_t)nwrite != strlen(msg)) {
+         return;
+     }
+ }
+diff --git a/src/cmd/isulad/main.c b/src/cmd/isulad/main.c
+index d22ab407..6d121f33 100644
+--- a/src/cmd/isulad/main.c
++++ b/src/cmd/isulad/main.c
+@@ -478,8 +478,8 @@ int check_and_save_pid(const char *fn)
+         goto out;
+     }
+ 
+-    len = (int)write(fd, pidbuf, strlen(pidbuf));
+-    if (len < 0) {
++    len = util_write_nointr(fd, pidbuf, strlen(pidbuf));
++    if (len < 0 || (size_t)len != strlen(pidbuf)) {
+         ERROR("Failed to write pid to file:%s: %s", fn, strerror(errno));
+         ret = -1;
+     }
+diff --git a/src/daemon/common/selinux_label.c b/src/daemon/common/selinux_label.c
+index 24294780..173f3acb 100644
+--- a/src/daemon/common/selinux_label.c
++++ b/src/daemon/common/selinux_label.c
+@@ -310,7 +310,7 @@ static int get_random_value(unsigned int range, unsigned int *val)
+         return -1;
+     }
+ 
+-    if (read(fd, &num, sizeof(int)) < 0) {
++    if (util_read_nointr(fd, &num, sizeof(int)) < 0) {
+         ERROR("Failed to read urandom value\n");
+         ret = -1;
+         goto out;
+diff --git a/src/daemon/entry/connect/grpc/grpc_containers_service.cc b/src/daemon/entry/connect/grpc/grpc_containers_service.cc
+index bc5c73f9..f69613ce 100644
+--- a/src/daemon/entry/connect/grpc/grpc_containers_service.cc
++++ b/src/daemon/entry/connect/grpc/grpc_containers_service.cc
+@@ -384,7 +384,8 @@ Status ContainerServiceImpl::RemoteStart(ServerContext *context,
+                 break;
+             }
+             const std::string &command = request.stdin();
+-            if (write(read_pipe_fd[1], (void *)(command.c_str()), command.length()) < 0) {
++            int nret = util_write_nointr_in_total(read_pipe_fd[1], command.c_str(), command.length());
++            if (nret < 0 || (size_t)nret != command.length()) {
+                 ERROR("sub write over!");
+                 break;
+             }
+@@ -668,7 +669,8 @@ public:
+             }
+             for (int i = 0; i < request.cmd_size(); i++) {
+                 std::string command = request.cmd(i);
+-                if (write(m_read_pipe_fd, (void *)(command.c_str()), command.length()) < 0) {
++                int nret = util_write_nointr_in_total(m_read_pipe_fd, command.c_str(), command.length());
++                if (nret < 0 || (size_t)nret != command.length()) {
+                     ERROR("sub write over!");
+                     return;
+                 }
+@@ -946,7 +948,8 @@ Status ContainerServiceImpl::Attach(ServerContext *context, ServerReaderWriter<A
+                 break;
+             }
+             std::string command = request.stdin();
+-            if (write(pipefd[1], (void *)(command.c_str()), command.length()) < 0) {
++            int nret = util_write_nointr_in_total(pipefd[1], command.c_str(), command.length());
++            if (nret < 0 || (size_t)nret != command.length()) {
+                 ERROR("sub write over!");
+                 break;
+             }
+diff --git a/src/daemon/entry/cri/sysctl_tools.c b/src/daemon/entry/cri/sysctl_tools.c
+index 257ccf8f..3c558fa1 100644
+--- a/src/daemon/entry/cri/sysctl_tools.c
++++ b/src/daemon/entry/cri/sysctl_tools.c
+@@ -99,7 +99,7 @@ int set_sysctl(const char *sysctl, int new_value, char **err)
+         goto free_out;
+     }
+     rsize = util_write_nointr(fd, buff, strlen(buff));
+-    if (rsize <= 0) {
++    if (rsize < 0 || (size_t)rsize != strlen(buff)) {
+         if (asprintf(err, "Write new value failed: %s", strerror(errno)) < 0) {
+             *err = util_strdup_s("Out of memory");
+         }
+diff --git a/src/daemon/executor/container_cb/execution.c b/src/daemon/executor/container_cb/execution.c
+index 4ca2eb8b..735c1bff 100644
+--- a/src/daemon/executor/container_cb/execution.c
++++ b/src/daemon/executor/container_cb/execution.c
+@@ -342,7 +342,7 @@ static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const
+         return -1;
+     }
+     nwrite = util_write_nointr(fd, buf, strlen(buf));
+-    if (nwrite < 0 || nwrite != strlen(buf)) {
++    if (nwrite < 0 || (size_t)nwrite != strlen(buf)) {
+         ERROR("Failed to write %s to %s: %s", buf, fpath, strerror(errno));
+         isulad_set_error_message("Failed to write '%s' to '%s': %s", buf, fpath, strerror(errno));
+         close(fd);
+diff --git a/src/daemon/modules/container/container_gc/containers_gc.c b/src/daemon/modules/container/container_gc/containers_gc.c
+index 8c858a96..9feb6d3c 100644
+--- a/src/daemon/modules/container/container_gc/containers_gc.c
++++ b/src/daemon/modules/container/container_gc/containers_gc.c
+@@ -88,7 +88,8 @@ static int save_gc_config(const char *json_gc_config)
+         goto out;
+     }
+ 
+-    if (write(fd, json_gc_config, strlen(json_gc_config)) == -1) {
++    nret = util_write_nointr(fd, json_gc_config, strlen(json_gc_config));
++    if (nret < 0 || (size_t)nret != strlen(json_gc_config)) {
+         ERROR("write %s failed: %s", filename, strerror(errno));
+         ret = -1;
+     }
+diff --git a/src/daemon/modules/events_sender/event_sender.c b/src/daemon/modules/events_sender/event_sender.c
+index 03dcbbf3..a3903f3e 100644
+--- a/src/daemon/modules/events_sender/event_sender.c
++++ b/src/daemon/modules/events_sender/event_sender.c
+@@ -58,7 +58,7 @@ static void isulad_monitor_fifo_send(const struct monitord_msg *msg)
+ 
+     do {
+         ret = util_write_nointr(fd, msg, sizeof(struct monitord_msg));
+-        if (ret != sizeof(struct monitord_msg)) {
++        if (ret < 0 || (size_t)ret != sizeof(struct monitord_msg)) {
+             util_usleep_nointerupt(1000);
+         }
+     } while (ret != sizeof(struct monitord_msg));
+diff --git a/src/daemon/modules/image/oci/storage/storage.c b/src/daemon/modules/image/oci/storage/storage.c
+index 829ea8d0..2f4bdf5f 100644
+--- a/src/daemon/modules/image/oci/storage/storage.c
++++ b/src/daemon/modules/image/oci/storage/storage.c
+@@ -1429,6 +1429,7 @@ static int do_add_checked_layer(const char *lid, int fd, map_t *checked_layers)
+     bool default_value = true;
+     char buf[PATH_MAX] = { 0 };
+     int ret = 0;
++    int nret;
+ 
+     if (strlen(lid) >= PATH_MAX - 1) {
+         ERROR("Invalid layer id: %s", lid);
+@@ -1438,7 +1439,8 @@ static int do_add_checked_layer(const char *lid, int fd, map_t *checked_layers)
+     (void)memcpy(buf, lid, strlen(lid));
+     buf[strlen(lid)] = '\n';
+     // save checked layer ids into file
+-    if (util_write_nointr(fd, buf, strlen(lid) + 1) < 0) {
++    nret = util_write_nointr(fd, buf, strlen(lid) + 1);
++    if (nret < 0 || (size_t)nret != strlen(lid) + 1) {
+         ERROR("Write checked layer data failed: %s", strerror(errno));
+         ret = -1;
+         goto out;
+diff --git a/src/daemon/modules/log/log_gather.c b/src/daemon/modules/log/log_gather.c
+index 49facaa2..414c9ad1 100644
+--- a/src/daemon/modules/log/log_gather.c
++++ b/src/daemon/modules/log/log_gather.c
+@@ -183,9 +183,9 @@ static int write_into_file(const void *buf, size_t g_log_size)
+             return -1;
+         }
+     }
+-    ret = (int)write(g_log_fd, buf, g_log_size);
+-    if (ret <= 0) {
+-        return ret;
++    ret = util_write_nointr_in_total(g_log_fd, buf, g_log_size);
++    if (ret < 0 || (size_t)ret != g_log_size) {
++        return -1;
+     }
+ 
+     write_size += ret;
+diff --git a/src/daemon/modules/plugin/plugin.c b/src/daemon/modules/plugin/plugin.c
+index 53afeeaf..1c0af368 100644
+--- a/src/daemon/modules/plugin/plugin.c
++++ b/src/daemon/modules/plugin/plugin.c
+@@ -618,7 +618,7 @@ static int process_plugin_events(int inotify_fd, const char *plugin_dir)
+     struct inotify_event *plugin_event = NULL;
+     char buffer[8192 + 1] = { 0 };
+     int action = 0;
+-    events_length = read(inotify_fd, buffer, 8192);
++    events_length = util_read_nointr(inotify_fd, buffer, 8192);
+ 
+     if (events_length <= 0) {
+         ERROR("Failed to wait events");
+diff --git a/src/daemon/modules/runtime/isula/isula_rt_ops.c b/src/daemon/modules/runtime/isula/isula_rt_ops.c
+index 99f8be5e..e80aa9a4 100644
+--- a/src/daemon/modules/runtime/isula/isula_rt_ops.c
++++ b/src/daemon/modules/runtime/isula/isula_rt_ops.c
+@@ -1355,8 +1355,8 @@ int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resi
+         goto out;
+     }
+ 
+-    count = write(fd, data, RESIZE_DATA_SIZE);
+-    if (count <= 0) {
++    count = util_write_nointr(fd, data, strlen(data));
++    if (count < 0 || (size_t)count != strlen(data)) {
+         ERROR("write exec resize data error");
+         ret = -1;
+         goto out;
+diff --git a/src/daemon/modules/service/io_handler.c b/src/daemon/modules/service/io_handler.c
+index 893733bc..98c763a4 100644
+--- a/src/daemon/modules/service/io_handler.c
++++ b/src/daemon/modules/service/io_handler.c
+@@ -340,7 +340,7 @@ static ssize_t write_to_fd(void *context, const void *data, size_t len)
+ {
+     ssize_t ret;
+     ret = util_write_nointr(*(int *)context, data, len);
+-    if ((ret <= 0) || (ret != (ssize_t)len)) {
++    if (ret < 0 || (size_t)ret != len) {
+         ERROR("Failed to write: %s", strerror(errno));
+         return -1;
+     }
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index f30a3f8e..6dc06c83 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -340,7 +340,7 @@ static int write_env_content(const char *env_path, const char **env, size_t env_
+                 goto out;
+             }
+             nret = util_write_nointr(fd, env_content, strlen(env_content));
+-            if (nret < 0 || nret != len - 1) {
++            if (nret < 0 || (size_t)nret != strlen(env_content)) {
+                 SYSERROR("Write env file failed");
+                 free(env_content);
+                 ret = -1;
+diff --git a/src/utils/cutils/utils.c b/src/utils/cutils/utils.c
+index b1db045a..2c3709ad 100644
+--- a/src/utils/cutils/utils.c
++++ b/src/utils/cutils/utils.c
+@@ -1237,7 +1237,7 @@ int util_generate_random_str(char *id, size_t len)
+     }
+     for (i = 0; i < len; i++) {
+         int nret;
+-        if (read(fd, &num, sizeof(int)) < 0) {
++        if (util_read_nointr(fd, &num, sizeof(int)) < 0) {
+             ERROR("Failed to read urandom value");
+             close(fd);
+             return -1;
+diff --git a/src/utils/cutils/utils_aes.c b/src/utils/cutils/utils_aes.c
+index 1e25ecd3..055a9538 100644
+--- a/src/utils/cutils/utils_aes.c
++++ b/src/utils/cutils/utils_aes.c
+@@ -77,7 +77,7 @@ int util_aes_key(const char *key_file, bool create, unsigned char *aeskey)
+             goto out;
+         }
+ 
+-        if (read(fd, aeskey, AES_256_CFB_KEY_LEN) != AES_256_CFB_KEY_LEN) {
++        if (util_read_nointr(fd, aeskey, AES_256_CFB_KEY_LEN) != AES_256_CFB_KEY_LEN) {
+             ERROR("read key file %s failed: %s", key_file, strerror(errno));
+             ret = -1;
+             goto out;
+diff --git a/src/utils/cutils/utils_file.c b/src/utils/cutils/utils_file.c
+index 7b1d5cb6..4c62aaa6 100644
+--- a/src/utils/cutils/utils_file.c
++++ b/src/utils/cutils/utils_file.c
+@@ -1012,7 +1012,7 @@ int util_file2str(const char *filename, char *buf, size_t len)
+     if (fd == -1) {
+         return -1;
+     }
+-    num_read = (int)read(fd, buf, len - 1);
++    num_read = (int)util_read_nointr(fd, buf, len - 1);
+     if (num_read <= 0) {
+         num_read = -1;
+     } else {
+diff --git a/src/utils/tar/util_archive.c b/src/utils/tar/util_archive.c
+index da814c94..630ad8f8 100644
+--- a/src/utils/tar/util_archive.c
++++ b/src/utils/tar/util_archive.c
+@@ -659,7 +659,7 @@ child_out:
+     if (ret != 0) {
+         ERROR("Wait archive_untar_handler failed with error:%s", strerror(errno));
+         fcntl(pipe_stderr[0], F_SETFL, O_NONBLOCK);
+-        if (read(pipe_stderr[0], errbuf, BUFSIZ) < 0) {
++        if (util_read_nointr(pipe_stderr[0], errbuf, BUFSIZ) < 0) {
+             ERROR("read error message from child failed");
+         }
+     }
+@@ -1054,7 +1054,7 @@ child_out:
+     if (ret != 0) {
+         ERROR("tar failed");
+         fcntl(pipe_for_read[0], F_SETFL, O_NONBLOCK);
+-        if (read(pipe_for_read[0], errbuf, BUFSIZ) < 0) {
++        if (util_read_nointr(pipe_for_read[0], errbuf, BUFSIZ) < 0) {
+             ERROR("read error message from child failed");
+         }
+     }
+diff --git a/src/utils/tar/util_gzip.c b/src/utils/tar/util_gzip.c
+index 5c34d719..2f4750be 100644
+--- a/src/utils/tar/util_gzip.c
++++ b/src/utils/tar/util_gzip.c
+@@ -212,7 +212,7 @@ int gzip(const char *filename, size_t len)
+         return -1;
+     }
+ 
+-    size_read = read(pipefd[0], buffer, BUFSIZ);
++    size_read = util_read_nointr(pipefd[0], buffer, BUFSIZ);
+     close(pipefd[0]);
+ 
+     if (size_read) {
+-- 
+2.25.1
+

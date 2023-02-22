@@ -1,0 +1,850 @@
+From adc75018f7eda4b205034999893634d1b98b2701 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Thu, 16 Feb 2023 15:42:02 +0800
+Subject: [PATCH 15/19] fix cpu-rt disable after reboot machine
+
+1. ensure parent cgroup cpu-rt of container, should do in start container;
+2. current do in create container, will cause failed of start container with cpu-rt after reboot machine
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/daemon/common/sysinfo.c                   |  48 ++++
+ src/daemon/common/sysinfo.h                   |   2 +
+ src/daemon/executor/container_cb/execution.c  | 177 +++++++++++++-
+ .../executor/container_cb/execution_create.c  | 221 +-----------------
+ src/daemon/modules/api/specs_api.h            |   2 +-
+ src/daemon/modules/spec/specs.c               |  88 ++++---
+ test/specs/specs/specs_ut.cc                  |  60 +++--
+ 7 files changed, 306 insertions(+), 292 deletions(-)
+
+diff --git a/src/daemon/common/sysinfo.c b/src/daemon/common/sysinfo.c
+index e7b3807b..8ad92b2a 100644
+--- a/src/daemon/common/sysinfo.c
++++ b/src/daemon/common/sysinfo.c
+@@ -1627,3 +1627,51 @@ free_out:
+     }
+     return minfos;
+ }
++
++char *sysinfo_cgroup_controller_cpurt_mnt_path(void)
++{
++    char *res = NULL;
++    int nret = 0;
++    char *mnt = NULL;
++    char *root = NULL;
++    char fpath[PATH_MAX] = { 0 };
++    sysinfo_t *sysinfo = NULL;
++
++    sysinfo = get_sys_info(true);
++    if (sysinfo == NULL) {
++        ERROR("Can not get system info");
++        return NULL;
++    }
++
++    if (!(sysinfo->cgcpuinfo.cpu_rt_period)) {
++        ERROR("Daemon-scoped cpu-rt-period and cpu-rt-runtime are not supported by kernel");
++        isulad_set_error_message("Daemon-scoped cpu-rt-period and cpu-rt-runtime are not supported by kernel");
++        return NULL;
++    }
++
++    nret = find_cgroup_mountpoint_and_root("cpu", &mnt, &root);
++    if (nret != 0 || mnt == NULL || root == NULL) {
++        ERROR("Can not find cgroup mnt and root path for subsystem 'cpu'");
++        isulad_set_error_message("Can not find cgroup mnt and root path for subsystem 'cpu'");
++        goto out;
++    }
++
++    // When iSulad is run inside docker, the root is based of the host cgroup.
++    // Replace root to "/"
++    if (strncmp(root, "/docker/", strlen("/docker/")) == 0) {
++        root[1] = '\0';
++    }
++
++    nret = snprintf(fpath, sizeof(fpath), "%s/%s", mnt, root);
++    if (nret < 0 || (size_t)nret >= sizeof(fpath)) {
++        ERROR("Failed to print string");
++        goto out;
++    }
++
++    res = util_strdup_s(fpath);
++
++out:
++    free(mnt);
++    free(root);
++    return res;
++}
+\ No newline at end of file
+diff --git a/src/daemon/common/sysinfo.h b/src/daemon/common/sysinfo.h
+index 8468e00a..027cb1de 100644
+--- a/src/daemon/common/sysinfo.h
++++ b/src/daemon/common/sysinfo.h
+@@ -139,6 +139,8 @@ mountinfo_t *find_mount_info(mountinfo_t **minfos, const char *dir);
+ 
+ void free_mounts_info(mountinfo_t **minfos);
+ 
++char *sysinfo_cgroup_controller_cpurt_mnt_path(void);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/src/daemon/executor/container_cb/execution.c b/src/daemon/executor/container_cb/execution.c
+index 68d0d8d6..4dd5f858 100644
+--- a/src/daemon/executor/container_cb/execution.c
++++ b/src/daemon/executor/container_cb/execution.c
+@@ -17,7 +17,13 @@
+ #include <stdio.h>
+ #include <pthread.h>
+ #include <malloc.h>
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <string.h>
++#include <libgen.h>
+ #include <sys/eventfd.h>
++
+ #include <isula_libutils/container_config.h>
+ #include <isula_libutils/container_config_v2.h>
+ #include <isula_libutils/container_delete_request.h>
+@@ -34,12 +40,11 @@
+ #include <isula_libutils/container_stop_request.h>
+ #include <isula_libutils/container_stop_response.h>
+ #include <isula_libutils/json_common.h>
+-#include <stdbool.h>
+-#include <stdint.h>
+-#include <stdlib.h>
+-#include <string.h>
++#include <isula_libutils/log.h>
+ 
+-#include "isula_libutils/log.h"
++#include "sysinfo.h"
++#include "isulad_config.h"
++#include "specs_api.h"
+ #include "container_api.h"
+ #include "execution_extend.h"
+ #include "execution_information.h"
+@@ -297,6 +302,155 @@ static void pack_start_response(container_start_response *response, uint32_t cc,
+     }
+ }
+ 
++static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
++                                      int64_t cpu_rt_period, int64_t cpu_rt_runtime);
++
++/* maybe create cpu realtime file */
++static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const char *path)
++{
++    int ret;
++    int fd = -1;
++    ssize_t nwrite;
++    char fpath[PATH_MAX] = { 0 };
++    char buf[ISULAD_NUMSTRLEN64] = { 0 };
++
++    if (value == 0) {
++        return 0;
++    }
++
++    ret = util_mkdir_p(path, CONFIG_DIRECTORY_MODE);
++    if (ret != 0) {
++        ERROR("Failed to mkdir: %s", path);
++        return -1;
++    }
++
++    ret = snprintf(fpath, sizeof(fpath), "%s/%s", path, file);
++    if (ret < 0 || ret >= sizeof(fpath)) {
++        ERROR("Failed to print string");
++        return -1;
++    }
++    ret = snprintf(buf, sizeof(buf), "%lld", (long long int)value);
++    if (ret < 0 || (size_t)ret >= sizeof(buf)) {
++        ERROR("Failed to print string");
++        return -1;
++    }
++
++    fd = util_open(fpath, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0700);
++    if (fd < 0) {
++        ERROR("Failed to open file: %s: %s", fpath, strerror(errno));
++        isulad_set_error_message("Failed to open file: %s: %s", fpath, strerror(errno));
++        return -1;
++    }
++    nwrite = util_write_nointr(fd, buf, strlen(buf));
++    if (nwrite < 0 || nwrite != strlen(buf)) {
++        ERROR("Failed to write %s to %s: %s", buf, fpath, strerror(errno));
++        isulad_set_error_message("Failed to write '%s' to '%s': %s", buf, fpath, strerror(errno));
++        close(fd);
++        return -1;
++    }
++    close(fd);
++
++    return 0;
++}
++
++static int recursively_create_cgroup(const char *path, const char *mnt_root, int recursive_depth, int64_t cpu_rt_period,
++                                     int64_t cpu_rt_runtime)
++{
++    int nret;
++    char *dup = NULL;
++    char *dirpath = NULL;
++    char fpath[PATH_MAX] = { 0 };
++
++    dup = util_strdup_s(path);
++    dirpath = dirname(dup);
++    nret = do_init_cpurt_cgroups_path(dirpath, (recursive_depth + 1), mnt_root, cpu_rt_period, cpu_rt_runtime);
++    free(dup);
++    if (nret != 0) {
++        return -1;
++    }
++
++    nret = snprintf(fpath, sizeof(fpath), "%s/%s", mnt_root, path);
++    if (nret < 0 || (size_t)nret >= sizeof(fpath)) {
++        ERROR("Failed to print string");
++        return -1;
++    }
++
++    nret = maybe_create_cpu_realtime_file(cpu_rt_period, "cpu.rt_period_us", fpath);
++    if (nret != 0) {
++        return -1;
++    }
++
++    return maybe_create_cpu_realtime_file(cpu_rt_runtime, "cpu.rt_runtime_us", fpath);
++}
++
++/* init cgroups path */
++static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
++                                      int64_t cpu_rt_period, int64_t cpu_rt_runtime)
++{
++    if ((recursive_depth + 1) > MAX_PATH_DEPTH) {
++        ERROR("Reach the max cgroup depth:%s", path);
++        return -1;
++    }
++
++    if (path == NULL || strcmp(path, "/") == 0 || strcmp(path, ".") == 0) {
++        return 0;
++    }
++
++    // Recursively create cgroup to ensure that the system and all parent cgroups have values set
++    // for the period and runtime as this limits what the children can be set to.
++    if (recursively_create_cgroup(path, mnt_root, recursive_depth, cpu_rt_period, cpu_rt_runtime)) {
++        return -1;
++    }
++
++    return 0;
++}
++
++// TODO: maybe we should adapt to cgroup v2
++static int cpurt_controller_init(const char *id, const host_config *host_spec)
++{
++    int ret = 0;
++    int64_t cpu_rt_period = 0;
++    int64_t cpu_rt_runtime = 0;
++    char *dirpath = NULL;
++    char *mnt_root = NULL;
++    char *cgroups_path = NULL;
++
++    if (conf_get_cgroup_cpu_rt(&cpu_rt_period, &cpu_rt_runtime)) {
++        return -1;
++    }
++
++    if (cpu_rt_period == 0 && cpu_rt_runtime == 0) {
++        return 0;
++    }
++
++    cgroups_path = merge_container_cgroups_path(id, host_spec);
++    if (cgroups_path == NULL) {
++        ERROR("Merge cgroups path for container failed");
++        ret = -1;
++        goto out;
++    }
++    if (strcmp(cgroups_path, "/") == 0 || strcmp(cgroups_path, ".") == 0) {
++        goto out;
++    }
++
++    mnt_root = sysinfo_cgroup_controller_cpurt_mnt_path();
++    if (mnt_root == NULL) {
++        ERROR("Failed to get cpu rt controller mnt root path");
++        isulad_set_error_message("Failed to get cpu rt controller mnt root path");
++        ret = -1;
++        goto out;
++    }
++
++    dirpath = dirname(cgroups_path);
++
++    ret = do_init_cpurt_cgroups_path(dirpath, 0, mnt_root, cpu_rt_period, cpu_rt_runtime);
++
++out:
++    free(mnt_root);
++    free(cgroups_path);
++    return ret;
++}
++
+ static int container_start_prepare(container_t *cont, const container_start_request *request, int stdinfd,
+                                    struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
+                                    char **fifopath, char *fifos[], int *sync_fd, pthread_t *thread_id)
+@@ -309,6 +463,19 @@ static int container_start_prepare(container_t *cont, const container_start_requ
+         return -1;
+     }
+ 
++    // init cgroup path for cpu_rt_runtime and cpu_rt_period
++    // we should do this in start container, not create container
++    // because it will fail after the following steps: 
++    // 1. enable cpu-rt of isulad;
++    // 2. then run container with --cpu-rt-runtime
++    // 3. then reboot machine;
++    // 4. finally, start before container, it will failed...
++    // cause of no one to set value into cgroup/isulad/cpu-rt-runtime and cpu-rt-period.
++    if (cpurt_controller_init(id, cont->hostconfig) != 0) {
++        isulad_set_error_message("Failed to init controller of cpu-rt for container \"%s\".", id);
++        return -1;
++    }
++
+     if (prepare_start_io(cont, request, fifopath, fifos, stdinfd, stdout_handler, stderr_handler, sync_fd, thread_id) !=
+         0) {
+         return -1;
+diff --git a/src/daemon/executor/container_cb/execution_create.c b/src/daemon/executor/container_cb/execution_create.c
+index 0d03afcb..a039ba6b 100644
+--- a/src/daemon/executor/container_cb/execution_create.c
++++ b/src/daemon/executor/container_cb/execution_create.c
+@@ -19,6 +19,13 @@
+ #include <errno.h>
+ #include <sys/stat.h>
+ #include <malloc.h>
++#include <limits.h>
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include <isula_libutils/log.h>
+ #include <isula_libutils/container_config.h>
+ #include <isula_libutils/container_config_v2.h>
+ #include <isula_libutils/defs.h>
+@@ -28,14 +35,7 @@
+ #include <isula_libutils/isulad_daemon_configs.h>
+ #include <isula_libutils/json_common.h>
+ #include <isula_libutils/oci_runtime_spec.h>
+-#include <limits.h>
+-#include <stdbool.h>
+-#include <stdint.h>
+-#include <stdlib.h>
+-#include <string.h>
+-#include <libgen.h>
+ 
+-#include "isula_libutils/log.h"
+ #include "isulad_config.h"
+ #include "specs_api.h"
+ #include "verify.h"
+@@ -61,9 +61,6 @@
+ #include "opt_log.h"
+ #include "network_namespace_api.h"
+ 
+-static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
+-                                      int64_t cpu_rt_period, int64_t cpu_rt_runtime);
+-
+ static int runtime_check(const char *name, bool *runtime_res)
+ {
+     int ret = 0;
+@@ -1291,148 +1288,6 @@ static int save_container_config_before_create(const char *id, const char *runti
+     return 0;
+ }
+ 
+-/* maybe create cpu realtime file */
+-static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const char *path)
+-{
+-    int ret;
+-    int fd = -1;
+-    ssize_t nwrite;
+-    char fpath[PATH_MAX] = { 0 };
+-    char buf[ISULAD_NUMSTRLEN64] = { 0 };
+-
+-    if (value == 0) {
+-        return 0;
+-    }
+-
+-    ret = util_mkdir_p(path, CONFIG_DIRECTORY_MODE);
+-    if (ret != 0) {
+-        ERROR("Failed to mkdir: %s", path);
+-        return -1;
+-    }
+-
+-    ret = snprintf(fpath, sizeof(fpath), "%s/%s", path, file);
+-    if (ret < 0 || ret >= sizeof(fpath)) {
+-        ERROR("Failed to print string");
+-        return -1;
+-    }
+-    ret = snprintf(buf, sizeof(buf), "%lld", (long long int)value);
+-    if (ret < 0 || (size_t)ret >= sizeof(buf)) {
+-        ERROR("Failed to print string");
+-        return -1;
+-    }
+-
+-    fd = util_open(fpath, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0700);
+-    if (fd < 0) {
+-        ERROR("Failed to open file: %s: %s", fpath, strerror(errno));
+-        isulad_set_error_message("Failed to open file: %s: %s", fpath, strerror(errno));
+-        return -1;
+-    }
+-    nwrite = util_write_nointr(fd, buf, strlen(buf));
+-    if (nwrite < 0) {
+-        ERROR("Failed to write %s to %s: %s", buf, fpath, strerror(errno));
+-        isulad_set_error_message("Failed to write '%s' to '%s': %s", buf, fpath, strerror(errno));
+-        close(fd);
+-        return -1;
+-    }
+-    close(fd);
+-
+-    return 0;
+-}
+-
+-static int recursively_create_cgroup(const char *path, const char *mnt_root, int recursive_depth, int64_t cpu_rt_period,
+-                                     int64_t cpu_rt_runtime)
+-{
+-    int ret = 0;
+-    char *dup = NULL;
+-    char *dirpath = NULL;
+-    char fpath[PATH_MAX] = { 0 };
+-
+-    dup = util_strdup_s(path);
+-    dirpath = dirname(dup);
+-    ret = do_init_cpurt_cgroups_path(dirpath, (recursive_depth + 1), mnt_root, cpu_rt_period, cpu_rt_runtime);
+-    free(dup);
+-    if (ret != 0) {
+-        return ret;
+-    }
+-
+-    int nret = snprintf(fpath, sizeof(fpath), "%s/%s", mnt_root, path);
+-    if (nret < 0 || (size_t)nret >= sizeof(fpath)) {
+-        ERROR("Failed to print string");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    ret = maybe_create_cpu_realtime_file(cpu_rt_period, "cpu.rt_period_us", fpath);
+-    if (ret != 0) {
+-        goto out;
+-    }
+-
+-    ret = maybe_create_cpu_realtime_file(cpu_rt_runtime, "cpu.rt_runtime_us", fpath);
+-    if (ret != 0) {
+-        goto out;
+-    }
+-
+-out:
+-    return ret;
+-}
+-
+-/* init cgroups path */
+-static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
+-                                      int64_t cpu_rt_period, int64_t cpu_rt_runtime)
+-{
+-    if ((recursive_depth + 1) > MAX_PATH_DEPTH) {
+-        ERROR("Reach the max cgroup depth:%s", path);
+-        return -1;
+-    }
+-
+-    if (path == NULL || strcmp(path, "/") == 0 || strcmp(path, ".") == 0) {
+-        return 0;
+-    }
+-
+-    // Recursively create cgroup to ensure that the system and all parent cgroups have values set
+-    // for the period and runtime as this limits what the children can be set to.
+-    if (recursively_create_cgroup(path, mnt_root, recursive_depth, cpu_rt_period, cpu_rt_runtime)) {
+-        return -1;
+-    }
+-
+-    return 0;
+-}
+-
+-static char *get_cpurt_controller_mnt_path()
+-{
+-    char *res = NULL;
+-    int nret = 0;
+-    char *mnt = NULL;
+-    char *root = NULL;
+-    char fpath[PATH_MAX] = { 0 };
+-
+-    nret = find_cgroup_mountpoint_and_root("cpu", &mnt, &root);
+-    if (nret != 0 || mnt == NULL || root == NULL) {
+-        ERROR("Can not find cgroup mnt and root path for subsystem 'cpu'");
+-        isulad_set_error_message("Can not find cgroup mnt and root path for subsystem 'cpu'");
+-        goto out;
+-    }
+-
+-    // When iSulad is run inside docker, the root is based of the host cgroup.
+-    // Replace root to "/"
+-    if (strncmp(root, "/docker/", strlen("/docker/")) == 0) {
+-        root[1] = '\0';
+-    }
+-
+-    nret = snprintf(fpath, sizeof(fpath), "%s/%s", mnt, root);
+-    if (nret < 0 || (size_t)nret >= sizeof(fpath)) {
+-        ERROR("Failed to print string");
+-        goto out;
+-    }
+-
+-    res = util_strdup_s(fpath);
+-
+-out:
+-    free(mnt);
+-    free(root);
+-    return res;
+-}
+-
+ static char *new_pod_sandbox_key(void)
+ {
+     int nret = 0;
+@@ -1495,61 +1350,6 @@ err_out:
+     return -1;
+ }
+ 
+-static int cpurt_controller_init(const char *cgroups_path)
+-{
+-    int ret = 0;
+-    char *dup = NULL;
+-    char *dirpath = NULL;
+-    int64_t cpu_rt_period = 0;
+-    int64_t cpu_rt_runtime = 0;
+-    sysinfo_t *sysinfo = NULL;
+-    char *mnt_root = NULL;
+-
+-    if (cgroups_path == NULL || strcmp(cgroups_path, "/") == 0 || strcmp(cgroups_path, ".") == 0) {
+-        return 0;
+-    }
+-
+-    if (conf_get_cgroup_cpu_rt(&cpu_rt_period, &cpu_rt_runtime)) {
+-        return -1;
+-    }
+-
+-    if (cpu_rt_period == 0 && cpu_rt_runtime == 0) {
+-        return 0;
+-    }
+-
+-    sysinfo = get_sys_info(true);
+-    if (sysinfo == NULL) {
+-        ERROR("Can not get system info");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    if (!(sysinfo->cgcpuinfo.cpu_rt_period)) {
+-        ERROR("Daemon-scoped cpu-rt-period and cpu-rt-runtime are not supported by kernel");
+-        isulad_set_error_message("Daemon-scoped cpu-rt-period and cpu-rt-runtime are not supported by kernel");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    mnt_root = get_cpurt_controller_mnt_path();
+-    if (mnt_root == NULL) {
+-        ERROR("Failed to get cpu rt controller mnt root path");
+-        isulad_set_error_message("Failed to get cpu rt controller mnt root path");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    dup = util_strdup_s(cgroups_path);
+-    dirpath = dirname(dup);
+-
+-    ret = do_init_cpurt_cgroups_path(dirpath, 0, mnt_root, cpu_rt_period, cpu_rt_runtime);
+-
+-out:
+-    free(mnt_root);
+-    free(dup);
+-    return ret;
+-}
+-
+ /*
+  * request -> host_spec + container_spec
+  * container_spec + image config
+@@ -1707,13 +1507,6 @@ int container_create_cb(const container_create_request *request, container_creat
+         goto umount_channel;
+     }
+ 
+-    // init cgroup path for cpu_rt_runtime and cpu_rt_period
+-    if (cpurt_controller_init(oci_spec->linux->cgroups_path) != 0) {
+-        ERROR("Unable to init CPU RT controller %s", oci_spec->linux->cgroups_path);
+-        cc = ISULAD_ERR_EXEC;
+-        goto umount_channel;
+-    }
+-
+     if (container_v2_spec_merge_contaner_spec(v2_spec) != 0) {
+         ERROR("Failed to merge container settings");
+         cc = ISULAD_ERR_EXEC;
+diff --git a/src/daemon/modules/api/specs_api.h b/src/daemon/modules/api/specs_api.h
+index c4ad79aa..0a594d81 100644
+--- a/src/daemon/modules/api/specs_api.h
++++ b/src/daemon/modules/api/specs_api.h
+@@ -27,7 +27,7 @@ extern "C" {
+ 
+ int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_config_v2_common_config *v2_spec,
+                     oci_runtime_spec *oci_spec);
+-int merge_oci_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *host_spec);
++char *merge_container_cgroups_path(const char *id, const host_config *host_spec);
+ int merge_global_config(oci_runtime_spec *oci_spec);
+ oci_runtime_spec *load_oci_config(const char *rootpath, const char *name);
+ oci_runtime_spec *default_spec(bool system_container);
+diff --git a/src/daemon/modules/spec/specs.c b/src/daemon/modules/spec/specs.c
+index 138a0989..f32ff911 100644
+--- a/src/daemon/modules/spec/specs.c
++++ b/src/daemon/modules/spec/specs.c
+@@ -165,36 +165,45 @@ out:
+     return ret;
+ }
+ 
+-static int make_annotations_cgroup_dir(const container_config *container_spec, const host_config *host_spec)
++static char *do_get_container_cgroup_path(const host_config *host_spec)
+ {
+-    int ret = 0;
+-    char cleaned[PATH_MAX] = { 0 };
+-    char *default_cgroup_parent = NULL;
+     char *path = NULL;
+ 
+-    default_cgroup_parent = conf_get_isulad_cgroup_parent();
+     if (host_spec->cgroup_parent != NULL) {
+-        path = host_spec->cgroup_parent;
+-    } else if (default_cgroup_parent != NULL) {
+-        path = default_cgroup_parent;
++        // first, use user setting
++        path = util_strdup_s(host_spec->cgroup_parent);
++    } else {
++        // second, if user donot set, use setting from daemon config
++        path = conf_get_isulad_cgroup_parent();
+     }
++
+     if (path == NULL) {
+-        path = "/isulad";
++        // third, all faild, just use default '/isulad'
++        path = util_strdup_s("/isulad");
+     }
++
++    return path;
++}
++
++static int make_annotations_cgroup_dir(const container_config *container_spec, const host_config *host_spec)
++{
++    char cleaned[PATH_MAX] = { 0 };
++    char *path = NULL;
++
++    path = do_get_container_cgroup_path(host_spec);
+     if (util_clean_path(path, cleaned, sizeof(cleaned)) == NULL) {
+         ERROR("Failed to clean path: %s", path);
+-        ret = -1;
+-        goto out;
++        free(path);
++        return -1;
+     }
++    free(path);
++
+     if (append_json_map_string_string(container_spec->annotations, "cgroup.dir", cleaned)) {
+         ERROR("Realloc annotations failed");
+-        ret = -1;
+-        goto out;
++        return -1;
+     }
+ 
+-out:
+-    free(default_cgroup_parent);
+-    return ret;
++    return 0;
+ }
+ 
+ static int make_annotations_oom_score_adj(const container_config *container_spec, const host_config *host_spec)
+@@ -2048,42 +2057,45 @@ out:
+     return ret;
+ }
+ 
+-int merge_oci_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *host_spec)
++char *merge_container_cgroups_path(const char *id, const host_config *host_spec)
+ {
+-    int ret = 0;
+-    char *default_cgroup_parent = NULL;
+     char *path = NULL;
++    char *ret = NULL;
++
++    if (id == NULL || host_spec == NULL) {
++        ERROR("Invalid arguments");
++        return NULL;
++    }
++
++    path = do_get_container_cgroup_path(host_spec);
++
++    ret = util_path_join(path, id);
++    free(path);
++
++    return ret;
++}
+ 
++static int merge_oci_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *host_spec)
++{
+     if (id == NULL || oci_spec == NULL || host_spec == NULL) {
+         ERROR("Invalid arguments");
+-        ret = -1;
+-        goto out;
++        return -1;
+     }
+ 
+     if (make_sure_oci_spec_linux(oci_spec) != 0) {
+         ERROR("Failed to make oci spec linux");
+-        ret = -1;
+-        goto out;
++        return -1;
+     }
+ 
+-    default_cgroup_parent = conf_get_isulad_cgroup_parent();
+-    path = default_cgroup_parent;
+-    if (host_spec->cgroup_parent != NULL) {
+-        path = host_spec->cgroup_parent;
+-    }
++    free(oci_spec->linux->cgroups_path);
+ 
+-    if (path == NULL) {
+-        free(oci_spec->linux->cgroups_path);
+-        oci_spec->linux->cgroups_path = util_path_join("/isulad", id);
+-        return 0;
++    oci_spec->linux->cgroups_path = merge_container_cgroups_path(id, host_spec);
++    if (oci_spec->linux->cgroups_path == NULL) {
++        ERROR("Failed to merge OCI spec cgroups path");
++        return -1;
+     }
+ 
+-    free(oci_spec->linux->cgroups_path);
+-    oci_spec->linux->cgroups_path = util_path_join(path, id);
+-
+-out:
+-    free(default_cgroup_parent);
+-    return ret;
++    return 0;
+ }
+ 
+ int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_config_v2_common_config *v2_spec,
+diff --git a/test/specs/specs/specs_ut.cc b/test/specs/specs/specs_ut.cc
+index c4014e2e..a2bd3890 100644
+--- a/test/specs/specs/specs_ut.cc
++++ b/test/specs/specs/specs_ut.cc
+@@ -232,41 +232,36 @@ char *invoke_conf_get_isulad_cgroup_parent()
+     return util_strdup_s("/var/lib/isulad/engines/lcr");
+ }
+ 
+-TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_1)
++TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_1)
+ {
+-    ASSERT_EQ(merge_oci_cgroups_path(nullptr, nullptr, nullptr), -1);
++    ASSERT_EQ(merge_container_cgroups_path(nullptr, nullptr), nullptr);
+ }
+ 
+-TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_2)
++TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_2)
+ {
+-    oci_runtime_spec *oci_spec = nullptr;
+     host_config *host_spec = nullptr;
+-
+-    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
+-    ASSERT_TRUE(oci_spec != nullptr);
++    char *merged_cp = nullptr;
+ 
+     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
+     ASSERT_TRUE(host_spec != nullptr);
+ 
+     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent_null));
+ 
+-    ASSERT_EQ(merge_oci_cgroups_path("123", oci_spec, host_spec), 0);
++    merged_cp = merge_container_cgroups_path("123", host_spec);
++    ASSERT_NE(merged_cp, nullptr);
+ 
+-    ASSERT_STREQ(oci_spec->linux->cgroups_path, "/isulad/123");
++    ASSERT_STREQ(merged_cp, "/isulad/123");
+ 
+-    free_oci_runtime_spec(oci_spec);
+     free_host_config(host_spec);
++    free(merged_cp);
+ 
+     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
+ }
+ 
+-TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_3)
++TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_3)
+ {
+-    oci_runtime_spec *oci_spec = nullptr;
+     host_config *host_spec = nullptr;
+-
+-    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
+-    ASSERT_TRUE(oci_spec != nullptr);
++    char *merged_cp = nullptr;
+ 
+     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
+     ASSERT_TRUE(host_spec != nullptr);
+@@ -275,46 +270,42 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_3)
+ 
+     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent_null));
+ 
+-    ASSERT_EQ(merge_oci_cgroups_path("123", oci_spec, host_spec), 0);
++    merged_cp = merge_container_cgroups_path("123", host_spec);
++    ASSERT_NE(merged_cp, nullptr);
+ 
+-    ASSERT_STREQ(oci_spec->linux->cgroups_path, "/test/123");
++    ASSERT_STREQ(merged_cp, "/test/123");
+ 
+-    free_oci_runtime_spec(oci_spec);
+     free_host_config(host_spec);
++    free(merged_cp);
+ 
+     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
+ }
+ 
+-TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_4)
++TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_4)
+ {
+-    oci_runtime_spec *oci_spec = nullptr;
+     host_config *host_spec = nullptr;
+-
+-    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
+-    ASSERT_TRUE(oci_spec != nullptr);
++    char *merged_cp = nullptr;
+ 
+     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
+     ASSERT_TRUE(host_spec != nullptr);
+ 
+     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent));
+ 
+-    ASSERT_EQ(merge_oci_cgroups_path("123", oci_spec, host_spec), 0);
++    merged_cp = merge_container_cgroups_path("123", host_spec);
++    ASSERT_NE(merged_cp, nullptr);
+ 
+-    ASSERT_STREQ(oci_spec->linux->cgroups_path, "/var/lib/isulad/engines/lcr/123");
++    ASSERT_STREQ(merged_cp, "/var/lib/isulad/engines/lcr/123");
+ 
+-    free_oci_runtime_spec(oci_spec);
+     free_host_config(host_spec);
++    free(merged_cp);
+ 
+     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
+ }
+ 
+-TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_5)
++TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_5)
+ {
+-    oci_runtime_spec *oci_spec = nullptr;
+     host_config *host_spec = nullptr;
+-
+-    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
+-    ASSERT_TRUE(oci_spec != nullptr);
++    char *merged_cp = nullptr;
+ 
+     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
+     ASSERT_TRUE(host_spec != nullptr);
+@@ -323,12 +314,13 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_5)
+ 
+     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent));
+ 
+-    ASSERT_EQ(merge_oci_cgroups_path("123", oci_spec, host_spec), 0);
++    merged_cp = merge_container_cgroups_path("123", host_spec);
++    ASSERT_NE(merged_cp, nullptr);
+ 
+-    ASSERT_STREQ(oci_spec->linux->cgroups_path, "/test/123");
++    ASSERT_STREQ(merged_cp, "/test/123");
+ 
+-    free_oci_runtime_spec(oci_spec);
+     free_host_config(host_spec);
++    free(merged_cp);
+ 
+     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
+ }
+-- 
+2.25.1
+
