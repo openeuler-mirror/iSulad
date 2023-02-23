@@ -1195,14 +1195,14 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
     }
     if (resources.hugepage_limits_size() != 0) {
         hostconfig->hugetlbs = (host_config_hugetlbs_element **)util_smart_calloc_s(
-                sizeof(host_config_hugetlbs_element *), resources.hugepage_limits_size());
+                                   sizeof(host_config_hugetlbs_element *), resources.hugepage_limits_size());
         if (hostconfig->hugetlbs == nullptr) {
             error.SetError("Out of memory");
             return;
         }
-	for (int i = 0; i < resources.hugepage_limits_size(); i++) {
+        for (int i = 0; i < resources.hugepage_limits_size(); i++) {
             hostconfig->hugetlbs[i] =
-                    (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
+                (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
             if (hostconfig->hugetlbs[i] == nullptr) {
                 error.SetError("Out of memory");
                 goto cleanup;
