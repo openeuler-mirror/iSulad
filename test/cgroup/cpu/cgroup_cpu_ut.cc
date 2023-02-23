@@ -16,9 +16,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include "daemon_arguments.h"
 #include "isulad_config.h"
+#include "mock.h"
+#include "sysinfo.h"
 #include "utils.h"
+
+extern "C" {
+    DECLARE_WRAPPER(util_common_calloc_s, void *, (size_t size));
+    DEFINE_WRAPPER(util_common_calloc_s, void *, (size_t size), (size));
+}
 
 struct service_arguments *new_args(int64_t cpu_rt_period, int64_t cpu_rt_runtime)
 {
@@ -57,4 +65,17 @@ TEST(CgroupCpuUnitTest, test_conf_get_cgroup_cpu_rt)
     ASSERT_EQ(cpu_rt_runtime, 0);
 }
 
+TEST(CgroupCpuUnitTest, test_find_cgroup_mountpoint_and_root)
+{
+    char *mnt = NULL;
+    char *root = NULL;
+    ASSERT_EQ(find_cgroup_mountpoint_and_root(nullptr, &mnt, &root), -1);
+}
 
+TEST(CgroupCpuUnitTest, test_sysinfo_cgroup_controller_cpurt_mnt_path)
+{
+    MOCK_SET(util_common_calloc_s, nullptr);
+    ASSERT_EQ(get_sys_info(true), nullptr);
+    ASSERT_EQ(sysinfo_cgroup_controller_cpurt_mnt_path(), nullptr);
+    MOCK_CLEAR(util_common_calloc_s);
+}
