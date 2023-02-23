@@ -842,8 +842,22 @@ void ContainerManagerService::ContainerStatsToGRPC(
                 response->container_stats[i]->cpu_use_nanos);
             container->mutable_cpu()->set_timestamp(timestamp);
         }
-
-        containerstats->push_back(move(container));
+        if (response->container_stats[i]->avaliable_bytes != 0u) {
+            container->mutable_memory()->mutable_available_bytes()->set_value(response->container_stats[i]->avaliable_bytes);
+        }
+        if (response->container_stats[i]->usage_bytes != 0u) {
+            container->mutable_memory()->mutable_usage_bytes()->set_value(response->container_stats[i]->usage_bytes);
+        }
+        if (response->container_stats[i]->rss_bytes != 0u) {
+            container->mutable_memory()->mutable_rss_bytes()->set_value(response->container_stats[i]->rss_bytes);
+        }
+        if (response->container_stats[i]->page_faults != 0u) {
+            container->mutable_memory()->mutable_page_faults()->set_value(response->container_stats[i]->page_faults);
+        }
+        if (response->container_stats[i]->major_page_faults != 0u) {
+            container->mutable_memory()->mutable_major_page_faults()->set_value(response->container_stats[i]->major_page_faults);
+        }
+        containerstats->push_back(std::move(container));
     }
 }
 

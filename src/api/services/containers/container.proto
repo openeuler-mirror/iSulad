@@ -86,6 +86,11 @@ message Container_info {
 	uint64 cache = 16;
 	uint64 cache_total = 17;
 	uint64 inactive_file_total = 18;
+	uint64 avaliable_bytes = 19;
+	uint64 usage_bytes = 20;
+	uint64 rss_bytes = 21;
+	uint64 page_faults = 22;
+	uint64 major_page_faults = 23;
 }
 
 message Event {
