@@ -760,6 +760,12 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
             goto realexec;
         }
 
+        // clear NOTIFY_SOCKET from the env to adapt runc create
+        if (unsetenv("NOTIFY_SOCKET") != 0) {
+            (void)dprintf(exec_fd[1], "%s: unset env NOTIFY_SOCKET failed %s", id, strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
         pid = fork();
         if (pid < 0) {
             (void)dprintf(exec_fd[1], "%s: fork shim-process failed %s", id, strerror(errno));
