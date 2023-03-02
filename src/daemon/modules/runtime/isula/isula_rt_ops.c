@@ -473,6 +473,12 @@ static void runtime_exec_func(void *arg)
         _exit(EXIT_FAILURE);
     }
 
+    // clear NOTIFY_SOCKET from the env to adapt runc start
+    if (strcmp(rei->subcmd, "start") == 0 && unsetenv("NOTIFY_SOCKET") != 0) {
+        dprintf(STDERR_FILENO, "unset env NOTIFY_SOCKET failed %s", strerror(errno));
+        _exit(EXIT_FAILURE);
+    }
+
     execvp(rei->cmd, rei->params);
     dprintf(STDERR_FILENO, "exec %s %s %s failed", rei->cmd, rei->subcmd, rei->id);
     _exit(EXIT_FAILURE);
@@ -993,11 +999,6 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
     pid_info->start_time = proc->start_time;
     pid_info->ppid = shim_pid;
     pid_info->pstart_time = p_proc->start_time;
-
-    // clear NOTIFY_SOCKET from the env to adapt runc start
-    if (unsetenv("NOTIFY_SOCKET") != 0) {
-        ERROR("%s: unset env NOTIFY_SOCKET failed %s", id);
-    }
 
     if (runtime_call_simple(workdir, runtime, "start", NULL, 0, id, NULL) != 0) {
         ERROR("call runtime start id failed");
