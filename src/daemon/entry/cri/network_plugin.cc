@@ -425,20 +425,26 @@ void PluginManager::SetUpPod(const std::string &ns, const std::string &name, con
         return;
     }
 
+    Errors tmpErr;
     std::string fullName = name + "_" + ns;
-    Lock(fullName, error);
-    if (error.NotEmpty()) {
+    Lock(fullName, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        error.AppendError(tmpErr.GetCMessage());
         return;
     }
     INFO("Calling network plugin %s to set up pod %s", m_plugin->Name().c_str(), fullName.c_str());
 
-    Errors tmpErr;
     m_plugin->SetUpPod(ns, name, interfaceName, podSandboxID, annotations, options, network_settings_json, tmpErr);
     if (tmpErr.NotEmpty()) {
         error.Errorf("NetworkPlugin %s failed to set up pod %s network: %s", m_plugin->Name().c_str(), fullName.c_str(),
                      tmpErr.GetCMessage());
     }
-    Unlock(fullName, error);
+
+    tmpErr.Clear();
+    Unlock(fullName, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        error.AppendError(tmpErr.GetCMessage());
+    }
 }
 
 void PluginManager::TearDownPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
@@ -447,8 +453,9 @@ void PluginManager::TearDownPod(const std::string &ns, const std::string &name, 
 {
     Errors tmpErr;
     std::string fullName = name + "_" + ns;
-    Lock(fullName, error);
-    if (error.NotEmpty()) {
+    Lock(fullName, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        error.AppendError(tmpErr.GetCMessage());
         return;
     }
     if (m_plugin == nullptr) {
@@ -462,7 +469,11 @@ void PluginManager::TearDownPod(const std::string &ns, const std::string &name, 
                      fullName.c_str(), tmpErr.GetCMessage());
     }
 unlock:
-    Unlock(fullName, error);
+    tmpErr.Clear();
+    Unlock(fullName, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        error.AppendError(tmpErr.GetCMessage());
+    }
 }
 
 void NoopNetworkPlugin::Init(const std::string &hairpinMode, const std::string &nonMasqueradeCIDR, int mtu,

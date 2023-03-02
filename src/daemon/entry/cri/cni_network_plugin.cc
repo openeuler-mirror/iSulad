@@ -120,8 +120,10 @@ auto CniNetworkPlugin::Name() const -> const std::string &
 
 void CniNetworkPlugin::CheckInitialized(Errors &err)
 {
-    RLockNetworkMap(err);
-    if (err.NotEmpty()) {
+    Errors tmpErr;
+    RLockNetworkMap(tmpErr);
+    if (tmpErr.NotEmpty()) {
+        err.AppendError(tmpErr.GetCMessage());
         return;
     }
 
@@ -129,9 +131,10 @@ void CniNetworkPlugin::CheckInitialized(Errors &err)
         err.SetError("cni config uninitialized");
     }
 
-    UnlockNetworkMap(err);
-    if (err.NotEmpty()) {
-        WARN("Unable to update cni config: %s", err.GetCMessage());
+    UnlockNetworkMap(tmpErr);
+    if (tmpErr.NotEmpty()) {
+        WARN("Unable to update cni config: %s", tmpErr.GetCMessage());
+        err.AppendError(tmpErr.GetCMessage());
     }
 }
 
@@ -623,6 +626,7 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         return;
     }
 
+    err.Clear();
     RLockNetworkMap(err);
     if (err.NotEmpty()) {
         ERROR("%s", err.GetCMessage());
