@@ -642,6 +642,7 @@ auto PodSandboxManagerServiceImpl::GetRealSandboxIDToStop(const std::string &pod
         if (status->linux().namespaces().has_options()) {
             hostNetwork = (status->linux().namespaces().options().network() == runtime::v1alpha2::NamespaceMode::NODE);
         }
+        // if metadata is invalid, don't return -1 and continue stopping pod
         if (status->has_metadata()) {
             name = status->metadata().name();
             ns = status->metadata().namespace_();
@@ -779,6 +780,7 @@ auto PodSandboxManagerServiceImpl::ClearCniNetwork(const std::string &realSandbo
         }
     }
 
+    pluginErr.Clear();
     m_pluginManager->TearDownPod(ns, name, Network::DEFAULT_NETWORK_INTERFACE_NAME, realSandboxID, stdAnnos,
                                  pluginErr);
     if (pluginErr.NotEmpty()) {
