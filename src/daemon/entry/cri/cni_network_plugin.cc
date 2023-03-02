@@ -110,9 +110,12 @@ void CniNetworkPlugin::SetDefaultNetwork(std::unique_ptr<CNINetwork> network, st
     if (network == nullptr) {
         return;
     }
-    WLockNetworkMap(err);
-    if (err.NotEmpty()) {
-        ERROR("%s", err.GetCMessage());
+
+    Errors tmpErr;
+    WLockNetworkMap(tmpErr);
+    if (tmpErr.NotEmpty()) {
+        ERROR("%s", tmpErr.GetCMessage());
+        err.AppendError(tmpErr.GetCMessage());
         return;
     }
     m_defaultNetwork = std::move(network);
@@ -120,9 +123,10 @@ void CniNetworkPlugin::SetDefaultNetwork(std::unique_ptr<CNINetwork> network, st
 
     DEBUG("Update new cni network: \"%s\"", m_defaultNetwork->GetName().c_str());
 
-    UnlockNetworkMap(err);
-    if (err.NotEmpty()) {
-        ERROR("%s", err.GetCMessage());
+    UnlockNetworkMap(tmpErr);
+    if (tmpErr.NotEmpty()) {
+        ERROR("%s", tmpErr.GetCMessage());
+        err.AppendError(tmpErr.GetCMessage());
     }
 }
 
@@ -132,8 +136,11 @@ void CniNetworkPlugin::UpdateMutlNetworks(std::vector<std::unique_ptr<CNINetwork
     if (multNets.size() == 0) {
         return;
     }
-    WLockNetworkMap(err);
-    if (err.NotEmpty()) {
+
+    Errors tmpErr;
+    WLockNetworkMap(tmpErr);
+    if (tmpErr.NotEmpty()) {
+        err.AppendError(tmpErr.GetCMessage());
         return;
     }
 
@@ -143,7 +150,10 @@ void CniNetworkPlugin::UpdateMutlNetworks(std::vector<std::unique_ptr<CNINetwork
         m_mutlNetworks[(*iter)->GetName()] = std::move(*iter);
     }
 
-    UnlockNetworkMap(err);
+    UnlockNetworkMap(tmpErr);
+    if (tmpErr.NotEmpty()) {
+        err.AppendError(tmpErr.GetCMessage());
+    }
 }
 
 CniNetworkPlugin::CniNetworkPlugin(std::vector<std::string> &binDirs, const std::string &confDir,
@@ -336,13 +346,20 @@ free_out:
 
 void CniNetworkPlugin::CheckInitialized(Errors &err)
 {
-    RLockNetworkMap(err);
-    if (err.NotEmpty()) {
-        ERROR("%s", err.GetCMessage());
+    Errors tmpErr;
+    RLockNetworkMap(tmpErr);
+    if (tmpErr.NotEmpty()) {
+        ERROR("%s", tmpErr.GetCMessage());
+        err.AppendError(tmpErr.GetCMessage());
         return;
     }
     bool inited = (m_defaultNetwork != nullptr);
-    UnlockNetworkMap(err);
+
+    UnlockNetworkMap(tmpErr);
+    if (tmpErr.NotEmpty()) {
+        err.AppendError(tmpErr.GetCMessage());
+    }
+
     if (!inited) {
         err.AppendError("cni config uninitialized");
     }
@@ -527,6 +544,7 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         }
     }
 
+    err.Clear();
     RLockNetworkMap(err);
     if (err.NotEmpty()) {
         ERROR("%s", err.GetCMessage());
