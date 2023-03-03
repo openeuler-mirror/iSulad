@@ -405,7 +405,7 @@ static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, con
     return 0;
 }
 
-// TODO: maybe we should adapt to cgroup v2
+// maybe we should adapt to cgroup v2
 static int cpurt_controller_init(const char *id, const host_config *host_spec)
 {
     int ret = 0;

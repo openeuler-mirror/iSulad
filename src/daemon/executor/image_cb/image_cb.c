@@ -556,6 +556,14 @@ static int trans_one_image(image_list_images_response *response, size_t image_in
         out_image->name = util_strdup_s(im_image->repo_tags[repo_index]);
     }
 
+    if (out_image->name == NULL && im_image->repo_digests != NULL && im_image->repo_digests_len > 0) {
+        // repo digest must valid, so just get lastest @
+        char *pod = strrchr(im_image->repo_digests[0], '@');
+        if (pod != NULL) {
+            out_image->name = util_sub_string(im_image->repo_digests[0], 0, (size_t)(pod - im_image->repo_digests[0]));
+        }
+    }
+
     out_image->target = util_common_calloc_s(sizeof(image_descriptor));
     if (out_image->target == NULL) {
         ERROR("Out of memory");
