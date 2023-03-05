@@ -49,6 +49,9 @@
 #include "image_type.h"
 #include "linked_list.h"
 #include "utils_verify.h"
+#ifdef ENABLE_REMOTE_LAYER_STORE
+#include "ro_symlink_maintain.h"
+#endif
 
 // the name of the big data item whose contents we consider useful for computing a "digest" of the
 // image, by which we can locate the image later.
@@ -3096,7 +3099,7 @@ out:
     return ret;
 }
 
-static int validate_manifest_schema_version_1(const char *path, bool *valid)
+int validate_manifest_schema_version_1(const char *path, bool *valid)
 {
     int ret = 0;
     int nret;
@@ -3640,6 +3643,10 @@ int image_store_init(struct storage_module_init_options *opts)
         goto out;
     }
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    remote_image_init(g_image_store->dir);
+#endif
+
 out:
     if (ret != 0) {
         free_image_store(g_image_store);
@@ -3648,3 +3655,70 @@ out:
     free(root_dir);
     return ret;
 }
+
+#ifdef ENABLE_REMOTE_LAYER_STORE
+int append_image_by_directory_with_lock(const char *id)
+{
+    int ret = 0;
+    int nret = 0;
+    char image_path[PATH_MAX] = { 0x00 };
+
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock remote image store when handle: %s", id);
+        return -1;
+    }
+
+    nret = snprintf(image_path, sizeof(image_path), "%s/%s", g_image_store->dir, id);
+    if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
+        ERROR("Failed to get image path");
+        return -1;
+    }
+
+    ret = append_image_by_directory(image_path);
+    image_store_unlock();
+
+    return ret;
+}
+
+int remove_image_from_memory_with_lock(const char *id)
+{
+    int ret = 0;
+
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock remote image store when handle: %s", id);
+        return -1;
+    }
+
+    ret = remove_image_from_memory(id);
+    image_store_unlock();
+
+    return ret;
+}
+
+char *get_top_layer_from_json(const char *img_id)
+{
+
+    char *ret = NULL;
+    int nret = 0;
+    char image_path[PATH_MAX] = { 0x00 };
+    storage_image *im = NULL;
+    parser_error err = NULL;
+
+    nret = snprintf(image_path, sizeof(image_path), "%s/%s/%s", g_image_store->dir, img_id, IMAGE_JSON);
+    if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
+        ERROR("Failed to get image path");
+        return NULL;
+    }
+
+    im = storage_image_parse_file(image_path, NULL, &err);
+    if (im == NULL) {
+        ERROR("Failed to parse images path: %s", err);
+        return NULL;
+    }
+
+    ret = util_strdup_s(im->layer);
+    free_storage_image(im);
+
+    return ret;
+}
+#endif

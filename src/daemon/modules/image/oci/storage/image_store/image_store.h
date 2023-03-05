@@ -28,6 +28,9 @@
 #include "isula_libutils/imagetool_image.h"
 #include "isula_libutils/imagetool_images_list.h"
 #include "isula_libutils/imagetool_image_summary.h"
+#ifdef ENABLE_REMOTE_LAYER_STORE
+#include "remote_support.h"
+#endif
 
 struct storage_module_init_options;
 
@@ -107,6 +110,14 @@ int image_store_get_fs_info(imagetool_fs_info *fs_info);
 void image_store_free();
 
 imagetool_image_summary *image_store_get_image_summary(const char *id);
+
+#ifdef ENABLE_REMOTE_LAYER_STORE
+remote_support *image_store_impl_remote_support();
+int validate_manifest_schema_version_1(const char *path, bool *valid);
+int append_image_by_directory_with_lock(const char *image_dir);
+int remove_image_from_memory_with_lock(const char *id);
+char *get_top_layer_from_json(const char *img_id); /* return top layer id */
+#endif
 
 #ifdef __cplusplus
 }
