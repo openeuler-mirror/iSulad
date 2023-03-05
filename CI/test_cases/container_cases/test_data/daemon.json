@@ -19,6 +19,7 @@
     "hook-spec": "/etc/default/isulad/hooks/default.json",
     "start-timeout": "2m",
     "storage-driver": "overlay2",
+    "storage-enable-remote-layer": false,
     "storage-opts": [
         "overlay2.override_kernel_check=true"
     ],
