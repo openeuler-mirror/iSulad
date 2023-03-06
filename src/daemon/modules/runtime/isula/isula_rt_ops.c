@@ -951,8 +951,8 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
     pid_t shim_pid = -1;
     int ret = -1;
     int splice_ret = 0;
-    proc_t *proc = NULL;
-    proc_t *p_proc = NULL;
+    __isula_auto_free proc_t *proc = NULL;
+    __isula_auto_free proc_t *p_proc = NULL;
 
     if (id == NULL || runtime == NULL || params == NULL || pid_info == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -1009,14 +1009,6 @@ out:
         show_shim_runtime_errlog(workdir);
         shim_kill_force(workdir);
     }
-
-    if (proc != NULL) {
-        free(proc);
-    }
-    if (p_proc != NULL) {
-        free(p_proc);
-    }
-
     return ret;
 }
 
