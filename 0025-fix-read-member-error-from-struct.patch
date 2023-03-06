@@ -1,0 +1,34 @@
+From 3e71fe5910a1b0c9dbb899e06614103a2cebf0fc Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Fri, 24 Feb 2023 10:25:46 +0800
+Subject: [PATCH 25/35] fix read member error from struct
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/client/connect/rest/rest_containers_client.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/src/client/connect/rest/rest_containers_client.c b/src/client/connect/rest/rest_containers_client.c
+index 9eee9d40..0ae9a4f6 100644
+--- a/src/client/connect/rest/rest_containers_client.c
++++ b/src/client/connect/rest/rest_containers_client.c
+@@ -2195,11 +2195,11 @@ static int unpack_container_info_for_stats_response(const container_stats_respon
+         // memory usage
+         infos[i].mem_used = con_info->mem_used;
+         infos[i].mem_limit = con_info->mem_limit;
+-        infos[i].avaliable_bytes = con_info->avaliable_bytes();
+-        infos[i].usage_bytes = con_info->usage_bytes();
+-        infos[i].rss_bytes = con_info->rss_bytes();
+-        infos[i].page_faults = con_info->page_faults();
+-        infos[i].major_page_faults = con_info->major_page_faults();
++        infos[i].avaliable_bytes = con_info->avaliable_bytes;
++        infos[i].usage_bytes = con_info->usage_bytes;
++        infos[i].rss_bytes = con_info->rss_bytes;
++        infos[i].page_faults = con_info->page_faults;
++        infos[i].major_page_faults = con_info->major_page_faults;
+         // kernel memory usage
+         infos[i].kmem_used = con_info->kmem_used;
+         infos[i].kmem_limit = con_info->kmem_limit;
+-- 
+2.25.1
+

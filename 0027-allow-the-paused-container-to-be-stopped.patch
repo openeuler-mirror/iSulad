@@ -1,0 +1,68 @@
+From 70173556a3825870b44cc344e83cdf0fd6d577c5 Mon Sep 17 00:00:00 2001
+From: zhongtao <zhongtao17@huawei.com>
+Date: Thu, 23 Feb 2023 16:08:48 +0800
+Subject: [PATCH 27/35] allow the paused container to be stopped
+
+Signed-off-by: zhongtao <zhongtao17@huawei.com>
+---
+ src/daemon/entry/cri/cri_container_manager_service.cc | 6 +++---
+ src/daemon/entry/cri/cri_helpers.cc                   | 2 +-
+ src/daemon/modules/service/service_container.c        | 7 +++----
+ 3 files changed, 7 insertions(+), 8 deletions(-)
+
+diff --git a/src/daemon/entry/cri/cri_container_manager_service.cc b/src/daemon/entry/cri/cri_container_manager_service.cc
+index 57284593..1592c0a6 100644
+--- a/src/daemon/entry/cri/cri_container_manager_service.cc
++++ b/src/daemon/entry/cri/cri_container_manager_service.cc
+@@ -1195,14 +1195,14 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
+     }
+     if (resources.hugepage_limits_size() != 0) {
+         hostconfig->hugetlbs = (host_config_hugetlbs_element **)util_smart_calloc_s(
+-                sizeof(host_config_hugetlbs_element *), resources.hugepage_limits_size());
++                                   sizeof(host_config_hugetlbs_element *), resources.hugepage_limits_size());
+         if (hostconfig->hugetlbs == nullptr) {
+             error.SetError("Out of memory");
+             return;
+         }
+-	for (int i = 0; i < resources.hugepage_limits_size(); i++) {
++        for (int i = 0; i < resources.hugepage_limits_size(); i++) {
+             hostconfig->hugetlbs[i] =
+-                    (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
++                (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
+             if (hostconfig->hugetlbs[i] == nullptr) {
+                 error.SetError("Out of memory");
+                 goto cleanup;
+diff --git a/src/daemon/entry/cri/cri_helpers.cc b/src/daemon/entry/cri/cri_helpers.cc
+index 6d59ec11..c24c8b73 100644
+--- a/src/daemon/entry/cri/cri_helpers.cc
++++ b/src/daemon/entry/cri/cri_helpers.cc
+@@ -470,7 +470,7 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
+             }
+             for (int i = 0; i < rOpts.hugepage_limits_size(); i++) {
+                 hc->hugetlbs[i] =
+-                        (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
++                    (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
+                 if (hc->hugetlbs[i] == nullptr) {
+                     error.SetError("Out of memory");
+                     return;
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index cc777411..d69ee757 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -1495,10 +1495,9 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
+ 
+     container_lock(cont);
+ 
+-    if (container_is_paused(cont->state)) {
+-        ERROR("Container %s is paused. Unpause the container before stopping or killing", id);
+-        isulad_set_error_message("Container %s is paused. Unpause the container before stopping or killing", id);
+-        ret = -1;
++    if (!container_is_running(cont->state)) {
++        INFO("Container %s is already stopped", id);
++        ret = 0;
+         goto out;
+     }
+ 
+-- 
+2.25.1
+

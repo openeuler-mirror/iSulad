@@ -1,0 +1,70 @@
+From dd238f80fd754b135c7b0e6a6535d45cf57c0b82 Mon Sep 17 00:00:00 2001
+From: songbuhuang <544824346@qq.com>
+Date: Wed, 22 Feb 2023 16:46:45 +0800
+Subject: [PATCH 23/35] add cgroup cpu ut
+
+Signed-off-by: songbuhuang <544824346@qq.com>
+---
+ test/cgroup/cpu/CMakeLists.txt   |  2 ++
+ test/cgroup/cpu/cgroup_cpu_ut.cc | 21 +++++++++++++++++++++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/test/cgroup/cpu/CMakeLists.txt b/test/cgroup/cpu/CMakeLists.txt
+index 6a8af719..b619fb59 100644
+--- a/test/cgroup/cpu/CMakeLists.txt
++++ b/test/cgroup/cpu/CMakeLists.txt
+@@ -22,8 +22,10 @@ target_include_directories(${EXE} PUBLIC
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/config
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../mocks
+     )
+ 
++set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_common_calloc_s")
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+ set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cgroup/cpu/cgroup_cpu_ut.cc b/test/cgroup/cpu/cgroup_cpu_ut.cc
+index 032ad656..7d23d014 100644
+--- a/test/cgroup/cpu/cgroup_cpu_ut.cc
++++ b/test/cgroup/cpu/cgroup_cpu_ut.cc
+@@ -16,10 +16,18 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <gtest/gtest.h>
++#include <gmock/gmock.h>
+ #include "daemon_arguments.h"
+ #include "isulad_config.h"
++#include "mock.h"
++#include "sysinfo.h"
+ #include "utils.h"
+ 
++extern "C" {
++    DECLARE_WRAPPER(util_common_calloc_s, void *, (size_t size));
++    DEFINE_WRAPPER(util_common_calloc_s, void *, (size_t size), (size));
++}
++
+ struct service_arguments *new_args(int64_t cpu_rt_period, int64_t cpu_rt_runtime)
+ {
+     struct service_arguments *args = (struct service_arguments *)util_common_calloc_s(sizeof(struct service_arguments));
+@@ -57,4 +65,17 @@ TEST(CgroupCpuUnitTest, test_conf_get_cgroup_cpu_rt)
+     ASSERT_EQ(cpu_rt_runtime, 0);
+ }
+ 
++TEST(CgroupCpuUnitTest, test_find_cgroup_mountpoint_and_root)
++{
++    char *mnt = NULL;
++    char *root = NULL;
++    ASSERT_EQ(find_cgroup_mountpoint_and_root(nullptr, &mnt, &root), -1);
++}
+ 
++TEST(CgroupCpuUnitTest, test_sysinfo_cgroup_controller_cpurt_mnt_path)
++{
++    MOCK_SET(util_common_calloc_s, nullptr);
++    ASSERT_EQ(get_sys_info(true), nullptr);
++    ASSERT_EQ(sysinfo_cgroup_controller_cpurt_mnt_path(), nullptr);
++    MOCK_CLEAR(util_common_calloc_s);
++}
+-- 
+2.25.1
+

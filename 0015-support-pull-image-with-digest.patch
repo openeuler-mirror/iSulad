@@ -1,7 +1,7 @@
 From aaf8dec80eff5390404d7da66dbb229e44c76b12 Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Thu, 16 Feb 2023 18:22:02 +0800
-Subject: [PATCH 15/22] support pull image with digest
+Subject: [PATCH 15/35] support pull image with digest
 
 usage: isula pull busybox@sha256:907ca53d7e2947e849b839b1cd258c98fd3916c60f2e6e70c30edbf741ab6754
 

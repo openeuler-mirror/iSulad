@@ -1,5 +1,5 @@
 %global _version 2.1.1
-%global _release 4
+%global _release 5
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -35,6 +35,19 @@ Patch0019:	0019-cleancode-for-read-write.patch
 Patch0020:	0020-add-crictl-timeout-and-sync-for-CI.patch
 Patch0021:	0021-unlock-m_podsLock-if-new-failed.patch
 Patch0022:	0022-Update-CRI.patch
+Patch0023:	0023-add-cgroup-cpu-ut.patch
+Patch0024:	0024-remove-temp-variables.patch
+Patch0025:	0025-fix-read-member-error-from-struct.patch
+Patch0026:	0026-Fix-PR-runc.patch
+Patch0027:	0027-allow-the-paused-container-to-be-stopped.patch
+Patch0028:	0028-Refine.patch
+Patch0029:	0029-support-isula-update-when-runtime-is-runc.patch
+Patch0030:	0030-Refine-as-others-feedback.patch
+Patch0031:	0031-fix-CRI-SetupPod-and-TearDownPod-deadlock.patch
+Patch0032:	0032-remote-layer-store-demo.patch
+Patch0033:	0033-add-ci-for-remote-ro.patch
+Patch0034:	0034-change-sleep-to-usleep-to-avoid-lossing-of-accuracy.patch
+Patch0035:	0035-fix-compile-error-when-not-enable-remote-ro.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -277,6 +290,12 @@ fi
 %endif
 
 %changelog
+* Mon May 06 2023 wangrunze <wangrunze13@huawei.com> - 2.1.1-5
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: upgrade from upstream to include feature remote ro
+
 * Wed Feb 22 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.1.1-4
 - Type: bugfix
 - ID: NA

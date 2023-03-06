@@ -1,7 +1,7 @@
 From e4993d0e89ca853d74d8b23895de0967b4379441 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Mon, 13 Feb 2023 17:42:30 +0800
-Subject: [PATCH 06/22] fix inspect.sh failed
+Subject: [PATCH 06/35] fix inspect.sh failed
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
