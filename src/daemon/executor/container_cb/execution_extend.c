@@ -1129,6 +1129,7 @@ static int do_update_resources(const container_update_request *request, containe
     if (container_is_running(cont->state)) {
         params.rootpath = cont->root_path;
         params.hostconfig = hostconfig;
+        params.state = cont->state_path;
         if (runtime_update(id, cont->runtime, &params)) {
             ERROR("Update container %s failed", id);
             ret = -1;
