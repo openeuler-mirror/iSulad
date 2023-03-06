@@ -347,7 +347,7 @@ int util_waitpid_with_timeout(pid_t pid, const int64_t timeout, handle_timeout_c
             return -1;
         }
         // sleep some time instead to avoid cpu full running and then retry.
-        usleep(0.1);
+        usleep(100);
     }
     return 0;
 }
