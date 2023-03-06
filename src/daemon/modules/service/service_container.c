@@ -1495,10 +1495,9 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
 
     container_lock(cont);
 
-    if (container_is_paused(cont->state)) {
-        ERROR("Container %s is paused. Unpause the container before stopping or killing", id);
-        isulad_set_error_message("Container %s is paused. Unpause the container before stopping or killing", id);
-        ret = -1;
+    if (!container_is_running(cont->state)) {
+        INFO("Container %s is already stopped", id);
+        ret = 0;
         goto out;
     }
 

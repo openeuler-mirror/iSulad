@@ -470,7 +470,7 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
             }
             for (int i = 0; i < rOpts.hugepage_limits_size(); i++) {
                 hc->hugetlbs[i] =
-                        (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
+                    (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
                 if (hc->hugetlbs[i] == nullptr) {
                     error.SetError("Out of memory");
                     return;
