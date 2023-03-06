@@ -161,7 +161,8 @@ static int container_exec_cb(const container_exec_request *request, container_ex
 
     if (exec_container(cont, request, *response, stdinfd, stdout_handler, stderr_handler) != 0) {
         ret = -1;
-        goto pack_err_response;
+        // pack err response in exec_container, there is no need to pack here.
+        goto out;
     }
 
     goto out;
