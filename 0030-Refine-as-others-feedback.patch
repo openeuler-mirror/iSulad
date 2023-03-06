@@ -1,0 +1,41 @@
+From 4900996ca52e46795eb25b05ce50519c7c71ae38 Mon Sep 17 00:00:00 2001
+From: sailorvii <chenw66@chinaunicom.cn>
+Date: Thu, 2 Mar 2023 09:04:57 +0000
+Subject: [PATCH 30/35] Refine as others' feedback.
+
+---
+ src/daemon/modules/runtime/isula/isula_rt_ops.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/src/daemon/modules/runtime/isula/isula_rt_ops.c b/src/daemon/modules/runtime/isula/isula_rt_ops.c
+index 5d622515..7ec3fc49 100644
+--- a/src/daemon/modules/runtime/isula/isula_rt_ops.c
++++ b/src/daemon/modules/runtime/isula/isula_rt_ops.c
+@@ -473,6 +473,12 @@ static void runtime_exec_func(void *arg)
+         _exit(EXIT_FAILURE);
+     }
+ 
++    // clear NOTIFY_SOCKET from the env to adapt runc start
++    if (strcmp(rei->subcmd, "start") == 0 && unsetenv("NOTIFY_SOCKET") != 0) {
++        dprintf(STDERR_FILENO, "unset env NOTIFY_SOCKET failed %s", strerror(errno));
++        _exit(EXIT_FAILURE);
++    }
++
+     execvp(rei->cmd, rei->params);
+     dprintf(STDERR_FILENO, "exec %s %s %s failed", rei->cmd, rei->subcmd, rei->id);
+     _exit(EXIT_FAILURE);
+@@ -994,11 +1000,6 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t
+     pid_info->ppid = shim_pid;
+     pid_info->pstart_time = p_proc->start_time;
+ 
+-    // clear NOTIFY_SOCKET from the env to adapt runc start
+-    if (unsetenv("NOTIFY_SOCKET") != 0) {
+-        ERROR("%s: unset env NOTIFY_SOCKET failed %s", id);
+-    }
+-
+     if (runtime_call_simple(workdir, runtime, "start", NULL, 0, id, NULL) != 0) {
+         ERROR("call runtime start id failed");
+         goto out;
+-- 
+2.25.1
+

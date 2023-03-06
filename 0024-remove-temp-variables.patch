@@ -1,0 +1,179 @@
+From e20767fc709bb945eb8e076a57f07d5b70b5f3ab Mon Sep 17 00:00:00 2001
+From: "ilya.kuksenok" <ilya.kuksenok@huawei.com>
+Date: Wed, 22 Feb 2023 16:17:34 +0300
+Subject: [PATCH 24/35] remove temp variables
+
+---
+ src/api/services/containers/container.proto    |  5 +++++
+ .../connect/grpc/grpc_containers_client.cc     |  5 +++++
+ src/client/connect/protocol_type.h             |  5 +++++
+ .../connect/rest/rest_containers_client.c      |  5 +++++
+ .../connect/grpc/container/stats_service.cc    |  6 ++++++
+ .../entry/cri/cri_container_manager_service.cc | 18 ++++++++++++++++--
+ .../executor/container_cb/execution_extend.c   |  5 +++++
+ src/daemon/modules/api/runtime_api.h           |  5 +++++
+ .../modules/runtime/engines/lcr/lcr_engine.c   |  6 ++++++
+ 9 files changed, 58 insertions(+), 2 deletions(-)
+
+diff --git a/src/api/services/containers/container.proto b/src/api/services/containers/container.proto
+index 13d1367b..230d18b3 100644
+--- a/src/api/services/containers/container.proto
++++ b/src/api/services/containers/container.proto
+@@ -86,6 +86,11 @@ message Container_info {
+ 	uint64 cache = 16;
+ 	uint64 cache_total = 17;
+ 	uint64 inactive_file_total = 18;
++	uint64 avaliable_bytes = 19;
++	uint64 usage_bytes = 20;
++	uint64 rss_bytes = 21;
++	uint64 page_faults = 22;
++	uint64 major_page_faults = 23;
+ }
+ 
+ message Event {
+diff --git a/src/client/connect/grpc/grpc_containers_client.cc b/src/client/connect/grpc/grpc_containers_client.cc
+index 1528b2ee..20766049 100644
+--- a/src/client/connect/grpc/grpc_containers_client.cc
++++ b/src/client/connect/grpc/grpc_containers_client.cc
+@@ -1690,6 +1690,11 @@ public:
+                 response->container_stats[i].blkio_read = gresponse->containers(i).blkio_read();
+                 response->container_stats[i].blkio_write = gresponse->containers(i).blkio_write();
+                 response->container_stats[i].mem_used = gresponse->containers(i).mem_used();
++                response->container_stats[i].avaliable_bytes = gresponse->containers(i).avaliable_bytes();
++                response->container_stats[i].usage_bytes = gresponse->containers(i).usage_bytes();
++                response->container_stats[i].rss_bytes = gresponse->containers(i).rss_bytes();
++                response->container_stats[i].page_faults = gresponse->containers(i).page_faults();
++                response->container_stats[i].major_page_faults = gresponse->containers(i).major_page_faults();
+                 response->container_stats[i].mem_limit = gresponse->containers(i).mem_limit();
+                 response->container_stats[i].kmem_used = gresponse->containers(i).kmem_used();
+                 response->container_stats[i].kmem_limit = gresponse->containers(i).kmem_limit();
+diff --git a/src/client/connect/protocol_type.h b/src/client/connect/protocol_type.h
+index 3831c7c0..a2d474a6 100644
+--- a/src/client/connect/protocol_type.h
++++ b/src/client/connect/protocol_type.h
+@@ -165,6 +165,11 @@ struct isula_container_info {
+     // Memory usage
+     uint64_t mem_used;
+     uint64_t mem_limit;
++    uint64_t avaliable_bytes;
++    uint64_t usage_bytes;
++    uint64_t rss_bytes;
++    uint64_t page_faults;
++    uint64_t major_page_faults;
+     // Kernel Memory usage
+     uint64_t kmem_used;
+     uint64_t kmem_limit;
+diff --git a/src/client/connect/rest/rest_containers_client.c b/src/client/connect/rest/rest_containers_client.c
+index 0a735a64..9eee9d40 100644
+--- a/src/client/connect/rest/rest_containers_client.c
++++ b/src/client/connect/rest/rest_containers_client.c
+@@ -2195,6 +2195,11 @@ static int unpack_container_info_for_stats_response(const container_stats_respon
+         // memory usage
+         infos[i].mem_used = con_info->mem_used;
+         infos[i].mem_limit = con_info->mem_limit;
++        infos[i].avaliable_bytes = con_info->avaliable_bytes();
++        infos[i].usage_bytes = con_info->usage_bytes();
++        infos[i].rss_bytes = con_info->rss_bytes();
++        infos[i].page_faults = con_info->page_faults();
++        infos[i].major_page_faults = con_info->major_page_faults();
+         // kernel memory usage
+         infos[i].kmem_used = con_info->kmem_used;
+         infos[i].kmem_limit = con_info->kmem_limit;
+diff --git a/src/daemon/entry/connect/grpc/container/stats_service.cc b/src/daemon/entry/connect/grpc/container/stats_service.cc
+index 6e116b4c..7315fe75 100644
+--- a/src/daemon/entry/connect/grpc/container/stats_service.cc
++++ b/src/daemon/entry/connect/grpc/container/stats_service.cc
+@@ -87,6 +87,12 @@ void ContainerStatsService::FillResponseTogRPC(void *containerRes, StatsResponse
+         stats->set_mem_limit(response->container_stats[i]->mem_limit);
+         stats->set_kmem_used(response->container_stats[i]->kmem_used);
+         stats->set_kmem_limit(response->container_stats[i]->kmem_limit);
++        stats->set_avaliable_bytes(response->container_stats[i]->avaliable_bytes);
++        stats->set_usage_bytes(response->container_stats[i]->usage_bytes);
++        stats->set_mem_used(response->container_stats[i]->mem_used);
++        stats->set_rss_bytes(response->container_stats[i]->rss_bytes);
++        stats->set_page_faults(response->container_stats[i]->page_faults);
++        stats->set_major_page_faults(response->container_stats[i]->major_page_faults);
+         if (response->container_stats[i]->name != nullptr) {
+             stats->set_name(response->container_stats[i]->name);
+         }
+diff --git a/src/daemon/entry/cri/cri_container_manager_service.cc b/src/daemon/entry/cri/cri_container_manager_service.cc
+index b02367c8..57284593 100644
+--- a/src/daemon/entry/cri/cri_container_manager_service.cc
++++ b/src/daemon/entry/cri/cri_container_manager_service.cc
+@@ -842,8 +842,22 @@ void ContainerManagerService::ContainerStatsToGRPC(
+                 response->container_stats[i]->cpu_use_nanos);
+             container->mutable_cpu()->set_timestamp(timestamp);
+         }
+-
+-        containerstats->push_back(move(container));
++        if (response->container_stats[i]->avaliable_bytes != 0u) {
++            container->mutable_memory()->mutable_available_bytes()->set_value(response->container_stats[i]->avaliable_bytes);
++        }
++        if (response->container_stats[i]->usage_bytes != 0u) {
++            container->mutable_memory()->mutable_usage_bytes()->set_value(response->container_stats[i]->usage_bytes);
++        }
++        if (response->container_stats[i]->rss_bytes != 0u) {
++            container->mutable_memory()->mutable_rss_bytes()->set_value(response->container_stats[i]->rss_bytes);
++        }
++        if (response->container_stats[i]->page_faults != 0u) {
++            container->mutable_memory()->mutable_page_faults()->set_value(response->container_stats[i]->page_faults);
++        }
++        if (response->container_stats[i]->major_page_faults != 0u) {
++            container->mutable_memory()->mutable_major_page_faults()->set_value(response->container_stats[i]->major_page_faults);
++        }
++        containerstats->push_back(std::move(container));
+     }
+ }
+ 
+diff --git a/src/daemon/executor/container_cb/execution_extend.c b/src/daemon/executor/container_cb/execution_extend.c
+index b0da705e..67d0845a 100644
+--- a/src/daemon/executor/container_cb/execution_extend.c
++++ b/src/daemon/executor/container_cb/execution_extend.c
+@@ -243,6 +243,11 @@ static container_info *get_container_stats(const container_t *cont,
+     info->blkio_write = einfo->blkio_write;
+     info->mem_used = einfo->mem_used;
+     info->mem_limit = einfo->mem_limit;
++    info->avaliable_bytes = einfo->avaliable_bytes;
++    info->usage_bytes = einfo->usage_bytes;
++    info->rss_bytes = einfo->rss_bytes;
++    info->page_faults = einfo->page_faults;
++    info->major_page_faults = einfo->major_page_faults;
+     info->kmem_used = einfo->kmem_used;
+     info->kmem_limit = einfo->kmem_limit;
+ 
+diff --git a/src/daemon/modules/api/runtime_api.h b/src/daemon/modules/api/runtime_api.h
+index de4136a3..b245ebf9 100644
+--- a/src/daemon/modules/api/runtime_api.h
++++ b/src/daemon/modules/api/runtime_api.h
+@@ -55,6 +55,11 @@ struct runtime_container_resources_stats_info {
+     /* Memory usage */
+     uint64_t mem_used;
+     uint64_t mem_limit;
++    uint64_t avaliable_bytes;
++    uint64_t usage_bytes;
++    uint64_t rss_bytes;
++    uint64_t page_faults;
++    uint64_t major_page_faults;
+     /* Kernel Memory usage */
+     uint64_t kmem_used;
+     uint64_t kmem_limit;
+diff --git a/src/daemon/modules/runtime/engines/lcr/lcr_engine.c b/src/daemon/modules/runtime/engines/lcr/lcr_engine.c
+index 2ca12545..2f7f73f8 100644
+--- a/src/daemon/modules/runtime/engines/lcr/lcr_engine.c
++++ b/src/daemon/modules/runtime/engines/lcr/lcr_engine.c
+@@ -162,6 +162,12 @@ static void copy_container_resources_stats(const struct lcr_container_state *lcs
+     rs_stats->mem_limit = lcs->mem_limit;
+     rs_stats->kmem_used = lcs->kmem_used;
+     rs_stats->kmem_limit = lcs->kmem_limit;
++    rs_stats->avaliable_bytes = lcs->avaliable_bytes;
++    rs_stats->usage_bytes = lcs->usage_bytes;
++    rs_stats->mem_used = lcs->mem_used;
++    rs_stats->rss_bytes = lcs->rss_bytes;
++    rs_stats->page_faults = lcs->page_faults;
++    rs_stats->major_page_faults = lcs->major_page_faults;
+     rs_stats->cache = lcs->cache;
+     rs_stats->cache_total = lcs->cache_total;
+     rs_stats->inactive_file_total = lcs->inactive_file_total;
+-- 
+2.25.1
+

@@ -1,0 +1,119 @@
+From 6311ccd6e367f965da4dc1b4c9efb4bf43275f64 Mon Sep 17 00:00:00 2001
+From: Neil <wrz750726@gmail.com>
+Date: Sun, 5 Mar 2023 12:23:29 +0000
+Subject: [PATCH 33/35] add ci for remote ro
+
+Signed-off-by: Neil <wangrunze13@huawei.com>
+---
+ CI/make-and-install.sh                        |  4 +-
+ .../container_cases/test_data/daemon.json     |  1 +
+ CI/test_cases/image_cases/ro_separate.sh      | 69 +++++++++++++++++++
+ 3 files changed, 72 insertions(+), 2 deletions(-)
+ create mode 100644 CI/test_cases/image_cases/ro_separate.sh
+
+diff --git a/CI/make-and-install.sh b/CI/make-and-install.sh
+index 3dbff480..fa9c2250 100755
+--- a/CI/make-and-install.sh
++++ b/CI/make-and-install.sh
+@@ -103,9 +103,9 @@ rm -rf build
+ mkdir build
+ cd build
+ if [[ ${enable_gcov} -ne 0 ]]; then
+-  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=Debug -DGCOV=ON -DENABLE_EMBEDDED=ON -DENABLE_COVERAGE=ON -DENABLE_UT=ON -DENABLE_METRICS=ON ..
++  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=Debug -DGCOV=ON -DENABLE_EMBEDDED=ON -DENABLE_COVERAGE=ON -DENABLE_UT=ON -DENABLE_METRICS=ON -DENABLE_REMOTE_LAYER_STORE=ON ..
+ else
+-  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DENABLE_EMBEDDED=ON -DENABLE_METRICS=ON ..
++  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DENABLE_EMBEDDED=ON -DENABLE_METRICS=ON -DENABLE_REMOTE_LAYER_STORE=ON ..
+ fi
+ make -j $(nproc)
+ make install
+diff --git a/CI/test_cases/container_cases/test_data/daemon.json b/CI/test_cases/container_cases/test_data/daemon.json
+index aa88c9da..2664c6b2 100644
+--- a/CI/test_cases/container_cases/test_data/daemon.json
++++ b/CI/test_cases/container_cases/test_data/daemon.json
+@@ -19,6 +19,7 @@
+     "hook-spec": "/etc/default/isulad/hooks/default.json",
+     "start-timeout": "2m",
+     "storage-driver": "overlay2",
++    "storage-enable-remote-layer": false,
+     "storage-opts": [
+         "overlay2.override_kernel_check=true"
+     ],
+diff --git a/CI/test_cases/image_cases/ro_separate.sh b/CI/test_cases/image_cases/ro_separate.sh
+new file mode 100644
+index 00000000..47e04abb
+--- /dev/null
++++ b/CI/test_cases/image_cases/ro_separate.sh
+@@ -0,0 +1,69 @@
++#!/bin/bash
++#
++# attributes: isulad basic image
++# concurrent: NA
++# spend time: 22
++
++#######################################################################
++##- Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
++# - iSulad licensed under the Mulan PSL v2.
++# - You can use this software according to the terms and conditions of the Mulan PSL v2.
++# - You may obtain a copy of Mulan PSL v2 at:
++# -     http://license.coscl.org.cn/MulanPSL2
++# - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++# - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++# - PURPOSE.
++# - See the Mulan PSL v2 for more details.
++##- @Description:CI
++##- @Author: wangrunze
++##- @Create: 2023-03-03
++#######################################################################
++
++declare -r curr_path=$(dirname $(readlink -f "$0"))
++source ../helpers.sh
++single_image="${curr_path}/busybox.tar"
++
++function test_separate_ro()
++{
++  local ret=0
++  local test="isula separate ro test => (${FUNCNAME[@]})"
++
++  msg_info "${test} starting..."
++
++  sed -i 's/"storage-enable-remote-layer": false/"storage-enable-remote-layer": true/' /etc/isulad/daemon.json
++  start_isulad_with_valgrind
++  wait_isulad_running
++
++  isula rmi busybox
++
++  isula pull busybox
++  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - pull image failed" && ((ret++))
++
++  isula run -tid --name test_separate busybox /bin/sh
++  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container failed" && ((ret++))
++
++  isula stop test_separate
++  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop container failed" && ((ret++))
++
++  isula rmi busybox
++  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - remove image failed" && ((ret++))
++
++  isula load -i $single_image
++  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${rootfs_tar}" && ((ret++))
++
++  check_valgrind_log
++  [[ $? -ne 0 ]] && msg_err "separate ro test - memory leak, please check...." && ((ret++))
++
++  sed -i 's/"storage-enable-remote-layer": true/"storage-enable-remote-layer": false/' /etc/isulad/daemon.json
++  start_isulad_with_valgrind
++  wait_isulad_running
++
++  msg_info "${test} finished with return ${ret}..."
++  return ${ret}
++}
++
++declare -i ans=0
++
++test_separate_ro || ((ans++))
++
++show_result ${ans} "${curr_path}/${0}"
+-- 
+2.25.1
+
