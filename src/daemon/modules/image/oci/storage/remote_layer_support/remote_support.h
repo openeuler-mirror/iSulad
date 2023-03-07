@@ -17,39 +17,59 @@
 #define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_REMOTE_LAYER_SUPPORT_REMOTE_SUPPORT_H
 
 #include "linked_list.h"
-#define REMOTE_RO_LAYER_DIR "RO"
-#define OVERLAY_RO_DIR "RO"
+#include "map.h"
+#include "ro_symlink_maintain.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct {
-    void *(*create)(const char *remote_home, const char *remote_ro);
-    void (*destroy)(void *data);
-    // populate the list contains all dirs
-    int (*scan_remote_dir)(void *data);
-    // consume the list contains all dirs
-    int (*load_item)(void *data);
-} remote_support;
+struct remote_overlay_data {
+    const char *overlay_home;
+    const char *overlay_ro;
+};
 
-typedef struct {
-    void *data;
-    remote_support *handlers;
-} remote_supporter;
+struct remote_layer_data {
+    const char *layer_home;
+    const char *layer_ro;
+};
 
-// RemoteSupport *impl_remote_support();
-remote_supporter *create_image_supporter(const char *remote_home, const char *remote_ro);
+struct remote_image_data {
+    const char *image_home;
+};
 
-remote_supporter *create_layer_supporter(const char *remote_home, const char *remote_ro);
+// image impl
+struct remote_image_data *remote_image_create(const char *image_home, const char *image_ro);
 
-remote_supporter *create_overlay_supporter(const char *remote_home, const char *remote_ro);
+void remote_image_destroy(struct remote_image_data *data);
 
-void destroy_suppoter(remote_supporter *supporter);
+void remote_image_refresh(struct remote_image_data *data);
 
-int scan_remote_dir(remote_supporter *supporter);
+// layer impl
+struct remote_layer_data *remote_layer_create(const char *layer_home, const char *layer_ro);
 
-int load_item(remote_supporter *supporter);
+void remote_layer_destroy(struct remote_layer_data *data);
+
+void remote_layer_refresh(struct remote_layer_data *data);
+
+bool remote_layer_layer_valid(const char *layer_id);
+
+// overlay impl
+struct remote_overlay_data *remote_overlay_create(const char *overlay_home, const char *overlay_ro);
+
+void remote_overlay_destroy(struct remote_overlay_data *data);
+
+void remote_overlay_refresh(struct remote_overlay_data *data);
+
+bool remote_overlay_layer_valid(const char *layer_id);
+
+// start refresh remote
+int remote_start_refresh_thread(void);
+
+// extra map utils
+char **remote_deleted_layers(const map_t *old, const map_t *new_l);
+
+char **remote_added_layers(const map_t *old, const map_t *new_l);
 
 #ifdef __cplusplus
 }
