@@ -13,27 +13,23 @@
  * Description: provide remote image store functions
  ******************************************************************************/
 #define _GNU_SOURCE
-#include "image_store.h"
+#include "remote_support.h"
 
 #include <isula_libutils/log.h>
 #include <stdio.h>
 
-#include "remote_support.h"
 #include "ro_symlink_maintain.h"
 #include "map.h"
 #include "utils_file.h"
 #include "utils.h"
 #include "layer_store.h"
+#include "image_store.h"
 #include "utils_array.h"
-
-struct remote_image_data {
-    const char *image_home;
-};
 
 static map_t *image_byid_old = NULL;
 static map_t *image_byid_new = NULL;
 
-static void *remote_support_create(const char *remote_home, const char *remote_ro)
+struct remote_image_data *remote_image_create(const char *remote_home, const char *remote_ro)
 {
     struct remote_image_data *data = util_common_calloc_s(sizeof(struct remote_image_data));
     if (data == NULL) {
@@ -46,7 +42,7 @@ static void *remote_support_create(const char *remote_home, const char *remote_r
     return data;
 }
 
-static void remote_support_destroy(void *data)
+void remote_image_destroy(struct remote_image_data *data)
 {
     if (data == NULL) {
         return;
@@ -59,7 +55,7 @@ static void remote_support_destroy(void *data)
     return;
 }
 
-static int remote_support_scan(void *data)
+static int remote_dir_scan(void *data)
 {
     int ret = 0;
     int nret;
@@ -79,7 +75,7 @@ static int remote_support_scan(void *data)
     image_dirs_num = util_array_len((const char **)image_dirs);
 
     for (i = 0; i < image_dirs_num; i++) {
-        bool valid_v1_image = false;
+        bool is_v1_image = false;
 
         if (util_reg_match(id_patten, image_dirs[i]) != 0) {
             DEBUG("Image's json is placed inside image's data directory, so skip any other file or directory: %s",
@@ -93,12 +89,14 @@ static int remote_support_scan(void *data)
             continue;
         }
 
-        if (validate_manifest_schema_version_1(image_path, &valid_v1_image) != 0) {
+        if (image_store_validate_manifest_schema_version_1(image_path, &is_v1_image) != 0) {
             ERROR("Failed to validate manifest schema version 1 format");
             continue;
         }
 
-        if (!valid_v1_image) {
+        // for refresh, we don't care v1 image, cause image should be handled by master isulad
+        // when master isulad pull images
+        if (!is_v1_image) {
             map_insert(image_byid_new, util_strdup_s(image_dirs[i]), (void *)&exist);
         }
     }
@@ -108,12 +106,13 @@ out:
     return ret;
 }
 
-static int remote_support_add(void *data)
+static int remote_image_add(void *data)
 {
     char **array_added = NULL;
     char **array_deleted = NULL;
     char *top_layer = NULL;
     map_t *tmp_map = NULL;
+    bool exist = true;
     int i = 0;
     int ret = 0;
 
@@ -121,26 +120,28 @@ static int remote_support_add(void *data)
         return -1;
     }
 
-    array_added = added_layers(image_byid_old, image_byid_new);
-    array_deleted = deleted_layers(image_byid_old, image_byid_new);
+    array_added = remote_added_layers(image_byid_old, image_byid_new);
+    array_deleted = remote_deleted_layers(image_byid_old, image_byid_new);
 
     for (i = 0; i < util_array_len((const char **)array_added); i++) {
-        top_layer = get_top_layer_from_json(array_added[i]);
-        if (top_layer != NULL && !layer_remote_layer_valid(top_layer)) {
-            ERROR("ERROR not find valid under layer, remoet image:%s not added", array_added[i]);
+        top_layer = remote_image_get_top_layer_from_json(array_added[i]);
+        if (top_layer != NULL && !remote_layer_layer_valid(top_layer)) {
+            WARN("Current not find valid under layer, remoet image:%s not added", array_added[i]);
             map_remove(image_byid_new, (void *)array_added[i]);
             continue;
         }
 
-        if (append_image_by_directory_with_lock(array_added[i]) != 0) {
+        if (remote_append_image_by_directory_with_lock(array_added[i]) != 0) {
             ERROR("Failed to load image into memrory: %s", array_added[i]);
+            map_remove(image_byid_new, (void *)array_added[i]);
             ret = -1;
         }
     }
 
     for (i = 0; i < util_array_len((const char **)array_deleted); i++) {
-        if (remove_image_from_memory_with_lock(array_deleted[i]) != 0) {
+        if (remote_remove_image_from_memory_with_lock(array_deleted[i]) != 0) {
             ERROR("Failed to remove remote memory store");
+            map_insert(image_byid_new, array_deleted[i], (void *)&exist);
             ret = -1;
         }
     }
@@ -148,7 +149,7 @@ static int remote_support_add(void *data)
     tmp_map = image_byid_old;
     image_byid_old = image_byid_new;
     image_byid_new = tmp_map;
-    empty_map(image_byid_new);
+    map_clear(image_byid_new);
 
     util_free_array(array_added);
     util_free_array(array_deleted);
@@ -157,17 +158,13 @@ static int remote_support_add(void *data)
     return ret;
 }
 
-remote_support *image_store_impl_remote_support(void)
-{
-    remote_support *rs = util_common_calloc_s(sizeof(remote_support));
-    if (rs == NULL) {
-        return NULL;
+void remote_image_refresh(struct remote_image_data *data) {
+    if (remote_dir_scan(data) != 0) {
+        ERROR("remote overlay failed to scan dir, skip refresh");
+        return;
     }
 
-    rs->create = remote_support_create;
-    rs->destroy = remote_support_destroy;
-    rs->scan_remote_dir = remote_support_scan;
-    rs->load_item = remote_support_add;
-
-    return rs;
+    if (remote_image_add(data) != 0) {
+        ERROR("refresh overlay failed");
+    }
 }

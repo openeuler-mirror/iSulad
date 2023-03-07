@@ -13,13 +13,13 @@
  * Description: provide remote implementation for driver overlay
  ******************************************************************************/
 #define _GNU_SOURCE
-#include "driver_overlay2.h"
+#include "remote_support.h"
 
 #include <stdio.h>
 
 #include "map.h"
-#include "remote_support.h"
 #include "ro_symlink_maintain.h"
+#include "driver_overlay2.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_array.h"
@@ -29,15 +29,13 @@
 #define OVERLAY_LINK_DIR "l"
 #define OVERLAY_LAYER_LINK "link"
 
-struct remote_overlay_data {
-    const char *overlay_home;
-    const char *overlay_ro;
-};
-
+// key: id, value: short id in 'l' dir
+// store short id to delete symbol link in 'l' dir
 static map_t *overlay_byid_old = NULL;
 static map_t *overlay_byid_new = NULL;
+static map_t *overlay_id_link = NULL;
 
-static void *remote_support_create(const char *remote_home, const char *remote_ro)
+struct remote_overlay_data *remote_overlay_create(const char *remote_home, const char *remote_ro)
 {
     struct remote_overlay_data *data = util_common_calloc_s(sizeof(struct remote_overlay_data));
     if (data == NULL) {
@@ -48,11 +46,12 @@ static void *remote_support_create(const char *remote_home, const char *remote_r
     data->overlay_ro = remote_ro;
     overlay_byid_old = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
     overlay_byid_new = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    overlay_id_link = map_new(MAP_STR_STR, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
 
     return data;
 }
 
-static void remote_support_destroy(void *data)
+void remote_overlay_destroy(struct remote_overlay_data *data)
 {
     if (data == NULL) {
         return;
@@ -60,6 +59,7 @@ static void remote_support_destroy(void *data)
 
     map_free(overlay_byid_old);
     map_free(overlay_byid_new);
+    map_free(overlay_id_link);
     free(data);
 }
 
@@ -74,10 +74,9 @@ static bool overlay_walk_dir_cb(const char *path_name, const struct dirent *sub_
     return true;
 }
 
-static int remote_support_scan(void *data)
+static int remote_dir_scan(struct remote_overlay_data *data)
 {
-    struct remote_overlay_data *remote_data = data;
-    return util_scan_subdirs(remote_data->overlay_ro, overlay_walk_dir_cb, data);
+    return util_scan_subdirs(data->overlay_ro, overlay_walk_dir_cb, data);
 }
 
 static int do_diff_symlink(const char *id, char *link_id, const char *driver_home)
@@ -128,9 +127,16 @@ out:
 static int remove_one_remote_overlay_layer(struct remote_overlay_data *data, const char *overlay_id)
 {
     char *ro_symlink = NULL;
+    char *link_path = NULL;
+    char *link_id = NULL;
     char clean_path[PATH_MAX] = { 0 };
     int nret = 0;
     int ret = 0;
+
+    if (overlay_id == NULL) {
+        ERROR("can't remove NULL remote layer");
+        return -1;
+    }
 
     nret = asprintf(&ro_symlink, "%s/%s", data->overlay_home, overlay_id);
     if (nret < 0 || nret > PATH_MAX) {
@@ -149,8 +155,40 @@ static int remove_one_remote_overlay_layer(struct remote_overlay_data *data, con
         SYSERROR("Failed to remove link path %s", clean_path);
     }
 
+    link_id = (char *)map_search(overlay_id_link, (void *)overlay_id);
+
+    if (link_id == NULL) {
+        ERROR("Failed to find link id for overlay layer: %s", overlay_id);
+        ret = -1;
+        goto out;
+    }
+
+    nret = asprintf(&link_path, "%s/%s/%s", data->overlay_home, OVERLAY_LINK_DIR, link_id);
+    if (nret < 0 || nret > PATH_MAX) {
+        SYSERROR("Create link path failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (util_clean_path(link_path, clean_path, sizeof(clean_path)) == NULL) {
+        ERROR("Failed to clean path: %s", ro_symlink);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_path_remove(clean_path) != 0) {
+        SYSERROR("Failed to remove link path %s", clean_path);
+    }
+
+    if (!map_remove(overlay_id_link, (void *)overlay_id)) {
+        ERROR("Failed to remove link id for overlay layers: %s", overlay_id);
+        ret = -1;
+        goto out;
+    }
+
 out:
     free(ro_symlink);
+    free(link_path);
     return ret;
 }
 
@@ -161,6 +199,11 @@ static int add_one_remote_overlay_layer(struct remote_overlay_data *data, const 
     char *link_file = NULL;
     char *diff_symlink = NULL;
     int ret = 0;
+
+    if (overlay_id == NULL) {
+        ERROR("can't add NULL remote layer");
+        return -1;
+    }
 
     ro_symlink = util_path_join(data->overlay_home, overlay_id);
     if (ro_symlink == NULL) {
@@ -211,6 +254,11 @@ static int add_one_remote_overlay_layer(struct remote_overlay_data *data, const 
         ret = -1;
     }
 
+    if (!map_insert(overlay_id_link, util_strdup_s(overlay_id), (void *)diff_symlink)) {
+        ERROR("can't insert remote layer into map");
+        ret = -1;
+    }
+
 free_out:
     free(ro_symlink);
     free(layer_dir);
@@ -220,24 +268,26 @@ free_out:
     return ret;
 }
 
-static int remote_support_add(void *data)
+static int remote_image_add(struct remote_overlay_data *data)
 {
     int ret = 0;
     char **array_added = NULL;
     char **array_deleted = NULL;
     map_t *tmp_map = NULL;
+    bool exist = true;
     int i = 0;
 
     if (data == NULL) {
         return -1;
     }
 
-    array_added = added_layers(overlay_byid_old, overlay_byid_new);
-    array_deleted = deleted_layers(overlay_byid_old, overlay_byid_new);
+    array_added = remote_added_layers(overlay_byid_old, overlay_byid_new);
+    array_deleted = remote_deleted_layers(overlay_byid_old, overlay_byid_new);
 
     for (i = 0; i < util_array_len((const char **)array_added); i++) {
         if (add_one_remote_overlay_layer(data, array_added[i]) != 0) {
             ERROR("Failed to add remote overlay layer: %s", array_added[i]);
+            map_remove(overlay_byid_new, (void *)array_added[i]);
             ret = -1;
         }
     }
@@ -245,6 +295,7 @@ static int remote_support_add(void *data)
     for (i = 0; i < util_array_len((const char **)array_deleted); i++) {
         if (remove_one_remote_overlay_layer(data, array_deleted[i]) != 0) {
             ERROR("Failed to delete remote overlay layer: %s", array_deleted[i]);
+            map_insert(overlay_byid_new, array_deleted[i], (void *)&exist);
             ret = -1;
         }
     }
@@ -252,7 +303,7 @@ static int remote_support_add(void *data)
     tmp_map = overlay_byid_old;
     overlay_byid_old = overlay_byid_new;
     overlay_byid_new = tmp_map;
-    empty_map(overlay_byid_new);
+    map_clear(overlay_byid_new);
 
     util_free_array(array_added);
     util_free_array(array_deleted);
@@ -260,23 +311,19 @@ static int remote_support_add(void *data)
     return ret;
 }
 
-remote_support *overlay_driver_impl_remote_support(void)
+void remote_overlay_refresh(struct remote_overlay_data *data)
 {
-    remote_support *rs = util_common_calloc_s(sizeof(remote_support));
-    if (rs == NULL) {
-        ERROR("Failed to calloc overlay supporter");
-        return NULL;
+    if (remote_dir_scan(data) != 0) {
+        ERROR("remote overlay failed to scan dir, skip refresh");
+        return;
     }
 
-    rs->create = remote_support_create;
-    rs->destroy = remote_support_destroy;
-    rs->scan_remote_dir = remote_support_scan;
-    rs->load_item = remote_support_add;
-
-    return rs;
+    if (remote_image_add(data) != 0) {
+        ERROR("refresh overlay failed");
+    }
 }
 
-bool overlay_remote_layer_valid(const char *layer_id)
+bool remote_overlay_layer_valid(const char *layer_id)
 {
     return map_search(overlay_byid_old, (void *)layer_id) != NULL;
 }

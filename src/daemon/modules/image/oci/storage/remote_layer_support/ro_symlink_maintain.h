@@ -15,11 +15,20 @@
 #ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_REMOTE_LAYER_SUPPORT_RO_SYMLINK_MAINTAIN_H
 #define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_REMOTE_LAYER_SUPPORT_RO_SYMLINK_MAINTAIN_H
 
-#include "map.h"
+#define REMOTE_RO_LAYER_DIR "RO"
+#define OVERLAY_RO_DIR "RO"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct {
+    const char *image_home;
+    const char *layer_ro_dir;
+    const char *layer_home;
+    const char *overlay_ro_dir;
+    const char *overlay_home;
+} maintain_context;
 
 int remote_image_init(const char *root_dir);
 
@@ -29,8 +38,6 @@ int remote_overlay_init(const char *driver_home);
 
 void remote_maintain_cleanup(void);
 
-int start_refresh_thread(void);
-
 int remote_layer_build_ro_dir(const char *id);
 
 int remote_overlay_build_ro_dir(const char *id);
@@ -39,11 +46,7 @@ int remote_layer_remove_ro_dir(const char *id);
 
 int remote_overlay_remove_ro_dir(const char *id);
 
-char **deleted_layers(map_t *old, map_t *new);
-
-char **added_layers(map_t *old, map_t *new);
-
-int empty_map(map_t *mp);
+maintain_context get_maintain_context(void);
 
 #ifdef __cplusplus
 }

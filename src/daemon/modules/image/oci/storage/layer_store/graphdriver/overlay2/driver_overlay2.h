@@ -22,9 +22,6 @@
 #include <stdint.h>
 
 #include "driver.h"
-#ifdef ENABLE_REMOTE_LAYER_STORE
-#include "remote_support.h"
-#endif
 
 struct driver_create_opts;
 struct driver_mount_opts;
@@ -70,11 +67,6 @@ void free_driver_mount_opts(struct driver_mount_opts *opts);
 int overlay2_repair_lowers(const char *id, const char *parent, const struct graphdriver *driver);
 
 int overlay2_get_layer_fs_info(const char *id, const struct graphdriver *driver, imagetool_fs_info *fs_info);
-
-#ifdef ENABLE_REMOTE_LAYER_STORE
-remote_support *overlay_driver_impl_remote_support(void);
-bool overlay_remote_layer_valid(const char *layer_id);
-#endif
 
 #ifdef __cplusplus
 }

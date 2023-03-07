@@ -17,19 +17,15 @@
 
 #include <sys/prctl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
-#include "map.h"
+
 #include "path.h"
 #include "linked_list.h"
-#include "layer_store.h"
-#include "layer.h"
 #include "isula_libutils/log.h"
-#include "image_store.h"
-#include "remote_support.h"
 #include "utils.h"
 #include "utils_file.h"
-#include "stdlib.h"
 
 #define REMOTE_RO_LAYER_DIR "RO"
 
@@ -42,14 +38,6 @@ static char *layer_home;
 // overlay and overlay/RO
 static char *overlay_ro_dir;
 static char *overlay_home;
-
-struct supporters {
-    remote_supporter *image_supporter;
-    remote_supporter *layer_supporter;
-    remote_supporter *overlay_supporter;
-};
-
-static struct supporters supporters;
 
 int remote_image_init(const char *root_dir)
 {
@@ -134,75 +122,11 @@ void remote_maintain_cleanup(void)
     overlay_ro_dir = NULL;
 }
 
-// to maintain the symbol links, add new symbol link and delete invalid symbol link
-// arg is const char *driver_home
-// scanning driver->home/RO/ directory, build symlink in driver->home
-static void *remote_refresh_ro_symbol_link(void *arg)
-{
-    struct supporters *supporters = (struct supporters *)arg;
-    prctl(PR_SET_NAME, "RoLayerRefresh");
-
-    while (true) {
-        util_usleep_nointerupt(5 * 1000 * 1000);
-        DEBUG("remote refresh start\n");
-        scan_remote_dir(supporters->overlay_supporter);
-        load_item(supporters->overlay_supporter);
-        scan_remote_dir(supporters->layer_supporter);
-        load_item(supporters->layer_supporter);
-        scan_remote_dir(supporters->image_supporter);
-        load_item(supporters->image_supporter);
-        DEBUG("remote refresh end\n");
-    }
-    return NULL;
-}
-
-int start_refresh_thread(void)
-{
-    int res = 0;
-    pthread_t a_thread;
-
-    supporters.image_supporter = create_image_supporter(image_home, NULL);
-    if (supporters.image_supporter == NULL) {
-        goto free_out;
-    }
-
-    supporters.layer_supporter = create_layer_supporter(layer_home, layer_ro_dir);
-    if (supporters.layer_supporter == NULL) {
-        goto free_out;
-    }
-
-    supporters.overlay_supporter = create_overlay_supporter(overlay_home, overlay_ro_dir);
-    if (supporters.overlay_supporter == NULL) {
-        goto free_out;
-    }
-
-    res = pthread_create(&a_thread, NULL, remote_refresh_ro_symbol_link, (void *)&supporters);
-    if (res != 0) {
-        CRIT("Thread creation failed");
-        return -1;
-    }
-
-    if (pthread_detach(a_thread) != 0) {
-        SYSERROR("Failed to detach 0x%lx", a_thread);
-        return -1;
-    }
-
-    return 0;
-
-free_out:
-    destroy_suppoter(supporters.image_supporter);
-    destroy_suppoter(supporters.layer_supporter);
-    destroy_suppoter(supporters.overlay_supporter);
-
-    return -1;
-}
-
 static int do_build_ro_dir(const char *home, const char *id)
 {
     char *ro_symlink = NULL;
     char *ro_layer_dir = NULL;
     int nret = 0;
-    // bool ret = true;
     int ret = 0;
 
     nret = asprintf(&ro_symlink, "%s/%s", home, id);
@@ -305,43 +229,15 @@ int remote_overlay_remove_ro_dir(const char *id)
     return do_remove_ro_dir(overlay_home, id);
 }
 
-static char **map_diff(map_t *map_a, map_t *map_b)
+maintain_context get_maintain_context(void)
 {
-    char **array = NULL;
-    map_itor *itor = map_itor_new(map_a);
-    bool *found = NULL;
+    maintain_context ctx = {0x0};
 
-    // iter new_map, every item not in old, append them to new_layers
-    for (; map_itor_valid(itor); map_itor_next(itor)) {
-        char *id = map_itor_key(itor);
-        found = map_search(map_b, id);
-        if (found == NULL) {
-            util_array_append(&array, util_strdup_s(id));
-        }
-    }
+    ctx.image_home = image_home;
+    ctx.layer_ro_dir = layer_ro_dir;
+    ctx.layer_home = layer_home;
+    ctx.overlay_ro_dir = overlay_ro_dir;
+    ctx.overlay_home = overlay_home;
 
-    map_itor_free(itor);
-
-    return array;
-}
-
-char **deleted_layers(map_t *old, map_t *new)
-{
-    return map_diff(old, new);
-}
-
-char **added_layers(map_t *old, map_t *new)
-{
-    return map_diff(new, old);
-}
-
-int empty_map(map_t *mp)
-{
-    if (mp == NULL) {
-        return -1;
-    }
-
-    map_clear(mp);
-    mp->store->root = mp->store->nil;
-    return 0;
+    return ctx;
 }
