@@ -45,6 +45,9 @@ function test_separate_ro()
   isula stop test_separate
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop container failed" && ((ret++))
 
+  isula rm test_separate
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - remove container failed" && ((ret++))
+
   isula rmi busybox
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - remove image failed" && ((ret++))
 
