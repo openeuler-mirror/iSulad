@@ -1852,6 +1852,11 @@ int load_one_layer(const char *id)
         return -1;
     }
 
+    if (map_search(g_metadata.by_id, (void *)id) != NULL) {
+        DEBUG("remote layer already exist, not added: %s", id);
+        goto unlock_out;
+    }
+
     tl = load_one_layer_from_json(id);
     if (tl == NULL) {
         ret = -1;
@@ -2482,8 +2487,14 @@ int remove_memory_stores_with_lock(const char *id)
         ERROR("Failed to lock layer store when handle: %s", id);
         return -1;
     }
+    if (map_search(g_metadata.by_id, (void *)id) == NULL) {
+        DEBUG("remote layer already removed, don't delete: %s", id);
+        goto unlock_out;
+    }
 
     ret = remove_memory_stores(id);
+
+unlock_out:
     layer_store_unlock();
 
     return ret;

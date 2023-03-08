@@ -175,7 +175,7 @@ static int remote_support_add(void *data)
         }
 
         if (add_one_remote_layer(data, array_added[i]) != 0) {
-            ERROR("Failed to add remote overlay layer: %s", array_added[i]);
+            ERROR("Failed to add remote layer: %s", array_added[i]);
             ret = -1;
         }
     }
