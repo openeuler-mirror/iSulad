@@ -1,0 +1,26 @@
+From c2bf76c3b6af0d88d84a76cd5680caf0aa22e321 Mon Sep 17 00:00:00 2001
+From: zhongtao <zhongtao17@huawei.com>
+Date: Mon, 6 Mar 2023 15:34:05 +0800
+Subject: [PATCH 25/26] modify sleep time
+
+Signed-off-by: zhongtao <zhongtao17@huawei.com>
+---
+ src/utils/cutils/utils.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/utils/cutils/utils.c b/src/utils/cutils/utils.c
+index 64d7e9f9..7f36d019 100644
+--- a/src/utils/cutils/utils.c
++++ b/src/utils/cutils/utils.c
+@@ -347,7 +347,7 @@ int util_waitpid_with_timeout(pid_t pid, const int64_t timeout, handle_timeout_c
+             return -1;
+         }
+         // sleep some time instead to avoid cpu full running and then retry.
+-        usleep(0.1);
++        usleep(100);
+     }
+     return 0;
+ }
+-- 
+2.25.1
+
