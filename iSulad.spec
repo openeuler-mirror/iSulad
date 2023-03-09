@@ -1,5 +1,5 @@
 %global _version 2.0.18
-%global _release 3
+%global _release 4
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -32,6 +32,13 @@ Patch0016:	0016-fix-code-style.patch
 Patch0017:	0017-add-retry-for-read-write.patch
 Patch0018:	0018-add-crictl-timeout-and-sync-for-CI.patch
 Patch0019:	0019-unlock-m_podsLock-if-new-failed.patch
+Patch0020:	0020-fix-CRI-SetupPod-and-TearDownPod-deadlock.patch
+Patch0021:	0021-support-pull-image-with-digest.patch
+Patch0022:	0022-isulad-shim-support-execSync-with-timeout.patch
+Patch0023:	0023-change-sleep-to-usleep-to-avoid-lossing-of-accuracy.patch
+Patch0024:	0024-adapt-to-repo-of-openeuler-url-changed.patch
+Patch0025:	0025-modify-sleep-time.patch
+Patch0026:	0026-change-goto-branch.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -276,6 +283,12 @@ fi
 %endif
 
 %changelog
+* Wed Mar 09 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-4
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: upgrade from upstream
+
 * Wed Feb 22 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-3
 - Type: bugfix
 - ID: NA
