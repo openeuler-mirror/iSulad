@@ -46,6 +46,7 @@
 #include "isulad_config.h"
 #include "specs_api.h"
 #include "container_api.h"
+#include "constants.h"
 #include "execution_extend.h"
 #include "execution_information.h"
 #include "execution_stream.h"
@@ -318,7 +319,7 @@ static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const
         return 0;
     }
 
-    ret = util_mkdir_p(path, CONFIG_DIRECTORY_MODE);
+    ret = util_mkdir_p(path, DEFAULT_CGROUP_DIR_MODE);
     if (ret != 0) {
         ERROR("Failed to mkdir: %s", path);
         return -1;
