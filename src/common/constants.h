@@ -22,6 +22,10 @@ extern "C" {
 
 /* mode of file and directory */
 
+#define DEFAULT_CGROUP_FILE_MODE 0644
+
+#define DEFAULT_CGROUP_DIR_MODE 0755
+
 #define DEFAULT_SECURE_FILE_MODE 0640
 
 #define DEFAULT_SECURE_DIRECTORY_MODE 0750

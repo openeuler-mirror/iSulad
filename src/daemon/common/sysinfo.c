@@ -27,6 +27,7 @@
 #include <isula_libutils/auto_cleanup.h>
 #include <isula_libutils/log.h>
 
+#include "constants.h"
 #include "err_msg.h"
 #include "utils.h"
 #include "utils_array.h"
@@ -73,8 +74,6 @@
 
 #define CGROUP_MOUNTPOINT "/sys/fs/cgroup"
 #define CGROUP_ISULAD_PATH CGROUP_MOUNTPOINT"/isulad"
-#define DEFAULT_CGROUP_DIR_MODE 0755
-#define DEFAULT_CGROUP_FILE_MODE 0644
 #define CGROUP2_CONTROLLERS_PATH CGROUP_MOUNTPOINT"/cgroup.controllers"
 #define CGROUP2_SUBTREE_CONTROLLER_PATH CGROUP_MOUNTPOINT"/cgroup.subtree_control"
 #define CGROUP2_CPUSET_CPUS_EFFECTIVE_PATH CGROUP_MOUNTPOINT"/cpuset.cpus.effective"
