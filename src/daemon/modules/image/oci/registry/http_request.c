@@ -691,6 +691,16 @@ static int progress(void *p, double dltotal, double dlnow, double ultotal, doubl
     return 0;
 }
 
+static int xfer(void *p, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+{
+    bool *cancel = p;
+    if (*cancel) {
+        // return nonzero code means abort transition
+        return -1;
+    }
+    return 0;
+}
+
 int http_request_file(pull_descriptor *desc, const char *url, const char **custom_headers, char *file,
                       resp_data_type type, CURLcode *errcode)
 {
@@ -721,6 +731,8 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
     options->show_progress = 1;
     options->progressinfo = &desc->cancel;
     options->progress_info_op = progress;
+    options->xferinfo = &desc->cancel;
+    options->xferinfo_op = xfer;
     options->timeout = true;
 
     ret = setup_common_options(desc, options, url, custom_headers);

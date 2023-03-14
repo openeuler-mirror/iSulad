@@ -17,6 +17,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <curl/curl.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +26,9 @@ extern "C" {
 typedef int(*progress_info_func)(void *p,
                                  double dltotal, double dlnow,
                                  double ultotal, double ulnow);
+typedef int(*xferinfo_func)(void *p,
+                            curl_off_t dltotal, curl_off_t dlnow,
+                            curl_off_t ultotal, curl_off_t ulnow);
 
 struct http_get_options {
     unsigned with_head : 1, /* if set, means write output with response HEADER */
@@ -77,6 +81,9 @@ struct http_get_options {
 
     void *progressinfo;
     progress_info_func progress_info_op;
+
+    void *xferinfo;
+    xferinfo_func xferinfo_op;
 };
 
 #define HTTP_RES_OK                 0
