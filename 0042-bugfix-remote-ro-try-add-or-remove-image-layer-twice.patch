@@ -1,0 +1,99 @@
+From a08e511eb6ee1955bb62e774190dfe7a7599fbdd Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Tue, 7 Mar 2023 23:59:56 -0800
+Subject: [PATCH 42/43] bugfix remote ro try add or remove image/layer twice
+
+Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
+---
+ .../image/oci/storage/image_store/image_store.c    | 14 ++++++++++++++
+ .../oci/storage/layer_store/layer_remote_impl.c    |  2 +-
+ .../image/oci/storage/layer_store/layer_store.c    | 11 +++++++++++
+ 3 files changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+index caff3705..84187ded 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+@@ -3668,6 +3668,11 @@ int append_image_by_directory_with_lock(const char *id)
+         return -1;
+     }
+ 
++    if (map_search(g_image_store->byid, (void *)id) != NULL ) {
++        DEBUG("remote image already exist, not added: %s", id);
++        goto out;
++    }
++
+     nret = snprintf(image_path, sizeof(image_path), "%s/%s", g_image_store->dir, id);
+     if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
+         ERROR("Failed to get image path");
+@@ -3675,6 +3680,8 @@ int append_image_by_directory_with_lock(const char *id)
+     }
+ 
+     ret = append_image_by_directory(image_path);
++
++out:
+     image_store_unlock();
+ 
+     return ret;
+@@ -3689,7 +3696,14 @@ int remove_image_from_memory_with_lock(const char *id)
+         return -1;
+     }
+ 
++    if (map_search(g_image_store->byid, (void *)id) == NULL) {
++        DEBUG("remote image already remvoed, don't delete twice: %s", id);
++        goto out;
++    }
++
+     ret = remove_image_from_memory(id);
++
++out:
+     image_store_unlock();
+ 
+     return ret;
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/layer_remote_impl.c b/src/daemon/modules/image/oci/storage/layer_store/layer_remote_impl.c
+index d03fc20b..d676458c 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/layer_remote_impl.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/layer_remote_impl.c
+@@ -175,7 +175,7 @@ static int remote_support_add(void *data)
+         }
+ 
+         if (add_one_remote_layer(data, array_added[i]) != 0) {
+-            ERROR("Failed to add remote overlay layer: %s", array_added[i]);
++            ERROR("Failed to add remote layer: %s", array_added[i]);
+             ret = -1;
+         }
+     }
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+index c00c3356..e88067bc 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+@@ -1852,6 +1852,11 @@ int load_one_layer(const char *id)
+         return -1;
+     }
+ 
++    if (map_search(g_metadata.by_id, (void *)id) != NULL) {
++        DEBUG("remote layer already exist, not added: %s", id);
++        goto unlock_out;
++    }
++
+     tl = load_one_layer_from_json(id);
+     if (tl == NULL) {
+         ret = -1;
+@@ -2482,8 +2487,14 @@ int remove_memory_stores_with_lock(const char *id)
+         ERROR("Failed to lock layer store when handle: %s", id);
+         return -1;
+     }
++    if (map_search(g_metadata.by_id, (void *)id) == NULL) {
++        DEBUG("remote layer already removed, don't delete: %s", id);
++        goto unlock_out;
++    }
+ 
+     ret = remove_memory_stores(id);
++
++unlock_out:
+     layer_store_unlock();
+ 
+     return ret;
+-- 
+2.25.1
+

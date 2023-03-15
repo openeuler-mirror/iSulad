@@ -1,5 +1,5 @@
 %global _version 2.1.1
-%global _release 5
+%global _release 6
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -48,6 +48,14 @@ Patch0032:	0032-remote-layer-store-demo.patch
 Patch0033:	0033-add-ci-for-remote-ro.patch
 Patch0034:	0034-change-sleep-to-usleep-to-avoid-lossing-of-accuracy.patch
 Patch0035:	0035-fix-compile-error-when-not-enable-remote-ro.patch
+Patch0036:	0036-adapt-to-repo-of-openeuler-url-changed.patch
+Patch0037:	0037-change-goto-branch.patch
+Patch0038:	0038-CI-not-enable-remote-ro-for-ut.patch
+Patch0039:	0039-use-auto-free-to-proc_t.patch
+Patch0040:	0040-modifying-cpurt-file-permissions.patch
+Patch0041:	0041-use-CURLOPT_XFERINFOFUNCTION-instead-of-deprecated-C.patch
+Patch0042:	0042-bugfix-remote-ro-try-add-or-remove-image-layer-twice.patch
+Patch0043:	0043-bugfix-can-t-delete-layers-under-dir-overlay-layers.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -290,6 +298,12 @@ fi
 %endif
 
 %changelog
+* Mon May 14 2023 wangrunze <wangrunze13@huawei.com> - 2.1.1-6
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: upgrade from upstream to fix remote ro bug
+
 * Mon May 06 2023 wangrunze <wangrunze13@huawei.com> - 2.1.1-5
 - Type: bugfix
 - ID: NA
