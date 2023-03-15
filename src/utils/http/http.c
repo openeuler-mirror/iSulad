@@ -219,12 +219,23 @@ static void http_custom_general_options(CURL *curl_handle, const struct http_get
     /* disable progress meter, set to 0L to enable and disable debug output */
     if (options->show_progress == 0) {
         curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
-    } else if (options->show_progress && options->progressinfo && options->progress_info_op) {
-        curl_easy_setopt(curl_handle, CURLOPT_PROGRESSFUNCTION, options->progress_info_op);
-        /* pass the struct pointer into the progress function */
-        curl_easy_setopt(curl_handle, CURLOPT_PROGRESSDATA, options->progressinfo);
-        curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 0L);
     } else {
+    /* libcurl support option CURLOPT_XFERINFOFUNCTION when version >= 7.32.0
+     * #define CURL_VERSION_BITS(x,y,z) ((x)<<16|(y)<<8|(z))
+     * CURL_VERSION_BITS(7,32,0) = 0x072000 */
+#if (LIBCURL_VERSION_NUM >= 0x072000)
+        if (options->xferinfo && options->xferinfo_op) {
+            curl_easy_setopt(curl_handle, CURLOPT_XFERINFOFUNCTION, options->xferinfo_op);
+            /* pass the struct pointer into the progress function */
+            curl_easy_setopt(curl_handle, CURLOPT_XFERINFODATA, options->xferinfo);
+        }
+#else
+        if (options->progressinfo && options->progress_info_op) {
+            curl_easy_setopt(curl_handle, CURLOPT_PROGRESSFUNCTION, options->progress_info_op);
+            /* pass the struct pointer into the progress function */
+            curl_easy_setopt(curl_handle, CURLOPT_PROGRESSDATA, options->progressinfo);
+        }
+#endif
         curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 0L);
     }
 
