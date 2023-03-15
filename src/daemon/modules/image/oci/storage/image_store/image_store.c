@@ -3668,6 +3668,11 @@ int append_image_by_directory_with_lock(const char *id)
         return -1;
     }
 
+    if (map_search(g_image_store->byid, (void *)id) != NULL ) {
+        DEBUG("remote image already exist, not added: %s", id);
+        goto out;
+    }
+
     nret = snprintf(image_path, sizeof(image_path), "%s/%s", g_image_store->dir, id);
     if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
         ERROR("Failed to get image path");
@@ -3675,6 +3680,8 @@ int append_image_by_directory_with_lock(const char *id)
     }
 
     ret = append_image_by_directory(image_path);
+
+out:
     image_store_unlock();
 
     return ret;
@@ -3689,7 +3696,14 @@ int remove_image_from_memory_with_lock(const char *id)
         return -1;
     }
 
+    if (map_search(g_image_store->byid, (void *)id) == NULL) {
+        DEBUG("remote image already remvoed, don't delete twice: %s", id);
+        goto out;
+    }
+
     ret = remove_image_from_memory(id);
+
+out:
     image_store_unlock();
 
     return ret;
