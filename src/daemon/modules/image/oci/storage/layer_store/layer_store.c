@@ -1409,10 +1409,14 @@ static int do_delete_layer(const char *id)
     }
 
 #ifdef ENABLE_REMOTE_LAYER_STORE
-    if (l->slayer->writable) {
+    if (!g_enable_remote_layer) {
         ret = layer_store_remove_layer(l->slayer->id);
     } else {
-        ret = remote_layer_remove_ro_dir(l->slayer->id);
+        if (l->slayer->writable) {
+            ret = layer_store_remove_layer(l->slayer->id);
+        } else {
+            ret = remote_layer_remove_ro_dir(l->slayer->id);
+        }
     }
 #else
     ret = layer_store_remove_layer(l->slayer->id);
