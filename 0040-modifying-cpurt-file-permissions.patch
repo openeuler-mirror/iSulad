@@ -1,0 +1,72 @@
+From 2d9b9d88f3150027609fe984930af1dcf06dfd00 Mon Sep 17 00:00:00 2001
+From: songbuhuang <544824346@qq.com>
+Date: Thu, 9 Mar 2023 18:32:19 +0800
+Subject: [PATCH 40/43] modifying cpurt file permissions
+
+Signed-off-by: songbuhuang <544824346@qq.com>
+---
+ src/common/constants.h                       | 4 ++++
+ src/daemon/common/sysinfo.c                  | 3 +--
+ src/daemon/executor/container_cb/execution.c | 3 ++-
+ 3 files changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/src/common/constants.h b/src/common/constants.h
+index b43d8c80..06015f1e 100644
+--- a/src/common/constants.h
++++ b/src/common/constants.h
+@@ -22,6 +22,10 @@ extern "C" {
+ 
+ /* mode of file and directory */
+ 
++#define DEFAULT_CGROUP_FILE_MODE 0644
++
++#define DEFAULT_CGROUP_DIR_MODE 0755
++
+ #define DEFAULT_SECURE_FILE_MODE 0640
+ 
+ #define DEFAULT_SECURE_DIRECTORY_MODE 0750
+diff --git a/src/daemon/common/sysinfo.c b/src/daemon/common/sysinfo.c
+index 7559d653..baf53510 100644
+--- a/src/daemon/common/sysinfo.c
++++ b/src/daemon/common/sysinfo.c
+@@ -27,6 +27,7 @@
+ #include <isula_libutils/auto_cleanup.h>
+ #include <isula_libutils/log.h>
+ 
++#include "constants.h"
+ #include "err_msg.h"
+ #include "utils.h"
+ #include "utils_array.h"
+@@ -73,8 +74,6 @@
+ 
+ #define CGROUP_MOUNTPOINT "/sys/fs/cgroup"
+ #define CGROUP_ISULAD_PATH CGROUP_MOUNTPOINT"/isulad"
+-#define DEFAULT_CGROUP_DIR_MODE 0755
+-#define DEFAULT_CGROUP_FILE_MODE 0644
+ #define CGROUP2_CONTROLLERS_PATH CGROUP_MOUNTPOINT"/cgroup.controllers"
+ #define CGROUP2_SUBTREE_CONTROLLER_PATH CGROUP_MOUNTPOINT"/cgroup.subtree_control"
+ #define CGROUP2_CPUSET_CPUS_EFFECTIVE_PATH CGROUP_MOUNTPOINT"/cpuset.cpus.effective"
+diff --git a/src/daemon/executor/container_cb/execution.c b/src/daemon/executor/container_cb/execution.c
+index 198052d3..c2a0bdb9 100644
+--- a/src/daemon/executor/container_cb/execution.c
++++ b/src/daemon/executor/container_cb/execution.c
+@@ -46,6 +46,7 @@
+ #include "isulad_config.h"
+ #include "sysinfo.h"
+ #include "container_api.h"
++#include "constants.h"
+ #include "specs_api.h"
+ #include "execution_extend.h"
+ #include "execution_information.h"
+@@ -324,7 +325,7 @@ static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const
+         return 0;
+     }
+ 
+-    ret = util_mkdir_p(path, CONFIG_DIRECTORY_MODE);
++    ret = util_mkdir_p(path, DEFAULT_CGROUP_DIR_MODE);
+     if (ret != 0) {
+         ERROR("Failed to mkdir: %s", path);
+         return -1;
+-- 
+2.25.1
+

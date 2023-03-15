@@ -1,0 +1,34 @@
+From c8702b62fd6016a96794d74abcae2e74551a9c07 Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Tue, 14 Mar 2023 20:32:23 -0700
+Subject: [PATCH 43/43] bugfix can't delete layers under dir overlay-layers
+
+Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
+---
+ .../modules/image/oci/storage/layer_store/layer_store.c   | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+index e88067bc..4edd0cad 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+@@ -1409,10 +1409,14 @@ static int do_delete_layer(const char *id)
+     }
+ 
+ #ifdef ENABLE_REMOTE_LAYER_STORE
+-    if (l->slayer->writable) {
++    if (!g_enable_remote_layer) {
+         ret = layer_store_remove_layer(l->slayer->id);
+     } else {
+-        ret = remote_layer_remove_ro_dir(l->slayer->id);
++        if (l->slayer->writable) {
++            ret = layer_store_remove_layer(l->slayer->id);
++        } else {
++            ret = remote_layer_remove_ro_dir(l->slayer->id);
++        }
+     }
+ #else
+     ret = layer_store_remove_layer(l->slayer->id);
+-- 
+2.25.1
+

@@ -1,0 +1,41 @@
+From c414e2226542660579e14b9401fc28bc91b709c7 Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Mon, 6 Mar 2023 18:59:43 -0800
+Subject: [PATCH 38/43] CI not enable remote ro for ut
+
+Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
+---
+ CI/make-and-install.sh                   | 2 +-
+ CI/test_cases/image_cases/ro_separate.sh | 3 +++
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/CI/make-and-install.sh b/CI/make-and-install.sh
+index fa9c2250..faeaf005 100755
+--- a/CI/make-and-install.sh
++++ b/CI/make-and-install.sh
+@@ -103,7 +103,7 @@ rm -rf build
+ mkdir build
+ cd build
+ if [[ ${enable_gcov} -ne 0 ]]; then
+-  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=Debug -DGCOV=ON -DENABLE_EMBEDDED=ON -DENABLE_COVERAGE=ON -DENABLE_UT=ON -DENABLE_METRICS=ON -DENABLE_REMOTE_LAYER_STORE=ON ..
++  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=Debug -DGCOV=ON -DENABLE_EMBEDDED=ON -DENABLE_COVERAGE=ON -DENABLE_UT=ON -DENABLE_METRICS=ON ..
+ else
+   cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DENABLE_EMBEDDED=ON -DENABLE_METRICS=ON -DENABLE_REMOTE_LAYER_STORE=ON ..
+ fi
+diff --git a/CI/test_cases/image_cases/ro_separate.sh b/CI/test_cases/image_cases/ro_separate.sh
+index 47e04abb..df45e120 100644
+--- a/CI/test_cases/image_cases/ro_separate.sh
++++ b/CI/test_cases/image_cases/ro_separate.sh
+@@ -45,6 +45,9 @@ function test_separate_ro()
+   isula stop test_separate
+   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop container failed" && ((ret++))
+ 
++  isula rm test_separate
++  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - remove container failed" && ((ret++))
++
+   isula rmi busybox
+   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - remove image failed" && ((ret++))
+ 
+-- 
+2.25.1
+
