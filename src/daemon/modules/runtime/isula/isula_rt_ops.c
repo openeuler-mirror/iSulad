@@ -39,6 +39,7 @@
 #include "constants.h"
 #include "isula_libutils/shim_client_process_state.h"
 #include "isula_libutils/shim_client_runtime_stats.h"
+#include "isula_libutils/shim_client_cgroup_resources.h"
 #include "isula_libutils/oci_runtime_state.h"
 #include "isulad_config.h"
 #include "utils_string.h"
@@ -53,6 +54,9 @@
 #define SHIM_LOG_SIZE ((BUFSIZ - 100) / 2)
 #define RESIZE_DATA_SIZE 100
 #define PID_WAIT_TIME 120
+
+// file name formats of cgroup resources json
+#define RESOURCE_FNAME_FORMATS "%s/resources.json"
 
 // handle string from stderr output.
 typedef int(*handle_output_callback_t)(const char *output);
@@ -725,18 +729,18 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
     runtime_exec_param_dump(params);
 
     if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
-        ERROR("failed make shim-pid full path");
+        ERROR("Failed make shim-pid full path");
         return -1;
     }
 
     if (pipe2(exec_fd, O_CLOEXEC) != 0) {
-        ERROR("failed to create pipe for shim create");
+        ERROR("Failed to create pipe for shim create");
         return -1;
     }
 
     pid = fork();
     if (pid < 0) {
-        ERROR("failed fork for shim parent %s", strerror(errno));
+        ERROR("Failed fork for shim parent %s", strerror(errno));
         close(exec_fd[0]);
         close(exec_fd[1]);
         return -1;
@@ -1256,11 +1260,162 @@ int rt_isula_attach(const char *id, const char *runtime, const rt_attach_params_
     return -1;
 }
 
+static int to_engine_resources(const host_config *hostconfig, shim_client_cgroup_resources *cr)
+{
+    uint64_t period = 0;
+    int64_t quota = 0;
+
+    if (hostconfig == NULL || cr == NULL) {
+        return -1;
+    }
+
+    cr->block_io = util_common_calloc_s(sizeof(shim_client_cgroup_resources_block_io));
+    if (cr->block_io == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    cr->cpu = util_common_calloc_s(sizeof(shim_client_cgroup_resources_cpu));
+    if (cr->cpu == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    cr->memory = util_common_calloc_s(sizeof(shim_client_cgroup_resources_memory));
+    if (cr->memory == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    cr->block_io->weight = hostconfig->blkio_weight;
+    cr->cpu->shares = (uint64_t)hostconfig->cpu_shares;
+    cr->cpu->period = (uint64_t)hostconfig->cpu_period;
+    cr->cpu->quota = hostconfig->cpu_quota;
+    cr->cpu->cpus = util_strdup_s(hostconfig->cpuset_cpus);
+    cr->cpu->mems = util_strdup_s(hostconfig->cpuset_mems);
+    cr->memory->limit = (uint64_t)hostconfig->memory;
+    cr->memory->swap = (uint64_t)hostconfig->memory_swap;
+    cr->memory->reservation = (uint64_t)hostconfig->memory_reservation;
+    cr->memory->kernel = (uint64_t)hostconfig->kernel_memory;
+    cr->cpu->realtime_period = hostconfig->cpu_realtime_period;
+    cr->cpu->realtime_runtime = hostconfig->cpu_realtime_runtime;
+
+    // when --cpus=n is set, nano_cpus = n * 1e9.
+    if (hostconfig->nano_cpus > 0) {
+        // in the case, period will be set to the default value of 100000(0.1s).
+        period = (uint64_t)(100 * Time_Milli / Time_Micro);
+        // set quota = period * n, in order to let container process fully occupy n cpus.
+        if ((hostconfig->nano_cpus / 1e9)  > (INT64_MAX / (int64_t)period)) {
+            ERROR("Overflow of quota");
+            return -1;
+        }
+        quota = hostconfig->nano_cpus / 1e9 * (int64_t)period;
+        cr->cpu->period = period;
+        cr->cpu->quota = quota;
+    }
+
+    return 0;
+}
+
+static int create_resources_json_file(const char *workdir, const shim_client_cgroup_resources *cr, char *fname,
+                                      size_t fname_size)
+{
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error perr = NULL;
+    char *data = NULL;
+    int retcode = 0;
+    int nret = 0;
+
+    nret = snprintf(fname, fname_size, RESOURCE_FNAME_FORMATS, workdir);
+    if (nret < 0 || (size_t)nret >= fname_size) {
+        ERROR("Failed make resources.json full path");
+        return -1;
+    }
+
+    data = shim_client_cgroup_resources_generate_json(cr, &ctx, &perr);
+    if (data == NULL) {
+        retcode = -1;
+        ERROR("Failed generate json for resources.json error=%s", perr);
+        goto out;
+    }
+
+    if (util_write_file(fname, data, strlen(data), DEFAULT_SECURE_FILE_MODE) != 0) {
+        retcode = -1;
+        ERROR("Failed write resources.json");
+        goto out;
+    }
+
+out:
+    UTIL_FREE_AND_SET_NULL(perr);
+    UTIL_FREE_AND_SET_NULL(data);
+
+    return retcode;
+}
+
+// show std error msg, always return -1.
+static int show_stderr(const char *err)
+{
+    isulad_set_error_message(err);
+    return -1;
+}
+
 int rt_isula_update(const char *id, const char *runtime, const rt_update_params_t *params)
 {
-    ERROR("isula update not support on isulad-shim");
-    isulad_set_error_message("isula update not support on isulad-shim");
-    return -1;
+    int ret = 0;
+    char workdir[PATH_MAX] = { 0 };
+    char resources_fname[PATH_MAX] = { 0 };
+    const char *opts[2] = { 0 };
+    shim_client_cgroup_resources *cr = NULL;
+
+    if (id == NULL || runtime == NULL || params == NULL || params->state == NULL || strlen(params->state) == 0) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
+    ret = snprintf(workdir, sizeof(workdir), "%s/%s/update", params->state, id);
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
+        ERROR("Failed join update full path");
+        return -1;
+    }
+
+    ret = util_mkdir_p(workdir, DEFAULT_SECURE_DIRECTORY_MODE);
+    if (ret < 0) {
+        ERROR("Failed mkdir update workdir %s", workdir);
+        return ret;
+    }
+
+    cr = util_common_calloc_s(sizeof(shim_client_cgroup_resources));
+    if (cr == NULL) {
+        ERROR("Out of memory");
+        goto del_out;
+    }
+
+    ret = to_engine_resources(params->hostconfig, cr);
+    if (ret < 0) {
+        ERROR("Failed to get resources for update");
+        goto del_out;
+    }
+
+    ret = create_resources_json_file(workdir, cr, resources_fname, sizeof(resources_fname));
+    if (ret != 0) {
+        ERROR("%s: failed create update json file", id);
+        goto del_out;
+    }
+
+    opts[0] = "--resources";
+    opts[1] = resources_fname;
+
+    if (runtime_call_simple(workdir, runtime, "update", opts, 2, id, show_stderr) != 0) {
+        ERROR("Call runtime update id failed");
+        ret = -1;
+    }
+
+del_out:
+    if (util_recursive_rmdir(workdir, 0)) {
+        ERROR("Rmdir %s failed", workdir);
+    }
+    free_shim_client_cgroup_resources(cr);
+    return ret;
 }
 
 int rt_isula_pause(const char *id, const char *runtime, const rt_pause_params_t *params)

@@ -164,6 +164,7 @@ typedef struct _rt_attach_params_t {
 typedef struct _rt_update_params_t {
     const char *rootpath;
     const host_config *hostconfig;
+    const char *state;
 } rt_update_params_t;
 
 typedef struct _rt_listpids_params_t {
