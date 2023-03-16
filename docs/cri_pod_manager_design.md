@@ -263,7 +263,7 @@ PodSandboxManagerServiceImpl::PodSandboxStatus(const std::string &podSandboxID, 
 }
 ```
 
-详细的代码走读，代码流程图在 [StopPod代码走读中](#stoppodsandbox) 中进行了详细的分析，可以参考对应的部分。
+详细的代码走读，代码流程图在 [StopPod代码走读](#stoppodsandbox) 中进行了详细的分析，可以参考对应的部分。
 
 ## 通用接口
 

@@ -730,7 +730,7 @@ void ContainerManagerServiceImpl::PackContainerStatsAttributes(
 
     container->mutable_attributes()->set_id(id);
     auto status = ContainerStatus(std::string(id), error);
-    if (status == nullptr) {
+    if (error.NotEmpty()) {
         return;
     }
 
