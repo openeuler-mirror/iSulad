@@ -34,6 +34,8 @@ This section contains some design documents for users who want to learn more abo
 
 - You can see how the isula search are designed in [image_search_design](./detailed/Image/image_search_design_zh.md)
 
+- You can see how the remote ro are designed in [remote_ro_design](./detailed/Image/remote_ro_design.md)
+
 ## Network
 
 - You can see how the cni operator modules are designed in [cni_operator_design](./detailed/Network/cni_operator_design.md).
