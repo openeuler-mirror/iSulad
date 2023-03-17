@@ -1764,8 +1764,7 @@ bool has_connected_container(native_network *network)
         message[pos - 1] = '\0';
     }
 
-    ERROR("network %s has connected containers [ %s ]", network->conflist->list->name, message);
-    isulad_set_error_message("network %s has connected containers [ %s ]", network->conflist->list->name, message);
+    INFO("network %s has connected containers [ %s ]", network->conflist->list->name, message);
 
 out:
     native_network_unlock(network);
@@ -1923,6 +1922,7 @@ int native_config_remove(const char *name, char **res_name)
     }
 
     if (has_connected_container(network)) {
+        isulad_set_error_message("network %s has connected containers", network->conflist->list->name);
         ret = -1;
         goto out;
     }
