@@ -321,6 +321,7 @@ rep:
 int util_waitpid_with_timeout(pid_t pid, const int64_t timeout, handle_timeout_callback_t cb)
 {
     int nret = 0;
+    int st;
     time_t start_time = time(NULL);
     time_t end_time;
     double interval;
@@ -330,7 +331,7 @@ int util_waitpid_with_timeout(pid_t pid, const int64_t timeout, handle_timeout_c
     }
 
     for (;;) {
-        nret = waitpid(pid, NULL, WNOHANG);
+        nret = waitpid(pid, &st, WNOHANG);
         if (nret == pid) {
             break;
         }
@@ -349,7 +350,7 @@ int util_waitpid_with_timeout(pid_t pid, const int64_t timeout, handle_timeout_c
         // sleep some time instead to avoid cpu full running and then retry.
         usleep(100);
     }
-    return 0;
+    return st;
 }
 
 int util_wait_for_pid_status(pid_t pid)
