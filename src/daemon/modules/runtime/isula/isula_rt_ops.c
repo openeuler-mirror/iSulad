@@ -469,6 +469,12 @@ static void runtime_exec_func(void *arg)
         _exit(EXIT_FAILURE);
     }
 
+    // clear NOTIFY_SOCKET from the env to adapt runc start
+    if (strcmp(rei->subcmd, "start") == 0 && unsetenv("NOTIFY_SOCKET") != 0) {
+        dprintf(STDERR_FILENO, "unset env NOTIFY_SOCKET failed %s", strerror(errno));
+        _exit(EXIT_FAILURE);
+    }
+
     execvp(rei->cmd, rei->params);
     dprintf(STDERR_FILENO, "exec %s %s %s failed", rei->cmd, rei->subcmd, rei->id);
     _exit(EXIT_FAILURE);
@@ -941,7 +947,7 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
     char shim_pid_file_name[PATH_MAX] = { 0 };
     pid_t pid = 0;
     pid_t shim_pid = -1;
-    int ret = 0;
+    int ret = -1;
     int splice_ret = 0;
     proc_t *proc = NULL;
     proc_t *p_proc = NULL;
@@ -963,28 +969,24 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
 
     pid = get_container_process_pid(workdir);
     if (pid < 0) {
-        ret = -1;
         ERROR("%s: failed wait init pid", id);
         goto out;
     }
 
     file_read_int(shim_pid_file_name, &shim_pid);
     if (shim_pid < 0) {
-        ret = -1;
         ERROR("%s: failed to read isulad shim pid", id);
         goto out;
     }
 
     proc = util_get_process_proc_info(pid);
     if (proc == NULL) {
-        ret = -1;
         ERROR("%s: failed to read pidinfo", id);
         goto out;
     }
 
     p_proc = util_get_process_proc_info(shim_pid);
     if (p_proc == NULL) {
-        ret = -1;
         ERROR("%s: failed to read isulad shim pidinfo", id);
         goto out;
     }
@@ -996,10 +998,10 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
 
     if (runtime_call_simple(workdir, runtime, "start", NULL, 0, id, NULL) != 0) {
         ERROR("call runtime start id failed");
-        ret = -1;
         goto out;
     }
 
+    ret = 0;
 out:
     if (ret != 0) {
         show_shim_runtime_errlog(workdir);
