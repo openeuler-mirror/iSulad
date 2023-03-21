@@ -157,6 +157,9 @@ static char **hold_string_list(char **line, char *buf_start, char *buf_end, cons
     }
 
 out:
+    if ((char *)(walker + 2) > buf_end) {
+        return NULL;
+    }
     *walker = NULL;
     return result;
 }
