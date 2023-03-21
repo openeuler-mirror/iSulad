@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <pthread.h>
 #include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/json_common.h>
 
@@ -72,6 +73,7 @@ struct storage_module_init_options {
     bool integration_check;
 #ifdef ENABLE_REMOTE_LAYER_STORE
     bool enable_remote_layer;
+    pthread_rwlock_t *remote_lock;
 #endif
 };
 

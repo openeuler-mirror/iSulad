@@ -16,6 +16,8 @@
 #ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_REMOTE_LAYER_SUPPORT_REMOTE_SUPPORT_H
 #define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_REMOTE_LAYER_SUPPORT_REMOTE_SUPPORT_H
 
+#include <pthread.h>
+
 #include "linked_list.h"
 #include "map.h"
 #include "ro_symlink_maintain.h"
@@ -64,7 +66,7 @@ void remote_overlay_refresh(struct remote_overlay_data *data);
 bool remote_overlay_layer_valid(const char *layer_id);
 
 // start refresh remote
-int remote_start_refresh_thread(void);
+int remote_start_refresh_thread(pthread_rwlock_t *remote_lock);
 
 // extra map utils
 char **remote_deleted_layers(const map_t *old, const map_t *new_l);

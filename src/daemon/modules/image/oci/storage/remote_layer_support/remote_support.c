@@ -24,9 +24,37 @@ struct supporters {
     struct remote_image_data *image_data;
     struct remote_layer_data *layer_data;
     struct remote_overlay_data *overlay_data;
+    pthread_rwlock_t *remote_lock;
 };
 
 static struct supporters supporters;
+
+static inline bool remote_refresh_lock(pthread_rwlock_t *remote_lock, bool writable)
+{
+    int nret = 0;
+
+    if (writable) {
+        nret = pthread_rwlock_wrlock(remote_lock);
+    } else {
+        nret = pthread_rwlock_rdlock(remote_lock);
+    }
+    if (nret != 0) {
+        ERROR("Lock memory store failed: %s", strerror(nret));
+        return false;
+    }
+
+    return true;
+}
+
+static inline void remote_refresh_unlock(pthread_rwlock_t *remote_lock)
+{
+    int nret = 0;
+
+    nret = pthread_rwlock_unlock(remote_lock);
+    if (nret != 0) {
+        FATAL("Unlock memory store failed: %s", strerror(nret));
+    }
+}
 
 static void *remote_refresh_ro_symbol_link(void *arg)
 {
@@ -37,16 +65,18 @@ static void *remote_refresh_ro_symbol_link(void *arg)
         util_usleep_nointerupt(5 * 1000 * 1000);
         DEBUG("remote refresh start\n");
 
+        remote_refresh_lock(supporters.remote_lock, true);
         remote_overlay_refresh(refresh_supporters->overlay_data);
         remote_layer_refresh(refresh_supporters->layer_data);
         remote_image_refresh(refresh_supporters->image_data);
+        remote_refresh_unlock(supporters.remote_lock);
 
         DEBUG("remote refresh end\n");
     }
     return NULL;
 }
 
-int remote_start_refresh_thread(void)
+int remote_start_refresh_thread(pthread_rwlock_t *remote_lock)
 {
     int res = 0;
     pthread_t a_thread;
@@ -66,6 +96,8 @@ int remote_start_refresh_thread(void)
     if (supporters.overlay_data == NULL) {
         goto free_out;
     }
+
+    supporters.remote_lock = remote_lock;
 
     res = pthread_create(&a_thread, NULL, remote_refresh_ro_symbol_link, (void *)&supporters);
     if (res != 0) {
