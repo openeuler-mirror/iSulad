@@ -140,3 +140,31 @@ TEST(utils_pwgr, test_getgrent_r)
 
     fclose(f_gr);
 }
+
+TEST(utils_pwgr, test_long_getgrent_r)
+{
+    std::string path = "../../../../test/cutils/utils_pwgr/long_sample";
+    FILE *f_gr = fopen(path.c_str(), "r");
+    ASSERT_NE(f_gr, nullptr);
+
+    struct group gr {
+        0
+    };
+    struct group *pgr = nullptr;
+    char mark_before[BUFSIZ] = { 0 };
+    char buf[BUFSIZ] = { 0 };
+    char mark_after[BUFSIZ] = { 0 };
+
+    for (int num = 0; num < BUFSIZ; num++) {
+        mark_before[num] = 0xEE;
+        mark_after[num] = 0xDD;
+    }
+
+    (void)util_getgrent_r(f_gr, &gr, buf, sizeof(buf), &pgr);
+    for (int num = 0; num < BUFSIZ; num++) {
+        ASSERT_EQ(mark_before[num], (char)0xEE);
+        ASSERT_EQ(mark_after[num], (char)0xDD);
+    }
+
+    fclose(f_gr);
+}
