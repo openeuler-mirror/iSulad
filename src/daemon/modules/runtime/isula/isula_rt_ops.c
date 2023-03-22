@@ -1553,6 +1553,11 @@ out:
 
 int rt_isula_kill(const char *id, const char *runtime, const rt_kill_params_t *params)
 {
+    if (id == NULL || runtime == NULL || params == NULL || params->pid < 0) {
+        ERROR("Invalid arguments not allowed");
+        return -1;
+    }
+
     if (util_process_alive(params->pid, params->start_time) == false) {
         if (params->signal == params->stop_signal || params->signal == SIGKILL) {
             WARN("Process %d is not alive", params->pid);

@@ -163,3 +163,59 @@ TEST_F(IsulaRtOpsUnitTest, test_rt_isula_exec_resize)
     close(fd);
     ASSERT_EQ(system(rm_path.c_str()), 0);
 }
+
+TEST_F(IsulaRtOpsUnitTest, test_rt_isula_update)
+{
+    rt_update_params_t params = {};
+    ASSERT_EQ(rt_isula_update(nullptr, nullptr, nullptr), -1);
+
+    ASSERT_EQ(rt_isula_update("123", nullptr, nullptr), -1);
+    ASSERT_EQ(rt_isula_update("123", "runtime", nullptr), -1);
+    ASSERT_EQ(rt_isula_update("123", "runtime", &params), -1);
+}
+
+TEST_F(IsulaRtOpsUnitTest, test_rt_isula_pause)
+{
+    rt_pause_params_t params = {};
+    ASSERT_EQ(rt_isula_pause(nullptr, nullptr, nullptr), -1);
+
+    ASSERT_EQ(rt_isula_pause("123", nullptr, nullptr), -1);
+    ASSERT_EQ(rt_isula_pause("123", "runtime", nullptr), -1);
+    ASSERT_EQ(rt_isula_pause("123", "runtime", &params), -1);
+}
+
+TEST_F(IsulaRtOpsUnitTest, test_rt_isula_resume)
+{
+    rt_resume_params_t params = {};
+    ASSERT_EQ(rt_isula_resume(nullptr, nullptr, nullptr), -1);
+
+    ASSERT_EQ(rt_isula_resume("123", nullptr, nullptr), -1);
+    ASSERT_EQ(rt_isula_resume("123", "runtime", nullptr), -1);
+    ASSERT_EQ(rt_isula_resume("123", "runtime", &params), -1);
+}
+
+TEST_F(IsulaRtOpsUnitTest, test_rt_isula_resources_stats)
+{
+    rt_stats_params_t params = {};
+    struct runtime_container_resources_stats_info stats = {};
+
+    ASSERT_EQ(rt_isula_resources_stats(nullptr, nullptr, nullptr, nullptr), -1);
+
+    ASSERT_EQ(rt_isula_resources_stats("123", nullptr, nullptr, nullptr), -1);
+    ASSERT_EQ(rt_isula_resources_stats("123", "runtime", nullptr, nullptr), -1);
+    ASSERT_EQ(rt_isula_resources_stats("123", "runtime", &params, nullptr), -1);
+    params.state = "/var/run/isulad/runtime";
+    ASSERT_EQ(rt_isula_resources_stats("123", "runtime", &params, &stats), -1);
+}
+
+TEST_F(IsulaRtOpsUnitTest, test_rt_isula_kill)
+{
+    rt_kill_params_t kill_params = {
+        .pid = -1,
+    };
+    ASSERT_EQ(rt_isula_kill(nullptr, nullptr, nullptr), -1);
+
+    ASSERT_EQ(rt_isula_kill("123", nullptr, nullptr), -1);
+    ASSERT_EQ(rt_isula_kill("123", "runtime", nullptr), -1);
+    ASSERT_EQ(rt_isula_kill("123", "runtime", &kill_params), -1);
+}
