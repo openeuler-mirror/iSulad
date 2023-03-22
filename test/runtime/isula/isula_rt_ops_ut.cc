@@ -211,7 +211,10 @@ TEST_F(IsulaRtOpsUnitTest, test_rt_isula_resources_stats)
 TEST_F(IsulaRtOpsUnitTest, test_rt_isula_kill)
 {
     rt_kill_params_t kill_params = {
+        .signal = SIGTERM,
+        .stop_signal = SIGKILL,
         .pid = -1,
+        .start_time = 12345,
     };
     ASSERT_EQ(rt_isula_kill(nullptr, nullptr, nullptr), -1);
 
