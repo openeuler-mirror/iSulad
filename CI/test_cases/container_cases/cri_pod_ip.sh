@@ -7,7 +7,6 @@
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/criconfigs)
 pause_img_path=$(realpath $curr_path/test_data)
-work_path="/var/lib/isulad/engines/lcr"
 pod_config="sandbox-config.json"
 source ../helpers.sh
 
@@ -41,7 +40,7 @@ function do_post()
 
 function do_test()
 {
-    msg_info "this is $0 do_test"
+    msg_info "this is $0 do_test -> ($1)"
 
     crictl pull busybox
     if [ $? -ne 0 ]; then
@@ -55,7 +54,7 @@ function do_test()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    pod_id=`crictl runp ${data_path}/$pod_config`
+    pod_id=`crictl runp --runtime $1 ${data_path}/$pod_config`
     if [ $? -ne 0 ]; then
         msg_err "Failed to run sandbox"
         TC_RET_T=$(($TC_RET_T+1))
@@ -83,7 +82,7 @@ function do_test()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    cat ${work_path}/${pod_id}/network_settings.json | grep "$ip"
+    cat ${RUNTIME_ROOT_PATH}/${1}/${pod_id}/network_settings.json | grep "$ip"
     if [ $? -ne 0 ];then
         msg_err "expect ip: $ip, network_settings.json cannot get it"
         TC_RET_T=$(($TC_RET_T+1))
@@ -112,10 +111,13 @@ if [ $? -ne 0 ];then
     let "ret=$ret + 1"
 fi
 
-do_test
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
+for element in ${RUNTIME_LIST[@]};
+do
+    do_test $element
+    if [ $? -ne 0 ];then
+        let "ret=$ret + 1"
+    fi
+done
 
 do_post
 

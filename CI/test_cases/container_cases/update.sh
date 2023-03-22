@@ -26,7 +26,7 @@ source ../helpers.sh
 function do_test_t()
 {
     containername=test_update
-    containerid=`isula create -t --name $containername busybox`
+    containerid=`isula create -t --runtime $1 --name $containername busybox`
     fn_check_eq "$?" "0" "create failed"
     testcontainer $containername inited
 
@@ -101,7 +101,24 @@ function do_test_t()
 
     main=$(uname -r | awk -F . '{print $1}')
     minor=$(uname -r | awk -F . '{print $2}')
-    if [[ ${main} -lt 5 ]] || [[ ${main} -eq 5 ]] && [[ ${minor} -lt 11 ]]; then
+    enable=1
+    if [ $1 == "runc" ]; then
+        version=$(runc --version | grep runc)
+        # Runc does not support '--kernel-memory' options from v1.0.0-rc94 version
+        limit=(1 0 0 93)
+        array=`echo $version |egrep -o "[0-9]*"`
+        index=0
+        for i in $(echo $array| awk '{print $1,$2}')
+        do
+            echo $i
+            if [[ $i -gt ${limit[index]} ]]; then
+                    enable=0
+                    break
+            fi
+            let "index+=1"
+        done
+    fi
+    if [[ ${main} -lt 5 ]] || [[ ${main} -eq 5 ]] && [[ ${minor} -lt 11 ]] && [[ ${enable} -eq 1 ]]; then
       isula update --kernel-memory 2000000000 $containername
       fn_check_eq "$?" "0" "update failed"
 
@@ -124,7 +141,7 @@ function do_test_t()
 function do_test_t1()
 {
     containername=test_update1
-    containerid=`isula run -itd --memory 500M --name $containername busybox`
+    containerid=`isula run -itd --runtime $1 --memory 500M --name $containername busybox`
     fn_check_eq "$?" "0" "run failed"
 
     isula inspect $containerid | grep "MemorySwap" | grep "1048576000"
@@ -146,16 +163,23 @@ function do_test_t1()
 
 ret=0
 
-do_test_t
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
+for element in ${RUNTIME_LIST[@]};
+do
+    test="update test => (${element})"
+    msg_info "${test} starting..."
 
-if [ -f "/sys/fs/cgroup/memory/memory.memsw.usage_in_bytes" ];then
-    do_test_t1
+    do_test_t $element
     if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
+        let "ret=$ret + 1"
     fi
-fi
+
+    if [ -f "/sys/fs/cgroup/memory/memory.memsw.usage_in_bytes" ];then
+        do_test_t1 $element
+        if [ $? -ne 0 ];then
+            let "ret=$ret + 1"
+        fi
+    fi
+    msg_info "${test} finished with return ${ret}..."
+done
 
 show_result $ret "basic update"

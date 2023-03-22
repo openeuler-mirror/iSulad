@@ -26,6 +26,10 @@ connect="grpc"
 
 function do_test_t_grpc()
 {
+    local runtime=$1
+    local test="do_test_t_grpc test => $runtime"
+    msg_info "${test} starting..."
+
     if [ $connect != "grpc" ];then
         echo "this test is designed for grpc version"
         return 0
@@ -34,7 +38,7 @@ function do_test_t_grpc()
     containername=test_fds
     isulad_pid=`cat /var/run/isulad.pid`
     precount=`ls /proc/$isulad_pid/fd | wc -l`
-    isula create -t --name $containername busybox
+    isula create -t --name $containername --runtime $runtime busybox
     fn_check_eq "$?" "0" "create failed"
     testcontainer $containername inited
 
@@ -61,11 +65,15 @@ function do_test_t_grpc()
     curcount=`ls /proc/$isulad_pid/fd | wc -l`
     fn_check_eq "$precount" "$curcount" "test failed"
 
+    msg_info "${test} finished with return ${TC_RET_T}..."
     return $TC_RET_T
 }
 
 function do_test_t_rest()
 {
+    local runtime=$1
+    local test="do_test_t_rest test => $runtime"
+    msg_info "${test} starting..."
     if [ $connect != "rest" ];then
         echo "this test is designed for rest version"
         return 0
@@ -76,7 +84,7 @@ function do_test_t_rest()
     isulad_pid=`cat /var/run/isulad.pid`
     precount=`ls /proc/$isulad_pid/fd | wc -l`
 
-    isula create -t --name $containername busybox
+    isula create -t --name $containername --runtime $runtime busybox
     fn_check_eq "$?" "0" "create failed"
     testcontainer $containername inited
 
@@ -118,15 +126,24 @@ function do_test_t_rest()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
+    msg_info "${test} finished with return ${TC_RET_T}..."
     return $TC_RET_T
 }
 
 ret=0
 
-do_test_t_grpc
-do_test_t_rest
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
+for element in ${RUNTIME_LIST[@]};
+do
+    do_test_t_grpc $element
+    if [ $? -ne 0 ];then
+        let "ret=$ret + 1"
+    fi
+    do_test_t_rest $element
+    if [ $? -ne 0 ];then
+        let "ret=$ret + 1"
+    fi
+done
+
+
 
 show_result $ret "basic check fd leak"
