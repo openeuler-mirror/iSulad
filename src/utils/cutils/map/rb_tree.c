@@ -134,6 +134,7 @@ void rbtree_clear(rb_tree_t *tree)
         return;
     }
     rbtree_destroy_all(tree, tree->root);
+    tree->root = tree->nil;
 }
 
 void rbtree_free(rb_tree_t *tree)

@@ -1789,119 +1789,6 @@ out:
     return ret;
 }
 
-static layer_t *load_one_layer_from_json(const char *id)
-{
-    int nret = 0;
-    char *mount_point_path = NULL;
-    char tmpdir[PATH_MAX] = { 0 };
-    char *rpath = NULL;
-    layer_t *l = NULL;
-    bool layer_valid = false;
-
-    nret = snprintf(tmpdir, PATH_MAX, "%s/%s", g_root_dir, id);
-    if (nret < 0 || nret >= PATH_MAX) {
-        ERROR("Sprintf: %s failed", id);
-        goto free_out;
-    }
-
-    mount_point_path = mountpoint_json_path(id);
-    if (mount_point_path == NULL) {
-        ERROR("Out of Memory");
-        goto free_out;
-    }
-
-    rpath = layer_json_path(id);
-    if (rpath == NULL) {
-        ERROR("%s is invalid layer", id);
-        goto free_out;
-    }
-
-    l = load_layer(rpath, mount_point_path);
-    if (l == NULL) {
-        ERROR("load layer: %s failed, remove it", id);
-        goto free_out;
-    }
-
-    if (do_validate_image_layer(tmpdir, l) != 0) {
-        ERROR("%s is invalid image layer", id);
-        goto free_out;
-    }
-
-    if (do_validate_rootfs_layer(l) != 0) {
-        ERROR("%s is invalid rootfs layer", id);
-        goto free_out;
-    }
-
-    layer_valid = true;
-
-free_out:
-    free(rpath);
-    free(mount_point_path);
-    if (!layer_valid) {
-        free_layer_t(l);
-        l = NULL;
-    }
-    // always return true;
-    // if load layer failed, just remove it
-    return l;
-}
-
-int load_one_layer(const char *id)
-{
-    int ret = 0;
-    layer_t *tl = NULL;
-    int i = 0;
-
-    if (!layer_store_lock(true)) {
-        return -1;
-    }
-
-    if (map_search(g_metadata.by_id, (void *)id) != NULL) {
-        DEBUG("remote layer already exist, not added: %s", id);
-        goto unlock_out;
-    }
-
-    tl = load_one_layer_from_json(id);
-    if (tl == NULL) {
-        ret = -1;
-        goto unlock_out;
-    }
-
-    if (!map_insert(g_metadata.by_id, (void *)tl->slayer->id, (void *)tl)) {
-        ERROR("Insert id: %s for layer failed", tl->slayer->id);
-        ret = -1;
-        goto unlock_out;
-    }
-
-    for (; i < tl->slayer->names_len; i++) {
-        // this should be done by master isulad
-        // if (remove_name(tl->slayer->names[i])) {
-        //     should_save = true;
-        // }
-        if (!map_insert(g_metadata.by_name, (void *)tl->slayer->names[i], (void *)tl)) {
-            ret = -1;
-            ERROR("Insert name: %s for layer failed", tl->slayer->names[i]);
-            goto unlock_out;
-        }
-    }
-    ret = insert_digest_into_map(g_metadata.by_compress_digest, tl->slayer->compressed_diff_digest, tl->slayer->id);
-    if (ret != 0) {
-        ERROR("update layer: %s compress failed", tl->slayer->id);
-        goto unlock_out;
-    }
-
-    ret = insert_digest_into_map(g_metadata.by_uncompress_digest, tl->slayer->diff_digest, tl->slayer->id);
-    if (ret != 0) {
-        ERROR("update layer: %s uncompress failed", tl->slayer->id);
-        goto unlock_out;
-    }
-
-    ret = 0;
-unlock_out:
-    layer_store_unlock();
-    return ret;
-}
-
 static bool load_layer_json_cb(const char *path_name, const struct dirent *sub_dir, void *context)
 {
 #define LAYER_NAME_LEN 64
@@ -2483,7 +2370,7 @@ container_inspect_graph_driver *layer_store_get_metadata_by_layer_id(const char 
 }
 
 #ifdef ENABLE_REMOTE_LAYER_STORE
-int remove_memory_stores_with_lock(const char *id)
+int remote_layer_remove_memory_stores_with_lock(const char *id)
 {
     int ret = 0;
 
@@ -2496,11 +2383,126 @@ int remove_memory_stores_with_lock(const char *id)
         goto unlock_out;
     }
 
+    if (map_search(g_metadata.by_id, (void *)id) == NULL) {
+        DEBUG("remote layer already removed, don't delete: %s", id);
+        goto unlock_out;
+    }
+
     ret = remove_memory_stores(id);
 
 unlock_out:
     layer_store_unlock();
 
+    return ret;
+}
+
+static layer_t *load_one_layer_from_json(const char *id)
+{
+    int nret = 0;
+    char *mount_point_path = NULL;
+    char tmpdir[PATH_MAX] = { 0 };
+    char *rpath = NULL;
+    layer_t *l = NULL;
+    bool layer_valid = false;
+
+    nret = snprintf(tmpdir, PATH_MAX, "%s/%s", g_root_dir, id);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Sprintf: %s failed", id);
+        goto free_out;
+    }
+
+    mount_point_path = mountpoint_json_path(id);
+    if (mount_point_path == NULL) {
+        ERROR("Out of Memory");
+        goto free_out;
+    }
+
+    rpath = layer_json_path(id);
+    if (rpath == NULL) {
+        ERROR("%s is invalid layer", id);
+        goto free_out;
+    }
+
+    l = load_layer(rpath, mount_point_path);
+    if (l == NULL) {
+        ERROR("load layer: %s failed, remove it", id);
+        goto free_out;
+    }
+
+    if (do_validate_image_layer(tmpdir, l) != 0) {
+        ERROR("%s is invalid image layer", id);
+        goto free_out;
+    }
+
+    if (do_validate_rootfs_layer(l) != 0) {
+        ERROR("%s is invalid rootfs layer", id);
+        goto free_out;
+    }
+
+    layer_valid = true;
+
+free_out:
+    free(rpath);
+    free(mount_point_path);
+    if (!layer_valid) {
+        free_layer_t(l);
+        l = NULL;
+    }
+    // always return true;
+    // if load layer failed, just remove it
+    return l;
+}
+
+int remote_load_one_layer(const char *id)
+{
+    int ret = 0;
+    layer_t *tl = NULL;
+    int i = 0;
+
+    if (!layer_store_lock(true)) {
+        return -1;
+    }
+
+    if (map_search(g_metadata.by_id, (void *)id) != NULL) {
+        DEBUG("remote layer already exist, not added: %s", id);
+        goto unlock_out;
+    }
+
+    tl = load_one_layer_from_json(id);
+    if (tl == NULL) {
+        ret = -1;
+        goto unlock_out;
+    }
+
+    if (!map_insert(g_metadata.by_id, (void *)tl->slayer->id, (void *)tl)) {
+        ERROR("Insert id: %s for layer failed", tl->slayer->id);
+        ret = -1;
+        goto unlock_out;
+    }
+
+    for (; i < tl->slayer->names_len; i++) {
+        // this should be done by master isulad
+        if (!map_insert(g_metadata.by_name, (void *)tl->slayer->names[i], (void *)tl)) {
+            ret = -1;
+            ERROR("Insert name: %s for layer failed", tl->slayer->names[i]);
+            goto unlock_out;
+        }
+    }
+    ret = insert_digest_into_map(g_metadata.by_compress_digest, tl->slayer->compressed_diff_digest, tl->slayer->id);
+    if (ret != 0) {
+        ERROR("update layer: %s compress failed", tl->slayer->id);
+        goto unlock_out;
+    }
+
+    ret = insert_digest_into_map(g_metadata.by_uncompress_digest, tl->slayer->diff_digest, tl->slayer->id);
+    if (ret != 0) {
+        ERROR("update layer: %s uncompress failed", tl->slayer->id);
+        goto unlock_out;
+    }
+
+    ret = 0;
+unlock_out:
+    layer_store_unlock();
     return ret;
 }
 #endif

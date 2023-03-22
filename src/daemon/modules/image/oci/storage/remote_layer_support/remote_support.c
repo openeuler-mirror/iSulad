@@ -15,108 +15,107 @@
 
 #include "remote_support.h"
 
-#include "layer_store.h"
-#include "image_store.h"
+#include <pthread.h>
+
 #include "isula_libutils/log.h"
-#include "driver_overlay2.h"
 #include "utils.h"
 
-remote_supporter *create_layer_supporter(const char *remote_home, const char *remote_ro)
+struct supporters {
+    struct remote_image_data *image_data;
+    struct remote_layer_data *layer_data;
+    struct remote_overlay_data *overlay_data;
+};
+
+static struct supporters supporters;
+
+static void *remote_refresh_ro_symbol_link(void *arg)
 {
-    remote_support *handlers = layer_store_impl_remote_support();
-    if (handlers == NULL || handlers->create == NULL) {
-        return NULL;
+    struct supporters *refresh_supporters = (struct supporters *)arg;
+    prctl(PR_SET_NAME, "RoLayerRefresh");
+
+    while (true) {
+        util_usleep_nointerupt(5 * 1000 * 1000);
+        DEBUG("remote refresh start\n");
+
+        remote_overlay_refresh(refresh_supporters->overlay_data);
+        remote_layer_refresh(refresh_supporters->layer_data);
+        remote_image_refresh(refresh_supporters->image_data);
+
+        DEBUG("remote refresh end\n");
     }
-
-    remote_supporter *supporter = (remote_supporter *)util_common_calloc_s(sizeof(remote_supporter));
-    if (supporter == NULL) {
-        goto err_out;
-    }
-
-    supporter->handlers = handlers;
-    supporter->data = handlers->create(remote_home, remote_ro);
-
-    return supporter;
-
-err_out:
-    free(handlers);
-    free(supporter);
     return NULL;
 }
 
-remote_supporter *create_image_supporter(const char *remote_home, const char *remote_ro)
+int remote_start_refresh_thread(void)
 {
-    remote_support *handlers = image_store_impl_remote_support();
-    if (handlers == NULL || handlers->create == NULL) {
-        return NULL;
+    int res = 0;
+    pthread_t a_thread;
+    maintain_context ctx = get_maintain_context();
+
+    supporters.image_data = remote_image_create(ctx.image_home, NULL);
+    if (supporters.image_data == NULL) {
+        goto free_out;
     }
 
-    remote_supporter *supporter = (remote_supporter *)util_common_calloc_s(sizeof(remote_supporter));
-    if (supporter == NULL) {
-        goto err_out;
+    supporters.layer_data = remote_layer_create(ctx.layer_home, ctx.layer_ro_dir);
+    if (supporters.layer_data == NULL) {
+        goto free_out;
     }
 
-    supporter->handlers = handlers;
-    supporter->data = handlers->create(remote_home, remote_ro);
-
-    return supporter;
-
-err_out:
-    free(handlers);
-    free(supporter);
-    return NULL;
-}
-
-remote_supporter *create_overlay_supporter(const char *remote_home, const char *remote_ro)
-{
-    remote_support *handlers = overlay_driver_impl_remote_support();
-    if (handlers == NULL || handlers->create == NULL) {
-        return NULL;
+    supporters.overlay_data = remote_overlay_create(ctx.overlay_home, ctx.overlay_ro_dir);
+    if (supporters.overlay_data == NULL) {
+        goto free_out;
     }
 
-    remote_supporter *supporter = (remote_supporter *)util_common_calloc_s(sizeof(remote_supporter));
-    if (supporter == NULL) {
-        goto err_out;
-    }
-
-    supporter->handlers = handlers;
-    supporter->data = handlers->create(remote_home, remote_ro);
-
-    return supporter;
-
-err_out:
-    free(handlers);
-    free(supporter);
-    return NULL;
-
-}
-
-void destroy_suppoter(remote_supporter *supporter)
-{
-    if (supporter->handlers->destroy == NULL) {
-        ERROR("destroy_supporter operation not supported");
-        return;
-    }
-
-    supporter->handlers->destroy(supporter->data);
-    free(supporter->handlers);
-    free(supporter);
-}
-
-int scan_remote_dir(remote_supporter *supporter)
-{
-    if (supporter->handlers->scan_remote_dir == NULL) {
-        ERROR("scan_remote_dir operation not supported");
+    res = pthread_create(&a_thread, NULL, remote_refresh_ro_symbol_link, (void *)&supporters);
+    if (res != 0) {
+        CRIT("Thread creation failed");
         return -1;
     }
-    return supporter->handlers->scan_remote_dir(supporter->data);
-}
 
-int load_item(remote_supporter *supporter)
-{
-    if (supporter->handlers->scan_remote_dir == NULL) {
-        ERROR("load_item operation not supported");
+    if (pthread_detach(a_thread) != 0) {
+        SYSERROR("Failed to detach 0x%lx", a_thread);
         return -1;
     }
-    return supporter->handlers->load_item(supporter->data);
+
+    return 0;
+
+free_out:
+    remote_image_destroy(supporters.image_data);
+    remote_layer_destroy(supporters.layer_data);
+    remote_overlay_destroy(supporters.overlay_data);
+
+    return -1;
+}
+
+// this function calculate map_a - map_b => diff_list
+// diff_list contains keys inside map_a but not inside map_b
+static char **map_diff(const map_t *map_a, const map_t *map_b)
+{
+    char **array = NULL;
+    map_itor *itor = map_itor_new(map_a);
+    bool *found = NULL;
+
+    // iter new_map, every item not in old, append them to new_layers
+    for (; map_itor_valid(itor); map_itor_next(itor)) {
+        char *id = map_itor_key(itor);
+        found = map_search(map_b, id);
+        if (found == NULL) {
+            util_array_append(&array, util_strdup_s(id));
+        }
+    }
+
+    map_itor_free(itor);
+
+    return array;
+}
+
+char **remote_deleted_layers(const map_t *old, const map_t *new)
+{
+    return map_diff(old, new);
+}
+
+char **remote_added_layers(const map_t *old, const map_t *new)
+{
+    return map_diff(new, old);
 }
