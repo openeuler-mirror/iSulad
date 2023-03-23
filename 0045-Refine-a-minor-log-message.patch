@@ -1,0 +1,34 @@
+From 9b7e37018612f7443a0f8f966106995da31cc292 Mon Sep 17 00:00:00 2001
+From: sailorvii <chenw66@chinaunicom.cn>
+Date: Fri, 17 Mar 2023 06:34:37 +0000
+Subject: [PATCH 45/53] Refine a minor log message.
+
+---
+ src/daemon/modules/network/native/adaptor_native.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/daemon/modules/network/native/adaptor_native.c b/src/daemon/modules/network/native/adaptor_native.c
+index 02ff3642..8bc386d1 100644
+--- a/src/daemon/modules/network/native/adaptor_native.c
++++ b/src/daemon/modules/network/native/adaptor_native.c
+@@ -1764,8 +1764,7 @@ bool has_connected_container(native_network *network)
+         message[pos - 1] = '\0';
+     }
+ 
+-    ERROR("network %s has connected containers [ %s ]", network->conflist->list->name, message);
+-    isulad_set_error_message("network %s has connected containers [ %s ]", network->conflist->list->name, message);
++    INFO("network %s has connected containers [ %s ]", network->conflist->list->name, message);
+ 
+ out:
+     native_network_unlock(network);
+@@ -1923,6 +1922,7 @@ int native_config_remove(const char *name, char **res_name)
+     }
+ 
+     if (has_connected_container(network)) {
++        isulad_set_error_message("network %s has connected containers", network->conflist->list->name);
+         ret = -1;
+         goto out;
+     }
+-- 
+2.25.1
+

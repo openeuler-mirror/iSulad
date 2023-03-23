@@ -1,7 +1,7 @@
 From 42a46f64e533ea0a89f95bef80a421fe06a5bfa2 Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Mon, 6 Mar 2023 14:38:58 +0800
-Subject: [PATCH 36/43] adapt to repo of openeuler url changed
+Subject: [PATCH 36/53] adapt to repo of openeuler url changed
 
 Signed-off-by: haozi007 <liuhao27@huawei.com>
 ---

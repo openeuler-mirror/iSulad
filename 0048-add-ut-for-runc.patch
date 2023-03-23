@@ -1,0 +1,188 @@
+From c20a580a7d8c6a8a16273513c6d11edd827b90b0 Mon Sep 17 00:00:00 2001
+From: zhongtao <zhongtao17@huawei.com>
+Date: Thu, 23 Feb 2023 14:39:23 +0800
+Subject: [PATCH 48/53] add ut for runc
+
+Signed-off-by: zhongtao <zhongtao17@huawei.com>
+---
+ .../modules/runtime/isula/isula_rt_ops.c      |  5 ++
+ test/cutils/utils_utils/CMakeLists.txt        |  2 +
+ test/cutils/utils_utils/utils_utils_ut.cc     | 61 +++++++++++++++++++
+ test/runtime/isula/isula_rt_ops_ut.cc         | 56 +++++++++++++++++
+ 4 files changed, 124 insertions(+)
+
+diff --git a/src/daemon/modules/runtime/isula/isula_rt_ops.c b/src/daemon/modules/runtime/isula/isula_rt_ops.c
+index 5ec0e639..fe0f227c 100644
+--- a/src/daemon/modules/runtime/isula/isula_rt_ops.c
++++ b/src/daemon/modules/runtime/isula/isula_rt_ops.c
+@@ -1553,6 +1553,11 @@ out:
+ 
+ int rt_isula_kill(const char *id, const char *runtime, const rt_kill_params_t *params)
+ {
++    if (id == NULL || runtime == NULL || params == NULL || params->pid < 0) {
++        ERROR("Invalid arguments not allowed");
++        return -1;
++    }
++
+     if (util_process_alive(params->pid, params->start_time) == false) {
+         if (params->signal == params->stop_signal || params->signal == SIGKILL) {
+             WARN("Process %d is not alive", params->pid);
+diff --git a/test/cutils/utils_utils/CMakeLists.txt b/test/cutils/utils_utils/CMakeLists.txt
+index 99a83e7a..6d276390 100644
+--- a/test/cutils/utils_utils/CMakeLists.txt
++++ b/test/cutils/utils_utils/CMakeLists.txt
+@@ -12,6 +12,8 @@ target_include_directories(${EXE} PUBLIC
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
+     )
++
++set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,waitpid")
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
+ add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
+ set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/cutils/utils_utils/utils_utils_ut.cc b/test/cutils/utils_utils/utils_utils_ut.cc
+index 5308351a..18f0a506 100644
+--- a/test/cutils/utils_utils/utils_utils_ut.cc
++++ b/test/cutils/utils_utils/utils_utils_ut.cc
+@@ -15,6 +15,44 @@
+ 
+ #include <gtest/gtest.h>
+ #include "utils.h"
++#include "mock.h"
++
++static pid_t test_pid = -1;
++
++extern "C" {
++    DECLARE_WRAPPER_V(waitpid, pid_t, (__pid_t pid, int *stat_loc, int options));
++    DEFINE_WRAPPER_V(waitpid, pid_t, (__pid_t pid, int *stat_loc, int options),(pid, stat_loc, options));
++}
++
++static pid_t waitpid_none_zero(__pid_t pid, int *stat_loc, int options)
++{
++    *stat_loc = 256;
++    return test_pid;
++}
++
++static pid_t waitpid_zero(__pid_t pid, int *stat_loc, int options)
++{
++    *stat_loc = 0;
++    return test_pid;
++}
++
++#define ExitSignalOffset 128
++static int status_to_exit_code(int status)
++{
++    int exit_code = 0;
++
++    if (WIFEXITED(status)) {
++        exit_code = WEXITSTATUS(status);
++    } else {
++        exit_code = -1;
++    }
++    if (WIFSIGNALED(status)) {
++        int signal;
++        signal = WTERMSIG(status);
++        exit_code = ExitSignalOffset + signal;
++    }
++    return exit_code;
++}
+ 
+ TEST(utils_utils, test_util_mem_realloc)
+ {
+@@ -284,4 +322,27 @@ TEST(utils_utils, test_do_retry_call)
+     DO_RETRY_CALL(10, 100, nret, retry_call_test, 11);
+     ASSERT_EQ(global_total, 10);
+     ASSERT_EQ(nret, -1);
++}
++
++TEST(utils_utils, test_util_waitpid_with_timeout)
++{
++    int64_t timeout = 2;
++    pid_t pid = getpid();
++    int status = 0;
++
++    test_pid = pid;
++    MOCK_SET_V(waitpid, waitpid_none_zero);
++    status = util_waitpid_with_timeout(test_pid, timeout, nullptr);
++    ASSERT_EQ(status, 256);
++    ASSERT_EQ(status_to_exit_code(status), 1);
++    MOCK_CLEAR(waitpid);
++
++    MOCK_SET_V(waitpid, waitpid_zero);
++    status = util_waitpid_with_timeout(test_pid, timeout, nullptr);
++    ASSERT_EQ(status, 0);
++    ASSERT_EQ(status_to_exit_code(status), 0);
++    MOCK_CLEAR(waitpid);
++
++    ASSERT_EQ(util_waitpid_with_timeout(pid, timeout, nullptr), -1);
++
+ }
+\ No newline at end of file
+diff --git a/test/runtime/isula/isula_rt_ops_ut.cc b/test/runtime/isula/isula_rt_ops_ut.cc
+index 03c213a5..f37e62a0 100644
+--- a/test/runtime/isula/isula_rt_ops_ut.cc
++++ b/test/runtime/isula/isula_rt_ops_ut.cc
+@@ -163,3 +163,59 @@ TEST_F(IsulaRtOpsUnitTest, test_rt_isula_exec_resize)
+     close(fd);
+     ASSERT_EQ(system(rm_path.c_str()), 0);
+ }
++
++TEST_F(IsulaRtOpsUnitTest, test_rt_isula_update)
++{
++    rt_update_params_t params = {};
++    ASSERT_EQ(rt_isula_update(nullptr, nullptr, nullptr), -1);
++
++    ASSERT_EQ(rt_isula_update("123", nullptr, nullptr), -1);
++    ASSERT_EQ(rt_isula_update("123", "runtime", nullptr), -1);
++    ASSERT_EQ(rt_isula_update("123", "runtime", &params), -1);
++}
++
++TEST_F(IsulaRtOpsUnitTest, test_rt_isula_pause)
++{
++    rt_pause_params_t params = {};
++    ASSERT_EQ(rt_isula_pause(nullptr, nullptr, nullptr), -1);
++
++    ASSERT_EQ(rt_isula_pause("123", nullptr, nullptr), -1);
++    ASSERT_EQ(rt_isula_pause("123", "runtime", nullptr), -1);
++    ASSERT_EQ(rt_isula_pause("123", "runtime", &params), -1);
++}
++
++TEST_F(IsulaRtOpsUnitTest, test_rt_isula_resume)
++{
++    rt_resume_params_t params = {};
++    ASSERT_EQ(rt_isula_resume(nullptr, nullptr, nullptr), -1);
++
++    ASSERT_EQ(rt_isula_resume("123", nullptr, nullptr), -1);
++    ASSERT_EQ(rt_isula_resume("123", "runtime", nullptr), -1);
++    ASSERT_EQ(rt_isula_resume("123", "runtime", &params), -1);
++}
++
++TEST_F(IsulaRtOpsUnitTest, test_rt_isula_resources_stats)
++{
++    rt_stats_params_t params = {};
++    struct runtime_container_resources_stats_info stats = {};
++
++    ASSERT_EQ(rt_isula_resources_stats(nullptr, nullptr, nullptr, nullptr), -1);
++
++    ASSERT_EQ(rt_isula_resources_stats("123", nullptr, nullptr, nullptr), -1);
++    ASSERT_EQ(rt_isula_resources_stats("123", "runtime", nullptr, nullptr), -1);
++    ASSERT_EQ(rt_isula_resources_stats("123", "runtime", &params, nullptr), -1);
++    params.state = "/var/run/isulad/runtime";
++    ASSERT_EQ(rt_isula_resources_stats("123", "runtime", &params, &stats), -1);
++}
++
++TEST_F(IsulaRtOpsUnitTest, test_rt_isula_kill)
++{
++    rt_kill_params_t kill_params = {
++        .pid = -1,
++    };
++    ASSERT_EQ(rt_isula_kill(nullptr, nullptr, nullptr), -1);
++
++    ASSERT_EQ(rt_isula_kill("123", nullptr, nullptr), -1);
++    ASSERT_EQ(rt_isula_kill("123", "runtime", nullptr), -1);
++    ASSERT_EQ(rt_isula_kill("123", "runtime", &kill_params), -1);
++}
+\ No newline at end of file
+-- 
+2.25.1
+

@@ -1,7 +1,7 @@
 From d0b0baa3f2624b6de0ca92c051c154f0cff43f1a Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Tue, 14 Mar 2023 10:33:38 +0800
-Subject: [PATCH 41/43] use CURLOPT_XFERINFOFUNCTION instead of deprecated
+Subject: [PATCH 41/53] use CURLOPT_XFERINFOFUNCTION instead of deprecated
  CURLOPT_PROGRESSFUNCTION since curl 7.32.0
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>

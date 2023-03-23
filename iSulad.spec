@@ -1,5 +1,5 @@
 %global _version 2.1.1
-%global _release 6
+%global _release 7
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -56,6 +56,15 @@ Patch0040:	0040-modifying-cpurt-file-permissions.patch
 Patch0041:	0041-use-CURLOPT_XFERINFOFUNCTION-instead-of-deprecated-C.patch
 Patch0042:	0042-bugfix-remote-ro-try-add-or-remove-image-layer-twice.patch
 Patch0043:	0043-bugfix-can-t-delete-layers-under-dir-overlay-layers.patch
+Patch0044:	0044-doc-add-document-about-support-remote-ro-directory.patch
+Patch0045:	0045-Refine-a-minor-log-message.patch
+Patch0046:	0046-modify-the-return-value-of-the-util_waitpid_with_tim.patch
+Patch0047:	0047-fix-util_getgrent_r-overflow.patch
+Patch0048:	0048-add-ut-for-runc.patch
+Patch0049:	0049-add-runc-doc.patch
+Patch0050:	0050-fix-isula_rt_ops_ut-bugs.patch
+Patch0051:	0051-refactor-remote-ro-code.patch
+Patch0052:	0052-bugfix-when-refresh-can-t-load-or-pull-images.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -298,13 +307,19 @@ fi
 %endif
 
 %changelog
-* Mon May 14 2023 wangrunze <wangrunze13@huawei.com> - 2.1.1-6
+* Thu Mar 23 2023 wangrunze <wangrunze13@huawei.com> - 2.1.1-7
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: upgrade from upstream to refactor remote ro
+
+* Tue Mar 14 2023 wangrunze <wangrunze13@huawei.com> - 2.1.1-6
 - Type: bugfix
 - ID: NA
 - SUG: NA
 - DESC: upgrade from upstream to fix remote ro bug
 
-* Mon May 06 2023 wangrunze <wangrunze13@huawei.com> - 2.1.1-5
+* Mon Mar 06 2023 wangrunze <wangrunze13@huawei.com> - 2.1.1-5
 - Type: bugfix
 - ID: NA
 - SUG: NA

@@ -1,7 +1,7 @@
 From 466309bc0aafe61ebed5c71012e28b9912783b60 Mon Sep 17 00:00:00 2001
 From: Xuepeng Xu <xuxuepeng1@huawei.com>
 Date: Thu, 9 Feb 2023 14:32:59 +0800
-Subject: [PATCH 03/35] Add macro for protoc cmake
+Subject: [PATCH 03/53] Add macro for protoc cmake
 
 Signed-off-by: Xuepeng Xu <xuxuepeng1@huawei.com>
 ---

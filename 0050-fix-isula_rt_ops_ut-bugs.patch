@@ -1,0 +1,28 @@
+From e2382f841c7bc3215793fdd8ce29132871281810 Mon Sep 17 00:00:00 2001
+From: zhongtao <zhongtao17@huawei.com>
+Date: Wed, 22 Mar 2023 08:02:51 +0800
+Subject: [PATCH 50/53] fix isula_rt_ops_ut bugs
+
+Signed-off-by: zhongtao <zhongtao17@huawei.com>
+---
+ test/runtime/isula/isula_rt_ops_ut.cc | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/test/runtime/isula/isula_rt_ops_ut.cc b/test/runtime/isula/isula_rt_ops_ut.cc
+index f37e62a0..9e014ac3 100644
+--- a/test/runtime/isula/isula_rt_ops_ut.cc
++++ b/test/runtime/isula/isula_rt_ops_ut.cc
+@@ -211,7 +211,10 @@ TEST_F(IsulaRtOpsUnitTest, test_rt_isula_resources_stats)
+ TEST_F(IsulaRtOpsUnitTest, test_rt_isula_kill)
+ {
+     rt_kill_params_t kill_params = {
++        .signal = SIGTERM,
++        .stop_signal = SIGKILL,
+         .pid = -1,
++        .start_time = 12345,
+     };
+     ASSERT_EQ(rt_isula_kill(nullptr, nullptr, nullptr), -1);
+ 
+-- 
+2.25.1
+
