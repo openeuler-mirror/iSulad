@@ -23,3 +23,7 @@ Device Mapper 是一个基于内核的框架，它支持 Linux 上的许多高�
 ## isula search使用指南
 
 关于如何使用isula search请参考[isula_search](isula_search_zh.md)
+
+## runc使用指南
+
+关于如何在isulad中使用runc请参考[runc_config](runc_config_zh.md)
