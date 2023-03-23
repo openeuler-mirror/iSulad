@@ -1,7 +1,7 @@
 From a08e511eb6ee1955bb62e774190dfe7a7599fbdd Mon Sep 17 00:00:00 2001
 From: "Neil.wrz" <wangrunze13@huawei.com>
 Date: Tue, 7 Mar 2023 23:59:56 -0800
-Subject: [PATCH 42/43] bugfix remote ro try add or remove image/layer twice
+Subject: [PATCH 42/53] bugfix remote ro try add or remove image/layer twice
 
 Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
 ---

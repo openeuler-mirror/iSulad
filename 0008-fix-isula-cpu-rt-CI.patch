@@ -1,7 +1,7 @@
 From edef459d5052dc6d7c29e8a7a48ff4bf1b01bd78 Mon Sep 17 00:00:00 2001
 From: songbuhuang <544824346@qq.com>
 Date: Tue, 14 Feb 2023 14:08:01 +0800
-Subject: [PATCH 08/35] fix isula cpu-rt CI
+Subject: [PATCH 08/53] fix isula cpu-rt CI
 
 Signed-off-by: songbuhuang <544824346@qq.com>
 ---
