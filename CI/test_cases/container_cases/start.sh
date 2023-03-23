@@ -26,7 +26,7 @@ source ../helpers.sh
 function do_test_t()
 {
     containername=test_start
-    isula create -t --name $containername busybox
+    isula create -t --name $containername --runtime $1 busybox
     fn_check_eq "$?" "0" "create failed"
     testcontainer $containername inited
 
@@ -51,7 +51,7 @@ function do_attach_local_test_t()
     local test="container start with --attach local test => (${FUNCNAME[@]})"
 
     containername=start_attach
-    isula create -ti --name $containername busybox /bin/sh -c 'echo "hello"'
+    isula create -ti --name $containername --runtime $1 busybox /bin/sh -c 'echo "hello"'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create ${containername}" && ((ret++))
     testcontainer $containername inited
 
@@ -62,7 +62,7 @@ function do_attach_local_test_t()
     isula rm -f $containername
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container" && ((ret++))
 
-    id=`isula create -ti busybox /bin/sh -c 'ech "hello"'`
+    id=`isula create -ti --runtime $1 busybox /bin/sh -c 'ech "hello"'`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create container" && ((ret++))
 
     isula start -a $id
@@ -88,19 +88,19 @@ function do_attach_remote_test_t()
     start_isulad_with_valgrind -H "$config"
 
     containername=start_attach
-    isula create -ti -H "$config" --name $containername busybox /bin/sh -c 'echo "hello"'
+    isula create -ti -H "$config" --name $containername --runtime $1 busybox /bin/sh -c 'echo "hello"'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create ${containername} remote" && ((ret++))
-    testcontainer $containername inited
+    testcontainer $containername inited "-H $config"
 
     result=`isula start -a -H "$config" $containername`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start -a ${containername} remote" && ((ret++))
-    testcontainer $containername exited
+    testcontainer $containername exited "-H $config"
 
     isula rm -f -H "$config" $containername
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container remote" && ((ret++))
 
     containername=start_exit
-    isula run -it -H "$config" --name $containername busybox /bin/sh -c 'exit 5'
+    isula run -it -H "$config" --name $containername --runtime $1 busybox /bin/sh -c 'exit 5'
     [[ $? -ne 5 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid exit code with remote start" && ((ret++))
 
     isula start -a -H "$config" $containername
@@ -119,12 +119,29 @@ function do_attach_remote_test_t()
     return ${ret}
 }
 
+function test_start()
+{
+    local ret=0
+    local runtime=$1
+    local test="start_test => (${runtime})"
+    msg_info "${test} starting..."
+
+    do_test_t $runtime || ((ret++))
+
+    do_attach_local_test_t $runtime || ((ret++))
+
+    do_attach_remote_test_t $runtime || ((ret++))
+
+    msg_info "${test} finished with return ${ret}..."
+
+    return $ret
+}
+
 declare -i ans=0
 
-do_test_t || ((ans++))
-
-do_attach_local_test_t || ((ans++))
-
-do_attach_remote_test_t || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    test_start $element || ((ans++))
+done
 
 show_result ${ans} "${curr_path}/${0}"

@@ -72,8 +72,9 @@ function do_post()
 function do_test_help()
 {
     local ret=0
+    local runtime=$4
 
-    msg_info "this is $0 do_test"
+    msg_info "this is $0 do_test with runtime $runtime"
 
     crictl pull busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Failed to pull busybox image" && ((ret++))
@@ -81,14 +82,14 @@ function do_test_help()
     crictl images | grep "mirrorgooglecontainers/pause-amd64"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Failed to find mirrorgooglecontainers/pause-amd64 image" && ((ret++))
 
-    sid1=`crictl runp ${data_path}/$1`
+    sid1=`crictl runp --runtime $runtime ${data_path}/$1`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Failed to run sandbox1" && ((ret++))
 
     spid1=`isula inspect -f '{{json .State.Pid}}' $sid1`
     nsenter -t $spid1 -n ifconfig eth0
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Sandbox1 network config failed" && ((ret++))
 
-    sid2=`crictl runp ${data_path}/$2`
+    sid2=`crictl runp --runtime $runtime ${data_path}/$2`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Failed to run sandbox2" && ((ret++))
 
     spid2=`isula inspect -f '{{json .State.Pid}}' $sid2`
@@ -123,7 +124,7 @@ function do_test_help()
     crictl rmp $sid1 $sid2
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm sandbox failed" && ((ret++))
 
-    msg_info "$0 do_test finished with return ${ret}..."
+    msg_info "$0 do_test with runtime $runtime finished with return ${ret}..."
     return ${ret}
 }
 
@@ -131,7 +132,10 @@ declare -i ans=0
 
 do_pre || ((ans++))
 
-do_test_help "sandbox-config.json" "sandbox-config2.json" "10\.2\." || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    do_test_help "sandbox-config.json" "sandbox-config2.json" "10\.2\." $element || ((ans++))
+done
 
 do_post
 
