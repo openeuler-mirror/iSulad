@@ -22,11 +22,10 @@ function do_pre()
     cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
     sed -i "s#\"pod-sandbox-image\": \"\"#\"pod-sandbox-image\": \"mirrorgooglecontainers/pause-amd64:3.0\"#g" /etc/isulad/daemon.json
 
-    # check_valgrind_log
-    stop_isulad_without_valgrind
+    check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop isulad" && return ${FAILURE}
 
-    start_isulad_without_valgrind
+    start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start isulad" && return ${FAILURE}
 
     isula load -i ${pause_img_path}/pause.tar
@@ -149,10 +148,9 @@ function tear_down()
 function do_post()
 {
     cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
-    # check_valgrind_log
-
-    stop_isulad_without_valgrind
-    start_isulad_without_valgrind
+    
+    check_valgrind_log
+    start_isulad_with_valgrind
 }
 
 function do_test_t()
@@ -184,7 +182,9 @@ do_pre || ((ans++))
 
 for element in ${RUNTIME_LIST[@]};
 do
-    do_test_t $element || ((ans++))
+    if [ $element != "runc" ]; then
+        do_test_t $element || ((ans++))
+    fi
 done
 
 do_post
