@@ -27,7 +27,7 @@ ISUALD_LOG="/var/lib/isulad/isulad.log"
 ISULAD_ROOT_PATH="/var/lib/isulad"
 ISULAD_RUN_ROOT_PATH="/var/run/isulad"
 
-RUNTIME_LIST=(lcr runc)
+RUNTIME_LIST=(lcr)
 
 enable_native_network=0
 

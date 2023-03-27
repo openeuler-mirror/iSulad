@@ -8,7 +8,6 @@ curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/criconfigs)
 pause_img_path=$(realpath $curr_path/test_data)
 source ../helpers.sh
-export CONTAINER_RUNTIME_ENDPOINT=unix:///var/run/isulad.sock
 
 function do_pre()
 {
