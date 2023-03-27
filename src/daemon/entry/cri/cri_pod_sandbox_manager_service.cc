@@ -837,7 +837,7 @@ auto PodSandboxManagerService::ClearCniNetwork(const std::string &realSandboxID,
     stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY, netnsPath));
     pluginErr.Clear();
     m_pluginManager->TearDownPod(ns, name, Network::DEFAULT_NETWORK_INTERFACE_NAME, realSandboxID, stdAnnos,
-                                    pluginErr);
+                                 pluginErr);
     if (pluginErr.NotEmpty()) {
         WARN("TearDownPod cni network failed: %s", pluginErr.GetCMessage());
         errlist.push_back(pluginErr.GetMessage());
