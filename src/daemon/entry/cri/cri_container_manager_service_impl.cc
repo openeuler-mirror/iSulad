@@ -1100,6 +1100,7 @@ ContainerManagerServiceImpl::ContainerStatus(const std::string &containerID, Err
     ContainerStatusPtr contStatus(new (std::nothrow) runtime::v1alpha2::ContainerStatus);
     if (contStatus == nullptr) {
         error.SetError("Out of memory");
+        free_container_inspect(inspect);
         return nullptr;
     }
 
