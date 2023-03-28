@@ -812,44 +812,48 @@ auto PodSandboxManagerService::ClearCniNetwork(const std::string &realSandboxID,
                                                /*error*/) -> int
 {
     Errors networkErr;
-    container_inspect *inspect_data = nullptr;
 
     bool ready = GetNetworkReady(realSandboxID, networkErr);
-    if (!hostNetwork && (ready || networkErr.NotEmpty())) {
-        Errors pluginErr;
+    if (hostNetwork || (!ready && networkErr.Empty())) {
+        return 0;
+    }
 
-        // hostNetwork has indicated network mode which render host config unnecessary
-        // so that with_host_config is set to be false.
-        inspect_data = CRIHelpers::InspectContainer(realSandboxID, pluginErr, false);
+    Errors pluginErr;
+    container_inspect *inspect_data = nullptr;
+
+    // hostNetwork has indicated network mode which render host config unnecessary
+    // so that with_host_config is set to be false.
+    inspect_data = CRIHelpers::InspectContainer(realSandboxID, pluginErr, false);
+    if (pluginErr.NotEmpty()) {
+        ERROR("Failed to inspect container");
+    }
+
+    std::string netnsPath = GetSandboxKey(inspect_data);
+    if (netnsPath.size() == 0) {
+        ERROR("Failed to get network namespace path");
+        goto cleanup;
+    }
+
+    stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY, netnsPath));
+    pluginErr.Clear();
+    m_pluginManager->TearDownPod(ns, name, Network::DEFAULT_NETWORK_INTERFACE_NAME, realSandboxID, stdAnnos,
+                                    pluginErr);
+    if (pluginErr.NotEmpty()) {
+        WARN("TearDownPod cni network failed: %s", pluginErr.GetCMessage());
+        errlist.push_back(pluginErr.GetMessage());
+    } else {
+        INFO("TearDownPod cni network: success");
+        SetNetworkReady(realSandboxID, false, pluginErr);
         if (pluginErr.NotEmpty()) {
-            ERROR("Failed to inspect container");
+            WARN("set network ready: %s", pluginErr.GetCMessage());
         }
-
-        std::string netnsPath = GetSandboxKey(inspect_data);
-        if (netnsPath.size() == 0) {
-            ERROR("Failed to get network namespace path");
-            return 0;
-        }
-
-        stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY, netnsPath));
-        pluginErr.Clear();
-        m_pluginManager->TearDownPod(ns, name, Network::DEFAULT_NETWORK_INTERFACE_NAME, realSandboxID, stdAnnos,
-                                     pluginErr);
-        if (pluginErr.NotEmpty()) {
-            WARN("TearDownPod cni network failed: %s", pluginErr.GetCMessage());
-            errlist.push_back(pluginErr.GetMessage());
-        } else {
-            INFO("TearDownPod cni network: success");
-            SetNetworkReady(realSandboxID, false, pluginErr);
-            if (pluginErr.NotEmpty()) {
-                WARN("set network ready: %s", pluginErr.GetCMessage());
-            }
-            // umount netns when cni removed network successfully
-            if (remove_network_namespace(netnsPath.c_str()) != 0) {
-                ERROR("Failed to umount directory %s:%s", netnsPath.c_str(), strerror(errno));
-            }
+        // umount netns when cni removed network successfully
+        if (remove_network_namespace(netnsPath.c_str()) != 0) {
+            ERROR("Failed to umount directory %s:%s", netnsPath.c_str(), strerror(errno));
         }
     }
+
+cleanup:
     free_container_inspect(inspect_data);
     return 0;
 }
