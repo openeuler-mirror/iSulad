@@ -128,10 +128,8 @@ auto ContainerManagerService::PackCreateContainerHostConfigSecurityContext(
     return 0;
 }
 
-auto ContainerManagerService::DoUsePodLevelSELinuxConfig(
-    const runtime::v1alpha2::ContainerConfig &containerConfig,
-    host_config *hostconfig,
-    const std::string &realPodSandboxID, Errors &error) -> int
+auto ContainerManagerService::DoUsePodLevelSELinuxConfig(const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                                         host_config *hostconfig, const std::string &realPodSandboxID, Errors &error) -> int
 {
     int ret = -1;
     size_t newSize = 0;
@@ -146,7 +144,7 @@ auto ContainerManagerService::DoUsePodLevelSELinuxConfig(
         return -1;
     }
 
-    if (inspect->process_label == NULL) {
+    if (inspect->process_label == nullptr) {
         ret = 0;
         goto cleanup;
     }
@@ -155,18 +153,15 @@ auto ContainerManagerService::DoUsePodLevelSELinuxConfig(
     selinuxLabelOpts = CRIHelpers::GetSELinuxLabelOpts(tmp_str, error);
     if (error.NotEmpty()) {
         ERROR("Failed to get SELinuxLabelOpts for container %s", containerConfig.metadata().name().c_str());
-        ret = -1;
         goto cleanup;
     }
     if (selinuxLabelOpts.empty()) {
         error.Errorf("SElinuxLabelOpts for container %s is empty", containerConfig.metadata().name().c_str());
-        ret = -1;
         goto cleanup;
     }
     if (selinuxLabelOpts.size() > (SIZE_MAX / sizeof(char *)) - hostconfig->security_opt_len) {
         ERROR("Out of memory");
         error.Errorf("Out of memory");
-        ret = -1;
         goto cleanup;
     }
     newSize = (hostconfig->security_opt_len + selinuxLabelOpts.size()) * sizeof(char *);
@@ -175,7 +170,6 @@ auto ContainerManagerService::DoUsePodLevelSELinuxConfig(
     if (ret != 0) {
         ERROR("Out of memory");
         error.Errorf("Out of memory");
-        ret = -1;
         goto cleanup;
     }
     hostconfig->security_opt = tmp_security_opt;
