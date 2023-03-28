@@ -535,7 +535,7 @@ auto CniNetworkPlugin::GetNetNS(const std::string &podSandboxID, Errors &err) ->
 
     container_inspect *inspect_data = CRIHelpers::InspectContainer(podSandboxID, err, false);
     if (inspect_data == nullptr) {
-        goto cleanup;
+        return result;
     }
     if (inspect_data->state->pid == 0) {
         err.Errorf("cannot find network namespace for the terminated container %s", podSandboxID.c_str());
