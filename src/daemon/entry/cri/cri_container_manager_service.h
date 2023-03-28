@@ -126,6 +126,7 @@ private:
     auto BuildURL(const std::string &method, const std::string &token) -> std::string;
     auto InspectContainerState(const std::string &containerID, Errors &err) -> container_inspect_state *;
     auto ValidateAttachRequest(const runtime::v1alpha2::AttachRequest &req, Errors &error) -> int;
+    auto IsSELinuxLabelEmpty(const ::runtime::v1alpha2::SELinuxOption &selinuxOption) -> bool;
 
 private:
     service_executor_t *m_cb { nullptr };

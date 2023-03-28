@@ -68,8 +68,17 @@ public:
     static const std::string CNI_ARGS_EXTENSION_PREFIX_KEY;
     static const std::string CNI_CAPABILITIES_BANDWIDTH_INGRESS_KEY;
     static const std::string CNI_CAPABILITIES_BANDWIDTH_ENGRESS_KEY;
+    static const std::string SELINUX_LABEL_LEVEL_PATTERN;
 
     static const std::string IMAGE_NAME_ANNOTATION_KEY;
+};
+
+struct commonSecurityContext {
+    const bool hasSeccomp;
+    const bool hasSELinuxOption;
+    const ::runtime::v1alpha2::SecurityProfile seccomp;
+    const ::runtime::v1alpha2::SELinuxOption selinuxOption;
+    const std::string seccompProfile;
 };
 
 auto GetDefaultSandboxImage(Errors &err) -> std::string;
@@ -125,12 +134,21 @@ auto ValidateCheckpointKey(const std::string &key, Errors &error) -> bool;
 
 auto ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state) -> std::string;
 
-auto GetSecurityOpts(const bool hasSeccomp, const ::runtime::v1alpha2::SecurityProfile &seccomp,
-                     const std::string &seccompProfile, const char &separator, Errors &error)
+auto GetSeccompSecurityOpts(const bool hasSeccomp, const ::runtime::v1alpha2::SecurityProfile &seccomp,
+                            const std::string &seccompProfile, const char &separator, Errors &error)
 -> std::vector<std::string>;
 
-auto GetSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
+auto GetSELinuxLabelOpts(const bool hasSELinuxOption, const ::runtime::v1alpha2::SELinuxOption &selinux,
+                         const char &separator, Errors &error)
 -> std::vector<std::string>;
+
+auto GetSecurityOpts(const commonSecurityContext &context, const char &separator, Errors &error)
+-> std::vector<std::string>;
+
+auto GetPodSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
+-> std::vector<std::string>;
+
+void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_config *hostconfig, Errors &error);
 
 auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string;
 
