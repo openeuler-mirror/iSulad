@@ -24,7 +24,7 @@ function do_pre()
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop isulad" && return ${FAILURE}
 
-    start_isulad_with_valgrind
+    start_isulad_without_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start isulad" && return ${FAILURE}
 
     isula load -i ${pause_img_path}/pause.tar
@@ -148,7 +148,7 @@ function do_post()
 {
     cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
     
-    check_valgrind_log
+    stop_isulad_without_valgrind
     start_isulad_with_valgrind
 }
 
@@ -181,9 +181,7 @@ do_pre || ((ans++))
 
 for element in ${RUNTIME_LIST[@]};
 do
-    if [ $element != "runc" ]; then
-        do_test_t $element || ((ans++))
-    fi
+    do_test_t $element || ((ans++))
 done
 
 do_post
