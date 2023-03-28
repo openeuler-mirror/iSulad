@@ -76,7 +76,9 @@ private:
                                         const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
                                         const std::string &podSandboxRuntime, Errors &error)
     -> container_create_request *;
-    auto GenerateCreateContainerHostConfig(const runtime::v1alpha2::ContainerConfig &containerConfig, Errors &error)
+    auto GenerateCreateContainerHostConfig(const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                           const std::string &realPodSandboxID,
+                                           Errors &error)
     -> host_config *;
     auto GenerateCreateContainerCustomConfig(const std::string &containerName, const std::string &realPodSandboxID,
                                              const runtime::v1alpha2::ContainerConfig &containerConfig,
@@ -86,6 +88,9 @@ private:
                                               host_config *hostconfig, Errors &error) -> int;
     auto PackCreateContainerHostConfigSecurityContext(const runtime::v1alpha2::ContainerConfig &containerConfig,
                                                       host_config *hostconfig, Errors &error) -> int;
+    auto DoUsePodLevelSELinuxConfig(const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                    host_config *hostconfig,
+                                    const std::string &realPodSandboxID, Errors &error) -> int;
     void MakeContainerConfig(const runtime::v1alpha2::ContainerConfig &config, container_config *cConfig,
                              Errors &error);
     void CreateContainerLogSymlink(const std::string &containerID, Errors &error);

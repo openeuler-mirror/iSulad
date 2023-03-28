@@ -128,8 +128,72 @@ auto ContainerManagerService::PackCreateContainerHostConfigSecurityContext(
     return 0;
 }
 
+auto ContainerManagerService::DoUsePodLevelSELinuxConfig(
+    const runtime::v1alpha2::ContainerConfig &containerConfig,
+    host_config *hostconfig,
+    const std::string &realPodSandboxID, Errors &error) -> int
+{
+    int ret = -1;
+    size_t newSize = 0;
+    size_t oldSize = 0;
+    container_inspect *inspect = nullptr;
+    std::vector<std::string> selinuxLabelOpts;
+    char **tmp_security_opt = nullptr;
+    std::string tmp_str;
+
+    inspect = CRIHelpers::InspectContainer(realPodSandboxID, error, true);
+    if (error.NotEmpty()) {
+        return -1;
+    }
+
+    if (inspect->process_label == NULL) {
+        ret = 0;
+        goto cleanup;
+    }
+
+    tmp_str = std::string(inspect->process_label);
+    selinuxLabelOpts = CRIHelpers::GetSELinuxLabelOpts(tmp_str, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to get SELinuxLabelOpts for container %s", containerConfig.metadata().name().c_str());
+        ret = -1;
+        goto cleanup;
+    }
+    if (selinuxLabelOpts.empty()) {
+        error.Errorf("SElinuxLabelOpts for container %s is empty", containerConfig.metadata().name().c_str());
+        ret = -1;
+        goto cleanup;
+    }
+    if (selinuxLabelOpts.size() > (SIZE_MAX / sizeof(char *)) - hostconfig->security_opt_len) {
+        ERROR("Out of memory");
+        error.Errorf("Out of memory");
+        ret = -1;
+        goto cleanup;
+    }
+    newSize = (hostconfig->security_opt_len + selinuxLabelOpts.size()) * sizeof(char *);
+    oldSize = hostconfig->security_opt_len * sizeof(char *);
+    ret = util_mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostconfig->security_opt, oldSize);
+    if (ret != 0) {
+        ERROR("Out of memory");
+        error.Errorf("Out of memory");
+        ret = -1;
+        goto cleanup;
+    }
+    hostconfig->security_opt = tmp_security_opt;
+    for (const auto &securityOpt : selinuxLabelOpts) {
+        hostconfig->security_opt[hostconfig->security_opt_len] = util_strdup_s(securityOpt.c_str());
+        hostconfig->security_opt_len++;
+    }
+
+cleanup:
+    free_container_inspect(inspect);
+    return ret;
+}
+
+
+
 auto ContainerManagerService::GenerateCreateContainerHostConfig(
-    const runtime::v1alpha2::ContainerConfig &containerConfig, Errors &error) -> host_config *
+    const runtime::v1alpha2::ContainerConfig &containerConfig,
+    const std::string &realPodSandboxID, Errors &error) -> host_config *
 {
     host_config *hostconfig = (host_config *)util_common_calloc_s(sizeof(host_config));
     if (hostconfig == nullptr) {
@@ -159,6 +223,15 @@ auto ContainerManagerService::GenerateCreateContainerHostConfig(
     if (PackCreateContainerHostConfigSecurityContext(containerConfig, hostconfig, error) != 0) {
         error.SetError("Failed to security context to host config");
         goto cleanup;
+    }
+
+    // If selinux label is not specified in container config, use pod level SELinux config
+    if (!containerConfig.linux().has_security_context() ||
+        !containerConfig.linux().security_context().has_selinux_options()) {
+        if (DoUsePodLevelSELinuxConfig(containerConfig, hostconfig, realPodSandboxID, error) != 0) {
+            error.SetError("Failed to security context to host config");
+            goto cleanup;
+        }
     }
 
     return hostconfig;
@@ -369,7 +442,7 @@ ContainerManagerService::GenerateCreateContainerRequest(const std::string &realP
 
     container_config *custom_config { nullptr };
 
-    host_config *hostconfig = GenerateCreateContainerHostConfig(containerConfig, error);
+    host_config *hostconfig = GenerateCreateContainerHostConfig(containerConfig, realPodSandboxID, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
