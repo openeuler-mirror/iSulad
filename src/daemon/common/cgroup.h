@@ -72,17 +72,19 @@ typedef struct {
     bool fileslimit;
 } cgroup_files_info_t;
 
-int get_cgroup_version(void);
+int common_get_cgroup_version(void);
 
-int find_cgroup_mountpoint_and_root(const char *subsystem, char **mountpoint, char **root);
+int common_find_cgroup_mnt_and_root(const char *subsystem, char **mountpoint, char **root);
 
-int get_cgroup_info_v1(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo, cgroup_hugetlb_info_t *hugetlbinfo,
-                       cgroup_blkio_info_t *blkioinfo, cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                       cgroup_files_info_t *filesinfo, bool quiet);
+int common_get_cgroup_info_v1(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
+                              cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
+                              cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
+                              cgroup_files_info_t *filesinfo, bool quiet);
 
-int get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo, cgroup_hugetlb_info_t *hugetlbinfo,
-                       cgroup_blkio_info_t *blkioinfo, cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                       cgroup_files_info_t *filesinfo, bool quiet);
+int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
+                              cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
+                              cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
+                              cgroup_files_info_t *filesinfo, bool quiet);
 
 #ifdef __cplusplus
 }

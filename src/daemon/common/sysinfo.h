@@ -21,12 +21,8 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/utsname.h>
 
 #include "cgroup.h"
-
-#define etcOsRelease "/etc/os-release"
-#define altOsRelease "/usr/lib/os-release"
 
 typedef struct {
     int ncpus;
@@ -76,10 +72,6 @@ typedef struct {
     char *vfsopts;
 } mountinfo_t;
 
-void free_list(char **str_list);
-
-int add_null_to_list(void ***list);
-
 void free_sysinfo(sysinfo_t *sysinfo);
 
 // check whether hugetlb pagesize and limit legal
@@ -99,7 +91,7 @@ mountinfo_t *find_mount_info(mountinfo_t **minfos, const char *dir);
 
 void free_mounts_info(mountinfo_t **minfos);
 
-char *sysinfo_cgroup_controller_cpurt_mnt_path();
+char *sysinfo_cgroup_controller_cpurt_mnt_path(void);
 
 #ifdef __cplusplus
 }

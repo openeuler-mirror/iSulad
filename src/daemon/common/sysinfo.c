@@ -16,68 +16,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include <dirent.h>
 #include <errno.h>
 #include <sys/sysinfo.h>
-#include <linux/magic.h>
-#include <sys/stat.h>
 
 #include <isula_libutils/auto_cleanup.h>
 #include <isula_libutils/log.h>
 
-#include "constants.h"
 #include "err_msg.h"
 #include "utils.h"
 #include "utils_array.h"
 #include "utils_file.h"
-#include "utils_string.h"
+
+#define etcOsRelease "/etc/os-release"
+#define altOsRelease "/usr/lib/os-release"
 
 static sysinfo_t *g_sysinfo = NULL;
-
-void free_list(char **str_list)
-{
-    int i;
-
-    if (str_list == NULL) {
-        return;
-    }
-
-    for (i = 0; str_list[i]; i++) {
-        free(str_list[i]);
-        str_list[i] = NULL;
-    }
-
-    free(str_list);
-}
-
-int add_null_to_list(void ***list)
-{
-    int ret = 0;
-    size_t index = 0;
-    size_t newsize, oldsize;
-    void **newlist = NULL;
-
-    if (*list != NULL) {
-        for (; (*list)[index] != NULL; index++) {
-        }
-    }
-
-    if (index > SIZE_MAX / sizeof(void **) - 2) {
-        ERROR("Out of range");
-        return -1;
-    }
-    newsize = (index + 2) * sizeof(void **);
-    oldsize = index * sizeof(void **);
-    ret = util_mem_realloc((void **)&newlist, newsize, (*list), oldsize);
-    if (ret < 0) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    *list = newlist;
-    (*list)[index + 1] = NULL;
-    return (int)index;
-}
 
 static char *get_pagesize(const char *pline)
 {
@@ -231,7 +184,6 @@ static bool is_hugetlb_max(const char *name)
 /* get huge page sizes */
 static char **get_huge_page_sizes()
 {
-    int index;
     int ret = 0;
     char *hugetlbmp = NULL;
     char **hps = NULL;
@@ -239,11 +191,11 @@ static char **get_huge_page_sizes()
     struct dirent *info_archivo = NULL;
     int cgroup_version = 0;
 
-    cgroup_version = get_cgroup_version();
+    cgroup_version = common_get_cgroup_version();
     if (cgroup_version == CGROUP_VERSION_2) {
         hugetlbmp = util_strdup_s(CGROUP_ISULAD_PATH);
     } else {
-        ret = find_cgroup_mountpoint_and_root("hugetlb", &hugetlbmp, NULL);
+        ret = common_find_cgroup_mnt_and_root("hugetlb", &hugetlbmp, NULL);
         if (ret != 0 || hugetlbmp == NULL) {
             ERROR("Hugetlb cgroup not supported");
             return NULL;
@@ -291,19 +243,18 @@ static char **get_huge_page_sizes()
         }
         *dot2 = '\0';
 
-        index = add_null_to_list((void ***)&hps);
-        if (index < 0) {
+        if (util_array_append(&hps, pos) != 0) {
+            ERROR("Failed to append array");
             free(dup);
-            free_list(hps);
+            util_free_array(hps);
             hps = NULL;
             goto free_out;
         }
-        hps[index] = util_strdup_s(pos);
+
 dup_free:
         free(dup);
     }
 free_out:
-
     free(hugetlbmp);
     if (dir != NULL) {
         closedir(dir);
@@ -351,7 +302,7 @@ free_out:
             ERROR("Out of memory");
         }
     }
-    free_list(hps);
+    util_free_array(hps);
     return bret;
 }
 
@@ -443,20 +394,20 @@ sysinfo_t *get_sys_info(bool quiet)
 
     sysinfo->ncpus = get_nprocs();
 
-    cgroup_version = get_cgroup_version();
+    cgroup_version = common_get_cgroup_version();
     if (cgroup_version < 0) {
         ret = -1;
         goto out;
     }
 
     if (cgroup_version == CGROUP_VERSION_1) {
-        ret = get_cgroup_info_v1(&sysinfo->cgmeminfo, &sysinfo->cgcpuinfo, &sysinfo->hugetlbinfo,
-                                 &sysinfo->blkioinfo, &sysinfo->cpusetinfo, &sysinfo->pidsinfo,
-                                 &sysinfo->filesinfo, quiet);
+        ret = common_get_cgroup_info_v1(&sysinfo->cgmeminfo, &sysinfo->cgcpuinfo, &sysinfo->hugetlbinfo,
+                                        &sysinfo->blkioinfo, &sysinfo->cpusetinfo, &sysinfo->pidsinfo,
+                                        &sysinfo->filesinfo, quiet);
     } else {
-        ret = get_cgroup_info_v2(&sysinfo->cgmeminfo, &sysinfo->cgcpuinfo, &sysinfo->hugetlbinfo,
-                                 &sysinfo->blkioinfo, &sysinfo->cpusetinfo, &sysinfo->pidsinfo,
-                                 &sysinfo->filesinfo, quiet);
+        ret = common_get_cgroup_info_v2(&sysinfo->cgmeminfo, &sysinfo->cgcpuinfo, &sysinfo->hugetlbinfo,
+                                        &sysinfo->blkioinfo, &sysinfo->cpusetinfo, &sysinfo->pidsinfo,
+                                        &sysinfo->filesinfo, quiet);
     }
     if (ret != 0) {
         goto out;
@@ -591,7 +542,6 @@ mountinfo_t **getmountsinfo(void)
     }
 
     while (getline(&pline, &length, fp) != -1) {
-        int index;
         mountinfo_t *info = NULL;
 
         info = get_mount_info(pline);
@@ -600,16 +550,15 @@ mountinfo_t **getmountsinfo(void)
             goto free_out;
         }
 
-        index = add_null_to_list((void ***)&minfos);
-        if (index < 0) {
+        if (util_common_array_append_pointer((void ***)&minfos, info) != 0) {
+            ERROR("Failed to append pointer to array");
             free_mount_info(info);
             ret = -1;
             goto free_out;
         }
-        minfos[index] = info;
     }
-free_out:
 
+free_out:
     fclose(fp);
     free(pline);
     if (ret != 0) {
@@ -619,7 +568,7 @@ free_out:
     return minfos;
 }
 
-char *sysinfo_cgroup_controller_cpurt_mnt_path()
+char *sysinfo_cgroup_controller_cpurt_mnt_path(void)
 {
     int nret = 0;
     __isula_auto_free char *mnt = NULL;
@@ -639,7 +588,7 @@ char *sysinfo_cgroup_controller_cpurt_mnt_path()
         return NULL;
     }
 
-    nret = find_cgroup_mountpoint_and_root("cpu", &mnt, &root);
+    nret = common_find_cgroup_mnt_and_root("cpu", &mnt, &root);
     if (nret != 0 || mnt == NULL || root == NULL) {
         ERROR("Can not find cgroup mnt and root path for subsystem 'cpu'");
         isulad_set_error_message("Can not find cgroup mnt and root path for subsystem 'cpu'");

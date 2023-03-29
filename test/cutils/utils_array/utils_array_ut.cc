@@ -252,3 +252,50 @@ TEST(utils_array, test_util_string_array_contain)
     util_free_string_array(sarray);
     sarray = nullptr;
 }
+
+TEST(utils_array, test_util_array_contain)
+{
+    char **array = nullptr;
+    const char *element1 = "1234567890";
+    const char *element2 = "abcdefghijk";
+
+    ASSERT_EQ(util_array_contain(nullptr, element1), false);
+    ASSERT_EQ(util_array_contain((const char **)array, nullptr), false);
+
+    ASSERT_EQ(util_array_append(&array, element1), 0);
+    ASSERT_EQ(util_array_contain((const char **)array, element1), true);
+    ASSERT_EQ(util_array_contain((const char **)array, element2), false);
+
+    ASSERT_EQ(util_array_append(&array, element2), 0);
+    ASSERT_EQ(util_array_contain((const char **)array, element1), true);
+    ASSERT_EQ(util_array_contain((const char **)array, element2), true);
+
+    util_free_array(array);
+    array = nullptr;
+}
+
+TEST(utils_array, test_util_common_array_append_pointer)
+{
+    int **array = nullptr;
+    int *element1 = new int(12345);
+    int *element2 = new int(678910);
+
+    ASSERT_NE(util_common_array_append_pointer(nullptr, (void *)element1), 0);
+    ASSERT_NE(util_common_array_append_pointer((void ***)&array, nullptr), 0);
+
+    ASSERT_EQ(util_common_array_append_pointer((void ***)&array, (void *)element1), 0);
+    ASSERT_EQ(array[0], element1);
+    ASSERT_EQ(array[1], nullptr);
+
+
+    ASSERT_EQ(util_common_array_append_pointer((void ***)&array, (void *)element2), 0);
+    ASSERT_EQ(array[0], element1);
+    ASSERT_EQ(array[1], element2);
+    ASSERT_EQ(array[2], nullptr);
+
+    free(array);
+    array = nullptr;
+
+    delete element1;
+    delete element2;
+}

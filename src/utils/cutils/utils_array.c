@@ -122,6 +122,23 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size, size
     return 0;
 }
 
+bool util_array_contain(const char **array, const char *element)
+{
+    const char **pos;
+
+    if (array == NULL || element == NULL) {
+        return false;
+    }
+
+    for (pos = array; *pos != NULL; pos++) {
+        if (strcmp(*pos, element) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static size_t get_string_array_scale_size(size_t old_size)
 {
 #define DOUBLE_THRESHOLD 1024
@@ -258,4 +275,40 @@ string_array *util_string_array_new(size_t len)
 err_out:
     util_free_string_array(ptr);
     return NULL;
+}
+
+int util_common_array_append_pointer(void ***array, void *element)
+{
+    size_t len = 0;
+    void **p = NULL;
+    void **new_array = NULL;
+
+    if (array == NULL || element == NULL) {
+        return -1;
+    }
+
+    for (p = *array; p != NULL && *p != NULL; p++) {
+        len++;
+    }
+
+    if (len > SIZE_MAX - 2) {
+        ERROR("Out of range");
+        return -1;
+    }
+
+    new_array = util_smart_calloc_s(sizeof(void *), (len + 2));
+    if (new_array == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (*array != NULL) {
+        (void)memcpy(new_array, *array, len * sizeof(void *));
+        UTIL_FREE_AND_SET_NULL(*array);
+    }
+
+    new_array[len] = element;
+    *array = new_array;
+
+    return 0;
 }
