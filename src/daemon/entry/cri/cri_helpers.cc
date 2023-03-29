@@ -700,20 +700,20 @@ auto GetSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
     // LabeSep is consistent with the separator used when parsing labels
     const char labeSep { ':' };
     std::vector<iSuladOpt> selinuxOpts { };
-    char **labelArr = NULL;
+    char **labelArr = nullptr;
     size_t labelArrLen = 0;
     std::vector<std::string> opts = {"user", "role", "type", "level"};
     std::vector<std::string> vect;
 
     labelArr = util_string_split_n(selinuxLabel.c_str(), labeSep, 4);
-    if (labelArr == NULL) {
-        error.Errorf("Invalid selinux label: %s", selinuxLabel);
+    if (labelArr == nullptr) {
+        error.Errorf("Invalid selinux label: %s", selinuxLabel.c_str());
         return vect;
     }
 
     labelArrLen = util_array_len((const char **)labelArr);
     for (size_t i {}; i < labelArrLen; i++) {
-        iSuladOpt tmp = { "label", opts[i] + labeSep + labelArr[i], "" };
+        iSuladOpt tmp = { "label", opts[i] + std::string(1, labeSep) + std::string(labelArr[i]), "" };
         selinuxOpts.push_back(tmp);
     }
 
