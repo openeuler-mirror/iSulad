@@ -25,6 +25,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/image_store/image_type.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry_type.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/sysinfo.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/cgroup.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/image_store/image_store.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/registry.c

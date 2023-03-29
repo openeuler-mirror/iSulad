@@ -68,6 +68,7 @@ set(LIB_ISULAD_IMG_SRCS
     ${CMAKE_SOURCE_DIR}/src/utils/buffer/buffer.c
     ${CMAKE_SOURCE_DIR}/src/daemon/common/err_msg.c
     ${CMAKE_SOURCE_DIR}/src/daemon/common/sysinfo.c
+    ${CMAKE_SOURCE_DIR}/src/daemon/common/cgroup.c
     ${CMAKE_SOURCE_DIR}/src/utils/tar/util_gzip.c
     ${CMAKE_SOURCE_DIR}/src/daemon/config/isulad_config.c
     ${CMAKE_SOURCE_DIR}/src/daemon/config/daemon_arguments.c
