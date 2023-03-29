@@ -15,60 +15,18 @@
 #ifndef DAEMON_COMMON_SYSINFO_H
 #define DAEMON_COMMON_SYSINFO_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <sys/utsname.h>
-
-#define etcOsRelease "/etc/os-release"
-#define altOsRelease "/usr/lib/os-release"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct {
-    bool limit;
-    bool swap;
-    bool reservation;
-    bool oomkilldisable;
-    bool swappiness;
-    bool kernel;
-} cgroup_mem_info_t;
+#include <stdbool.h>
+#include <stdint.h>
+#include <sys/utsname.h>
 
-typedef struct {
-    bool cpu_rt_period;
-    bool cpu_rt_runtime;
-    bool cpu_shares;
-    bool cpu_cfs_period;
-    bool cpu_cfs_quota;
-} cgroup_cpu_info_t;
+#include "cgroup.h"
 
-typedef struct {
-    bool hugetlblimit;
-} cgroup_hugetlb_info_t;
-
-typedef struct {
-    bool blkio_weight;
-    bool blkio_weight_device;
-    bool blkio_read_bps_device;
-    bool blkio_write_bps_device;
-    bool blkio_read_iops_device;
-    bool blkio_write_iops_device;
-} cgroup_blkio_info_t;
-
-typedef struct {
-    bool cpuset;
-    char *cpus;
-    char *mems;
-} cgroup_cpuset_info_t;
-
-typedef struct {
-    bool pidslimit;
-} cgroup_pids_info_t;
-
-typedef struct {
-    bool fileslimit;
-} cgroup_files_info_t;
+#define etcOsRelease "/etc/os-release"
+#define altOsRelease "/usr/lib/os-release"
 
 typedef struct {
     int ncpus;
@@ -118,12 +76,14 @@ typedef struct {
     char *vfsopts;
 } mountinfo_t;
 
+void free_list(char **str_list);
+
+int add_null_to_list(void ***list);
+
 void free_sysinfo(sysinfo_t *sysinfo);
 
 // check whether hugetlb pagesize and limit legal
 char *validate_hugetlb(const char *pagesize, uint64_t limit);
-
-int find_cgroup_mountpoint_and_root(const char *subsystem, char **mountpoint, char **root);
 
 sysinfo_t *get_sys_info(bool quiet);
 
