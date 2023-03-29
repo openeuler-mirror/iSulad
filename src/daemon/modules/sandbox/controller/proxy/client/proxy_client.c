@@ -14,9 +14,16 @@
  ******************************************************************************/
 
 #include "proxy_client.h"
+#include "grpc_ctrl_client_ops.h"
+
+#define PROXY_CONTROLLER "proxy"
 
 static ctrl_client_ops_t *get_ctrl_client_ops(const ctrl_client_config_t *config)
 {
+    // TODO: This is trivial
+    if (strcmp(config->controller_type, PROXY_CONTROLLER) == 0) {
+        return &g_ctrl_grpc_client_ops;
+    }
     return NULL;
 }
 
