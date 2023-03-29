@@ -42,6 +42,16 @@ set(local_modules_incs
     ${VOLUME_INCS}
     )
 
+if (ENABLE_SANDBOX)
+    add_subdirectory(sandbox)
+    list(APPEND local_modules_srcs
+        ${SANDBOX_SRCS}
+        )
+    list(APPEND local_modules_incs
+        ${SANDBOX_INCS}
+        )
+endif()
+
 set(MODULES_SRCS
     ${local_modules_srcs}
     PARENT_SCOPE
