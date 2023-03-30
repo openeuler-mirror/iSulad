@@ -5,6 +5,10 @@ if(NOT ENABLE_NATIVE_NETWORK)
     list(REMOVE_ITEM local_service_srcs "${CMAKE_CURRENT_SOURCE_DIR}/service_network.c")
 endif()
 
+if(NOT ENABLE_SANDBOX)
+    list(REMOVE_ITEM local_service_srcs "${CMAKE_CURRENT_SOURCE_DIR}/service_sandboxer.c")
+endif()
+
 set(SERVICE_SRCS
     ${local_service_srcs}
     PARENT_SCOPE
