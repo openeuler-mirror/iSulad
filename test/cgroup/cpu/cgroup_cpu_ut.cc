@@ -65,11 +65,11 @@ TEST(CgroupCpuUnitTest, test_conf_get_cgroup_cpu_rt)
     ASSERT_EQ(cpu_rt_runtime, 0);
 }
 
-TEST(CgroupCpuUnitTest, test_find_cgroup_mountpoint_and_root)
+TEST(CgroupCpuUnitTest, test_common_find_cgroup_mnt_and_root)
 {
     char *mnt = NULL;
     char *root = NULL;
-    ASSERT_EQ(find_cgroup_mountpoint_and_root(nullptr, &mnt, &root), -1);
+    ASSERT_EQ(common_find_cgroup_mnt_and_root(nullptr, &mnt, &root), -1);
 }
 
 TEST(CgroupCpuUnitTest, test_sysinfo_cgroup_controller_cpurt_mnt_path)

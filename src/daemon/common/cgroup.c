@@ -17,10 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include <dirent.h>
 #include <errno.h>
-#include <sys/sysinfo.h>
 #include <sys/vfs.h>
 #include <linux/magic.h>
 #include <sys/stat.h>
@@ -28,12 +25,9 @@
 #include <isula_libutils/auto_cleanup.h>
 #include <isula_libutils/log.h>
 
-#include "constants.h"
 #include "err_msg.h"
 #include "utils.h"
 #include "utils_array.h"
-#include "utils_file.h"
-#include "utils_string.h"
 #include "sysinfo.h"
 
 // Cgroup V1 Item Definition
@@ -87,14 +81,14 @@
 #define CGROUP_SUPER_MAGIC 0x27e0eb
 #endif
 
-struct layer {
+typedef struct {
     char **controllers;
     char *mountpoint;
-};
+} cgroup_layer_t;
 
-static void free_layer(struct layer **layers)
+static void free_cgroup_layer(cgroup_layer_t **layers)
 {
-    struct layer **it = NULL;
+    cgroup_layer_t **it = NULL;
 
     if (layers == NULL) {
         return;
@@ -103,7 +97,7 @@ static void free_layer(struct layer **layers)
     for (it = layers; it && *it; it++) {
         free((*it)->mountpoint);
         (*it)->mountpoint = NULL;
-        free_list((*it)->controllers);
+        util_free_array((*it)->controllers);
         (*it)->controllers = NULL;
         free(*it);
         *it = NULL;
@@ -111,35 +105,18 @@ static void free_layer(struct layer **layers)
     free(layers);
 }
 
-static int append_string(char ***list, const char *entry)
-{
-    int index;
-    char *dup_entry = NULL;
-
-    index = add_null_to_list((void ***)list);
-    if (index < 0) {
-        return -1;
-    }
-    dup_entry = util_strdup_s(entry);
-    if (dup_entry == NULL) {
-        return -1;
-    }
-    (*list)[index] = dup_entry;
-    return 0;
-}
-
 static int append_subsystem_to_list(char ***klist, char ***nlist, const char *ptoken)
 {
     int ret = 0;
 
     if (strncmp(ptoken, "name=", 5) == 0) {
-        ret = append_string(nlist, ptoken);
+        ret = util_array_append(nlist, ptoken);
         if (ret != 0) {
             ERROR("Failed to append string");
             return -1;
         }
     } else {
-        ret = append_string(klist, ptoken);
+        ret = util_array_append(klist, ptoken);
         if (ret != 0) {
             ERROR("Failed to append string");
             return -1;
@@ -197,29 +174,12 @@ out:
     free(pline);
     fclose(fp);
     if (ret != 0) {
-        free_list(*klist);
+        util_free_array(*klist);
         *klist = NULL;
-        free_list(*nlist);
+        util_free_array(*nlist);
         *nlist = NULL;
     }
     return ret;
-}
-
-static bool list_contain_string(const char **a_list, const char *str)
-{
-    int i;
-
-    if (a_list == NULL) {
-        return false;
-    }
-
-    for (i = 0; a_list[i]; i++) {
-        if (strcmp(a_list[i], str) == 0) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 static char *cgroup_legacy_must_prefix_named(const char *entry)
@@ -249,23 +209,18 @@ static char *cgroup_legacy_must_prefix_named(const char *entry)
 
 static int append_controller(const char **klist, const char **nlist, char ***clist, const char *entry)
 {
-    int index;
+    int ret = 0;
     char *dup_entry = NULL;
 
-    if (list_contain_string(klist, entry) && list_contain_string(nlist, entry)) {
+    if (util_array_contain(klist, entry) && util_array_contain(nlist, entry)) {
         ERROR("Refusing to use ambiguous controller \"%s\"", entry);
         ERROR("It is both a named and kernel subsystem");
         return -1;
     }
 
-    index = add_null_to_list((void ***)clist);
-    if (index < 0) {
-        return -1;
-    }
-
     if (strncmp(entry, "name=", 5) == 0) {
         dup_entry = util_strdup_s(entry);
-    } else if (list_contain_string(klist, entry)) {
+    } else if (util_array_contain(klist, entry)) {
         dup_entry = util_strdup_s(entry);
     } else {
         dup_entry = cgroup_legacy_must_prefix_named(entry);
@@ -273,8 +228,14 @@ static int append_controller(const char **klist, const char **nlist, char ***cli
     if (dup_entry == NULL) {
         return -1;
     }
-    (*clist)[index] = dup_entry;
-    return 0;
+
+    ret = util_array_append(clist, dup_entry);
+    if (ret != 0) {
+        ERROR("Failed to append array");
+    }
+
+    free(dup_entry);
+    return ret;
 }
 
 static inline bool is_cgroup_mountpoint(const char *mp)
@@ -325,7 +286,7 @@ static char **cgroup_get_controllers(const char **klist, const char **nlist, con
     for (tok = strtok_r(dup, sep, &psave); tok; tok = strtok_r(NULL, sep, &psave)) {
         if (append_controller(klist, nlist, &pret, tok)) {
             ERROR("Failed to append controller");
-            free_list(pret);
+            util_free_array(pret);
             pret = NULL;
             break;
         }
@@ -337,24 +298,24 @@ static char **cgroup_get_controllers(const char **klist, const char **nlist, con
 }
 
 /* add hierarchy */
-static int cgroup_add_layer(struct layer ***layers, char **clist, char *mountpoint)
+static int cgroup_add_layer(cgroup_layer_t ***layers, char **clist, char *mountpoint)
 {
-    int index;
-    struct layer *newh = NULL;
+    cgroup_layer_t *newh = NULL;
 
-    newh = util_common_calloc_s(sizeof(struct layer));
+    newh = util_common_calloc_s(sizeof(cgroup_layer_t));
     if (newh == NULL) {
         return -1;
     }
 
     newh->controllers = clist;
     newh->mountpoint = mountpoint;
-    index = add_null_to_list((void ***)layers);
-    if (index < 0) {
+
+    if (util_common_array_append_pointer((void ***)layers, newh) != 0) {
+        ERROR("Failed to append pointer to array");
         free(newh);
         return -1;
     }
-    (*layers)[index] = newh;
+
     return 0;
 }
 
@@ -415,7 +376,7 @@ static bool lists_intersect(const char **controllers, const char **list)
     }
 
     for (index = 0; controllers[index]; index++) {
-        if (list_contain_string(list, controllers[index])) {
+        if (util_array_contain(list, controllers[index])) {
             return true;
         }
     }
@@ -423,7 +384,7 @@ static bool lists_intersect(const char **controllers, const char **list)
     return false;
 }
 
-static bool controller_list_is_dup(struct layer **llist, const char **clist)
+static bool controller_list_is_dup(cgroup_layer_t **llist, const char **clist)
 {
     int index;
 
@@ -440,7 +401,7 @@ static bool controller_list_is_dup(struct layer **llist, const char **clist)
     return false;
 }
 
-static struct layer **cgroup_layers_find(void)
+static cgroup_layer_t **cgroup_layers_find(void)
 {
     int nret;
     FILE *fp = NULL;
@@ -448,7 +409,7 @@ static struct layer **cgroup_layers_find(void)
     char *pline = NULL;
     char **klist = NULL;
     char **nlist = NULL;
-    struct layer **layers = NULL;
+    cgroup_layer_t **layers = NULL;
 
     nret = get_cgroup_subsystems(&klist, &nlist);
     if (nret < 0) {
@@ -490,12 +451,12 @@ static struct layer **cgroup_layers_find(void)
 
         continue;
 list_out:
-        free_list(clist);
+        util_free_array(clist);
         free(mountpoint);
     }
 out:
-    free_list(klist);
-    free_list(nlist);
+    util_free_array(klist);
+    util_free_array(nlist);
     if (fp != NULL) {
         fclose(fp);
     }
@@ -524,9 +485,9 @@ static void cgroup_do_log(bool quiet, bool do_log, const char *msg)
     }
 }
 
-static char *find_cgroup_subsystem_mountpoint(struct layer **layers, const char *subsystem)
+static char *find_cgroup_subsystem_mountpoint(cgroup_layer_t **layers, const char *subsystem)
 {
-    struct layer **it = NULL;
+    cgroup_layer_t **it = NULL;
 
     for (it = layers; it && *it; it++) {
         char **cit = NULL;
@@ -541,7 +502,7 @@ static char *find_cgroup_subsystem_mountpoint(struct layer **layers, const char 
 }
 
 /* check cgroup mem */
-static void check_cgroup_mem(struct layer **layers, bool quiet, cgroup_mem_info_t *meminfo)
+static void check_cgroup_mem(cgroup_layer_t **layers, bool quiet, cgroup_mem_info_t *meminfo)
 {
     char *mountpoint = NULL;
 
@@ -571,7 +532,7 @@ static void check_cgroup_mem(struct layer **layers, bool quiet, cgroup_mem_info_
 }
 
 /* check cgroup cpu */
-static void check_cgroup_cpu(struct layer **layers, bool quiet, cgroup_cpu_info_t *cpuinfo)
+static void check_cgroup_cpu(cgroup_layer_t **layers, bool quiet, cgroup_cpu_info_t *cpuinfo)
 {
     char *mountpoint = NULL;
 
@@ -598,7 +559,7 @@ static void check_cgroup_cpu(struct layer **layers, bool quiet, cgroup_cpu_info_
 }
 
 /* check cgroup blkio info */
-static void check_cgroup_blkio_info(struct layer **layers, bool quiet, cgroup_blkio_info_t *blkioinfo)
+static void check_cgroup_blkio_info(cgroup_layer_t **layers, bool quiet, cgroup_blkio_info_t *blkioinfo)
 {
     char *mountpoint = NULL;
 
@@ -632,7 +593,7 @@ static void check_cgroup_blkio_info(struct layer **layers, bool quiet, cgroup_bl
 }
 
 /* check cgroup cpuset info */
-static void check_cgroup_cpuset_info(struct layer **layers, bool quiet, cgroup_cpuset_info_t *cpusetinfo)
+static void check_cgroup_cpuset_info(cgroup_layer_t **layers, bool quiet, cgroup_cpuset_info_t *cpusetinfo)
 {
     char *mountpoint = NULL;
     char cpuset_cpus_path[PATH_MAX] = { 0 };
@@ -684,7 +645,7 @@ static void check_cgroup_pids(bool quiet, cgroup_pids_info_t *pidsinfo)
     int ret = 0;
     char *pidsmp = NULL;
 
-    ret = find_cgroup_mountpoint_and_root("pids", &pidsmp, NULL);
+    ret = common_find_cgroup_mnt_and_root("pids", &pidsmp, NULL);
     if (ret != 0 || pidsmp == NULL) {
         if (!quiet) {
             WARN("Unable to find pids cgroup in mounts");
@@ -703,7 +664,7 @@ static void check_cgroup_files(bool quiet, cgroup_files_info_t *filesinfo)
     int ret = 0;
     char *filesmp = NULL;
 
-    ret = find_cgroup_mountpoint_and_root("files", &filesmp, NULL);
+    ret = common_find_cgroup_mnt_and_root("files", &filesmp, NULL);
     if (ret != 0 || filesmp == NULL) {
         if (!quiet) {
             WARN("Unable to find pids cgroup in mounts");
@@ -717,7 +678,7 @@ out:
 }
 
 /* find cgroup mountpoint and root */
-int find_cgroup_mountpoint_and_root(const char *subsystem, char **mountpoint, char **root)
+int common_find_cgroup_mnt_and_root(const char *subsystem, char **mountpoint, char **root)
 {
     int ret = 0;
     FILE *fp = NULL;
@@ -793,7 +754,7 @@ free_out:
 }
 
 /* check cgroup hugetlb */
-static void check_cgroup_hugetlb(struct layer **layers, bool quiet, cgroup_hugetlb_info_t *hugetlbinfo)
+static void check_cgroup_hugetlb(cgroup_layer_t **layers, bool quiet, cgroup_hugetlb_info_t *hugetlbinfo)
 {
     int nret;
     char *mountpoint = NULL;
@@ -822,7 +783,7 @@ free_out:
     free(defaultpagesize);
 }
 
-int get_cgroup_version(void)
+int common_get_cgroup_version(void)
 {
     struct statfs fs = { 0 };
 
@@ -838,11 +799,12 @@ int get_cgroup_version(void)
     return CGROUP_VERSION_1;
 }
 
-int get_cgroup_info_v1(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo, cgroup_hugetlb_info_t *hugetlbinfo,
-                       cgroup_blkio_info_t *blkioinfo, cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                       cgroup_files_info_t *filesinfo, bool quiet)
+int common_get_cgroup_info_v1(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
+                              cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
+                              cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
+                              cgroup_files_info_t *filesinfo, bool quiet)
 {
-    struct layer **layers = NULL;
+    cgroup_layer_t **layers = NULL;
 
     layers = cgroup_layers_find();
     if (layers == NULL) {
@@ -858,7 +820,7 @@ int get_cgroup_info_v1(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo, c
     check_cgroup_pids(quiet, pidsinfo);
     check_cgroup_files(quiet, filesinfo);
 
-    free_layer(layers);
+    free_cgroup_layer(layers);
 
     return 0;
 }
@@ -960,9 +922,10 @@ static int make_sure_cgroup2_isulad_path_exist()
     return ret;
 }
 
-int get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo, cgroup_hugetlb_info_t *hugetlbinfo,
-                       cgroup_blkio_info_t *blkioinfo, cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                       cgroup_files_info_t *filesinfo, bool quiet)
+int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
+                              cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
+                              cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
+                              cgroup_files_info_t *filesinfo, bool quiet)
 {
     int ret = 0;
     int nret = 0;
