@@ -37,6 +37,16 @@ function test_hook_spec()
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
+    cat > /tmp/env.sh <<EOF
+#!/bin/bash
+
+env > /tmp/envfile
+EOF
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to generate env shell" && ((ret++))
+
+    chmod +x /tmp/env.sh
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to chmod env shell" && ((ret++))
+
     CONT=`isula run -itd --hook-spec ${test_data_path}/test-hookspec.json ${image}`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
@@ -45,6 +55,17 @@ function test_hook_spec()
 
     isula rm ${CONT}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm ${CONT}" && ((ret++))
+
+    # debug
+    cat /tmp/envfile
+    cat /tmp/envfile | grep "PATH=/usr/local/bin:/usr/bin"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - set ocihook PATH env failed" && ((ret++))
+
+    cat /tmp/envfile | grep "AAA=bbb"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - set ocihook env failed" && ((ret++))
+
+    rm -rf /tmp/env.sh
+    rm -rf /tmp/envfile
 
     runlog=/tmp/hook_permission.log
     no_permission_container="test_no_permission"
