@@ -894,6 +894,77 @@ cleanup:
     free(realPath);
 }
 
+#ifdef ENABLE_SANDBOX
+auto GetRealSandboxID(service_executor_t *cb, const std::string &id, Errors &error) -> std::string
+{
+    std::string realID;
+
+    if (cb == nullptr || cb->sandbox.get_id == nullptr) {
+        error.SetError("Unimplemented callback");
+        return realID;
+    }
+
+    sandbox_get_id_request *request { nullptr };
+    sandbox_get_id_response *response { nullptr };
+
+    request = (sandbox_get_id_request *)util_common_calloc_s(sizeof(sandbox_get_id_request));
+    if (request == nullptr) {
+        error.SetError("Out of memory");
+        goto cleanup;
+    }
+    request->id_or_name = util_strdup_s(id.c_str());
+
+    if (cb->sandbox.get_id(request, &response) != 0) {
+        if (response != nullptr && response->errmsg != nullptr) {
+            error.SetError(response->errmsg);
+            goto cleanup;
+        } else {
+            error.SetError("Failed to call get id callback");
+            goto cleanup;
+        }
+    }
+    if (strncmp(response->id, id.c_str(), id.length()) != 0) {
+        error.Errorf("No such container with id: %s", id.c_str());
+        goto cleanup;
+    }
+
+    realID = response->id;
+
+cleanup:
+    free_sandbox_get_id_request(request);
+    free_sandbox_get_id_response(response);
+    return realID;
+}
+
+auto GetSandboxRuntime(service_executor_t *cb, const std::string &sandbox_id, Errors &error) -> std::string
+{
+    std::string runtime;
+
+    if (cb == nullptr || cb->sandbox.get_runtime == nullptr) {
+        error.SetError("Unimplemented callback");
+        return runtime;
+    }
+    sandbox_get_runtime_response *response { nullptr };
+
+    if (cb->sandbox.get_runtime(sandbox_id.c_str(), &response) != 0) {
+        if (response != nullptr && response->errmsg != nullptr) {
+            error.SetError(response->errmsg);
+        } else {
+            error.SetError("Failed to call get runtime callback");
+        }
+        goto cleanup;
+    }
+
+    if (response->runtime != nullptr) {
+        runtime = response->runtime;
+    }
+
+cleanup:
+    free_sandbox_get_runtime_response(response);
+    return runtime;
+}
+#endif
+
 void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
                             int64_t *finishedAt, Errors &err)
 {

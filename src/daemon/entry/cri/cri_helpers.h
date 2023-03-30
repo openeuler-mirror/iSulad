@@ -147,6 +147,12 @@ void RemoveContainerLogSymlink(const std::string &containerID, Errors &error);
 void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt,
                             int64_t *startedAt, int64_t *finishedAt, Errors &err);
 
+#ifdef ENABLE_SANDBOX
+auto GetRealSandboxID(service_executor_t *cb, const std::string &id, Errors &error) -> std::string;
+
+auto GetSandboxRuntime(service_executor_t *cb, const std::string &sandbox_id, Errors &error) -> std::string;
+#endif
+
 auto GetRealContainerOrSandboxID(service_executor_t *cb, const std::string &id,
                                  bool isSandbox, Errors &error) -> std::string;
 
