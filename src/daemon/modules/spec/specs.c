@@ -2248,38 +2248,45 @@ out:
     return ociconfig;
 }
 
-int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec *oci_spec)
+int save_oci_json(const char *id, const char *rootpath, const char *json_oci_spec)
 {
-    int ret = 0;
     int nret = 0;
-    char *json_container = NULL;
     char file_path[PATH_MAX] = { 0x0 };
-    struct parser_context ctx = { OPT_PARSE_STRICT, stderr };
-    parser_error err = NULL;
 
     nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, OCI_CONFIG_JSON);
     if (nret < 0 || nret >= PATH_MAX) {
         ERROR("Failed to print string");
-        ret = -1;
-        goto out_free;
+        return -1;
+ 
     }
 
-    json_container = oci_runtime_spec_generate_json(oci_spec, &ctx, &err);
-    if (json_container == NULL) {
+    if (util_atomic_write_file(file_path, json_oci_spec, strlen(json_oci_spec), DEFAULT_SECURE_FILE_MODE, false) !=
+        0) {
+        ERROR("write json container failed: %s", strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec *oci_spec)
+{
+    int ret = 0;
+    char *json_oci_spec = NULL;
+    struct parser_context ctx = { OPT_PARSE_STRICT, stderr };
+    parser_error err = NULL;
+
+    json_oci_spec = oci_runtime_spec_generate_json(oci_spec, &ctx, &err);
+    if (json_oci_spec == NULL) {
         ERROR("Failed to generate json: %s", err);
         ret = -1;
         goto out_free;
     }
 
-    if (util_atomic_write_file(file_path, json_container, strlen(json_container), DEFAULT_SECURE_FILE_MODE, false) !=
-        0) {
-        ERROR("write json container failed: %s", strerror(errno));
-        ret = -1;
-        goto out_free;
-    }
+    ret = save_oci_json(id, rootpath, json_oci_spec);
 
 out_free:
     free(err);
-    free(json_container);
+    free(json_oci_spec);
     return ret;
 }

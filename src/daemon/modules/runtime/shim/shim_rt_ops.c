@@ -21,6 +21,9 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <limits.h>
+#ifdef ENABLE_SANDBOX
+#include <pthread.h>
+#endif
 #include "isula_libutils/log.h"
 #include "isula_libutils/shim_client_process_state.h"
 #include "utils.h"
@@ -315,6 +318,7 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
     int ret = 0;
     int pid = 0;
     int fd = -1;
+    const char *task_address = NULL;
     char addr[PATH_MAX] = {0};
     char *exit_fifo_path = NULL;
     char *state_path = NULL;
@@ -354,16 +358,25 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
     }
     close(fd);
 
-    if (shim_bin_v2_create(runtime, id, params->bundle, NULL, addr, state_path) != 0) {
-        ERROR("%s: failed to create v2 shim", id);
-        ret = -1;
-        goto out;
+#ifdef ENABLE_SANDBOX
+    if (params->task_addr == NULL) {
+#endif
+        if (shim_bin_v2_create(runtime, id, params->bundle, NULL, addr, state_path) != 0) {
+            ERROR("%s: failed to create v2 shim", id);
+            ret = -1;
+            goto out;
+        }
+        task_address = addr;
+#ifdef ENABLE_SANDBOX
+    } else {
+        task_address = params->task_addr;
     }
+#endif
 
-    INFO("%s: get shim-v2 address %s", id, addr);
+    INFO("%s: get shim-v2 address %s", id, task_address);
 
-    if (shim_v2_new(id, addr) != 0) {
-        ERROR("%s: failed to init shim v2 connection on address %s", id, addr);
+    if (shim_v2_new(id, task_address) != 0) {
+        ERROR("%s: failed to init shim v2 connection on address %s", id, task_address);
         ret = -1;
         goto out;
     }
@@ -381,6 +394,107 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_SANDBOX
+struct shim_wait_data {
+    char *id;
+    char *exec_id;
+    char *exit_fifo;
+};
+
+static void free_shim_wait_data(struct shim_wait_data *data) {
+    if (data == NULL) {
+        return;
+    }
+    if (data->id != NULL) {
+        free(data->id);
+    }
+    if (data->exec_id != NULL) {
+        free(data->exec_id);
+    }
+    if (data->exit_fifo != NULL) {
+        free(data->exit_fifo);
+    }
+    free(data);
+}
+
+static int write_to_exit_fifo(const char *exit_fifo, int exit_status)
+{
+    int ret = 0;
+    int exit_fifo_fd;
+ 
+    if (exit_fifo == NULL) {
+        return -1;
+    }
+ 
+    if (!util_file_exists(exit_fifo)) {
+        ERROR("Exit FIFO %s does not does not exist", exit_fifo);
+        ret = -1;
+        goto out;
+    }
+ 
+    exit_fifo_fd = util_open(exit_fifo, O_WRONLY | O_NONBLOCK, 0);
+    if (exit_fifo_fd < 0) {
+        ERROR("Failed to open exit FIFO %s: %s.", exit_fifo, strerror(errno));
+        ret = -1;
+        goto out;
+    }
+ 
+    if (util_write_nointr(exit_fifo_fd, &exit_status, sizeof(int)) <= 0) {
+        ERROR("Failed to write exit fifo fd %s", exit_fifo);
+        ret = -1;
+    }
+ 
+    close(exit_fifo_fd);
+out:
+    return ret;
+}
+
+static void *shim_wait_thread(void *args)
+{
+    int exit_status = 0;
+    struct shim_wait_data *datap = (struct shim_wait_data *)args;
+    if (shim_v2_wait(datap->id, datap->exec_id, &exit_status) != 0) {
+        ERROR("%s: failed to wait for container", datap->id);
+        goto out;
+    }
+ 
+    if (write_to_exit_fifo(datap->exit_fifo, exit_status) != 0) {
+        ERROR("Failed to write to exit fifo %s", datap->exit_fifo);
+    } else {
+        DEBUG("Write to exit fifo successfully, %s", datap->exit_fifo);
+    }
+out:
+    free_shim_wait_data(datap);
+    return NULL;
+}
+
+static int shim_start_to_wait(const char *id, const char *exit_fifo)
+{
+    // TODO: For demo, a thread is create for waiting shim v2 grpc wait call
+    //       However, it is definitely not efficient, since iSulad will have
+    //       too much threads if multiple container starts.
+    //       A better way is to let lib-shim-v2 process the async waiting,
+    //       which can get better performance from rust async ability
+    pthread_t thread = 0;
+    int ret = 0;
+    struct shim_wait_data *data = util_common_calloc_s(sizeof(struct shim_wait_data));
+    if (data == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    data->id = util_strdup_s(id);
+    data->exec_id = NULL;
+    data->exit_fifo = util_strdup_s(exit_fifo);
+    ret = pthread_create(&thread, NULL, shim_wait_thread, (void*)data);
+    if (ret) {
+        ERROR("Thread creation failed");
+        free(data);
+        return -1;
+    }
+    return 0;
+}
+#endif
+
 int rt_shim_start(const char *id, const char *runtime, const rt_start_params_t *params, pid_ppid_info_t *pid_info)
 {
     int pid = -1;
@@ -391,8 +505,11 @@ int rt_shim_start(const char *id, const char *runtime, const rt_start_params_t *
     }
 
     pid_info->pid = pid;
-
+#ifdef ENABLE_SANDBOX
+    return shim_start_to_wait(id, params->exit_fifo);
+#else
     return 0;
+#endif
 }
 
 int rt_shim_restart(const char *id, const char *runtime, const rt_restart_params_t *params)

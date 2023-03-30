@@ -18,6 +18,7 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "cri_constants.h"
+#include "namespace.h"
 #include <memory>
 
 namespace CRISecurity {
@@ -138,7 +139,7 @@ static void ModifyCommonNamespaceOptions(const runtime::v1alpha2::NamespaceOptio
 static void ModifyHostNetworkOptionForContainer(const runtime::v1alpha2::NamespaceMode &hostNetwork,
                                                 const std::string &podSandboxID, host_config *hostConfig)
 {
-    std::string sandboxNSMode = "container:" + podSandboxID;
+    std::string sandboxNSMode = SHARE_NAMESPACE_SANDBOX_PREFIX + podSandboxID;
 
     free(hostConfig->network_mode);
     hostConfig->network_mode = util_strdup_s(sandboxNSMode.c_str());
@@ -169,14 +170,14 @@ static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::Namespace
 static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts,
                                             const std::string &podSandboxID, host_config *hostConfig)
 {
-    std::string sandboxNSMode = "container:" + podSandboxID;
+    std::string sandboxNSMode = SHARE_NAMESPACE_SANDBOX_PREFIX + podSandboxID;
     if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::POD) {
         free(hostConfig->pid_mode);
         hostConfig->pid_mode = util_strdup_s(sandboxNSMode.c_str());
     }
 
     if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::TARGET) {
-        std::string targetPidNsMode = "container:" + nsOpts.target_id();
+        std::string targetPidNsMode = SHARE_NAMESPACE_CONTAINER_PREFIX + nsOpts.target_id();
         free(hostConfig->pid_mode);
         hostConfig->pid_mode = util_strdup_s(targetPidNsMode.c_str());
     }

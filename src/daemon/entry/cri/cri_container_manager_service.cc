@@ -219,6 +219,8 @@ auto ContainerManagerService::GenerateCreateContainerHostConfig(
         goto cleanup;
     }
 
+#ifndef ENABLE_SANDBOX
+    // TODO: Fix this for sandbox API, sandbox security context hasn't been correctly configured
     // If selinux label is not specified in container config, use pod level SELinux config
     if (!containerConfig.linux().has_security_context() ||
         !containerConfig.linux().security_context().has_selinux_options()) {
@@ -227,6 +229,7 @@ auto ContainerManagerService::GenerateCreateContainerHostConfig(
             goto cleanup;
         }
     }
+#endif
 
     return hostconfig;
 
@@ -471,6 +474,10 @@ ContainerManagerService::GenerateCreateContainerRequest(const std::string &realP
         request = nullptr;
         goto cleanup;
     }
+#ifdef ENABLE_SANDBOX
+    // TODO: Sandbox related annotation can be removed from config
+    request->sandbox_id = util_strdup_s(realPodSandboxID.c_str());
+#endif
 
 cleanup:
     free_host_config(hostconfig);
@@ -494,6 +501,23 @@ std::string ContainerManagerService::CreateContainer(const std::string &podSandb
     container_create_request *request { nullptr };
     container_create_response *response { nullptr };
 
+    // TODO: Check sandbox status and try to retrieve sandbox pid, and pass it to executor to construct namespace
+#ifdef ENABLE_SANDBOX
+    // TODO: Check sandbox status first
+    std::string realPodSandboxID = CRIHelpers::GetRealSandboxID(m_cb, podSandboxID, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
+        error.Errorf("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
+        goto cleanup;
+    }
+
+    podSandboxRuntime = CRIHelpers::GetSandboxRuntime(m_cb, realPodSandboxID, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to get sandbox runtime %s: %s", podSandboxID.c_str(), error.GetCMessage());
+        error.Errorf("Failed to get sandbox runtime %s: %s", podSandboxID.c_str(), error.GetCMessage());
+        goto cleanup;
+    }
+#else
     std::string realPodSandboxID = CRIHelpers::GetRealContainerOrSandboxID(m_cb, podSandboxID, true, error);
     if (error.NotEmpty()) {
         ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
@@ -502,6 +526,8 @@ std::string ContainerManagerService::CreateContainer(const std::string &podSandb
     }
 
     podSandboxRuntime = GetContainerOrSandboxRuntime(realPodSandboxID, error);
+    // TODO: error not checked here
+#endif
 
     request = GenerateCreateContainerRequest(realPodSandboxID, containerConfig, podSandboxConfig, podSandboxRuntime,
                                              error);

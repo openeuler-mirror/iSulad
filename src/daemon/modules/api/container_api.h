@@ -101,6 +101,12 @@ typedef struct _container_t_ {
     health_check_manager_t *health_check;
     bool rm_anonymous_volumes;
 
+#ifdef ENABLE_SANDBOX
+    /* sandbox */
+    char *sandbox_id;
+    char *sandbox_task_address;
+#endif
+
     /* log configs of container */
     char *log_driver;
     char *log_path;

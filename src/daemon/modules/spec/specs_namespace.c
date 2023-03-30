@@ -26,46 +26,18 @@
 #include "utils_network.h"
 #include "namespace.h"
 #include "container_api.h"
+#ifdef ENABLE_SANDBOX
+#include "sandbox_api.h"
+#endif
 #include "err_msg.h"
 #include "network_namespace.h"
 
-static char *parse_share_namespace_with_prefix(const char *type, const char *path)
+static char *generate_ns_path_by_pid(const char *type, int pid)
 {
-    char *tmp_cid = NULL;
-    char *result = NULL;
-    container_t *cont = NULL;
-    int pid;
     int ret = 0;
-    char ns_path[PATH_MAX] = { 0 };
+    char *result = NULL;
     char *ns_type = NULL;
-
-    tmp_cid = namespace_get_connected_container(path);
-    if (tmp_cid == NULL) {
-        goto out;
-    }
-    cont = containers_store_get(tmp_cid);
-    if (cont == NULL) {
-        ERROR("Invalid share path: %s", path);
-        goto out;
-    }
-
-    if (!container_is_running(cont->state)) {
-        ERROR("Can not join namespace of a non running container %s", tmp_cid);
-        isulad_set_error_message("Can not join namespace of a non running container %s", tmp_cid);
-        goto out;
-    }
-
-    if (container_is_restarting(cont->state)) {
-        ERROR("Container %s is restarting, wait until the container is running", tmp_cid);
-        isulad_set_error_message("Container %s is restarting, wait until the container is running", tmp_cid);
-        goto out;
-    }
-
-    pid = container_state_get_pid(cont->state);
-    if (pid < 1 || kill(pid, 0) < 0) {
-        ERROR("Container %s pid %d invalid", tmp_cid, pid);
-        goto out;
-    }
+    char ns_path[PATH_MAX] = { 0 };
 
     if (strcmp(type, TYPE_NAMESPACE_NETWORK) == 0) {
         ns_type = util_strdup_s("net");
@@ -84,11 +56,72 @@ static char *parse_share_namespace_with_prefix(const char *type, const char *pat
     result = util_strdup_s(ns_path);
 
 out:
-    container_unref(cont);
-    free(tmp_cid);
     free(ns_type);
     return result;
 }
+
+static char *get_share_namespace_of_container(const char *type, const char *container_id)
+{
+    char *result = NULL;
+    container_t *cont = NULL;
+    int pid;
+
+    cont = containers_store_get(container_id);
+    if (cont == NULL) {
+        ERROR("Invalid container id: %s", container_id);
+        goto out;
+    }
+
+    if (!container_is_running(cont->state)) {
+        ERROR("Can not join namespace of a non running container %s", container_id);
+        isulad_set_error_message("Can not join namespace of a non running container %s", container_id);
+        goto out;
+    }
+
+    if (container_is_restarting(cont->state)) {
+        ERROR("Container %s is restarting, wait until the container is running", container_id);
+        isulad_set_error_message("Container %s is restarting, wait until the container is running", container_id);
+        goto out;
+    }
+
+    pid = container_state_get_pid(cont->state);
+    if (pid < 1 || kill(pid, 0) < 0) {
+        ERROR("Container %s pid %d invalid", container_id, pid);
+        goto out;
+    }
+
+    result = generate_ns_path_by_pid(type, pid);
+
+out:
+    container_unref(cont);
+    return result;
+}
+
+#ifdef ENABLE_SANDBOX
+static char *get_share_namespace_of_sandbox(const char *type, const char *sandbox_id)
+{
+    char *result = NULL;
+    sandbox_t *sandbox = NULL;
+    int pid;
+
+    sandbox = sandboxes_store_get(sandbox_id);
+    if (sandbox == NULL) {
+        ERROR("Invalid share path: %s", sandbox_id);
+        return NULL;
+    }
+
+    // TODO: Get sandbox pid by calling sandboxer status?
+    //       or status can be got at higher level(CRI), and passed in the request
+    // TODO: Fix this for more general case
+    // Currently, 1 means the 1st process in the sandbox
+    pid = 1;
+    result = generate_ns_path_by_pid(type, pid);
+
+    sandbox_unref(sandbox);
+    return result;
+}
+#endif
+
 
 int get_share_namespace_path(const char *type, const char *src_path, char **dest_path)
 {
@@ -105,8 +138,29 @@ int get_share_namespace_path(const char *type, const char *src_path, char **dest
         if (*dest_path == NULL) {
             ret = -1;
         }
+    } else if (namespace_is_sandbox(src_path)) {
+        char *sandbox_id = NULL;
+        sandbox_id = namespace_get_sandbox(src_path);
+        if (sandbox_id == NULL) {
+            return -1;
+        }
+#ifdef ENABLE_SANDBOX
+        *dest_path = get_share_namespace_of_sandbox(type, sandbox_id);
+#else
+        *dest_path = get_share_namespace_of_container(type, sandbox_id);
+#endif
+        free(sandbox_id);
+        if (*dest_path == NULL) {
+            return -1;
+        }
     } else if (namespace_is_container(src_path)) {
-        *dest_path = parse_share_namespace_with_prefix(type, src_path);
+        char *container_id = NULL;
+        container_id = namespace_get_connected_container(src_path);
+        if (container_id == NULL) {
+            return -1;
+        }
+        *dest_path = get_share_namespace_of_container(type, container_id);
+        free(container_id);
         if (*dest_path == NULL) {
             ret = -1;
         }
@@ -164,11 +218,43 @@ static int handle_get_path_from_host(const host_config *host_spec,
     return 0;
 }
 
+static int handle_get_path_from_sandbox(const host_config *host_spec,
+                                        const container_network_settings *network_settings, const char *type,
+                                        char **dest_path)
+{
+    char *sandbox_id = NULL;
+
+    sandbox_id = namespace_get_sandbox(host_spec->network_mode);
+    if (sandbox_id == NULL) {
+        return -1;
+    }
+
+#ifdef ENABLE_SANDBOX
+    *dest_path = get_share_namespace_of_sandbox(type, sandbox_id);
+#else
+    *dest_path = get_share_namespace_of_container(type, sandbox_id);
+#endif
+
+    free(sandbox_id);
+    if (*dest_path == NULL) {
+        return -1;
+    }
+    return 0;
+}
+
 static int handle_get_path_from_container(const host_config *host_spec,
                                           const container_network_settings *network_settings, const char *type,
                                           char **dest_path)
 {
-    *dest_path = parse_share_namespace_with_prefix(type, host_spec->network_mode);
+    char *container_id = NULL;
+
+    container_id = namespace_get_connected_container(host_spec->network_mode);
+    if (container_id == NULL) {
+        return -1;
+    }
+    *dest_path = get_share_namespace_of_container(type, container_id);
+
+    free(container_id);
     if (*dest_path == NULL) {
         return -1;
     }
@@ -222,7 +308,8 @@ int get_network_namespace_path(const host_config *host_spec,
     struct get_netns_path_handler handler_jump_table[] = {
         { SHARE_NAMESPACE_NONE, handle_get_path_from_none },
         { SHARE_NAMESPACE_HOST, handle_get_path_from_host },
-        { SHARE_NAMESPACE_PREFIX, handle_get_path_from_container },
+        { SHARE_NAMESPACE_SANDBOX_PREFIX, handle_get_path_from_sandbox},
+        { SHARE_NAMESPACE_CONTAINER_PREFIX, handle_get_path_from_container },
         { SHARE_NAMESPACE_CNI, handle_get_path_from_cni },
 #ifdef ENABLE_NATIVE_NETWORK
         { SHARE_NAMESPACE_BRIDGE, handle_get_path_from_bridge },

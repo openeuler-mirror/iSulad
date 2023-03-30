@@ -41,6 +41,9 @@
 #include "namespace.h"
 #include "specs_extend.h"
 #include "container_api.h"
+#ifdef ENABLE_SANDBOX
+#include "sandbox_api.h"
+#endif
 #ifdef ENABLE_SELINUX
 #include "selinux_label.h"
 #endif
@@ -2466,7 +2469,7 @@ static int append_network_files_mounts(defs_mount ***all_mounts, size_t *all_mou
     defs_mount **old_mounts = *all_mounts;
     size_t old_mounts_len = *all_mounts_len;
 #ifdef ENABLE_SELINUX
-    bool share = namespace_is_container(host_spec->network_mode);
+    bool share = namespace_is_container(host_spec->network_mode) || namespace_is_sandbox(host_spec->network_mode);
 #endif
 
     for (i = 0; i < old_mounts_len; i++) {
@@ -2836,12 +2839,57 @@ out_free:
     return ret;
 }
 
+#ifdef ENABLE_SANDBOX
+static int get_shm_path_from_sandbox(const char* sandbox_id, char **right_path)
+{
+    int ret = 0;
+    sandbox_t *sandbox = NULL;
+
+    if (sandbox_id == NULL) {
+        ERROR("Invalid sandbox id");
+        return -1;
+    }
+    sandbox = sandboxes_store_get(sandbox_id);
+    if (sandbox == NULL) {
+        ERROR("Failed to get sandbox: %s", sandbox_id);
+        ret = -1;
+        goto out;
+    }
+    *right_path = util_strdup_s(sandbox->sandboxconfig->shm_path);
+
+out:
+    sandbox_unref(sandbox);
+    return ret;
+}
+#endif
+
+static int get_shm_path_from_connected_container(const char* container_id, char **right_path)
+{
+    int ret = 0;
+    container_t *cont = NULL;
+
+    if (container_id == NULL) {
+        ERROR("Invalid container id");
+        return -1;
+    }
+    cont = containers_store_get(container_id);
+    if (cont == NULL) {
+        ERROR("Failed to get connected container: %s", container_id);
+        ret = -1;
+        goto out;
+    }
+    *right_path = util_strdup_s(cont->common_config->shm_path);
+
+out:
+    container_unref(cont);
+    return ret;
+}
+
 #define SHM_MOUNT_POINT "/dev/shm"
 static int set_shm_path(host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
-    container_t *cont = NULL;
-    char *tmp_cid = NULL;
+    char *tmp_id = NULL;
     char *right_path = NULL;
 
     // ignore shm of system container
@@ -2864,16 +2912,28 @@ static int set_shm_path(host_config *host_spec, container_config_v2_common_confi
         return 0;
     }
 
-    if (namespace_is_container(host_spec->ipc_mode)) {
-        tmp_cid = namespace_get_connected_container(host_spec->ipc_mode);
-        cont = containers_store_get(tmp_cid);
-        if (cont == NULL) {
+    if (namespace_is_sandbox(host_spec->ipc_mode)) {
+        tmp_id = namespace_get_sandbox(host_spec->ipc_mode);
+#ifdef ENABLE_SANDBOX
+        if (get_shm_path_from_sandbox(tmp_id, &right_path) != 0) {
             ERROR("Invalid share path: %s", host_spec->ipc_mode);
             ret = -1;
             goto out;
         }
-        right_path = util_strdup_s(cont->common_config->shm_path);
-        container_unref(cont);
+#else
+        if (get_shm_path_from_connected_container(tmp_id, &right_path) != 0) {
+            ERROR("Invalid share path: %s", host_spec->ipc_mode);
+            ret = -1;
+            goto out;
+        }
+#endif
+    } else if (namespace_is_container(host_spec->ipc_mode)) {
+        tmp_id = namespace_get_connected_container(host_spec->ipc_mode);
+        if (get_shm_path_from_connected_container(tmp_id, &right_path)) {
+            ERROR("Invalid share path: %s", host_spec->ipc_mode);
+            ret = -1;
+            goto out;
+        }
     } else if (namespace_is_host(host_spec->ipc_mode)) {
         if (!util_file_exists(SHM_MOUNT_POINT)) {
             ERROR("/dev/shm is not mounted, but must be for --ipc=host");
@@ -2886,7 +2946,7 @@ static int set_shm_path(host_config *host_spec, container_config_v2_common_confi
     free(v2_spec->shm_path);
     v2_spec->shm_path = right_path;
 out:
-    free(tmp_cid);
+    free(tmp_id);
     return ret;
 }
 
@@ -3435,7 +3495,8 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
     }
 
 #ifndef ENABLE_GVISOR
-    if (!has_mount_shm(host_spec, v2_spec) && host_spec->shm_size > 0) {
+    // TODO: Removed ! for temporary workaround
+    if (has_mount_shm(host_spec, v2_spec) && host_spec->shm_size > 0) {
         ret = change_dev_shm_size(oci_spec, host_spec);
         if (ret) {
             ERROR("Failed to set dev shm size");

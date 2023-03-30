@@ -33,7 +33,8 @@ typedef enum {
     NAMESPACE_MAX
 } Namespace_Type_t;
 
-#define SHARE_NAMESPACE_PREFIX "container:"
+#define SHARE_NAMESPACE_SANDBOX_PREFIX "sandbox:"
+#define SHARE_NAMESPACE_CONTAINER_PREFIX "container:"
 #define SHARE_NAMESPACE_HOST "host"
 #define SHARE_NAMESPACE_NONE "none"
 #define SHARE_NAMESPACE_SHAREABLE "shareable"
@@ -76,9 +77,17 @@ static inline bool namespace_is_none(const char *mode)
     return false;
 }
 
+static inline bool namespace_is_sandbox(const char *mode)
+{
+    if (mode != NULL && strncmp(mode, SHARE_NAMESPACE_SANDBOX_PREFIX, strlen(SHARE_NAMESPACE_SANDBOX_PREFIX)) == 0) {
+        return true;
+    }
+    return false;
+}
+
 static inline bool namespace_is_container(const char *mode)
 {
-    if (mode != NULL && strncmp(mode, SHARE_NAMESPACE_PREFIX, strlen(SHARE_NAMESPACE_PREFIX)) == 0) {
+    if (mode != NULL && strncmp(mode, SHARE_NAMESPACE_CONTAINER_PREFIX, strlen(SHARE_NAMESPACE_CONTAINER_PREFIX)) == 0) {
         return true;
     }
     return false;
@@ -108,6 +117,7 @@ static inline bool namespace_is_shareable(const char *mode)
     return false;
 }
 
+char *namespace_get_sandbox(const char *mode);
 char *namespace_get_connected_container(const char *mode);
 char *namespace_get_host_namespace_path(const char *type);
 
