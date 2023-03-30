@@ -8,6 +8,13 @@
             "path": "/bin/echo"
         }
     ],
+    "poststart": [
+        {
+            "args": ["/tmp/env.sh"],
+            "path": "/tmp/env.sh",
+            "env": ["PATH=/usr/local/bin:/usr/bin", "AAA=bbb"]
+        }
+    ],
     "poststop": [
         {
             "args": [
