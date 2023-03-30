@@ -99,31 +99,22 @@ auto ContainerManagerService::PackCreateContainerHostConfigSecurityContext(
     // New version '=' , old version ':', iSulad cri is based on v18.09, so iSulad cri use new version separator
     const char securityOptSep { '=' };
     const ::runtime::v1alpha2::LinuxContainerSecurityContext &context = containerConfig.linux().security_context();
-    std::vector<std::string> securityOpts = CRIHelpers::GetSecurityOpts(context.has_seccomp(), context.seccomp(),
-                                                                        context.seccomp_profile_path(), securityOptSep,
-                                                                        error);
+    CRIHelpers::commonSecurityContext commonContext = {
+        .hasSeccomp = context.has_seccomp(),
+        .hasSELinuxOption = context.has_selinux_options(),
+        .seccomp = context.seccomp(),
+        .selinuxOption = context.selinux_options(),
+        .seccompProfile = context.seccomp_profile_path(),
+    };
+    std::vector<std::string> securityOpts = CRIHelpers::GetSecurityOpts(commonContext, securityOptSep, error);
     if (error.NotEmpty()) {
-        error.Errorf("failed to generate security options for container %s", containerConfig.metadata().name().c_str());
+        error.Errorf("Failed to generate security options for container %s", containerConfig.metadata().name().c_str());
         return -1;
     }
-    if (!securityOpts.empty()) {
-        char **tmp_security_opt = nullptr;
-        if (securityOpts.size() > (SIZE_MAX / sizeof(char *)) - hostconfig->security_opt_len) {
-            error.Errorf("Out of memory");
-            return -1;
-        }
-        size_t newSize = (hostconfig->security_opt_len + securityOpts.size()) * sizeof(char *);
-        size_t oldSize = hostconfig->security_opt_len * sizeof(char *);
-        int ret = util_mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostconfig->security_opt, oldSize);
-        if (ret != 0) {
-            error.Errorf("Out of memory");
-            return -1;
-        }
-        hostconfig->security_opt = tmp_security_opt;
-        for (const auto &securityOpt : securityOpts) {
-            hostconfig->security_opt[hostconfig->security_opt_len] = util_strdup_s(securityOpt.c_str());
-            hostconfig->security_opt_len++;
-        }
+    CRIHelpers::AddSecurityOptsToHostConfig(securityOpts, hostconfig, error);
+    if (error.NotEmpty()) {
+        error.Errorf("Failed to add securityOpts to hostconfig for container %s", containerConfig.metadata().name().c_str());
+        return -1;
     }
     return 0;
 }
@@ -150,7 +141,7 @@ auto ContainerManagerService::DoUsePodLevelSELinuxConfig(const runtime::v1alpha2
     }
 
     tmp_str = std::string(inspect->process_label);
-    selinuxLabelOpts = CRIHelpers::GetSELinuxLabelOpts(tmp_str, error);
+    selinuxLabelOpts = CRIHelpers::GetPodSELinuxLabelOpts(tmp_str, error);
     if (error.NotEmpty()) {
         ERROR("Failed to get SELinuxLabelOpts for container %s", containerConfig.metadata().name().c_str());
         goto cleanup;
@@ -183,7 +174,14 @@ cleanup:
     return ret;
 }
 
-
+auto ContainerManagerService::IsSELinuxLabelEmpty(const ::runtime::v1alpha2::SELinuxOption &selinuxOption) -> bool
+{
+    if (selinuxOption.user().length() == 0 && selinuxOption.role().length() == 0 && selinuxOption.type().length() == 0 &&
+        selinuxOption.level().length() == 0) {
+        return true;
+    }
+    return false;
+}
 
 auto ContainerManagerService::GenerateCreateContainerHostConfig(
     const runtime::v1alpha2::ContainerConfig &containerConfig,
@@ -221,7 +219,8 @@ auto ContainerManagerService::GenerateCreateContainerHostConfig(
 
     // If selinux label is not specified in container config, use pod level SELinux config
     if (!containerConfig.linux().has_security_context() ||
-        !containerConfig.linux().security_context().has_selinux_options()) {
+        !containerConfig.linux().security_context().has_selinux_options() ||
+        IsSELinuxLabelEmpty(containerConfig.linux().security_context().selinux_options())) {
         if (DoUsePodLevelSELinuxConfig(containerConfig, hostconfig, realPodSandboxID, error) != 0) {
             error.SetError("Failed to security context to host config");
             goto cleanup;
