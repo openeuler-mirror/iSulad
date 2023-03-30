@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2023. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -102,6 +102,29 @@
 #include "isula_libutils/network_remove_request.h"
 #include "isula_libutils/network_remove_response.h"
 #endif
+
+#ifdef ENABLE_SANDBOX
+#include "isula_libutils/sandbox_allocate_id_request.h"
+#include "isula_libutils/sandbox_allocate_id_response.h"
+#include "isula_libutils/sandbox_create_request.h"
+#include "isula_libutils/sandbox_create_response.h"
+#include "isula_libutils/sandbox_start_request.h"
+#include "isula_libutils/sandbox_start_response.h"
+#include "isula_libutils/sandbox_inspect_request.h"
+#include "isula_libutils/sandbox_inspect_response.h"
+#include "isula_libutils/sandbox_stop_request.h"
+#include "isula_libutils/sandbox_stop_response.h"
+#include "isula_libutils/sandbox_remove_request.h"
+#include "isula_libutils/sandbox_remove_response.h"
+#include "isula_libutils/sandbox_status_request.h"
+#include "isula_libutils/sandbox_status_response.h"
+#include "isula_libutils/sandbox_list_request.h"
+#include "isula_libutils/sandbox_list_response.h"
+#include "isula_libutils/sandbox_get_id_request.h"
+#include "isula_libutils/sandbox_get_id_response.h"
+#include "isula_libutils/sandbox_get_runtime_response.h"
+#endif
+
 #include "isula_libutils/container_update_network_settings_request.h"
 #include "isula_libutils/container_update_network_settings_response.h"
 
@@ -317,6 +340,31 @@ typedef struct {
 } service_network_callback_t;
 #endif
 
+#ifdef ENABLE_SANDBOX
+typedef struct {
+    int (*allocate_id)(const sandbox_allocate_id_request *request, sandbox_allocate_id_response **response);
+
+    int (*create)(const sandbox_create_request *request, sandbox_create_response **response);
+
+    int (*start)(const sandbox_start_request *request, sandbox_start_response **response);
+
+    int (*inspect)(const sandbox_inspect_request *request, sandbox_inspect_response **response);
+
+    int (*stop)(const sandbox_stop_request *request, sandbox_stop_response **response);
+
+    int (*remove)(const sandbox_remove_request *request, sandbox_remove_response **response);
+
+    int (*status)(const sandbox_status_request *request, sandbox_status_response **response);
+
+    int (*list)(const sandbox_list_request *request, sandbox_list_response **response);
+
+    int (*get_id)(const sandbox_get_id_request *request, sandbox_get_id_response **response);
+
+    int (*get_runtime)(const char *sandbox_id, sandbox_get_runtime_response **response);
+
+} service_sandbox_callback_t;
+#endif
+
 typedef struct {
     service_container_callback_t container;
     service_image_callback_t image;
@@ -326,6 +374,9 @@ typedef struct {
 #endif
 #ifdef ENABLE_NATIVE_NETWORK
     service_network_callback_t network;
+#endif
+#ifdef ENABLE_SANDBOX
+    service_sandbox_callback_t sandbox;
 #endif
 } service_executor_t;
 

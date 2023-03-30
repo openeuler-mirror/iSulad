@@ -42,6 +42,11 @@
 #define ENGINE_ROOTPATH_NAME "engines"
 #define GRAPH_ROOTPATH_CHECKED_FLAG "NEED_CHECK"
 
+#ifdef ENABLE_SANDBOX
+#define SANDBOX_ROOTPATH_NAME "sandbox"
+#define SANDBOX_STATEPATH_NAME "sandbox"
+#endif
+
 #define INCREMENT_INTREVAL 2
 #define BUFFER_ITEM_NUMS 10
 
@@ -386,6 +391,105 @@ out:
     (void)isulad_server_conf_unlock();
     return path;
 }
+
+#ifdef ENABLE_SANDBOX
+/* conf get routine rootdir */
+char *conf_get_sandbox_rootdir(const char *sandboxer)
+{
+    char *path = NULL;
+    struct service_arguments *conf = NULL;
+    size_t len = 0;
+
+    if (sandboxer == NULL) {
+        ERROR("sandboxer is NULL");
+        return NULL;
+    }
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs->graph == NULL) {
+        ERROR("Server conf is NULL or rootpath is NULL");
+        goto out;
+    }
+
+    /* path = conf->rootpath + / + sandbox + / + sandboxer + /0 */
+    if (strlen(conf->json_confs->graph) > (SIZE_MAX - strlen(SANDBOX_ROOTPATH_NAME) - strlen(sandboxer)- 3)) {
+        ERROR("Graph path is too long");
+        goto out;
+    }
+    len = strlen(conf->json_confs->graph) + 1 + strlen(SANDBOX_ROOTPATH_NAME) + 1 + strlen(sandboxer) + 1;
+    if (len > PATH_MAX / sizeof(char)) {
+        ERROR("The size of path exceeds the limit");
+        goto out;
+    }
+    path = util_smart_calloc_s(sizeof(char), len);
+    if (path == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
+    int nret = snprintf(path, len, "%s/%s/%s", conf->json_confs->graph, SANDBOX_ROOTPATH_NAME, sandboxer);
+    if (nret < 0 || (size_t)nret >= len) {
+        ERROR("Failed to sprintf path");
+        free(path);
+        path = NULL;
+    }
+
+out:
+    (void)isulad_server_conf_unlock();
+    return path;
+}
+
+/* conf get routine statedir */
+char *conf_get_sandbox_statedir(const char *sandboxer)
+{
+    char *path = NULL;
+    struct service_arguments *conf = NULL;
+    size_t len = 0;
+
+    if (sandboxer == NULL) {
+        return NULL;
+    }
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs->state == NULL) {
+        goto out;
+    }
+
+    /* path = conf->statepath + / + sandbox + / + sandboxer + /0 */
+    if (strlen(conf->json_confs->state) > (SIZE_MAX - strlen(SANDBOX_STATEPATH_NAME)) - strlen(sandboxer) - 3) {
+        ERROR("State path is too long");
+        goto out;
+    }
+    len = strlen(conf->json_confs->state) + 1 + strlen(SANDBOX_STATEPATH_NAME) + 1 + strlen(sandboxer) + 1;
+    if (len > PATH_MAX) {
+        ERROR("The size of path exceeds the limit");
+        goto out;
+    }
+    path = util_common_calloc_s(sizeof(char) * len);
+    if (path == NULL) {
+        goto out;
+    }
+
+    int nret = snprintf(path, len, "%s/%s/%s", conf->json_confs->state, SANDBOX_STATEPATH_NAME, sandboxer);
+    if (nret < 0 || (size_t)nret >= len) {
+        ERROR("sprintf path failed");
+        free(path);
+        path = NULL;
+    }
+
+out:
+    (void)isulad_server_conf_unlock();
+    return path;
+}
+#endif
 
 /* conf get isulad rootdir */
 char *conf_get_isulad_rootdir()
@@ -1151,6 +1255,30 @@ out:
     return result;
 }
 
+#ifdef ENABLE_SANDBOX
+char *conf_get_default_sandboxer()
+{
+    struct service_arguments *conf = NULL;
+    char *result = NULL;
+
+    if (isulad_server_conf_rdlock()) {
+        ERROR("BUG conf_rdlock failed");
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL) {
+        goto out;
+    }
+
+    result = util_strings_to_lower(conf->json_confs->default_sandboxer);
+
+out:
+    (void)isulad_server_conf_unlock();
+    return result;
+}
+#endif
+
 char *conf_get_enable_plugins()
 {
     struct service_arguments *conf = NULL;
@@ -1644,7 +1772,10 @@ int merge_json_confs_into_global(struct service_arguments *args)
 
     args->json_confs->runtimes = tmp_json_confs->runtimes;
     tmp_json_confs->runtimes = NULL;
-
+#ifdef ENABLE_SANDBOX
+    args->json_confs->sandboxers = tmp_json_confs->sandboxers;
+    tmp_json_confs->sandboxers = NULL;
+#endif
     if (merge_cri_runtimes_into_global(args, tmp_json_confs)) {
         ret = -1;
         goto out;
