@@ -208,6 +208,7 @@ void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig 
     }
     if (lc.has_security_context()) {
         const runtime::v1alpha2::LinuxSandboxSecurityContext &old = lc.security_context();
+        sc->set_privileged(old.privileged());
         if (old.has_run_as_user()) {
             *sc->mutable_run_as_user() = old.run_as_user();
         }
