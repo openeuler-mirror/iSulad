@@ -37,6 +37,28 @@ function test_hook_spec()
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
+    CONT=`isula run -itd --hook-spec ${test_data_path}/test-hookspec.json ${image}`
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
+
+    isula stop -t 0 ${CONT}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop ${CONT}" && ((ret++))
+
+    isula rm ${CONT}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm ${CONT}" && ((ret++))
+
+    runlog=/tmp/hook_permission.log
+    no_permission_container="test_no_permission"
+    isula run -n $no_permission_container -itd --hook-spec ${test_data_path}/no_permission.json ${image} > $runlog 2>&1
+    [[ $? -ne 126 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check exit code container with image: ${image}" && ((ret++))
+
+    cat $runlog | grep "Permission denied"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to get no_permission output: ${image}" && ((ret++))
+
+    isula rm -f $no_permission_container
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm $no_permission_container" && ((ret++))
+
+    rm -rf $runlog
+
     cat > /tmp/env.sh <<EOF
 #!/bin/bash
 
@@ -47,7 +69,7 @@ EOF
     chmod +x /tmp/env.sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to chmod env shell" && ((ret++))
 
-    CONT=`isula run -itd --hook-spec ${test_data_path}/test-hookspec.json ${image}`
+    CONT=`isula run -itd --hook-spec ${test_data_path}/env-hookspec.json ${image}`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula stop -t 0 ${CONT}
@@ -66,19 +88,6 @@ EOF
 
     rm -rf /tmp/env.sh
     rm -rf /tmp/envfile
-
-    runlog=/tmp/hook_permission.log
-    no_permission_container="test_no_permission"
-    isula run -n $no_permission_container -itd --hook-spec ${test_data_path}/no_permission.json ${image} > $runlog 2>&1
-    [[ $? -ne 126 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check exit code container with image: ${image}" && ((ret++))
-
-    cat $runlog | grep "Permission denied"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to get no_permission output: ${image}" && ((ret++))
-
-    isula rm -f $no_permission_container
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm $no_permission_container" && ((ret++))
-
-    rm -rf $runlog
 
     msg_info "${test} finished with return ${ret}..."
     return ${ret}
