@@ -814,7 +814,7 @@ int PodSandboxManagerService::DoRemovePodSandbox(const std::string &realSandboxI
         return -1;
     }
     remove_request->id = util_strdup_s(realSandboxID.c_str());
-    // remove_request->force = true;
+    remove_request->force = true;
 
     ret = m_cb->sandbox.remove(remove_request, &remove_response);
     if (ret == 0) {

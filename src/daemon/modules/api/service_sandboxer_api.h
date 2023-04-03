@@ -27,7 +27,7 @@ int start_sandbox(sandbox_t *sandbox);
 
 int stop_sandbox(sandbox_t *sandbox);
 
-int delete_sandbox(sandbox_t *sandbox);
+int delete_sandbox(sandbox_t *sandbox, bool force);
 
 int update_sandbox_status(sandbox_t *sandbox);
 

@@ -867,7 +867,7 @@ static int sandbox_remove_cb(const sandbox_remove_request *request, sandbox_remo
 
     // TODO: Check if the removal is already in progress?
     //       Set sandbox to removal in progress
-    if (delete_sandbox(sandbox) != 0) {
+    if (delete_sandbox(sandbox, request->force) != 0) {
         SB_CB_ERROR_FORMAT(cc, ISULAD_ERR_EXEC, "Failed to delete sandbox, %s", id);
         goto pack_response;
     }

@@ -273,7 +273,7 @@ int sandbox_cleanup_mounts_by_id(const char *id, const char *engine_root_path)
     return 0;
 }
 
-int delete_sandbox(sandbox_t *sandbox)
+int delete_sandbox(sandbox_t *sandbox, bool force)
 {
     int ret = 0;
     const char *sandbox_id = NULL;
@@ -284,13 +284,21 @@ int delete_sandbox(sandbox_t *sandbox)
     }
 
     sandbox_lock(sandbox);
-    // TODO: Check if force to remove?
-    if (sandbox_is_ready(sandbox)) {
-        ERROR("Sandbox is still running, unable to remove.");
-        return -1;
-    }
 
     sandbox_id = sandbox->sandboxconfig->id;
+    if (sandbox_is_ready(sandbox)) {
+        if (force) {
+            if (stop_sandbox(sandbox) != 0) {
+                ERROR("Failed to stop sandbox before removing sandbox, %s", sandbox_id);
+                ret = -1;
+                goto out;
+            }
+        } else {
+            ERROR("Sandbox is still running, unable to remove, %s", sandbox_id);
+            ret = -1;
+            goto out;
+        }
+    }
 
     if (sandbox_ctrl_shutdown(sandbox->sandboxer, sandbox_id) != 0) {
         ret = -1;
