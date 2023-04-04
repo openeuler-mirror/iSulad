@@ -37,6 +37,7 @@ function do_test_t_grpc()
     sleep 1
     containername=test_fds
     isulad_pid=`cat /var/run/isulad.pid`
+    ls -l /proc/$isulad_pid/fd
     precount=`ls /proc/$isulad_pid/fd | wc -l`
     isula create -t --name $containername --runtime $runtime busybox
     fn_check_eq "$?" "0" "create failed"
@@ -44,7 +45,7 @@ function do_test_t_grpc()
 
     sleep 1
     curcount=`ls /proc/$isulad_pid/fd | wc -l`
-    fn_check_eq "$precount" "$curcount" "test failed"
+    fn_check_eq "$precount" "$curcount" "test failed: $(ls -l /proc/$isulad_pid/fd)"
 
     isula start $containername
     fn_check_eq "$?" "0" "start failed"
@@ -56,14 +57,14 @@ function do_test_t_grpc()
 
     sleep 1
     curcount=`ls /proc/$isulad_pid/fd | wc -l`
-    fn_check_eq "$precount" "$curcount" "test failed"
+    fn_check_eq "$precount" "$curcount" "test failed: $(ls -l /proc/$isulad_pid/fd)"
 
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
     sleep 1
     curcount=`ls /proc/$isulad_pid/fd | wc -l`
-    fn_check_eq "$precount" "$curcount" "test failed"
+    fn_check_eq "$precount" "$curcount" "test failed: $(ls -l /proc/$isulad_pid/fd)"
 
     msg_info "${test} finished with return ${TC_RET_T}..."
     return $TC_RET_T
@@ -143,7 +144,5 @@ do
         let "ret=$ret + 1"
     fi
 done
-
-
 
 show_result $ret "basic check fd leak"
