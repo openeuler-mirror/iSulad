@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <limits.h>
 
 int set_fd_no_inherited(int fd)
 {
@@ -316,3 +317,32 @@ int open_no_inherit(const char *path, int flag, mode_t mode)
 
     return fd;
 }
+
+static bool is_invalid_error_str(const char *err_str, const char *numstr)
+{
+    return err_str == NULL || err_str == numstr || *err_str != '\0';
+}
+
+int shim_util_safe_uint64(const char *numstr, uint64_t *converted)
+{
+    char *err_str = NULL;
+    uint64_t ull;
+
+    if (numstr == NULL || converted == NULL) {
+        return -EINVAL;
+    }
+
+    errno = 0;
+    ull = strtoull(numstr, &err_str, 0);
+    if (errno > 0) {
+        return -errno;
+    }
+
+    if (is_invalid_error_str(err_str, numstr)) {
+        return -EINVAL;
+    }
+
+    *converted = (uint64_t)ull;
+    return 0;
+}
+

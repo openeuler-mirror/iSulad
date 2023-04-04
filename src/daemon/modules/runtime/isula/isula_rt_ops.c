@@ -54,6 +54,7 @@
 #define SHIM_LOG_SIZE ((BUFSIZ - 100) / 2)
 #define RESIZE_DATA_SIZE 100
 #define PID_WAIT_TIME 120
+#define SHIM_EXIT_TIMEOUT 2
 
 // file name formats of cgroup resources json
 #define RESOURCE_FNAME_FORMATS "%s/resources.json"
@@ -692,27 +693,6 @@ static int status_to_exit_code(int status)
     return exit_code;
 }
 
-static int try_wait_pid(pid_t pid)
-{
-    if (waitpid(pid, NULL, WNOHANG) == pid) {
-        return 0;
-    }
-
-    return 1;
-}
-
-static void kill_and_show_err(pid_t pid)
-{
-    int nret = 0;
-    kill(pid, SIGKILL);
-    // wait atmost 0.5 seconds
-    DO_RETRY_CALL(5, 100000, nret, try_wait_pid, pid);
-    if (nret != 0) {
-        WARN("Fail to wait isulad-shim");
-    }
-    isulad_set_error_message("Exec container error;exec timeout");
-}
-
 static int shim_create(bool fg, const char *id, const char *workdir, const char *bundle, const char *runtime_cmd,
                        int *exit_code, const int64_t timeout)
 {
@@ -731,7 +711,14 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
     params[i++] = bundle;
     params[i++] = runtime_cmd;
     params[i++] = "info";
-    params[i++] = "2m0s";
+    // execSync timeout
+    if (timeout > 0) {
+        params[i] = util_int_to_string(timeout);
+        if (params[i] == NULL) {
+            ERROR("Failed to convert execSync timeout %ld to string", timeout);
+            return -1;
+        }
+    }
     runtime_exec_param_dump(params);
 
     if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
@@ -805,7 +792,7 @@ realexec:
         goto out;
     }
 
-    status = util_waitpid_with_timeout(pid, timeout, kill_and_show_err);
+    status = util_wait_for_pid_status(pid);
     if (status < 0) {
         ERROR("failed wait shim-parent %d exit %s", pid, strerror(errno));
         ret = -1;
@@ -1201,6 +1188,13 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     ret = shim_create(fg_exec(params), id, workdir, bundle, cmd, exit_code, params->timeout);
     if (ret != 0) {
         ERROR("%s: failed create shim process for exec %s", id, exec_id);
+        goto errlog_out;
+    }
+
+    if (*exit_code == SHIM_EXIT_TIMEOUT) {
+        ret = -1;
+        isulad_set_error_message("Exec container error;exec timeout");
+        ERROR("isulad-shim %d exit for execing timeout", pid);
         goto errlog_out;
     }
 
