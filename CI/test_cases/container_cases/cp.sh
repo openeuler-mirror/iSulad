@@ -336,6 +336,9 @@ function cp_test_t()
 
     local isulad_pid=$(cat /var/run/isulad.pid)
 
+    # ensure load liblcr.so finished
+    isula create -t --name load_lcr --runtime lcr ${image}
+    isula rm load_lcr
     # wait some time to make sure fd closed
     sleep 3
     local fd_num1=$(ls -l /proc/$isulad_pid/fd | wc -l)
