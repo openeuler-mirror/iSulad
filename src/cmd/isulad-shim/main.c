@@ -62,7 +62,8 @@ static int set_subreaper()
     return SHIM_OK;
 }
 
-static int parse_args(int argc, char **argv, char **cid, char **bundle, char **rt_name, char **log_level)
+static int parse_args(int argc, char **argv, char **cid, char **bundle, char **rt_name, char **log_level,
+                      uint64_t *timeout)
 {
     if (argc < 4) {
         return SHIM_ERR;
@@ -78,6 +79,12 @@ static int parse_args(int argc, char **argv, char **cid, char **bundle, char **r
     if (argc > 4) {
         *log_level = strdup(argv[4]);
         if (*log_level == NULL) {
+            return SHIM_ERR;
+        }
+    }
+
+    if (argc > 5) {
+        if (shim_util_safe_uint64(strdup(argv[5]), timeout) != 0) {
             return SHIM_ERR;
         }
     }
@@ -99,6 +106,8 @@ int main(int argc, char **argv)
     int efd = -1;
     process_t *p = NULL;
     pthread_t tid_accept;
+    // execSync timeout
+    uint64_t timeout = 0;
 
     g_log_fd = open_no_inherit(SHIM_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0640);
     if (g_log_fd < 0) {
@@ -117,7 +126,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    ret = parse_args(argc, argv, &container_id, &bundle, &rt_name, &log_level);
+    ret = parse_args(argc, argv, &container_id, &bundle, &rt_name, &log_level, &timeout);
     if (ret != SHIM_OK) {
         write_message(g_log_fd, ERR_MSG, "parse args failed:%d", ret);
         exit(EXIT_FAILURE);
@@ -167,5 +176,5 @@ int main(int argc, char **argv)
 
     released_timeout_exit();
 
-    return process_signal_handle_routine(p, tid_accept);
+    return process_signal_handle_routine(p, tid_accept, timeout);
 }
