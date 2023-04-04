@@ -133,6 +133,10 @@ function do_test_t_rest()
 
 ret=0
 
+# ensure load liblcr.so finished
+isula create -t --name load_lcr --runtime lcr busybox
+isula rm load_lcr
+
 for element in ${RUNTIME_LIST[@]};
 do
     do_test_t_grpc $element
