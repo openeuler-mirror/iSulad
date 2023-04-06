@@ -21,12 +21,45 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+
+#include <isula_libutils/log.h>
 
 #define CGROUP_VERSION_1 1
 #define CGROUP_VERSION_2 2
 
 #define CGROUP_MOUNTPOINT "/sys/fs/cgroup"
 #define CGROUP_ISULAD_PATH CGROUP_MOUNTPOINT"/isulad"
+
+int common_get_cgroup_version(void);
+
+int common_find_cgroup_mnt_and_root(const char *subsystem, char **mountpoint, char **root);
+
+static inline void common_cgroup_do_log(bool quiet, bool do_log, const char *msg)
+{
+    if (!quiet && do_log) {
+        WARN("%s", msg);
+    }
+}
+
+
+typedef struct {
+    char **controllers;
+    char *mountpoint;
+} cgroup_layers_item;
+
+typedef struct {
+    cgroup_layers_item **items;
+    size_t len;
+    size_t cap;
+} cgroup_layer_t;
+
+char *common_find_cgroup_subsystem_mountpoint(const cgroup_layer_t *layers, const char *subsystem);
+
+cgroup_layer_t *common_cgroup_layers_find(void);
+
+void common_free_cgroup_layer(cgroup_layer_t *layers);
+
 
 typedef struct {
     bool limit;
@@ -72,10 +105,6 @@ typedef struct {
     bool fileslimit;
 } cgroup_files_info_t;
 
-int common_get_cgroup_version(void);
-
-int common_find_cgroup_mnt_and_root(const char *subsystem, char **mountpoint, char **root);
-
 int common_get_cgroup_info_v1(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
                               cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
                               cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
@@ -85,6 +114,40 @@ int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpu
                               cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
                               cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
                               cgroup_files_info_t *filesinfo, bool quiet);
+
+
+typedef struct {
+    uint64_t cpu_use_nanos;
+    uint64_t cpu_use_user;
+    uint64_t cpu_use_sys;
+} cgroup_cpu_metrics_t;
+
+typedef struct {
+    /* Memory */
+    uint64_t mem_limit;
+    uint64_t mem_used;
+    /* Kernel Memory */
+    uint64_t kmem_limit;
+    uint64_t kmem_used;
+    /* Swap */
+    uint64_t memsw_limit;
+    uint64_t memsw_used;
+    /* Cache */
+    uint64_t cache;
+    uint64_t cache_total;
+} cgroup_mem_metrics_t;
+
+typedef struct {
+    uint64_t pid_current;
+} cgroup_pids_metrics_t;
+
+typedef struct {
+    cgroup_cpu_metrics_t cgcpu_metrics;
+    cgroup_mem_metrics_t cgmem_metrics;
+    cgroup_pids_metrics_t cgpids_metrics;
+} cgroup_metrics_t;
+
+int common_get_cgroup_v1_metrics(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics);
 
 #ifdef __cplusplus
 }
