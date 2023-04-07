@@ -19,6 +19,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/types.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +32,14 @@ extern "C" {
 #define SHIM_ERR (-1)
 #define SHIM_ERR_WAIT (-2)
 #define SHIM_ERR_NOT_REQUIRED (-3)
+#define SHIM_ERR_TIMEOUT (-4)
+
+// common exit code is defined in stdlib.h
+// EXIT_FAILURE	1	: Failing exit status.
+// EXIT_SUCCESS	0	: Successful exit status.
+// custom shim exit code
+// SHIM_EXIT_TIMEOUT 2: Container process timeout exit code
+#define SHIM_EXIT_TIMEOUT 2
 
 #define INFO_MSG "info"
 #define WARN_MSG "warn"
@@ -67,6 +76,8 @@ int generate_random_str(char *id, size_t len);
 void close_fd(int *pfd);
 
 int open_no_inherit(const char *path, int flag, mode_t mode);
+
+int shim_util_safe_uint64(const char *numstr, uint64_t *converted);
 
 #ifdef __cplusplus
 }
