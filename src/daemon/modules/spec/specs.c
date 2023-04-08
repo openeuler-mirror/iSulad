@@ -889,6 +889,27 @@ static int make_sure_oci_spec_linux_resources_pids(oci_runtime_spec *oci_spec)
     return 0;
 }
 
+static int make_sure_oci_spec_linux_resources_files(oci_runtime_spec *oci_spec)
+{
+    int ret = 0;
+
+    ret = make_sure_oci_spec_linux_resources(oci_spec);
+    if (ret < 0) {
+        return -1;
+    }
+
+    if (oci_spec->linux->resources->files != NULL) {
+        return 0;
+    }
+
+    oci_spec->linux->resources->files = util_common_calloc_s(sizeof(defs_resources_files));
+    if (oci_spec->linux->resources->files == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    return 0;
+}
+
 static int merge_pids_limit(oci_runtime_spec *oci_spec, int64_t pids_limit)
 {
     int ret = 0;
@@ -901,6 +922,20 @@ static int merge_pids_limit(oci_runtime_spec *oci_spec, int64_t pids_limit)
     oci_spec->linux->resources->pids->limit = pids_limit;
 
 out:
+    return ret;
+}
+
+static int merge_files_limit(oci_runtime_spec *oci_spec, int64_t files_limit)
+{
+    int ret = 0;
+
+    ret = make_sure_oci_spec_linux_resources_files(oci_spec);
+    if (ret < 0) {
+        ERROR("Failed to merge files limit");
+        return ret;
+    }
+
+    oci_spec->linux->resources->files->limit = files_limit;
     return ret;
 }
 
@@ -1254,6 +1289,15 @@ out:
     return ret;
 }
 
+static int merge_conf_files_limit(oci_runtime_spec *oci_spec, const host_config *host_spec)
+{
+    if (host_spec->files_limit == 0) {
+        return 0;
+    }
+
+    return merge_files_limit(oci_spec, host_spec->files_limit);
+}
+
 int merge_conf_cgroup(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
@@ -1289,6 +1333,11 @@ int merge_conf_cgroup(oci_runtime_spec *oci_spec, const host_config *host_spec)
     }
 
     ret = merge_conf_pids_limit(oci_spec, host_spec);
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = merge_conf_files_limit(oci_spec, host_spec);
     if (ret != 0) {
         goto out;
     }
