@@ -127,6 +127,9 @@ auto ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state
 auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
 -> std::vector<std::string>;
 
+auto GetSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
+-> std::vector<std::string>;
+
 auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string;
 
 void GetCheckpoint(const std::string &jsonCheckPoint, CRI::PodSandboxCheckpoint &checkpoint, Errors &error);
