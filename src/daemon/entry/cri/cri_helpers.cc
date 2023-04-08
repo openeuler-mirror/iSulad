@@ -619,6 +619,37 @@ auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, E
     return seccompSecurityOpts;
 }
 
+auto GetSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
+-> std::vector<std::string>
+{
+    // security Opt Separator Change Version : k8s v1.23.0 (Corresponds to docker 1.11.x)
+    // New version '=' , old version ':', iSulad cri is based on v18.09, so iSulad cri use new version separator
+    const char securityOptSep { '=' };
+    // LabeSep is consistent with the separator used when parsing labels
+    const char labeSep { ':' };
+    std::vector<iSuladOpt> selinuxOpts { };
+    char **labelArr = nullptr;
+    size_t labelArrLen = 0;
+    std::vector<std::string> opts = {"user", "role", "type", "level"};
+    std::vector<std::string> vect;
+
+    labelArr = util_string_split_n(selinuxLabel.c_str(), labeSep, 4);
+    if (labelArr == nullptr) {
+        error.Errorf("Invalid selinux label: %s", selinuxLabel.c_str());
+        return vect;
+    }
+
+    labelArrLen = util_array_len((const char **)labelArr);
+    for (size_t i {}; i < labelArrLen; i++) {
+        iSuladOpt tmp = { "label", opts[i] + std::string(1, labeSep) + std::string(labelArr[i]), "" };
+        selinuxOpts.push_back(tmp);
+    }
+
+    util_free_array(labelArr);
+
+    return fmtiSuladOpts(selinuxOpts, securityOptSep);
+}
+
 auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string
 {
     cri_checkpoint *criCheckpoint { nullptr };
