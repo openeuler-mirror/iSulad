@@ -68,6 +68,8 @@ const std::string Constants::CNI_MUTL_NET_EXTENSION_KEY { "extension.network.kub
 const std::string Constants::CNI_MUTL_NET_EXTENSION_ARGS_KEY { "CNI_MUTLINET_EXTENSION" };
 const std::string Constants::CNI_ARGS_EXTENSION_PREFIX_KEY { "extension.network.kubernetes.io/cniargs/" };
 const std::string Constants::IMAGE_NAME_ANNOTATION_KEY { "io.kubernetes.cri.image-name" };
+// Usually, the format of level is "s0:c60,c525" or "s0-s0:c40.c23"
+const std::string Constants::SELINUX_LABEL_LEVEL_PATTERN { "^s[0-9](-s[0-9])?(:c[0-9]{1,4}(\\.c[0-9]{1,4})?(,c[0-9]{1,4}(\\.c[0-9]{1,4})?)*)?$" };
 
 const char *InternalLabelKeys[] = { CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY.c_str(),
                                     CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str(),
@@ -598,6 +600,34 @@ auto GetSeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> s
     return ret;
 }
 
+
+auto GetSelinuxiSuladOpts(const ::runtime::v1alpha2::SELinuxOption &selinux, Errors &error)-> std::vector<iSuladOpt>
+{
+    std::vector<iSuladOpt> selinuxOpts { };
+    // LabeSep is consistent with the separator used when parsing labels
+    const char labeSep { ':' };
+
+    if (selinux.level().length() != 0 &&
+        util_reg_match(CRIHelpers::Constants::SELINUX_LABEL_LEVEL_PATTERN.c_str(), selinux.level().c_str()) != 0) {
+        error.Errorf("The format of 'level' %s is not correct", selinux.level().c_str());
+        return selinuxOpts;
+    }
+
+    if (selinux.user().length() > 0) {
+        selinuxOpts.push_back({ "label", std::string("user") + std::string(1, labeSep) + selinux.user(), "" });
+    }
+    if (selinux.role().length() > 0) {
+        selinuxOpts.push_back({ "label", std::string("role") + std::string(1, labeSep) + selinux.role(), "" });
+    }
+    if (selinux.type().length() > 0) {
+        selinuxOpts.push_back({ "label", std::string("type") + std::string(1, labeSep) + selinux.type(), "" });
+    }
+    if (selinux.level().length() > 0) {
+        selinuxOpts.push_back({ "label", std::string("level") + std::string(1, labeSep) + selinux.level(), "" });
+    }
+    return selinuxOpts;
+}
+
 auto GetSeccompSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
 -> std::vector<std::string>
 {
@@ -609,17 +639,44 @@ auto GetSeccompSecurityOpts(const std::string &seccompProfile, const char &separ
     return fmtiSuladOpts(seccompOpts, separator);
 }
 
-auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
+auto GetSELinuxLabelOpts(const bool hasSELinuxOption, const ::runtime::v1alpha2::SELinuxOption &selinux,
+                         const char &separator, Errors &error)
 -> std::vector<std::string>
 {
-    std::vector<std::string> seccompSecurityOpts = GetSeccompSecurityOpts(seccompProfile, separator, error);
-    if (error.NotEmpty()) {
-        error.Errorf("failed to generate seccomp security options for container: %s", error.GetMessage().c_str());
+    if (!hasSELinuxOption) {
+        return std::vector<std::string>();
     }
-    return seccompSecurityOpts;
+
+    std::vector<iSuladOpt> selinuxOpts = GetSelinuxiSuladOpts(selinux, error);
+    if (error.NotEmpty()) {
+        return std::vector<std::string>();
+    }
+
+    return fmtiSuladOpts(selinuxOpts, separator);
 }
 
-auto GetSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
+auto GetSecurityOpts(const commonSecurityContext &context, const char &separator, Errors &error)
+-> std::vector<std::string>
+{
+    std::vector<std::string> securityOpts;
+    std::vector<std::string> seccompSecurityOpts = GetSeccompSecurityOpts(context.seccompProfile, separator, error);
+    if (error.NotEmpty()) {
+        error.Errorf("Failed to generate seccomp security options for container: %s", error.GetMessage().c_str());
+        return securityOpts;
+    }
+
+    std::vector<std::string> selinuxOpts = CRIHelpers::GetSELinuxLabelOpts(context.hasSELinuxOption,
+                                                                           context.selinuxOption, separator, error);
+    if (error.NotEmpty()) {
+        error.Errorf("Failed to generate SELinuxLabel options for container %s", error.GetMessage().c_str());
+        return securityOpts;
+    }
+    securityOpts.insert(securityOpts.end(), seccompSecurityOpts.begin(), seccompSecurityOpts.end());
+    securityOpts.insert(securityOpts.end(), selinuxOpts.begin(), selinuxOpts.end());
+    return securityOpts;
+}
+
+auto GetPodSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
 -> std::vector<std::string>
 {
     // security Opt Separator Change Version : k8s v1.23.0 (Corresponds to docker 1.11.x)
@@ -648,6 +705,34 @@ auto GetSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
     util_free_array(labelArr);
 
     return fmtiSuladOpts(selinuxOpts, securityOptSep);
+}
+
+void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_config *hostconfig, Errors &error)
+{
+    if (securityOpts.empty()) {
+        return;
+    }
+
+    char **tmp_security_opt = nullptr;
+    if (securityOpts.size() > (SIZE_MAX / sizeof(char *)) - hostconfig->security_opt_len) {
+        error.Errorf("Too many securityOpts");
+        ERROR("Too many securityOpts");
+        return;
+    }
+    size_t newSize = (hostconfig->security_opt_len + securityOpts.size()) * sizeof(char *);
+    size_t oldSize = hostconfig->security_opt_len * sizeof(char *);
+    int ret = util_mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostconfig->security_opt, oldSize);
+    if (ret != 0) {
+        error.Errorf("Out of memory");
+        ERROR("Out of memory");
+        return;
+    }
+    hostconfig->security_opt = tmp_security_opt;
+    for (const auto &securityOpt : securityOpts) {
+        hostconfig->security_opt[hostconfig->security_opt_len] = util_strdup_s(securityOpt.c_str());
+        hostconfig->security_opt_len++;
+    }
+
 }
 
 auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string

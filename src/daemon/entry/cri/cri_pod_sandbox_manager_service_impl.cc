@@ -197,34 +197,27 @@ void PodSandboxManagerServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alph
     const char securityOptSep = '=';
 
     // Security Opts
-    if (c.linux().has_security_context()) {
-        std::vector<std::string> securityOpts =
-            CRIHelpers::GetSecurityOpts(c.linux().security_context().seccomp_profile_path(), securityOptSep, error);
-        if (error.NotEmpty()) {
-            error.Errorf("failed to generate security options for sandbox %s: %s",
-                         c.metadata().name().c_str(), error.GetMessage().c_str());
-            return;
-        }
-        if (!securityOpts.empty()) {
-            char **tmp_security_opt = nullptr;
+    if (!c.linux().has_security_context()) {
+        return;
+    }
 
-            if (securityOpts.size() > (SIZE_MAX / sizeof(char *)) - hc->security_opt_len) {
-                error.Errorf("Out of memory");
-                return;
-            }
-            size_t newSize = (hc->security_opt_len + securityOpts.size()) * sizeof(char *);
-            size_t oldSize = hc->security_opt_len * sizeof(char *);
-            int ret = util_mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hc->security_opt, oldSize);
-            if (ret != 0) {
-                error.Errorf("Out of memory");
-                return;
-            }
-            hc->security_opt = tmp_security_opt;
-            for (const auto &securityOpt : securityOpts) {
-                hc->security_opt[hc->security_opt_len] = util_strdup_s(securityOpt.c_str());
-                hc->security_opt_len++;
-            }
-        }
+    CRIHelpers::commonSecurityContext commonContext = {
+        .hasSELinuxOption = c.linux().security_context().has_selinux_options(),
+        .selinuxOption = c.linux().security_context().selinux_options(),
+        .seccompProfile = c.linux().security_context().seccomp_profile_path(),
+    };
+
+    std::vector<std::string> securityOpts = CRIHelpers::GetSecurityOpts(commonContext, securityOptSep, error);
+    if (error.NotEmpty()) {
+        error.Errorf("Failed to generate security options for sandbox %s: %s",
+                     c.metadata().name().c_str(), error.GetMessage().c_str());
+        return;
+    }
+    CRIHelpers::AddSecurityOptsToHostConfig(securityOpts, hc, error);
+    if (error.NotEmpty()) {
+        error.Errorf("Failed to add securityOpts to hostconfig for sandbox %s: %s", c.metadata().name().c_str(),
+                     error.GetMessage().c_str());
+        return;
     }
 }
 
