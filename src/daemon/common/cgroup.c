@@ -23,33 +23,11 @@
 #include <sys/stat.h>
 
 #include <isula_libutils/auto_cleanup.h>
-#include <isula_libutils/log.h>
 
 #include "err_msg.h"
 #include "utils.h"
 #include "utils_array.h"
 #include "sysinfo.h"
-
-// Cgroup V1 Item Definition
-#define CGROUP_BLKIO_WEIGHT "blkio.weight"
-#define CGROUP_BLKIO_WEIGHT_DEVICE "blkio.weight_device"
-#define CGROUP_BLKIO_READ_BPS_DEVICE "blkio.throttle.read_bps_device"
-#define CGROUP_BLKIO_WRITE_BPS_DEVICE "blkio.throttle.write_bps_device"
-#define CGROUP_BLKIO_READ_IOPS_DEVICE "blkio.throttle.read_iops_device"
-#define CGROUP_BLKIO_WRITE_IOPS_DEVICE "blkio.throttle.write_iops_device"
-#define CGROUP_CPU_SHARES "cpu.shares"
-#define CGROUP_CPU_PERIOD "cpu.cfs_period_us"
-#define CGROUP_CPU_QUOTA "cpu.cfs_quota_us"
-#define CGROUP_CPU_RT_PERIOD "cpu.rt_period_us"
-#define CGROUP_CPU_RT_RUNTIME "cpu.rt_runtime_us"
-#define CGROUP_CPUSET_CPUS "cpuset.cpus"
-#define CGROUP_CPUSET_MEMS "cpuset.mems"
-#define CGROUP_MEMORY_LIMIT "memory.limit_in_bytes"
-#define CGROUP_MEMORY_SWAP "memory.memsw.limit_in_bytes"
-#define CGROUP_MEMORY_SWAPPINESS "memory.swappiness"
-#define CGROUP_MEMORY_RESERVATION "memory.soft_limit_in_bytes"
-#define CGROUP_KENEL_MEMORY_LIMIT "memory.kmem.limit_in_bytes"
-#define CGROUP_MEMORY_OOM_CONTROL "memory.oom_control"
 
 // Cgroup V2 Item Definition
 #define CGROUP2_CPU_WEIGHT "cpu.weight"
@@ -81,27 +59,102 @@
 #define CGROUP_SUPER_MAGIC 0x27e0eb
 #endif
 
-typedef struct {
-    char **controllers;
-    char *mountpoint;
-} cgroup_layer_t;
-
-static void free_cgroup_layer(cgroup_layer_t **layers)
+static cgroup_layer_t *new_cgroup_layer(size_t len)
 {
-    cgroup_layer_t **it = NULL;
+    cgroup_layer_t *layers = NULL;
+
+    if (len == 0) {
+        return NULL;
+    }
+
+    layers = (cgroup_layer_t *)util_common_calloc_s(sizeof(cgroup_layer_t));
+    if (layers == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    layers->items = (cgroup_layers_item **)util_smart_calloc_s(sizeof(cgroup_layers_item *), len);
+    if (layers->items == NULL) {
+        ERROR("Out of memory");
+        free(layers);
+        return NULL;
+    }
+
+    layers->len = 0;
+    layers->cap = len;
+
+    return layers;
+}
+
+static int add_cgroup_layer(cgroup_layer_t *layers, char **clist, char *mountpoint)
+{
+#define CGROUP_LAYER_MAX_CAPABILITY 1024
+    size_t new_size;
+    cgroup_layers_item *newh = NULL;
+    cgroup_layers_item **tmp = NULL;
+
+    if (layers->len >= CGROUP_LAYER_MAX_CAPABILITY) {
+        ERROR("Too many cgroup layers");
+        return -1;
+    }
+
+    newh = util_common_calloc_s(sizeof(cgroup_layers_item));
+    if (newh == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    newh->controllers = clist;
+    newh->mountpoint = mountpoint;
+
+    if (layers->len < layers->cap) {
+        goto out;
+    }
+
+    if (layers->cap > CGROUP_LAYER_MAX_CAPABILITY / 2) {
+        new_size = CGROUP_LAYER_MAX_CAPABILITY;
+    } else {
+        new_size = layers->cap * 2;
+    }
+
+    if (util_mem_realloc((void **)&tmp, new_size * sizeof(cgroup_layers_item *),
+                         layers->items, layers->cap * sizeof(cgroup_layers_item *)) != 0) {
+        ERROR("Failed to realloc memory");
+        free(newh);
+        return -1;
+    }
+
+    layers->items = tmp;
+    tmp = NULL;
+    layers->cap = new_size;
+
+out:
+    layers->items[layers->len] = newh;
+    layers->len++;
+    return 0;
+}
+
+void common_free_cgroup_layer(cgroup_layer_t *layers)
+{
+    size_t i;
 
     if (layers == NULL) {
         return;
     }
 
-    for (it = layers; it && *it; it++) {
-        free((*it)->mountpoint);
-        (*it)->mountpoint = NULL;
-        util_free_array((*it)->controllers);
-        (*it)->controllers = NULL;
-        free(*it);
-        *it = NULL;
+    for (i = 0; i < layers->len && layers->items[i]; i++) {
+        free(layers->items[i]->mountpoint);
+        layers->items[i]->mountpoint = NULL;
+        util_free_array(layers->items[i]->controllers);
+        layers->items[i]->controllers = NULL;
+        free(layers->items[i]);
+        layers->items[i] = NULL;
     }
+
+    free(layers->items);
+    layers->items = NULL;
+    layers->len = 0;
+    layers->cap = 0;
+
     free(layers);
 }
 
@@ -182,31 +235,6 @@ out:
     return ret;
 }
 
-static char *cgroup_legacy_must_prefix_named(const char *entry)
-{
-    size_t len;
-    char *prefixed = NULL;
-    const char *prefix = "name=";
-
-    len = strlen(entry);
-
-    if (((SIZE_MAX - len) - 1) < strlen(prefix)) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    prefixed = util_common_calloc_s(len + strlen(prefix) + 1);
-    if (prefixed == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-    (void)memcpy(prefixed, prefix, strlen(prefix));
-    (void)memcpy(prefixed + strlen(prefix), entry, len);
-
-    prefixed[len + strlen(prefix)] = '\0';
-    return prefixed;
-}
-
 static int append_controller(const char **klist, const char **nlist, char ***clist, const char *entry)
 {
     int ret = 0;
@@ -223,9 +251,10 @@ static int append_controller(const char **klist, const char **nlist, char ***cli
     } else if (util_array_contain(klist, entry)) {
         dup_entry = util_strdup_s(entry);
     } else {
-        dup_entry = cgroup_legacy_must_prefix_named(entry);
+        dup_entry = util_string_append(entry, "name=");
     }
     if (dup_entry == NULL) {
+        ERROR("Out of memory");
         return -1;
     }
 
@@ -241,11 +270,6 @@ static int append_controller(const char **klist, const char **nlist, char ***cli
 static inline bool is_cgroup_mountpoint(const char *mp)
 {
     return strncmp(mp, "/sys/fs/cgroup/", strlen("/sys/fs/cgroup/")) == 0;
-}
-
-static void set_char_to_terminator(char *p)
-{
-    *p = '\0';
 }
 
 static char **cgroup_get_controllers(const char **klist, const char **nlist, const char *line)
@@ -278,8 +302,8 @@ static char **cgroup_get_controllers(const char **klist, const char **nlist, con
         ERROR("Invalid mountinfo format \"%s\"", line);
         return NULL;
     }
-    set_char_to_terminator(pos2);
 
+    *pos2 = '\0';
     dup = util_strdup_s(pos);
     *pos2 = ' ';
 
@@ -295,28 +319,6 @@ static char **cgroup_get_controllers(const char **klist, const char **nlist, con
     free(dup);
 
     return pret;
-}
-
-/* add hierarchy */
-static int cgroup_add_layer(cgroup_layer_t ***layers, char **clist, char *mountpoint)
-{
-    cgroup_layer_t *newh = NULL;
-
-    newh = util_common_calloc_s(sizeof(cgroup_layer_t));
-    if (newh == NULL) {
-        return -1;
-    }
-
-    newh->controllers = clist;
-    newh->mountpoint = mountpoint;
-
-    if (util_common_array_append_pointer((void ***)layers, newh) != 0) {
-        ERROR("Failed to append pointer to array");
-        free(newh);
-        return -1;
-    }
-
-    return 0;
 }
 
 int cgroup_get_mountpoint_and_root(char *pline, char **mountpoint, char **root)
@@ -384,16 +386,16 @@ static bool lists_intersect(const char **controllers, const char **list)
     return false;
 }
 
-static bool controller_list_is_dup(cgroup_layer_t **llist, const char **clist)
+static bool controller_list_is_dup(const cgroup_layer_t *llist, const char **clist)
 {
-    int index;
+    size_t index;
 
     if (llist == NULL) {
         return false;
     }
 
-    for (index = 0; llist[index]; index++) {
-        if (lists_intersect((const char **)llist[index]->controllers, (const char **)clist)) {
+    for (index = 0; index < llist->len && llist->items[index]; index++) {
+        if (lists_intersect((const char **)llist->items[index]->controllers, (const char **)clist)) {
             return true;
         }
     }
@@ -401,25 +403,34 @@ static bool controller_list_is_dup(cgroup_layer_t **llist, const char **clist)
     return false;
 }
 
-static cgroup_layer_t **cgroup_layers_find(void)
+cgroup_layer_t *common_cgroup_layers_find(void)
 {
     int nret;
+    int ret = 0;
     FILE *fp = NULL;
     size_t length = 0;
+    const size_t cgroup_layer_item_num = 10;
     char *pline = NULL;
     char **klist = NULL;
     char **nlist = NULL;
-    cgroup_layer_t **layers = NULL;
+    cgroup_layer_t *layers = NULL;
 
-    nret = get_cgroup_subsystems(&klist, &nlist);
-    if (nret < 0) {
-        ERROR("Failed to retrieve available legacy cgroup controllers\n");
+    layers = new_cgroup_layer(cgroup_layer_item_num);
+    if (layers == NULL) {
+        ERROR("Failed to new cgroup layer");
         return NULL;
+    }
+
+    ret = get_cgroup_subsystems(&klist, &nlist);
+    if (ret != 0) {
+        ERROR("Failed to retrieve available legacy cgroup controllers\n");
+        goto out;
     }
 
     fp = util_fopen("/proc/self/mountinfo", "r");
     if (fp == NULL) {
         ERROR("Failed to open \"/proc/self/mountinfo\"\n");
+        ret = -1;
         goto out;
     }
 
@@ -443,7 +454,7 @@ static cgroup_layer_t **cgroup_layers_find(void)
             goto list_out;
         }
 
-        nret = cgroup_add_layer(&layers, clist, mountpoint);
+        nret = add_cgroup_layer(layers, clist, mountpoint);
         if (nret != 0) {
             ERROR("Failed to add hierarchies");
             goto list_out;
@@ -461,6 +472,12 @@ out:
         fclose(fp);
     }
     free(pline);
+
+    if (ret != 0) {
+        common_free_cgroup_layer(layers);
+        return NULL;
+    }
+
     return layers;
 }
 
@@ -478,203 +495,20 @@ static bool cgroup_enabled(const char *mountpoint, const char *name)
     return util_file_exists(path);
 }
 
-static void cgroup_do_log(bool quiet, bool do_log, const char *msg)
+char *common_find_cgroup_subsystem_mountpoint(const cgroup_layer_t *layers, const char *subsystem)
 {
-    if (!quiet && do_log) {
-        WARN("%s", msg);
-    }
-}
+    size_t i;
 
-static char *find_cgroup_subsystem_mountpoint(cgroup_layer_t **layers, const char *subsystem)
-{
-    cgroup_layer_t **it = NULL;
-
-    for (it = layers; it && *it; it++) {
+    for (i = 0; i < layers->len && layers->items[i]; i++) {
         char **cit = NULL;
 
-        for (cit = (*it)->controllers; cit && *cit; cit++) {
+        for (cit = layers->items[i]->controllers; cit && *cit; cit++) {
             if (strcmp(*cit, subsystem) == 0) {
-                return (*it)->mountpoint;
+                return layers->items[i]->mountpoint;
             }
         }
     }
     return NULL;
-}
-
-/* check cgroup mem */
-static void check_cgroup_mem(cgroup_layer_t **layers, bool quiet, cgroup_mem_info_t *meminfo)
-{
-    char *mountpoint = NULL;
-
-    mountpoint = find_cgroup_subsystem_mountpoint(layers, "memory");
-    if (mountpoint == NULL) {
-        cgroup_do_log(quiet, true, "Your kernel does not support cgroup memory limit");
-        return;
-    }
-
-    meminfo->limit = cgroup_enabled(mountpoint, CGROUP_MEMORY_LIMIT);
-    cgroup_do_log(quiet, !(meminfo->limit), "Your kernel does not support memory limit");
-
-    meminfo->swap = cgroup_enabled(mountpoint, CGROUP_MEMORY_SWAP);
-    cgroup_do_log(quiet, !(meminfo->swap), "Your kernel does not support swap memory limit");
-
-    meminfo->reservation = cgroup_enabled(mountpoint, CGROUP_MEMORY_RESERVATION);
-    cgroup_do_log(quiet, !(meminfo->reservation), "Your kernel does not support memory reservation");
-
-    meminfo->oomkilldisable = cgroup_enabled(mountpoint, CGROUP_MEMORY_OOM_CONTROL);
-    cgroup_do_log(quiet, !(meminfo->oomkilldisable), "Your kernel does not support oom control");
-
-    meminfo->swappiness = cgroup_enabled(mountpoint, CGROUP_MEMORY_SWAPPINESS);
-    cgroup_do_log(quiet, !(meminfo->swappiness), "Your kernel does not support memory swappiness");
-
-    meminfo->kernel = cgroup_enabled(mountpoint, CGROUP_KENEL_MEMORY_LIMIT);
-    cgroup_do_log(quiet, !(meminfo->kernel), "Your kernel does not support kernel memory limit");
-}
-
-/* check cgroup cpu */
-static void check_cgroup_cpu(cgroup_layer_t **layers, bool quiet, cgroup_cpu_info_t *cpuinfo)
-{
-    char *mountpoint = NULL;
-
-    mountpoint = find_cgroup_subsystem_mountpoint(layers, "cpu");
-    if (mountpoint == NULL) {
-        cgroup_do_log(quiet, true, "Unable to find cpu cgroup in mounts");
-        return;
-    }
-
-    cpuinfo->cpu_rt_period = cgroup_enabled(mountpoint, CGROUP_CPU_RT_PERIOD);
-    cgroup_do_log(quiet, !(cpuinfo->cpu_rt_period), "Your kernel does not support cgroup rt period");
-
-    cpuinfo->cpu_rt_runtime = cgroup_enabled(mountpoint, CGROUP_CPU_RT_RUNTIME);
-    cgroup_do_log(quiet, !(cpuinfo->cpu_rt_runtime), "Your kernel does not support cgroup rt runtime");
-
-    cpuinfo->cpu_shares = cgroup_enabled(mountpoint, CGROUP_CPU_SHARES);
-    cgroup_do_log(quiet, !(cpuinfo->cpu_shares), "Your kernel does not support cgroup cpu shares");
-
-    cpuinfo->cpu_cfs_period = cgroup_enabled(mountpoint, CGROUP_CPU_PERIOD);
-    cgroup_do_log(quiet, !(cpuinfo->cpu_cfs_period), "Your kernel does not support cgroup cfs period");
-
-    cpuinfo->cpu_cfs_quota = cgroup_enabled(mountpoint, CGROUP_CPU_QUOTA);
-    cgroup_do_log(quiet, !(cpuinfo->cpu_cfs_quota), "Your kernel does not support cgroup cfs quota");
-}
-
-/* check cgroup blkio info */
-static void check_cgroup_blkio_info(cgroup_layer_t **layers, bool quiet, cgroup_blkio_info_t *blkioinfo)
-{
-    char *mountpoint = NULL;
-
-    mountpoint = find_cgroup_subsystem_mountpoint(layers, "blkio");
-    if (mountpoint == NULL) {
-        cgroup_do_log(quiet, true, "Unable to find blkio cgroup in mounts");
-        return;
-    }
-
-    blkioinfo->blkio_weight = cgroup_enabled(mountpoint, CGROUP_BLKIO_WEIGHT);
-    cgroup_do_log(quiet, !(blkioinfo->blkio_weight), "Your kernel does not support cgroup blkio weight");
-
-    blkioinfo->blkio_weight_device = cgroup_enabled(mountpoint, CGROUP_BLKIO_WEIGHT_DEVICE);
-    cgroup_do_log(quiet, !(blkioinfo->blkio_weight_device), "Your kernel does not support cgroup blkio weight_device");
-
-    blkioinfo->blkio_read_bps_device = cgroup_enabled(mountpoint, CGROUP_BLKIO_READ_BPS_DEVICE);
-    cgroup_do_log(quiet, !(blkioinfo->blkio_read_bps_device),
-                  "Your kernel does not support cgroup blkio throttle.read_bps_device");
-
-    blkioinfo->blkio_write_bps_device = cgroup_enabled(mountpoint, CGROUP_BLKIO_WRITE_BPS_DEVICE);
-    cgroup_do_log(quiet, !(blkioinfo->blkio_write_bps_device),
-                  "Your kernel does not support cgroup blkio throttle.write_bps_device");
-
-    blkioinfo->blkio_read_iops_device = cgroup_enabled(mountpoint, CGROUP_BLKIO_READ_IOPS_DEVICE);
-    cgroup_do_log(quiet, !(blkioinfo->blkio_read_iops_device),
-                  "Your kernel does not support cgroup blkio throttle.read_iops_device");
-
-    blkioinfo->blkio_write_iops_device = cgroup_enabled(mountpoint, CGROUP_BLKIO_WRITE_IOPS_DEVICE);
-    cgroup_do_log(quiet, !(blkioinfo->blkio_write_iops_device),
-                  "Your kernel does not support cgroup blkio throttle.write_iops_device");
-}
-
-/* check cgroup cpuset info */
-static void check_cgroup_cpuset_info(cgroup_layer_t **layers, bool quiet, cgroup_cpuset_info_t *cpusetinfo)
-{
-    char *mountpoint = NULL;
-    char cpuset_cpus_path[PATH_MAX] = { 0 };
-    char cpuset_mems_path[PATH_MAX] = { 0 };
-
-    mountpoint = find_cgroup_subsystem_mountpoint(layers, "cpuset");
-    if (mountpoint == NULL) {
-        cgroup_do_log(quiet, true, ("Unable to find cpuset cgroup in mounts"));
-        return;
-    }
-
-    int nret = snprintf(cpuset_cpus_path, sizeof(cpuset_cpus_path), "%s/%s", mountpoint, CGROUP_CPUSET_CPUS);
-    if (nret < 0 || (size_t)nret >= sizeof(cpuset_cpus_path)) {
-        ERROR("Path is too long");
-        goto error;
-    }
-
-    cpusetinfo->cpus = util_read_content_from_file(cpuset_cpus_path);
-    if (cpusetinfo->cpus == NULL) {
-        ERROR("Failed to read the file: %s", cpuset_cpus_path);
-        goto error;
-    }
-
-    nret = snprintf(cpuset_mems_path, sizeof(cpuset_mems_path), "%s/%s", mountpoint, CGROUP_CPUSET_MEMS);
-    if (nret < 0 || (size_t)nret >= sizeof(cpuset_mems_path)) {
-        ERROR("Path is too long");
-        goto error;
-    }
-
-    cpusetinfo->mems = util_read_content_from_file(cpuset_mems_path);
-    if (cpusetinfo->mems == NULL) {
-        ERROR("Failed to read the file: %s", cpuset_mems_path);
-        goto error;
-    }
-    cpusetinfo->cpus = util_trim_space(cpusetinfo->cpus);
-    cpusetinfo->mems = util_trim_space(cpusetinfo->mems);
-    cpusetinfo->cpuset = true;
-    return;
-error:
-    free(cpusetinfo->cpus);
-    cpusetinfo->cpus = NULL;
-    free(cpusetinfo->mems);
-    cpusetinfo->mems = NULL;
-}
-
-/* check cgroup pids */
-static void check_cgroup_pids(bool quiet, cgroup_pids_info_t *pidsinfo)
-{
-    int ret = 0;
-    char *pidsmp = NULL;
-
-    ret = common_find_cgroup_mnt_and_root("pids", &pidsmp, NULL);
-    if (ret != 0 || pidsmp == NULL) {
-        if (!quiet) {
-            WARN("Unable to find pids cgroup in mounts");
-        }
-        goto out;
-    }
-
-    pidsinfo->pidslimit = true;
-out:
-    free(pidsmp);
-}
-
-/* check cgroup files */
-static void check_cgroup_files(bool quiet, cgroup_files_info_t *filesinfo)
-{
-    int ret = 0;
-    char *filesmp = NULL;
-
-    ret = common_find_cgroup_mnt_and_root("files", &filesmp, NULL);
-    if (ret != 0 || filesmp == NULL) {
-        if (!quiet) {
-            WARN("Unable to find pids cgroup in mounts");
-        }
-        goto out;
-    }
-
-    filesinfo->fileslimit = true;
-out:
-    free(filesmp);
 }
 
 /* find cgroup mountpoint and root */
@@ -753,36 +587,6 @@ free_out:
     return ret;
 }
 
-/* check cgroup hugetlb */
-static void check_cgroup_hugetlb(cgroup_layer_t **layers, bool quiet, cgroup_hugetlb_info_t *hugetlbinfo)
-{
-    int nret;
-    char *mountpoint = NULL;
-    char *defaultpagesize = NULL;
-    char hugetlbpath[64] = { 0x00 };
-
-    mountpoint = find_cgroup_subsystem_mountpoint(layers, "hugetlb");
-    if (mountpoint == NULL) {
-        cgroup_do_log(quiet, true, "Your kernel does not support cgroup hugetlb limit");
-        return;
-    }
-    defaultpagesize = get_default_huge_page_size();
-    if (defaultpagesize == NULL) {
-        WARN("Your kernel does not support cgroup hugetlb limit");
-        return;
-    }
-    nret = snprintf(hugetlbpath, sizeof(hugetlbpath), "hugetlb.%s.limit_in_bytes", defaultpagesize);
-    if (nret < 0 || (size_t)nret >= sizeof(hugetlbpath)) {
-        WARN("Failed to print hugetlb path");
-        goto free_out;
-    }
-    hugetlbinfo->hugetlblimit = cgroup_enabled(mountpoint, hugetlbpath);
-    cgroup_do_log(quiet, !hugetlbinfo->hugetlblimit, ("Your kernel does not support hugetlb limit"));
-
-free_out:
-    free(defaultpagesize);
-}
-
 int common_get_cgroup_version(void)
 {
     struct statfs fs = { 0 };
@@ -797,32 +601,6 @@ int common_get_cgroup_version(void)
     }
 
     return CGROUP_VERSION_1;
-}
-
-int common_get_cgroup_info_v1(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
-                              cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
-                              cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                              cgroup_files_info_t *filesinfo, bool quiet)
-{
-    cgroup_layer_t **layers = NULL;
-
-    layers = cgroup_layers_find();
-    if (layers == NULL) {
-        ERROR("Failed to parse cgroup information");
-        return -1;
-    }
-
-    check_cgroup_mem(layers, quiet, meminfo);
-    check_cgroup_cpu(layers, quiet, cpuinfo);
-    check_cgroup_hugetlb(layers, quiet, hugetlbinfo);
-    check_cgroup_blkio_info(layers, quiet, blkioinfo);
-    check_cgroup_cpuset_info(layers, quiet, cpusetinfo);
-    check_cgroup_pids(quiet, pidsinfo);
-    check_cgroup_files(quiet, filesinfo);
-
-    free_cgroup_layer(layers);
-
-    return 0;
 }
 
 static int cgroup2_enable_all()
@@ -938,17 +716,17 @@ int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpu
 
     // cpu cgroup
     cpuinfo->cpu_shares = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPU_WEIGHT);
-    cgroup_do_log(quiet, !(cpuinfo->cpu_shares), "Your kernel does not support cgroup2 cpu weight");
+    common_cgroup_do_log(quiet, !(cpuinfo->cpu_shares), "Your kernel does not support cgroup2 cpu weight");
 
     cpuinfo->cpu_cfs_period = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPU_MAX);
     cpuinfo->cpu_cfs_quota = cpuinfo->cpu_cfs_period;
-    cgroup_do_log(quiet, !(cpuinfo->cpu_cfs_period), "Your kernel does not support cgroup2 cpu max");
+    common_cgroup_do_log(quiet, !(cpuinfo->cpu_cfs_period), "Your kernel does not support cgroup2 cpu max");
 
     cpusetinfo->cpuset = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_CPUS_EFFECTIVE) &&
                          cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_CPUS) &&
                          cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_MEMS_EFFECTIVE) &&
                          cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_MEMS);
-    cgroup_do_log(quiet, !(cpusetinfo->cpuset), "Your kernel does not support cpuset");
+    common_cgroup_do_log(quiet, !(cpusetinfo->cpuset), "Your kernel does not support cpuset");
     if (cpusetinfo->cpuset) {
         cpusetinfo->cpus = util_read_content_from_file(CGROUP2_CPUSET_CPUS_EFFECTIVE_PATH);
         cpusetinfo->mems = util_read_content_from_file(CGROUP2_CPUSET_MEMS_EFFECTIVE_PATH);
@@ -964,27 +742,27 @@ int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpu
     blkioinfo->blkio_weight = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_BFQ_WEIGHT) ||
                               cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_WEIGHT);
     blkioinfo->blkio_weight_device = blkioinfo->blkio_weight;
-    cgroup_do_log(quiet, !(blkioinfo->blkio_weight), "Your kernel does not support cgroup2 io weight");
+    common_cgroup_do_log(quiet, !(blkioinfo->blkio_weight), "Your kernel does not support cgroup2 io weight");
 
     blkioinfo->blkio_read_bps_device = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_MAX);
     blkioinfo->blkio_write_bps_device = blkioinfo->blkio_read_bps_device;
     blkioinfo->blkio_read_iops_device = blkioinfo->blkio_read_bps_device;
     blkioinfo->blkio_write_iops_device = blkioinfo->blkio_read_bps_device;
-    cgroup_do_log(quiet, !(blkioinfo->blkio_read_bps_device), "Your kernel does not support cgroup2 io max");
+    common_cgroup_do_log(quiet, !(blkioinfo->blkio_read_bps_device), "Your kernel does not support cgroup2 io max");
 
     // memory cgroup
     meminfo->limit = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_MAX);
-    cgroup_do_log(quiet, !(meminfo->limit), "Your kernel does not support cgroup2 memory max");
+    common_cgroup_do_log(quiet, !(meminfo->limit), "Your kernel does not support cgroup2 memory max");
 
     meminfo->reservation = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_LOW);
-    cgroup_do_log(quiet, !(meminfo->reservation), "Your kernel does not support cgroup2 memory low");
+    common_cgroup_do_log(quiet, !(meminfo->reservation), "Your kernel does not support cgroup2 memory low");
 
     meminfo->swap = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_SWAP_MAX);
-    cgroup_do_log(quiet, !(meminfo->swap), "Your kernel does not support cgroup2 memory swap max");
+    common_cgroup_do_log(quiet, !(meminfo->swap), "Your kernel does not support cgroup2 memory swap max");
 
     // pids cgroup
     pidsinfo->pidslimit = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_PIDS_MAX);
-    cgroup_do_log(quiet, !(pidsinfo->pidslimit), "Your kernel does not support cgroup2 pids max");
+    common_cgroup_do_log(quiet, !(pidsinfo->pidslimit), "Your kernel does not support cgroup2 pids max");
 
     // hugetlb cgroup
     size = get_default_huge_page_size();
@@ -996,14 +774,14 @@ int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpu
             goto out;
         }
         hugetlbinfo->hugetlblimit = cgroup_enabled(CGROUP_ISULAD_PATH, path);
-        cgroup_do_log(quiet, !hugetlbinfo->hugetlblimit, "Your kernel does not support cgroup2 hugetlb limit");
+        common_cgroup_do_log(quiet, !hugetlbinfo->hugetlblimit, "Your kernel does not support cgroup2 hugetlb limit");
     } else {
         WARN("Your kernel does not support cgroup2 hugetlb limit");
     }
 
     // files cgroup
     filesinfo->fileslimit = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_FILES_LIMIT);
-    cgroup_do_log(quiet, !(filesinfo->fileslimit), "Your kernel does not support cgroup2 files limit");
+    common_cgroup_do_log(quiet, !(filesinfo->fileslimit), "Your kernel does not support cgroup2 files limit");
 
 out:
     free(size);
