@@ -1213,69 +1213,145 @@ static int try_wait_all_child(void)
     return 1;
 }
 
-int process_signal_handle_routine(process_t *p, const pthread_t tid_accept)
+static int waitpid_with_timeout(int ctr_pid,  int *status, const int64_t timeout)
 {
-    int ret = SHIM_ERR;
-    bool exit_shim = false;
     int nret = 0;
-    int i;
-    struct timespec ts;
+    time_t start_time = time(NULL);
+    time_t end_time;
+    double interval;
+    int st;
 
     for (;;) {
-        int status;
-        ret = reap_container(p->ctr_pid, &status);
+        nret = waitpid(-1, &st, WNOHANG);
+        if (nret == ctr_pid) {
+            break;
+        }
+        end_time = time(NULL);
+        interval = difftime(end_time, start_time);
+        if (nret == 0 && interval >= timeout) {
+            return SHIM_ERR_TIMEOUT;
+        }
+        // sleep some time instead to avoid cpu full running and then retry.
+        usleep(1000);
+    }
+
+    if (WIFSIGNALED(st)) {
+        *status = EXIT_SIGNAL_OFFSET + WTERMSIG(st);
+    } else {
+        *status = WEXITSTATUS(st);
+    }
+
+    if (*status == CONTAINER_ACTION_REBOOT) {
+        nret = setenv("CONTAINER_ACTION", "reboot", 1);
+        if (nret != SHIM_OK) {
+            write_message(g_log_fd, WARN_MSG, "set reboot action failed:%d", SHIM_SYS_ERR(errno));
+        }
+    } else if (*status == CONTAINER_ACTION_SHUTDOWN) {
+        nret = setenv("CONTAINER_ACTION", "shutdown", 1);
+        if (nret != SHIM_OK) {
+            write_message(g_log_fd, WARN_MSG, "set shutdown action failed:%d", SHIM_SYS_ERR(errno));
+        }
+    }
+    return SHIM_OK;
+}
+
+/*
+ * If timeout <= 0, blocking wait in reap_container.
+ * If timeout > 0, non-blocking wait pid with timeout.
+ */
+static int wait_container_process_with_timeout(process_t *p, const unsigned int timeout, int *status)
+{
+    int ret = SHIM_ERR;
+
+    if (timeout > 0) {
+        return waitpid_with_timeout(p->ctr_pid, status, timeout);
+    }
+
+    for (;;) {
+        ret = reap_container(p->ctr_pid, status);
         if (ret == SHIM_OK) {
-            exit_shim = true;
-            if (status == CONTAINER_ACTION_REBOOT) {
+            if (*status == CONTAINER_ACTION_REBOOT) {
                 ret = setenv("CONTAINER_ACTION", "reboot", 1);
                 if (ret != SHIM_OK) {
                     write_message(g_log_fd, WARN_MSG, "set reboot action failed:%d", SHIM_SYS_ERR(errno));
                 }
-            } else if (status == CONTAINER_ACTION_SHUTDOWN) {
+            } else if (*status == CONTAINER_ACTION_SHUTDOWN) {
                 ret = setenv("CONTAINER_ACTION", "shutdown", 1);
                 if (ret != SHIM_OK) {
                     write_message(g_log_fd, WARN_MSG, "set shutdown action failed:%d", SHIM_SYS_ERR(errno));
                 }
             }
-        } else if (ret == SHIM_ERR_WAIT) {
+            return SHIM_OK;
+        }
+
+        if (ret == SHIM_ERR_WAIT) {
             /* avoid thread entering the infinite loop */
             usleep(1000);
+        }
+
+        if (ret == SHIM_ERR) {
+            // if the child process is not expected, retry.
             continue;
         }
-        if (exit_shim) {
-            process_kill_all(p);
+    }
 
-            // wait atmost 120 seconds
-            DO_RETRY_CALL(120, 1000000, nret, try_wait_all_child);
-            if (nret != 0) {
-                write_message(g_log_fd, ERR_MSG, "Failed to wait all child after 120 seconds");
-            }
+}
 
-            process_delete(p);
-            if (p->exit_fd > 0) {
-                (void)write_nointr(p->exit_fd, &status, sizeof(int));
-            }
-            // wait for task_console_accept thread termination. In order to make sure that
-            // the io_copy connection is established and io_thread is not used by multiple threads.
-            if (p->state->terminal) {
-                if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
-                    write_message(g_log_fd, ERR_MSG, "Failed to get realtime");
-                    nret = pthread_join(tid_accept, NULL);
-                } else {
-                    // Set the maximum waiting time to 60s to prevent stuck.
-                    ts.tv_sec += 60;
-                    nret = pthread_timedjoin_np(tid_accept, NULL, &ts);
-                }
+int process_signal_handle_routine(process_t *p, const pthread_t tid_accept, const unsigned int timeout)
+{
+    int i;
+    int nret = 0;
+    int ret = 0;
+    int status = 0;
+    struct timespec ts;
 
-                if (nret != 0) {
-                    write_message(g_log_fd, ERR_MSG, "Failed to join task_console_accept thread");
-                }
-            }
-
-            for (i = 0; i < 3; i++) {
-                destroy_io_thread(p, i);
-            }
-            return status;
+    ret = wait_container_process_with_timeout(p, timeout, &status);
+    if (ret == SHIM_ERR_TIMEOUT) {
+        // kill container process to ensure process_kill_all effective
+        nret = kill(p->ctr_pid, SIGKILL);
+        if (nret < 0 && errno != ESRCH) {
+            write_message(g_log_fd, ERR_MSG, "Can not kill process (pid=%d) with SIGKILL", p->ctr_pid);
+            exit(EXIT_FAILURE);
         }
     }
+
+    process_kill_all(p);
+
+    // wait atmost 120 seconds
+    DO_RETRY_CALL(120, 1000000, nret, try_wait_all_child);
+    if (nret != 0) {
+        write_message(g_log_fd, ERR_MSG, "Failed to wait all child after 120 seconds");
+    }
+
+    process_delete(p);
+    if (p->exit_fd > 0) {
+        (void)write_nointr(p->exit_fd, &status, sizeof(int));
+    }
+    // wait for task_console_accept thread termination. In order to make sure that
+    // the io_copy connection is established and io_thread is not used by multiple threads.
+    if (p->state->terminal) {
+        if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+            write_message(g_log_fd, ERR_MSG, "Failed to get realtime");
+            nret = pthread_join(tid_accept, NULL);
+        } else {
+            // Set the maximum waiting time to 60s to prevent stuck.
+            ts.tv_sec += 60;
+            nret = pthread_timedjoin_np(tid_accept, NULL, &ts);
+        }
+
+        if (nret != 0) {
+            write_message(g_log_fd, ERR_MSG, "Failed to join task_console_accept thread");
+        }
+    }
+
+    for (i = 0; i < 3; i++) {
+        destroy_io_thread(p, i);
+    }
+
+    if (ret == SHIM_ERR_TIMEOUT) {
+        write_message(g_log_fd, INFO_MSG, "Wait %d timeout", p->ctr_pid);
+        exit(SHIM_EXIT_TIMEOUT);
+    }
+    return status;
+
 }
