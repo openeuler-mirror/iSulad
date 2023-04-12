@@ -261,36 +261,80 @@ free_out:
     return ret;
 }
 
+// tweak_all_type_capabilities can tweak all support type capabilities by adding or dropping capabilities
+// based on the basic capabilities.
+static int tweak_all_type_capabilities(defs_process_capabilities **caps, const char **adds, size_t adds_len,
+                                       const char **drops, size_t drops_len)
+{
+    int ret = 0;
+    ret = tweak_capabilities(&((*caps)->bounding), &((*caps)->bounding_len), adds, adds_len, drops, drops_len);
+    if (ret != 0) {
+        ERROR("Failed to tweak bounding capabilities");
+        return -1;
+    }
+
+    ret = tweak_capabilities(&((*caps)->permitted), &((*caps)->permitted_len), adds, adds_len, drops, drops_len);
+    if (ret != 0) {
+        ERROR("Failed to tweak permitted capabilities");
+        return -1;
+    }
+
+    ret = tweak_capabilities(&((*caps)->effective), &((*caps)->effective_len), adds, adds_len, drops, drops_len);
+    if (ret != 0) {
+        ERROR("Failed to tweak effective capabilities");
+        return -1;
+    }
+    return ret;
+}
+
+static void clear_caps(defs_process_capabilities **caps)
+{
+    util_free_array_by_len((*caps)->bounding, (*caps)->bounding_len);
+    (*caps)->bounding_len = 0;
+    (*caps)->bounding = NULL;
+
+    util_free_array_by_len((*caps)->permitted, (*caps)->permitted_len);
+    (*caps)->permitted_len = 0;
+    (*caps)->permitted = NULL;
+
+    util_free_array_by_len((*caps)->effective, (*caps)->effective_len);
+    (*caps)->effective_len = 0;
+    (*caps)->effective = NULL;
+}
+
 int refill_oci_process_capabilities(defs_process_capabilities **caps, const char **src_caps, size_t src_caps_len)
 {
     int ret = 0;
-    size_t i = 0;
 
     if (*caps == NULL) {
         *caps = util_common_calloc_s(sizeof(defs_process_capabilities));
         if (*caps == NULL) {
-            ret = -1;
-            goto out;
+            return -1;
         }
     }
 
-    if ((*caps)->bounding != NULL) {
-        // free current capabilities
-        for (i = 0; i < ((*caps)->bounding_len); i++) {
-            free((*caps)->bounding[i]);
-            (*caps)->bounding[i] = NULL;
-        }
-        free((*caps)->bounding);
-        (*caps)->bounding = NULL;
-    }
-    (*caps)->bounding_len = 0;
+    // clear current capabilities
+    clear_caps(caps);
 
     // copy capabilities
     ret = copy_capabilities(&((*caps)->bounding), &((*caps)->bounding_len), src_caps, src_caps_len);
     if (ret != 0) {
-        ERROR("Failed to copy all capabilities");
+        ERROR("Failed to copy all bounding capabilities");
+        return -1;
     }
-out:
+
+    ret = copy_capabilities(&((*caps)->permitted), &((*caps)->permitted_len), src_caps, src_caps_len);
+    if (ret != 0) {
+        ERROR("Failed to copy all permitted capabilities");
+        return -1;
+    }
+
+    ret = copy_capabilities(&((*caps)->effective), &((*caps)->effective_len), src_caps, src_caps_len);
+    if (ret != 0) {
+        ERROR("Failed to copy all effective capabilities");
+        return -1;
+    }
+
     return ret;
 }
 
@@ -823,25 +867,21 @@ int merge_caps(oci_runtime_spec *oci_spec, const char **adds, size_t adds_len, c
 
     ret = make_sure_oci_spec_process_capabilities(oci_spec);
     if (ret < 0) {
-        goto out;
+        return ret;
     }
 
     if (adds_len > LIST_SIZE_MAX || drops_len > LIST_SIZE_MAX) {
         ERROR("Too many capabilities to add or drop, the limit is %lld", LIST_SIZE_MAX);
         isulad_set_error_message("Too many capabilities to add or drop, the limit is %d", LIST_SIZE_MAX);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-    ret = tweak_capabilities(&oci_spec->process->capabilities->bounding, &oci_spec->process->capabilities->bounding_len,
-                             adds, adds_len, drops, drops_len);
+    ret = tweak_all_type_capabilities(&oci_spec->process->capabilities, adds, adds_len, drops, drops_len);
     if (ret != 0) {
-        ERROR("Failed to tweak capabilities");
-        ret = -1;
-        goto out;
+        ERROR("Failed to tweak all type capabilities");
+        return -1;
     }
 
-out:
     return ret;
 }
 
