@@ -30,15 +30,19 @@
 #include <sys/xattr.h>
 #include <unistd.h>
 
+#include <isula_libutils/log.h>
+#include <isula_libutils/go_crc64.h>
+#include <isula_libutils/storage_entry.h>
+
 #include "error.h"
 #include "io_wrapper.h"
-#include "isula_libutils/log.h"
 #include "map.h"
 #include "path.h"
 #include "stdbool.h"
 #include "utils.h"
 #include "utils_file.h"
 #include "utils_string.h"
+#include "buffer.h"
 
 struct archive;
 struct archive_entry;
@@ -1411,4 +1415,234 @@ free_out:
     free(ctx);
 
     return ret;
+}
+
+
+static void free_archive_read(struct archive *read_a)
+{
+    if (read_a == NULL) {
+        return;
+    }
+    archive_read_close(read_a);
+    archive_read_free(read_a);
+}
+
+#define READ_BLOCK_SIZE 10240
+
+static struct archive *create_archive_read(int fd)
+{
+    int nret = 0;
+    struct archive *ret = NULL;
+
+    ret = archive_read_new();
+    if (ret == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+    nret = archive_read_support_filter_all(ret);
+    if (nret != 0) {
+        ERROR("archive read support compression all failed");
+        goto err_out;
+    }
+    nret = archive_read_support_format_all(ret);
+    if (nret != 0) {
+        ERROR("archive read support format all failed");
+        goto err_out;
+    }
+    nret = archive_read_open_fd(ret, fd, READ_BLOCK_SIZE);
+    if (nret != 0) {
+        ERROR("archive read open file failed: %s", archive_error_string(ret));
+        goto err_out;
+    }
+
+    return ret;
+err_out:
+    free_archive_read(ret);
+    return NULL;
+}
+
+typedef int (*archive_entry_cb_t)(struct archive_entry *entry, struct archive *ar, int32_t position, Buffer *json_buf,
+                                  int64_t *size);
+
+static void free_storage_entry_data(storage_entry *entry)
+{
+    if (entry->name != NULL) {
+        free(entry->name);
+        entry->name = NULL;
+    }
+    if (entry->payload != NULL) {
+        free(entry->payload);
+        entry->payload = NULL;
+    }
+}
+
+static int caculate_playload(struct archive *ar, char **result)
+{
+    int r = 0;
+    unsigned char *block_buf = NULL;
+    size_t block_size = 0;
+#if ARCHIVE_VERSION_NUMBER >= 3000000
+    int64_t block_offset = 0;
+#else
+    off_t block_offset = 0;
+#endif
+    int ret = 0;
+    const isula_crc_table_t *ctab = NULL;
+    uint64_t crc = 0;
+    // max crc bits is 8
+    unsigned char sum_data[8] = { 0 };
+    // add \0 at crc bits last, so need a 9 bits array
+    unsigned char tmp_data[9] = { 0 };
+    bool empty = true;
+
+    ctab = new_isula_crc_table(ISO_POLY);
+
+    if (ctab == NULL) {
+        return -1;
+    }
+
+    for (;;) {
+        r = archive_read_data_block(ar, (const void **)&block_buf, &block_size, &block_offset);
+        if (r == ARCHIVE_EOF) {
+            break;
+        }
+        if (r != ARCHIVE_OK) {
+            ERROR("Read archive failed");
+            ret = -1;
+            goto out;
+        }
+        if (!isula_crc_update(ctab, &crc, block_buf, block_size)) {
+            ERROR("Do crc update failed");
+            ret = -1;
+            goto out;
+        }
+        empty = false;
+    }
+    if (empty) {
+        goto out;
+    }
+
+    isula_crc_sum(crc, sum_data);
+    // max crc bits is 8
+    for (r = 0; r < 8; r++) {
+        tmp_data[r] = sum_data[r];
+    }
+    ret = util_base64_encode(tmp_data, 8, result);
+    if (ret != 0) {
+        ERROR("Do encode failed");
+    }
+
+out:
+    return ret;
+}
+
+static int archive_entry_parse(struct archive_entry *entry, struct archive *ar, int32_t position, Buffer *json_buf,
+                               int64_t *size)
+{
+    storage_entry sentry = { 0 };
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, stderr };
+    parser_error jerr = NULL;
+    char *data = NULL;
+    int ret = -1;
+    ssize_t nret = 0;
+
+    // get entry information: name, size
+    sentry.type = 1;
+    sentry.name = util_strdup_s(archive_entry_pathname(entry));
+    sentry.size = archive_entry_size(entry);
+    sentry.position = position;
+    // caculate playload
+    if (caculate_playload(ar, &sentry.payload) != 0) {
+        ERROR("Caculate playload failed");
+        goto out;
+    }
+
+    data = storage_entry_generate_json(&sentry, &ctx, &jerr);
+    if (data == NULL) {
+        ERROR("parse entry failed: %s", jerr);
+        goto out;
+    }
+    nret = buffer_append(json_buf, data, strlen(data));
+    if (nret != 0) {
+        goto out;
+    }
+    nret = buffer_append(json_buf, "\n", 1);
+    if (nret != 0) {
+        goto out;
+    }
+
+    *size = *size + sentry.size;
+
+    ret = 0;
+out:
+    free_storage_entry_data(&sentry);
+    free(data);
+    free(jerr);
+    return ret;
+}
+
+static int foreach_archive_entry(archive_entry_cb_t cb, int fd, const char *dist, int64_t *size)
+{
+    const size_t entry_init_buf_size = 4096;
+    int ret = -1;
+    int nret = 0;
+    struct archive *read_a = NULL;
+    struct archive_entry *entry = NULL;
+    int32_t position = 0;
+    Buffer *json_buf = NULL;
+
+    // we need reset fd point to first position
+    if (lseek(fd, 0, SEEK_SET) == -1) {
+        ERROR("can not reposition of archive file");
+        return -1;
+    }
+    json_buf = buffer_alloc(entry_init_buf_size);
+    if (json_buf == NULL) {
+        ERROR("Failed to malloc output_buffer");
+        return -1;
+    }
+
+    read_a = create_archive_read(fd);
+    if (read_a == NULL) {
+        goto out;
+    }
+
+    for (;;) {
+        nret = archive_read_next_header(read_a, &entry);
+        if (nret == ARCHIVE_EOF) {
+            DEBUG("read entry: %d", position);
+            break;
+        }
+        if (nret != ARCHIVE_OK) {
+            ERROR("archive read header failed: %s", archive_error_string(read_a));
+            goto out;
+        }
+        nret = cb(entry, read_a, position, json_buf, size);
+        if (nret != 0) {
+            goto out;
+        }
+        position++;
+    }
+    nret = util_atomic_write_file(dist, json_buf->contents, json_buf->bytes_used, SECURE_CONFIG_FILE_MODE, true);
+    if (nret != 0) {
+        ERROR("save tar split failed");
+        goto out;
+    }
+
+    ret = 0;
+out:
+    buffer_free(json_buf);
+    free_archive_read(read_a);
+    return ret;
+}
+
+// copy oci layer tar split archive file to dist path and return ahchive uncompress size
+int archive_copy_oci_tar_split_and_ret_size(int src_fd, const char *dist_file, int64_t *ret_size)
+{
+    if (src_fd < 0 || dist_file == NULL || ret_size == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    return foreach_archive_entry(archive_entry_parse, src_fd, dist_file, ret_size);
 }

@@ -19,6 +19,7 @@ add_executable(${DRIVER_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map/rb_tree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/tar/util_archive.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/buffer/buffer.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/selinux_label.c

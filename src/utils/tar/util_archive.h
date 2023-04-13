@@ -16,6 +16,7 @@
 #define UTILS_TAR_UTIL_ARCHIVE_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define ARCHIVE_BLOCK_SIZE (32 * 1024)
 
@@ -55,6 +56,8 @@ int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, cons
 int archive_chroot_untar_stream(const struct io_read_wrapper *content, const char *chroot_dir,
                                 const char *untar_dir, const char *src_base, const char *dst_base,
                                 char **errmsg);
+
+int archive_copy_oci_tar_split_and_ret_size(int src_fd, const char *dist_file, int64_t *ret_size);
 
 #ifdef __cplusplus
 }
