@@ -221,6 +221,17 @@ void GetPodIP(const std::string &nsenterPath, const std::string &netnsPath, cons
               std::vector<std::string> &getIPs, Errors &error);
 
 const std::string &GetInterfaceName();
+
+struct NetworkInterfaceStats {
+    std::string name;
+    uint64_t rxBytes;
+    uint64_t rxErrors;
+    uint64_t txBytes;
+    uint64_t txErrors;
+};
+
+void GetPodNetworkStats(const std::string &nsenterPath, const std::string &netnsPath, const std::string &interfaceName,
+                        struct NetworkInterfaceStats &stats, Errors &error);
 } // namespace Network
 
 #endif

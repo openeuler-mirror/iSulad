@@ -1301,6 +1301,413 @@ cleanup:
     free_container_list_response(response);
 }
 
+void PodSandboxManagerService::GetPodSandboxCgroupMetrics(const container_inspect *inspectData, 
+                                                          cgroup_metrics_t &cgroupMetrics, Errors &error)
+{
+    int nret { 0 };
+
+    if (inspectData == nullptr || inspectData->host_config == nullptr) {
+        error.SetError("Failed to retrieve inspect data");
+        return;
+    }
+
+    auto cgroupParent = inspectData->host_config->cgroup_parent;
+    if (cgroupParent == nullptr || strlen(cgroupParent) == 0) {
+        error.Errorf("None cgroup parent");
+        return;
+    }
+
+    auto cgroupVersion = common_get_cgroup_version();
+    if (cgroupVersion < 0) {
+        error.Errorf("Invalid cgroup version");
+        return;
+    }
+
+    if (cgroupVersion == CGROUP_VERSION_1) {
+        nret = common_get_cgroup_v1_metrics(cgroupParent, &cgroupMetrics);
+    } else {
+        // todo: get cgroup v2 metrics
+    }
+
+    if (nret != 0) {
+        error.Errorf("Failed to get cgroup metrics");
+    }
+}
+
+auto PodSandboxManagerService::GetNsenterPath(Errors &error) -> std::string
+{
+    char *err { nullptr };
+
+    auto nsenterPath = look_path(std::string("nsenter").c_str(), &err);
+    if (nsenterPath == nullptr) {
+        error.SetError(err);
+        free(err);
+        return std::string();
+    }
+
+    auto path = std::string(nsenterPath);
+    free(nsenterPath);
+    return path;
+}
+
+void PodSandboxManagerService::GetPodSandboxNetworkMetrics(const container_inspect *inspectData,
+                                                           std::map<std::string, std::string> &annotations,
+                                                           std::vector<Network::NetworkInterfaceStats> &netMetrics,
+                                                           Errors &error)
+{
+    Errors tmpErr;
+
+    auto nsenterPath = GetNsenterPath(tmpErr);
+    if (tmpErr.NotEmpty()) {
+        error.Errorf("Failed to get nsenter: %s", tmpErr.GetCMessage());
+        return;
+    }
+
+    std::string netnsPath = GetSandboxKey(inspectData);
+    if (netnsPath.size() == 0) {
+        error.SetError("Failed to get network namespace path");
+        return;
+    }
+
+    Network::NetworkInterfaceStats netStats;
+    Network::GetPodNetworkStats(nsenterPath, netnsPath, Network::DEFAULT_NETWORK_INTERFACE_NAME, netStats, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        error.Errorf("Failed to get network stats: %s", tmpErr.GetCMessage());
+        return;
+    }
+    netMetrics.push_back(netStats);
+
+    auto networks = CRIHelpers::GetNetworkPlaneFromPodAnno(annotations, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        WARN("Failed to get network plane: %s", tmpErr.GetCMessage());
+        return;
+    }
+    if (networks == nullptr || networks->len == 0 || networks->items == nullptr) {
+        // none extral networks
+        return;
+    }
+
+    for (size_t i = 0; i < networks->len; i++) {
+        if (networks->items[i] == nullptr || networks->items[i]->interface == nullptr) {
+            continue;
+        }
+
+        Network::NetworkInterfaceStats netStats;
+        Network::GetPodNetworkStats(nsenterPath, netnsPath, std::string(networks->items[i]->interface), netStats, tmpErr);
+        if (tmpErr.NotEmpty()) {
+            WARN("Failed to get network stats: %s", tmpErr.GetCMessage());
+            tmpErr.Clear();
+            continue;
+        }
+        netMetrics.push_back(netStats);
+    }
+}
+
+void PodSandboxManagerService::PackagePodSandboxStatsAttributes(
+    const std::string &id, std::unique_ptr<runtime::v1alpha2::PodSandboxStats> &podStatsPtr, Errors &error)
+{
+    auto status = PodSandboxStatus(id, error);
+    if (error.NotEmpty()) {
+        return;
+    }
+
+    podStatsPtr->mutable_attributes()->set_id(id);
+    if (status->has_metadata()) {
+        std::unique_ptr<runtime::v1alpha2::PodSandboxMetadata> metadata(
+            new (std::nothrow) runtime::v1alpha2::PodSandboxMetadata(status->metadata()));
+        if (metadata == nullptr) {
+            error.SetError("Out of memory");
+            return;
+        }
+        podStatsPtr->mutable_attributes()->set_allocated_metadata(metadata.release());
+    }
+    if (status->labels_size() > 0) {
+        auto labels = podStatsPtr->mutable_attributes()->mutable_labels();
+        *labels = status->labels();
+    }
+    if (status->annotations_size() > 0) {
+        auto annotations = podStatsPtr->mutable_attributes()->mutable_annotations();
+        *annotations = status->annotations();
+    }
+}
+
+auto PodSandboxManagerService::GetAvailableBytes(const uint64_t &memoryLimit, const uint64_t &workingSetBytes)
+    -> uint64_t
+{
+    // maxMemorySize is define in
+    // cadvisor/blob/2b6fbacac7598e0140b5bc8428e3bdd7d86cf5b9/metrics/prometheus.go#L1969-L1971
+    const uint64_t maxMemorySize = 1UL <<62;
+
+    if (memoryLimit < maxMemorySize && memoryLimit > workingSetBytes) {
+        return memoryLimit - workingSetBytes;
+    }
+
+    return 0;
+}
+
+void PodSandboxManagerService::PackagePodSandboxContainerStats(
+    const std::string &id,
+    const std::unique_ptr<ContainerManagerService> &containerManager, 
+    std::unique_ptr<runtime::v1alpha2::PodSandboxStats> &podStatsPtr, Errors &error)
+{
+    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> containerStats;
+    runtime::v1alpha2::ContainerStatsFilter filter;
+    
+    filter.set_pod_sandbox_id(id);
+    containerManager->ListContainerStats(&filter, &containerStats, error);
+    if (error.NotEmpty()) {
+        error.Errorf("Failed to list container stats: %s", error.GetCMessage());
+        return;
+    }
+
+    for (auto &itor : containerStats) {
+        auto container = podStatsPtr->mutable_linux()->add_containers();
+        if (container == nullptr) {
+            ERROR("Out of memory");
+            error.SetError("Out of memory");
+            return;
+        }
+        *container = *itor;
+    }
+}
+
+void PodSandboxManagerService::PodSandboxStatsToGRPC(const std::string &id, const cgroup_metrics_t &cgroupMetrics,
+                                                     const std::vector<Network::NetworkInterfaceStats> &netMetrics,
+                                                     const std::unique_ptr<ContainerManagerService> &containerManager,
+                                                     std::unique_ptr<runtime::v1alpha2::PodSandboxStats> &podStats,
+                                                     Errors &error)
+{
+    std::unique_ptr<runtime::v1alpha2::PodSandboxStats> podStatsPtr(
+        new (std::nothrow) runtime::v1alpha2::PodSandboxStats);
+    if (podStatsPtr == nullptr) {
+        ERROR("Out of memory");
+        error.SetError("Out of memory");
+        return;
+    }
+
+    PackagePodSandboxStatsAttributes(id, podStatsPtr, error);
+    if (error.NotEmpty()) {
+        return;
+    }
+
+    int64_t timestamp = util_get_now_time_nanos();
+    // CPU
+    auto cpu = podStatsPtr->mutable_linux()->mutable_cpu();
+    cpu->set_timestamp(timestamp);
+    cpu->mutable_usage_core_nano_seconds()->set_value(cgroupMetrics.cgcpu_metrics.cpu_use_nanos);
+    // todo
+    // cpu->mutable_usage_nano_cores()->set_value(getNanoCores());
+
+    // Memory
+    auto memory = podStatsPtr->mutable_linux()->mutable_memory();
+    uint64_t workingSetBytes = 0;
+    if (cgroupMetrics.cgmem_metrics.mem_used > cgroupMetrics.cgmem_metrics.total_inactive_file) {
+        workingSetBytes = cgroupMetrics.cgmem_metrics.mem_used - cgroupMetrics.cgmem_metrics.total_inactive_file;
+    }
+    uint64_t availableBytes = GetAvailableBytes(cgroupMetrics.cgmem_metrics.mem_limit, workingSetBytes);
+
+    memory->set_timestamp(timestamp);
+    memory->mutable_working_set_bytes()->set_value(workingSetBytes);
+    memory->mutable_available_bytes()->set_value(availableBytes);
+    memory->mutable_usage_bytes()->set_value(cgroupMetrics.cgmem_metrics.mem_used);
+    memory->mutable_rss_bytes()->set_value(cgroupMetrics.cgmem_metrics.total_rss);
+    memory->mutable_page_faults()->set_value(cgroupMetrics.cgmem_metrics.total_pgfault);
+    memory->mutable_major_page_faults()->set_value(cgroupMetrics.cgmem_metrics.total_pgmajfault);
+
+    // Network
+    if (netMetrics.size() > 0) {
+        auto network = podStatsPtr->mutable_linux()->mutable_network();
+        network->set_timestamp(timestamp);
+        network->mutable_default_interface()->set_name(netMetrics[0].name);
+        network->mutable_default_interface()->mutable_rx_bytes()->set_value(netMetrics[0].rxBytes);
+        network->mutable_default_interface()->mutable_rx_errors()->set_value(netMetrics[0].rxErrors);
+        network->mutable_default_interface()->mutable_tx_bytes()->set_value(netMetrics[0].txBytes);
+        network->mutable_default_interface()->mutable_tx_errors()->set_value(netMetrics[0].txErrors);
+
+        for (size_t i = 1; i < netMetrics.size(); i++) {
+            auto extra = network->add_interfaces();
+            extra->set_name(netMetrics[i].name);
+            extra->mutable_rx_bytes()->set_value(netMetrics[i].rxBytes);
+            extra->mutable_rx_errors()->set_value(netMetrics[i].rxErrors);
+            extra->mutable_tx_bytes()->set_value(netMetrics[i].txBytes);
+            extra->mutable_tx_errors()->set_value(netMetrics[i].txErrors);
+        }
+    }
+
+    // Process
+    auto process = podStatsPtr->mutable_linux()->mutable_process();
+    process->set_timestamp(timestamp);
+    process->mutable_process_count()->set_value(cgroupMetrics.cgpids_metrics.pid_current);
+
+    PackagePodSandboxContainerStats(id, containerManager, podStatsPtr, error);
+    if (error.NotEmpty()) {
+        return;
+    }
+
+    podStats = move(podStatsPtr);
+    return;
+}
+
+auto PodSandboxManagerService::PodSandboxStats(const std::string &podSandboxID,
+                                               const std::unique_ptr<ContainerManagerService> &containerManager,
+                                               Errors &error) -> std::unique_ptr<runtime::v1alpha2::PodSandboxStats>
+{
+    Errors tmpErr;
+    container_inspect *inspectData { nullptr };
+    cgroup_metrics_t cgroupMetrics { 0 };
+    std::vector<Network::NetworkInterfaceStats> netMetrics;
+    std::map<std::string, std::string> annotations;
+    std::unique_ptr<runtime::v1alpha2::PodSandboxStats> podStats { nullptr };
+
+    // get sandbox id
+    if (podSandboxID.empty()) {
+        ERROR("Empty pod sandbox id");
+        error.SetError("Empty pod sandbox id");
+        return nullptr;
+    }
+    std::string realSandboxID = CRIHelpers::GetRealContainerOrSandboxID(m_cb, podSandboxID, true, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), tmpErr.GetCMessage());
+        error.Errorf("Failed to find sandbox id %s", podSandboxID.c_str());
+        return nullptr;
+    }
+
+    inspectData = CRIHelpers::InspectContainer(realSandboxID, tmpErr, true);
+    if (tmpErr.NotEmpty()) {
+        ERROR("Failed to inspect container %s: %s", realSandboxID.c_str(), tmpErr.GetCMessage());
+        error.Errorf("Failed to inspect container %s", realSandboxID.c_str());
+        return nullptr;
+    }
+
+    auto status = PodSandboxStatus(realSandboxID, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        ERROR("Failed to get podsandbox %s status: %s", realSandboxID.c_str(), tmpErr.GetCMessage());
+        error.Errorf("Failed to get podsandbox %s status", realSandboxID.c_str());
+        goto out;
+    }
+    CRIHelpers::ProtobufAnnoMapToStd(status->annotations(), annotations);
+
+    GetPodSandboxCgroupMetrics(inspectData, cgroupMetrics, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        ERROR("Failed to get cgroup metrics of sandbox id %s: %s", podSandboxID.c_str(), tmpErr.GetCMessage());
+        error.Errorf("Failed to get cgroup metrics of sandbox id %s", podSandboxID.c_str());
+        goto out;
+    }
+
+    GetPodSandboxNetworkMetrics(inspectData, annotations, netMetrics, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        WARN("Failed to get network metrics of sandbox id %s: %s", podSandboxID.c_str(), tmpErr.GetCMessage());
+        tmpErr.Clear();
+    }
+
+    PodSandboxStatsToGRPC(realSandboxID, cgroupMetrics, netMetrics, containerManager, podStats, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        ERROR("Failed to set PodSandboxStats: %s", tmpErr.GetCMessage());
+        error.Errorf("Failed to set PodSandboxStats");
+        goto out;
+    }
+
+out:
+    free_container_inspect(inspectData);
+    return podStats;
+}
+
+void PodSandboxManagerService::GetFilterPodSandbox(const runtime::v1alpha2::PodSandboxStatsFilter *filter,
+                                                   std::vector<std::string> &podSandboxIDs, Errors &error)
+{
+    int ret = 0;
+    container_list_request *request { nullptr };
+    container_list_response *response { nullptr };
+
+    if (m_cb == nullptr || m_cb->container.list == nullptr) {
+        error.SetError("Unimplemented callback list");
+        return;
+    }
+
+    request = (container_list_request *)util_common_calloc_s(sizeof(container_list_request));
+    if (request == nullptr) {
+        error.SetError("Out of memory");
+        return;
+    }
+    request->filters = (defs_filters *)util_common_calloc_s(sizeof(defs_filters));
+    if (request->filters == nullptr) {
+        error.SetError("Out of memory");
+        goto cleanup;
+    }
+    // only get running pod metrics
+    request->all = false;
+
+    // add filter
+    if (CRIHelpers::FiltersAddLabel(request->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
+                                    CRIHelpers::Constants::CONTAINER_TYPE_LABEL_SANDBOX) != 0) {
+        error.Errorf("Failed to add label %s", CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY);
+        goto cleanup;
+    }
+    if (filter != nullptr) {
+        if (!filter->id().empty()) {
+            if (CRIHelpers::FiltersAdd(request->filters, "id", filter->id()) != 0) {
+                error.SetError("Failed to add label id");
+                goto cleanup;
+            }
+        }
+        for (auto &iter : filter->label_selector()) {
+            if (CRIHelpers::FiltersAddLabel(request->filters, iter.first, iter.second) != 0) {
+                error.Errorf("Failed to add label %s", iter.first.c_str());
+                goto cleanup;
+            }
+        }
+    }
+
+    ret = m_cb->container.list(request, &response);
+    if (ret != 0) {
+        if (response != nullptr && (response->errmsg != nullptr)) {
+            error.SetError(response->errmsg);
+        } else {
+            error.SetError("Failed to call list container callback");
+        }
+        goto cleanup;
+    }
+
+    for (size_t i = 0; i < response->containers_len; i++) {
+        podSandboxIDs.push_back(response->containers[i]->id);
+    }
+
+cleanup:
+    free_container_list_request(request);
+    free_container_list_response(response);
+}
+
+void PodSandboxManagerService::ListPodSandboxStats(const runtime::v1alpha2::PodSandboxStatsFilter *filter,
+                        const std::unique_ptr<ContainerManagerService> &containerManager,
+                        std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> *podsStats,
+                        Errors &error)
+{
+    std::vector<std::string> podSandboxIDs;
+
+    GetFilterPodSandbox(filter, podSandboxIDs, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to get podsandbox filter: %s", error.GetCMessage());
+        error.SetError("Failed to get podsandbox filter");
+        return;
+    }
+
+    if (podSandboxIDs.size() == 0) {
+        // none ready pods
+        return;
+    }
+
+    for (auto &id : podSandboxIDs) {
+        Errors tmpErr;
+        auto podStats = PodSandboxStats(id, containerManager, tmpErr);
+        if (podStats == nullptr) {
+            WARN("Failed to get podSandbox %s stats: %s", id.c_str(), tmpErr.GetCMessage());
+            continue;
+        }
+
+        podsStats->push_back(move(podStats));
+    }
+}
+
 void PodSandboxManagerService::PortForward(const runtime::v1alpha2::PortForwardRequest &req,
                                            runtime::v1alpha2::PortForwardResponse *resp, Errors &error)
 {

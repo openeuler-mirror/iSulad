@@ -29,6 +29,8 @@
 #include "isula_libutils/container_config.h"
 #include "isula_libutils/container_inspect.h"
 #include "checkpoint_handler.h"
+#include "cgroup.h"
+#include "cri_container_manager_service.h"
 
 namespace CRI {
 class PodSandboxManagerService {
@@ -56,6 +58,15 @@ public:
 
     void ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
                         std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods, Errors &error);
+
+    auto PodSandboxStats(const std::string &podSandboxID,
+                         const std::unique_ptr<ContainerManagerService> &containerManager,
+                         Errors &error) -> std::unique_ptr<runtime::v1alpha2::PodSandboxStats>;
+
+    void ListPodSandboxStats(const runtime::v1alpha2::PodSandboxStatsFilter *filter,
+                             const std::unique_ptr<ContainerManagerService> &containerManager,
+                             std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> *podsStats,
+                             Errors &error);
 
     void PortForward(const runtime::v1alpha2::PortForwardRequest &req, runtime::v1alpha2::PortForwardResponse *resp,
                      Errors &error);
@@ -123,6 +134,27 @@ private:
                               bool filterOutReadySandboxes, Errors &error);
     auto GenerateUpdateNetworkSettingsReqest(const std::string &id, const std::string &json, Errors &error)
     -> container_update_network_settings_request *;
+    auto GetNsenterPath(Errors &error) -> std::string;
+    auto GetAvailableBytes(const uint64_t &memoryLimit, const uint64_t &workingSetBytes) -> uint64_t;
+    void GetPodSandboxCgroupMetrics(const container_inspect *inspectData, cgroup_metrics_t &cgroupMetrics,
+                                    Errors &error);
+    void GetPodSandboxNetworkMetrics(const container_inspect *inspectData,
+                                     std::map<std::string, std::string> &annotations,
+                                     std::vector<Network::NetworkInterfaceStats> &netMetrics, Errors &error);
+    void PackagePodSandboxStatsAttributes(const std::string &id, 
+                                          std::unique_ptr<runtime::v1alpha2::PodSandboxStats> &podStatsPtr,
+                                          Errors &error);
+    void PackagePodSandboxContainerStats(const std::string &id,
+                                         const std::unique_ptr<ContainerManagerService> &containerManager,
+                                         std::unique_ptr<runtime::v1alpha2::PodSandboxStats> &podStatsPtr,
+                                         Errors &error);
+    void PodSandboxStatsToGRPC(const std::string &id, const cgroup_metrics_t &cgroupMetrics,
+                               const std::vector<Network::NetworkInterfaceStats> &netMetrics,
+                               const std::unique_ptr<ContainerManagerService> &containerManager,
+                               std::unique_ptr<runtime::v1alpha2::PodSandboxStats> &podStats,
+                               Errors &error);
+    void GetFilterPodSandbox(const runtime::v1alpha2::PodSandboxStatsFilter *filter,
+                             std::vector<std::string> &podSandboxIDs, Errors &error);
 
 private:
     std::string m_podSandboxImage;

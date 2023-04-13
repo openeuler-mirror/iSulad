@@ -76,6 +76,13 @@ public:
     virtual void ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
                                 std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods, Errors &error) = 0;
 
+    virtual auto PodSandboxStats(const std::string &podSandboxID,
+                                 Errors &error) -> std::unique_ptr<runtime::v1alpha2::PodSandboxStats> = 0;
+
+    virtual void ListPodSandboxStats(const runtime::v1alpha2::PodSandboxStatsFilter *filter,
+                                     std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> *podsStats,
+                                     Errors &error) = 0;
+
     virtual void UpdateContainerResources(const std::string &containerID,
                                           const runtime::v1alpha2::LinuxContainerResources &resources, Errors &error) = 0;
 

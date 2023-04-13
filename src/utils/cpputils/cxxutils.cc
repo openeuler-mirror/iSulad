@@ -28,6 +28,21 @@ std::vector<std::string> Split(const std::string &str, char delimiter)
     return ret_vec;
 }
 
+// more than one contiguous delimiter is considered as a single delimiter
+std::vector<std::string> SplitDropEmpty(const std::string &str, char delimiter)
+{
+    std::vector<std::string> ret_vec;
+    std::string tmpstr;
+    std::istringstream istream(str);
+    while (std::getline(istream, tmpstr, delimiter)) {
+        if (tmpstr.empty()) {
+            continue;
+        }
+        ret_vec.push_back(tmpstr);
+    }
+    return ret_vec;
+}
+
 // Join concatenates the elements of a to create a single string. The separator string
 // sep is placed between elements in the resulting string.
 std::string StringsJoin(const std::vector<std::string> &vec, const std::string &sep)
@@ -36,6 +51,21 @@ std::string StringsJoin(const std::vector<std::string> &vec, const std::string &
         return a + (a.length() > 0 ? sep : "") + b;
     };
     return std::accumulate(vec.begin(), vec.end(), std::string(), func);
+}
+
+std::string StringTrim(const std::string &str)
+{
+    auto pos1 = str.find_first_not_of(' ');
+    if (pos1 == std::string::npos) {
+        return str;
+    }
+
+    auto pos2 = str.find_last_not_of(' ');
+    if (pos2 == std::string::npos) {
+        return str.substr(pos1);
+    }
+
+    return str.substr(pos1, pos2 - pos1 + 1);
 }
 
 } // namespace CXXUtils
