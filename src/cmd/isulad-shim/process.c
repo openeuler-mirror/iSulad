@@ -1353,6 +1353,12 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_accept, cons
         destroy_io_thread(p, i);
     }
 
+    if(!p->state->exec) {
+        // if log did not contain "/n", print remaind container log when exit isulad-shim
+        shim_write_container_log_file(p->terminal, STDID_OUT, NULL, 0);
+        shim_write_container_log_file(p->terminal, STDID_ERR, NULL, 0);
+    }
+
     if (ret == SHIM_ERR_TIMEOUT) {
         write_message(g_log_fd, INFO_MSG, "Wait %d timeout", p->ctr_pid);
         exit(SHIM_EXIT_TIMEOUT);
