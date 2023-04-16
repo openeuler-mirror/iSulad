@@ -40,64 +40,37 @@ typedef struct {
     int resize;
 } stdio_t;
 
-typedef struct fd_node {
-    int fd;
-    bool is_log;
-    struct fd_node *next;
-} fd_node_t;
-
-typedef struct {
-    int fd_from;
-    fd_node_t *fd_to;
-    int id;// 0,1,2,3
-    pthread_mutex_t mutex;
-} io_copy_t;
-
-typedef struct {
-    int epfd;
-    pthread_t tid;
-    pthread_attr_t attr;
-    sem_t sem_thd;
-    io_copy_t *ioc;
-    bool shutdown;
-    bool is_stdin;
-    log_terminal *terminal;// just used by stdout and stderr
-} io_thread_t;
-
 typedef struct process {
     char *id;
     char *bundle;
     char *runtime;
-    char *console_sock_path;// pty socket path
+    char *console_sock_path; // pty socket path
     int io_loop_fd;
     int exit_fd;
     int ctr_pid;
+    int sync_fd;
+    int listen_fd;
+    int recv_fd;
+    bool block_read;
     log_terminal *terminal;
-    stdio_t *stdio;// shim to on runtime side, in:r out/err: w
+    stdio_t *stdio; // shim to on runtime side, in:r out/err: w
     stdio_t *shim_io; // shim io on isulad side, in: w  out/err: r
-    io_thread_t *io_threads[4];// stdin,stdout,stderr,exec_resize
+    stdio_t *isulad_io; // isulad io, in:r out/err: w
     shim_client_process_state *state;
     sem_t sem_mainloop;
+    char *buf;
 } process_t;
-
-typedef struct {
-    int listen_fd;
-    process_t *p;
-} console_accept_t;
 
 typedef struct {
     int pid;
     int status;
 } process_exit_t;
 
-
-
 process_t* new_process(char *id, char *bundle, char *runtime);
 
-int open_io(process_t *p, pthread_t *tid_accept);
-int process_io_init(process_t *p);
+int process_io_start(process_t *p, pthread_t *tid_epoll);
 int create_process(process_t *p);
-int process_signal_handle_routine(process_t *p, const pthread_t tid_accept, const unsigned int timeout);
+int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const unsigned int timeout);
 
 #ifdef __cplusplus
 }

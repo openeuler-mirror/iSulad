@@ -6,6 +6,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad-shim/process.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad-shim/common.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad-shim/terminal.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad-shim/mainloop.c
     isulad-shim_ut.cc)
 
 target_include_directories(${EXE} PUBLIC

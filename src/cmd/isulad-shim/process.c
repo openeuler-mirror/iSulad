@@ -28,6 +28,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <sys/eventfd.h>
 #include <termios.h> // IWYU pragma: keep
 #include <sys/resource.h> // IWYU pragma: keep
 #include <isula_libutils/json_common.h>
@@ -37,6 +38,7 @@
 
 #include "common.h"
 #include "terminal.h"
+#include "mainloop.h"
 
 #define MAX_EVENTS 100
 #define DEFAULT_IO_COPY_BUF (16 * 1024)
@@ -78,7 +80,7 @@ static int receive_fd(int sock)
     u_char *pfd = NULL;
     int fd = -1;
     int cmsgsize = CMSG_LEN(sizeof(int));
-    struct cmsghdr *cmptr = (struct cmsghdr *)calloc(1, cmsgsize);
+    struct cmsghdr *cmptr = (struct cmsghdr *)util_common_calloc_s(cmsgsize);
     if (cmptr == NULL) {
         return -1;
     }
@@ -128,107 +130,6 @@ static bool check_fd(int fd)
     return true;
 }
 
-static int add_io_dispatch(int epfd, io_thread_t *io_thd, int from, int to)
-{
-    int ret = SHIM_ERR;
-
-    if (io_thd == NULL || io_thd->ioc == NULL) {
-        return SHIM_ERR;
-    }
-
-    io_copy_t *ioc = io_thd->ioc;
-
-    if (pthread_mutex_lock(&(ioc->mutex)) != 0) {
-        return SHIM_ERR;
-    }
-    /* add src fd */
-    if (from != -1 && ioc->fd_from == -1) {
-        ioc->fd_from = from;
-        struct epoll_event ev;
-        ev.events = EPOLLIN;
-        ev.data.ptr = io_thd;
-
-        ret = epoll_ctl(epfd, EPOLL_CTL_ADD, from, &ev);
-        if (ret != SHIM_OK) {
-            write_message(g_log_fd, ERR_MSG, "add fd %d to epoll loop failed:%d", from, SHIM_SYS_ERR(errno));
-            pthread_mutex_unlock(&(ioc->mutex));
-            return SHIM_ERR;
-        }
-    }
-
-    /* add dest fd */
-    if (to != -1) {
-        /* new fd_node_t for dest fd */
-        fd_node_t *fn = (fd_node_t *)calloc(1, sizeof(fd_node_t));
-        if (fn == NULL) {
-            pthread_mutex_unlock(&(ioc->mutex));
-            return SHIM_ERR;
-        }
-        fn->fd = to;
-        fn->is_log = false;
-        if (io_thd->terminal != NULL && to == io_thd->terminal->fd) {
-            fn->is_log = true;
-        }
-        fn->next = NULL;
-
-        if (ioc->fd_to == NULL) {
-            ioc->fd_to = fn;
-        } else {
-            fd_node_t *tmp = ioc->fd_to;
-            while (tmp->next != NULL) {
-                tmp = tmp->next;
-            }
-            tmp->next = fn;
-        }
-    }
-    pthread_mutex_unlock(&(ioc->mutex));
-
-    return SHIM_OK;
-}
-
-static void remove_io_dispatch(io_thread_t *io_thd, int from, int to)
-{
-    if (io_thd == NULL || io_thd->ioc == NULL) {
-        return;
-    }
-    io_copy_t *ioc = io_thd->ioc;
-
-    fd_node_t *tmp = NULL;
-    do {
-        /* remove src fd */
-        if (from != -1 && from == ioc->fd_from) {
-            struct epoll_event ev;
-            ev.events = EPOLLIN;
-            ev.data.fd = ioc->fd_from;
-            (void)epoll_ctl(io_thd->epfd, EPOLL_CTL_DEL, ioc->fd_from, &ev);
-        }
-
-        /* remove dest fd */
-        if (ioc->fd_to == NULL) {
-            break;
-        }
-        if (ioc->fd_to->fd == to) {
-            /* remove the first fd node */
-            tmp = ioc->fd_to;
-            ioc->fd_to = ioc->fd_to->next;
-            break;
-        }
-        fd_node_t *pre = ioc->fd_to;
-        tmp = ioc->fd_to->next;
-        while (tmp != NULL && tmp->fd != to) {
-            pre = tmp;
-            tmp = tmp->next;
-        }
-        if (tmp != NULL) {
-            pre->next = tmp->next;
-        }
-    } while (0);
-    if (tmp != NULL) {
-        free(tmp);
-        tmp = NULL;
-    }
-}
-
 static int get_exec_winsize(const char *buf, struct winsize *wsize)
 {
     char **array = NULL;
@@ -261,424 +162,213 @@ out:
     return ret;
 }
 
-static void *do_io_copy(void *data)
+static int sync_exit_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
 {
-    io_thread_t *io_thd = (io_thread_t *)data;
-    if (io_thd == NULL || io_thd->ioc == NULL) {
-        return NULL;
-    }
-    io_copy_t *ioc = io_thd->ioc;
-    char *buf = calloc(1, DEFAULT_IO_COPY_BUF + 1);
-    if (buf == NULL) {
-        return NULL;
-    }
-
-    for (;;) {
-        memset(buf, 0, DEFAULT_IO_COPY_BUF);
-        (void)sem_wait(&(io_thd->sem_thd));
-        if (io_thd->is_stdin && io_thd->shutdown) {
-            break;
-        }
-
-        int r_count = read(ioc->fd_from, buf, DEFAULT_IO_COPY_BUF);
-        if (r_count == -1) {
-            if (errno == EAGAIN || errno == EINTR) {
-                continue;
-            }
-            break;
-        } else if (r_count == 0) {
-            /* End of file. The remote has closed the connection */
-            break;
-        } else if (ioc->id != EXEC_RESIZE) {
-            if (pthread_mutex_lock(&(ioc->mutex)) != 0) {
-                continue;
-            }
-
-            fd_node_t *fn = ioc->fd_to;
-            fd_node_t *next = NULL;
-            for (; fn != NULL; fn = next) {
-                next = fn->next;
-                if (fn->is_log) {
-                    shim_write_container_log_file(io_thd->terminal, ioc->id, buf, r_count);
-                } else {
-                    int w_count = write_nointr_in_total(fn->fd, buf, r_count);
-                    if (w_count < 0) {
-                        /* When any error occurs, remove the write fd */
-                        remove_io_dispatch(io_thd, -1, fn->fd);
-                    }
-                }
-            }
-            pthread_mutex_unlock(&(ioc->mutex));
-        } else {
-            if (pthread_mutex_lock(&(ioc->mutex)) != 0) {
-                continue;
-            }
-
-            int resize_fd = ioc->fd_to->fd;
-            struct winsize wsize = { 0x00 };
-            if (get_exec_winsize(buf, &wsize) < 0) {
-                break;
-            }
-            if (ioctl(resize_fd, TIOCSWINSZ, &wsize) < 0) {
-                break;
-            }
-            pthread_mutex_unlock(&(ioc->mutex));
-        }
-
-        /*
-         In the case of stdout and stderr, maybe numbers of read bytes are not the last msg in pipe.
-         So, when the value of r_count is larger than zero, we need to try reading again to avoid loss msgs.
-        */
-        if (io_thd->shutdown && r_count <= 0) {
-            break;
-        }
-    }
-    struct epoll_event ev;
-    ev.events = EPOLLIN;
-    ev.data.fd = ioc->fd_from;
-    (void)epoll_ctl(io_thd->epfd, EPOLL_CTL_DEL, ioc->fd_from, &ev);
-
-    free(buf);
-
-    return NULL;
+    return EPOLL_LOOP_HANDLE_CLOSE;
 }
 
-static void sem_post_inotify_io_copy(int fd, uint32_t event, void *data)
+static int stdin_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
 {
-    io_thread_t *thd = (io_thread_t *)data;
-    if (thd->ioc == NULL || fd != thd->ioc->fd_from) {
-        return;
-    }
-
-    if (event & EPOLLIN) {
-        (void)sem_post(&thd->sem_thd);
-    } else if (event & EPOLLHUP) {
-        thd->shutdown = true;
-        (void)sem_post(&thd->sem_thd);
-    }
-}
-
-static int create_io_copy_thread(process_t *p, int std_id)
-{
-    int ret = SHIM_ERR;
-    io_thread_t *io_thd = NULL;
-    io_copy_t *ioc = NULL;
-
-    ioc = (io_copy_t *)calloc(1, sizeof(io_copy_t));
-    if (ioc == NULL) {
-        goto failure;
-    }
-    ioc->id = std_id;
-    ioc->fd_from = -1;
-    ioc->fd_to = NULL;
-    if (pthread_mutex_init(&(ioc->mutex), NULL) != 0) {
-        goto failure;
-    }
-
-    io_thd = (io_thread_t *)calloc(1, sizeof(io_thread_t));
-    if (io_thd == NULL) {
-        goto failure;
-    }
-    if (sem_init(&io_thd->sem_thd, 0, 0) != 0) {
-        write_message(g_log_fd, ERR_MSG, "sem init failed:%d", SHIM_SYS_ERR(errno));
-        goto failure;
-    }
-    io_thd->epfd = p->io_loop_fd;
-    io_thd->ioc = ioc;
-    io_thd->shutdown = false;
-    io_thd->is_stdin = std_id == STDID_IN ? true : false;
-    io_thd->terminal = std_id != STDID_IN ? p->terminal : NULL;
-
-    p->io_threads[std_id] = io_thd;
-
-    ret = pthread_create(&(io_thd->tid), NULL, do_io_copy, io_thd);
-    if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "thread io copy create failed:%d", SHIM_SYS_ERR(errno));
-        goto failure;
-    }
-
-    ret = SHIM_OK;
-
-    return ret;
-
-failure:
-    if (ioc != NULL) {
-        pthread_mutex_destroy(&(ioc->mutex));
-        free(ioc);
-    }
-    if (io_thd != NULL) {
-        free(io_thd);
-    }
-
-    return SHIM_ERR;
-}
-
-static int start_io_copy_threads(process_t *p)
-{
-    int ret = SHIM_ERR;
-    int i;
-
-    /* 4 threads for stdin, stdout, stderr and exec resize */
-    for (i = 0; i < 4; i++) {
-        /*
-        * if the terminal is used, we do not need to active the io copy of stderr pipe,
-        * for stderr and stdout are mixed together
-        */
-        if (i == STDID_ERR && p->state->terminal) {
-            continue;
-        }
-
-        ret = create_io_copy_thread(p, i);
-        if (ret != SHIM_OK) {
-            return SHIM_ERR;
-        }
-    }
-    return SHIM_OK;
-}
-
-static void destroy_io_thread(process_t *p, int std_id)
-{
-    io_thread_t *io_thd = p->io_threads[std_id];
-    if (io_thd == NULL) {
-        return;
-    }
-
-    io_thd->shutdown = true;
-    (void)sem_post(&io_thd->sem_thd);
-    pthread_join(io_thd->tid, NULL);
-    if (io_thd->ioc != NULL) {
-        free(io_thd->ioc);
-    }
-    free(io_thd);
-    p->io_threads[std_id] = NULL;
-}
-
-/*
-    std_id: channel type
-    isulad_stdio: one side of the isulad fifo file
-    fd: one side of the shim io pipe
-    ---------------------------------------------------------------
-    | CHANNEL |    iSulad Fifo Side     | Flow Direction |   fd   |
-    ---------------------------------------------------------------
-    |  STDIN  |        READ             |      -->       |  WRITE |
-    ---------------------------------------------------------------
-    |  STDOUT |        WRITE            |      <--       |  READ  |
-    ---------------------------------------------------------------
-    |  STDERR |        WRITE            |      <--       |  READ  |
-    ---------------------------------------------------------------
-    |  RESIZE |        READ             |      -->       |  WRITE |
-    ---------------------------------------------------------------
-*/
-static int connect_to_isulad(process_t *p, int std_id, const char *isulad_stdio, int fd)
-{
-    mode_t mode;
-    int fd_isulad = -1;
-    int *fd_from = NULL;
+    process_t *p = (process_t *)cbdata;
+    int r_count = 0;
+    int w_count = 0;
     int *fd_to = NULL;
 
-    if (std_id == STDID_IN || std_id == EXEC_RESIZE) {
-        mode = O_RDONLY;
-        fd_from = &fd_isulad;
-        fd_to = &fd;
+    if (events & EPOLLHUP) {
+        return EPOLL_LOOP_HANDLE_CLOSE;
+    }
+
+    if (!(events & EPOLLIN)) {
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+
+    (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
+
+    r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    if (r_count <= 0) {
+        return EPOLL_LOOP_HANDLE_CLOSE;
+    }
+
+    if (p->state->terminal) {
+        fd_to = &(p->recv_fd);
     } else {
-        mode = O_WRONLY;
-        fd_from = &fd;
-        fd_to = &fd_isulad;
+        fd_to = &(p->shim_io->in);
+    }
+    w_count = write_nointr_in_total(*fd_to, p->buf, r_count);
+    if (w_count < 0) {
+        /* When any error occurs, set the write fd -1  */
+        write_message(g_log_fd, WARN_MSG, "write in_fd %d error:%d", *fd_to, SHIM_SYS_ERR(errno));
+        close(*fd_to);
+        *fd_to = -1;
     }
 
-    if (isulad_stdio != NULL && file_exists(isulad_stdio)) {
-        fd_isulad = open_fifo_noblock(isulad_stdio, mode);
-        if (fd_isulad < 0) {
-            return SHIM_ERR;
-        }
-        /* open dummy fd to avoid resize epoll hub */
-        if (std_id == EXEC_RESIZE && open_fifo_noblock(isulad_stdio, O_WRONLY) < 0) {
-            return SHIM_ERR;
-        }
-    }
-
-    if (*fd_from != -1) {
-        if (std_id != STDID_IN && std_id != EXEC_RESIZE && p->io_threads[std_id]->terminal != NULL) {
-            (void)add_io_dispatch(p->io_loop_fd, p->io_threads[std_id], *fd_from, p->terminal->fd);
-        }
-        return add_io_dispatch(p->io_loop_fd, p->io_threads[std_id], *fd_from, *fd_to);
-    }
-
-    /* if no I/O source is available, the I/O thread nead to be destroyed */
-    destroy_io_thread(p, std_id);
-
-    return SHIM_OK;
+    return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
-static void *task_console_accept(void *data)
+static int stdout_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
 {
-    int conn_fd = -1;
-    int recv_fd = -1;
-    int ret = SHIM_ERR;
-    console_accept_t *ac = (console_accept_t *)data;
+    process_t *p = (process_t *)cbdata;
+    int r_count = 0;
+    int w_count = 0;
 
-    conn_fd = accept(ac->listen_fd, NULL, NULL);
+    if (events & EPOLLHUP) {
+        return EPOLL_LOOP_HANDLE_CLOSE;
+    }
+
+    if (!(events & EPOLLIN)) {
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+
+    (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
+
+    if (p->block_read) {
+        r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    } else {
+        r_count = read(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    }
+    if (r_count <= 0) {
+        return EPOLL_LOOP_HANDLE_CLOSE;
+    }
+
+    shim_write_container_log_file(p->terminal, STDID_OUT, p->buf, r_count);
+
+    if (p->isulad_io->out == -1) {
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+
+    w_count = write_nointr_in_total(p->isulad_io->out, p->buf, r_count);
+    if (w_count < 0) {
+        /* When any error occurs, set the write fd -1  */
+        write_message(g_log_fd, WARN_MSG, "write out_fd %d error:%d", p->isulad_io->out, SHIM_SYS_ERR(errno));
+        close(p->isulad_io->out);
+        p->isulad_io->out = -1;
+    }
+
+    return EPOLL_LOOP_HANDLE_CONTINUE;
+}
+
+static int stderr_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+{
+    process_t *p = (process_t *)cbdata;
+    int r_count = 0;
+    int w_count = 0;
+
+    if (events & EPOLLHUP) {
+        return EPOLL_LOOP_HANDLE_CLOSE;
+    }
+
+    if (!(events & EPOLLIN)) {
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+
+    (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
+
+    if (p->block_read) {
+        r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    } else {
+        r_count = read(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    }
+    if (r_count <= 0) {
+        return EPOLL_LOOP_HANDLE_CLOSE;
+    }
+
+    shim_write_container_log_file(p->terminal, STDID_ERR, p->buf, r_count);
+
+    if (p->isulad_io->err == -1) {
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+
+    w_count = write_nointr_in_total(p->isulad_io->err, p->buf, r_count);
+    if (w_count < 0) {
+        /* When any error occurs, set the write fd -1  */
+        write_message(g_log_fd, WARN_MSG, "write err_fd %d error:%d", p->isulad_io->err, SHIM_SYS_ERR(errno));
+        close(p->isulad_io->err);
+        p->isulad_io->err = -1;
+    }
+
+    return EPOLL_LOOP_HANDLE_CONTINUE;
+}
+
+static int resize_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+{
+    process_t *p = (process_t *)cbdata;
+    int r_count = 0;
+    int resize_fd = -1;
+
+    if (events & EPOLLHUP) {
+        return EPOLL_LOOP_HANDLE_CLOSE;
+    }
+
+    if (!(events & EPOLLIN)) {
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+
+    (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
+    r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    if (r_count <= 0) {
+        return EPOLL_LOOP_HANDLE_CLOSE;
+    }
+
+    resize_fd = p->recv_fd;
+    struct winsize wsize = { 0x00 };
+    if (get_exec_winsize(p->buf, &wsize) < 0) {
+        return EPOLL_LOOP_HANDLE_CLOSE;
+    }
+    if (ioctl(resize_fd, TIOCSWINSZ, &wsize) < 0) {
+        return EPOLL_LOOP_HANDLE_CLOSE;
+    }
+
+    return EPOLL_LOOP_HANDLE_CONTINUE;
+}
+
+static int task_console_accept(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+{
+    process_t *p = (process_t *)cbdata;
+    int conn_fd = -1;
+    int ret = SHIM_ERR;
+
+    conn_fd = accept(p->listen_fd, NULL, NULL);
     if (conn_fd < 0) {
-        write_message(g_log_fd, ERR_MSG, "accept from fd %d failed:%d", ac->listen_fd, SHIM_SYS_ERR(errno));
+        write_message(g_log_fd, ERR_MSG, "accept from fd %d failed:%d", p->listen_fd, SHIM_SYS_ERR(errno));
         goto out;
     }
 
-    recv_fd = receive_fd(conn_fd);
-    if (check_fd(recv_fd) != true) {
+    p->recv_fd = receive_fd(conn_fd);
+    if (check_fd(p->recv_fd) != true) {
         write_message(g_log_fd, ERR_MSG, "check console fd failed");
         goto out;
     }
 
     /* do console io copy */
 
-    /* p.state.stdin---->runtime.console */
-    ret = connect_to_isulad(ac->p, STDID_IN, ac->p->state->isulad_stdin, recv_fd);
+    // p->isulad_io->in ----> p->recv_fd
+    ret = epoll_loop_add_handler(descr, p->isulad_io->in, stdin_cb, p);
     if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "add in fd %d to epoll loop failed:%d", p->isulad_io->in, SHIM_SYS_ERR(errno));
         goto out;
     }
-
-    /* p.state.stdout<------runtime.console */
-    ret = connect_to_isulad(ac->p, STDID_OUT, ac->p->state->isulad_stdout, recv_fd);
+    // p->recv_fd ----> p->isulad_io->out
+    ret = epoll_loop_add_handler(descr, p->recv_fd, stdout_cb, p);
     if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "add recv_fd fd %d to epoll loop failed:%d", p->recv_fd, SHIM_SYS_ERR(errno));
         goto out;
     }
-
-    /* p.state.resize_fifo------>runtime.console */
-    ret = connect_to_isulad(ac->p, EXEC_RESIZE, ac->p->state->resize_fifo, recv_fd);
+    // p->isulad_io->resize ----> p->recv_fd
+    ret = epoll_loop_add_handler(descr, p->isulad_io->resize, resize_cb, p);
     if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "add resize fd %d to epoll loop failed:%d", p->isulad_io->resize, SHIM_SYS_ERR(errno));
         goto out;
     }
 
 out:
     /* release listen socket at the first time */
-    close_fd(&ac->listen_fd);
-    if (ac->p->console_sock_path != NULL) {
-        (void)unlink(ac->p->console_sock_path);
-        free(ac->p->console_sock_path);
-        ac->p->console_sock_path = NULL;
-    }
-    free(ac);
-    if (ret != SHIM_OK) {
-        /*
-         * When an error occurs during the receiving of the fd , the process
-         * exits directly. The files created in the working directory will be
-         * deleted by its parent process isulad
-         */
-        exit(EXIT_FAILURE);
-    }
-    return NULL;
-}
-
-static void *io_epoll_loop(void *data)
-{
-    process_t *p = (process_t *)data;
-    int wait_fds = 0;
-    struct epoll_event evs[MAX_EVENTS];
-    int i;
-
-    if ((pthread_detach(pthread_self())) != 0) {
-        write_message(g_log_fd, ERR_MSG, "detach thread failed");
-        return NULL;
-    }
-
-    p->io_loop_fd = epoll_create1(EPOLL_CLOEXEC);
-    if (p->io_loop_fd < 0) {
-        write_message(g_log_fd, ERR_MSG, "epoll create failed:%d", SHIM_SYS_ERR(errno));
-        exit(EXIT_FAILURE);
-    }
-    (void)sem_post(&p->sem_mainloop);
-
-    for (;;) {
-        wait_fds = epoll_wait(p->io_loop_fd, evs, MAX_EVENTS, -1);
-        if (wait_fds < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
-            _exit(EXIT_FAILURE);
-        }
-
-        for (i = 0; i < wait_fds; i++) {
-            io_thread_t *thd_io = (io_thread_t *)evs[i].data.ptr;
-            sem_post_inotify_io_copy(thd_io->ioc->fd_from, evs[i].events, thd_io);
-        }
-    }
-}
-
-static int new_temp_console_path(process_t *p)
-{
-#define RAND_NUM_LEN 9
-    int ret = SHIM_ERR;
-    char str_rand[RAND_NUM_LEN + 1] = { 0 };
-
-    ret = generate_random_str(str_rand, RAND_NUM_LEN);
-    if (ret != SHIM_OK) {
-        return SHIM_ERR;
-    }
-    p->console_sock_path = (char *)calloc(1, MAX_CONSOLE_SOCK_LEN + 1);
-    if (p->console_sock_path == NULL) {
-        return SHIM_ERR;
-    }
-    int nret = snprintf(p->console_sock_path, MAX_CONSOLE_SOCK_LEN, "/run/isulad%s-pty.sock", str_rand);
-    if (nret < 0 || nret >= MAX_CONSOLE_SOCK_LEN) {
+    close_fd(&p->listen_fd);
+    if (p->console_sock_path != NULL) {
+        (void)unlink(p->console_sock_path);
         free(p->console_sock_path);
         p->console_sock_path = NULL;
-        return SHIM_ERR;
     }
-
-    return SHIM_OK;
-}
-
-static int console_init(process_t *p, pthread_t *tid_accept)
-{
-    int ret = SHIM_ERR;
-    int fd = -1;
-    struct sockaddr_un addr;
-    console_accept_t *ac = NULL;
-
-    fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (fd < 0) {
-        write_message(g_log_fd, ERR_MSG, "create socket failed:%d", SHIM_SYS_ERR(errno));
-        goto failure;
-    }
-
-    (void)memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    (void)strcpy(addr.sun_path, p->console_sock_path);
-
-    ret = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
-    if (ret < 0) {
-        write_message(g_log_fd, ERR_MSG, "bind console fd failed:%d", SHIM_SYS_ERR(errno));
-        goto failure;
-    }
-
-    ret = listen(fd, 2);
-    if (ret < 0) {
-        write_message(g_log_fd, ERR_MSG, "listen console fd failed:%d", SHIM_SYS_ERR(errno));
-        goto failure;
-    }
-
-    ac = (console_accept_t *)calloc(1, sizeof(console_accept_t));
-    if (ac == NULL) {
-        goto failure;
-    }
-    ac->p = p;
-    ac->listen_fd = fd;
-
-    ret = pthread_create(tid_accept, NULL, task_console_accept, ac);
-    if (ret != SHIM_OK) {
-        goto failure;
-    }
-
-    return SHIM_OK;
-failure:
-    close_fd(&fd);
-    if (ac != NULL) {
-        free(ac);
-        ac = NULL;
-    }
-    (void)unlink(p->console_sock_path);
-
-    return SHIM_ERR;
+    return ret;
 }
 
 static int stdio_chown(int (*stdio_fd)[2], int uid, int gid)
@@ -713,8 +403,8 @@ static stdio_t *initialize_io(process_t *p)
 {
     int stdio_fd[4][2] = { { -1, -1 }, { -1, -1 }, { -1, -1 }, { -1, -1 } };
 
-    stdio_t *stdio = (stdio_t *)calloc(1, sizeof(stdio_t));
-    p->stdio = (stdio_t *)calloc(1, sizeof(stdio_t));
+    stdio_t *stdio = (stdio_t *)util_common_calloc_s(sizeof(stdio_t));
+    p->stdio = (stdio_t *)util_common_calloc_s(sizeof(stdio_t));
     if (p->stdio == NULL || stdio == NULL) {
         goto failure;
     }
@@ -755,7 +445,75 @@ failure:
     return NULL;
 }
 
-static int open_terminal_io(process_t *p, pthread_t *tid_accept)
+static int new_temp_console_path(process_t *p)
+{
+#define RAND_NUM_LEN 9
+    int ret = SHIM_ERR;
+    char str_rand[RAND_NUM_LEN + 1] = { 0 };
+
+    ret = generate_random_str(str_rand, RAND_NUM_LEN);
+    if (ret != SHIM_OK) {
+        return SHIM_ERR;
+    }
+    p->console_sock_path = (char *)util_common_calloc_s(MAX_CONSOLE_SOCK_LEN + 1);
+    if (p->console_sock_path == NULL) {
+        return SHIM_ERR;
+    }
+    int nret = snprintf(p->console_sock_path, MAX_CONSOLE_SOCK_LEN, "/run/isulad%s-pty.sock", str_rand);
+    if (nret < 0 || nret >= MAX_CONSOLE_SOCK_LEN) {
+        free(p->console_sock_path);
+        p->console_sock_path = NULL;
+        return SHIM_ERR;
+    }
+
+    return SHIM_OK;
+}
+
+static int console_init(process_t *p, struct epoll_descr *descr)
+{
+    int ret = SHIM_ERR;
+    int fd = -1;
+    struct sockaddr_un addr;
+
+    fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        write_message(g_log_fd, ERR_MSG, "create socket failed:%d", SHIM_SYS_ERR(errno));
+        goto failure;
+    }
+
+    (void)memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    (void)strcpy(addr.sun_path, p->console_sock_path);
+
+    ret = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
+    if (ret < 0) {
+        write_message(g_log_fd, ERR_MSG, "bind console fd failed:%d", SHIM_SYS_ERR(errno));
+        goto failure;
+    }
+
+    ret = listen(fd, 2);
+    if (ret < 0) {
+        write_message(g_log_fd, ERR_MSG, "listen console fd failed:%d", SHIM_SYS_ERR(errno));
+        goto failure;
+    }
+
+    p->listen_fd = fd;
+
+    ret = epoll_loop_add_handler(descr, p->listen_fd, task_console_accept, p);
+    if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "add listen_fd fd %d to epoll loop failed:%d",  p->listen_fd, SHIM_SYS_ERR(errno));
+        goto failure;
+    }
+
+    return SHIM_OK;
+failure:
+    close_fd(&fd);
+    (void)unlink(p->console_sock_path);
+
+    return SHIM_ERR;
+}
+
+static int open_terminal_io(process_t *p, struct epoll_descr *descr)
 {
     int ret = SHIM_ERR;
 
@@ -765,11 +523,11 @@ static int open_terminal_io(process_t *p, pthread_t *tid_accept)
         return SHIM_ERR;
     }
 
-    /* begin listen and accept fd from p->console_sock_path */
-    return console_init(p, tid_accept);
+    /* begin listen from p->console_sock_path */
+    return console_init(p, descr);
 }
 
-static int open_generic_io(process_t *p)
+static int open_generic_io(process_t *p, struct epoll_descr *descr)
 {
     int ret = SHIM_ERR;
 
@@ -779,23 +537,142 @@ static int open_generic_io(process_t *p)
         return SHIM_ERR;
     }
     p->shim_io = io;
-    /* stdin */
-    ret = connect_to_isulad(p, STDID_IN, p->state->isulad_stdin, io->in);
+
+    // p->isulad_io->in ----> p->shim_io->in
+    ret = epoll_loop_add_handler(descr, p->isulad_io->in, stdin_cb, p);
     if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "add in fd %d to epoll loop failed:%d", p->isulad_io->in, SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
-    /* stdout */
-    ret = connect_to_isulad(p, STDID_OUT, p->state->isulad_stdout, io->out);
+    // p->shim_io->out ----> p->isulad_io->out
+    ret = epoll_loop_add_handler(descr, p->shim_io->out, stdout_cb, p);
     if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "add  out fd %d to epoll loop failed:%d", p->shim_io->out, SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
-    /* stderr */
-    ret = connect_to_isulad(p, STDID_ERR, p->state->isulad_stderr, io->err);
+    // p->shim_io->err ----> p->isulad_io->err
+    ret = epoll_loop_add_handler(descr, p->shim_io->err, stderr_cb, p);
     if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "add err fd %d to epoll loop failed:%d", p->shim_io->err, SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
 
     return SHIM_OK;
+}
+
+static int set_non_block(int fd)
+{
+    int flag = -1;
+    int ret = SHIM_ERR;
+
+    flag = fcntl(fd, F_GETFL, 0);
+    if (flag < 0) {
+        return SHIM_ERR;
+    }
+
+    ret = fcntl(fd, F_SETFL, flag | O_NONBLOCK);
+    if (ret != 0) {
+        return SHIM_ERR;
+    }
+
+    return SHIM_OK;
+}
+
+/*
+    std_id: channel type
+    isulad_stdio: one side of the isulad fifo file
+    fd: one side of the shim io pipe
+    ---------------------------------------------------------------
+    | CHANNEL |    iSulad Fifo Side     | Flow Direction |   fd   |
+    ---------------------------------------------------------------
+    |  STDIN  |        READ             |      -->       |  WRITE |
+    ---------------------------------------------------------------
+    |  STDOUT |        WRITE            |      <--       |  READ  |
+    ---------------------------------------------------------------
+    |  STDERR |        WRITE            |      <--       |  READ  |
+    ---------------------------------------------------------------
+    |  RESIZE |        READ             |      -->       |  WRITE |
+    ---------------------------------------------------------------
+*/
+static void *io_epoll_loop(void *data)
+{
+    int ret = 0;
+    int fd_out = -1;
+    int fd_err = -1;
+    process_t *p = (process_t *)data;
+    struct epoll_descr descr;
+
+    ret = epoll_loop_open(&descr);
+    if (ret != 0) {
+        write_message(g_log_fd, ERR_MSG, "epoll loop open failed:%d", SHIM_SYS_ERR(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    // sync fd: epoll loop will exit when recive sync fd event.
+    ret = epoll_loop_add_handler(&descr, p->sync_fd, sync_exit_cb, p);
+    if (ret != 0) {
+        write_message(g_log_fd, ERR_MSG, "add sync_fd %d to epoll loop failed:%d", p->sync_fd, SHIM_SYS_ERR(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    if (p->state->terminal) {
+        ret = open_terminal_io(p, &descr);
+    } else {
+        ret = open_generic_io(p, &descr);
+    }
+    if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "open io failed:%d", SHIM_SYS_ERR(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    (void)sem_post(&p->sem_mainloop);
+
+    ret = epoll_loop(&descr, -1);
+    if (ret != 0) {
+        write_message(g_log_fd, ERR_MSG, "epoll loop failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // in order to avoid data loss, set fd non-block and read it
+    p->block_read = false;
+    if (p->state->terminal) {
+        fd_out = p->recv_fd;
+    } else {
+        fd_out = p->shim_io->out;
+        fd_err = p->shim_io->err;
+    }
+
+    if (fd_out > 0) {
+        ret = set_non_block(fd_out);
+        if (ret != SHIM_OK) {
+            write_message(g_log_fd, ERR_MSG, "set fd %d non_block failed:%d", fd_out, SHIM_SYS_ERR(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        for (;;) {
+            ret = stdout_cb(fd_out, EPOLLIN, p, &descr);
+            if (ret == EPOLL_LOOP_HANDLE_CLOSE) {
+                break;
+            }
+        }
+    }
+
+    if (fd_err > 0) {
+        ret = set_non_block(fd_err);
+        if (ret != SHIM_OK) {
+            write_message(g_log_fd, ERR_MSG, "set fd %d non_block failed:%d", fd_err, SHIM_SYS_ERR(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        for (;;) {
+            ret = stderr_cb(fd_err, EPOLLIN, p, &descr);
+            if (ret == EPOLL_LOOP_HANDLE_CLOSE) {
+                break;
+            }
+        }
+    }
+
+    return NULL;
 }
 
 static void adapt_for_isulad_stdin(process_t *p)
@@ -813,7 +690,7 @@ static int terminal_init(log_terminal **terminal, shim_client_process_state *p_s
 {
     log_terminal *log_term = NULL;
 
-    log_term = calloc(1, sizeof(log_terminal));
+    log_term = util_common_calloc_s(sizeof(log_terminal));
     if (log_term == NULL) {
         write_message(g_log_fd, ERR_MSG, "Failed to calloc log_terminal");
         goto clean_out;
@@ -858,11 +735,90 @@ clean_out:
     return SHIM_ERR;
 }
 
+static int open_isulad_fd(int std_id, const char *isulad_stdio, int *fd)
+{
+    mode_t mode = O_WRONLY;
+
+    if (std_id == STDID_IN || std_id == EXEC_RESIZE) {
+        mode = O_RDONLY;
+    }
+
+    if (isulad_stdio != NULL && file_exists(isulad_stdio)) {
+        *(fd) = open_fifo_noblock(isulad_stdio, mode);
+        if (*(fd) < 0) {
+            return -1;
+        }
+        /* open dummy fd to avoid resize epoll hub */
+        if (std_id == EXEC_RESIZE && open_fifo_noblock(isulad_stdio, O_WRONLY) < 0) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+
+static int init_isulad_stdio(process_t *p)
+{
+    int ret = SHIM_OK;
+    p->isulad_io = (stdio_t *)util_common_calloc_s(sizeof(stdio_t));
+    if (p->isulad_io == NULL) {
+        return SHIM_ERR;
+    }
+
+    p->isulad_io->in = -1;
+    p->isulad_io->out = -1;
+    p->isulad_io->err = -1;
+    p->isulad_io->resize = -1;
+
+    ret = open_isulad_fd(STDID_IN, p->state->isulad_stdin, &p->isulad_io->in);
+    if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "Failed to open in isulad fd: %s",  p->state->isulad_stdin);
+        goto failure;
+    }
+
+    ret = open_isulad_fd(STDID_OUT, p->state->isulad_stdout, &p->isulad_io->out);
+    if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "Failed to open out isulad fd: %s",  p->state->isulad_stdout);
+        goto failure;
+    }
+
+    ret = open_isulad_fd(STDID_ERR, p->state->isulad_stderr, &p->isulad_io->err);
+    if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "Failed to open err isulad fd: %s",  p->state->isulad_stderr);
+        goto failure;
+    }
+
+    ret = open_isulad_fd(EXEC_RESIZE, p->state->resize_fifo, &p->isulad_io->resize);
+    if (ret != SHIM_OK) {
+        write_message(g_log_fd, ERR_MSG, "Failed to open resize isulad fd: %s",  p->state->resize_fifo);
+        goto failure;
+    }
+    return SHIM_OK;
+failure:
+    if (p->isulad_io != NULL) {
+        free(p->isulad_io);
+        p->isulad_io = NULL;
+    }
+    if (p->isulad_io->in > 0) {
+        close(p->isulad_io->in);
+    }
+    if (p->isulad_io->out > 0) {
+        close(p->isulad_io->out);
+    }
+    if (p->isulad_io->err > 0) {
+        close(p->isulad_io->err);
+    }
+    if (p->isulad_io->resize > 0) {
+        close(p->isulad_io->resize);
+    }
+    return SHIM_ERR;
+}
+
 process_t *new_process(char *id, char *bundle, char *runtime)
 {
     shim_client_process_state *p_state;
     process_t *p = NULL;
-    int i;
     int ret;
 
     p_state = load_process();
@@ -870,7 +826,7 @@ process_t *new_process(char *id, char *bundle, char *runtime)
         return NULL;
     }
 
-    p = (process_t *)calloc(1, sizeof(process_t));
+    p = (process_t *)util_common_calloc_s(sizeof(process_t));
     if (p == NULL) {
         return NULL;
     }
@@ -889,16 +845,31 @@ process_t *new_process(char *id, char *bundle, char *runtime)
     p->bundle = bundle;
     p->runtime = runtime;
     p->state = p_state;
-
+    p->block_read = true;
     p->console_sock_path = NULL;
     p->exit_fd = -1;
     p->io_loop_fd = -1;
     p->ctr_pid = -1;
+    p->listen_fd = -1;
+    p->recv_fd = -1;
     p->stdio = NULL;
     p->shim_io = NULL;
+    p->isulad_io = NULL;
 
-    for (i = 0; i < 3; i++) {
-        p->io_threads[i] = NULL;
+    p->sync_fd = eventfd(0, EFD_CLOEXEC);
+    if (p->sync_fd < 0) {
+        write_message(g_log_fd, ERR_MSG, "Failed to create eventfd: %s", strerror(errno));
+        goto failure;
+    }
+
+    ret = init_isulad_stdio(p);
+    if (ret != SHIM_OK) {
+        goto failure;
+    }
+
+    p->buf = util_common_calloc_s(DEFAULT_IO_COPY_BUF + 1);
+    if (p->buf == NULL) {
+        goto failure;
     }
 
     return p;
@@ -909,28 +880,11 @@ failure:
     return NULL;
 }
 
-int open_io(process_t *p, pthread_t *tid_accept)
+int process_io_start(process_t *p, pthread_t *tid_epoll)
 {
     int ret = SHIM_ERR;
 
-    ret = start_io_copy_threads(p);
-    if (ret != SHIM_OK) {
-        return SHIM_ERR;
-    }
-
-    if (p->state->terminal) {
-        return open_terminal_io(p, tid_accept);
-    }
-
-    return open_generic_io(p);
-}
-
-int process_io_init(process_t *p)
-{
-    int ret = SHIM_ERR;
-
-    pthread_t tid_loop;
-    ret = pthread_create(&tid_loop, NULL, io_epoll_loop, p);
+    ret = pthread_create(tid_epoll, NULL, io_epoll_loop, p);
     if (ret != SHIM_OK) {
         return SHIM_SYS_ERR(errno);
     }
@@ -1091,8 +1045,8 @@ static void exec_runtime_process(process_t *p, int exec_fd)
     }
 
     char *cwd = getcwd(NULL, 0);
-    char *log_path = (char *)calloc(1, PATH_MAX);
-    char *pid_path = (char *)calloc(1, PATH_MAX);
+    char *log_path = (char *)util_common_calloc_s(PATH_MAX);
+    char *pid_path = (char *)util_common_calloc_s(PATH_MAX);
     if (cwd == NULL || log_path == NULL || pid_path == NULL) {
         (void)dprintf(exec_fd, "memory error: %s", strerror(errno));
         _exit(EXIT_FAILURE);
@@ -1294,13 +1248,11 @@ static int wait_container_process_with_timeout(process_t *p, const unsigned int 
 
 }
 
-int process_signal_handle_routine(process_t *p, const pthread_t tid_accept, const unsigned int timeout)
+int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const unsigned int timeout)
 {
-    int i;
     int nret = 0;
     int ret = 0;
     int status = 0;
-    struct timespec ts;
 
     ret = wait_container_process_with_timeout(p, timeout, &status);
     if (ret == SHIM_ERR_TIMEOUT) {
@@ -1324,26 +1276,19 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_accept, cons
     if (p->exit_fd > 0) {
         (void)write_nointr(p->exit_fd, &status, sizeof(int));
     }
-    // wait for task_console_accept thread termination. In order to make sure that
-    // the io_copy connection is established and io_thread is not used by multiple threads.
-    if (p->state->terminal) {
-        if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
-            write_message(g_log_fd, ERR_MSG, "Failed to get realtime");
-            nret = pthread_join(tid_accept, NULL);
-        } else {
-            // Set the maximum waiting time to 60s to prevent stuck.
-            ts.tv_sec += 60;
-            nret = pthread_timedjoin_np(tid_accept, NULL, &ts);
-        }
 
-        if (nret != 0) {
-            write_message(g_log_fd, ERR_MSG, "Failed to join task_console_accept thread");
+    if (p->sync_fd > 0) {
+        if (eventfd_write(p->sync_fd, 1)) {
+            write_message(g_log_fd, ERR_MSG, "Failed to write sync fd");
         }
     }
 
-    for (i = 0; i < 3; i++) {
-        destroy_io_thread(p, i);
+    nret = pthread_join(tid_epoll, NULL);
+    if (nret != 0) {
+        write_message(g_log_fd, ERR_MSG, "Failed to join epoll loop thread");
     }
+
+    close(p->sync_fd);
 
     if (!p->state->exec) {
         // if log did not contain "/n", print remaind container log when exit isulad-shim
