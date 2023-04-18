@@ -1076,28 +1076,6 @@ int rt_isula_rm(const char *id, const char *runtime, const rt_rm_params_t *param
     return 0;
 }
 
-static char *try_generate_exec_id()
-{
-    char *id = NULL;
-
-    id = util_common_calloc_s(sizeof(char) * (CONTAINER_EXEC_ID_MAX_LEN + 1));
-    if (id == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    if (util_generate_random_str(id, (size_t)CONTAINER_EXEC_ID_MAX_LEN) != 0) {
-        ERROR("Generate id failed");
-        goto err_out;
-    }
-
-    return id;
-
-err_out:
-    free(id);
-    return NULL;
-}
-
 static bool fg_exec(const rt_exec_params_t *params)
 {
     if (params->console_fifos[0] != NULL || params->console_fifos[1] != NULL || params->console_fifos[2] != NULL) {
@@ -1120,7 +1098,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     int pid = 0;
     shim_client_process_state p = { 0 };
 
-    if (id == NULL || runtime == NULL || params == NULL || exit_code == NULL) {
+    if (id == NULL || runtime == NULL || params == NULL || exit_code == NULL || params->suffix == NULL) {
         ERROR("nullptr arguments not allowed");
         return -1;
     }
@@ -1133,12 +1111,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
         return -1;
     }
 
-    if (params->suffix != NULL) {
-        exec_id = util_strdup_s(params->suffix);
-    } else {
-        exec_id = try_generate_exec_id();
-    }
-
+    exec_id = util_strdup_s(params->suffix);
     if (exec_id == NULL) {
         ERROR("Out of memory or generate exec id failed");
         return -1;
