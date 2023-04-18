@@ -289,6 +289,13 @@ grpc::Status RuntimeRuntimeServiceImpl::ExecSync(grpc::ServerContext *context,
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
     }
 
+    if (reply->exit_code() != 0) {
+        ERROR("Object: CRI, Type: Sync exec in container: %s with exit code: %d", request->container_id().c_str(),
+              reply->exit_code());
+        error.SetError(reply->stderr());
+        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+    }
+
     WARN("Event: {Object: CRI, Type: sync execed Container: %s}", request->container_id().c_str());
 
     return grpc::Status::OK;
