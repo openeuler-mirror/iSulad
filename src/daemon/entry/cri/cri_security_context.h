@@ -18,12 +18,23 @@
 #include "api.pb.h"
 #include "errors.h"
 #include "isula_libutils/container_config.h"
+#ifdef ENABLE_SANDBOX
+#include "isula_libutils/sandbox_config.h"
+#endif
 #include "isula_libutils/host_config.h"
 #include <string>
 
 namespace CRISecurity {
 void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, container_config *config,
                                  host_config *hc, Errors &error);
+
+#ifdef ENABLE_SANDBOX
+void ApplySandboxLinuxSecurityOpts(const runtime::v1alpha2::LinuxPodSandboxConfig &lc,
+                                   host_config *hostconf, Errors &error);
+
+void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, sandbox_config *config,
+                                 host_config *hc, Errors &error);
+#endif
 
 void ApplyContainerSecurityContext(const runtime::v1alpha2::LinuxContainerConfig &lc, const std::string &podSandboxID,
                                    container_config *config, host_config *hc, Errors &errorr);

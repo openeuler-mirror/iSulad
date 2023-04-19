@@ -1068,7 +1068,8 @@ inline static void request_pack_host_restart_policy(const struct client_argument
 
 static bool bridge_network_mode(const char *net_mode)
 {
-    if (namespace_is_host(net_mode) || namespace_is_container(net_mode) || namespace_is_none(net_mode)) {
+    if (namespace_is_host(net_mode) || namespace_is_sandbox(net_mode) ||
+        namespace_is_container(net_mode) || namespace_is_none(net_mode)) {
         return false;
     }
 

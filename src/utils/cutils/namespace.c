@@ -18,10 +18,20 @@
 
 #include "utils.h"
 
+char *namespace_get_sandbox(const char *mode)
+{
+    if (namespace_is_sandbox(mode)) {
+        const char *p = mode + strlen(SHARE_NAMESPACE_SANDBOX_PREFIX);
+        return util_strdup_s(p);
+    }
+
+    return NULL;
+}
+
 char *namespace_get_connected_container(const char *mode)
 {
     if (namespace_is_container(mode)) {
-        const char *p = mode + strlen(SHARE_NAMESPACE_PREFIX);
+        const char *p = mode + strlen(SHARE_NAMESPACE_CONTAINER_PREFIX);
         return util_strdup_s(p);
     }
 

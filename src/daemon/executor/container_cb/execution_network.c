@@ -31,6 +31,9 @@
 #endif
 #include "utils.h"
 #include "container_api.h"
+#ifdef ENABLE_SANDBOX
+#include "sandbox_api.h"
+#endif
 #include "namespace.h"
 #include "path.h"
 #include "constants.h"
@@ -876,14 +879,13 @@ cleanup:
     return NULL;
 }
 
-static int init_container_network_confs_container(const char *id, const host_config *hc,
+static int init_container_network_confs_container(const char *id, const char *connected_id, const host_config *hc,
                                                   container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
-    size_t len = strlen(SHARE_NAMESPACE_PREFIX);
     container_t *nc = NULL;
 
-    nc = get_networked_container(id, hc->network_mode + len, false);
+    nc = get_networked_container(id, connected_id, false);
     if (nc == NULL) {
         ERROR("Error to get networked container");
         return -1;
@@ -910,6 +912,42 @@ static int init_container_network_confs_container(const char *id, const host_con
     container_unref(nc);
     return ret;
 }
+
+#ifdef ENABLE_SANDBOX
+static int init_container_network_confs_sandbox(const char *id, const char *sandbox_id,
+                                                container_config_v2_common_config *v2_spec)
+{
+    int ret = 0;
+    sandbox_t *sandbox = NULL;
+
+    sandbox = sandboxes_store_get_by_id(sandbox_id);
+    if (sandbox == NULL) {
+        ERROR("Failed to get sandbox %s for container %s", sandbox_id, id);
+        return -1;
+    }
+
+    if (sandbox->sandboxconfig->hostname_path != NULL) {
+        free(v2_spec->hostname_path);
+        v2_spec->hostname_path = util_strdup_s(sandbox->sandboxconfig->hostname_path);
+    }
+    if (sandbox->sandboxconfig->hosts_path != NULL) {
+        free(v2_spec->hosts_path);
+        v2_spec->hosts_path = util_strdup_s(sandbox->sandboxconfig->hosts_path);
+    }
+    if (sandbox->sandboxconfig->resolv_conf_path != NULL) {
+        free(v2_spec->resolv_conf_path);
+        v2_spec->resolv_conf_path = util_strdup_s(sandbox->sandboxconfig->resolv_conf_path);
+    }
+
+    if (sandbox->sandboxconfig->hostname != NULL) {
+        free(v2_spec->config->hostname);
+        v2_spec->config->hostname = util_strdup_s(sandbox->sandboxconfig->hostname);
+    }
+
+    sandbox_unref(sandbox);
+    return ret;
+}
+#endif
 
 static int create_default_hostname(const char *id, const char *rootpath, bool share_host,
                                    container_config_v2_common_config *v2_spec)
@@ -1082,9 +1120,19 @@ int init_container_network_confs(const char *id, const char *rootpath, const hos
     int ret = 0;
     bool share_host = namespace_is_host(hc->network_mode);
 
+    // is sandbox mode
+    if (namespace_is_sandbox(hc->network_mode)) {
+        const char *sandbox_id = hc->network_mode + strlen(SHARE_NAMESPACE_SANDBOX_PREFIX);
+#ifdef ENABLE_SANDBOX
+        return init_container_network_confs_sandbox(id, sandbox_id, v2_spec);
+#else
+        return init_container_network_confs_container(id, sandbox_id, hc, v2_spec);
+#endif
+    }
     // is container mode
     if (namespace_is_container(hc->network_mode)) {
-        return init_container_network_confs_container(id, hc, v2_spec);
+        const char *container_id = hc->network_mode + strlen(SHARE_NAMESPACE_CONTAINER_PREFIX);
+        return init_container_network_confs_container(id, container_id, hc, v2_spec);
     }
 
     if (create_default_hostname(id, rootpath, share_host, v2_spec) != 0) {

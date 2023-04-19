@@ -80,6 +80,9 @@
 #ifdef ENABLE_NETWORK
 #include "network_api.h"
 #endif
+#ifdef ENABLE_SANDBOX
+#include "controller_api.h"
+#endif
 
 sem_t g_daemon_shutdown_sem;
 sem_t g_daemon_wait_shutdown_sem;
@@ -1274,6 +1277,18 @@ static int isulad_server_init_common()
         goto out;
     }
 
+#ifdef ENABLE_SANDBOX
+    if (sandboxes_store_init()) {
+        ERROR("Failed to init sandbox store");
+        goto out;
+    }
+ 
+    if (sandbox_name_index_init()) {
+        ERROR("Failed to init sandbox name index");
+        goto out;
+    }
+#endif
+
     ret = 0;
 
 out:
@@ -1526,6 +1541,13 @@ static int pre_init_daemon(int argc, char **argv)
         ERROR("Failed to init runtime");
         goto out;
     }
+
+#ifdef ENABLE_SANDBOX
+    if (sandbox_ctrl_init() != 0) {
+        ERROR("Failed to init sandboxer controller");
+        goto out;
+    }
+#endif
 
     /*
      * change the current working dir to root.

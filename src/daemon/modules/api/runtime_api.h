@@ -81,6 +81,9 @@ typedef struct _rt_create_params_t {
     const char *exit_fifo;
     bool tty;
     bool open_stdin;
+#ifdef ENABLE_SANDBOX
+    const char *task_addr;
+#endif
 } rt_create_params_t;
 
 typedef struct _rt_start_params_t {

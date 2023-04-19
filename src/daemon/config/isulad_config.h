@@ -31,6 +31,10 @@ extern "C" {
 
 #define DEFAULT_RUNTIME_NAME "lcr"
 
+#ifdef ENABLE_SANDBOX
+#define DEFAULT_SANDBOXER_NAME "shim"
+#endif
+
 struct isulad_conf {
     pthread_rwlock_t isulad_conf_rwlock;
     struct service_arguments *server_conf;
@@ -42,6 +46,10 @@ char *conf_get_routine_rootdir(const char *runtime);
 char *conf_get_routine_statedir(const char *runtime);
 char *conf_get_isulad_rootdir();
 char *conf_get_isulad_statedir();
+#ifdef ENABLE_SANDBOX
+char *conf_get_sandbox_rootdir(const char *sandboxer);
+char *conf_get_sandbox_statedir(const char *sandboxer);
+#endif
 char *conf_get_isulad_mount_rootfs();
 char *conf_get_isulad_loglevel();
 char *conf_get_isulad_logdriver();
@@ -90,6 +98,10 @@ char *conf_get_isulad_native_umask();
 char *conf_get_isulad_cgroup_parent();
 
 char *conf_get_default_runtime();
+
+#ifdef ENABLE_SANDBOX
+char *conf_get_default_sandboxer();
+#endif
 
 char *conf_get_graph_check_flag_file();
 

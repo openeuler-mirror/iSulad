@@ -42,6 +42,9 @@
 #include "execution_network.h"
 #include "plugin_api.h"
 #include "image_api.h"
+#ifdef ENABLE_SANDBOX
+#include "sandbox_api.h"
+#endif
 #include "utils.h"
 #include "error.h"
 #include "constants.h"
@@ -1153,6 +1156,62 @@ static int get_basic_spec(const container_create_request *request, host_config *
     return 0;
 }
 
+#ifdef ENABLE_SANDBOX
+static int get_sandbox_info(const container_create_request *request, char **sandbox_id, char **sandbox_task_address)
+{
+    const char *id = request->sandbox_id;
+    sandbox_t *sandbox = NULL;
+    if (id == NULL) {
+        DEBUG("Sandbox id is not set in container create_request.");
+        return -1;
+    }
+
+    sandbox = sandboxes_store_get_by_id(id);
+    if (sandbox == NULL) {
+        DEBUG("Sandbox %s doesn't exist", id);
+        return -1;
+    }
+
+    *sandbox_id = util_strdup_s(id);
+    *sandbox_task_address = util_strdup_s(sandbox->task_address);
+
+    sandbox_unref(sandbox);
+    return 0;
+}
+
+static int set_sandbox_info_for_container(const container_create_request *request, const char *container_id)
+{
+    int ret = 0;
+    char *sandbox_id = NULL;
+    char *sandbox_task_address = NULL;
+    container_t *cont = NULL;
+
+    cont = containers_store_get(container_id);
+    if (cont == NULL){
+        ret = -1;
+        ERROR("Container %s doesn't exist", container_id);
+        goto out;
+    }
+
+    ret = get_sandbox_info(request, &sandbox_id, &sandbox_task_address);
+    if (ret != 0) {
+        DEBUG("Failed to get sandbox info for container %s", container_id);
+        goto out;
+    }
+
+    cont->sandbox_id = sandbox_id;
+    cont->sandbox_task_address = sandbox_task_address;
+    sandbox_id = NULL;
+    sandbox_task_address = NULL;
+
+out:
+    free(sandbox_id);
+    free(sandbox_task_address);
+    container_unref(cont);
+    return ret;
+}
+#endif
+
 static int do_image_create_container_roofs_layer(const char *container_id, const char *image_type,
                                                  const char *image_name, const char *mount_label, const char *rootfs,
                                                  json_map_string_string *storage_opt, char **real_rootfs)
@@ -1501,6 +1560,12 @@ int container_create_cb(const container_create_request *request, container_creat
     host_spec = NULL;
     v2_spec = NULL;
     network_settings = NULL;
+
+#ifdef ENABLE_SANDBOX
+    if (set_sandbox_info_for_container(request, id) != 0) {
+        WARN("Sandbox info is not set for container %s", id);
+    }
+#endif
 
     EVENT("Event: {Object: %s, Type: Created %s}", id, name);
     (void)isulad_monitor_send_container_event(id, CREATE, -1, 0, NULL, NULL);

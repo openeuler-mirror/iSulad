@@ -11,6 +11,10 @@ if (ENABLE_NATIVE_NETWORK)
 set(NETWORK_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/network)
 endif()
 
+if (ENABLE_SANDBOX)
+set(SANDBOX_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/sandbox)
+endif()
+
 macro(PROTOC_CPP_GEN proto_name cpp_out_path proto_path)
     execute_process(COMMAND ${CMD_PROTOC} -I ${PROTOS_PATH}/${proto_name} --cpp_out=${cpp_out_path} ${proto_path} ERROR_VARIABLE cpp_err)
     if (cpp_err)
@@ -55,3 +59,21 @@ if (GRPC_CONNECTOR)
     endif()
 endif()
 
+if (ENABLE_SANDBOX)
+    execute_process(COMMAND mkdir -p ${SANDBOX_PROTOS_OUT_PATH})
+    PROTOC_CPP_GEN(sandbox ${SANDBOX_PROTOS_OUT_PATH} ${PROTOS_PATH}/sandbox/google/protobuf/any.proto)
+
+    PROTOC_CPP_GEN(sandbox ${SANDBOX_PROTOS_OUT_PATH} ${PROTOS_PATH}/sandbox/google/protobuf/empty.proto)
+
+    PROTOC_CPP_GEN(sandbox ${SANDBOX_PROTOS_OUT_PATH} ${PROTOS_PATH}/sandbox/google/protobuf/timestamp.proto)
+
+    PROTOC_CPP_GEN(sandbox ${SANDBOX_PROTOS_OUT_PATH} ${PROTOS_PATH}/sandbox/github.com/containerd/containerd/api/types/sandbox.proto)
+
+    PROTOC_CPP_GEN(sandbox ${SANDBOX_PROTOS_OUT_PATH} ${PROTOS_PATH}/sandbox/github.com/containerd/containerd/api/types/mount.proto)
+
+    PROTOC_CPP_GEN(sandbox ${SANDBOX_PROTOS_OUT_PATH} ${PROTOS_PATH}/sandbox/github.com/containerd/containerd/api/types/platform.proto)
+
+    PROTOC_CPP_GEN(sandbox ${SANDBOX_PROTOS_OUT_PATH} ${PROTOS_PATH}/sandbox/sandbox.proto)
+
+    PROTOC_GRPC_GEN(sandbox ${SANDBOX_PROTOS_OUT_PATH} ${PROTOS_PATH}/sandbox/sandbox.proto)
+endif()

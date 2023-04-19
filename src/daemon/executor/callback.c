@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2023. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -24,6 +24,9 @@
 #endif
 #ifdef ENABLE_NATIVE_NETWORK
 #include "network_cb.h"
+#endif
+#ifdef ENABLE_SANDBOX
+#include "sandbox_cb.h"
 #endif
 
 service_executor_t g_isulad_service_executor;
@@ -168,6 +171,9 @@ int service_callback_init(void)
 #endif
 #ifdef ENABLE_NATIVE_NETWORK
     network_callback_init(&g_isulad_service_executor.network);
+#endif
+#ifdef ENABLE_SANDBOX
+    sandbox_callback_init(&g_isulad_service_executor.sandbox);
 #endif
     return 0;
 }

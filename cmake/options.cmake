@@ -33,6 +33,13 @@ if (ENABLE_GRPC STREQUAL "ON")
     message("${Green}--  Use grpc connector${ColourReset}")
 endif()
 
+option(ENABLE_SANDBOX "Enable sandbox API" OFF)
+if (ENABLE_SANDBOX STREQUAL "ON")
+    add_definitions(-DENABLE_SANDBOX)
+    set(ENABLE_SANDBOX 1)
+    message("${Green}--  Enable sandbox API${ColourReset}")
+endif()
+
 option(ENABLE_SYSTEMD_NOTIFY "Enable systemd notify" ON)
 if (ENABLE_SYSTEMD_NOTIFY STREQUAL "ON")
     add_definitions(-DSYSTEMD_NOTIFY)

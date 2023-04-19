@@ -13,10 +13,12 @@
  * Description: provide cri security context functions
  *********************************************************************************/
 #include "cri_security_context.h"
+#include "cri_helpers.h"
 #include "cri_runtime_service.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "cri_constants.h"
+#include "namespace.h"
 #include <memory>
 
 namespace CRISecurity {
@@ -137,7 +139,7 @@ static void ModifyCommonNamespaceOptions(const runtime::v1alpha2::NamespaceOptio
 static void ModifyHostNetworkOptionForContainer(const runtime::v1alpha2::NamespaceMode &hostNetwork,
                                                 const std::string &podSandboxID, host_config *hostConfig)
 {
-    std::string sandboxNSMode = "container:" + podSandboxID;
+    std::string sandboxNSMode = SHARE_NAMESPACE_SANDBOX_PREFIX + podSandboxID;
 
     free(hostConfig->network_mode);
     hostConfig->network_mode = util_strdup_s(sandboxNSMode.c_str());
@@ -168,14 +170,14 @@ static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::Namespace
 static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts,
                                             const std::string &podSandboxID, host_config *hostConfig)
 {
-    std::string sandboxNSMode = "container:" + podSandboxID;
+    std::string sandboxNSMode = SHARE_NAMESPACE_SANDBOX_PREFIX + podSandboxID;
     if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::POD) {
         free(hostConfig->pid_mode);
         hostConfig->pid_mode = util_strdup_s(sandboxNSMode.c_str());
     }
 
     if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::TARGET) {
-        std::string targetPidNsMode = "container:" + nsOpts.target_id();
+        std::string targetPidNsMode = SHARE_NAMESPACE_CONTAINER_PREFIX + nsOpts.target_id();
         free(hostConfig->pid_mode);
         hostConfig->pid_mode = util_strdup_s(targetPidNsMode.c_str());
     }
@@ -227,6 +229,84 @@ void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig 
     }
     ModifySandboxNamespaceOptions(sc->namespace_options(), hc);
 }
+
+#ifdef ENABLE_SANDBOX
+void ApplySandboxLinuxSecurityOpts(const runtime::v1alpha2::LinuxPodSandboxConfig &lc,
+                                   host_config *hostconf, Errors &error)
+{
+    const char securityOptSep = '=';
+
+    // Security Opts
+    if (lc.has_security_context()) {
+        const ::runtime::v1alpha2::LinuxSandboxSecurityContext &context = lc.security_context();
+        std::vector<std::string> securityOpts =
+            CRIHelpers::GetSecurityOpts(context.has_seccomp(), context.seccomp(),
+                                        context.seccomp_profile_path(), securityOptSep, error);
+        if (error.NotEmpty()) {
+            error.Errorf("failed to generate security options: %s", error.GetMessage().c_str());
+            return;
+        }
+        if (!securityOpts.empty()) {
+            char **tmp_security_opt = nullptr;
+
+            if (securityOpts.size() > (SIZE_MAX / sizeof(char *)) - hostconf->security_opt_len) {
+                error.Errorf("Out of memory");
+                return;
+            }
+            size_t newSize = (hostconf->security_opt_len + securityOpts.size()) * sizeof(char *);
+            size_t oldSize = hostconf->security_opt_len * sizeof(char *);
+            int ret = util_mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostconf->security_opt, oldSize);
+            if (ret != 0) {
+                error.Errorf("Out of memory");
+                return;
+            }
+            hostconf->security_opt = tmp_security_opt;
+            for (const auto &securityOpt : securityOpts) {
+                hostconf->security_opt[hostconf->security_opt_len] = util_strdup_s(securityOpt.c_str());
+                hostconf->security_opt_len++;
+            }
+        }
+    }
+}
+
+void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, sandbox_config *config,
+                                 host_config *hc, Errors &error)
+{
+    std::unique_ptr<runtime::v1alpha2::LinuxContainerSecurityContext> sc(
+        new (std::nothrow) runtime::v1alpha2::LinuxContainerSecurityContext);
+    if (sc == nullptr) {
+        error.SetError("Out of memory");
+        return;
+    }
+    if (lc.has_security_context()) {
+        const runtime::v1alpha2::LinuxSandboxSecurityContext &old = lc.security_context();
+        if (old.has_run_as_user()) {
+            *sc->mutable_run_as_user() = old.run_as_user();
+        }
+        if (old.has_namespace_options()) {
+            *sc->mutable_namespace_options() = old.namespace_options();
+        }
+        if (old.has_selinux_options()) {
+            *sc->mutable_selinux_options() = old.selinux_options();
+        }
+        *sc->mutable_supplemental_groups() = old.supplemental_groups();
+        sc->set_readonly_rootfs(old.readonly_rootfs());
+    }
+
+    if (sc->has_run_as_user()) {
+        free(config->user);
+        config->user = util_strdup_s(std::to_string(sc->run_as_user().value()).c_str());
+    }
+
+    ModifyHostConfig(*sc, hc, error);
+    if (error.NotEmpty()) {
+        return;
+    }
+    ModifySandboxNamespaceOptions(sc->namespace_options(), hc);
+
+    ApplySandboxLinuxSecurityOpts(lc, hc, error);
+}
+#endif
 
 void ApplyContainerSecurityContext(const runtime::v1alpha2::LinuxContainerConfig &lc, const std::string &podSandboxID,
                                    container_config *config, host_config *hc, Errors &error)
