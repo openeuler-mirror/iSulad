@@ -16,7 +16,7 @@ You can see `iSulad`  architecture in [architecture](./docs/design/architecture.
 
 ### Runtime
 
-`iSulad` support multiple container runtimes, including lxc、runc and kata.
+`iSulad` support multiple container runtimes, including lxc, runc, kata and kuasar.
 
 #### lxc
 
@@ -29,6 +29,9 @@ runc is an OCI-compliant runtime written in GO. When users use runc, the OCI run
 #### kata-runtime
 
 kata-runtime start secure containers with lightweight virtual machines.
+
+#### Kuasar
+[Kuasar](https://kuasar.io/) supports multiple types of sandbox with Sandbox API. Compared with shim v2 runtime, it boots up faster with less resources overhead.
 
 ### Image
 
