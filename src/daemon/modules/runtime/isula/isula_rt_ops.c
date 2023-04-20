@@ -694,7 +694,7 @@ static int status_to_exit_code(int status)
 }
 
 static int shim_create(bool fg, const char *id, const char *workdir, const char *bundle, const char *runtime_cmd,
-                       int *exit_code, const int64_t timeout)
+                       int *exit_code, const char* timeout)
 {
     pid_t pid = 0;
     int exec_fd[2] = { -1, -1 };
@@ -712,12 +712,8 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
     params[i++] = runtime_cmd;
     params[i++] = "info";
     // execSync timeout
-    if (timeout > 0) {
-        params[i] = util_int_to_string(timeout);
-        if (params[i] == NULL) {
-            ERROR("Failed to convert execSync timeout %ld to string", timeout);
-            return -1;
-        }
+    if (timeout != NULL) {
+        params[i++] = timeout;
     }
     runtime_exec_param_dump(params);
 
@@ -917,7 +913,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     }
 
     get_runtime_cmd(runtime, &cmd);
-    ret = shim_create(false, id, workdir, params->bundle, cmd, NULL, -1);
+    ret = shim_create(false, id, workdir, params->bundle, cmd, NULL, NULL);
     if (ret != 0) {
         runtime_call_delete_force(workdir, runtime, id);
         ERROR("%s: failed create shim process", id);
@@ -1099,6 +1095,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     char bundle[PATH_MAX] = { 0 };
     int pid = 0;
     shim_client_process_state p = { 0 };
+    char *timeout = NULL;
 
     if (id == NULL || runtime == NULL || params == NULL || exit_code == NULL || params->suffix == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -1158,7 +1155,18 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     }
 
     get_runtime_cmd(runtime, &cmd);
-    ret = shim_create(fg_exec(params), id, workdir, bundle, cmd, exit_code, params->timeout);
+
+    // execSync timeout
+    if (params->timeout > 0) {
+        timeout = util_int_to_string(params->timeout);
+        if (timeout == NULL) {
+            ERROR("Failed to convert execSync timeout %ld to string", params->timeout);
+            ret = -1;
+            goto del_out;
+        }
+    }
+
+    ret = shim_create(fg_exec(params), id, workdir, bundle, cmd, exit_code, timeout);
     if (ret != 0) {
         ERROR("%s: failed create shim process for exec %s", id, exec_id);
         goto errlog_out;
@@ -1181,6 +1189,10 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
 errlog_out:
     if (ret != 0) {
         show_shim_runtime_errlog(workdir);
+    }
+
+    if (timeout != NULL) {
+        free(timeout);
     }
 
 del_out:
