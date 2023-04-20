@@ -16,7 +16,7 @@
 
 ### Runtime
 
-`iSulad`支持多种容器runtime，包括lxc、runc和kata。
+`iSulad`支持多种容器runtime，包括lxc、runc、kata和kuasar。
 
 #### lxc
 
@@ -29,6 +29,9 @@ runc是用GO语言编写的符合OCI标准的runtime，使用runc时要求其使
 #### kata-runtime
 
 kata-runtime是一个安全容器runtime，用于启动安全容器时使用。
+
+#### Kuasar
+[Kuasar](https://kuasar.io/)是一个能够运行多种沙箱的runtime，支持Sandbox API。相比于shim v2的安全容器，Kuasar具有资源占用少、启动速度快的特点。
 
 ### Image
 
