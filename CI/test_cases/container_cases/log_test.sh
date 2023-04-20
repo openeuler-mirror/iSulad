@@ -245,6 +245,28 @@ function do_test_container_log()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
+    mkdir shim_sh
+    cat >> ./shim_sh/msg.sh << EOF
+#!/bin/bash
+dd if=/dev/zero of=/home/file bs=2M count=100
+for i in {1..10}
+do
+        cat /home/file > /dev/stderr &
+        cat /home/file > /dev/stdout &
+        echo "cat done"
+        sleep 1
+done
+echo "done"
+EOF
+    cat $curr_path/shim_sh/msg.sh
+    cid=`isula run -id --runtime $1 -v $curr_path/shim_sh:/home/shim --log-driver=json-file --log-opt="max-file=3" busybox:latest /bin/sh -x /home/shim/msg.sh`
+
+    isula wait $cid
+
+    logcount=`ls ${RUNTIME_ROOT_PATH}/$1/$cid/console.log* | wc -l`
+    [[ $logcount -ne 3 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - max-file didn't effective" && ((ret++))
+    
+    rm -rf shim_sh
     isula rm -f `isula ps -aq`
     return $TC_RET_T
 }
