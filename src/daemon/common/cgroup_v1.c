@@ -50,7 +50,9 @@ typedef enum {
     MEMORY_KMEM_LIMIT, MEMORY_KMEM_USAGE,
     MEMORY_SWAPPINESS, MEMORY_SW_LIMIT, MEMORY_SW_USAGE,
     MEMORY_CACHE, MEMORY_CACHE_TOTAL,
-    MEMORY_INACTIVE_FILE_TOTAL, MEMORY_OOM_CONTROL,
+    MEMORY_TOTAL_RSS,
+    MEMORY_TOTAL_PGFAULT, MEMORY_TOTAL_PGMAJFAULT,
+    MEMORY_TOTAL_INACTIVE_FILE, MEMORY_OOM_CONTROL,
     // BLKIO subsystem
     BLKIO_WEIGTH, BLKIO_WEIGTH_DEVICE, BLKIO_READ_BPS, BLKIO_WRITE_BPS, BLKIO_READ_IOPS, BLKIO_WRITE_IOPS,
     // PIDS subsystem
@@ -84,7 +86,10 @@ static struct cgfile_t g_cgroup_v1_files[] = {
     [MEMORY_SW_USAGE]               = {"memsw_usage",           "memory.memsw.usage_in_bytes",      get_value_ull},
     [MEMORY_CACHE]                  = {"cache",                 "memory.stat",                      get_match_value_ull},
     [MEMORY_CACHE_TOTAL]            = {"cache_total",           "memory.stat",                      get_match_value_ull},
-    [MEMORY_INACTIVE_FILE_TOTAL]    = {"inactive_file_total",   "memory.stat",                      get_match_value_ull},
+    [MEMORY_TOTAL_RSS]              = {"total_rss",             "memory.stat",                      get_match_value_ull},
+    [MEMORY_TOTAL_PGFAULT]          = {"total_page_fault",      "memory.stat",                      get_match_value_ull},
+    [MEMORY_TOTAL_PGMAJFAULT]       = {"total_page_majfault",   "memory.stat",                      get_match_value_ull},
+    [MEMORY_TOTAL_INACTIVE_FILE]    = {"total_inactive_file",   "memory.stat",                      get_match_value_ull},
     [MEMORY_OOM_CONTROL]            = {"oom_control",           "memory.oom_control",               NULL},
     // BLKIO subsystem
     [BLKIO_WEIGTH]                  = {"blkio_weigth",          "blkio.weight",                     NULL},
@@ -256,6 +261,9 @@ static int get_cgroup_v1_value_helper(const char *path, const cgroup_v1_files_in
         ERROR("%s: failed to read file %s", g_cgroup_v1_files[index].name, real_path);
         return -1;
     }
+
+    util_trim_newline(content);
+    content = util_trim_space(content);
 
     nret = g_cgroup_v1_files[index].get_value(content, args, result);
     if (nret != 0) {
@@ -442,15 +450,8 @@ static void get_cgroup_v1_metrics_cpu(const cgroup_layer_t *layers, const char *
     int nret = 0;
     char *mountpoint = NULL;
     char path[PATH_MAX] = { 0 };
-    const cgfile_callback_args_t use_user_arg = {
-        .match = "user",
-    };
-    const cgfile_callback_args_t use_sys_arg = {
-        .match = "system",
-    };
 
-
-    mountpoint = common_find_cgroup_subsystem_mountpoint(layers, "cpu");
+    mountpoint = common_find_cgroup_subsystem_mountpoint(layers, "cpuacct");
     if (mountpoint == NULL) {
         ERROR("Unable to find cpu cgroup in mounts");
         return;
@@ -463,8 +464,6 @@ static void get_cgroup_v1_metrics_cpu(const cgroup_layer_t *layers, const char *
     }
 
     get_cgroup_v1_value_helper(path, CPUACCT_USE_NANOS, NULL, (void *)&cgroup_cpu_metrics->cpu_use_nanos);
-    get_cgroup_v1_value_helper(path, CPUACCT_USE_USER, &use_user_arg, (void *)&cgroup_cpu_metrics->cpu_use_user);
-    get_cgroup_v1_value_helper(path, CPUACCT_USE_SYS, &use_sys_arg, (void *)&cgroup_cpu_metrics->cpu_use_sys);
 }
 
 static void get_cgroup_v1_metrics_memory(const cgroup_layer_t *layers, const char *cgroup_path,
@@ -473,11 +472,17 @@ static void get_cgroup_v1_metrics_memory(const cgroup_layer_t *layers, const cha
     int nret = 0;
     char *mountpoint = NULL;
     char path[PATH_MAX] = { 0 };
-    const cgfile_callback_args_t cache_arg = {
-        .match = "cache",
+    const cgfile_callback_args_t total_inactive_file_arg = {
+        .match = "total_inactive_file",
     };
-    const cgfile_callback_args_t total_cache_arg = {
-        .match = "total_cache",
+    const cgfile_callback_args_t total_rss_arg = {
+        .match = "total_rss",
+    };
+    const cgfile_callback_args_t total_pgfault_arg = {
+        .match = "total_pgfault",
+    };
+    const cgfile_callback_args_t total_pgmajfault_arg = {
+        .match = "total_pgmajfault",
     };
 
     mountpoint = common_find_cgroup_subsystem_mountpoint(layers, "memory");
@@ -494,12 +499,13 @@ static void get_cgroup_v1_metrics_memory(const cgroup_layer_t *layers, const cha
 
     get_cgroup_v1_value_helper(path, MEMORY_LIMIT, NULL, (void *)&cgroup_mem_metrics->mem_limit);
     get_cgroup_v1_value_helper(path, MEMORY_USAGE, NULL, (void *)&cgroup_mem_metrics->mem_used);
-    get_cgroup_v1_value_helper(path, MEMORY_KMEM_LIMIT, NULL, (void *)&cgroup_mem_metrics->kmem_limit);
-    get_cgroup_v1_value_helper(path, MEMORY_KMEM_USAGE, NULL, (void *)&cgroup_mem_metrics->kmem_used);
-    get_cgroup_v1_value_helper(path, MEMORY_SW_LIMIT, NULL, (void *)&cgroup_mem_metrics->memsw_limit);
-    get_cgroup_v1_value_helper(path, MEMORY_SW_USAGE, NULL, (void *)&cgroup_mem_metrics->memsw_used);
-    get_cgroup_v1_value_helper(path, MEMORY_CACHE, &cache_arg, (void *)&cgroup_mem_metrics->cache);
-    get_cgroup_v1_value_helper(path, MEMORY_CACHE_TOTAL, &total_cache_arg, (void *)&cgroup_mem_metrics->cache_total);
+    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_RSS, &total_rss_arg, (void *)&cgroup_mem_metrics->total_rss);
+    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_PGFAULT, &total_pgfault_arg,
+                               (void *)&cgroup_mem_metrics->total_pgfault);
+    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_PGMAJFAULT, &total_pgmajfault_arg,
+                               (void *)&cgroup_mem_metrics->total_pgmajfault);
+    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_INACTIVE_FILE, &total_inactive_file_arg,
+                               (void *)&cgroup_mem_metrics->total_inactive_file);
 }
 
 static void get_cgroup_v1_metrics_pid(const cgroup_layer_t *layers, const char *cgroup_path,

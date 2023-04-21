@@ -401,6 +401,57 @@ grpc::Status RuntimeRuntimeServiceImpl::ListPodSandbox(grpc::ServerContext *cont
     return grpc::Status::OK;
 }
 
+grpc::Status RuntimeRuntimeServiceImpl::PodSandboxStats(grpc::ServerContext *context,
+                                                        const runtime::v1alpha2::PodSandboxStatsRequest *request, 
+                                                        runtime::v1alpha2::PodSandboxStatsResponse *reply)
+{
+    Errors error;
+
+    INFO("Event: {Object: CRI, Type: Stats Pod: %s}", request->pod_sandbox_id().c_str());
+
+    std::unique_ptr<runtime::v1alpha2::PodSandboxStats> podStats;
+    podStats = m_rService->PodSandboxStats(request->pod_sandbox_id(), error);
+    if (!error.Empty() || podStats == nullptr) {
+        ERROR("Object: CRI, Type: Failed to stats pod:%s due to %s", request->pod_sandbox_id().c_str(),
+              error.GetCMessage());
+        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+    }
+    *(reply->mutable_stats()) = *podStats;
+
+    INFO("Event: {Object: CRI, Type: Statsed Pod: %s}", request->pod_sandbox_id().c_str());
+
+    return grpc::Status::OK;
+}
+
+grpc::Status
+RuntimeRuntimeServiceImpl::ListPodSandboxStats(grpc::ServerContext *context,
+                                               const runtime::v1alpha2::ListPodSandboxStatsRequest *request,
+                                               runtime::v1alpha2::ListPodSandboxStatsResponse *reply)
+{
+    Errors error;
+
+    INFO("Event: {Object: CRI, Type: Listing Pods Stats}");
+
+    std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> podsStats;
+    m_rService->ListPodSandboxStats(request->has_filter() ? &request->filter() : nullptr, &podsStats, error);
+    if (!error.Empty()) {
+        ERROR("Object: CRI, Type: Failed to list pods stats: %s", error.GetCMessage());
+        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+    }
+    for (auto iter = podsStats.begin(); iter != podsStats.end(); ++iter) {
+        runtime::v1alpha2::PodSandboxStats *podStats = reply->add_stats();
+        if (podStats == nullptr) {
+            ERROR("Object: CRI, Type: Failed to list pods stats: Out of memory");
+            return grpc::Status(grpc::StatusCode::UNKNOWN, "Out of memory");
+        }
+        *podStats = *(iter->get());
+    }
+
+    INFO("Event: {Object: CRI, Type: Listed Pods Stats}");
+
+    return grpc::Status::OK;
+}
+
 grpc::Status
 RuntimeRuntimeServiceImpl::UpdateContainerResources(grpc::ServerContext *context,
                                                     const runtime::v1alpha2::UpdateContainerResourcesRequest *request,

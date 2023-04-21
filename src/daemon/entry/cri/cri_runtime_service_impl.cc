@@ -137,6 +137,20 @@ void CRIRuntimeServiceImpl::ListPodSandbox(const runtime::v1alpha2::PodSandboxFi
     m_podSandboxManager->ListPodSandbox(filter, pods, error);
 }
 
+auto CRIRuntimeServiceImpl::PodSandboxStats(const std::string &podSandboxID, Errors &error)
+-> std::unique_ptr<runtime::v1alpha2::PodSandboxStats>
+{
+    return m_podSandboxManager->PodSandboxStats(podSandboxID, m_containerManager, error);
+}
+
+void
+CRIRuntimeServiceImpl::ListPodSandboxStats(const runtime::v1alpha2::PodSandboxStatsFilter *filter,
+                                           std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> *podsStats,
+                                           Errors &error)
+{
+    m_podSandboxManager->ListPodSandboxStats(filter, m_containerManager, podsStats, error);
+}
+
 void CRIRuntimeServiceImpl::UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors &error)
 {
     m_runtimeManager->UpdateRuntimeConfig(config, error);

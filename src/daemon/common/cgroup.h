@@ -118,23 +118,15 @@ int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpu
 
 typedef struct {
     uint64_t cpu_use_nanos;
-    uint64_t cpu_use_user;
-    uint64_t cpu_use_sys;
 } cgroup_cpu_metrics_t;
 
 typedef struct {
-    /* Memory */
     uint64_t mem_limit;
     uint64_t mem_used;
-    /* Kernel Memory */
-    uint64_t kmem_limit;
-    uint64_t kmem_used;
-    /* Swap */
-    uint64_t memsw_limit;
-    uint64_t memsw_used;
-    /* Cache */
-    uint64_t cache;
-    uint64_t cache_total;
+    uint64_t total_rss;
+    uint64_t total_pgfault;
+    uint64_t total_pgmajfault;
+    uint64_t total_inactive_file;
 } cgroup_mem_metrics_t;
 
 typedef struct {

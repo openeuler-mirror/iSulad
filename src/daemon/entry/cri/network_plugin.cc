@@ -22,6 +22,7 @@
 
 #include "utils_network.h"
 #include "utils.h"
+#include "cxxutils.h"
 #include "isula_libutils/log.h"
 #include "sysctl_tools.h"
 #include "cri_runtime_service.h"
@@ -550,4 +551,158 @@ const std::string &GetInterfaceName()
 {
     return DEFAULT_NETWORK_INTERFACE_NAME;
 }
+
+static void runGetNetworkStats(void *args)
+{
+    constexpr size_t ARGS_LEN { 10 };
+    char **tmp_args = reinterpret_cast<char **>(args);
+
+    if (util_array_len((const char **)tmp_args) != ARGS_LEN) {
+        COMMAND_ERROR("Get network Stats need %lu args", ARGS_LEN);
+        exit(1);
+    }
+
+    execvp(tmp_args[0], tmp_args);
+}
+
+static void ParseOneLineNetworkStats(std::string &headerLine, std::string &valueLine,
+                                     uint64_t &bytesValue, uint64_t &errorsValue, Errors &error)
+{
+    if (headerLine.length() == 0 || valueLine.length() == 0) {
+        error.Errorf("Invalid header line %s or value line", headerLine.c_str(), valueLine.c_str());
+        return;
+    }
+
+    size_t bytesColumn = SIZE_MAX;
+    size_t errorsColumn = SIZE_MAX;
+    auto split = CXXUtils::SplitDropEmpty(headerLine, ' ');
+    for (size_t i = 1; i < split.size(); i++) {
+        if (split[i] == "bytes") {
+            bytesColumn = i - 1;
+            continue;
+        }
+        if (split[i] == "errors") {
+            errorsColumn = i - 1;
+            continue;
+        }
+    }
+    if (bytesColumn >= split.size() || errorsColumn >= split.size()) {
+        error.Errorf("Invalid header line: %s", headerLine.c_str());
+        return;
+    }
+
+    split = CXXUtils::SplitDropEmpty(valueLine, ' ');
+    if (bytesColumn >= split.size() || errorsColumn >= split.size()) {
+        error.Errorf("Invalid value line: %s", valueLine);
+        return;
+    }
+
+    if (util_safe_uint64(split[bytesColumn].c_str(), &bytesValue) != 0) {
+        error.Errorf("Failed to convert %s to uint64", split[bytesColumn].c_str());
+        return;
+    }
+    if (util_safe_uint64(split[errorsColumn].c_str(), &errorsValue) != 0) {
+        error.Errorf("Failed to convert %s to uint64", split[errorsColumn].c_str());
+        return;
+    }
+}
+
+// Parse result of command: ip -s link show dev XXX
+// for example
+// 6: ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+//    link/ether 00:15:5d:c4:29:0d brd ff:ff:ff:ff:ff:ff
+//    RX: bytes  packets  errors  dropped overrun mcast
+//    2686258    9336     0       0       0       7721
+//    TX: bytes  packets  errors  dropped carrier collsns
+//    175961     1097     0       0       0       0
+//    altname enp0s3
+static void ParseNetworkStats(const std::string &stdoutString, struct NetworkInterfaceStats &stats, Errors &error)
+{
+    if (stdoutString.length() == 0) {
+        error.SetError("none command output");
+        return;
+    }
+
+    size_t rxLine = SIZE_MAX;
+    size_t txLine = SIZE_MAX;
+    auto lines = CXXUtils::SplitDropEmpty(stdoutString, '\n');
+    for (size_t i = 0; i < lines.size(); i++) {
+        std::string trim = CXXUtils::StringTrim(lines[i]);
+        if (trim.rfind("RX:", 0) == 0) {
+            rxLine = i;
+            continue;
+        }
+        if (trim.rfind("TX:", 0) == 0) {
+            txLine = i;
+            continue;
+        }
+    }
+
+    if (rxLine >= lines.size() - 1 || txLine >= lines.size() - 1) {
+        error.Errorf("Unexpected command output %s", stdoutString.c_str());
+        return;
+    }
+
+    uint64_t rxBytes, rxErrors, txBytes, txErrors;
+    ParseOneLineNetworkStats(lines[rxLine], lines[rxLine + 1], rxBytes, rxErrors, error);
+    if (error.NotEmpty()) {
+        return;
+    }
+    ParseOneLineNetworkStats(lines[txLine], lines[txLine + 1], txBytes, txErrors, error);
+    if (error.NotEmpty()) {
+        return;
+    }
+
+    stats.rxBytes = rxBytes;
+    stats.rxErrors = rxErrors;   
+    stats.txBytes = txBytes;
+    stats.txErrors = txErrors;
+}
+
+void GetPodNetworkStats(const std::string &nsenterPath, const std::string &netnsPath, const std::string &interfaceName,
+                        struct NetworkInterfaceStats &stats, Errors &error)
+{
+    Errors tmpErr;
+    size_t i = 0;
+    constexpr size_t ARGS_LEN { 10 };
+    char **args = { 0 };
+    char *stdoutString { nullptr };
+    char *stderrString { nullptr };
+
+    args = (char **)util_smart_calloc_s(sizeof(char *), ARGS_LEN + 1);
+    if (args == nullptr) {
+        error.SetError("Out of memory");
+        return;
+    }
+
+    // join command args: nsenter --net=XXX -F -- ip -s link show dev XXX
+    args[i++] = util_strdup_s(nsenterPath.c_str());
+    args[i++] = util_strdup_s((std::string("--net=") + netnsPath).c_str());
+    args[i++] = util_strdup_s("-F");
+    args[i++] = util_strdup_s("--");
+    args[i++] = util_strdup_s("ip");
+    args[i++] = util_strdup_s("-s");
+    args[i++] = util_strdup_s("link");
+    args[i++] = util_strdup_s("show");
+    args[i++] = util_strdup_s("dev");
+    args[i++] = util_strdup_s(interfaceName.c_str());
+    args[i++] = nullptr;
+
+    if (!util_exec_cmd(runGetNetworkStats, args, nullptr, &stdoutString, &stderrString)) {
+        error.Errorf("Unexpected command output %s with error: %s", stdoutString, stderrString);
+        goto free_out;
+    }
+
+    ParseNetworkStats(std::string(stdoutString), stats, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        error.AppendError(tmpErr.GetMessage());
+    }
+    stats.name = interfaceName; 
+
+free_out:
+    free(stdoutString);
+    free(stderrString);
+    util_free_array(args);
+}
+
 } // namespace Network
