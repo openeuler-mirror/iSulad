@@ -195,6 +195,10 @@ typedef enum {
 
 typedef enum { WAIT_CONDITION_STOPPED = 0, WAIT_CONDITION_REMOVED = 1 } wait_condition_t;
 
+// CRI
+#define CRI_CONTAINER_TYPE_LABEL_KEY "cri.isulad.type"
+#define CRI_CONTAINER_TYPE_LABEL_SANDBOX "podsandbox"
+
 #ifdef __cplusplus
 }
 #endif
