@@ -88,7 +88,7 @@ void ContainerStatsService::FillResponseTogRPC(void *containerRes, StatsResponse
         stats->set_kmem_used(response->container_stats[i]->kmem_used);
         stats->set_kmem_limit(response->container_stats[i]->kmem_limit);
         stats->set_avaliable_bytes(response->container_stats[i]->avaliable_bytes);
-        stats->set_usage_bytes(response->container_stats[i]->usage_bytes);
+        stats->set_workingset_bytes(response->container_stats[i]->workingset_bytes);
         stats->set_mem_used(response->container_stats[i]->mem_used);
         stats->set_rss_bytes(response->container_stats[i]->rss_bytes);
         stats->set_page_faults(response->container_stats[i]->page_faults);

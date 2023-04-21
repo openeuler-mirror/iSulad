@@ -569,7 +569,7 @@ static void ParseOneLineNetworkStats(std::string &headerLine, std::string &value
                                      uint64_t &bytesValue, uint64_t &errorsValue, Errors &error)
 {
     if (headerLine.length() == 0 || valueLine.length() == 0) {
-        error.Errorf("Invalid header line %s or value line", headerLine.c_str(), valueLine.c_str());
+        error.Errorf("Invalid header line %s or value line %s", headerLine.c_str(), valueLine.c_str());
         return;
     }
 
@@ -593,7 +593,7 @@ static void ParseOneLineNetworkStats(std::string &headerLine, std::string &value
 
     split = CXXUtils::SplitDropEmpty(valueLine, ' ');
     if (bytesColumn >= split.size() || errorsColumn >= split.size()) {
-        error.Errorf("Invalid value line: %s", valueLine);
+        error.Errorf("Invalid value line: %s", valueLine.c_str());
         return;
     }
 
@@ -654,7 +654,7 @@ static void ParseNetworkStats(const std::string &stdoutString, struct NetworkInt
     }
 
     stats.rxBytes = rxBytes;
-    stats.rxErrors = rxErrors;   
+    stats.rxErrors = rxErrors;
     stats.txBytes = txBytes;
     stats.txErrors = txErrors;
 }
@@ -697,7 +697,7 @@ void GetPodNetworkStats(const std::string &nsenterPath, const std::string &netns
     if (tmpErr.NotEmpty()) {
         error.AppendError(tmpErr.GetMessage());
     }
-    stats.name = interfaceName; 
+    stats.name = interfaceName;
 
 free_out:
     free(stdoutString);

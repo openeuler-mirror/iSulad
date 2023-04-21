@@ -78,10 +78,10 @@ public:
     grpc::Status ListPodSandbox(grpc::ServerContext *context, const runtime::v1alpha2::ListPodSandboxRequest *request,
                                 runtime::v1alpha2::ListPodSandboxResponse *reply) override;
 
-    grpc::Status PodSandboxStats(grpc::ServerContext* context, const runtime::v1alpha2::PodSandboxStatsRequest* request, 
+    grpc::Status PodSandboxStats(grpc::ServerContext* context, const runtime::v1alpha2::PodSandboxStatsRequest* request,
                                  runtime::v1alpha2::PodSandboxStatsResponse* reply) override;
 
-    grpc::Status ListPodSandboxStats(grpc::ServerContext *context, 
+    grpc::Status ListPodSandboxStats(grpc::ServerContext *context,
                                      const runtime::v1alpha2::ListPodSandboxStatsRequest *request,
                                      runtime::v1alpha2::ListPodSandboxStatsResponse *reply) override;
 

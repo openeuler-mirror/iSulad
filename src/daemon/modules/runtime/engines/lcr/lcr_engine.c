@@ -162,8 +162,6 @@ static void copy_container_resources_stats(const struct lcr_container_state *lcs
     rs_stats->mem_limit = lcs->mem_limit;
     rs_stats->kmem_used = lcs->kmem_used;
     rs_stats->kmem_limit = lcs->kmem_limit;
-    rs_stats->avaliable_bytes = lcs->avaliable_bytes;
-    rs_stats->usage_bytes = lcs->usage_bytes;
     rs_stats->mem_used = lcs->mem_used;
     rs_stats->rss_bytes = lcs->rss_bytes;
     rs_stats->page_faults = lcs->page_faults;

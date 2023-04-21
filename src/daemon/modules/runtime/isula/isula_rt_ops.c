@@ -593,6 +593,9 @@ static int runtime_call_stats(const char *workdir, const char *runtime, const ch
     }
     if (stats != NULL && stats->data != NULL && stats->data->memory != NULL && stats->data->memory->raw) {
         info->inactive_file_total = stats->data->memory->raw->total_inactive_file;
+        info->rss_bytes = stats->data->memory->raw->rss;
+        info->page_faults = stats->data->memory->raw->pgfault;
+        info->major_page_faults = stats->data->memory->raw->pgmajfault;
     }
 
 out:
