@@ -28,7 +28,7 @@ $ sudo isulad
 
 # 总体设计
 
-由于isulad与runc之间的交互存在gap，且将容器创建成功之后，容器进程的生命周期与isulad进程的生命周期没有必然联系，因此我们设计了一个isulad-shim进程，用于isulad与runc的交互并将isulad与容器实例解耦。同时，由于只有create以及exec涉及到在容器中新建进程，因此只有这两个子命令需要创建isulad-shim。其他的子命令直接通过调用runc二进制实现。
+由于isulad与runc之间的交互存在gap，且将容器创建成功之后，容器进程的生命周期与isulad进程的生命周期没有必然联系，因此我们设计了一个isulad-shim进程，用于isulad与runc的交互并将isulad与容器实例解耦。同时，由于只有runtime_create以及runtime_exec涉及到在容器中新建进程，因此只有这两个子命令需要创建isulad-shim。其他的子命令直接通过调用runc二进制实现。
 
 ## 时序图
 
@@ -262,3 +262,7 @@ isulad端：
 ### isulad与isulad-shim交互流程图
 
 ![isulad_shim_flow_chart](../../../images/isulad_shim_flow_chart.svg)
+
+### 重构后的isulad-shim流程图
+
+![refactor_isulad_shim_flow_chart](../../../images/refactor_isulad_shim_flow_chart.svg)
