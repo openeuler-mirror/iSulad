@@ -130,14 +130,18 @@ ssize_t util_write_nointr_in_total(int fd, const char *buf, size_t count)
     for (nwritten = 0; nwritten < count;) {
         nret = write(fd, buf + nwritten, count - nwritten);
         if (nret < 0) {
-            if (errno == EINTR || errno == EAGAIN) {
+            if (errno == EINTR) {
                 continue;
-            } else {
-                return nret;
             }
-        } else {
-            nwritten += nret;
+            if (errno == EAGAIN) {
+                // if Resource temporarily unavailable,
+                // we should wait a while to avoid high cpu usage
+                util_usleep_nointerupt(100);
+                continue;
+            }
+            return nret;
         }
+        nwritten += nret;
     }
 
     return nwritten;
