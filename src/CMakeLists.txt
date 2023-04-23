@@ -113,8 +113,16 @@ endif()
 add_executable(isulad-shim
     ${ISULAD_SHIM_SRCS}
     )
-target_include_directories(isulad-shim PUBLIC ${ISULAD_SHIM_INCS} ${SHARED_INCS})
-target_link_libraries(isulad-shim libisulad_tools)
+target_include_directories(isulad-shim PUBLIC 
+    ${ISULAD_SHIM_INCS} 
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${COMMON_INCS}
+    ${CMAKE_BINARY_DIR}/conf
+    ${CHECKED_INCLUDE_DIRS}
+    ${SHARED_INCS}
+    ${ISULA_LIBUTILS_INCLUDE_DIR}
+    )
+target_link_libraries(isulad-shim ${ISULA_LIBUTILS_LIBRARY})
 if (ANDROID OR MUSL)
     target_link_libraries(isulad-shim ${LIBSSL_LIBRARY} ${LIBYAJL_LIBRARY})
 else()
