@@ -38,7 +38,7 @@ target_link_libraries(${EXE}
     ${GMOCK_MAIN_LIBRARY} 
     ${CMAKE_THREAD_LIBS_INIT} 
     ${ISULA_LIBUTILS_LIBRARY} 
-    -lgtest -lgtest_main libutils_ut -lcrypto -lyajl -lz)
+    -lgtest -lgtest_main libutils_ut -lcrypto -lyajl -lz -ldl)
 
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
 set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)

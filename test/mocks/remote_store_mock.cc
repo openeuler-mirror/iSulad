@@ -15,8 +15,14 @@
 
 #include "remote_store_mock.h"
 
-namespace {
+namespace
+{
 MockRemoteStore *g_remote_store_mock = nullptr;
+}
+
+void MockRemoteStore_SetMock(MockRemoteStore *mock)
+{
+    g_remote_store_mock = mock;
 }
 
 int remote_load_one_layer(const char *id)

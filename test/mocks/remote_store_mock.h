@@ -37,4 +37,6 @@ public:
     MOCK_METHOD2(ImageValidSchemaV1, int(const char *, bool *));
 };
 
+void MockRemoteStore_SetMock(MockRemoteStore *mock);
+
 #endif // _ISULAD_TEST_MOCKS_IMAGE_MOCK_H
