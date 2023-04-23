@@ -220,6 +220,18 @@ static int copy_map_labels(const container_config *config, map_t **map_labels)
     return 0;
 }
 
+static uint64_t get_available_bytes(const uint64_t memory_limit, const uint64_t workingset_bytes)
+{
+    // max_memory_size is define in
+    // cadvisor/blob/2b6fbacac7598e0140b5bc8428e3bdd7d86cf5b9/metrics/prometheus.go#L1969-L1971
+    const uint64_t max_memory_size = 1UL << 62;
+
+    if (memory_limit < max_memory_size && memory_limit > workingset_bytes) {
+        return memory_limit - workingset_bytes;
+    }
+    return 0;
+}
+
 static container_info *get_container_stats(const container_t *cont,
                                            const struct runtime_container_resources_stats_info *einfo,
                                            const struct stats_context *ctx)
@@ -243,13 +255,17 @@ static container_info *get_container_stats(const container_t *cont,
     info->blkio_write = einfo->blkio_write;
     info->mem_used = einfo->mem_used;
     info->mem_limit = einfo->mem_limit;
-    info->avaliable_bytes = einfo->avaliable_bytes;
-    info->usage_bytes = einfo->usage_bytes;
     info->rss_bytes = einfo->rss_bytes;
     info->page_faults = einfo->page_faults;
     info->major_page_faults = einfo->major_page_faults;
     info->kmem_used = einfo->kmem_used;
     info->kmem_limit = einfo->kmem_limit;
+
+    // workingset is zero if memory used < total inactive file
+    if (einfo->inactive_file_total < einfo->mem_used) {
+        info->workingset_bytes = einfo->mem_used - einfo->inactive_file_total;
+    }
+    info->avaliable_bytes = get_available_bytes(einfo->mem_limit, info->workingset_bytes);
 
     sysmem_limit = get_default_total_mem_size();
     if (get_system_cpu_usage(&sys_cpu_usage)) {

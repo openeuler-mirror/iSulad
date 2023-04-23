@@ -1691,7 +1691,7 @@ public:
                 response->container_stats[i].blkio_write = gresponse->containers(i).blkio_write();
                 response->container_stats[i].mem_used = gresponse->containers(i).mem_used();
                 response->container_stats[i].avaliable_bytes = gresponse->containers(i).avaliable_bytes();
-                response->container_stats[i].usage_bytes = gresponse->containers(i).usage_bytes();
+                response->container_stats[i].workingset_bytes = gresponse->containers(i).workingset_bytes();
                 response->container_stats[i].rss_bytes = gresponse->containers(i).rss_bytes();
                 response->container_stats[i].page_faults = gresponse->containers(i).page_faults();
                 response->container_stats[i].major_page_faults = gresponse->containers(i).major_page_faults();

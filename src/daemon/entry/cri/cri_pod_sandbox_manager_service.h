@@ -141,7 +141,7 @@ private:
     void GetPodSandboxNetworkMetrics(const container_inspect *inspectData,
                                      std::map<std::string, std::string> &annotations,
                                      std::vector<Network::NetworkInterfaceStats> &netMetrics, Errors &error);
-    void PackagePodSandboxStatsAttributes(const std::string &id, 
+    void PackagePodSandboxStatsAttributes(const std::string &id,
                                           std::unique_ptr<runtime::v1alpha2::PodSandboxStats> &podStatsPtr,
                                           Errors &error);
     void PackagePodSandboxContainerStats(const std::string &id,

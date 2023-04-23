@@ -402,7 +402,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ListPodSandbox(grpc::ServerContext *cont
 }
 
 grpc::Status RuntimeRuntimeServiceImpl::PodSandboxStats(grpc::ServerContext *context,
-                                                        const runtime::v1alpha2::PodSandboxStatsRequest *request, 
+                                                        const runtime::v1alpha2::PodSandboxStatsRequest *request,
                                                         runtime::v1alpha2::PodSandboxStatsResponse *reply)
 {
     Errors error;

@@ -894,25 +894,22 @@ void ContainerManagerService::ContainerStatsToGRPC(
         int64_t timestamp = util_get_now_time_nanos();
         PackContainerStatsFilesystemUsage(response->container_stats[i]->id, response->container_stats[i]->image_type,
                                           timestamp, container);
-        if (response->container_stats[i]->mem_used != 0u) {
-            uint64_t workingset = response->container_stats[i]->mem_used;
-            if (response->container_stats[i]->inactive_file_total < response->container_stats[i]->mem_used) {
-                workingset = response->container_stats[i]->mem_used - response->container_stats[i]->inactive_file_total;
-            }
-            container->mutable_memory()->mutable_working_set_bytes()->set_value(workingset);
-            container->mutable_memory()->set_timestamp(timestamp);
-        }
-
+        // CPU
+        container->mutable_cpu()->set_timestamp(timestamp);
         if (response->container_stats[i]->cpu_use_nanos != 0u) {
             container->mutable_cpu()->mutable_usage_core_nano_seconds()->set_value(
                 response->container_stats[i]->cpu_use_nanos);
-            container->mutable_cpu()->set_timestamp(timestamp);
+        }
+
+        // Memory
+        if (response->container_stats[i]->mem_used != 0u) {
+            container->mutable_memory()->mutable_usage_bytes()->set_value(response->container_stats[i]->mem_used);
         }
         if (response->container_stats[i]->avaliable_bytes != 0u) {
             container->mutable_memory()->mutable_available_bytes()->set_value(response->container_stats[i]->avaliable_bytes);
         }
-        if (response->container_stats[i]->usage_bytes != 0u) {
-            container->mutable_memory()->mutable_usage_bytes()->set_value(response->container_stats[i]->usage_bytes);
+        if (response->container_stats[i]->workingset_bytes != 0u) {
+            container->mutable_memory()->mutable_working_set_bytes()->set_value(response->container_stats[i]->workingset_bytes);
         }
         if (response->container_stats[i]->rss_bytes != 0u) {
             container->mutable_memory()->mutable_rss_bytes()->set_value(response->container_stats[i]->rss_bytes);

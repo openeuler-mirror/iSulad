@@ -1301,7 +1301,7 @@ cleanup:
     free_container_list_response(response);
 }
 
-void PodSandboxManagerService::GetPodSandboxCgroupMetrics(const container_inspect *inspectData, 
+void PodSandboxManagerService::GetPodSandboxCgroupMetrics(const container_inspect *inspectData,
                                                           cgroup_metrics_t &cgroupMetrics, Errors &error)
 {
     int nret { 0 };
@@ -1432,11 +1432,11 @@ void PodSandboxManagerService::PackagePodSandboxStatsAttributes(
 }
 
 auto PodSandboxManagerService::GetAvailableBytes(const uint64_t &memoryLimit, const uint64_t &workingSetBytes)
-    -> uint64_t
+-> uint64_t
 {
     // maxMemorySize is define in
     // cadvisor/blob/2b6fbacac7598e0140b5bc8428e3bdd7d86cf5b9/metrics/prometheus.go#L1969-L1971
-    const uint64_t maxMemorySize = 1UL <<62;
+    const uint64_t maxMemorySize = 1UL << 62;
 
     if (memoryLimit < maxMemorySize && memoryLimit > workingSetBytes) {
         return memoryLimit - workingSetBytes;
@@ -1447,12 +1447,12 @@ auto PodSandboxManagerService::GetAvailableBytes(const uint64_t &memoryLimit, co
 
 void PodSandboxManagerService::PackagePodSandboxContainerStats(
     const std::string &id,
-    const std::unique_ptr<ContainerManagerService> &containerManager, 
+    const std::unique_ptr<ContainerManagerService> &containerManager,
     std::unique_ptr<runtime::v1alpha2::PodSandboxStats> &podStatsPtr, Errors &error)
 {
     std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> containerStats;
     runtime::v1alpha2::ContainerStatsFilter filter;
-    
+
     filter.set_pod_sandbox_id(id);
     containerManager->ListContainerStats(&filter, &containerStats, error);
     if (error.NotEmpty()) {
@@ -1640,7 +1640,7 @@ void PodSandboxManagerService::GetFilterPodSandbox(const runtime::v1alpha2::PodS
     // add filter
     if (CRIHelpers::FiltersAddLabel(request->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
                                     CRIHelpers::Constants::CONTAINER_TYPE_LABEL_SANDBOX) != 0) {
-        error.Errorf("Failed to add label %s", CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY);
+        error.Errorf("Failed to add label %s", CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY.c_str());
         goto cleanup;
     }
     if (filter != nullptr) {
@@ -1678,9 +1678,9 @@ cleanup:
 }
 
 void PodSandboxManagerService::ListPodSandboxStats(const runtime::v1alpha2::PodSandboxStatsFilter *filter,
-                        const std::unique_ptr<ContainerManagerService> &containerManager,
-                        std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> *podsStats,
-                        Errors &error)
+                                                   const std::unique_ptr<ContainerManagerService> &containerManager,
+                                                   std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> *podsStats,
+                                                   Errors &error)
 {
     std::vector<std::string> podSandboxIDs;
 

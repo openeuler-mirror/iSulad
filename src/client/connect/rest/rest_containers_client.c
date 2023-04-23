@@ -2196,7 +2196,7 @@ static int unpack_container_info_for_stats_response(const container_stats_respon
         infos[i].mem_used = con_info->mem_used;
         infos[i].mem_limit = con_info->mem_limit;
         infos[i].avaliable_bytes = con_info->avaliable_bytes;
-        infos[i].usage_bytes = con_info->usage_bytes;
+        infos[i].workingset_bytes = con_info->workingset_bytes;
         infos[i].rss_bytes = con_info->rss_bytes;
         infos[i].page_faults = con_info->page_faults;
         infos[i].major_page_faults = con_info->major_page_faults;
