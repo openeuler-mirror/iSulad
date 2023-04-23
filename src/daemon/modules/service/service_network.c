@@ -1614,6 +1614,17 @@ bool network_store_container_list_add(container_t *cont)
         return true;
     }
 
+    if (cont->common_config != NULL && cont->common_config->config != NULL &&
+        cont->common_config->config->annotations != NULL) {
+        json_map_string_string *annotations = cont->common_config->config->annotations;
+        for (i = 0; i < annotations->len; i++) {
+            if (strcmp(annotations->keys[i], CRI_CONTAINER_TYPE_LABEL_KEY) == 0 &&
+                strcmp(annotations->values[i], CRI_CONTAINER_TYPE_LABEL_SANDBOX) == 0) {
+                return true;
+            }
+        }
+    }
+
     obj = cont->network_settings->networks;
     for (i = 0; i < obj->len; i++) {
         if (network_module_container_list_add(NETWOKR_API_TYPE_NATIVE, obj->keys[i], cont->common_config->id) != 0) {
