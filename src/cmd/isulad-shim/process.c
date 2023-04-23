@@ -37,9 +37,6 @@
 
 #include "common.h"
 #include "terminal.h"
-#include "utils_array.h"
-#include "utils_string.h"
-#include "utils.h"
 
 #define MAX_EVENTS 100
 #define DEFAULT_IO_COPY_BUF (16 * 1024)
