@@ -1,5 +1,5 @@
 %global _version 2.0.18
-%global _release 4
+%global _release 5
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -39,6 +39,26 @@ Patch0023:	0023-change-sleep-to-usleep-to-avoid-lossing-of-accuracy.patch
 Patch0024:	0024-adapt-to-repo-of-openeuler-url-changed.patch
 Patch0025:	0025-modify-sleep-time.patch
 Patch0026:	0026-change-goto-branch.patch
+Patch0027:	0027-modifying-cpurt-file-permissions.patch
+Patch0028:	0028-add-design-docs-for-cri-manager.patch
+Patch0029:	0029-improve-check-of-process-failure.patch
+Patch0030:	0030-support-isula-update-when-runtime-is-runc.patch
+Patch0031:	0031-when-calling-runc-start-unset-NOTIFY_-SOCKET.patch
+Patch0032:	0032-add-CRI-container-design-doc.patch
+Patch0033:	0033-fix-util_getgrent_r-overflow.patch
+Patch0034:	0034-modify-the-return-value-of-the-util_waitpid_with_tim.patch
+Patch0035:	0035-fix-inspect-data-memleak.patch
+Patch0036:	0036-containers-in-same-sandbox-should-have-same-process-.patch
+Patch0037:	0037-clean-container-process-after-execSync-timeout-exit.patch
+Patch0038:	0038-support-to-config-selinux-label-in-cri.patch
+Patch0039:	0039-add-files_limit-to-oci-spec.patch
+Patch0040:	0040-support-setting-pod-to-privilege.patch
+Patch0041:	0041-add-hugepage_limit.patch
+Patch0042:	0042-add-effective-and-permitted-type-of-cap-to-oci-spec.patch
+Patch0043:	0043-isulad-shim-fix-log-loss-bug.patch
+Patch0044:	0044-remove-unused-func.patch
+Patch0045:	0045-if-the-exit-code-in-the-response-of-execSync-is-not-.patch
+Patch0046:	0046-free-timeout-when-shim_create-finished.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -283,6 +303,12 @@ fi
 %endif
 
 %changelog
+* Mon Apr 24 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-5
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: bugfix for runc and cri
+
 * Wed Mar 09 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-4
 - Type: bugfix
 - ID: NA
