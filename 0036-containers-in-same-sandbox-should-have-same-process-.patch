@@ -1,0 +1,193 @@
+From 12b64931a90594e837e1f3dc9a0dde5292bb73b5 Mon Sep 17 00:00:00 2001
+From: zhongtao <zhongtao17@huawei.com>
+Date: Sat, 8 Apr 2023 15:42:30 +0800
+Subject: [PATCH 36/46] containers in same sandbox should have same process
+ labels
+
+Signed-off-by: zhongtao <zhongtao17@huawei.com>
+---
+ .../cri/cri_container_manager_service_impl.cc | 71 ++++++++++++++++++-
+ .../cri/cri_container_manager_service_impl.h  |  5 +-
+ src/daemon/entry/cri/cri_helpers.cc           | 31 ++++++++
+ src/daemon/entry/cri/cri_helpers.h            |  3 +
+ 4 files changed, 107 insertions(+), 3 deletions(-)
+
+diff --git a/src/daemon/entry/cri/cri_container_manager_service_impl.cc b/src/daemon/entry/cri/cri_container_manager_service_impl.cc
+index d406496e..a64d222c 100644
+--- a/src/daemon/entry/cri/cri_container_manager_service_impl.cc
++++ b/src/daemon/entry/cri/cri_container_manager_service_impl.cc
+@@ -126,8 +126,66 @@ auto ContainerManagerServiceImpl::PackCreateContainerHostConfigSecurityContext(
+     return 0;
+ }
+ 
++auto ContainerManagerServiceImpl::DoUsePodLevelSELinuxConfig(const runtime::v1alpha2::ContainerConfig &containerConfig,
++                                                             host_config *hostconfig, const std::string &realPodSandboxID, Errors &error) -> int
++{
++    int ret = -1;
++    size_t newSize = 0;
++    size_t oldSize = 0;
++    container_inspect *inspect = nullptr;
++    std::vector<std::string> selinuxLabelOpts;
++    char **tmp_security_opt = nullptr;
++    std::string tmp_str;
++
++    inspect = CRIHelpers::InspectContainer(realPodSandboxID, error, true);
++    if (error.NotEmpty()) {
++        return -1;
++    }
++
++    if (inspect->process_label == nullptr) {
++        ret = 0;
++        goto cleanup;
++    }
++
++    tmp_str = std::string(inspect->process_label);
++    selinuxLabelOpts = CRIHelpers::GetSELinuxLabelOpts(tmp_str, error);
++    if (error.NotEmpty()) {
++        ERROR("Failed to get SELinuxLabelOpts for container %s", containerConfig.metadata().name().c_str());
++        goto cleanup;
++    }
++    if (selinuxLabelOpts.empty()) {
++        error.Errorf("SElinuxLabelOpts for container %s is empty", containerConfig.metadata().name().c_str());
++        goto cleanup;
++    }
++    if (selinuxLabelOpts.size() > (SIZE_MAX / sizeof(char *)) - hostconfig->security_opt_len) {
++        ERROR("Out of memory");
++        error.Errorf("Out of memory");
++        goto cleanup;
++    }
++    newSize = (hostconfig->security_opt_len + selinuxLabelOpts.size()) * sizeof(char *);
++    oldSize = hostconfig->security_opt_len * sizeof(char *);
++    ret = util_mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostconfig->security_opt, oldSize);
++    if (ret != 0) {
++        ERROR("Out of memory");
++        error.Errorf("Out of memory");
++        goto cleanup;
++    }
++    hostconfig->security_opt = tmp_security_opt;
++    for (const auto &securityOpt : selinuxLabelOpts) {
++        hostconfig->security_opt[hostconfig->security_opt_len] = util_strdup_s(securityOpt.c_str());
++        hostconfig->security_opt_len++;
++    }
++
++cleanup:
++    free_container_inspect(inspect);
++    return ret;
++}
++
++
++
+ auto ContainerManagerServiceImpl::GenerateCreateContainerHostConfig(
+-    const runtime::v1alpha2::ContainerConfig &containerConfig, Errors &error) -> host_config *
++    const runtime::v1alpha2::ContainerConfig &containerConfig,
++    const std::string &realPodSandboxID, Errors &error) -> host_config *
+ {
+     host_config *hostconfig = (host_config *)util_common_calloc_s(sizeof(host_config));
+     if (hostconfig == nullptr) {
+@@ -159,6 +217,15 @@ auto ContainerManagerServiceImpl::GenerateCreateContainerHostConfig(
+         goto cleanup;
+     }
+ 
++    // If selinux label is not specified in container config, use pod level SELinux config
++    if (!containerConfig.linux().has_security_context() ||
++        !containerConfig.linux().security_context().has_selinux_options()) {
++        if (DoUsePodLevelSELinuxConfig(containerConfig, hostconfig, realPodSandboxID, error) != 0) {
++            error.SetError("Failed to security context to host config");
++            goto cleanup;
++        }
++    }
++
+     return hostconfig;
+ 
+ cleanup:
+@@ -367,7 +434,7 @@ ContainerManagerServiceImpl::GenerateCreateContainerRequest(const std::string &r
+ 
+     container_config *custom_config { nullptr };
+ 
+-    host_config *hostconfig = GenerateCreateContainerHostConfig(containerConfig, error);
++    host_config *hostconfig = GenerateCreateContainerHostConfig(containerConfig, realPodSandboxID, error);
+     if (error.NotEmpty()) {
+         goto cleanup;
+     }
+diff --git a/src/daemon/entry/cri/cri_container_manager_service_impl.h b/src/daemon/entry/cri/cri_container_manager_service_impl.h
+index 6ac1cbc4..dcb2cd44 100644
+--- a/src/daemon/entry/cri/cri_container_manager_service_impl.h
++++ b/src/daemon/entry/cri/cri_container_manager_service_impl.h
+@@ -83,7 +83,7 @@ private:
+                                         const std::string &podSandboxRuntime,
+                                         Errors &error) -> container_create_request *;
+     auto GenerateCreateContainerHostConfig(const runtime::v1alpha2::ContainerConfig &containerConfig,
+-                                           Errors &error) -> host_config *;
++                                           const std::string &realPodSandboxID, Errors &error) -> host_config *;
+     auto GenerateCreateContainerCustomConfig(const std::string &containerName, const std::string &realPodSandboxID,
+                                              const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                              const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+@@ -92,6 +92,9 @@ private:
+                                               host_config *hostconfig, Errors &error) -> int;
+     auto PackCreateContainerHostConfigSecurityContext(const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                                       host_config *hostconfig, Errors &error) -> int;
++    auto DoUsePodLevelSELinuxConfig(const runtime::v1alpha2::ContainerConfig &containerConfig,
++                                    host_config *hostconfig,
++                                    const std::string &realPodSandboxID, Errors &error) -> int;
+     void MakeContainerConfig(const runtime::v1alpha2::ContainerConfig &config, container_config *cConfig,
+                              Errors &error);
+     void CreateContainerLogSymlink(const std::string &containerID, Errors &error);
+diff --git a/src/daemon/entry/cri/cri_helpers.cc b/src/daemon/entry/cri/cri_helpers.cc
+index 711196ba..2bc6bed7 100644
+--- a/src/daemon/entry/cri/cri_helpers.cc
++++ b/src/daemon/entry/cri/cri_helpers.cc
+@@ -619,6 +619,37 @@ auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, E
+     return seccompSecurityOpts;
+ }
+ 
++auto GetSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
++-> std::vector<std::string>
++{
++    // security Opt Separator Change Version : k8s v1.23.0 (Corresponds to docker 1.11.x)
++    // New version '=' , old version ':', iSulad cri is based on v18.09, so iSulad cri use new version separator
++    const char securityOptSep { '=' };
++    // LabeSep is consistent with the separator used when parsing labels
++    const char labeSep { ':' };
++    std::vector<iSuladOpt> selinuxOpts { };
++    char **labelArr = nullptr;
++    size_t labelArrLen = 0;
++    std::vector<std::string> opts = {"user", "role", "type", "level"};
++    std::vector<std::string> vect;
++
++    labelArr = util_string_split_n(selinuxLabel.c_str(), labeSep, 4);
++    if (labelArr == nullptr) {
++        error.Errorf("Invalid selinux label: %s", selinuxLabel.c_str());
++        return vect;
++    }
++
++    labelArrLen = util_array_len((const char **)labelArr);
++    for (size_t i {}; i < labelArrLen; i++) {
++        iSuladOpt tmp = { "label", opts[i] + std::string(1, labeSep) + std::string(labelArr[i]), "" };
++        selinuxOpts.push_back(tmp);
++    }
++
++    util_free_array(labelArr);
++
++    return fmtiSuladOpts(selinuxOpts, securityOptSep);
++}
++
+ auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string
+ {
+     cri_checkpoint *criCheckpoint { nullptr };
+diff --git a/src/daemon/entry/cri/cri_helpers.h b/src/daemon/entry/cri/cri_helpers.h
+index d50759ad..4ef227d7 100644
+--- a/src/daemon/entry/cri/cri_helpers.h
++++ b/src/daemon/entry/cri/cri_helpers.h
+@@ -127,6 +127,9 @@ auto ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state
+ auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
+ -> std::vector<std::string>;
+ 
++auto GetSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
++-> std::vector<std::string>;
++
+ auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string;
+ 
+ void GetCheckpoint(const std::string &jsonCheckPoint, CRI::PodSandboxCheckpoint &checkpoint, Errors &error);
+-- 
+2.25.1
+
