@@ -463,8 +463,15 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     /* libcurl support option CURL_SSLVERSION_TLSv1_2 when version >= 7.34.0
      * #define CURL_VERSION_BITS(x,y,z) ((x)<<16|(y)<<8|(z))
      * CURL_VERSION_BITS(7,34,0) = 0x072200 */
-#if (LIBCURL_VERSION_NUM >= 0x072200)
+#if (LIBCURL_VERSION_NUM >= 0x072200 && LIBCURL_VERSION_NUM < 0x073400)
     curl_easy_setopt(curl_handle, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+#endif
+
+     /* libcurl support option CURL_SSLVERSION_TLSv1_3 when version >= 7.52.0
+     * #define CURL_VERSION_BITS(x,y,z) ((x)<<16|(y)<<8|(z))
+     * CURL_VERSION_BITS(7,52,0) = 0x073400 */
+#if (LIBCURL_VERSION_NUM >= 0x073400)
+    curl_easy_setopt(curl_handle, CURLOPT_SSLVERSION, CURL_SSLVERSION_MAX_TLSv1_3);
 #endif
 
     ret = http_custom_options(curl_handle, options);
