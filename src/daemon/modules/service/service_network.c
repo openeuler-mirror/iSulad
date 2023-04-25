@@ -1615,11 +1615,11 @@ bool network_store_container_list_add(container_t *cont)
     }
 
     if (cont->common_config != NULL && cont->common_config->config != NULL &&
-        cont->common_config->config->annotations != NULL) {
-        json_map_string_string *annotations = cont->common_config->config->annotations;
-        for (i = 0; i < annotations->len; i++) {
-            if (strcmp(annotations->keys[i], CRI_CONTAINER_TYPE_LABEL_KEY) == 0 &&
-                strcmp(annotations->values[i], CRI_CONTAINER_TYPE_LABEL_SANDBOX) == 0) {
+        cont->common_config->config->labels != NULL) {
+        json_map_string_string *labels = cont->common_config->config->labels;
+        for (i = 0; i < labels->len; i++) {
+            if (strcmp(labels->keys[i], CRI_CONTAINER_TYPE_LABEL_KEY) == 0 &&
+                strcmp(labels->values[i], CRI_CONTAINER_TYPE_LABEL_SANDBOX) == 0) {
                 return true;
             }
         }
