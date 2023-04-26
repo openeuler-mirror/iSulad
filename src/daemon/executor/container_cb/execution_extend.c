@@ -952,6 +952,39 @@ out:
     return ret;
 }
 
+static int update_container_unified(const char *id, const host_config *hostconfig, host_config *chostconfig)
+{
+    int i, cgroup_version;
+
+    if (hostconfig->unified == NULL || hostconfig->unified->len == 0) {
+        return 0;
+    }
+
+    cgroup_version = common_get_cgroup_version();
+    if (cgroup_version != CGROUP_VERSION_2) {
+        WARN("Cannot setting unified config without cgroup v2");
+        return 0;
+    }
+
+    if (chostconfig->unified == NULL) {
+        chostconfig->unified = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
+        if (chostconfig->unified == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+
+    for (i = 0; i < hostconfig->unified->len; i++) {
+        if (append_json_map_string_string(chostconfig->unified, hostconfig->unified->keys[i],
+                                          hostconfig->unified->values[i]) != 0) {
+            ERROR("Failed to append unified map");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static int update_container_restart_policy(const host_config *hostconfig, host_config *chostconfig)
 {
     int ret = 0;
@@ -991,24 +1024,25 @@ static int update_container(const container_t *cont, const host_config *hostconf
 
     ret = update_container_cpu(hostconfig, chostconfig);
     if (ret != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     ret = update_container_memory(id, hostconfig, chostconfig);
     if (ret != 0) {
-        ret = -1;
-        goto out;
+        return -1;
+    }
+
+    ret = update_container_unified(id, hostconfig, chostconfig);
+    if (ret != 0) {
+        return -1;
     }
 
     ret = update_container_restart_policy(hostconfig, chostconfig);
     if (ret != 0) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-out:
-    return ret;
+    return 0;
 }
 
 host_config *dump_host_config(const host_config *origconfig)
