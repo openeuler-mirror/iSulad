@@ -58,6 +58,43 @@ extern "C" {
 #define CONTAINER_ACTION_REBOOT 129
 #define CONTAINER_ACTION_SHUTDOWN 130
 
+
+void util_usleep_nointerupt(unsigned long usec);
+/**
+ * retry_cnt: max count of call cb;
+ * interval_us: how many us to sleep, after call cb;
+ * cb: retry call function;
+ * return:
+ *  0 is cb successful at least once;
+ *  1 is all cb are failure;
+*/
+#define DO_RETRY_CALL(retry_cnt, interval_us, ret, cb, ...) do {    \
+        size_t i = 0;                                               \
+        for(; i < retry_cnt; i++) {                                 \
+            ret = cb(##__VA_ARGS__);                                  \
+            if (ret == 0) {                                         \
+                break;                                              \
+            }                                                       \
+            util_usleep_nointerupt(interval_us);                    \
+        }                                                           \
+    } while(0)
+
+#define UTIL_FREE_AND_SET_NULL(p) \
+    do {                          \
+        if ((p) != NULL) {        \
+            free((void *)(p));    \
+            (p) = NULL;           \
+        }                         \
+    } while (0)
+
+#if __WORDSIZE == 64
+// current max user memory for 64-machine is 2^47 B
+#define MAX_MEMORY_SIZE ((size_t)1 << 47)
+#else
+// current max user memory for 32-machine is 2^31 B
+#define MAX_MEMORY_SIZE ((size_t)1 << 31)
+#endif
+
 ssize_t read_nointr(int fd, void *buf, size_t count);
 ssize_t write_nointr(int fd, const void *buf, size_t count);
 
@@ -78,6 +115,18 @@ void close_fd(int *pfd);
 int open_no_inherit(const char *path, int flag, mode_t mode);
 
 int shim_util_safe_uint64(const char *numstr, uint64_t *converted);
+
+void *util_smart_calloc_s(size_t unit_size, size_t count);
+
+size_t util_array_len(const char **array);
+
+void util_free_array(char **array);
+
+int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size, size_t increment);
+
+char *util_strdup_s(const char *src);
+
+char **util_string_split_multi(const char *src_str, char delim);
 
 #ifdef __cplusplus
 }
