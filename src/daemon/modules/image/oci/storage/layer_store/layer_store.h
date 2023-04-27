@@ -23,7 +23,6 @@
 
 #include "storage.h"
 #include "io_wrapper.h"
-#include "map.h"
 
 struct io_read_wrapper;
 struct layer_list;

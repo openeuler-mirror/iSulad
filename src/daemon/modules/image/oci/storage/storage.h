@@ -18,7 +18,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#ifdef ENABLE_REMOTE_LAYER_STORE
 #include <pthread.h>
+#endif
 #include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/json_common.h>
 
