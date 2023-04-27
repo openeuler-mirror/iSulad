@@ -18,6 +18,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#ifdef ENABLE_REMOTE_LAYER_STORE
+#include <pthread.h>
+#endif
 #include <isula_libutils/imagetool_image.h>
 #include <isula_libutils/json_common.h>
 
@@ -70,6 +73,10 @@ struct storage_module_init_options {
     char **driver_opts;
     size_t driver_opts_len;
     bool integration_check;
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    bool enable_remote_layer;
+    pthread_rwlock_t *remote_lock;
+#endif
 };
 
 struct storage_img_create_options {

@@ -41,6 +41,39 @@
 
 struct oci_image_module_data g_oci_image_module_data = { 0 };
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+// intend to make remote refresh and oci ops exlusive
+static bool g_enable_remote;
+static pthread_rwlock_t g_remote_lock = PTHREAD_RWLOCK_INITIALIZER;
+
+static inline bool oci_remote_lock(pthread_rwlock_t *remote_lock, bool writable)
+{
+    int nret = 0;
+
+    if (writable) {
+        nret = pthread_rwlock_wrlock(remote_lock);
+    } else {
+        nret = pthread_rwlock_rdlock(remote_lock);
+    }
+    if (nret != 0) {
+        ERROR("Lock memory store failed: %s", strerror(nret));
+        return false;
+    }
+
+    return true;
+}
+
+static inline void oci_remote_unlock(pthread_rwlock_t *remote_lock)
+{
+    int nret = 0;
+
+    nret = pthread_rwlock_unlock(remote_lock);
+    if (nret != 0) {
+        FATAL("Unlock memory store failed: %s", strerror(nret));
+    }
+}
+#endif
+
 static void free_oci_image_data(void)
 {
     free(g_oci_image_module_data.root_dir);
@@ -214,6 +247,11 @@ static int storage_module_init_helper(const isulad_daemon_configs *args)
         goto out;
     }
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    storage_opts->enable_remote_layer = args->storage_enable_remote_layer;
+    storage_opts->remote_lock = &g_remote_lock;
+#endif
+
     if (util_dup_array_of_strings((const char **)args->storage_opts, args->storage_opts_len, &storage_opts->driver_opts,
                                   &storage_opts->driver_opts_len) != 0) {
         ERROR("Failed to get storage storage opts");
@@ -295,6 +333,10 @@ int oci_init(const isulad_daemon_configs *args)
         goto out;
     }
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    g_enable_remote = args->storage_enable_remote_layer;
+#endif
+
     if (storage_module_init_helper(args) != 0) {
         ret = -1;
         goto out;
@@ -313,6 +355,7 @@ void oci_exit()
 
 int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
 {
+    int ret = 0;
     if (request == NULL || request->image == NULL || response == NULL) {
         ERROR("Invalid NULL param");
         return -1;
@@ -323,8 +366,24 @@ int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
         isulad_try_set_error_message("Invalid image name: %s", request->image);
         return -1;
     }
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    // read lock here because pull have exclusive access against remote refresh
+    // pull can work concurrently with other oci operations.
+    if (g_enable_remote && !oci_remote_lock(&g_remote_lock, false)) {
+        ERROR("Failed to lock oci remote lock when load image");
+        return -1;
+    }
+#endif
 
-    return oci_do_pull_image(request, response);
+    ret = oci_do_pull_image(request, response);
+
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    if (g_enable_remote) {
+        oci_remote_unlock(&g_remote_lock);
+    }
+#endif
+
+    return ret;
 }
 
 int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs)
@@ -433,6 +492,15 @@ int oci_rmi(const im_rmi_request *request)
         return -1;
     }
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    // read lock here because load have exclusive access against remote refresh
+    // load can work concurrently with other oci operations.
+    if (g_enable_remote && !oci_remote_lock(&g_remote_lock, false)) {
+        ERROR("Failed to lock oci remote lock when load image");
+        return -1;
+    }
+#endif
+
     if (!util_valid_image_name(request->image.image)) {
         ERROR("Invalid image name: %s", request->image.image);
         isulad_try_set_error_message("Invalid image name: %s", request->image.image);
@@ -494,6 +562,11 @@ int oci_rmi(const im_rmi_request *request)
     }
 
 out:
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    if (g_enable_remote) {
+        oci_remote_unlock(&g_remote_lock);
+    }
+#endif
     free(real_image_name);
     free(image_ID);
     util_free_array_by_len(image_names, image_names_len);
@@ -519,7 +592,24 @@ int oci_import(const im_import_request *request, char **id)
         goto err_out;
     }
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    // read lock here because import have exclusive access against remote refresh
+    // import can work concurrently with other oci operations.
+    if (g_enable_remote && !oci_remote_lock(&g_remote_lock, false)) {
+        ERROR("Failed to lock oci remote lock when load image");
+        ret = -1;
+        goto err_out;
+    }
+#endif
+
     ret = oci_do_import(request->file, dest_name, id);
+
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    if (g_enable_remote) {
+        oci_remote_unlock(&g_remote_lock);
+    }
+#endif
+
     if (ret != 0) {
         goto err_out;
     }
@@ -669,7 +759,24 @@ int oci_load_image(const im_load_request *request)
         goto out;
     }
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    // read lock here because load have exclusive access against remote refresh
+    // load can work concurrently with other oci operations.
+    if (g_enable_remote && !oci_remote_lock(&g_remote_lock, false)) {
+        ERROR("Failed to lock oci remote lock when load image");
+        ret = -1;
+        goto out;
+    }
+#endif
+
     ret = oci_do_load(request);
+
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    if (g_enable_remote) {
+        oci_remote_unlock(&g_remote_lock);
+    }
+#endif
+
     if (ret != 0) {
         ERROR("Failed to load image");
         goto out;

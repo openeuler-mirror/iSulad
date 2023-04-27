@@ -79,6 +79,11 @@ int layer_store_check(const char *id);
 
 container_inspect_graph_driver *layer_store_get_metadata_by_layer_id(const char *id);
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+int remote_load_one_layer(const char *id);
+int remote_layer_remove_memory_stores_with_lock(const char *id);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -108,6 +108,14 @@ void image_store_free();
 
 imagetool_image_summary *image_store_get_image_summary(const char *id);
 
+#ifdef ENABLE_REMOTE_LAYER_STORE
+int image_store_validate_manifest_schema_version_1(const char *path, bool *valid);
+int remote_append_image_by_directory_with_lock(const char *image_dir);
+int remote_remove_image_from_memory_with_lock(const char *id);
+// return top layer id
+char *remote_image_get_top_layer_from_json(const char *img_id);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

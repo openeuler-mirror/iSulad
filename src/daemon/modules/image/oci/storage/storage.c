@@ -42,6 +42,9 @@
 #include "utils_string.h"
 #include "utils_verify.h"
 #include "sha256.h"
+#ifdef ENABLE_REMOTE_LAYER_STORE
+#include "remote_support.h"
+#endif
 
 static pthread_rwlock_t g_storage_rwlock;
 static char *g_storage_run_root;
@@ -1869,6 +1872,12 @@ int storage_module_init(struct storage_module_init_options *opts)
         ret = -1;
         goto out;
     }
+
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    if (opts->enable_remote_layer && remote_start_refresh_thread(opts->remote_lock) != 0) {
+        ERROR("Failed to start remote refresh thread");
+    }
+#endif
 
     if (restore_images_size() != 0) {
         ERROR("Failed to recal image size");
