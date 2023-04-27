@@ -1580,7 +1580,8 @@ static int do_append_process_exec_env(const char **default_env, defs_process *sp
         ret = -1;
         goto out;
     }
-    new_size = (spec->env_len + default_env_len) * sizeof(char *);
+    // new_size = old_size + default_env_len + 1(null as terminator)
+    new_size = (spec->env_len + default_env_len + 1) * sizeof(char *);
     old_size = spec->env_len * sizeof(char *);
     ret = util_mem_realloc((void **)&temp, new_size, spec->env, old_size);
     if (ret != 0) {
