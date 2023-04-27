@@ -88,11 +88,22 @@ void PodSandboxManagerService::ApplySandboxLinuxOptions(const runtime::v1alpha2:
     }
 }
 
-void PodSandboxManagerService::ApplySandboxResources(const runtime::v1alpha2::LinuxPodSandboxConfig * /*lc*/,
-                                                     host_config *hc, Errors & /*error*/)
+void PodSandboxManagerService::ApplySandboxResources(const runtime::v1alpha2::LinuxPodSandboxConfig *lc,
+                                                     host_config *hc, Errors & /* error */)
 {
     hc->memory_swap = CRI::Constants::DefaultMemorySwap;
     hc->cpu_shares = CRI::Constants::DefaultSandboxCPUshares;
+    hc->cpu_quota = CRI::Constants::DefaultSandboxCPUQuota;
+    hc->cpu_period = CRI::Constants::DefaultSandboxCPUPeriod;
+    hc->memory = CRI::Constants::DefaultSandboxMemoryLimitInBytes;
+
+    if (lc != nullptr && lc->has_resources()) {
+        const runtime::v1alpha2::LinuxContainerResources &res = lc->resources();
+        hc->cpu_shares = res.cpu_shares();
+        hc->cpu_quota = res.cpu_quota();
+        hc->cpu_period = res.cpu_period();
+        hc->memory = res.memory_limit_in_bytes();
+    }
 }
 
 void PodSandboxManagerService::SetHostConfigDefaultValue(host_config *hc)
