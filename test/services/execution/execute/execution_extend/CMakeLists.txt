@@ -20,6 +20,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/mainloop.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/filters.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/err_msg.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/cgroup.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/events_sender/event_sender.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/console/console.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils.c

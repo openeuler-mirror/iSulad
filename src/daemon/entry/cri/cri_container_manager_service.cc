@@ -1216,12 +1216,6 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
     struct parser_context ctx {
         OPT_GEN_SIMPLIFY, 0
     };
-    json_map_string_string *unified = nullptr;
-    unified = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
-    if (unified == nullptr) {
-        error.SetError("Out of memory");
-        goto cleanup;
-    }
     request = (container_update_request *)util_common_calloc_s(sizeof(container_update_request));
     if (request == nullptr) {
         error.SetError("Out of memory");
@@ -1238,19 +1232,23 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
     hostconfig->cpu_period = resources.cpu_period();
     hostconfig->cpu_quota = resources.cpu_quota();
     hostconfig->cpu_shares = resources.cpu_shares();
-    hostconfig->memory_swap_limit_in_bytes = resources.memory_swap_limit_in_bytes();
 
     if (!resources.unified().empty()) {
+        hostconfig->unified = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
+        if (hostconfig->unified == nullptr) {
+            error.SetError("Out of memory");
+            goto cleanup;
+        }
         for (auto &iter : resources.unified()) {
-            if (append_json_map_string_string(unified, iter.first.c_str(), iter.second.c_str()) != 0) {
+            if (append_json_map_string_string(hostconfig->unified, iter.first.c_str(), iter.second.c_str()) != 0) {
                 error.SetError("Failed to append string");
                 goto cleanup;
             }
         }
     }
-    hostconfig->unified = unified;
-    unified = nullptr;
+
     hostconfig->memory = resources.memory_limit_in_bytes();
+    hostconfig->memory_swap = resources.memory_swap_limit_in_bytes();
     if (!resources.cpuset_cpus().empty()) {
         hostconfig->cpuset_cpus = util_strdup_s(resources.cpuset_cpus().c_str());
     }
@@ -1262,7 +1260,7 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
                                    sizeof(host_config_hugetlbs_element *), resources.hugepage_limits_size());
         if (hostconfig->hugetlbs == nullptr) {
             error.SetError("Out of memory");
-            return;
+            goto cleanup;
         }
         for (int i = 0; i < resources.hugepage_limits_size(); i++) {
             hostconfig->hugetlbs[i] =
@@ -1295,7 +1293,6 @@ cleanup:
     free_container_update_request(request);
     free_container_update_response(response);
     free_host_config(hostconfig);
-    free_json_map_string_string(unified);
     free(perror);
 }
 

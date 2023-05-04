@@ -436,7 +436,7 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
     if (config.linux().has_resources()) {
         runtime::v1alpha2::LinuxContainerResources rOpts = config.linux().resources();
         hc->memory = rOpts.memory_limit_in_bytes();
-        hc->memory_swap = CRI::Constants::DefaultMemorySwap;
+        hc->memory_swap = rOpts.memory_swap_limit_in_bytes();
         hc->cpu_shares = rOpts.cpu_shares();
         hc->cpu_quota = rOpts.cpu_quota();
         hc->cpu_period = rOpts.cpu_period();
@@ -447,22 +447,21 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
             hc->cpuset_mems = util_strdup_s(rOpts.cpuset_mems().c_str());
         }
         hc->oom_score_adj = rOpts.oom_score_adj();
-        hc->memory_swap_limit_in_bytes = rOpts.memory_swap_limit_in_bytes();
-        auto *unified = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
-        if (unified == nullptr) {
-            error.SetError("Out of memory");
-            return;
-        }
+
         if (!rOpts.unified().empty()) {
+            hc->unified = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
+            if (hc->unified == nullptr) {
+                error.SetError("Out of memory");
+                return;
+            }
             for (auto &iter : rOpts.unified()) {
-                if (append_json_map_string_string(unified, iter.first.c_str(), iter.second.c_str()) != 0) {
+                if (append_json_map_string_string(hc->unified, iter.first.c_str(), iter.second.c_str()) != 0) {
                     error.SetError("Failed to append string");
-                    free_json_map_string_string(unified);
                     return;
                 }
             }
         }
-        hc->unified = unified;
+
         if (rOpts.hugepage_limits_size() != 0) {
             hc->hugetlbs = (host_config_hugetlbs_element **)util_smart_calloc_s(sizeof(host_config_hugetlbs_element *),
                                                                                 rOpts.hugepage_limits_size());

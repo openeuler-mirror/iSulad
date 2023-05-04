@@ -1061,6 +1061,24 @@ out:
     return ret;
 }
 
+static int verify_resources_unified(const json_map_string_string *unified)
+{
+    int cgroup_version;
+
+    if (unified == NULL || unified->len == 0) {
+        return 0;
+    }
+
+    cgroup_version = common_get_cgroup_version();
+    if (cgroup_version != CGROUP_VERSION_2) {
+        ERROR("Your kernel does not support cgroup v2. Unified discarded.");
+        isulad_set_error_message("Your kernel does not support cgroup v2. Unified discarded.");
+        return -1;
+    }
+
+    return 0;
+}
+
 /* adapt memory swap */
 static int adapt_memory_swap(const sysinfo_t *sysinfo, const int64_t *limit, int64_t *swap)
 {
@@ -1110,46 +1128,54 @@ static int verify_linux_resources(const sysinfo_t *sysinfo, defs_resources *reso
     if (resources->memory != NULL) {
         ret = verify_resources_memory(sysinfo, resources->memory);
         if (ret != 0) {
-            goto out;
+            return -1;
         }
     }
     // pids
     if (resources->pids != NULL) {
         ret = verify_resources_pids(sysinfo, resources->pids);
         if (ret != 0) {
-            goto out;
+            return -1;
         }
     }
     // cpu
     if (resources->cpu != NULL) {
         ret = verify_resources_cpu(sysinfo, resources->cpu);
         if (ret != 0) {
-            goto out;
+            return -1;
         }
     }
     // hugetlb
     if (resources->hugepage_limits_len && resources->hugepage_limits != NULL) {
         ret = verify_resources_hugetlbs(sysinfo, &(resources->hugepage_limits), &(resources->hugepage_limits_len));
         if (ret != 0) {
-            goto out;
+            return -1;
         }
     }
     // blkio
     if (resources->block_io != NULL) {
         ret = verify_resources_blkio(sysinfo, resources->block_io);
         if (ret != 0) {
-            goto out;
+            return -1;
         }
     }
     // device
     if (resources->devices != NULL) {
         ret = verify_resources_device(resources);
         if (ret != 0) {
-            goto out;
+            return -1;
         }
     }
-out:
-    return ret;
+
+    // unified
+    if (resources->unified != NULL) {
+        ret = verify_resources_unified(resources->unified);
+        if (ret != 0) {
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 /* adapt linux resources */

@@ -38,6 +38,7 @@
 #include "specs_mount.h"
 #include "specs_extend.h"
 #include "specs_namespace.h"
+#include "cgroup.h"
 #include "path.h"
 #include "constants.h"
 #ifdef ENABLE_SELINUX
@@ -1298,52 +1299,94 @@ static int merge_conf_files_limit(oci_runtime_spec *oci_spec, const host_config 
     return merge_files_limit(oci_spec, host_spec->files_limit);
 }
 
+static int merge_conf_unified(oci_runtime_spec *oci_spec, const host_config *host_spec)
+{
+    int i, cgroup_version;
+
+    if (host_spec->unified == NULL || host_spec->unified->len == 0) {
+        return 0;
+    }
+
+    cgroup_version = common_get_cgroup_version();
+    if (cgroup_version != CGROUP_VERSION_2) {
+        WARN("Cannot setting unified config without cgroup v2");
+        return 0;
+    }
+
+    if (make_sure_oci_spec_linux_resources(oci_spec) != 0) {
+        ERROR("Failed to make sure oci spec linux resource");
+        return -1;
+    }
+
+    if (oci_spec->linux->resources->unified == NULL) {
+        oci_spec->linux->resources->unified = (json_map_string_string *)util_common_calloc_s(
+                                                                            sizeof(json_map_string_string));
+        if (oci_spec->linux->resources->unified == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+
+    for (i = 0; i < host_spec->unified->len; i++) {
+        if (append_json_map_string_string(oci_spec->linux->resources->unified, host_spec->unified->keys[i],
+                                          host_spec->unified->values[i]) != 0) {
+            ERROR("Failed to append unified map");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 int merge_conf_cgroup(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
 
     if (oci_spec == NULL || host_spec == NULL) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     ret = merge_conf_cgroup_cpu(oci_spec, host_spec);
     if (ret != 0) {
-        goto out;
+        return -1;
     }
 
     ret = merge_conf_cgroup_memory(oci_spec, host_spec);
     if (ret != 0) {
-        goto out;
+        return -1;
     }
 
     ret = merge_conf_blkio_weight(oci_spec, host_spec);
     if (ret != 0) {
-        goto out;
+        return -1;
     }
 
     ret = merge_conf_ulimits(oci_spec, host_spec);
     if (ret != 0) {
-        goto out;
+        return -1;
     }
 
     ret = merge_conf_hugetlbs(oci_spec, host_spec);
     if (ret != 0) {
-        goto out;
+        return -1;
     }
 
     ret = merge_conf_pids_limit(oci_spec, host_spec);
     if (ret != 0) {
-        goto out;
+        return -1;
     }
 
     ret = merge_conf_files_limit(oci_spec, host_spec);
     if (ret != 0) {
-        goto out;
+        return -1;
     }
 
-out:
-    return ret;
+    ret = merge_conf_unified(oci_spec, host_spec);
+    if (ret != 0) {
+        return -1;
+    }
+
+    return 0;
 }
 
 static int prepare_process_args(oci_runtime_spec *oci_spec, size_t args_len)

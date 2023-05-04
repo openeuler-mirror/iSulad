@@ -1242,6 +1242,31 @@ int rt_isula_attach(const char *id, const char *runtime, const rt_attach_params_
     return -1;
 }
 
+static int to_engine_resources_unified(const host_config *hostconfig, shim_client_cgroup_resources *cr)
+{
+    int i;
+
+    if (hostconfig->unified == NULL || hostconfig->unified->len == 0) {
+        return 0;
+    }
+
+    cr->unified = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
+    if (cr->unified == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < hostconfig->unified->len; i++) {
+        if (append_json_map_string_string(cr->unified, hostconfig->unified->keys[i],
+                                          hostconfig->unified->values[i]) != 0) {
+            ERROR("Failed to append unified map");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static int to_engine_resources(const host_config *hostconfig, shim_client_cgroup_resources *cr)
 {
     uint64_t period = 0;
@@ -1296,7 +1321,7 @@ static int to_engine_resources(const host_config *hostconfig, shim_client_cgroup
         cr->cpu->quota = quota;
     }
 
-    return 0;
+    return to_engine_resources_unified(hostconfig, cr);
 }
 
 static int create_resources_json_file(const char *workdir, const shim_client_cgroup_resources *cr, char *fname,

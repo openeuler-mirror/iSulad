@@ -47,6 +47,14 @@ void free_mounts_info(mountinfo_t **minfos)
     }
 }
 
+char *get_default_huge_page_size(void)
+{
+    if (g_sysinfo_mock != nullptr) {
+        return g_sysinfo_mock->GetDefaultHugePageSize();
+    }
+    return nullptr;
+}
+
 char *validate_hugetlb(const char *pagesize, uint64_t limit)
 {
     if (g_sysinfo_mock != nullptr) {
