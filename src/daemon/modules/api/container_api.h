@@ -20,6 +20,7 @@
 #include <isula_libutils/host_config.h>
 #include <isula_libutils/oci_runtime_spec.h>
 #include <isula_libutils/container_inspect.h>
+#include <isula_libutils/container_info.h>
 
 #include "util_atomic.h"
 #include "linked_list.h"
@@ -106,6 +107,9 @@ typedef struct _container_t_ {
     char *log_path;
     int log_rotate;
     int64_t log_maxsize;
+
+    /* container info */
+    container_info *info;
 } container_t;
 
 int containers_store_init(void);
@@ -152,6 +156,8 @@ int container_fill_restart_manager(container_t *cont);
 int container_fill_network_settings(container_t *cont, container_network_settings *network_settings);
 
 int container_fill_log_configs(container_t *cont);
+
+int container_update_info(container_t *cont, const container_info *info, container_info **old_info);
 
 container_t *container_load(const char *runtime, const char *rootpath, const char *statepath, const char *id);
 
