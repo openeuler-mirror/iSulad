@@ -525,3 +525,12 @@ err_out:
     errno = tmp_errno;
     return NULL;
 }
+
+void *util_common_calloc_s(size_t size)
+{
+    if (size == 0 || size > MAX_MEMORY_SIZE) {
+        return NULL;
+    }
+
+    return calloc((size_t)1, size);
+}

@@ -105,9 +105,9 @@ int main(int argc, char **argv)
     int ret = SHIM_ERR;
     int efd = -1;
     process_t *p = NULL;
-    pthread_t tid_accept;
     // execSync timeout
     uint64_t timeout = 0;
+    pthread_t tid_epoll;
 
     g_log_fd = open_no_inherit(SHIM_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0640);
     if (g_log_fd < 0) {
@@ -154,15 +154,10 @@ int main(int argc, char **argv)
         }
     }
 
-    /* create main loop and start epoll for io copy */
-    ret = process_io_init(p);
+    /* start epoll for io copy */
+    ret = process_io_start(p, &tid_epoll);
     if (ret != SHIM_OK) {
         write_message(g_log_fd, ERR_MSG, "process io init failed:%d", ret);
-        exit(EXIT_FAILURE);
-    }
-
-    ret = open_io(p, &tid_accept);
-    if (ret != SHIM_OK) {
         exit(EXIT_FAILURE);
     }
 
@@ -176,5 +171,5 @@ int main(int argc, char **argv)
 
     released_timeout_exit();
 
-    return process_signal_handle_routine(p, tid_accept, timeout);
+    return process_signal_handle_routine(p, tid_epoll, timeout);
 }

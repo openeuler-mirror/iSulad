@@ -128,6 +128,8 @@ char *util_strdup_s(const char *src);
 
 char **util_string_split_multi(const char *src_str, char delim);
 
+void *util_common_calloc_s(size_t size);
+
 #ifdef __cplusplus
 }
 #endif
