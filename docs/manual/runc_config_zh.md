@@ -5,7 +5,7 @@
 
 `tips`: 在安装runc之前需要安装好go环境。
 
-isulad当前推荐的runc验证版本为v1.0.0-rc5。
+isulad当前推荐的runc验证版本为v1.0.0-rc6。
 
 runc可以使用以下两种安装方式：
 
@@ -18,7 +18,7 @@ sudo yum install runc
 sudo apt-get install runc
 ```
 
-2. 源码编译安装runc（注意建议切换成isulad推荐的runc版本：`git checkout v1.0.0-rc5`）
+2. 源码编译安装runc（注意建议切换成isulad推荐的runc版本：`git checkout v1.0.0-rc6`）
 
 ```sh
 # 在GOPATH/src下创建 'github.com/opencontainers' 文件夹 
@@ -41,7 +41,12 @@ sudo make install
 
 最终安装好的runc会在`/usr/local/sbin/runc`目录下。
 
-##   二、配置iSulad使用runc
+##   二、runc版本限制
+
+1. runc版本低于1.0.0-rc6时，由于runc未定义cgroup namespace, 若系统存在cgroup namespace，则创建容器报错`namespace {"cgroup"} dose not exits`，需要将runc升级至1.0.0-rc6及以上。
+2. runc版本高于1.0.0-rc94时，runc update子命令不支持--kernel-memory选项，配置不生效。
+
+##   三、配置iSulad使用runc
 
 ### 配置文件配置
 
@@ -80,7 +85,7 @@ $ sudo isulad
 isula run -tid -n test --runtime=runc busybox sh
 ```
 
-## 三、K8s中配置pod的runtime为runc
+## 四、K8s中配置pod的runtime为runc
 
 如何与kubernetes集成请参考[k8s_integration](https://gitee.com/openeuler/iSulad/blob/master/docs/manual/k8s_integration_zh.md)。
 
