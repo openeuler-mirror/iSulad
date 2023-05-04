@@ -1123,6 +1123,41 @@ void ContainerManagerService::ConvertMountsToStatus(container_inspect *inspect,
     }
 }
 
+void ContainerManagerService::ConvertResourcesToStatus(container_inspect *inspect,
+                                                       std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus)
+{
+    if (inspect->resources == nullptr) {
+        return;
+    }
+    runtime::v1alpha2::LinuxContainerResources *resources = contStatus->mutable_resources()->mutable_linux();
+    if (inspect->resources->cpu_shares != 0) {
+        resources->set_cpu_shares(inspect->resources->cpu_shares);
+    }
+    if (inspect->resources->cpu_period != 0) {
+        resources->set_cpu_period(inspect->resources->cpu_period);
+    }
+    if (inspect->resources->cpu_quota != 0) {
+        resources->set_cpu_quota(inspect->resources->cpu_quota);
+    }
+    if (inspect->resources->memory != 0) {
+        resources->set_memory_limit_in_bytes(inspect->resources->memory);
+    }
+    if (inspect->resources->memory_swap != 0) {
+        resources->set_memory_swap_limit_in_bytes(inspect->resources->memory_swap);
+    }
+    for (size_t i = 0; i < inspect->resources->hugetlbs_len; i++) {
+        runtime::v1alpha2::HugepageLimit *hugepage = resources->add_hugepage_limits();
+        hugepage->set_page_size(inspect->resources->hugetlbs[i]->page_size);
+        hugepage->set_limit(inspect->resources->hugetlbs[i]->limit);
+    }
+    if (inspect->resources->unified != nullptr) {
+        for (size_t i = 0; i < inspect->resources->unified->len; i++) {
+            auto &resUnified = *(resources->mutable_unified());
+            resUnified[inspect->resources->unified->keys[i]] = inspect->resources->unified->values[i];
+        }
+    }
+}
+
 void ContainerManagerService::ContainerStatusToGRPC(container_inspect *inspect,
                                                     std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus,
                                                     Errors &error)
@@ -1150,6 +1185,7 @@ void ContainerManagerService::ContainerStatusToGRPC(container_inspect *inspect,
         return;
     }
     ConvertMountsToStatus(inspect, contStatus);
+    ConvertResourcesToStatus(inspect, contStatus);
 }
 
 std::unique_ptr<runtime::v1alpha2::ContainerStatus>

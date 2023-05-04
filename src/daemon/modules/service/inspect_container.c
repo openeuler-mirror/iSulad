@@ -713,6 +713,74 @@ out:
     return ret;
 }
 
+static int dup_resource_unified(const container_t *cont, container_inspect_resources *resources)
+{
+    if (cont->hostconfig == NULL || cont->hostconfig->unified == NULL) {
+        return 0;
+    }
+
+    resources->unified = util_common_calloc_s(sizeof(json_map_string_string));
+    if (resources->unified == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (dup_json_map_string_string(cont->hostconfig->unified, resources->unified) != 0) {
+        ERROR("Failed to dup unified resource");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int pack_inspect_resources(const container_t *cont, container_inspect *inspect)
+{
+    int ret = 0;
+    size_t i = 0;
+    container_inspect_resources *resources = NULL;
+
+    resources = util_common_calloc_s(sizeof(container_inspect_resources));
+    if (resources == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    resources->cpu_period = cont->hostconfig->cpu_period;
+    resources->cpu_quota = cont->hostconfig->cpu_quota;
+    resources->cpu_shares = cont->hostconfig->cpu_shares;
+    resources->memory = cont->hostconfig->memory;
+    resources->memory_swap = cont->hostconfig->memory_swap;
+    resources->hugetlbs = util_smart_calloc_s(sizeof(container_inspect_resources_hugetlbs_element *), resources->hugetlbs_len);
+    if (resources->hugetlbs == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < cont->hostconfig->hugetlbs_len; i++) {
+        resources->hugetlbs[i] = util_common_calloc_s(sizeof(container_inspect_resources_hugetlbs_element));
+        if (resources->hugetlbs[i] == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        resources->hugetlbs[i]->page_size = util_strdup_s(cont->hostconfig->hugetlbs[i]->page_size);
+        resources->hugetlbs[i]->limit = cont->hostconfig->hugetlbs[i]->limit;
+        resources->hugetlbs_len++;
+    }
+
+    ret = dup_resource_unified(cont, resources);
+    if (ret != 0) {
+        goto out;
+    }
+    inspect->resources = resources;
+    resources = NULL;
+
+out:
+    free_container_inspect_resources(resources);
+    return ret;
+}
+
 static container_inspect *pack_inspect_data(const container_t *cont, bool with_host_config)
 {
     container_inspect *inspect = NULL;
@@ -745,6 +813,10 @@ static container_inspect *pack_inspect_data(const container_t *cont, bool with_h
 
     if (pack_inspect_config(cont, inspect) != 0) {
         ERROR("Failed to pack container config data, continue to pack other information");
+    }
+
+    if (pack_inspect_resources(cont, inspect) != 0) {
+        ERROR("Failed to pack container resources data, continue to pack other information");
     }
 
     if (strcmp(cont->common_config->image_type, IMAGE_TYPE_OCI) == 0) {

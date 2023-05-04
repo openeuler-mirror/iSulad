@@ -30,6 +30,9 @@ public:
     const static std::string iSulaRuntimeName;
     constexpr static int64_t DefaultMemorySwap { 0 };
     constexpr static int64_t DefaultSandboxCPUshares { 2 };
+    constexpr static int64_t DefaultSandboxCPUPeriod { 0 };
+    constexpr static int64_t DefaultSandboxCPUQuota { 0 };
+    constexpr static int64_t DefaultSandboxMemoryLimitInBytes { 0 };
     constexpr static int64_t PodInfraOOMAdj { -998 };
 
     // container mounts files
