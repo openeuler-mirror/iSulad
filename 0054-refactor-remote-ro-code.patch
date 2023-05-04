@@ -1,0 +1,2089 @@
+From 2bfce1ac385eabd9614e4d8d6f50c02efb9653fc Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Mon, 6 Mar 2023 17:43:17 -0800
+Subject: [PATCH 54/56] refactor remote ro code
+
+Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
+---
+ CI/make-and-install.sh                        |   2 +-
+ .../oci/storage/image_store/CMakeLists.txt    |   3 -
+ .../oci/storage/image_store/image_store.c     |  37 +--
+ .../oci/storage/image_store/image_store.h     |  13 +-
+ .../oci/storage/layer_store/CMakeLists.txt    |   3 -
+ .../graphdriver/overlay2/CMakeLists.txt       |   3 -
+ .../graphdriver/overlay2/driver_overlay2.h    |   8 -
+ .../oci/storage/layer_store/layer_store.c     | 230 +++++++++---------
+ .../oci/storage/layer_store/layer_store.h     |   9 +-
+ .../image_remote_impl.c                       |  61 +++--
+ .../layer_remote_impl.c                       |  71 +++---
+ .../overlay_remote_impl.c                     | 103 +++++---
+ .../remote_layer_support/remote_support.c     | 141 ++++++-----
+ .../remote_layer_support/remote_support.h     |  62 +++--
+ .../ro_symlink_maintain.c                     | 124 +---------
+ .../ro_symlink_maintain.h                     |  19 +-
+ .../modules/image/oci/storage/storage.c       |   4 +-
+ src/utils/cutils/map/rb_tree.c                |   1 +
+ test/image/oci/registry/CMakeLists.txt        |   2 +
+ test/image/oci/storage/CMakeLists.txt         |   3 +
+ test/image/oci/storage/images/CMakeLists.txt  |   2 +
+ test/image/oci/storage/layers/CMakeLists.txt  |   4 +
+ .../remote_layer_support/CMakeLists.txt       |  44 ++++
+ .../remote_layer_support/remote_layer_ut.cc   |  93 +++++++
+ test/image/oci/storage/rootfs/CMakeLists.txt  |   2 +
+ test/mocks/remote_store_mock.cc               |  68 ++++++
+ test/mocks/remote_store_mock.h                |  40 +++
+ 27 files changed, 683 insertions(+), 469 deletions(-)
+ rename src/daemon/modules/image/oci/storage/{image_store => remote_layer_support}/image_remote_impl.c (71%)
+ rename src/daemon/modules/image/oci/storage/{layer_store => remote_layer_support}/layer_remote_impl.c (76%)
+ rename src/daemon/modules/image/oci/storage/{layer_store/graphdriver/overlay2 => remote_layer_support}/overlay_remote_impl.c (72%)
+ create mode 100644 test/image/oci/storage/remote_layer_support/CMakeLists.txt
+ create mode 100644 test/image/oci/storage/remote_layer_support/remote_layer_ut.cc
+ create mode 100644 test/mocks/remote_store_mock.cc
+ create mode 100644 test/mocks/remote_store_mock.h
+
+diff --git a/CI/make-and-install.sh b/CI/make-and-install.sh
+index 7c194826..e714d206 100755
+--- a/CI/make-and-install.sh
++++ b/CI/make-and-install.sh
+@@ -106,7 +106,7 @@ rm -rf build
+ mkdir build
+ cd build
+ if [[ ${enable_gcov} -ne 0 ]]; then
+-  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=Debug -DGCOV=ON -DENABLE_EMBEDDED=ON -DENABLE_COVERAGE=ON -DENABLE_UT=ON -DENABLE_METRICS=ON ..
++  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=Debug -DGCOV=ON -DENABLE_EMBEDDED=ON -DENABLE_COVERAGE=ON -DENABLE_UT=ON -DENABLE_METRICS=ON -DENABLE_REMOTE_LAYER_STORE=ON ..
+ else
+   cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DENABLE_EMBEDDED=ON -DENABLE_METRICS=ON -DENABLE_REMOTE_LAYER_STORE=ON ..
+ fi
+diff --git a/src/daemon/modules/image/oci/storage/image_store/CMakeLists.txt b/src/daemon/modules/image/oci/storage/image_store/CMakeLists.txt
+index 7d4fb77c..ecf21caa 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/CMakeLists.txt
++++ b/src/daemon/modules/image/oci/storage/image_store/CMakeLists.txt
+@@ -1,8 +1,5 @@
+ # get current directory sources files
+ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} local_image_store_srcs)
+-IF (NOT ENABLE_REMOTE_LAYER_STORE)
+-list(REMOVE_ITEM local_image_store_srcs "${CMAKE_CURRENT_SOURCE_DIR}/image_remote_impl.c")
+-ENDIF()
+ 
+ set(IMAGE_STORE_SRCS
+     ${local_image_store_srcs}
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+index a44bf362..7837f9db 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+@@ -133,7 +133,7 @@ static void free_image_store(image_store_t *store)
+     (void)map_free(store->bydigest);
+     store->bydigest = NULL;
+ 
+-    linked_list_for_each_safe(item, &(store->images_list), next) {
++    linked_list_for_each_safe (item, &(store->images_list), next) {
+         linked_list_del(item);
+         image_ref_dec((image_t *)item->elem);
+         free(item);
+@@ -165,7 +165,7 @@ static void image_store_digest_field_kvfree(void *key, void *value)
+ 
+     free(key);
+     if (val != NULL) {
+-        linked_list_for_each_safe(item, &(val->images_list), next) {
++        linked_list_for_each_safe (item, &(val->images_list), next) {
+             linked_list_del(item);
+             free(item);
+             item = NULL;
+@@ -501,7 +501,7 @@ static void digest_image_slice_without_value(digest_image_t *digest_filter_image
+         return;
+     }
+ 
+-    linked_list_for_each_safe(item, &(digest_filter_images->images_list), next) {
++    linked_list_for_each_safe (item, &(digest_filter_images->images_list), next) {
+         tmp = (image_t *)item->elem;
+         if (strcmp(tmp->simage->id, img->simage->id) == 0) {
+             linked_list_del(item);
+@@ -582,7 +582,7 @@ static int remove_image_from_memory(const char *id)
+         goto out;
+     }
+ 
+-    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
++    linked_list_for_each_safe (item, &(g_image_store->images_list), next) {
+         image_t *tmp = (image_t *)item->elem;
+         if (strcmp(tmp->simage->id, id) != 0) {
+             continue;
+@@ -681,7 +681,7 @@ static void free_digest_image(digest_image_t *ptr)
+         return;
+     }
+ 
+-    linked_list_for_each_safe(item, &(ptr->images_list), next) {
++    linked_list_for_each_safe (item, &(ptr->images_list), next) {
+         linked_list_del(item);
+         free(item);
+         item = NULL;
+@@ -2679,7 +2679,7 @@ int image_store_get_all_images(imagetool_images_list *images_list)
+         goto unlock;
+     }
+ 
+-    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
++    linked_list_for_each_safe (item, &(g_image_store->images_list), next) {
+         imagetool_image_summary *imginfo = NULL;
+         image_t *img = (image_t *)item->elem;
+         imginfo = get_image_summary(img);
+@@ -3102,7 +3102,7 @@ out:
+     return ret;
+ }
+ 
+-int validate_manifest_schema_version_1(const char *path, bool *valid)
++int image_store_validate_manifest_schema_version_1(const char *path, bool *valid)
+ {
+     int ret = 0;
+     int nret;
+@@ -3509,7 +3509,7 @@ static int get_images_from_json()
+             continue;
+         }
+ 
+-        if (validate_manifest_schema_version_1(image_path, &valid_v1_image) != 0) {
++        if (image_store_validate_manifest_schema_version_1(image_path, &valid_v1_image) != 0) {
+             ERROR("Failed to validate manifest schema version 1 format");
+             continue;
+         }
+@@ -3546,7 +3546,7 @@ static void image_store_check_all_images()
+         return;
+     }
+ 
+-    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
++    linked_list_for_each_safe (item, &(g_image_store->images_list), next) {
+         image_t *img = (image_t *)item->elem;
+         if (img->spec == NULL) {
+             ERROR("Failed to check spec info of image: %s, try to delete", img->simage->id);
+@@ -3660,18 +3660,23 @@ out:
+ }
+ 
+ #ifdef ENABLE_REMOTE_LAYER_STORE
+-int append_image_by_directory_with_lock(const char *id)
++int remote_append_image_by_directory_with_lock(const char *id)
+ {
+     int ret = 0;
+     int nret = 0;
+     char image_path[PATH_MAX] = { 0x00 };
+ 
++    if (id == NULL) {
++        ERROR("can't add NULL remote image");
++        return -1;
++    }
++
+     if (!image_store_lock(EXCLUSIVE)) {
+         ERROR("Failed to lock remote image store when handle: %s", id);
+         return -1;
+     }
+ 
+-    if (map_search(g_image_store->byid, (void *)id) != NULL ) {
++    if (map_search(g_image_store->byid, (void *)id) != NULL) {
+         DEBUG("remote image already exist, not added: %s", id);
+         goto out;
+     }
+@@ -3690,10 +3695,15 @@ out:
+     return ret;
+ }
+ 
+-int remove_image_from_memory_with_lock(const char *id)
++int remote_remove_image_from_memory_with_lock(const char *id)
+ {
+     int ret = 0;
+ 
++    if (id == NULL) {
++        ERROR("can't remove NULL remote image");
++        return -1;
++    }
++
+     if (!image_store_lock(EXCLUSIVE)) {
+         ERROR("Failed to lock remote image store when handle: %s", id);
+         return -1;
+@@ -3712,9 +3722,8 @@ out:
+     return ret;
+ }
+ 
+-char *get_top_layer_from_json(const char *img_id)
++char *remote_image_get_top_layer_from_json(const char *img_id)
+ {
+-
+     char *ret = NULL;
+     int nret = 0;
+     char image_path[PATH_MAX] = { 0x00 };
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.h b/src/daemon/modules/image/oci/storage/image_store/image_store.h
+index c3cb50e3..5164cc73 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.h
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.h
+@@ -28,9 +28,6 @@
+ #include "isula_libutils/imagetool_image.h"
+ #include "isula_libutils/imagetool_images_list.h"
+ #include "isula_libutils/imagetool_image_summary.h"
+-#ifdef ENABLE_REMOTE_LAYER_STORE
+-#include "remote_support.h"
+-#endif
+ 
+ struct storage_module_init_options;
+ 
+@@ -112,11 +109,11 @@ void image_store_free();
+ imagetool_image_summary *image_store_get_image_summary(const char *id);
+ 
+ #ifdef ENABLE_REMOTE_LAYER_STORE
+-remote_support *image_store_impl_remote_support();
+-int validate_manifest_schema_version_1(const char *path, bool *valid);
+-int append_image_by_directory_with_lock(const char *image_dir);
+-int remove_image_from_memory_with_lock(const char *id);
+-char *get_top_layer_from_json(const char *img_id); /* return top layer id */
++int image_store_validate_manifest_schema_version_1(const char *path, bool *valid);
++int remote_append_image_by_directory_with_lock(const char *image_dir);
++int remote_remove_image_from_memory_with_lock(const char *id);
++// return top layer id
++char *remote_image_get_top_layer_from_json(const char *img_id);
+ #endif
+ 
+ #ifdef __cplusplus
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/CMakeLists.txt b/src/daemon/modules/image/oci/storage/layer_store/CMakeLists.txt
+index e04b4ad7..c218a7c0 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/CMakeLists.txt
++++ b/src/daemon/modules/image/oci/storage/layer_store/CMakeLists.txt
+@@ -1,8 +1,5 @@
+ # get current directory sources files
+ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} local_layer_store_srcs)
+-IF (NOT ENABLE_REMOTE_LAYER_STORE)
+-list(REMOVE_ITEM local_layer_store_srcs "${CMAKE_CURRENT_SOURCE_DIR}/layer_remote_impl.c")
+-ENDIF()
+ add_subdirectory(graphdriver)
+ 
+ set(LAYER_STORE_SRCS
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/CMakeLists.txt b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/CMakeLists.txt
+index dd4e82aa..ceed16b7 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/CMakeLists.txt
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/CMakeLists.txt
+@@ -1,8 +1,5 @@
+ # get current directory sources files
+ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} local_overlay2_srcs)
+-IF (NOT ENABLE_REMOTE_LAYER_STORE)
+-list(REMOVE_ITEM local_overlay2_srcs "${CMAKE_CURRENT_SOURCE_DIR}/overlay_remote_impl.c")
+-ENDIF()
+ 
+ set(OVERLAY2_SRCS
+     ${local_overlay2_srcs}
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.h b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.h
+index 5c1d93fb..e14271b1 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.h
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.h
+@@ -22,9 +22,6 @@
+ #include <stdint.h>
+ 
+ #include "driver.h"
+-#ifdef ENABLE_REMOTE_LAYER_STORE
+-#include "remote_support.h"
+-#endif
+ 
+ struct driver_create_opts;
+ struct driver_mount_opts;
+@@ -71,11 +68,6 @@ int overlay2_repair_lowers(const char *id, const char *parent, const struct grap
+ 
+ int overlay2_get_layer_fs_info(const char *id, const struct graphdriver *driver, imagetool_fs_info *fs_info);
+ 
+-#ifdef ENABLE_REMOTE_LAYER_STORE
+-remote_support *overlay_driver_impl_remote_support(void);
+-bool overlay_remote_layer_valid(const char *layer_id);
+-#endif
+-
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+index 680b35a2..12fca5ff 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+@@ -1792,119 +1792,6 @@ out:
+     return ret;
+ }
+ 
+-static layer_t *load_one_layer_from_json(const char *id)
+-{
+-    int nret = 0;
+-    char *mount_point_path = NULL;
+-    char tmpdir[PATH_MAX] = { 0 };
+-    char *rpath = NULL;
+-    layer_t *l = NULL;
+-    bool layer_valid = false;
+-
+-    nret = snprintf(tmpdir, PATH_MAX, "%s/%s", g_root_dir, id);
+-    if (nret < 0 || nret >= PATH_MAX) {
+-        ERROR("Sprintf: %s failed", id);
+-        goto free_out;
+-    }
+-
+-    mount_point_path = mountpoint_json_path(id);
+-    if (mount_point_path == NULL) {
+-        ERROR("Out of Memory");
+-        goto free_out;
+-    }
+-
+-    rpath = layer_json_path(id);
+-    if (rpath == NULL) {
+-        ERROR("%s is invalid layer", id);
+-        goto free_out;
+-    }
+-
+-    l = load_layer(rpath, mount_point_path);
+-    if (l == NULL) {
+-        ERROR("load layer: %s failed, remove it", id);
+-        goto free_out;
+-    }
+-
+-    if (do_validate_image_layer(tmpdir, l) != 0) {
+-        ERROR("%s is invalid image layer", id);
+-        goto free_out;
+-    }
+-
+-    if (do_validate_rootfs_layer(l) != 0) {
+-        ERROR("%s is invalid rootfs layer", id);
+-        goto free_out;
+-    }
+-
+-    layer_valid = true;
+-
+-free_out:
+-    free(rpath);
+-    free(mount_point_path);
+-    if (!layer_valid) {
+-        free_layer_t(l);
+-        l = NULL;
+-    }
+-    // always return true;
+-    // if load layer failed, just remove it
+-    return l;
+-}
+-
+-int load_one_layer(const char *id)
+-{
+-    int ret = 0;
+-    layer_t *tl = NULL;
+-    int i = 0;
+-
+-    if (!layer_store_lock(true)) {
+-        return -1;
+-    }
+-
+-    if (map_search(g_metadata.by_id, (void *)id) != NULL) {
+-        DEBUG("remote layer already exist, not added: %s", id);
+-        goto unlock_out;
+-    }
+-
+-    tl = load_one_layer_from_json(id);
+-    if (tl == NULL) {
+-        ret = -1;
+-        goto unlock_out;
+-    }
+-
+-    if (!map_insert(g_metadata.by_id, (void *)tl->slayer->id, (void *)tl)) {
+-        ERROR("Insert id: %s for layer failed", tl->slayer->id);
+-        ret = -1;
+-        goto unlock_out;
+-    }
+-
+-    for (; i < tl->slayer->names_len; i++) {
+-        // this should be done by master isulad
+-        // if (remove_name(tl->slayer->names[i])) {
+-        //     should_save = true;
+-        // }
+-        if (!map_insert(g_metadata.by_name, (void *)tl->slayer->names[i], (void *)tl)) {
+-            ret = -1;
+-            ERROR("Insert name: %s for layer failed", tl->slayer->names[i]);
+-            goto unlock_out;
+-        }
+-    }
+-    ret = insert_digest_into_map(g_metadata.by_compress_digest, tl->slayer->compressed_diff_digest, tl->slayer->id);
+-    if (ret != 0) {
+-        ERROR("update layer: %s compress failed", tl->slayer->id);
+-        goto unlock_out;
+-    }
+-
+-    ret = insert_digest_into_map(g_metadata.by_uncompress_digest, tl->slayer->diff_digest, tl->slayer->id);
+-    if (ret != 0) {
+-        ERROR("update layer: %s uncompress failed", tl->slayer->id);
+-        goto unlock_out;
+-    }
+-
+-    ret = 0;
+-unlock_out:
+-    layer_store_unlock();
+-    return ret;
+-}
+-
+ static bool load_layer_json_cb(const char *path_name, const struct dirent *sub_dir, void *context)
+ {
+ #define LAYER_NAME_LEN 64
+@@ -2486,7 +2373,7 @@ container_inspect_graph_driver *layer_store_get_metadata_by_layer_id(const char
+ }
+ 
+ #ifdef ENABLE_REMOTE_LAYER_STORE
+-int remove_memory_stores_with_lock(const char *id)
++int remote_layer_remove_memory_stores_with_lock(const char *id)
+ {
+     int ret = 0;
+ 
+@@ -2499,6 +2386,11 @@ int remove_memory_stores_with_lock(const char *id)
+         goto unlock_out;
+     }
+ 
++    if (map_search(g_metadata.by_id, (void *)id) == NULL) {
++        DEBUG("remote layer already removed, don't delete: %s", id);
++        goto unlock_out;
++    }
++
+     ret = remove_memory_stores(id);
+ 
+ unlock_out:
+@@ -2506,4 +2398,114 @@ unlock_out:
+ 
+     return ret;
+ }
++
++static layer_t *load_one_layer_from_json(const char *id)
++{
++    int nret = 0;
++    char *mount_point_path = NULL;
++    char tmpdir[PATH_MAX] = { 0 };
++    char *rpath = NULL;
++    layer_t *l = NULL;
++    bool layer_valid = false;
++
++    nret = snprintf(tmpdir, PATH_MAX, "%s/%s", g_root_dir, id);
++    if (nret < 0 || nret >= PATH_MAX) {
++        ERROR("Sprintf: %s failed", id);
++        goto free_out;
++    }
++
++    mount_point_path = mountpoint_json_path(id);
++    if (mount_point_path == NULL) {
++        ERROR("Out of Memory");
++        goto free_out;
++    }
++
++    rpath = layer_json_path(id);
++    if (rpath == NULL) {
++        ERROR("%s is invalid layer", id);
++        goto free_out;
++    }
++
++    l = load_layer(rpath, mount_point_path);
++    if (l == NULL) {
++        ERROR("load layer: %s failed, remove it", id);
++        goto free_out;
++    }
++
++    if (do_validate_image_layer(tmpdir, l) != 0) {
++        ERROR("%s is invalid image layer", id);
++        goto free_out;
++    }
++
++    if (do_validate_rootfs_layer(l) != 0) {
++        ERROR("%s is invalid rootfs layer", id);
++        goto free_out;
++    }
++
++    layer_valid = true;
++
++free_out:
++    free(rpath);
++    free(mount_point_path);
++    if (!layer_valid) {
++        free_layer_t(l);
++        l = NULL;
++    }
++    // always return true;
++    // if load layer failed, just remove it
++    return l;
++}
++
++int remote_load_one_layer(const char *id)
++{
++    int ret = 0;
++    layer_t *tl = NULL;
++    int i = 0;
++
++    if (!layer_store_lock(true)) {
++        return -1;
++    }
++
++    if (map_search(g_metadata.by_id, (void *)id) != NULL) {
++        DEBUG("remote layer already exist, not added: %s", id);
++        goto unlock_out;
++    }
++
++    tl = load_one_layer_from_json(id);
++    if (tl == NULL) {
++        ret = -1;
++        goto unlock_out;
++    }
++
++    if (!map_insert(g_metadata.by_id, (void *)tl->slayer->id, (void *)tl)) {
++        ERROR("Insert id: %s for layer failed", tl->slayer->id);
++        ret = -1;
++        goto unlock_out;
++    }
++
++    for (; i < tl->slayer->names_len; i++) {
++        // this should be done by master isulad
++        if (!map_insert(g_metadata.by_name, (void *)tl->slayer->names[i], (void *)tl)) {
++            ret = -1;
++            ERROR("Insert name: %s for layer failed", tl->slayer->names[i]);
++            goto unlock_out;
++        }
++    }
++    ret = insert_digest_into_map(g_metadata.by_compress_digest, tl->slayer->compressed_diff_digest, tl->slayer->id);
++    if (ret != 0) {
++        ERROR("update layer: %s compress failed", tl->slayer->id);
++        goto unlock_out;
++    }
++
++    ret = insert_digest_into_map(g_metadata.by_uncompress_digest, tl->slayer->diff_digest, tl->slayer->id);
++    if (ret != 0) {
++        ERROR("update layer: %s uncompress failed", tl->slayer->id);
++        goto unlock_out;
++    }
++
++    ret = 0;
++unlock_out:
++    layer_store_unlock();
++    return ret;
++}
+ #endif
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/layer_store.h b/src/daemon/modules/image/oci/storage/layer_store/layer_store.h
+index 44bd297e..4677e5ee 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/layer_store.h
++++ b/src/daemon/modules/image/oci/storage/layer_store/layer_store.h
+@@ -24,9 +24,6 @@
+ #include "storage.h"
+ #include "io_wrapper.h"
+ #include "map.h"
+-#ifdef ENABLE_REMOTE_LAYER_STORE
+-#include "remote_support.h"
+-#endif
+ 
+ struct io_read_wrapper;
+ struct layer_list;
+@@ -84,10 +81,8 @@ int layer_store_check(const char *id);
+ container_inspect_graph_driver *layer_store_get_metadata_by_layer_id(const char *id);
+ 
+ #ifdef ENABLE_REMOTE_LAYER_STORE
+-remote_support *layer_store_impl_remote_support();
+-bool layer_remote_layer_valid(const char *layer_id);
+-int load_one_layer(const char *id);
+-int remove_memory_stores_with_lock(const char *id);
++int remote_load_one_layer(const char *id);
++int remote_layer_remove_memory_stores_with_lock(const char *id);
+ #endif
+ 
+ #ifdef __cplusplus
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_remote_impl.c b/src/daemon/modules/image/oci/storage/remote_layer_support/image_remote_impl.c
+similarity index 71%
+rename from src/daemon/modules/image/oci/storage/image_store/image_remote_impl.c
+rename to src/daemon/modules/image/oci/storage/remote_layer_support/image_remote_impl.c
+index 20da8116..a822ea81 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_remote_impl.c
++++ b/src/daemon/modules/image/oci/storage/remote_layer_support/image_remote_impl.c
+@@ -13,27 +13,23 @@
+  * Description: provide remote image store functions
+  ******************************************************************************/
+ #define _GNU_SOURCE
+-#include "image_store.h"
++#include "remote_support.h"
+ 
+ #include <isula_libutils/log.h>
+ #include <stdio.h>
+ 
+-#include "remote_support.h"
+ #include "ro_symlink_maintain.h"
+ #include "map.h"
+ #include "utils_file.h"
+ #include "utils.h"
+ #include "layer_store.h"
++#include "image_store.h"
+ #include "utils_array.h"
+ 
+-struct remote_image_data {
+-    const char *image_home;
+-};
+-
+ static map_t *image_byid_old = NULL;
+ static map_t *image_byid_new = NULL;
+ 
+-static void *remote_support_create(const char *remote_home, const char *remote_ro)
++struct remote_image_data *remote_image_create(const char *remote_home, const char *remote_ro)
+ {
+     struct remote_image_data *data = util_common_calloc_s(sizeof(struct remote_image_data));
+     if (data == NULL) {
+@@ -46,7 +42,7 @@ static void *remote_support_create(const char *remote_home, const char *remote_r
+     return data;
+ }
+ 
+-static void remote_support_destroy(void *data)
++void remote_image_destroy(struct remote_image_data *data)
+ {
+     if (data == NULL) {
+         return;
+@@ -59,7 +55,7 @@ static void remote_support_destroy(void *data)
+     return;
+ }
+ 
+-static int remote_support_scan(void *data)
++static int remote_dir_scan(void *data)
+ {
+     int ret = 0;
+     int nret;
+@@ -79,7 +75,7 @@ static int remote_support_scan(void *data)
+     image_dirs_num = util_array_len((const char **)image_dirs);
+ 
+     for (i = 0; i < image_dirs_num; i++) {
+-        bool valid_v1_image = false;
++        bool is_v1_image = false;
+ 
+         if (util_reg_match(id_patten, image_dirs[i]) != 0) {
+             DEBUG("Image's json is placed inside image's data directory, so skip any other file or directory: %s",
+@@ -93,12 +89,14 @@ static int remote_support_scan(void *data)
+             continue;
+         }
+ 
+-        if (validate_manifest_schema_version_1(image_path, &valid_v1_image) != 0) {
++        if (image_store_validate_manifest_schema_version_1(image_path, &is_v1_image) != 0) {
+             ERROR("Failed to validate manifest schema version 1 format");
+             continue;
+         }
+ 
+-        if (!valid_v1_image) {
++        // for refresh, we don't care v1 image, cause image should be handled by master isulad
++        // when master isulad pull images
++        if (!is_v1_image) {
+             map_insert(image_byid_new, util_strdup_s(image_dirs[i]), (void *)&exist);
+         }
+     }
+@@ -108,12 +106,13 @@ out:
+     return ret;
+ }
+ 
+-static int remote_support_add(void *data)
++static int remote_image_add(void *data)
+ {
+     char **array_added = NULL;
+     char **array_deleted = NULL;
+     char *top_layer = NULL;
+     map_t *tmp_map = NULL;
++    bool exist = true;
+     int i = 0;
+     int ret = 0;
+ 
+@@ -121,26 +120,28 @@ static int remote_support_add(void *data)
+         return -1;
+     }
+ 
+-    array_added = added_layers(image_byid_old, image_byid_new);
+-    array_deleted = deleted_layers(image_byid_old, image_byid_new);
++    array_added = remote_added_layers(image_byid_old, image_byid_new);
++    array_deleted = remote_deleted_layers(image_byid_old, image_byid_new);
+ 
+     for (i = 0; i < util_array_len((const char **)array_added); i++) {
+-        top_layer = get_top_layer_from_json(array_added[i]);
+-        if (top_layer != NULL && !layer_remote_layer_valid(top_layer)) {
+-            ERROR("ERROR not find valid under layer, remoet image:%s not added", array_added[i]);
++        top_layer = remote_image_get_top_layer_from_json(array_added[i]);
++        if (top_layer != NULL && !remote_layer_layer_valid(top_layer)) {
++            WARN("Current not find valid under layer, remoet image:%s not added", array_added[i]);
+             map_remove(image_byid_new, (void *)array_added[i]);
+             continue;
+         }
+ 
+-        if (append_image_by_directory_with_lock(array_added[i]) != 0) {
++        if (remote_append_image_by_directory_with_lock(array_added[i]) != 0) {
+             ERROR("Failed to load image into memrory: %s", array_added[i]);
++            map_remove(image_byid_new, (void *)array_added[i]);
+             ret = -1;
+         }
+     }
+ 
+     for (i = 0; i < util_array_len((const char **)array_deleted); i++) {
+-        if (remove_image_from_memory_with_lock(array_deleted[i]) != 0) {
++        if (remote_remove_image_from_memory_with_lock(array_deleted[i]) != 0) {
+             ERROR("Failed to remove remote memory store");
++            map_insert(image_byid_new, array_deleted[i], (void *)&exist);
+             ret = -1;
+         }
+     }
+@@ -148,7 +149,7 @@ static int remote_support_add(void *data)
+     tmp_map = image_byid_old;
+     image_byid_old = image_byid_new;
+     image_byid_new = tmp_map;
+-    empty_map(image_byid_new);
++    map_clear(image_byid_new);
+ 
+     util_free_array(array_added);
+     util_free_array(array_deleted);
+@@ -157,17 +158,13 @@ static int remote_support_add(void *data)
+     return ret;
+ }
+ 
+-remote_support *image_store_impl_remote_support(void)
+-{
+-    remote_support *rs = util_common_calloc_s(sizeof(remote_support));
+-    if (rs == NULL) {
+-        return NULL;
++void remote_image_refresh(struct remote_image_data *data) {
++    if (remote_dir_scan(data) != 0) {
++        ERROR("remote overlay failed to scan dir, skip refresh");
++        return;
+     }
+ 
+-    rs->create = remote_support_create;
+-    rs->destroy = remote_support_destroy;
+-    rs->scan_remote_dir = remote_support_scan;
+-    rs->load_item = remote_support_add;
+-
+-    return rs;
++    if (remote_image_add(data) != 0) {
++        ERROR("refresh overlay failed");
++    }
+ }
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/layer_remote_impl.c b/src/daemon/modules/image/oci/storage/remote_layer_support/layer_remote_impl.c
+similarity index 76%
+rename from src/daemon/modules/image/oci/storage/layer_store/layer_remote_impl.c
+rename to src/daemon/modules/image/oci/storage/remote_layer_support/layer_remote_impl.c
+index d676458c..3e3afff6 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/layer_remote_impl.c
++++ b/src/daemon/modules/image/oci/storage/remote_layer_support/layer_remote_impl.c
+@@ -13,7 +13,7 @@
+  * Description: remote layer store implementation
+  ******************************************************************************/
+ #define _GNU_SOURCE
+-#include "layer_store.h"
++#include "remote_support.h"
+ 
+ #include <pthread.h>
+ #include <isula_libutils/log.h>
+@@ -21,20 +21,15 @@
+ 
+ #include "map.h"
+ #include "utils.h"
+-#include "remote_support.h"
+ #include "ro_symlink_maintain.h"
++#include "layer_store.h"
+ #include "path.h"
+ #include "driver_overlay2.h"
+ 
+-struct remote_layer_data {
+-    const char *layer_home;
+-    const char *layer_ro;
+-};
+-
+ static map_t *layer_byid_old = NULL;
+ static map_t *layer_byid_new = NULL;
+ 
+-static void *remote_support_create(const char *layer_home, const char *layer_ro)
++struct remote_layer_data *remote_layer_create(const char *layer_home, const char *layer_ro)
+ {
+     struct remote_layer_data *data = util_common_calloc_s(sizeof(struct remote_layer_data));
+     if (data == NULL) {
+@@ -49,7 +44,7 @@ static void *remote_support_create(const char *layer_home, const char *layer_ro)
+     return data;
+ };
+ 
+-static void remote_support_destroy(void *data)
++void remote_layer_destroy(struct remote_layer_data *data)
+ {
+     if (data == NULL) {
+         return;
+@@ -72,10 +67,9 @@ static bool layer_walk_dir_cb(const char *path_name, const struct dirent *sub_di
+     return true;
+ }
+ 
+-static int remote_support_scan(void *data)
++static int remote_dir_scan(struct remote_layer_data *data)
+ {
+-    struct remote_layer_data *remote_data = data;
+-    return util_scan_subdirs(remote_data->layer_ro, layer_walk_dir_cb, data);
++    return util_scan_subdirs(data->layer_ro, layer_walk_dir_cb, data);
+ }
+ 
+ static int remove_one_remote_layer(struct remote_layer_data *data, char *layer_id)
+@@ -85,6 +79,11 @@ static int remove_one_remote_layer(struct remote_layer_data *data, char *layer_i
+     int nret = 0;
+     int ret = 0;
+ 
++    if (layer_id == NULL) {
++        ERROR("can't delete NULL remote layer");
++        return -1;
++    }
++
+     nret = asprintf(&ro_symlink, "%s/%s", data->layer_home, layer_id);
+     if (nret < 0 || nret > PATH_MAX) {
+         SYSERROR("Create layer symbol link path failed");
+@@ -98,11 +97,14 @@ static int remove_one_remote_layer(struct remote_layer_data *data, char *layer_i
+         goto out;
+     }
+ 
++    // return 0 if path already removed
+     if (util_path_remove(clean_path) != 0) {
+         SYSERROR("Failed to remove link path %s", clean_path);
++        ret = -1;
++        goto out;
+     }
+ 
+-    if (remove_memory_stores_with_lock(layer_id) != 0) {
++    if (remote_layer_remove_memory_stores_with_lock(layer_id) != 0) {
+         ERROR("Failed to remove remote layer store memory");
+         ret = -1;
+     }
+@@ -110,7 +112,6 @@ static int remove_one_remote_layer(struct remote_layer_data *data, char *layer_i
+ out:
+     free(ro_symlink);
+     return ret;
+-
+ }
+ 
+ static int add_one_remote_layer(struct remote_layer_data *data, char *layer_id)
+@@ -119,6 +120,11 @@ static int add_one_remote_layer(struct remote_layer_data *data, char *layer_id)
+     char *layer_dir = NULL;
+     int ret = 0;
+ 
++    if (layer_id == NULL) {
++        ERROR("can't add NULL remote layer");
++        return -1;
++    }
++
+     ro_symlink = util_path_join(data->layer_home, layer_id);
+     layer_dir = util_path_join(data->layer_ro, layer_id);
+ 
+@@ -140,7 +146,7 @@ static int add_one_remote_layer(struct remote_layer_data *data, char *layer_id)
+         goto free_out;
+     }
+     // insert layer into memory
+-    if (load_one_layer(layer_id) != 0) {
++    if (remote_load_one_layer(layer_id) != 0) {
+         ERROR("Failed to load new layer: %s into memory", layer_id);
+         ret = -1;
+     }
+@@ -152,30 +158,32 @@ free_out:
+     return ret;
+ }
+ 
+-static int remote_support_add(void *data)
++static int remote_layer_add(struct remote_layer_data *data)
+ {
+     int ret = 0;
+     char **array_added = NULL;
+     char **array_deleted = NULL;
+     map_t *tmp_map = NULL;
++    bool exist = true;
+     int i = 0;
+ 
+     if (data == NULL) {
+         return -1;
+     }
+ 
+-    array_added = added_layers(layer_byid_old, layer_byid_new);
+-    array_deleted = deleted_layers(layer_byid_old, layer_byid_new);
++    array_added = remote_added_layers(layer_byid_old, layer_byid_new);
++    array_deleted = remote_deleted_layers(layer_byid_old, layer_byid_new);
+ 
+     for (i = 0; i < util_array_len((const char **)array_added); i++) {
+-        if (!overlay_remote_layer_valid(array_added[i]) != 0) {
++        if (!remote_overlay_layer_valid(array_added[i]) != 0) {
++            WARN("remote overlay layer current not valid: %s", array_added[i]);
+             map_remove(layer_byid_new, (void *)array_added[i]);
+-            ERROR("remote overlay layer current not valid: %s", array_added[i]);
+             continue;
+         }
+ 
+         if (add_one_remote_layer(data, array_added[i]) != 0) {
+             ERROR("Failed to add remote layer: %s", array_added[i]);
++            map_remove(layer_byid_new, (void *)array_added[i]);
+             ret = -1;
+         }
+     }
+@@ -183,6 +191,7 @@ static int remote_support_add(void *data)
+     for (i = 0; i < util_array_len((const char **)array_deleted); i++) {
+         if (remove_one_remote_layer(data, array_deleted[i]) != 0) {
+             ERROR("Failed to delete remote overlay layer: %s", array_deleted[i]);
++            map_insert(layer_byid_new, array_deleted[i], (void *)&exist);
+             ret = -1;
+         }
+     }
+@@ -190,7 +199,7 @@ static int remote_support_add(void *data)
+     tmp_map = layer_byid_old;
+     layer_byid_old = layer_byid_new;
+     layer_byid_new = tmp_map;
+-    empty_map(layer_byid_new);
++    map_clear(layer_byid_new);
+ 
+     util_free_array(array_added);
+     util_free_array(array_deleted);
+@@ -198,22 +207,20 @@ static int remote_support_add(void *data)
+     return ret;
+ }
+ 
+-remote_support *layer_store_impl_remote_support()
++void remote_layer_refresh(struct remote_layer_data *data)
+ {
+-    remote_support *rs = util_common_calloc_s(sizeof(remote_support));
+-    if (rs == NULL) {
+-        return NULL;
++    if (remote_dir_scan(data) != 0) {
++        ERROR("remote layer failed to scan dir, skip refresh");
++        return;
+     }
+ 
+-    rs->create = remote_support_create;
+-    rs->destroy = remote_support_destroy;
+-    rs->scan_remote_dir = remote_support_scan;
+-    rs->load_item = remote_support_add;
+-
+-    return rs;
++    if (remote_layer_add(data) != 0) {
++        ERROR("refresh overlay failed");
++    }
+ }
+ 
+-bool layer_remote_layer_valid(const char *layer_id)
++
++bool remote_layer_layer_valid(const char *layer_id)
+ {
+     return map_search(layer_byid_old, (void *)layer_id) != NULL;
+ }
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/overlay_remote_impl.c b/src/daemon/modules/image/oci/storage/remote_layer_support/overlay_remote_impl.c
+similarity index 72%
+rename from src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/overlay_remote_impl.c
+rename to src/daemon/modules/image/oci/storage/remote_layer_support/overlay_remote_impl.c
+index a674a00f..de2e583c 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/overlay_remote_impl.c
++++ b/src/daemon/modules/image/oci/storage/remote_layer_support/overlay_remote_impl.c
+@@ -13,13 +13,13 @@
+  * Description: provide remote implementation for driver overlay
+  ******************************************************************************/
+ #define _GNU_SOURCE
+-#include "driver_overlay2.h"
++#include "remote_support.h"
+ 
+ #include <stdio.h>
+ 
+ #include "map.h"
+-#include "remote_support.h"
+ #include "ro_symlink_maintain.h"
++#include "driver_overlay2.h"
+ #include "isula_libutils/log.h"
+ #include "utils.h"
+ #include "utils_array.h"
+@@ -29,15 +29,13 @@
+ #define OVERLAY_LINK_DIR "l"
+ #define OVERLAY_LAYER_LINK "link"
+ 
+-struct remote_overlay_data {
+-    const char *overlay_home;
+-    const char *overlay_ro;
+-};
+-
++// key: id, value: short id in 'l' dir
++// store short id to delete symbol link in 'l' dir
+ static map_t *overlay_byid_old = NULL;
+ static map_t *overlay_byid_new = NULL;
++static map_t *overlay_id_link = NULL;
+ 
+-static void *remote_support_create(const char *remote_home, const char *remote_ro)
++struct remote_overlay_data *remote_overlay_create(const char *remote_home, const char *remote_ro)
+ {
+     struct remote_overlay_data *data = util_common_calloc_s(sizeof(struct remote_overlay_data));
+     if (data == NULL) {
+@@ -48,11 +46,12 @@ static void *remote_support_create(const char *remote_home, const char *remote_r
+     data->overlay_ro = remote_ro;
+     overlay_byid_old = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+     overlay_byid_new = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
++    overlay_id_link = map_new(MAP_STR_STR, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+ 
+     return data;
+ }
+ 
+-static void remote_support_destroy(void *data)
++void remote_overlay_destroy(struct remote_overlay_data *data)
+ {
+     if (data == NULL) {
+         return;
+@@ -60,6 +59,7 @@ static void remote_support_destroy(void *data)
+ 
+     map_free(overlay_byid_old);
+     map_free(overlay_byid_new);
++    map_free(overlay_id_link);
+     free(data);
+ }
+ 
+@@ -74,10 +74,9 @@ static bool overlay_walk_dir_cb(const char *path_name, const struct dirent *sub_
+     return true;
+ }
+ 
+-static int remote_support_scan(void *data)
++static int remote_dir_scan(struct remote_overlay_data *data)
+ {
+-    struct remote_overlay_data *remote_data = data;
+-    return util_scan_subdirs(remote_data->overlay_ro, overlay_walk_dir_cb, data);
++    return util_scan_subdirs(data->overlay_ro, overlay_walk_dir_cb, data);
+ }
+ 
+ static int do_diff_symlink(const char *id, char *link_id, const char *driver_home)
+@@ -128,10 +127,17 @@ out:
+ static int remove_one_remote_overlay_layer(struct remote_overlay_data *data, const char *overlay_id)
+ {
+     char *ro_symlink = NULL;
++    char *link_path = NULL;
++    char *link_id = NULL;
+     char clean_path[PATH_MAX] = { 0 };
+     int nret = 0;
+     int ret = 0;
+ 
++    if (overlay_id == NULL) {
++        ERROR("can't remove NULL remote layer");
++        return -1;
++    }
++
+     nret = asprintf(&ro_symlink, "%s/%s", data->overlay_home, overlay_id);
+     if (nret < 0 || nret > PATH_MAX) {
+         SYSERROR("Create layer symbol link path failed");
+@@ -149,8 +155,40 @@ static int remove_one_remote_overlay_layer(struct remote_overlay_data *data, con
+         SYSERROR("Failed to remove link path %s", clean_path);
+     }
+ 
++    link_id = (char *)map_search(overlay_id_link, (void *)overlay_id);
++
++    if (link_id == NULL) {
++        ERROR("Failed to find link id for overlay layer: %s", overlay_id);
++        ret = -1;
++        goto out;
++    }
++
++    nret = asprintf(&link_path, "%s/%s/%s", data->overlay_home, OVERLAY_LINK_DIR, link_id);
++    if (nret < 0 || nret > PATH_MAX) {
++        SYSERROR("Create link path failed");
++        ret = -1;
++        goto out;
++    }
++
++    if (util_clean_path(link_path, clean_path, sizeof(clean_path)) == NULL) {
++        ERROR("Failed to clean path: %s", ro_symlink);
++        ret = -1;
++        goto out;
++    }
++
++    if (util_path_remove(clean_path) != 0) {
++        SYSERROR("Failed to remove link path %s", clean_path);
++    }
++
++    if (!map_remove(overlay_id_link, (void *)overlay_id)) {
++        ERROR("Failed to remove link id for overlay layers: %s", overlay_id);
++        ret = -1;
++        goto out;
++    }
++
+ out:
+     free(ro_symlink);
++    free(link_path);
+     return ret;
+ }
+ 
+@@ -162,6 +200,11 @@ static int add_one_remote_overlay_layer(struct remote_overlay_data *data, const
+     char *diff_symlink = NULL;
+     int ret = 0;
+ 
++    if (overlay_id == NULL) {
++        ERROR("can't add NULL remote layer");
++        return -1;
++    }
++
+     ro_symlink = util_path_join(data->overlay_home, overlay_id);
+     if (ro_symlink == NULL) {
+         ERROR("Failed to join ro symlink path: %s", overlay_id);
+@@ -211,6 +254,11 @@ static int add_one_remote_overlay_layer(struct remote_overlay_data *data, const
+         ret = -1;
+     }
+ 
++    if (!map_insert(overlay_id_link, util_strdup_s(overlay_id), (void *)diff_symlink)) {
++        ERROR("can't insert remote layer into map");
++        ret = -1;
++    }
++
+ free_out:
+     free(ro_symlink);
+     free(layer_dir);
+@@ -220,24 +268,26 @@ free_out:
+     return ret;
+ }
+ 
+-static int remote_support_add(void *data)
++static int remote_image_add(struct remote_overlay_data *data)
+ {
+     int ret = 0;
+     char **array_added = NULL;
+     char **array_deleted = NULL;
+     map_t *tmp_map = NULL;
++    bool exist = true;
+     int i = 0;
+ 
+     if (data == NULL) {
+         return -1;
+     }
+ 
+-    array_added = added_layers(overlay_byid_old, overlay_byid_new);
+-    array_deleted = deleted_layers(overlay_byid_old, overlay_byid_new);
++    array_added = remote_added_layers(overlay_byid_old, overlay_byid_new);
++    array_deleted = remote_deleted_layers(overlay_byid_old, overlay_byid_new);
+ 
+     for (i = 0; i < util_array_len((const char **)array_added); i++) {
+         if (add_one_remote_overlay_layer(data, array_added[i]) != 0) {
+             ERROR("Failed to add remote overlay layer: %s", array_added[i]);
++            map_remove(overlay_byid_new, (void *)array_added[i]);
+             ret = -1;
+         }
+     }
+@@ -245,6 +295,7 @@ static int remote_support_add(void *data)
+     for (i = 0; i < util_array_len((const char **)array_deleted); i++) {
+         if (remove_one_remote_overlay_layer(data, array_deleted[i]) != 0) {
+             ERROR("Failed to delete remote overlay layer: %s", array_deleted[i]);
++            map_insert(overlay_byid_new, array_deleted[i], (void *)&exist);
+             ret = -1;
+         }
+     }
+@@ -252,7 +303,7 @@ static int remote_support_add(void *data)
+     tmp_map = overlay_byid_old;
+     overlay_byid_old = overlay_byid_new;
+     overlay_byid_new = tmp_map;
+-    empty_map(overlay_byid_new);
++    map_clear(overlay_byid_new);
+ 
+     util_free_array(array_added);
+     util_free_array(array_deleted);
+@@ -260,23 +311,19 @@ static int remote_support_add(void *data)
+     return ret;
+ }
+ 
+-remote_support *overlay_driver_impl_remote_support(void)
++void remote_overlay_refresh(struct remote_overlay_data *data)
+ {
+-    remote_support *rs = util_common_calloc_s(sizeof(remote_support));
+-    if (rs == NULL) {
+-        ERROR("Failed to calloc overlay supporter");
+-        return NULL;
++    if (remote_dir_scan(data) != 0) {
++        ERROR("remote overlay failed to scan dir, skip refresh");
++        return;
+     }
+ 
+-    rs->create = remote_support_create;
+-    rs->destroy = remote_support_destroy;
+-    rs->scan_remote_dir = remote_support_scan;
+-    rs->load_item = remote_support_add;
+-
+-    return rs;
++    if (remote_image_add(data) != 0) {
++        ERROR("refresh overlay failed");
++    }
+ }
+ 
+-bool overlay_remote_layer_valid(const char *layer_id)
++bool remote_overlay_layer_valid(const char *layer_id)
+ {
+     return map_search(overlay_byid_old, (void *)layer_id) != NULL;
+ }
+diff --git a/src/daemon/modules/image/oci/storage/remote_layer_support/remote_support.c b/src/daemon/modules/image/oci/storage/remote_layer_support/remote_support.c
+index 9dc096f7..3c7d0f54 100644
+--- a/src/daemon/modules/image/oci/storage/remote_layer_support/remote_support.c
++++ b/src/daemon/modules/image/oci/storage/remote_layer_support/remote_support.c
+@@ -15,108 +15,107 @@
+ 
+ #include "remote_support.h"
+ 
+-#include "layer_store.h"
+-#include "image_store.h"
++#include <pthread.h>
++
+ #include "isula_libutils/log.h"
+-#include "driver_overlay2.h"
+ #include "utils.h"
+ 
+-remote_supporter *create_layer_supporter(const char *remote_home, const char *remote_ro)
+-{
+-    remote_support *handlers = layer_store_impl_remote_support();
+-    if (handlers == NULL || handlers->create == NULL) {
+-        return NULL;
+-    }
++struct supporters {
++    struct remote_image_data *image_data;
++    struct remote_layer_data *layer_data;
++    struct remote_overlay_data *overlay_data;
++};
+ 
+-    remote_supporter *supporter = (remote_supporter *)util_common_calloc_s(sizeof(remote_supporter));
+-    if (supporter == NULL) {
+-        goto err_out;
+-    }
++static struct supporters supporters;
++
++static void *remote_refresh_ro_symbol_link(void *arg)
++{
++    struct supporters *refresh_supporters = (struct supporters *)arg;
++    prctl(PR_SET_NAME, "RoLayerRefresh");
+ 
+-    supporter->handlers = handlers;
+-    supporter->data = handlers->create(remote_home, remote_ro);
++    while (true) {
++        util_usleep_nointerupt(5 * 1000 * 1000);
++        DEBUG("remote refresh start\n");
+ 
+-    return supporter;
++        remote_overlay_refresh(refresh_supporters->overlay_data);
++        remote_layer_refresh(refresh_supporters->layer_data);
++        remote_image_refresh(refresh_supporters->image_data);
+ 
+-err_out:
+-    free(handlers);
+-    free(supporter);
++        DEBUG("remote refresh end\n");
++    }
+     return NULL;
+ }
+ 
+-remote_supporter *create_image_supporter(const char *remote_home, const char *remote_ro)
++int remote_start_refresh_thread(void)
+ {
+-    remote_support *handlers = image_store_impl_remote_support();
+-    if (handlers == NULL || handlers->create == NULL) {
+-        return NULL;
+-    }
++    int res = 0;
++    pthread_t a_thread;
++    maintain_context ctx = get_maintain_context();
+ 
+-    remote_supporter *supporter = (remote_supporter *)util_common_calloc_s(sizeof(remote_supporter));
+-    if (supporter == NULL) {
+-        goto err_out;
++    supporters.image_data = remote_image_create(ctx.image_home, NULL);
++    if (supporters.image_data == NULL) {
++        goto free_out;
+     }
+ 
+-    supporter->handlers = handlers;
+-    supporter->data = handlers->create(remote_home, remote_ro);
+-
+-    return supporter;
+-
+-err_out:
+-    free(handlers);
+-    free(supporter);
+-    return NULL;
+-}
++    supporters.layer_data = remote_layer_create(ctx.layer_home, ctx.layer_ro_dir);
++    if (supporters.layer_data == NULL) {
++        goto free_out;
++    }
+ 
+-remote_supporter *create_overlay_supporter(const char *remote_home, const char *remote_ro)
+-{
+-    remote_support *handlers = overlay_driver_impl_remote_support();
+-    if (handlers == NULL || handlers->create == NULL) {
+-        return NULL;
++    supporters.overlay_data = remote_overlay_create(ctx.overlay_home, ctx.overlay_ro_dir);
++    if (supporters.overlay_data == NULL) {
++        goto free_out;
+     }
+ 
+-    remote_supporter *supporter = (remote_supporter *)util_common_calloc_s(sizeof(remote_supporter));
+-    if (supporter == NULL) {
+-        goto err_out;
++    res = pthread_create(&a_thread, NULL, remote_refresh_ro_symbol_link, (void *)&supporters);
++    if (res != 0) {
++        CRIT("Thread creation failed");
++        return -1;
+     }
+ 
+-    supporter->handlers = handlers;
+-    supporter->data = handlers->create(remote_home, remote_ro);
++    if (pthread_detach(a_thread) != 0) {
++        SYSERROR("Failed to detach 0x%lx", a_thread);
++        return -1;
++    }
+ 
+-    return supporter;
++    return 0;
+ 
+-err_out:
+-    free(handlers);
+-    free(supporter);
+-    return NULL;
++free_out:
++    remote_image_destroy(supporters.image_data);
++    remote_layer_destroy(supporters.layer_data);
++    remote_overlay_destroy(supporters.overlay_data);
+ 
++    return -1;
+ }
+ 
+-void destroy_suppoter(remote_supporter *supporter)
++// this function calculate map_a - map_b => diff_list
++// diff_list contains keys inside map_a but not inside map_b
++static char **map_diff(const map_t *map_a, const map_t *map_b)
+ {
+-    if (supporter->handlers->destroy == NULL) {
+-        ERROR("destroy_supporter operation not supported");
+-        return;
++    char **array = NULL;
++    map_itor *itor = map_itor_new(map_a);
++    bool *found = NULL;
++
++    // iter new_map, every item not in old, append them to new_layers
++    for (; map_itor_valid(itor); map_itor_next(itor)) {
++        char *id = map_itor_key(itor);
++        found = map_search(map_b, id);
++        if (found == NULL) {
++            util_array_append(&array, util_strdup_s(id));
++        }
+     }
+ 
+-    supporter->handlers->destroy(supporter->data);
+-    free(supporter->handlers);
+-    free(supporter);
++    map_itor_free(itor);
++
++    return array;
+ }
+ 
+-int scan_remote_dir(remote_supporter *supporter)
++char **remote_deleted_layers(const map_t *old, const map_t *new)
+ {
+-    if (supporter->handlers->scan_remote_dir == NULL) {
+-        ERROR("scan_remote_dir operation not supported");
+-        return -1;
+-    }
+-    return supporter->handlers->scan_remote_dir(supporter->data);
++    return map_diff(old, new);
+ }
+ 
+-int load_item(remote_supporter *supporter)
++char **remote_added_layers(const map_t *old, const map_t *new)
+ {
+-    if (supporter->handlers->scan_remote_dir == NULL) {
+-        ERROR("load_item operation not supported");
+-        return -1;
+-    }
+-    return supporter->handlers->load_item(supporter->data);
++    return map_diff(new, old);
+ }
+diff --git a/src/daemon/modules/image/oci/storage/remote_layer_support/remote_support.h b/src/daemon/modules/image/oci/storage/remote_layer_support/remote_support.h
+index d1f7af35..892a9155 100644
+--- a/src/daemon/modules/image/oci/storage/remote_layer_support/remote_support.h
++++ b/src/daemon/modules/image/oci/storage/remote_layer_support/remote_support.h
+@@ -17,39 +17,59 @@
+ #define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_REMOTE_LAYER_SUPPORT_REMOTE_SUPPORT_H
+ 
+ #include "linked_list.h"
+-#define REMOTE_RO_LAYER_DIR "RO"
+-#define OVERLAY_RO_DIR "RO"
++#include "map.h"
++#include "ro_symlink_maintain.h"
+ 
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+ 
+-typedef struct {
+-    void *(*create)(const char *remote_home, const char *remote_ro);
+-    void (*destroy)(void *data);
+-    // populate the list contains all dirs
+-    int (*scan_remote_dir)(void *data);
+-    // consume the list contains all dirs
+-    int (*load_item)(void *data);
+-} remote_support;
++struct remote_overlay_data {
++    const char *overlay_home;
++    const char *overlay_ro;
++};
+ 
+-typedef struct {
+-    void *data;
+-    remote_support *handlers;
+-} remote_supporter;
++struct remote_layer_data {
++    const char *layer_home;
++    const char *layer_ro;
++};
+ 
+-// RemoteSupport *impl_remote_support();
+-remote_supporter *create_image_supporter(const char *remote_home, const char *remote_ro);
++struct remote_image_data {
++    const char *image_home;
++};
+ 
+-remote_supporter *create_layer_supporter(const char *remote_home, const char *remote_ro);
++// image impl
++struct remote_image_data *remote_image_create(const char *image_home, const char *image_ro);
+ 
+-remote_supporter *create_overlay_supporter(const char *remote_home, const char *remote_ro);
++void remote_image_destroy(struct remote_image_data *data);
+ 
+-void destroy_suppoter(remote_supporter *supporter);
++void remote_image_refresh(struct remote_image_data *data);
+ 
+-int scan_remote_dir(remote_supporter *supporter);
++// layer impl
++struct remote_layer_data *remote_layer_create(const char *layer_home, const char *layer_ro);
+ 
+-int load_item(remote_supporter *supporter);
++void remote_layer_destroy(struct remote_layer_data *data);
++
++void remote_layer_refresh(struct remote_layer_data *data);
++
++bool remote_layer_layer_valid(const char *layer_id);
++
++// overlay impl
++struct remote_overlay_data *remote_overlay_create(const char *overlay_home, const char *overlay_ro);
++
++void remote_overlay_destroy(struct remote_overlay_data *data);
++
++void remote_overlay_refresh(struct remote_overlay_data *data);
++
++bool remote_overlay_layer_valid(const char *layer_id);
++
++// start refresh remote
++int remote_start_refresh_thread(void);
++
++// extra map utils
++char **remote_deleted_layers(const map_t *old, const map_t *new_l);
++
++char **remote_added_layers(const map_t *old, const map_t *new_l);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c b/src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
+index 7df7a221..a3aa3aa4 100644
+--- a/src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
++++ b/src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
+@@ -17,19 +17,15 @@
+ 
+ #include <sys/prctl.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ #include <pthread.h>
+ #include <unistd.h>
+-#include "map.h"
++
+ #include "path.h"
+ #include "linked_list.h"
+-#include "layer_store.h"
+-#include "layer.h"
+ #include "isula_libutils/log.h"
+-#include "image_store.h"
+-#include "remote_support.h"
+ #include "utils.h"
+ #include "utils_file.h"
+-#include "stdlib.h"
+ 
+ #define REMOTE_RO_LAYER_DIR "RO"
+ 
+@@ -43,14 +39,6 @@ static char *layer_home;
+ static char *overlay_ro_dir;
+ static char *overlay_home;
+ 
+-struct supporters {
+-    remote_supporter *image_supporter;
+-    remote_supporter *layer_supporter;
+-    remote_supporter *overlay_supporter;
+-};
+-
+-static struct supporters supporters;
+-
+ int remote_image_init(const char *root_dir)
+ {
+     if (root_dir == NULL) {
+@@ -134,75 +122,11 @@ void remote_maintain_cleanup(void)
+     overlay_ro_dir = NULL;
+ }
+ 
+-// to maintain the symbol links, add new symbol link and delete invalid symbol link
+-// arg is const char *driver_home
+-// scanning driver->home/RO/ directory, build symlink in driver->home
+-static void *remote_refresh_ro_symbol_link(void *arg)
+-{
+-    struct supporters *supporters = (struct supporters *)arg;
+-    prctl(PR_SET_NAME, "RoLayerRefresh");
+-
+-    while (true) {
+-        util_usleep_nointerupt(5 * 1000 * 1000);
+-        DEBUG("remote refresh start\n");
+-        scan_remote_dir(supporters->overlay_supporter);
+-        load_item(supporters->overlay_supporter);
+-        scan_remote_dir(supporters->layer_supporter);
+-        load_item(supporters->layer_supporter);
+-        scan_remote_dir(supporters->image_supporter);
+-        load_item(supporters->image_supporter);
+-        DEBUG("remote refresh end\n");
+-    }
+-    return NULL;
+-}
+-
+-int start_refresh_thread(void)
+-{
+-    int res = 0;
+-    pthread_t a_thread;
+-
+-    supporters.image_supporter = create_image_supporter(image_home, NULL);
+-    if (supporters.image_supporter == NULL) {
+-        goto free_out;
+-    }
+-
+-    supporters.layer_supporter = create_layer_supporter(layer_home, layer_ro_dir);
+-    if (supporters.layer_supporter == NULL) {
+-        goto free_out;
+-    }
+-
+-    supporters.overlay_supporter = create_overlay_supporter(overlay_home, overlay_ro_dir);
+-    if (supporters.overlay_supporter == NULL) {
+-        goto free_out;
+-    }
+-
+-    res = pthread_create(&a_thread, NULL, remote_refresh_ro_symbol_link, (void *)&supporters);
+-    if (res != 0) {
+-        CRIT("Thread creation failed");
+-        return -1;
+-    }
+-
+-    if (pthread_detach(a_thread) != 0) {
+-        SYSERROR("Failed to detach 0x%lx", a_thread);
+-        return -1;
+-    }
+-
+-    return 0;
+-
+-free_out:
+-    destroy_suppoter(supporters.image_supporter);
+-    destroy_suppoter(supporters.layer_supporter);
+-    destroy_suppoter(supporters.overlay_supporter);
+-
+-    return -1;
+-}
+-
+ static int do_build_ro_dir(const char *home, const char *id)
+ {
+     char *ro_symlink = NULL;
+     char *ro_layer_dir = NULL;
+     int nret = 0;
+-    // bool ret = true;
+     int ret = 0;
+ 
+     nret = asprintf(&ro_symlink, "%s/%s", home, id);
+@@ -305,43 +229,15 @@ int remote_overlay_remove_ro_dir(const char *id)
+     return do_remove_ro_dir(overlay_home, id);
+ }
+ 
+-static char **map_diff(map_t *map_a, map_t *map_b)
+-{
+-    char **array = NULL;
+-    map_itor *itor = map_itor_new(map_a);
+-    bool *found = NULL;
+-
+-    // iter new_map, every item not in old, append them to new_layers
+-    for (; map_itor_valid(itor); map_itor_next(itor)) {
+-        char *id = map_itor_key(itor);
+-        found = map_search(map_b, id);
+-        if (found == NULL) {
+-            util_array_append(&array, util_strdup_s(id));
+-        }
+-    }
+-
+-    map_itor_free(itor);
+-
+-    return array;
+-}
+-
+-char **deleted_layers(map_t *old, map_t *new)
+-{
+-    return map_diff(old, new);
+-}
+-
+-char **added_layers(map_t *old, map_t *new)
++maintain_context get_maintain_context(void)
+ {
+-    return map_diff(new, old);
+-}
++    maintain_context ctx = {0x0};
+ 
+-int empty_map(map_t *mp)
+-{
+-    if (mp == NULL) {
+-        return -1;
+-    }
++    ctx.image_home = image_home;
++    ctx.layer_ro_dir = layer_ro_dir;
++    ctx.layer_home = layer_home;
++    ctx.overlay_ro_dir = overlay_ro_dir;
++    ctx.overlay_home = overlay_home;
+ 
+-    map_clear(mp);
+-    mp->store->root = mp->store->nil;
+-    return 0;
++    return ctx;
+ }
+diff --git a/src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.h b/src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.h
+index 25712d40..aa2036ea 100644
+--- a/src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.h
++++ b/src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.h
+@@ -15,12 +15,21 @@
+ #ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_REMOTE_LAYER_SUPPORT_RO_SYMLINK_MAINTAIN_H
+ #define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_REMOTE_LAYER_SUPPORT_RO_SYMLINK_MAINTAIN_H
+ 
+-#include "map.h"
++#define REMOTE_RO_LAYER_DIR "RO"
++#define OVERLAY_RO_DIR "RO"
+ 
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+ 
++typedef struct {
++    const char *image_home;
++    const char *layer_ro_dir;
++    const char *layer_home;
++    const char *overlay_ro_dir;
++    const char *overlay_home;
++} maintain_context;
++
+ int remote_image_init(const char *root_dir);
+ 
+ int remote_layer_init(const char *root_dir);
+@@ -29,8 +38,6 @@ int remote_overlay_init(const char *driver_home);
+ 
+ void remote_maintain_cleanup(void);
+ 
+-int start_refresh_thread(void);
+-
+ int remote_layer_build_ro_dir(const char *id);
+ 
+ int remote_overlay_build_ro_dir(const char *id);
+@@ -39,11 +46,7 @@ int remote_layer_remove_ro_dir(const char *id);
+ 
+ int remote_overlay_remove_ro_dir(const char *id);
+ 
+-char **deleted_layers(map_t *old, map_t *new);
+-
+-char **added_layers(map_t *old, map_t *new);
+-
+-int empty_map(map_t *mp);
++maintain_context get_maintain_context(void);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/src/daemon/modules/image/oci/storage/storage.c b/src/daemon/modules/image/oci/storage/storage.c
+index 31812a22..f9830ac3 100644
+--- a/src/daemon/modules/image/oci/storage/storage.c
++++ b/src/daemon/modules/image/oci/storage/storage.c
+@@ -43,7 +43,7 @@
+ #include "utils_verify.h"
+ #include "sha256.h"
+ #ifdef ENABLE_REMOTE_LAYER_STORE
+-#include "ro_symlink_maintain.h"
++#include "remote_support.h"
+ #endif
+ 
+ static pthread_rwlock_t g_storage_rwlock;
+@@ -1874,7 +1874,7 @@ int storage_module_init(struct storage_module_init_options *opts)
+     }
+ 
+ #ifdef ENABLE_REMOTE_LAYER_STORE
+-    if (opts->enable_remote_layer && start_refresh_thread() != 0) {
++    if (opts->enable_remote_layer && remote_start_refresh_thread() != 0) {
+         ERROR("Failed to start remote refresh thread");
+     }
+ #endif
+diff --git a/src/utils/cutils/map/rb_tree.c b/src/utils/cutils/map/rb_tree.c
+index e933003a..b85371e3 100644
+--- a/src/utils/cutils/map/rb_tree.c
++++ b/src/utils/cutils/map/rb_tree.c
+@@ -134,6 +134,7 @@ void rbtree_clear(rb_tree_t *tree)
+         return;
+     }
+     rbtree_destroy_all(tree, tree->root);
++    tree->root = tree->nil;
+ }
+ 
+ void rbtree_free(rb_tree_t *tree)
+diff --git a/test/image/oci/registry/CMakeLists.txt b/test/image/oci/registry/CMakeLists.txt
+index 31240ae0..df184b09 100644
+--- a/test/image/oci/registry/CMakeLists.txt
++++ b/test/image/oci/registry/CMakeLists.txt
+@@ -26,6 +26,7 @@ add_executable(${EXE}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry_type.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/sysinfo.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/image_store/image_store.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/registry.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/registry_apiv2.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/http_request.c
+@@ -56,6 +57,7 @@ target_include_directories(${EXE} PUBLIC
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/image_store
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/remote_layer_support
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks
+     )
+diff --git a/test/image/oci/storage/CMakeLists.txt b/test/image/oci/storage/CMakeLists.txt
+index feb81b14..7a9d77fe 100644
+--- a/test/image/oci/storage/CMakeLists.txt
++++ b/test/image/oci/storage/CMakeLists.txt
+@@ -3,3 +3,6 @@ project(iSulad_UT)
+ add_subdirectory(images)
+ add_subdirectory(rootfs)
+ add_subdirectory(layers)
++IF (ENABLE_REMOTE_LAYER_STORE)
++add_subdirectory(remote_layer_support)
++ENDIF()
+diff --git a/test/image/oci/storage/images/CMakeLists.txt b/test/image/oci/storage/images/CMakeLists.txt
+index 3e6b69a4..8446ebba 100644
+--- a/test/image/oci/storage/images/CMakeLists.txt
++++ b/test/image/oci/storage/images/CMakeLists.txt
+@@ -21,6 +21,7 @@ add_executable(${EXE}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/image_store/image_type.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/registry_type.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/image_store/image_store.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/storage_mock.cc
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/isulad_config_mock.cc
+     storage_images_ut.cc)
+@@ -39,6 +40,7 @@ target_include_directories(${EXE} PUBLIC
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/image_store
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/registry
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks
+     )
+diff --git a/test/image/oci/storage/layers/CMakeLists.txt b/test/image/oci/storage/layers/CMakeLists.txt
+index 952e9483..ae0ac9c3 100644
+--- a/test/image/oci/storage/layers/CMakeLists.txt
++++ b/test/image/oci/storage/layers/CMakeLists.txt
+@@ -30,6 +30,7 @@ add_executable(${DRIVER_EXE}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/metadata_store.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/driver_quota_mock.cc
+     storage_driver_ut.cc)
+@@ -52,6 +53,7 @@ target_include_directories(${DRIVER_EXE} PUBLIC
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks
+     )
+@@ -105,6 +107,7 @@ add_executable(${LAYER_EXE}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/driver_quota_mock.cc
+     storage_layers_ut.cc)
+ 
+@@ -129,6 +132,7 @@ target_include_directories(${LAYER_EXE} PUBLIC
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks
+     )
+ 
+diff --git a/test/image/oci/storage/remote_layer_support/CMakeLists.txt b/test/image/oci/storage/remote_layer_support/CMakeLists.txt
+new file mode 100644
+index 00000000..c36d9049
+--- /dev/null
++++ b/test/image/oci/storage/remote_layer_support/CMakeLists.txt
+@@ -0,0 +1,44 @@
++project(iSulad_UT)
++
++SET(EXE remote_layer_support_ut)
++
++add_executable(${EXE}
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/remote_store_mock.cc
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map/map.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support/remote_support.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support/overlay_remote_impl.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support/image_remote_impl.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support/layer_remote_impl.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_file.c
++    remote_layer_ut.cc
++    )
++
++target_include_directories(${EXE} PUBLIC
++    ${GTEST_INCLUDE_DIR}
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../include
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/config
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/api
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/image_store
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks
++    )
++
++target_link_libraries(${EXE} 
++    ${GTEST_BOTH_LIBRARIES} 
++    ${GMOCK_LIBRARY} 
++    ${GMOCK_MAIN_LIBRARY} 
++    ${CMAKE_THREAD_LIBS_INIT} 
++    ${ISULA_LIBUTILS_LIBRARY} 
++    -lgtest -lgtest_main libutils_ut -lcrypto -lyajl -lz)
++
++add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
++set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
+diff --git a/test/image/oci/storage/remote_layer_support/remote_layer_ut.cc b/test/image/oci/storage/remote_layer_support/remote_layer_ut.cc
+new file mode 100644
+index 00000000..5f5e92fb
+--- /dev/null
++++ b/test/image/oci/storage/remote_layer_support/remote_layer_ut.cc
+@@ -0,0 +1,93 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: wangrunze
++ * Create: 2023-03-16
++ * Description: provide remote layer support ut
++ ******************************************************************************/
++#include <gtest/gtest.h>
++
++#include "remote_store_mock.h"
++#include "ro_symlink_maintain.h"
++#include "remote_support.h"
++#include "map.h"
++
++using ::testing::Invoke;
++
++bool invokeOverlayRemoteLayerValid(const char *id)
++{
++    return true; /* currently always valid overlay layer */
++}
++
++bool invokeLayerRemoteLayerValid(const char *id)
++{
++    return true;
++}
++
++int invokeLayerLoadOneLayer(const char *id)
++{
++    return 0;
++}
++
++int invokeLayerRemoveOneLayer(const char *id)
++{
++    return 0;
++}
++
++int invokeImageAppendOneImage(const char *id)
++{
++    return 0;
++}
++
++int invokeImageRemoveOneImage(const char *id)
++{
++    return 0;
++}
++
++char *invokeImageGetTopLayer(const char *id)
++{
++    return NULL;
++}
++
++int invokeImageValidSchemaV1(const char *path, bool *valid)
++{
++    return 0;
++}
++
++void mockCommonAll(MockRemoteStore *mock)
++{
++    EXPECT_CALL(*mock, LayerLoadOneLayer(::testing::_)).WillRepeatedly(Invoke(invokeLayerLoadOneLayer));
++    EXPECT_CALL(*mock, LayerRemoveOneLayer(::testing::_)).WillRepeatedly(Invoke(invokeLayerRemoveOneLayer));
++
++    EXPECT_CALL(*mock, ImageAppendOneImage(::testing::_)).WillRepeatedly(Invoke(invokeImageAppendOneImage));
++    EXPECT_CALL(*mock, ImageRemoveOneImage(::testing::_)).WillRepeatedly(Invoke(invokeImageRemoveOneImage));
++    EXPECT_CALL(*mock, ImageGetTopLayer(::testing::_)).WillRepeatedly(Invoke(invokeImageGetTopLayer));
++    EXPECT_CALL(*mock, ImageValidSchemaV1(::testing::_, ::testing::_)).WillRepeatedly(Invoke(invokeImageValidSchemaV1));
++}
++
++TEST(remote_Layer_ut, test_map_diff)
++{
++    // old: a b x 
++    // new: x b c
++    map_t *old_one = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
++    map_t *new_one = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
++    bool exist = true;
++
++    map_insert(old_one, (void *)"a", (void *)&exist);
++    map_insert(old_one, (void *)"b", (void *)&exist);
++    map_insert(new_one, (void *)"b", (void *)&exist);
++    map_insert(new_one, (void *)"c", (void *)&exist);
++
++    char **added = remote_added_layers(old_one, new_one);
++    char **deleted = remote_deleted_layers(old_one, new_one);
++
++    ASSERT_EQ(added[0][0], 'c');
++    ASSERT_EQ(deleted[0][0], 'a');
++}
+diff --git a/test/image/oci/storage/rootfs/CMakeLists.txt b/test/image/oci/storage/rootfs/CMakeLists.txt
+index 4d7d3533..5383fbac 100644
+--- a/test/image/oci/storage/rootfs/CMakeLists.txt
++++ b/test/image/oci/storage/rootfs/CMakeLists.txt
+@@ -22,6 +22,7 @@ add_executable(${EXE}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/utils_images.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/rootfs_store/rootfs.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/rootfs_store/rootfs_store.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/storage_mock.cc
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/isulad_config_mock.cc
+     storage_rootfs_ut.cc)
+@@ -41,6 +42,7 @@ target_include_directories(${EXE} PUBLIC
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/rootfs_store
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/remote_layer_support
+     )
+ 
+ target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
+diff --git a/test/mocks/remote_store_mock.cc b/test/mocks/remote_store_mock.cc
+new file mode 100644
+index 00000000..c6428623
+--- /dev/null
++++ b/test/mocks/remote_store_mock.cc
+@@ -0,0 +1,68 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: wangrunze
++ * Create: 2023-03-09
++ * Description: provide mock for image store, layer store and driver overlay
++ ******************************************************************************/
++
++#include "remote_store_mock.h"
++
++namespace {
++MockRemoteStore *g_remote_store_mock = nullptr;
++}
++
++int remote_load_one_layer(const char *id)
++{
++    if (g_remote_store_mock != nullptr) {
++        return g_remote_store_mock->LayerLoadOneLayer(id);
++    }
++    return -1;
++}
++
++int remote_layer_remove_memory_stores_with_lock(const char *id)
++{
++    if (g_remote_store_mock != nullptr) {
++        return g_remote_store_mock->LayerRemoveOneLayer(id);
++    }
++    return -1;
++}
++
++int image_store_validate_manifest_schema_version_1(const char *path, bool *valid)
++{
++    if (g_remote_store_mock != nullptr) {
++        return g_remote_store_mock->ImageValidSchemaV1(path, valid);
++    }
++    return -1;
++}
++
++int remote_append_image_by_directory_with_lock(const char *image_dir)
++{
++    if (g_remote_store_mock != nullptr) {
++        return g_remote_store_mock->ImageAppendOneImage(image_dir);
++    }
++    return -1;
++}
++
++int remote_remove_image_from_memory_with_lock(const char *id)
++{
++    if (g_remote_store_mock != nullptr) {
++        return g_remote_store_mock->ImageRemoveOneImage(id);
++    }
++    return -1;
++}
++
++char *remote_image_get_top_layer_from_json(const char *img_id)
++{
++    if (g_remote_store_mock != nullptr) {
++        return g_remote_store_mock->ImageGetTopLayer(img_id);
++    }
++    return nullptr;
++}
+diff --git a/test/mocks/remote_store_mock.h b/test/mocks/remote_store_mock.h
+new file mode 100644
+index 00000000..e8d73ef1
+--- /dev/null
++++ b/test/mocks/remote_store_mock.h
+@@ -0,0 +1,40 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: wangrunze
++ * Create: 2023-03-09
++ * Description: provide mock for image store, layer store and driver overlay
++ ******************************************************************************/
++
++#ifndef _ISULAD_TEST_MOCKS_REMOTE_STORE_MOCK_H
++#define _ISULAD_TEST_MOCKS_REMOTE_STORE_MOCK_H
++
++#include <gmock/gmock.h>
++
++#include "image_store.h"
++#include "layer_store.h"
++#include "driver_overlay2.h"
++
++class MockRemoteStore {
++public:
++    virtual ~MockRemoteStore() = default;
++    // MOCK_METHOD1(OverlayRemoteLayerValid, bool(const char *));
++
++    // MOCK_METHOD1(LayerRemoteLayerValid, bool(const char *));
++    MOCK_METHOD1(LayerLoadOneLayer, int(const char *));
++    MOCK_METHOD1(LayerRemoveOneLayer, int(const char *));
++
++    MOCK_METHOD1(ImageAppendOneImage, int(const char *));
++    MOCK_METHOD1(ImageRemoveOneImage, int(const char *));
++    MOCK_METHOD1(ImageGetTopLayer, char *(const char *));
++    MOCK_METHOD2(ImageValidSchemaV1, int(const char *, bool *));
++};
++
++#endif // _ISULAD_TEST_MOCKS_IMAGE_MOCK_H
+-- 
+2.25.1
+
