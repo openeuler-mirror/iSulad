@@ -1,5 +1,5 @@
 %global _version 2.0.18
-%global _release 6
+%global _release 7
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -70,6 +70,8 @@ Patch0054:	0054-refactor-remote-ro-code.patch
 Patch0055:	0055-bugfix-when-refresh-can-t-load-or-pull-images.patch
 Patch0056:	0056-remove-unused-headers.patch
 Patch0057:	0057-change-isulad-shim-epoll-struct.patch
+Patch0058:	0058-fix-memrealloc-size-error.patch
+Patch0059:	0059-convert-struct-lcr-start-exec-request.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -314,6 +316,12 @@ fi
 %endif
 
 %changelog
+* Fri May 05 2023 wangrunze<wangrunze13@huawei.com> - 2.0.18-7
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: fix memrealloc size error and convert struct
+
 * Thu May 04 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-6
 - Type: bugfix
 - ID: NA
