@@ -102,16 +102,66 @@ static bool lcr_update_container(const char *name, const char *lcrpath, const st
 
 static bool lcr_start_container(const engine_start_request_t *request)
 {
-    struct lcr_start_request *lcr_request = (struct lcr_start_request *)request;
+    struct lcr_start_request lcr_request = { 0 };
 
-    return g_lcr_start_op(lcr_request);
+    if (g_lcr_start_op == NULL) {
+        ERROR("Not supported start operation");
+        return false;
+    }
+
+    if (request == NULL) {
+        ERROR("Empty start request");
+        return false;
+    }
+
+    lcr_request.name = request->name;
+    lcr_request.lcrpath = request->lcrpath;
+    lcr_request.logpath = request->logpath;
+    lcr_request.loglevel = request->loglevel;
+    lcr_request.daemonize = request->daemonize;
+    lcr_request.tty = request->tty;
+    lcr_request.open_stdin = request->open_stdin;
+    lcr_request.console_fifos = request->console_fifos;
+    lcr_request.start_timeout = request->start_timeout;
+    lcr_request.container_pidfile = request->container_pidfile;
+    lcr_request.exit_fifo = request->exit_fifo;
+    lcr_request.image_type_oci = request->image_type_oci;
+
+    return g_lcr_start_op(&lcr_request);
 }
 
 static bool lcr_exec_container(const engine_exec_request_t *request, int *exit_code)
 {
-    struct lcr_exec_request *lcr_request = (struct lcr_exec_request *)request;
+    struct lcr_exec_request lcr_request = { 0 };
 
-    return g_lcr_exec_op(lcr_request, exit_code);
+    if (g_lcr_exec_op == NULL) {
+        ERROR("Not supported exec operation");
+        return false;
+    }
+
+    if (request == NULL) {
+        ERROR("Empty exec request");
+        return false;
+    }
+
+    lcr_request.name = request->name;
+    lcr_request.lcrpath = request->lcrpath;
+    lcr_request.logpath = request->logpath;
+    lcr_request.loglevel = request->loglevel;
+    lcr_request.console_fifos = request->console_fifos;
+    lcr_request.user = request->user;
+    lcr_request.add_gids = request->add_gids;
+    lcr_request.env = request->env;
+    lcr_request.env_len = request->env_len;
+    lcr_request.args = request->args;
+    lcr_request.args_len = request->args_len;
+    lcr_request.timeout = request->timeout;
+    lcr_request.suffix = request->suffix;
+    lcr_request.tty = request->tty;
+    lcr_request.open_stdin = request->open_stdin;
+    lcr_request.workdir = (char *)request->workdir;
+
+    return g_lcr_exec_op(&lcr_request, exit_code);
 }
 
 /*
