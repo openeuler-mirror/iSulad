@@ -309,7 +309,7 @@ fi
 - SUG: NA
 - DESC: bugfix for runc and cri
 
-* Wed Mar 09 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-4
+* Thu Mar 09 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-4
 - Type: bugfix
 - ID: NA
 - SUG: NA
