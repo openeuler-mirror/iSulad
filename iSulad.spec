@@ -1,5 +1,5 @@
 %global _version 2.0.18
-%global _release 5
+%global _release 6
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -59,6 +59,17 @@ Patch0043:	0043-isulad-shim-fix-log-loss-bug.patch
 Patch0044:	0044-remove-unused-func.patch
 Patch0045:	0045-if-the-exit-code-in-the-response-of-execSync-is-not-.patch
 Patch0046:	0046-free-timeout-when-shim_create-finished.patch
+Patch0047:	0047-clean-isulad-shim-compile-relies.patch
+Patch0048:	0048-remote-layer-store-demo.patch
+Patch0049:	0049-add-ci-for-remote-ro.patch
+Patch0050:	0050-fix-compile-error-when-not-enable-remote-ro.patch
+Patch0051:	0051-CI-not-enable-remote-ro-for-ut.patch
+Patch0052:	0052-bugfix-remote-ro-try-add-or-remove-image-layer-twice.patch
+Patch0053:	0053-bugfix-can-t-delete-layers-under-dir-overlay-layers.patch
+Patch0054:	0054-refactor-remote-ro-code.patch
+Patch0055:	0055-bugfix-when-refresh-can-t-load-or-pull-images.patch
+Patch0056:	0056-remove-unused-headers.patch
+Patch0057:	0057-change-isulad-shim-epoll-struct.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -303,6 +314,12 @@ fi
 %endif
 
 %changelog
+* Thu May 04 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-6
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: upgrade from upstream
+
 * Mon Apr 24 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.18-5
 - Type: bugfix
 - ID: NA
