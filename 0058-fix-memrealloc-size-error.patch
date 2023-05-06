@@ -1,0 +1,27 @@
+From c376da6d86e52bb5eceaa8357b80e81591e05f7b Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Thu, 27 Apr 2023 05:20:31 -0700
+Subject: [PATCH 58/58] fix memrealloc size error
+
+Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
+---
+ src/daemon/modules/service/service_container.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index 6dc06c83..9960ace1 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -1580,7 +1580,8 @@ static int do_append_process_exec_env(const char **default_env, defs_process *sp
+         ret = -1;
+         goto out;
+     }
+-    new_size = (spec->env_len + default_env_len) * sizeof(char *);
++    // new_size = old_size + default_env_len + 1(null as terminator)
++    new_size = (spec->env_len + default_env_len + 1) * sizeof(char *);
+     old_size = spec->env_len * sizeof(char *);
+     ret = util_mem_realloc((void **)&temp, new_size, spec->env, old_size);
+     if (ret != 0) {
+-- 
+2.25.1
+
