@@ -65,7 +65,10 @@ static void *remote_refresh_ro_symbol_link(void *arg)
         util_usleep_nointerupt(5 * 1000 * 1000);
         DEBUG("remote refresh start\n");
 
-        remote_refresh_lock(supporters.remote_lock, true);
+        if (!remote_refresh_lock(supporters.remote_lock, true)) {
+            WARN("Failed to lock remote store failed, try to lock after 5 seconds");
+            continue;
+        }
         remote_overlay_refresh(refresh_supporters->overlay_data);
         remote_layer_refresh(refresh_supporters->layer_data);
         remote_image_refresh(refresh_supporters->image_data);
@@ -127,17 +130,29 @@ static char **map_diff(const map_t *map_a, const map_t *map_b)
     char **array = NULL;
     map_itor *itor = map_itor_new(map_a);
     bool *found = NULL;
+    int ret = 0;
 
     // iter new_map, every item not in old, append them to new_layers
     for (; map_itor_valid(itor); map_itor_next(itor)) {
         char *id = map_itor_key(itor);
         found = map_search(map_b, id);
         if (found == NULL) {
-            util_array_append(&array, util_strdup_s(id));
+            ret = util_array_append(&array, id);
+            if (ret != 0) {
+                ERROR("Failed to add diff item %s to array", id);
+                break;
+            }
         }
     }
 
     map_itor_free(itor);
+
+    // if array is null then return directly
+    // if array is not null, free array and return NULL
+    if (ret != 0 && array != NULL) {
+        util_free_array(array);
+        array = NULL;
+    }
 
     return array;
 }
