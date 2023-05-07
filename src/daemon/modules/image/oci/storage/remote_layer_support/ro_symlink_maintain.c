@@ -27,8 +27,6 @@
 #include "utils.h"
 #include "utils_file.h"
 
-#define REMOTE_RO_LAYER_DIR "RO"
-
 // overlay-layers and overlay-layers/RO
 static char *image_home;
 

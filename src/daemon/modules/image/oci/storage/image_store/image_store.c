@@ -3647,7 +3647,7 @@ int image_store_init(struct storage_module_init_options *opts)
     }
 
 #ifdef ENABLE_REMOTE_LAYER_STORE
-    remote_image_init(g_image_store->dir);
+    ret = remote_image_init(g_image_store->dir);
 #endif
 
 out:
