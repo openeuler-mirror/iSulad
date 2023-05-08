@@ -33,6 +33,7 @@
 #include "specs_mock.h"
 #include "callback.h"
 #include "utils.h"
+#include "utils_timestamp.h"
 
 using ::testing::Args;
 using ::testing::ByRef;

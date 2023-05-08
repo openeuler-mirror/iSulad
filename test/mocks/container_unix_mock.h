@@ -29,6 +29,7 @@ public:
     MOCK_METHOD1(ContainerLock, void(const container_t *cont));
     MOCK_METHOD1(ContainerUnref, void(container_t *cont));
     MOCK_METHOD2(ContainerUpdateRestartManager, void(container_t *cont, const host_config_restart_policy *policy));
+    MOCK_METHOD3(ContainerUpdateInfo, int(container_t *cont, const container_info *info, container_info **old_info));
 };
 
 void MockContainerUnix_SetMock(MockContainerUnix *mock);
