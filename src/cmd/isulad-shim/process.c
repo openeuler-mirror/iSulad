@@ -1164,7 +1164,7 @@ static int try_wait_all_child(void)
     return 1;
 }
 
-static int waitpid_with_timeout(int ctr_pid,  int *status, const int64_t timeout)
+static int waitpid_with_timeout(int ctr_pid,  int *status, const uint64_t timeout)
 {
     int nret = 0;
     time_t start_time = time(NULL);
@@ -1210,7 +1210,7 @@ static int waitpid_with_timeout(int ctr_pid,  int *status, const int64_t timeout
  * If timeout <= 0, blocking wait in reap_container.
  * If timeout > 0, non-blocking wait pid with timeout.
  */
-static int wait_container_process_with_timeout(process_t *p, const unsigned int timeout, int *status)
+static int wait_container_process_with_timeout(process_t *p, const uint64_t timeout, int *status)
 {
     int ret = SHIM_ERR;
 
@@ -1248,7 +1248,7 @@ static int wait_container_process_with_timeout(process_t *p, const unsigned int 
 
 }
 
-int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const unsigned int timeout)
+int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const uint64_t timeout)
 {
     int nret = 0;
     int ret = 0;
