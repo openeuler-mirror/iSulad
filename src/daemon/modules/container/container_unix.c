@@ -972,6 +972,65 @@ out:
     return ret;
 }
 
+static int dup_container_info(const container_info *src, container_info **dest)
+{
+    int ret = -1;
+    char *json = NULL;
+    parser_error err = NULL;
+
+    if (src == NULL) {
+        *dest = NULL;
+        return 0;
+    }
+
+    json = container_info_generate_json(src, NULL, &err);
+    if (json == NULL) {
+        ERROR("Failed to generate container info json: %s", err);
+        goto out;
+    }
+
+    *dest = container_info_parse_data(json, NULL, &err);
+    if (*dest == NULL) {
+        ERROR("Failed to parse container info json: %s", err);
+        goto out;
+    }
+    ret = 0;
+
+out:
+    free(err);
+    free(json);
+    return ret;
+}
+
+int container_update_info(container_t *cont, const container_info *info, container_info **old_info)
+{
+    container_info *dup_info = NULL;
+
+    if (cont == NULL) {
+        return -1;
+    }
+
+    container_lock(cont);
+
+    if (dup_container_info(info, &dup_info) != 0) {
+        ERROR("Failed to dup container info");
+        container_unlock(cont);
+        return -1;
+    }
+
+    if (old_info != NULL) {
+        *old_info = cont->info;
+    } else {
+        free_container_info(cont->info);
+    }
+
+    cont->info = dup_info;
+
+    container_unlock(cont);
+
+    return 0;
+}
+
 // cp old container config file "ociconfig.json" to "config.json"
 static int update_OCI_config_v1_to_v2(const char *rootpath, const char *id)
 {

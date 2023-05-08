@@ -891,7 +891,7 @@ void ContainerManagerService::ContainerStatsToGRPC(
             return;
         }
 
-        int64_t timestamp = util_get_now_time_nanos();
+        int64_t timestamp = response->container_stats[i]->timestamp;
         PackContainerStatsFilesystemUsage(response->container_stats[i]->id, response->container_stats[i]->image_type,
                                           timestamp, container);
         // CPU
@@ -899,6 +899,8 @@ void ContainerManagerService::ContainerStatsToGRPC(
         if (response->container_stats[i]->cpu_use_nanos != 0u) {
             container->mutable_cpu()->mutable_usage_core_nano_seconds()->set_value(
                 response->container_stats[i]->cpu_use_nanos);
+            container->mutable_cpu()->mutable_usage_nano_cores()->set_value(
+                response->container_stats[i]->cpu_use_nanos_per_second);
         }
 
         // Memory

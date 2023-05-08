@@ -260,6 +260,7 @@ static container_info *get_container_stats(const container_t *cont,
     info->major_page_faults = einfo->major_page_faults;
     info->kmem_used = einfo->kmem_used;
     info->kmem_limit = einfo->kmem_limit;
+    info->timestamp = util_get_now_time_nanos();
 
     // workingset is zero if memory used < total inactive file
     if (einfo->inactive_file_total < einfo->mem_used) {
@@ -422,8 +423,29 @@ cleanup:
     return ret;
 }
 
-static int get_containers_stats(char **idsarray, size_t ids_len, const struct stats_context *ctx, bool check_exists,
-                                container_info ***info, size_t *info_len)
+static void update_usage_nano_cores(container_info *stats, const container_info *old_stats)
+{
+    uint64_t usage = 0;
+    uint64_t nanoSeconds = 0;
+
+    if (stats == NULL) {
+        return;
+    }
+
+    if (old_stats == NULL || stats->cpu_use_nanos <= old_stats->cpu_use_nanos ||
+        stats->timestamp <= old_stats->timestamp) {
+        stats->cpu_use_nanos_per_second = 0;
+        return;
+    }
+
+    usage = stats->cpu_use_nanos - old_stats->cpu_use_nanos;
+    nanoSeconds = stats->timestamp - old_stats->timestamp;
+
+    stats->cpu_use_nanos_per_second = (uint64_t)(((double)usage / (double)nanoSeconds) * (double)Time_Second);
+}
+
+static int generate_containers_stats(char **idsarray, size_t ids_len, const struct stats_context *ctx, bool check_exists,
+                                     container_info ***info, size_t *info_len)
 {
     int ret = 0;
     int nret;
@@ -438,6 +460,8 @@ static int get_containers_stats(char **idsarray, size_t ids_len, const struct st
     for (i = 0; i < ids_len; i++) {
         struct runtime_container_resources_stats_info einfo = { 0 };
         container_t *cont = NULL;
+        container_info *cont_info = NULL;
+        container_info *old_cont_info = NULL;
 
         cont = containers_store_get(idsarray[i]);
         if (cont == NULL) {
@@ -466,11 +490,22 @@ static int get_containers_stats(char **idsarray, size_t ids_len, const struct st
             }
         }
 
-        (*info)[*info_len] = get_container_stats(cont, &einfo, ctx);
-        container_unref(cont);
-        if ((*info)[*info_len] == NULL) {
+        cont_info = get_container_stats(cont, &einfo, ctx);
+        if (cont_info == NULL) {
+            container_unref(cont);
             continue;
         }
+
+        if (container_update_info(cont, cont_info, &old_cont_info) != 0) {
+            WARN("Failed to update container info");
+        }
+
+        update_usage_nano_cores(cont_info, old_cont_info);
+
+        (*info)[*info_len] = cont_info;
+
+        free_container_info(old_cont_info);
+        container_unref(cont);
         (*info_len)++;
     }
 cleanup:
@@ -514,7 +549,7 @@ static int container_stats_cb(const container_stats_request *request, container_
         goto pack_response;
     }
 
-    if (get_containers_stats(idsarray, ids_len, ctx, check_exists, &info, &info_len)) {
+    if (generate_containers_stats(idsarray, ids_len, ctx, check_exists, &info, &info_len)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
