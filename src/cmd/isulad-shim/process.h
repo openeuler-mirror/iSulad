@@ -70,7 +70,7 @@ process_t* new_process(char *id, char *bundle, char *runtime);
 
 int process_io_start(process_t *p, pthread_t *tid_epoll);
 int create_process(process_t *p);
-int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const unsigned int timeout);
+int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const uint64_t timeout);
 
 #ifdef __cplusplus
 }
