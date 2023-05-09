@@ -24,6 +24,14 @@ void MockContainerUnix_SetMock(MockContainerUnix *mock)
     g_container_unix_mock = mock;
 }
 
+int container_update_info(container_t *cont, const container_info *info, container_info **old_info)
+{
+    if (g_container_unix_mock != nullptr) {
+        return g_container_unix_mock->ContainerUpdateInfo(cont, info, old_info);
+    }
+    return 0;
+}
+
 /* container unref */
 void container_unref(container_t *cont)
 {
