@@ -36,13 +36,30 @@ struct remote_layer_data *remote_layer_create(const char *layer_home, const char
         ERROR("Out of memory");
         return NULL;
     }
-    data->layer_home = util_strdup_s(layer_home);
-    data->layer_ro = util_strdup_s(layer_ro);
+    data->layer_home = layer_home;
+    data->layer_ro = layer_ro;
+
     layer_byid_old = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (layer_byid_old == NULL) {
+        ERROR("Failed to cerate layer_byid_old");
+        goto free_out;
+    }
+
     layer_byid_new = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (layer_byid_new == NULL) {
+        ERROR("Failed to cerate layer_byid_new");
+        goto free_out;
+    }
 
     return data;
-};
+
+free_out:
+    map_free(layer_byid_old);
+    map_free(layer_byid_new);
+    free(data);
+
+    return NULL;
+}
 
 void remote_layer_destroy(struct remote_layer_data *data)
 {
@@ -59,7 +76,7 @@ static bool layer_walk_dir_cb(const char *path_name, const struct dirent *sub_di
 {
     bool exist = true;
 
-    if (!map_insert(layer_byid_new, util_strdup_s(sub_dir->d_name), (void *)&exist)) {
+    if (!map_insert(layer_byid_new, (void *)sub_dir->d_name, (void *)&exist)) {
         ERROR("can't insert remote layer into map");
         return false;
     }
@@ -165,7 +182,7 @@ static int remote_layer_add(struct remote_layer_data *data)
     char **array_deleted = NULL;
     map_t *tmp_map = NULL;
     bool exist = true;
-    int i = 0;
+    size_t i = 0;
 
     if (data == NULL) {
         return -1;
@@ -175,15 +192,19 @@ static int remote_layer_add(struct remote_layer_data *data)
     array_deleted = remote_deleted_layers(layer_byid_old, layer_byid_new);
 
     for (i = 0; i < util_array_len((const char **)array_added); i++) {
-        if (!remote_overlay_layer_valid(array_added[i]) != 0) {
+        if (!remote_overlay_layer_valid(array_added[i])) {
             WARN("remote overlay layer current not valid: %s", array_added[i]);
-            map_remove(layer_byid_new, (void *)array_added[i]);
+            if (!map_remove(layer_byid_new, (void *)array_added[i])) {
+                WARN("layer %s will not be loaded from remote", array_added[i]);
+            }
             continue;
         }
 
         if (add_one_remote_layer(data, array_added[i]) != 0) {
             ERROR("Failed to add remote layer: %s", array_added[i]);
-            map_remove(layer_byid_new, (void *)array_added[i]);
+            if (!map_remove(layer_byid_new, (void *)array_added[i])) {
+                WARN("layer %s will not be loaded from remote", array_added[i]);
+            }
             ret = -1;
         }
     }
@@ -191,7 +212,9 @@ static int remote_layer_add(struct remote_layer_data *data)
     for (i = 0; i < util_array_len((const char **)array_deleted); i++) {
         if (remove_one_remote_layer(data, array_deleted[i]) != 0) {
             ERROR("Failed to delete remote overlay layer: %s", array_deleted[i]);
-            map_insert(layer_byid_new, array_deleted[i], (void *)&exist);
+            if (!map_insert(layer_byid_new, array_deleted[i], (void *)&exist)) {
+                WARN("layer %s will not be removed from local", array_deleted[i]);
+            }
             ret = -1;
         }
     }

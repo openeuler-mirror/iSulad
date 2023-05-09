@@ -36,10 +36,28 @@ struct remote_image_data *remote_image_create(const char *remote_home, const cha
         ERROR("Out of memory");
         return NULL;
     }
+
     data->image_home = remote_home;
     image_byid_old = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (image_byid_old == NULL) {
+        ERROR("Failed to cerate image_byid_old");
+        goto free_out;
+    }
+
     image_byid_new = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (image_byid_new == NULL) {
+        ERROR("Failed to cerate image_byid_new");
+        goto free_out;
+    }
+
     return data;
+
+free_out:
+    map_free(image_byid_old);
+    map_free(image_byid_new);
+    free(data);
+
+    return NULL;
 }
 
 void remote_image_destroy(struct remote_image_data *data)
@@ -97,7 +115,9 @@ static int remote_dir_scan(void *data)
         // for refresh, we don't care v1 image, cause image should be handled by master isulad
         // when master isulad pull images
         if (!is_v1_image) {
-            map_insert(image_byid_new, util_strdup_s(image_dirs[i]), (void *)&exist);
+            if (!map_insert(image_byid_new, image_dirs[i], (void *)&exist)) {
+                WARN("Failed to insert image %s to map", image_dirs[i]);
+            }
         }
     }
 
@@ -113,7 +133,7 @@ static int remote_image_add(void *data)
     char *top_layer = NULL;
     map_t *tmp_map = NULL;
     bool exist = true;
-    int i = 0;
+    size_t i = 0;
     int ret = 0;
 
     if (data == NULL) {
@@ -127,13 +147,17 @@ static int remote_image_add(void *data)
         top_layer = remote_image_get_top_layer_from_json(array_added[i]);
         if (top_layer != NULL && !remote_layer_layer_valid(top_layer)) {
             WARN("Current not find valid under layer, remoet image:%s not added", array_added[i]);
-            map_remove(image_byid_new, (void *)array_added[i]);
+            if (!map_remove(image_byid_new, (void *)array_added[i])) {
+                WARN("image %s will not be loaded from remote.", array_added[i]);
+            }
             continue;
         }
 
         if (remote_append_image_by_directory_with_lock(array_added[i]) != 0) {
             ERROR("Failed to load image into memrory: %s", array_added[i]);
-            map_remove(image_byid_new, (void *)array_added[i]);
+            if (!map_remove(image_byid_new, (void *)array_added[i])) {
+                WARN("image %s will not be loaded from remote", array_added[i]);
+            }
             ret = -1;
         }
     }
@@ -141,7 +165,9 @@ static int remote_image_add(void *data)
     for (i = 0; i < util_array_len((const char **)array_deleted); i++) {
         if (remote_remove_image_from_memory_with_lock(array_deleted[i]) != 0) {
             ERROR("Failed to remove remote memory store");
-            map_insert(image_byid_new, array_deleted[i], (void *)&exist);
+            if (!map_insert(image_byid_new, array_deleted[i], (void *)&exist)) {
+                WARN("image %s will not be removed from local", array_deleted[i]);
+            }
             ret = -1;
         }
     }
