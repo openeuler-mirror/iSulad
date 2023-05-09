@@ -220,6 +220,9 @@ void container_free(container_t *container)
     free(container->log_driver);
     container->log_driver = NULL;
 
+    free(container->info);
+    container->info = NULL;
+
     free_host_config(container->hostconfig);
 
     restart_manager_unref(container->rm);
