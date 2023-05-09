@@ -220,7 +220,7 @@ void container_free(container_t *container)
     free(container->log_driver);
     container->log_driver = NULL;
 
-    free(container->info);
+    free_container_info(container->info);
     container->info = NULL;
 
     free_host_config(container->hostconfig);
