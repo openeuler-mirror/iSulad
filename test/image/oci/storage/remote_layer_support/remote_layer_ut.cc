@@ -241,6 +241,9 @@ TEST_F(RemoteLayerUnitTest, test_image_refresh_invalid_data)
 TEST_F(RemoteLayerUnitTest, test_image_refresh_invalid_sub_dir)
 {
     struct remote_image_data *image = remote_image_create("images", "bar");
+    struct remote_layer_data *layer = remote_layer_create("layers", "layers/RO");
+    ASSERT_NE(image, nullptr);
+    ASSERT_NE(layer, nullptr);
     if (prepare_image_home(image->image_home, false) != 0) {
         return;
     }
