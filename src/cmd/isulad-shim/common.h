@@ -58,6 +58,7 @@ extern "C" {
 #define CONTAINER_ACTION_REBOOT 129
 #define CONTAINER_ACTION_SHUTDOWN 130
 
+void signal_routine(int sig);
 
 void util_usleep_nointerupt(unsigned long usec);
 /**
