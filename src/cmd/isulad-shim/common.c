@@ -29,6 +29,19 @@
 #include <limits.h>
 #include <time.h>
 
+int g_log_fd = -1;
+
+void signal_routine(int sig)
+{
+    switch (sig) {
+        case SIGALRM:
+            write_message(g_log_fd, ERR_MSG, "runtime timeout");
+            exit(EXIT_FAILURE);
+        default:
+            break;
+    }
+}
+
 int set_fd_no_inherited(int fd)
 {
     int ret = SHIM_ERR;
