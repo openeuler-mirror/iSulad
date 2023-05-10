@@ -1876,6 +1876,8 @@ int storage_module_init(struct storage_module_init_options *opts)
 #ifdef ENABLE_REMOTE_LAYER_STORE
     if (opts->enable_remote_layer && remote_start_refresh_thread(opts->remote_lock) != 0) {
         ERROR("Failed to start remote refresh thread");
+        ret = -1;
+        goto out;
     }
 #endif
 
