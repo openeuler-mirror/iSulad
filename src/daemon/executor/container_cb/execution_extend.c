@@ -444,8 +444,8 @@ static void update_usage_nano_cores(container_info *stats, const container_info 
     stats->cpu_use_nanos_per_second = (uint64_t)(((double)usage / (double)nanoSeconds) * (double)Time_Second);
 }
 
-static int generate_containers_stats(char **idsarray, size_t ids_len, const struct stats_context *ctx, bool check_exists,
-                                     container_info ***info, size_t *info_len)
+static int generate_containers_stats(char **idsarray, size_t ids_len, const struct stats_context *ctx,
+                                     bool check_exists, container_info ***info, size_t *info_len)
 {
     int ret = 0;
     int nret;

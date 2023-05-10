@@ -750,7 +750,8 @@ static int pack_inspect_resources(const container_t *cont, container_inspect *in
     resources->cpu_shares = cont->hostconfig->cpu_shares;
     resources->memory = cont->hostconfig->memory;
     resources->memory_swap = cont->hostconfig->memory_swap;
-    resources->hugetlbs = util_smart_calloc_s(sizeof(container_inspect_resources_hugetlbs_element *), resources->hugetlbs_len);
+    resources->hugetlbs = util_smart_calloc_s(sizeof(container_inspect_resources_hugetlbs_element *),
+                                              resources->hugetlbs_len);
     if (resources->hugetlbs == NULL) {
         ERROR("Out of memory");
         ret = -1;

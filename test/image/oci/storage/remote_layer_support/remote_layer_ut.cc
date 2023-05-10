@@ -91,7 +91,7 @@ char *invokeImageGetTopLayer(const char *id)
 int invokeImageValidSchemaV1(const char *path, bool *valid)
 {
     *valid = false;
-    return flag ? -1:0;
+    return flag ? -1 : 0;
 }
 
 void mockCommonAll(MockRemoteStore *mock)

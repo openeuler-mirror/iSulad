@@ -31,6 +31,8 @@ client_connect_config_t get_connect_config(const struct client_arguments *args)
     client_connect_config_t config = { 0 };
 
     config.socket = args->socket;
+
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
     // unix socket not support tls
     if (strncmp(args->socket, "tcp://", strlen("tcp://"))) {
         config.tls_verify = false;
@@ -49,9 +51,12 @@ client_connect_config_t get_connect_config(const struct client_arguments *args)
         config.cert_file = args->cert_file;
         config.key_file = args->key_file;
     }
+#endif
+
     return config;
 }
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
 static int set_default_tls_options(struct client_arguments *args)
 {
     int ret = -1;
@@ -104,6 +109,7 @@ out:
     free(cert_path);
     return ret;
 }
+#endif
 
 /* client arguments init */
 int client_arguments_init(struct client_arguments *args)
@@ -127,9 +133,11 @@ int client_arguments_init(struct client_arguments *args)
     (void)memset(&args->custom_conf, 0, sizeof(struct custom_configs));
     (void)memset(&args->cr, 0, sizeof(struct args_cgroup_resources));
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
     if (set_default_tls_options(args) != 0) {
         return -1;
     }
+#endif
 
     // default swappiness should be set to -1
     args->cr.swappiness = -1;
@@ -241,6 +249,7 @@ void client_arguments_free(struct client_arguments *args)
     util_free_array(custom_conf->security);
     custom_conf->security = NULL;
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
     free(args->ca_file);
     args->ca_file = NULL;
 
@@ -249,6 +258,7 @@ void client_arguments_free(struct client_arguments *args)
 
     free(args->key_file);
     args->key_file = NULL;
+#endif
 
 #ifdef ENABLE_IMAGE_SEARCH
     free(args->search_name);

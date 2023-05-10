@@ -35,8 +35,8 @@ extern "C" {
 #define SHIM_ERR_TIMEOUT (-4)
 
 // common exit code is defined in stdlib.h
-// EXIT_FAILURE	1	: Failing exit status.
-// EXIT_SUCCESS	0	: Successful exit status.
+// EXIT_FAILURE 1   : Failing exit status.
+// EXIT_SUCCESS 0   : Successful exit status.
 // custom shim exit code
 // SHIM_EXIT_TIMEOUT 2: Container process timeout exit code
 #define SHIM_EXIT_TIMEOUT 2

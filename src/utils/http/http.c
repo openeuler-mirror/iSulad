@@ -220,9 +220,9 @@ static void http_custom_general_options(CURL *curl_handle, const struct http_get
     if (options->show_progress == 0) {
         curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
     } else {
-    /* libcurl support option CURLOPT_XFERINFOFUNCTION when version >= 7.32.0
-     * #define CURL_VERSION_BITS(x,y,z) ((x)<<16|(y)<<8|(z))
-     * CURL_VERSION_BITS(7,32,0) = 0x072000 */
+        /* libcurl support option CURLOPT_XFERINFOFUNCTION when version >= 7.32.0
+         * #define CURL_VERSION_BITS(x,y,z) ((x)<<16|(y)<<8|(z))
+         * CURL_VERSION_BITS(7,32,0) = 0x072000 */
 #if (LIBCURL_VERSION_NUM >= 0x072000)
         if (options->xferinfo && options->xferinfo_op) {
             curl_easy_setopt(curl_handle, CURLOPT_XFERINFOFUNCTION, options->xferinfo_op);
@@ -467,7 +467,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     curl_easy_setopt(curl_handle, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
 #endif
 
-     /* libcurl support option CURL_SSLVERSION_TLSv1_3 when version >= 7.52.0
+    /* libcurl support option CURL_SSLVERSION_TLSv1_3 when version >= 7.52.0
      * #define CURL_VERSION_BITS(x,y,z) ((x)<<16|(y)<<8|(z))
      * CURL_VERSION_BITS(7,52,0) = 0x073400 */
 #if (LIBCURL_VERSION_NUM >= 0x073400)
