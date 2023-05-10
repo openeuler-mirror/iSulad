@@ -1320,7 +1320,7 @@ static int merge_conf_unified(oci_runtime_spec *oci_spec, const host_config *hos
 
     if (oci_spec->linux->resources->unified == NULL) {
         oci_spec->linux->resources->unified = (json_map_string_string *)util_common_calloc_s(
-                                                                            sizeof(json_map_string_string));
+                                                  sizeof(json_map_string_string));
         if (oci_spec->linux->resources->unified == NULL) {
             ERROR("Out of memory");
             return -1;

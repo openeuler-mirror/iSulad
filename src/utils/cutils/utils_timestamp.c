@@ -182,7 +182,7 @@ static bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timeb
         goto out;
     }
 
-#ifdef	__USE_MISC
+#ifdef __USE_MISC
     tm_gmtoff = tm_local.tm_gmtoff;
 #else
     tm_gmtoff = tm_local.__tm_gmtoff;

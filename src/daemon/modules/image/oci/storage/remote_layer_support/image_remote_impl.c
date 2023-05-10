@@ -184,7 +184,8 @@ static int remote_image_add(void *data)
     return ret;
 }
 
-void remote_image_refresh(struct remote_image_data *data) {
+void remote_image_refresh(struct remote_image_data *data)
+{
     if (remote_dir_scan(data) != 0) {
         ERROR("remote overlay failed to scan dir, skip refresh");
         return;

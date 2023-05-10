@@ -15,8 +15,7 @@
 
 #include "remote_store_mock.h"
 
-namespace
-{
+namespace {
 MockRemoteStore *g_remote_store_mock = nullptr;
 }
 

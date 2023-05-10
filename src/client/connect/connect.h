@@ -24,12 +24,14 @@ extern "C" {
 typedef struct {
     unsigned int deadline;
     char *socket;
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
     // gRPC tls config
     bool tls;
     bool tls_verify;
     char *ca_file;
     char *cert_file;
     char *key_file;
+#endif
 } client_connect_config_t;
 
 #ifdef __cplusplus

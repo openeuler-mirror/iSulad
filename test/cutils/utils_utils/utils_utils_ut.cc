@@ -21,7 +21,7 @@ static pid_t test_pid = -1;
 
 extern "C" {
     DECLARE_WRAPPER_V(waitpid, pid_t, (__pid_t pid, int *stat_loc, int options));
-    DEFINE_WRAPPER_V(waitpid, pid_t, (__pid_t pid, int *stat_loc, int options),(pid, stat_loc, options));
+    DEFINE_WRAPPER_V(waitpid, pid_t, (__pid_t pid, int *stat_loc, int options), (pid, stat_loc, options));
 }
 
 static pid_t waitpid_none_zero(__pid_t pid, int *stat_loc, int options)
