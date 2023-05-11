@@ -1,4 +1,4 @@
-%global _version 2.1.1
+%global _version 2.1.2
 %global _release 1
 %global is_systemd 1
 %global enable_shimv2 0
