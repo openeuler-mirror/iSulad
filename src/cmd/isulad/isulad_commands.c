@@ -225,6 +225,7 @@ int parse_args(struct service_arguments *args, int argc, const char **argv)
     command_t cmd = { 0 };
     struct command_option options[] = {
         ISULAD_OPTIONS(args)
+        ISULAD_TLS_OPTIONS(args)
     };
     command_init_isulad(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, isulad_desc,
                         isulad_usage);

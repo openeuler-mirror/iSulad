@@ -74,7 +74,7 @@ void mockCommonAll(MockRemoteStore *mock)
 
 TEST(remote_Layer_ut, test_map_diff)
 {
-    // old: a b x 
+    // old: a b x
     // new: x b c
     map_t *old_one = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
     map_t *new_one = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);

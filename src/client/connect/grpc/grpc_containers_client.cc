@@ -298,6 +298,7 @@ public:
     }
 };
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
 class RemoteStartWriteToServerTask : public StoppableThread {
 public:
     explicit RemoteStartWriteToServerTask(
@@ -442,6 +443,8 @@ out:
         return (response->cc == ISULAD_SUCCESS) ? 0 : -1;
     }
 };
+#endif
+
 class ContainerTop : public ClientBase<ContainerService, ContainerService::Stub, isula_top_request, TopRequest,
     isula_top_response, TopResponse> {
 public:
@@ -868,6 +871,7 @@ public:
     }
 };
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
 class RemoteExecWriteToServerTask : public StoppableThread {
 public:
     explicit RemoteExecWriteToServerTask(
@@ -1035,6 +1039,7 @@ out:
         return (response->cc == ISULAD_SUCCESS) ? 0 : -1;
     }
 };
+#endif
 
 class ContainerInspect : public ClientBase<ContainerService, ContainerService::Stub, isula_inspect_request,
     InspectContainerRequest, isula_inspect_response, InspectContainerResponse> {
@@ -1351,6 +1356,7 @@ public:
             ERROR("Missing container id in the request");
             return -1;
         }
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
 #ifdef OPENSSL_VERIFY
         // Set common name from cert.perm
         char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
@@ -1362,6 +1368,7 @@ public:
         }
         context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
         context.AddMetadata("tls_mode", m_tlsMode);
+#endif
 #endif
         context.AddMetadata("container-id", std::string(request->name));
         context.AddMetadata("attach-stdin", request->attach_stdin ? "true" : "false");
@@ -1742,11 +1749,13 @@ public:
         Status status;
         container_events_format_t *isula_event = nullptr;
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
         if (SetMetadataInfo(context) != 0) {
             ERROR("Failed to set metadata info for authorization");
             response->cc = ISULAD_ERR_INPUT;
             return -1;
         }
+#endif
 
         ret = events_request_to_grpc(request, &req);
         if (ret != 0) {
@@ -1926,6 +1935,7 @@ public:
             return -1;
         }
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
 #ifdef OPENSSL_VERIFY
         // Set common name from cert.perm
         char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
@@ -1938,6 +1948,7 @@ public:
         }
         ctx->context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
         ctx->context.AddMetadata("tls_mode", m_tlsMode);
+#endif
 #endif
         auto reader = stub_->CopyFromContainer(&ctx->context, ctx->request);
         reader->WaitForInitialMetadata();
@@ -2073,6 +2084,7 @@ public:
             goto out;
         }
         context.AddMetadata("isulad-copy-to-container", json);
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
 #ifdef OPENSSL_VERIFY
         {
             // Set common name from cert.perm
@@ -2087,6 +2099,7 @@ public:
             context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
             context.AddMetadata("tls_mode", m_tlsMode);
         }
+#endif
 #endif
 
 out:
@@ -2146,6 +2159,7 @@ public:
         ClientContext context;
         LogsRequest grequest;
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
 #ifdef OPENSSL_VERIFY
         // Set common name from cert.perm
         char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
@@ -2157,6 +2171,7 @@ public:
         }
         context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
         context.AddMetadata("tls_mode", m_tlsMode);
+#endif
 #endif
 
         if (logs_request_to_grpc(request, &grequest) != 0) {
@@ -2234,13 +2249,11 @@ auto grpc_containers_client_ops_init(isula_connect_ops *ops) -> int
     ops->container.info = container_func<isula_info_request, isula_info_response, ContainerInfo>;
     ops->container.create = container_func<isula_create_request, isula_create_response, ContainerCreate>;
     ops->container.start = container_func<isula_start_request, isula_start_response, ContainerStart>;
-    ops->container.remote_start = container_func<isula_start_request, isula_start_response, ContainerRemoteStart>;
     ops->container.stop = container_func<isula_stop_request, isula_stop_response, ContainerStop>;
     ops->container.restart = container_func<isula_restart_request, isula_restart_response, ContainerRestart>;
     ops->container.remove = container_func<isula_delete_request, isula_delete_response, ContainerDelete>;
     ops->container.list = container_func<isula_list_request, isula_list_response, ContainerList>;
     ops->container.exec = container_func<isula_exec_request, isula_exec_response, ContainerExec>;
-    ops->container.remote_exec = container_func<isula_exec_request, isula_exec_response, ContainerRemoteExec>;
     ops->container.attach = container_func<isula_attach_request, isula_attach_response, ContainerAttach>;
     ops->container.pause = container_func<isula_pause_request, isula_pause_response, ContainerPause>;
     ops->container.resume = container_func<isula_resume_request, isula_resume_response, ContainerResume>;
@@ -2259,6 +2272,11 @@ auto grpc_containers_client_ops_init(isula_connect_ops *ops) -> int
     ops->container.rename = container_func<isula_rename_request, isula_rename_response, ContainerRename>;
     ops->container.resize = container_func<isula_resize_request, isula_resize_response, ContainerResize>;
     ops->container.logs = container_func<isula_logs_request, isula_logs_response, ContainerLogs>;
+
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
+    ops->container.remote_start = container_func<isula_start_request, isula_start_response, ContainerRemoteStart>;
+    ops->container.remote_exec = container_func<isula_exec_request, isula_exec_response, ContainerRemoteExec>;
+#endif
 
     return 0;
 }

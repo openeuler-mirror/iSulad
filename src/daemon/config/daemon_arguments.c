@@ -27,6 +27,7 @@
 #include "utils_array.h"
 #include "utils_file.h"
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
 static int set_daemon_default_tls_options(struct service_arguments *args)
 {
     int ret = -1;
@@ -87,6 +88,7 @@ out:
     free(cert_path);
     return ret;
 }
+#endif
 
 int service_arguments_init(struct service_arguments *args)
 {
@@ -156,9 +158,11 @@ int service_arguments_init(struct service_arguments *args)
     *(args->json_confs->use_decrypted_key) = true;
     args->json_confs->insecure_skip_verify_enforce = false;
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
     if (set_daemon_default_tls_options(args) != 0) {
         goto free_out;
     }
+#endif
 
     args->default_ulimit = NULL;
     args->default_ulimit_len = 0;
