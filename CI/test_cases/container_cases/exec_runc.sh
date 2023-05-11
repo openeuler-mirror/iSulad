@@ -26,7 +26,7 @@ test="exec_runc_test => (${FUNCNAME[@]})"
 function exec_runc_test()
 {
     local ret=0
-    local image="busybox"
+    local image="ubuntu"
     local container_name="test_busybox"
 
     isula pull ${image}
@@ -64,6 +64,12 @@ function exec_runc_test()
     ls -l -h test_exec
     ls -l -h test_exec 2>&1 | grep "1.9G"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - exec data loss" && ((ret++))
+
+    isula exec $container_name bash -c "sleep 999 & exit"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to exec backgrounder" && ((ret++))
+
+    isula exec -ti $container_name bash -c "sleep 999 & exit"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - resize failed" && ((ret++))
 
     rm test_exec
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm test_execs" && ((ret++))

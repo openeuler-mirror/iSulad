@@ -37,7 +37,7 @@ function test_health_check_paraments()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
     container_name="health_check_para"
-    isula run -itd -n ${container_name} --health-cmd 'echo "iSulad" ; exit 1' \
+    isula run -itd --runtime $1 -n ${container_name} --health-cmd 'echo "iSulad" ; exit 1' \
         --health-interval 5s --health-retries 2 --health-start-period 8s --health-exit-on-unhealthy ${image} /bin/sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
@@ -85,7 +85,7 @@ function test_health_check_normally()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
     container_name="health_check_normally"
-    isula run -itd -n ${container_name} --health-cmd 'date' --health-interval 5s ${image} /bin/sh
+    isula run -itd --runtime $1 -n ${container_name} --health-cmd 'date' --health-interval 5s ${image} /bin/sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     # start period : 0s => interval: 2s => do health check => interval: 2s => do health check => ...
@@ -131,7 +131,7 @@ function test_health_check_timeout()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
     container_name="health_check_timeout"
-    isula run -itd -n ${container_name} --health-cmd 'sleep 5' --health-interval 5s --health-timeout 1s \
+    isula run -itd --runtime $1 -n ${container_name} --health-cmd 'sleep 5' --health-interval 5s --health-timeout 1s \
         --health-retries 1 --health-exit-on-unhealthy ${image} /bin/sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
@@ -174,7 +174,7 @@ function test_health_check_monitor()
     isula rm -f $(isula ps -qa)
 
     container_name="health_check_monitor"
-    isula run -itd -n ${container_name} --health-cmd="sleep 3" --health-interval 3s  busybox
+    isula run -itd --runtime $1 -n ${container_name} --health-cmd="sleep 3" --health-interval 3s  busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula stop -t 0 ${container_name} && isula start ${container_name} && \
@@ -193,13 +193,21 @@ function test_health_check_monitor()
 
 declare -i ans=0
 
-test_health_check_paraments || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    test="health check test => (${element})"
+    msg_info "${test} starting..."
 
-test_health_check_normally || ((ans++))
+    test_health_check_paraments $element || ((ans++))
 
-test_health_check_timeout || ((ans++))
+    test_health_check_normally $element || ((ans++))
 
-test_health_check_monitor || ((ans++))
+    test_health_check_timeout $element || ((ans++))
+
+    test_health_check_monitor $element || ((ans++))
+
+    msg_info "${test} finished with return ${ans}..."
+done
 
 show_result ${ans} "${curr_path}/${0}"
 
