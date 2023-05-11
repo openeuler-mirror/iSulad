@@ -17,6 +17,7 @@
 #include <map>
 #include <stdlib.h>
 #include "http.h"
+#include "constants.h"
 
 namespace AuthorizationPluginConfig {
 std::string auth_plugin = "";
@@ -25,6 +26,7 @@ std::string auth_plugin = "";
 namespace GrpcServerTlsAuth {
 Status auth(ServerContext *context, std::string action)
 {
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
     const std::multimap<grpc::string_ref, grpc::string_ref> &init_metadata = context->client_metadata();
     auto tls_mode_kv = init_metadata.find("tls_mode");
     if (tls_mode_kv == init_metadata.end()) {
@@ -36,7 +38,7 @@ Status auth(ServerContext *context, std::string action)
     }
     if (AuthorizationPluginConfig::auth_plugin.empty()) {
         return Status::OK;
-    } else if (AuthorizationPluginConfig::auth_plugin == "authz-broker") {
+    } else if (AuthorizationPluginConfig::auth_plugin == AUTH_PLUGIN) {
         auto username_kv = init_metadata.find("username");
         if (username_kv == init_metadata.end()) {
             return Status(StatusCode::UNKNOWN, "unknown error");
@@ -55,6 +57,8 @@ Status auth(ServerContext *context, std::string action)
     } else {
         return Status(StatusCode::UNIMPLEMENTED, "authorization plugin invalid");
     }
+#endif
+
     return Status::OK;
 }
 } // namespace GrpcServerTlsAuth

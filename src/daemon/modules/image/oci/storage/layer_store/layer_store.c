@@ -136,7 +136,7 @@ void layer_store_cleanup()
     map_free(g_metadata.by_uncompress_digest);
     g_metadata.by_uncompress_digest = NULL;
 
-    linked_list_for_each_safe (item, &(g_metadata.layers_list), next) {
+    linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
         linked_list_del(item);
         layer_ref_dec((layer_t *)item->elem);
         free(item);
@@ -167,7 +167,7 @@ static void free_digest_layer_t(digest_layer_t *ptr)
         return;
     }
 
-    linked_list_for_each_safe (item, &(ptr->layer_list), next) {
+    linked_list_for_each_safe(item, &(ptr->layer_list), next) {
         linked_list_del(item);
         free(item->elem);
         item->elem = NULL;
@@ -622,7 +622,7 @@ static int delete_digest_from_map(map_t *by_digest, const char *digest, const ch
         return 0;
     }
 
-    linked_list_for_each_safe (item, &(old_list->layer_list), next) {
+    linked_list_for_each_safe(item, &(old_list->layer_list), next) {
         char *t_id = (char *)item->elem;
         if (strcmp(t_id, id) == 0) {
             linked_list_del(item);
@@ -735,7 +735,7 @@ static int remove_memory_stores(const char *id)
         }
     }
 
-    linked_list_for_each_safe (item, &(g_metadata.layers_list), next) {
+    linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
         layer_t *tl = (layer_t *)item->elem;
         if (strcmp(tl->slayer->id, id) != 0) {
             continue;
@@ -1505,7 +1505,7 @@ int layer_store_list(struct layer_list *resp)
         goto unlock;
     }
 
-    linked_list_for_each_safe (item, &(g_metadata.layers_list), next) {
+    linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
         layer_t *l = (layer_t *)item->elem;
         resp->layers[i] = util_common_calloc_s(sizeof(struct layer));
         if (resp->layers[i] == NULL) {
@@ -1548,7 +1548,7 @@ static int layers_by_digest_map(map_t *m, const char *digest, struct layer_list 
         goto free_out;
     }
 
-    linked_list_for_each_safe (item, &(id_list->layer_list), next) {
+    linked_list_for_each_safe(item, &(id_list->layer_list), next) {
         layer_t *l = NULL;
         resp->layers[i] = util_common_calloc_s(sizeof(struct layer));
         if (resp->layers[i] == NULL) {
@@ -1902,7 +1902,7 @@ static int load_layers_from_json_files()
         goto unlock_out;
     }
 
-    linked_list_for_each_safe (item, &(g_metadata.layers_list), next) {
+    linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
         layer_t *tl = (layer_t *)item->elem;
         size_t i = 0;
 

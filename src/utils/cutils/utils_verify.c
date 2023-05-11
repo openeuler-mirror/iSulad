@@ -121,6 +121,7 @@ int util_validate_absolute_path(const char *path)
     return nret;
 }
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
 static bool util_vaildate_tcp_socket(const char *socket)
 {
     if (socket == NULL) {
@@ -132,6 +133,7 @@ static bool util_vaildate_tcp_socket(const char *socket)
                           "|([1-5][0-9]{4})|([1-9][0-9]{0,3})|0))$",
                           socket) == 0;
 }
+#endif
 
 bool util_validate_unix_socket(const char *socket)
 {
@@ -162,7 +164,11 @@ bool util_validate_unix_socket(const char *socket)
 
 bool util_validate_socket(const char *socket)
 {
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
     return util_validate_unix_socket(socket) || util_vaildate_tcp_socket(socket);
+#else
+    return util_validate_unix_socket(socket);
+#endif
 }
 
 bool util_valid_device_mode(const char *mode)

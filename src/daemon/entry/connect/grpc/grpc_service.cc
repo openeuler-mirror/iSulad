@@ -54,13 +54,19 @@ public:
             ERROR("Init runtime service failed: %s", err.GetCMessage());
             return -1;
         }
+
+        // hosts has been validate by util_validate_socket
         auto hosts = std::vector<std::string>(args->hosts, args->hosts + args->hosts_len);
         for (auto host : hosts) {
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
             if (host.find("tcp://") == 0) {
                 m_tcpPath.push_back(host.erase(0, std::string("tcp://").length()));
             } else {
+#endif
                 m_socketPath.push_back(host);
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
             }
+#endif
         }
 
         if (ListeningPort(args, err)) {
@@ -109,6 +115,7 @@ public:
 private:
     int ListeningPort(const struct service_arguments *args, Errors &err)
     {
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
         if (args->json_confs->tls) {
             if (args->json_confs->authorization_plugin != nullptr) {
                 AuthorizationPluginConfig::auth_plugin = args->json_confs->authorization_plugin;
@@ -152,6 +159,8 @@ private:
                 INFO("Server listening on %s", address.c_str());
             }
         }
+#endif
+
         // Listen on the given socket address without any authentication mechanism.
         for (const auto &address : m_socketPath) {
             m_builder.AddListeningPort(address, grpc::InsecureServerCredentials());
@@ -187,7 +196,9 @@ private:
     RuntimeRuntimeServiceImpl m_runtimeRuntimeService;
     RuntimeImageServiceImpl m_runtimeImageService;
     ServerBuilder m_builder;
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
     std::vector<std::string> m_tcpPath;
+#endif
     std::vector<std::string> m_socketPath;
     std::unique_ptr<Server> m_server;
 };

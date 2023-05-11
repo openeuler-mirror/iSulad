@@ -133,7 +133,7 @@ static void free_image_store(image_store_t *store)
     (void)map_free(store->bydigest);
     store->bydigest = NULL;
 
-    linked_list_for_each_safe (item, &(store->images_list), next) {
+    linked_list_for_each_safe(item, &(store->images_list), next) {
         linked_list_del(item);
         image_ref_dec((image_t *)item->elem);
         free(item);
@@ -165,7 +165,7 @@ static void image_store_digest_field_kvfree(void *key, void *value)
 
     free(key);
     if (val != NULL) {
-        linked_list_for_each_safe (item, &(val->images_list), next) {
+        linked_list_for_each_safe(item, &(val->images_list), next) {
             linked_list_del(item);
             free(item);
             item = NULL;
@@ -501,7 +501,7 @@ static void digest_image_slice_without_value(digest_image_t *digest_filter_image
         return;
     }
 
-    linked_list_for_each_safe (item, &(digest_filter_images->images_list), next) {
+    linked_list_for_each_safe(item, &(digest_filter_images->images_list), next) {
         tmp = (image_t *)item->elem;
         if (strcmp(tmp->simage->id, img->simage->id) == 0) {
             linked_list_del(item);
@@ -582,7 +582,7 @@ static int remove_image_from_memory(const char *id)
         goto out;
     }
 
-    linked_list_for_each_safe (item, &(g_image_store->images_list), next) {
+    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
         image_t *tmp = (image_t *)item->elem;
         if (strcmp(tmp->simage->id, id) != 0) {
             continue;
@@ -681,7 +681,7 @@ static void free_digest_image(digest_image_t *ptr)
         return;
     }
 
-    linked_list_for_each_safe (item, &(ptr->images_list), next) {
+    linked_list_for_each_safe(item, &(ptr->images_list), next) {
         linked_list_del(item);
         free(item);
         item = NULL;
@@ -2679,7 +2679,7 @@ int image_store_get_all_images(imagetool_images_list *images_list)
         goto unlock;
     }
 
-    linked_list_for_each_safe (item, &(g_image_store->images_list), next) {
+    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
         imagetool_image_summary *imginfo = NULL;
         image_t *img = (image_t *)item->elem;
         imginfo = get_image_summary(img);
@@ -3546,7 +3546,7 @@ static void image_store_check_all_images()
         return;
     }
 
-    linked_list_for_each_safe (item, &(g_image_store->images_list), next) {
+    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
         image_t *img = (image_t *)item->elem;
         if (img->spec == NULL) {
             ERROR("Failed to check spec info of image: %s, try to delete", img->simage->id);
