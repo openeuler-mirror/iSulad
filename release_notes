@@ -1,3 +1,109 @@
+2023-05-11 root release 2.1.2
+    - !1996 add some ci for runc Merge pull request !1996 from zhongtao/runc_ci
+    - !1995 add try_generate_exec_id func for health check Merge pull request !1995 from zhongtao/fix
+    - !1993 fix remote_layer_ut error Merge pull request !1993 from DriedYellowPeach/fix_secwarning
+    - !1991 split remote grpc code by macro Merge pull request !1991 from zhangxiaoyu/master
+    - !1992 add some shim ut Merge pull request !1992 from zhongtao/runc_ut
+    - !1990 Fix free for container info Merge pull request !1990 from xuxuepeng/fix-cpu-usage
+    - !1989 Fix memory leak for container info Merge pull request !1989 from xuxuepeng/fix-cpu-usage
+    - !1988 Fix UT failure for execution_extend Merge pull request !1988 from xuxuepeng/fix-cpu-usage
+    - !1984 fix security warning Merge pull request !1984 from DriedYellowPeach/fix_secwarning
+    - !1983 Add support for usage_nano_cores in stats Merge pull request !1983 from xuxuepeng/fix-cpu-usage
+    - !1985 fix security warning Merge pull request !1985 from zhongtao/warning
+    - !1980 convert struct lcr start/exec request Merge pull request !1980 from zhangxiaoyu/master
+    - !1977 [CRI] Add support for saving and displaying resource related info in CRI  1.25
+    - !1973 fix setting of memory-swap-limit and unified resources Merge pull request !1973 from zhangxiaoyu/master
+    - !1965 update runc doc Merge pull request !1965 from zhongtao/runc_doc
+    - !1962 change isulad-shim epoll struct Merge pull request !1962 from zhongtao/epoll_change
+    - !1976 bugfix last element of array should be null Merge pull request !1976 from DriedYellowPeach/fix_array
+    - !1975 remove unused headers Merge pull request !1975 from DriedYellowPeach/fix_header
+    - !1971 fix network store check podsandbox Merge pull request !1971 from zhangxiaoyu/master
+    - !1972 clean isulad shim compile relies Merge pull request !1972 from zhongtao/shim_remove_utils
+    - !1970 修复ubuntu下isula pull 阿里源失败 Merge pull request !1970 from xingleigao/master
+    - !1964 fix workingset bytes and add memory info for runc runtime Merge pull request !1964 from zhangxiaoyu/master
+    - !1961 skip add podsandbox to network store
+    - !1960 ut for remote layer store
+    - !1963 if write return EAGAIN maybe should wait a moment Merge pull request !1963 from haozi007/write_eagain_with_sleep
+    - !1948 add PodSandboxStats and ListSandboxStats
+    - !1959 free timeout when shim_create finished Merge pull request !1959 from zhongtao/leak
+    - !1957 add some ci test for exec and log Merge pull request !1957 from zhongtao/ci_add
+    - !1956 remove unused func Merge pull request !1956 from zhongtao/remove
+    - !1953 if the exit code in the response of execSync is not zero, an error will be returned in cri Merge pull request !1953 from zhongtao/exit_code
+    - !1951 isulad-shim: fix log loss bug Merge pull request !1951 from zhongtao/log_runc
+    - !1950 add effective and permitted type of cap to oci spec Merge pull request !1950 from zhongtao/cap
+    - !1949 move archive code into util archive Merge pull request !1949 from haozi007/master
+    - !1939 add functions of getting cgroup v1 metrics Merge pull request !1939 from zhangxiaoyu/master
+    - !1940 add files_limit to oci spec Merge pull request !1940 from zhongtao/fileslimit
+    - !1935 clean container process after execSync timeout exit
+    - !1937 CI: ensure load liblcr.so before check opened fd in isulad Merge pull request !1937 from haozi007/master
+    - !1936 CI: show leak fd in log Merge pull request !1936 from haozi007/master
+    - !1934 add env-hookspec to test hook env Merge pull request !1934 from zhangxiaoyu/master
+    - !1932 add hook env test Merge pull request !1932 from zhangxiaoyu/master
+    - !1933 support setting pod to privilege Merge pull request !1933 from zhongtao/privilege
+    - !1930 support to config selinux label in cri
+    - !1929 refactor sysinfo/cgroup use util functions and bugfix for cgroup
+    - !1926 split cgroup from sysinfo Merge pull request !1926 from zhangxiaoyu/master
+    - !1927 clean code for some cri code Merge pull request !1927 from zhongtao/selinux
+    - !1925 containers in same sandbox should have same process labels Merge pull request !1925 from zhongtao/selinux
+    - !1924 cri_stream test without using valgrind and restore the runc test Merge pull request !1924 from zhongtao/runc_ci
+    - !1922 fix inspect data memleak Merge pull request !1922 from zhangxiaoyu/master
+    - !1921 temporary remove runc ci Merge pull request !1921 from zhongtao/runc_ci
+    - !1919 skip cri_stream test for runc Merge pull request !1919 from zhongtao/ci_fix
+    - !1918 when create container in container, runc not support to mount /dev Merge pull request !1918 from zhongtao/ci_fix
+    - !1879 【runc】add ci for runc Merge pull request !1879 from zhongtao/runc_ci
+    - !1915 bugfix when refresh working don't allow pull or load image
+    - !1877 add runc doc Merge pull request !1877 from zhongtao/runcdoc
+    - !1916 fix isula_rt_ops_ut bugs Merge pull request !1916 from zhongtao/runc_ut
+    - !1906 refactor remote ro code Merge pull request !1906 from DriedYellowPeach/master
+    - !1878 【runc】add ut for runc
+    - !1913 fix util_getgrent_r overflow
+    - !1910 modify the return value of the util_waitpid_with_timeout to status Merge pull request !1910 from zhongtao/errno
+    - !1908 更新一个打印级别问题 Merge pull request !1908 from sailorvii/master
+    - !1841 add new doc for support remote ro directory Merge pull request !1841 from DriedYellowPeach/doc
+    - !1903 bugfix can't delete layers under dir overlay-layer
+    - !1902 bug fix remote ro add/remove remote image twice
+    - !1901 use CURLOPT_XFERINFOFUNCTION instead of deprecated CURLOPT_PROGRESSFUNCTION since curl 7.32.0 Merge pull request !1901 from zhangxiaoyu/master
+    - !1897 use auto free to proc_t Merge pull request !1897 from zhongtao/notify
+    - !1899 modifying cpurt file permissions Merge pull request !1899 from ger202/master
+    - !1895 close remote ro when compile with ut for now Merge pull request !1895 from DriedYellowPeach/fix_ut
+    - !1894 change goto branch Merge pull request !1894 from zhongtao/err
+    - !1890 adapt to repo of openeuler url changed Merge pull request !1890 from haozi007/fixbug
+    - !1888 fix compile error when not enable remote ro Merge pull request !1888 from DriedYellowPeach/fix_compile
+    - !1872 【runc支持】allow the paused container to be stopped Merge pull request !1872 from zhongtao/pause
+    - !1875 修复runc NOTIFY_SOCKET环境变量设置问题 Merge pull request !1875 from sailorvii/master
+    - !1885 change sleep() to usleep() to avoid lossing of accuracy Merge pull request !1885 from zhongtao/sleep
+    - !1884 add ci for remote ro Merge pull request !1884 from DriedYellowPeach/master
+    - !1874 [feature] remote ro Merge pull request !1874 from DriedYellowPeach/remote_ro
+    - !1836 support isula update when runtime is runc Merge pull request !1836 from zhongtao/update
+    - !1881 fix CRI SetupPod and TearDownPod deadlock Merge pull request !1881 from zhangxiaoyu/master
+    - !1873 fix read member error from struct Merge pull request !1873 from haozi007/new
+    - !1869 add cgroup cpu ut Merge pull request !1869 from ger202/master
+    - !1871 [CRI Update to 1.25] Add Memory Info Merge pull request !1871 from ilyakuksenok/test_meminfo_fix
+    - Update-CRI
+    - unlock m_podsLock if new failed
+    - !1862 cleancode for read/write and add crictl timeout and sync for CI Merge pull request !1862 from zhangxiaoyu/master
+    - !1863 修改docs/design/detailed/Network/native_network_design_zh.md错误的文件链接 Merge pull request !1863 from sailorvii/master
+    - !1852 isulad-shim support execSync with timeout Merge pull request !1852 from zhongtao/timeout2
+    - !1856 [image] support pull image with digest
+    - !1858 add retry for read/write Merge pull request !1858 from zhangxiaoyu/master
+    - !1854 fix selinux_label_ut timeout and add timeout for all ut Merge pull request !1854 from zhangxiaoyu/master
+    - !1851 fix cpu-rt disable after reboot machine Merge pull request !1851 from haozi007/fixbug
+    - !1848 Bugfix in isulad_config and executor Merge pull request !1848 from xuxuepeng/bug-fix
+    - !1849 fix cpu-rt CI Merge pull request !1849 from ger202/master
+    - !1846 fix cpu-rt CI Merge pull request !1846 from ger202/master
+    - !1844 fix isula cpu-rt CI
+    - !1833 add CRI ContainerStats Service Merge pull request !1833 from zhangxiaoyu/master
+    - !1839 fix inspect.sh failed Merge pull request !1839 from zhangxiaoyu/master_dev
+    - !1834 fix design typo Merge pull request !1834 from kenneth/master
+    - !1837 fix cpu rt review comments
+    - !1829 Add macro in protoc.cmake Merge pull request !1829 from xuxuepeng/protoc_macro
+    - !1817 add ContainerStats Merge pull request !1817 from ilyakuksenok/container_stats
+    - !1824 modify dependence lcr to libisula Merge pull request !1824 from zhangxiaoyu/master
+
+    dev stats:
+      - 243 files changed, 11236 insertions(+), 3200 deletions(-)
+      - contributors: zhongtao, zhangxiaoyu, Neil.wrz, haozi007, sailorvii, songbuhuang, xuepengxu, Xuepeng Xu, ilya.kuksenok, Neil, shijiaqi1, xinglei, zhushy
+
 2023-02-06 root release 2.1.1
     - !1801 ensure that the task_console_accept thread ends before destroying the io_thread Merge pull request !1801 from zhongtao/io_thread
     - !1816 ensure isula exec inherits the config of create Merge pull request !1816 from zhongtao/rlimit
