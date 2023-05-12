@@ -1,5 +1,5 @@
 %global _version 2.0.18
-%global _release 7
+%global _release 8
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -316,6 +316,12 @@ fi
 %endif
 
 %changelog
+* Mon May 08 2023 penghaitao <htpengc@isoftstone.com> - 2.0.18-8
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: fix bogus date in %changelog
+
 * Fri May 05 2023 wangrunze<wangrunze13@huawei.com> - 2.0.18-7
 - Type: bugfix
 - ID: NA
