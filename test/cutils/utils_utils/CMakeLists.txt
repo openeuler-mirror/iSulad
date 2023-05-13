@@ -12,6 +12,8 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
     )
+
+set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,waitpid")
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lcrypto -lyajl -lz)
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
 set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)

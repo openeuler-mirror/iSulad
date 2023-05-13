@@ -15,6 +15,44 @@
 
 #include <gtest/gtest.h>
 #include "utils.h"
+#include "mock.h"
+
+static pid_t test_pid = -1;
+
+extern "C" {
+    DECLARE_WRAPPER_V(waitpid, pid_t, (__pid_t pid, int *stat_loc, int options));
+    DEFINE_WRAPPER_V(waitpid, pid_t, (__pid_t pid, int *stat_loc, int options),(pid, stat_loc, options));
+}
+
+static pid_t waitpid_none_zero(__pid_t pid, int *stat_loc, int options)
+{
+    *stat_loc = 256;
+    return test_pid;
+}
+
+static pid_t waitpid_zero(__pid_t pid, int *stat_loc, int options)
+{
+    *stat_loc = 0;
+    return test_pid;
+}
+
+#define ExitSignalOffset 128
+static int status_to_exit_code(int status)
+{
+    int exit_code = 0;
+
+    if (WIFEXITED(status)) {
+        exit_code = WEXITSTATUS(status);
+    } else {
+        exit_code = -1;
+    }
+    if (WIFSIGNALED(status)) {
+        int signal;
+        signal = WTERMSIG(status);
+        exit_code = ExitSignalOffset + signal;
+    }
+    return exit_code;
+}
 
 TEST(utils_utils, test_util_mem_realloc)
 {
@@ -297,4 +335,27 @@ TEST(utils_utils, test_do_retry_call)
     DO_RETRY_CALL(10, 100, nret, retry_call_test, 11);
     ASSERT_EQ(global_total, 10);
     ASSERT_EQ(nret, -1);
+}
+
+TEST(utils_utils, test_util_waitpid_with_timeout)
+{
+    int64_t timeout = 2;
+    pid_t pid = getpid();
+    int status = 0;
+
+    test_pid = pid;
+    MOCK_SET_V(waitpid, waitpid_none_zero);
+    status = util_waitpid_with_timeout(test_pid, timeout, nullptr);
+    ASSERT_EQ(status, 256);
+    ASSERT_EQ(status_to_exit_code(status), 1);
+    MOCK_CLEAR(waitpid);
+
+    MOCK_SET_V(waitpid, waitpid_zero);
+    status = util_waitpid_with_timeout(test_pid, timeout, nullptr);
+    ASSERT_EQ(status, 0);
+    ASSERT_EQ(status_to_exit_code(status), 0);
+    MOCK_CLEAR(waitpid);
+
+    ASSERT_EQ(util_waitpid_with_timeout(pid, timeout, nullptr), -1);
+
 }
