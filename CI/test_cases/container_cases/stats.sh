@@ -26,7 +26,8 @@ function test_stats_spec()
 {
     local ret=0
     local image="busybox"
-    local test="container stats test => (${FUNCNAME[@]})"
+    local runtime=$1
+    local test="container stats test with (${runtime}) => (${FUNCNAME[@]})"
     statslog=/tmp/stats.log
 
     msg_info "${test} starting..."
@@ -44,11 +45,11 @@ function test_stats_spec()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     container_name_init=stats_inited
-    id_init=`isula create -t -n $container_name_init $image /bin/sh`
+    id_init=`isula create -t -n $container_name_init --runtime $runtime $image /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     container_name_running=stats_running
-    id_running=`isula run -td -n $container_name_running $image /bin/sh`
+    id_running=`isula run -td -n $container_name_running --runtime $runtime $image /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula stats --no-stream > $statslog
@@ -73,14 +74,14 @@ function test_stats_spec()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     container_name_pause=stats_paused
-    id_pause=`isula run -td -n $container_name_pause $image /bin/sh`
+    id_pause=`isula run -td -n $container_name_pause --runtime $runtime $image /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula pause $id_pause
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pause running container" && ((ret++))
 
     container_name_stop=stats_stopped
-    id_stop=`isula run -td -n $container_name_stop $image /bin/sh`
+    id_stop=`isula run -td -n $container_name_stop --runtime $runtime $image /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula stop -t 0 $id_stop
@@ -129,6 +130,9 @@ function test_stats_spec()
 
 declare -i ans=0
 
-test_stats_spec || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    test_stats_spec $element || ((ans++))
+done
 
 show_result ${ans} "${curr_path}/${0}"

@@ -26,10 +26,11 @@ source ../helpers.sh
 function test_ulimit()
 {
     local ret=0
+    local runtime=$1
     local image="busybox"
     ulimitlog=/tmp/ulimit.log
 
-    local test="ulimit test => (${FUNCNAME[@]})"
+    local test="ulimit test with (${runtime})=> (${FUNCNAME[@]})"
     msg_info "${test} starting..."
 
     check_valgrind_log
@@ -38,37 +39,37 @@ function test_ulimit()
     start_isulad_with_valgrind --default-ulimit nproc=2048:4096 --default-ulimit nproc=2048:8192 --default-ulimit nofile=1024:4096
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
-    isula run --ulimit nproc= $image /bin/sh > $ulimitlog 2>&1
+    isula run --ulimit nproc= $image --runtime $runtime /bin/sh > $ulimitlog 2>&1
     cat $ulimitlog | grep "delimiter '=' can't be the first or the last character"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula run --ulimit nproc=1024: $image /bin/sh > $ulimitlog 2>&1
+    isula run --ulimit nproc=1024: --runtime $runtime $image /bin/sh > $ulimitlog 2>&1
     cat $ulimitlog | grep "delimiter ':' can't be the first or the last character"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula run --ulimit npro=1024:2048 $image /bin/sh > $ulimitlog 2>&1
+    isula run --ulimit npro=1024:2048 --runtime $runtime $image /bin/sh > $ulimitlog 2>&1
     cat $ulimitlog | grep "Invalid ulimit type"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula run --ulimit nproc=4096:2048 $image /bin/sh > $ulimitlog 2>&1
+    isula run --ulimit nproc=4096:2048 --runtime $runtime $image /bin/sh > $ulimitlog 2>&1
     cat $ulimitlog | grep "Ulimit soft limit must be less than or equal to hard limit"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula run --ulimit nproc=2048:4096.5 $image /bin/sh > $ulimitlog 2>&1
+    isula run --ulimit nproc=2048:4096.5 --runtime $runtime $image /bin/sh > $ulimitlog 2>&1
     cat $ulimitlog | grep "Invalid ulimit hard value"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula run --ulimit nproc==2048:4096 $image /bin/sh > $ulimitlog 2>&1
+    isula run --ulimit nproc==2048:4096 --runtime $runtime $image /bin/sh > $ulimitlog 2>&1
     cat $ulimitlog | grep "Invalid ulimit argument"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
-    isula run --ulimit nproc=2048::4096 $image /bin/sh > $ulimitlog 2>&1
+    isula run --ulimit nproc=2048::4096 --runtime $runtime $image /bin/sh > $ulimitlog 2>&1
     cat $ulimitlog | grep "Too many limit value arguments"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
     container_name="ulimit_test"
 
-    isula run -td -n $container_name --ulimit nofile=20480:40960 --ulimit core=1024:2048 $image /bin/sh
+    isula run -td -n $container_name --ulimit nofile=20480:40960 --ulimit core=1024:2048 --runtime $runtime $image /bin/sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
 
     isula exec $container_name /bin/sh -c "cat /proc/self/limits" | grep "Max open files" |awk '{ print $(NF-1) }' |grep 40960
@@ -106,6 +107,9 @@ function test_ulimit()
 
 declare -i ans=0
 
-test_ulimit || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    test_ulimit $element || ((ans++))
+done
 
 show_result ${ans} "${curr_path}/${0}"

@@ -21,10 +21,13 @@ declare -a lines
 
 # Root directory of integration tests.
 LCR_ROOT_PATH="/var/lib/isulad/engines/lcr"
+RUNTIME_ROOT_PATH="/var/lib/isulad/engines"
 valgrind_log="/tmp/valgrind.log"
 ISUALD_LOG="/var/lib/isulad/isulad.log"
 ISULAD_ROOT_PATH="/var/lib/isulad"
 ISULAD_RUN_ROOT_PATH="/var/run/isulad"
+
+RUNTIME_LIST=(lcr runc)
 
 declare -r -i FAILURE=1
 
@@ -58,7 +61,7 @@ function fn_check_ne() {
 }
 
 function testcontainer() {
-    st=`isula inspect -f '{{json .State.Status}}' "$1"`
+    st=`isula inspect -f '{{json .State.Status}}' $3 "$1"`
     if ! [[ "${st}" =~ "$2" ]];then
         echo "expect status $2, but get ${st}"
         TC_RET_T=$(($TC_RET_T+1))

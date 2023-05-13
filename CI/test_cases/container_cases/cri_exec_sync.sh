@@ -1,8 +1,23 @@
 #!/bin/bash
 #
-# attributes: isulad cri websockets exec attach
+# attributes: cri exec sync test
 # concurrent: NA
-# spend time: 46
+# spend time: 14
+
+#######################################################################
+##- Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+# - iSulad licensed under the Mulan PSL v2.
+# - You can use this software according to the terms and conditions of the Mulan PSL v2.
+# - You may obtain a copy of Mulan PSL v2 at:
+# -     http://license.coscl.org.cn/MulanPSL2
+# - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+# - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+# - PURPOSE.
+# - See the Mulan PSL v2 for more details.
+##- @Description:CI
+##- @Author: zhongtao
+##- @Create: 2023-04-18
+#######################################################################
 
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/criconfigs)
@@ -24,7 +39,7 @@ function do_pre()
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop isulad" && return ${FAILURE}
 
-    start_isulad_without_valgrind
+    start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start isulad" && return ${FAILURE}
 
     isula load -i ${pause_img_path}/pause.tar
@@ -55,71 +70,26 @@ function set_up()
     return ${ret}
 }
 
-function test_cri_exec_fun()
+function test_cri_exec_sync_fun()
 {
     local ret=0
-    local test="test_cri_exec_fun => (${FUNCNAME[@]})"
+    local test="test_cri_exec_sync_fun => (${FUNCNAME[@]})"
     msg_info "${test} starting..."
-    declare -a fun_pids
-    for index in $(seq 1 20); do
-            nohup cricli exec -it ${cid} date &
-            fun_pids[${#pids[@]}]=$!
-    done
-    wait ${fun_pids[*]// /|}
+    
+    crictl exec -s ${cid} xxx 2>&1
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to catch exec sync error msg" && ((ret++))
 
-    declare -a abn_pids
-    for index in $(seq 1 20); do
-            nohup cricli exec -it ${cid} xxx &
-            abn_pids[${#pids[@]}]=$!
-    done
-    wait ${abn_pids[*]// /|}
+    crictl exec -s ${cid} date
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to exec sync" && ((ret++))
 
-    sleep 2
-    ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI exec operation" && ((ret++))
+    crictl exec -s --timeout 2 ${cid} ls
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to exec sync with timeout" && ((ret++))
 
-    msg_info "${test} finished with return ${ret}..."
-    return ${ret}
-}
+    crictl exec -s --timeout 2 ${cid} sleep 898989 2>&1 | grep "timeout"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to catch exec sync timeout error msg" && ((ret++))
 
-function test_cri_exec_abn
-{
-    local ret=0
-    local test="test_cri_exec_abn => (${FUNCNAME[@]})"
-    msg_info "${test} starting..."
-
-    nohup cricli exec -it ${cid} sleep 100 &
-    pid=$!
-    sleep 3
-    kill -9 $pid
-    sleep 2
-
-    ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI exec operation" && ((ret++))
-
-    msg_info "${test} finished with return ${ret}..."
-    return ${ret}
-}
-
-function test_cri_attach
-{
-    local ret=0
-    local test="test_cri_attach => (${FUNCNAME[@]})"
-    msg_info "${test} starting..."
-
-    nohup cricli attach -i ${cid} &
-    pid=$!
-    sleep 2
-
-    ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI attach operation" && ((ret++))
-
-
-    kill -9 $pid
-    sleep 2
-
-    ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI attach operation" && ((ret++))
+    crictl exec -s --timeout 2 ${cid} ps 2>&1 | grep "sleep 898989"
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual exec process" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
     return ${ret}
@@ -148,7 +118,7 @@ function do_post()
 {
     cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
     
-    stop_isulad_without_valgrind
+    check_valgrind_log
     start_isulad_with_valgrind
 }
 
@@ -156,18 +126,13 @@ function do_test_t()
 {
     local ret=0
     local runtime=$1
-    local test="cri_stream_test => (${runtime})"
+    local test="cri_exec_sync_test => (${runtime})"
     msg_info "${test} starting..."
 
     set_up $runtime || ((ret++))
 
-    test_cri_exec_fun  || ((ret++))
-    test_cri_exec_abn || ((ret++))
+    test_cri_exec_sync_fun  || ((ret++))
 
-    # runc attach not support
-    if [ $runtime == "lcr" ]; then
-        test_cri_attach || ((ret++))
-    fi
     tear_down || ((ret++))
 
     msg_info "${test} finished with return ${ret}..."

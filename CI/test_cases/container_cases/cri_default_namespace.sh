@@ -43,10 +43,11 @@ function set_up()
 function test_cri_default_namespace_in_pod_fun()
 {
     local ret=0
-    local test="test_cri_default_namespace_in_pod_fun => (${FUNCNAME[@]})"
+    local runtime=$1
+    local test="test_cri_default_namespace_in_pod_fun => (${runtime})"
     msg_info "${test} starting..."
 
-    sid=$(crictl runp ${data_path}/sandbox-config.json)
+    sid=$(crictl runp --runtime $runtime ${data_path}/sandbox-config.json)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run sandbox" && ((ret++))
 
     cid=$(crictl create $sid ${data_path}/container-config-default-namespace.json ${data_path}/sandbox-config.json)
@@ -73,14 +74,6 @@ function test_cri_default_namespace_in_pod_fun()
         [[ x"$sandboxns" == x"$conatainerns" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - $element namespace should be not shared in pod" && ((ret++))
     done
 
-    msg_info "${test} finished with return ${ret}..."
-    return ${ret}
-}
-
-function tear_down()
-{
-    local ret=0
-
     crictl stop $cid
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop container" && ((ret++))
 
@@ -93,19 +86,26 @@ function tear_down()
     crictl rmp $sid
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm sandbox" && ((ret++))
 
+    msg_info "${test} finished with return ${ret}..."
+    return ${ret}
+}
+
+function tear_down()
+{
     cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
     check_valgrind_log
     start_isulad_with_valgrind
-
-    return ${ret}
 }
 
 declare -i ans=0
 
 set_up || ((ans++))
 
-test_cri_default_namespace_in_pod_fun || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    test_cri_default_namespace_in_pod_fun $element || ((ans++))
+done
 
-tear_down || ((ans++))
+tear_down
 
 show_result ${ans} "${curr_path}/${0}"
