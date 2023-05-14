@@ -194,6 +194,10 @@ static int stdin_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *d
     } else {
         fd_to = &(p->shim_io->in);
     }
+
+    if (fd_to == NULL || *fd_to == -1) {
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
     w_count = write_nointr_in_total(*fd_to, p->buf, r_count);
     if (w_count < 0) {
         /* When any error occurs, set the write fd -1  */
@@ -797,20 +801,20 @@ static int init_isulad_stdio(process_t *p)
     return SHIM_OK;
 failure:
     if (p->isulad_io != NULL) {
+        if (p->isulad_io->in > 0) {
+            close(p->isulad_io->in);
+        }
+        if (p->isulad_io->out > 0) {
+            close(p->isulad_io->out);
+        }
+        if (p->isulad_io->err > 0) {
+            close(p->isulad_io->err);
+        }
+        if (p->isulad_io->resize > 0) {
+            close(p->isulad_io->resize);
+        }
         free(p->isulad_io);
         p->isulad_io = NULL;
-    }
-    if (p->isulad_io->in > 0) {
-        close(p->isulad_io->in);
-    }
-    if (p->isulad_io->out > 0) {
-        close(p->isulad_io->out);
-    }
-    if (p->isulad_io->err > 0) {
-        close(p->isulad_io->err);
-    }
-    if (p->isulad_io->resize > 0) {
-        close(p->isulad_io->resize);
     }
     return SHIM_ERR;
 }
