@@ -103,7 +103,7 @@ function test_health_check_normally()
     [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "healthy" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not healthy" && ((ret++))
 
-    kill -9 $(isula inspect -f '{{.State.Pid}}' ${container_name}) && sleep 1 # Wait for the container to be killed
+    kill -9 $(isula inspect -f '{{.State.Pid}}' ${container_name}) && sleep 2 # Wait for the container to be killed
 
     # The container process exits abnormally and the health check status becomes unhealthy
     [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "unhealthy" ]]
@@ -139,13 +139,13 @@ function test_health_check_timeout()
     [[ $(isula inspect -f '{{.State.Status}}' ${container_name}) == "running" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container status: not running" && ((ret++))
 
-    sleep 1 # Health check has been performed yet
+    sleep 2 # Health check has been performed yet
 
     # Initial status when the container is still starting
     [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "starting" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not starting" && ((ret++))
 
-    sleep 7 # finish first health check
+    sleep 10 # finish first health check
     # The container process exits and the health check status becomes unhealthy
     [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "unhealthy" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not unhealthy" && ((ret++))
