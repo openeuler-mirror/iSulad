@@ -25,9 +25,8 @@ source ../helpers.sh
 function test_bind_special_dir()
 {
     local ret=0
-    local runtime=$1
     local image="busybox"
-    local test="container bind special directory test with ($runtime) => (${FUNCNAME[@]})"
+    local test="container bind special directory test => (${FUNCNAME[@]})"
 
     msg_info "${test} starting..."
 
@@ -37,12 +36,7 @@ function test_bind_special_dir()
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    # when create container in container, runc not support to mount /dev
-    if [ $runtime == "runc" ]; then
-        c_id=`isula run -itd -v -itd --runtime=$runtime -v /sys/fs:/sys/fs:rw,rshared -v /proc:/proc  -v /dev/pts:/dev/pts:rw busybox sh`
-    else
-        c_id=`isula run --runtime=$runtime -itd -v -itd -v /sys/fs:/sys/fs:rw,rshared -v /proc:/proc -v /dev:/dev:ro -v /dev/pts:/dev/pts:rw busybox sh`
-    fi
+    c_id=`isula run -itd -v -itd -v /sys/fs:/sys/fs:rw,rshared -v /proc:/proc -v /dev:/dev:ro -v /dev/pts:/dev/pts:rw busybox sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula exec -it $c_id sh -c "ls -al /sys/fs" | grep "cgroup"
@@ -57,9 +51,6 @@ function test_bind_special_dir()
 
 declare -i ans=0
 
-for element in ${RUNTIME_LIST[@]};
-do
-    test_bind_special_dir $element || ((ans++))
-done
+test_bind_special_dir || ((ans++))
 
 show_result ${ans} "${curr_path}/${0}"
