@@ -630,9 +630,9 @@ static int runtime_call_simple(const char *workdir, const char *runtime, const c
 }
 
 // oci runtime return -1 if the container 'does not exist'
-// if output contains 'does not exist', means nothing to kill, return 0
-// this will change the exit status of kill command
-static int kill_output_check(const char *output)
+// if output contains 'does not exist', means nothing to kill or delete, return 0
+// this will change the exit status of kill or delete command
+static int non_existent_output_check(const char *output)
 {
     char *pattern = "does not exist";
 
@@ -640,24 +640,24 @@ static int kill_output_check(const char *output)
         return -1;
     }
 
-    // container not exist, kill success, return 0
+    // container not exist, kill or delete success, return 0
     if (util_strings_contains_word(output, pattern)) {
         return 0;
     }
 
-    // kill failed, return -1
+    // kill or delete failed, return -1
     return -1;
 }
 
-// kill success or kill_output_check succeed return 0, DO_RETRY_CALL will break;
+// kill success or non_existent_output_check succeed return 0, DO_RETRY_CALL will break;
 // if kill failed, recheck on shim alive, if not alive, kill succeed,  still return 0;
 // else, return -1, DO_RETRY_CALL will call this again;
 static int runtime_call_kill_and_check(const char *workdir, const char *runtime, const char *id)
 {
     int ret = -1;
 
-    // kill succeed, return 0; kill_output_check succeed, return 0;
-    ret = runtime_call_simple(workdir, runtime, "kill", NULL, 0, id, kill_output_check);
+    // kill succeed, return 0; non_existent_output_check succeed, return 0;
+    ret = runtime_call_simple(workdir, runtime, "kill", NULL, 0, id, non_existent_output_check);
     if (ret == 0) {
         return 0;
     }
@@ -672,7 +672,13 @@ static int runtime_call_kill_and_check(const char *workdir, const char *runtime,
 static int runtime_call_delete_force(const char *workdir, const char *runtime, const char *id)
 {
     const char *opts[1] = { "--force" };
-    return runtime_call_simple(workdir, runtime, "delete", opts, 1, id, NULL);
+    // delete succeed, return 0; 
+    // When the runc version is less than or equal to v1.0.0-rc3, 
+    // if the container does not exist when force deleting it, 
+    // runc will report an error and isulad does not need to retry the deletion again.
+    // related PR ID:d1a743674a98e23d348b29f52c43436356f56b79
+    // non_existent_output_check succeed, return 0;
+    return runtime_call_simple(workdir, runtime, "delete", opts, 1, id, non_existent_output_check);
 }
 
 #define ExitSignalOffset 128
