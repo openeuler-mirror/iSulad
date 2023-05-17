@@ -1,5 +1,5 @@
-%global _version 2.0.18
-%global _release 7
+%global _version 2.1.2
+%global _release 2
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -13,69 +13,9 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 
-Patch0001:	0001-add-omitted-musl-adaption-code.patch
-Patch0002:	0002-add-cpu-rt-CI.patch
-Patch0003:	0003-add-cpu-rt-ut.patch
-Patch0004:	0004-add-info-log-when-isulad-shutdown.patch
-Patch0005:	0005-create-a-log-file-for-shim-v2-and-remove-10-229-devi.patch
-Patch0006:	0006-ensure-isula-exec-inherits-the-config-of-create.patch
-Patch0007:	0007-Delete-meaningless-thread-creation-and-ensure-the-ta.patch
-Patch0008:	0008-fix-cpu-rt-review-comments.patch
-Patch0009:	0009-fix-inspect.sh-failed.patch
-Patch0010:	0010-ensure-list-name-is-not-null.patch
-Patch0011:	0011-Bugfix-in-config-and-executor.patch
-Patch0012:	0012-fix-isula-cpu-rt-CI.patch
-Patch0013:	0013-add-CRI-ContainerStats-Service.patch
-Patch0014:	0014-fix-selinux_label_ut-timeout-and-add-timeout-for-all.patch
-Patch0015:	0015-fix-cpu-rt-disable-after-reboot-machine.patch
-Patch0016:	0016-fix-code-style.patch
-Patch0017:	0017-add-retry-for-read-write.patch
-Patch0018:	0018-add-crictl-timeout-and-sync-for-CI.patch
-Patch0019:	0019-unlock-m_podsLock-if-new-failed.patch
-Patch0020:	0020-fix-CRI-SetupPod-and-TearDownPod-deadlock.patch
-Patch0021:	0021-support-pull-image-with-digest.patch
-Patch0022:	0022-isulad-shim-support-execSync-with-timeout.patch
-Patch0023:	0023-change-sleep-to-usleep-to-avoid-lossing-of-accuracy.patch
-Patch0024:	0024-adapt-to-repo-of-openeuler-url-changed.patch
-Patch0025:	0025-modify-sleep-time.patch
-Patch0026:	0026-change-goto-branch.patch
-Patch0027:	0027-modifying-cpurt-file-permissions.patch
-Patch0028:	0028-add-design-docs-for-cri-manager.patch
-Patch0029:	0029-improve-check-of-process-failure.patch
-Patch0030:	0030-support-isula-update-when-runtime-is-runc.patch
-Patch0031:	0031-when-calling-runc-start-unset-NOTIFY_-SOCKET.patch
-Patch0032:	0032-add-CRI-container-design-doc.patch
-Patch0033:	0033-fix-util_getgrent_r-overflow.patch
-Patch0034:	0034-modify-the-return-value-of-the-util_waitpid_with_tim.patch
-Patch0035:	0035-fix-inspect-data-memleak.patch
-Patch0036:	0036-containers-in-same-sandbox-should-have-same-process-.patch
-Patch0037:	0037-clean-container-process-after-execSync-timeout-exit.patch
-Patch0038:	0038-support-to-config-selinux-label-in-cri.patch
-Patch0039:	0039-add-files_limit-to-oci-spec.patch
-Patch0040:	0040-support-setting-pod-to-privilege.patch
-Patch0041:	0041-add-hugepage_limit.patch
-Patch0042:	0042-add-effective-and-permitted-type-of-cap-to-oci-spec.patch
-Patch0043:	0043-isulad-shim-fix-log-loss-bug.patch
-Patch0044:	0044-remove-unused-func.patch
-Patch0045:	0045-if-the-exit-code-in-the-response-of-execSync-is-not-.patch
-Patch0046:	0046-free-timeout-when-shim_create-finished.patch
-Patch0047:	0047-clean-isulad-shim-compile-relies.patch
-Patch0048:	0048-remote-layer-store-demo.patch
-Patch0049:	0049-add-ci-for-remote-ro.patch
-Patch0050:	0050-fix-compile-error-when-not-enable-remote-ro.patch
-Patch0051:	0051-CI-not-enable-remote-ro-for-ut.patch
-Patch0052:	0052-bugfix-remote-ro-try-add-or-remove-image-layer-twice.patch
-Patch0053:	0053-bugfix-can-t-delete-layers-under-dir-overlay-layers.patch
-Patch0054:	0054-refactor-remote-ro-code.patch
-Patch0055:	0055-bugfix-when-refresh-can-t-load-or-pull-images.patch
-Patch0056:	0056-remove-unused-headers.patch
-Patch0057:	0057-change-isulad-shim-epoll-struct.patch
-Patch0058:	0058-fix-memrealloc-size-error.patch
-Patch0059:	0059-convert-struct-lcr-start-exec-request.patch
-
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
-Provides:       libisula.so()(64bit)
+Provides:       libisula_client.so()(64bit)
 Provides:       libisulad_img.so()(64bit)
 Provides:       libisulad_tools.so()(64bit)
 %endif
@@ -100,13 +40,11 @@ Requires: sqlite
 BuildRequires: gtest-devel gmock-devel
 %endif
 
-%define lcrver_lower 2.0.9-0
-%define lcrver_upper 2.0.10-0
-%define clibcniver_lower 2.0.7-0
-%define clibcniver_upper 2.0.8-0
+%define lcrver_lower 2.1.1-0
+%define lcrver_upper 2.1.2-0
 
 BuildRequires: lcr-devel > %{lcrver_lower} lcr-devel < %{lcrver_upper}
-BuildRequires: clibcni-devel > %{clibcniver_lower} clibcni-devel < %{clibcniver_upper}
+BuildRequires: libisula-devel > %{lcrver_lower} libisula-devel < %{lcrver_upper}
 BuildRequires: cmake gcc-c++ yajl-devel lxc lxc-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel libarchive-devel device-mapper-devel
@@ -118,8 +56,8 @@ BuildRequires: lib-shim-v2 lib-shim-v2-devel
 %endif
 
 
+Requires:      libisula > %{lcrver_lower} libisula < %{lcrver_upper}
 Requires:      lcr > %{lcrver_lower} lcr < %{lcrver_upper}
-Requires:      clibcni > %{clibcniver_lower} clibcni < %{clibcniver_upper}
 Requires:      grpc protobuf lxc
 Requires:      libcurl
 Requires:      http-parser libseccomp
@@ -141,15 +79,15 @@ mkdir -p build
 cd build
 %if 0%{?enable_shimv2}
 %if %{defined openeuler}
-%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=ON -DENABLE_UT=ON ../
+%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=ON -DENABLE_UT=ON -DENABLE_GRPC_REMOTE_CONNECT=ON ../
 %else
-%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=ON ../
+%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SHIM_V2=ON -DENABLE_GRPC_REMOTE_CONNECT=ON ../
 %endif
 %else
 %if %{defined openeuler}
-%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON ../
+%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UT=ON -DENABLE_GRPC_REMOTE_CONNECT=ON ../
 %else
-%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
+%cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_GRPC_REMOTE_CONNECT=ON ../
 %endif
 %endif
 %make_build
@@ -165,7 +103,7 @@ ctest -E "registry_images_ut|volume_ut"
 rm -rf %{buildroot}
 cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
-install -m 0755 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
+install -m 0755 ./src/libisula_client.so             %{buildroot}/%{_libdir}/libisula_client.so
 install -m 0755 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
 install -m 0755 ./src/libisulad_tools.so  %{buildroot}/%{_libdir}/libisulad_tools.so
 install -m 0755 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
@@ -316,6 +254,18 @@ fi
 %endif
 
 %changelog
+* Fri May 12 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.1.2-2
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: fix remote grpc macro
+
+* Thu May 11 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.1.2-1
+- Type: bugfix
+- ID: NA
+- SUG: NA
+- DESC: upgrade to v2.1.2
+
 * Fri May 05 2023 wangrunze<wangrunze13@huawei.com> - 2.0.18-7
 - Type: bugfix
 - ID: NA
