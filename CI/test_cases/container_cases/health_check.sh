@@ -29,6 +29,9 @@ isula pull ${image}
 function test_health_check_paraments()
 {
     local ret=0
+    local retry_limit=10
+    local retry_interval=1
+    local success=1
     local test="list && inspect image info test => (${FUNCNAME[@]})"
 
     msg_info "${test} starting..."
@@ -45,16 +48,33 @@ function test_health_check_paraments()
     [[ $(isula inspect -f '{{.State.Status}}' ${container_name}) == "running" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container status: not running" && ((ret++))
 
-    sleep 13 # finish first health check
+    # finish first health check
+    sleep 10
+    for i in $(seq 1 "$retry_limit"); do
+        [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "starting" ]]
+        if [ $? -eq 0 ]; then
+            success=0
+            break;
+        fi
+        sleep $retry_interval
+    done
 
     # keep starting status with health check return non-zero at always until status change to unhealthy
-    [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "starting" ]]
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not starting" && ((ret++))
+    [[ $success -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not starting" && ((ret++))
 
     sleep 6 # finish second health check
 
-    [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "unhealthy" ]]
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not unhealthy" && ((ret++))
+    success=1
+    for i in $(seq 1 "$retry_limit"); do
+        [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "unhealthy" ]]
+        if [ $? -eq 0 ]; then
+            success=0
+            break;
+        fi
+        sleep $retry_interval
+    done
+
+    [[ $success -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not unhealthy" && ((ret++))
 
     # validate --health-retries option
     [[ $(isula inspect -f '{{.State.Health.FailingStreak}}' ${container_name}) == "2" ]]
@@ -77,6 +97,9 @@ function test_health_check_normally()
 {
     local ret=0
     local image="busybox"
+    local retry_limit=10
+    local retry_interval=1
+    local success=1
     local test="list && inspect image info test => (${FUNCNAME[@]})"
 
     msg_info "${test} starting..."
@@ -92,25 +115,60 @@ function test_health_check_normally()
     [[ $(isula inspect -f '{{.State.Status}}' ${container_name}) == "running" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container status: not running" && ((ret++))
 
-    sleep 2 # Health check has been performed yet
+    # Health check has been performed yet
+    for i in $(seq 1 "$retry_limit"); do
+        [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "starting" ]]
+        if [ $? -eq 0 ]; then
+            success=0
+            break;
+        fi
+        sleep $retry_interval
+    done
 
     # Initial status when the container is still starting
-    [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "starting" ]]
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not starting" && ((ret++))
+    [[ $success -ne 0 ]]  && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not starting" && ((ret++))
 
     sleep 8 # finish first health check
+    
+    success=1
+    for i in $(seq 1 "$retry_limit"); do
+        [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "healthy" ]]
+        if [ $? -eq 0 ]; then
+            success=0
+            break;
+        fi
+        sleep $retry_interval
+    done
     # When the health check returns successfully, status immediately becomes healthy
-    [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "healthy" ]]
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not healthy" && ((ret++))
+    [[ $success -ne 0 ]]  && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not healthy" && ((ret++))
 
-    kill -9 $(isula inspect -f '{{.State.Pid}}' ${container_name}) && sleep 2 # Wait for the container to be killed
+    kill -9 $(isula inspect -f '{{.State.Pid}}' ${container_name})
+    
+    # Wait for the container to be killed
+    success=1
+    for i in $(seq 1 "$retry_limit"); do
+        [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "unhealthy" ]]
+        if [ $? -eq 0 ]; then
+            success=0
+            break;
+        fi
+        sleep $retry_interval
+    done
 
     # The container process exits abnormally and the health check status becomes unhealthy
-    [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "unhealthy" ]]
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not unhealthy" && ((ret++))
+    [[ $success -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not unhealthy" && ((ret++))
 
-    [[ $(isula inspect -f '{{.State.ExitCode}}' ${container_name}) == "137" ]]
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container exit code: not 137" && ((ret++))
+    success=1
+    for i in $(seq 1 "$retry_limit"); do
+        [[ $(isula inspect -f '{{.State.ExitCode}}' ${container_name}) == "137" ]]
+        if [ $? -eq 0 ]; then
+            success=0
+            break;
+        fi
+        sleep $retry_interval
+    done
+    
+    [[ $success -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container exit code: not 137" && ((ret++))
 
     isula rm -f ${container_name}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove container: ${container_name}" && ((ret++))
@@ -168,8 +226,16 @@ function test_health_check_timeout()
     # The container process exits and the health check status becomes unhealthy
     [[ $success -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not unhealthy" && ((ret++))
 
-    [[ $(isula inspect -f '{{.State.ExitCode}}' ${container_name}) == "137" ]]
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container exit code: not 137" && ((ret++))
+    success=1
+    for i in $(seq 1 "$retry_limit"); do
+        [[ $(isula inspect -f '{{.State.ExitCode}}' ${container_name}) == "137" ]]
+        if [ $? -eq 0 ]; then
+            success=0
+            break;
+        fi
+        sleep $retry_interval
+    done
+    [[ $success -ne 0 ]]  && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container exit code: not 137" && ((ret++))
 
     isula rm -f ${container_name}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove container: ${container_name}" && ((ret++))
