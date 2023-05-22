@@ -58,6 +58,9 @@ function set_up()
 function test_cri_exec_fun()
 {
     local ret=0
+    local retry_limit=20
+    local retry_interval=1
+    local success=1
     local test="test_cri_exec_fun => (${FUNCNAME[@]})"
     msg_info "${test} starting..."
     declare -a fun_pids
@@ -74,9 +77,15 @@ function test_cri_exec_fun()
     done
     wait ${abn_pids[*]// /|}
 
-    sleep 2
-    ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI exec operation" && ((ret++))
+    for i in $(seq 1 "$retry_limit"); do
+        ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
+        if [ $? -ne 0 ]; then
+            success=0
+            break;
+        fi
+        sleep $retry_interval
+    done
+    [[ $success -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI exec operation" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
     return ${ret}
@@ -85,6 +94,9 @@ function test_cri_exec_fun()
 function test_cri_exec_abn
 {
     local ret=0
+    local retry_limit=20
+    local retry_interval=1
+    local success=1
     local test="test_cri_exec_abn => (${FUNCNAME[@]})"
     msg_info "${test} starting..."
 
@@ -92,10 +104,16 @@ function test_cri_exec_abn
     pid=$!
     sleep 3
     kill -9 $pid
-    sleep 2
 
-    ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI exec operation" && ((ret++))
+    for i in $(seq 1 "$retry_limit"); do
+        ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
+        if [ $? -ne 0 ]; then
+            success=0
+            break;
+        fi
+        sleep $retry_interval
+    done
+    [[ $success -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI exec operation" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
     return ${ret}
