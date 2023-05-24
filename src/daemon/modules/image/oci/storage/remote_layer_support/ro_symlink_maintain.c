@@ -136,7 +136,7 @@ static int do_build_ro_dir(const char *home, const char *id)
     nret = asprintf(&ro_layer_dir, "%s/%s/%s", home, REMOTE_RO_LAYER_DIR, id);
     if (nret < 0 || nret > PATH_MAX) {
         SYSERROR("Failed to create ro layer dir path");
-        return -1;
+        goto out;
     }
 
     if (util_mkdir_p(ro_layer_dir, IMAGE_STORE_PATH_MODE) != 0) {
