@@ -105,12 +105,12 @@ int remote_start_refresh_thread(pthread_rwlock_t *remote_lock)
     res = pthread_create(&a_thread, NULL, remote_refresh_ro_symbol_link, (void *)&supporters);
     if (res != 0) {
         CRIT("Thread creation failed");
-        return -1;
+        goto free_out;
     }
 
     if (pthread_detach(a_thread) != 0) {
         SYSERROR("Failed to detach 0x%lx", a_thread);
-        return -1;
+        goto free_out;
     }
 
     return 0;
