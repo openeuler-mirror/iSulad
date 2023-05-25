@@ -135,6 +135,7 @@ static int do_build_ro_dir(const char *home, const char *id)
 
     nret = asprintf(&ro_layer_dir, "%s/%s/%s", home, REMOTE_RO_LAYER_DIR, id);
     if (nret < 0 || nret > PATH_MAX) {
+        ret = -1;
         SYSERROR("Failed to create ro layer dir path");
         goto out;
     }
