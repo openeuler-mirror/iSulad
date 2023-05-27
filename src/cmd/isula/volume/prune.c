@@ -85,7 +85,6 @@ int cmd_volume_prune_main(int argc, const char **argv)
     command_t cmd;
     char **volumes = NULL;
     size_t volumes_len = 0;
-    char ch = 'n';
     struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_volume_prune_args)
         PRUNE_OPTIONS(g_cmd_volume_prune_args)
     };
@@ -113,6 +112,7 @@ int cmd_volume_prune_main(int argc, const char **argv)
     }
 
     if (!g_cmd_volume_prune_args.force) {
+        int ch;
         printf("WARNING! This will remove all local volumes not used by at least one container.\n");
         printf("Are you sure you want to continue? [y/N]");
         ch = getchar();
