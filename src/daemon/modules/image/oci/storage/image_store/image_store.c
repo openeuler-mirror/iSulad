@@ -3684,7 +3684,8 @@ int remote_append_image_by_directory_with_lock(const char *id)
     nret = snprintf(image_path, sizeof(image_path), "%s/%s", g_image_store->dir, id);
     if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
         ERROR("Failed to get image path");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     ret = append_image_by_directory(image_path);

@@ -126,11 +126,43 @@ out:
     return ret;
 }
 
+static int check_top_layer_and_add_image(const char *id)
+{
+    char *top_layer = NULL;
+    int ret = 0;
+
+    top_layer = remote_image_get_top_layer_from_json(id);
+    if (top_layer == NULL) {
+        WARN("Can't get top layer id for image: %s, image not add", id);
+        return 0;
+    }
+
+    if (!remote_layer_layer_valid(top_layer)) {
+        WARN("Current not find valid under layer, remote image:%s not add", id);
+        if (!map_remove(image_byid_new, (void *)id)) {
+            WARN("image %s will not be loaded from remote.", id);
+        }
+        goto out;
+    }
+
+    if (remote_append_image_by_directory_with_lock(id) != 0) {
+        ERROR("Failed to load image into memrory: %s", id);
+        if (!map_remove(image_byid_new, (void *)id)) {
+            WARN("image %s will not be loaded from remote", id);
+        }
+        ret = -1;
+    }
+
+out:
+    free(top_layer);
+
+    return ret;
+}
+
 static int remote_image_add(void *data)
 {
     char **array_added = NULL;
     char **array_deleted = NULL;
-    char *top_layer = NULL;
     map_t *tmp_map = NULL;
     bool exist = true;
     size_t i = 0;
@@ -144,20 +176,7 @@ static int remote_image_add(void *data)
     array_deleted = remote_deleted_layers(image_byid_old, image_byid_new);
 
     for (i = 0; i < util_array_len((const char **)array_added); i++) {
-        top_layer = remote_image_get_top_layer_from_json(array_added[i]);
-        if (top_layer != NULL && !remote_layer_layer_valid(top_layer)) {
-            WARN("Current not find valid under layer, remoet image:%s not added", array_added[i]);
-            if (!map_remove(image_byid_new, (void *)array_added[i])) {
-                WARN("image %s will not be loaded from remote.", array_added[i]);
-            }
-            continue;
-        }
-
-        if (remote_append_image_by_directory_with_lock(array_added[i]) != 0) {
-            ERROR("Failed to load image into memrory: %s", array_added[i]);
-            if (!map_remove(image_byid_new, (void *)array_added[i])) {
-                WARN("image %s will not be loaded from remote", array_added[i]);
-            }
+        if (check_top_layer_and_add_image(array_added[i]) != 0) {
             ret = -1;
         }
     }
@@ -179,7 +198,6 @@ static int remote_image_add(void *data)
 
     util_free_array(array_added);
     util_free_array(array_deleted);
-    free(top_layer);
 
     return ret;
 }
