@@ -381,7 +381,10 @@ void util_usleep_nointerupt(unsigned long usec)
 
 void *util_smart_calloc_s(size_t unit_size, size_t count)
 {
-    if (unit_size == 0) {
+    // If count or size is 0,
+    // then calloc() returns either NULL,
+    // or a unique pointer value that can later be successfully passed to free()
+    if (unit_size == 0 || count == 0) {
         return NULL;
     }
 
