@@ -292,7 +292,7 @@ free_out:
     return ret;
 }
 
-static int remote_image_add(struct remote_overlay_data *data)
+static int remote_overlay_add(struct remote_overlay_data *data)
 {
     int ret = 0;
     char **array_added = NULL;
@@ -346,7 +346,7 @@ void remote_overlay_refresh(struct remote_overlay_data *data)
         return;
     }
 
-    if (remote_image_add(data) != 0) {
+    if (remote_overlay_add(data) != 0) {
         ERROR("refresh overlay failed");
     }
 }
