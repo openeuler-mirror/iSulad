@@ -160,5 +160,13 @@ int main(int argc, char **argv)
 
     released_timeout_exit();
 
-    return process_signal_handle_routine(p, tid_epoll, timeout);
+    ret = process_signal_handle_routine(p, tid_epoll, timeout);
+    if (ret == SHIM_ERR) {
+        exit(EXIT_FAILURE);
+    }
+    if (ret == SHIM_ERR_TIMEOUT) {
+        exit(SHIM_EXIT_TIMEOUT);
+    }
+
+    exit(EXIT_SUCCESS);
 }

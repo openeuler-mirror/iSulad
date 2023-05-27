@@ -677,9 +677,9 @@ static int runtime_call_kill_and_check(const char *workdir, const char *runtime,
 static int runtime_call_delete_force(const char *workdir, const char *runtime, const char *id)
 {
     const char *opts[1] = { "--force" };
-    // delete succeed, return 0; 
-    // When the runc version is less than or equal to v1.0.0-rc3, 
-    // if the container does not exist when force deleting it, 
+    // delete succeed, return 0;
+    // When the runc version is less than or equal to v1.0.0-rc3,
+    // if the container does not exist when force deleting it,
     // runc will report an error and isulad does not need to retry the deletion again.
     // related PR ID:d1a743674a98e23d348b29f52c43436356f56b79
     // non_existent_output_check succeed, return 0;
@@ -704,11 +704,16 @@ static int status_to_exit_code(int status)
     return exit_code;
 }
 
+/*
+    exit_code records the exit code of the container, obtained by reading the stdout of isulad-shim;
+    shim_exit_code records the exit code of isulad-shim, obtained through waitpid;
+*/
 static int shim_create(bool fg, const char *id, const char *workdir, const char *bundle, const char *runtime_cmd,
-                       int *exit_code, const char* timeout)
+                       int *exit_code, const char* timeout, int* shim_exit_code)
 {
     pid_t pid = 0;
     int exec_fd[2] = { -1, -1 };
+    int shim_stdout_pipe[2] = { -1, -1 };
     int num = 0;
     int ret = 0;
     char exec_buff[BUFSIZ + 1] = { 0 };
@@ -738,11 +743,18 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
         return -1;
     }
 
+    if (pipe2(shim_stdout_pipe, O_CLOEXEC) != 0) {
+        ERROR("Failed to create pipe for shim exit code");
+        return -1;
+    }
+
     pid = fork();
     if (pid < 0) {
         ERROR("Failed fork for shim parent %s", strerror(errno));
         close(exec_fd[0]);
         close(exec_fd[1]);
+        close(shim_stdout_pipe[0]);
+        close(shim_stdout_pipe[1]);
         return -1;
     }
 
@@ -777,12 +789,21 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
 realexec:
         /* real shim process. */
         close(exec_fd[0]);
+        close(shim_stdout_pipe[0]);
+        // child process, dup2 shim_stdout_pipe[1] to STDOUT
+        if (dup2(shim_stdout_pipe[1], STDOUT_FILENO) < 0) {
+            (void)dprintf(exec_fd[1], "Dup fd error: %s", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+        
         if (setsid() < 0) {
             (void)dprintf(exec_fd[1], "%s: failed setsid for process %d", id, getpid());
             exit(EXIT_FAILURE);
         }
-
-        if (util_check_inherited(true, exec_fd[1]) != 0) {
+        int ignore_fd[2] = {-1, -1};
+        ignore_fd[0] = exec_fd[1];
+        ignore_fd[1] = shim_stdout_pipe[1];
+        if (util_check_inherited_exclude_fds(true, ignore_fd, 2) != 0) {
             (void)dprintf(exec_fd[1], "close inherited fds failed");
         }
 
@@ -791,24 +812,38 @@ realexec:
     }
 
     close(exec_fd[1]);
+    close(shim_stdout_pipe[1]);
     num = util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
     close(exec_fd[0]);
     if (num > 0) {
-        ERROR("exec failed: %s", exec_buff);
+        ERROR("Exec failed: %s", exec_buff);
         ret = -1;
         goto out;
     }
 
     status = util_wait_for_pid_status(pid);
     if (status < 0) {
-        ERROR("failed wait shim-parent %d exit %s", pid, strerror(errno));
+        ERROR("Failed wait shim-parent %d exit %s", pid, strerror(errno));
         ret = -1;
         goto out;
     }
 
-    if (exit_code != NULL) {
-        *exit_code = status_to_exit_code(status);
+    *shim_exit_code = status_to_exit_code(status);
+    if (*shim_exit_code != 0) {
+        ERROR("Isulad-shim exit error");
+        ret = -1;
+        goto out;
     }
+
+    if (exit_code == NULL) {
+        goto out;
+    }
+    ret = util_read_nointr(shim_stdout_pipe[0], exit_code, sizeof(int));
+    close(shim_stdout_pipe[0]);
+    if (ret <= 0) {
+        *exit_code = 137;
+    }
+    ret = 0;
 
 out:
     if (ret != 0) {
@@ -892,6 +927,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     int ret = 0;
     char workdir[PATH_MAX] = { 0 };
     shim_client_process_state p = { 0 };
+    int shim_exit_code = 0;
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -924,7 +960,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     }
 
     get_runtime_cmd(runtime, &cmd);
-    ret = shim_create(false, id, workdir, params->bundle, cmd, NULL, NULL);
+    ret = shim_create(false, id, workdir, params->bundle, cmd, NULL, NULL, &shim_exit_code);
     if (ret != 0) {
         runtime_call_delete_force(workdir, runtime, id);
         ERROR("%s: failed create shim process", id);
@@ -1125,6 +1161,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     int pid = 0;
     shim_client_process_state p = { 0 };
     char *timeout = NULL;
+    int shim_exit_code = 0;
 
     if (id == NULL || runtime == NULL || params == NULL || exit_code == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -1199,13 +1236,13 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
         }
     }
 
-    ret = shim_create(fg_exec(params), id, workdir, bundle, cmd, exit_code, timeout);
+    ret = shim_create(fg_exec(params), id, workdir, bundle, cmd, exit_code, timeout, &shim_exit_code);
     if (ret != 0) {
         ERROR("%s: failed create shim process for exec %s", id, exec_id);
         goto errlog_out;
     }
 
-    if (*exit_code == SHIM_EXIT_TIMEOUT) {
+    if (shim_exit_code == SHIM_EXIT_TIMEOUT) {
         ret = -1;
         isulad_set_error_message("Exec container error;exec timeout");
         ERROR("isulad-shim %d exit for execing timeout", pid);
