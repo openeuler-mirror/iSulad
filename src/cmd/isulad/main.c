@@ -1249,7 +1249,7 @@ static int isulad_server_init_common()
 
 #ifndef DISABLE_CLEANUP
     // to cleanup leftover, init clean module before other modules.
-    if (clean_module_init() != 0) {
+    if (clean_module_init(args->json_confs) != 0) {
         ERROR("Failed to init clean module");
         goto out;
     }
