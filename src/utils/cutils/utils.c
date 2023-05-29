@@ -253,10 +253,7 @@ int util_sig_parse(const char *sig_name)
 
 void *util_smart_calloc_s(size_t unit_size, size_t count)
 {
-    // If count or size is 0,
-    // then calloc() returns either NULL,
-    // or a unique pointer value that can later be successfully passed to free()
-    if (unit_size == 0 || count == 0) {
+    if (unit_size == 0 ) {
         return NULL;
     }
 
@@ -264,6 +261,12 @@ void *util_smart_calloc_s(size_t unit_size, size_t count)
         return NULL;
     }
 
+    // If count or size is 0,
+    // then calloc() returns either NULL,
+    // or a unique pointer value that can later be successfully passed to free()
+    // In current linux implementation, if the size for memory allocation is 0,
+    // then a unique pointer value is returned. If the return value is Null pointer,
+    // it means out of memory.
     return calloc(count, unit_size);
 }
 
