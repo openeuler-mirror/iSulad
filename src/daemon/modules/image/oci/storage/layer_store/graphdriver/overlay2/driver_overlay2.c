@@ -1204,6 +1204,12 @@ int overlay2_rm_layer(const char *id, const struct graphdriver *driver)
     }
 
 #ifdef ENABLE_REMOTE_LAYER_STORE
+    if (!util_fileself_exists(layer_dir)) {
+        WARN("layer direcotry is already removed, can't remove twice");
+        ret = 0;
+        goto out;
+    }
+
     if (lstat(layer_dir, &stat_buf) < 0) {
         SYSERROR("Failed to lstat path: %s", layer_dir);
         ret = -1;
