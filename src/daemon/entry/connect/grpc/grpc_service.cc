@@ -81,6 +81,8 @@ public:
         m_builder.RegisterService(&m_containerService);
         m_builder.RegisterService(&m_imagesService);
         m_builder.RegisterService(&m_volumeService);
+
+        // Register CRI services, runtime and image
         m_builder.RegisterService(&m_runtimeRuntimeService);
         m_builder.RegisterService(&m_runtimeImageService);
 #ifdef ENABLE_NATIVE_NETWORK

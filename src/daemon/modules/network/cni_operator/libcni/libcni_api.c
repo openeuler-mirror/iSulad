@@ -511,9 +511,11 @@ static int run_cni_plugin(const cni_net_conf *p_net, const char *name, const cha
     }
 
     if (with_result) {
-        ret = exec_plugin_with_result(plugin_path, net.bytes, cargs, pret);
+        // cni plugin calls should not take longer than 90 seconds
+        CALL_CHECK_TIMEOUT(90, ret = exec_plugin_with_result(plugin_path, net.bytes, cargs, pret));
     } else {
-        ret = exec_plugin_without_result(plugin_path, net.bytes, cargs);
+        // cni plugin calls should not take longer than 90 seconds
+        CALL_CHECK_TIMEOUT(90, ret = exec_plugin_without_result(plugin_path, net.bytes, cargs));
     }
 free_out:
     free_cni_args(cargs);
