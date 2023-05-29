@@ -15,6 +15,8 @@
 #ifndef DAEMON_MODULES_API_LEFTOVER_CLEANUP_API_H
 #define DAEMON_MODULES_API_LEFTOVER_CLEANUP_API_H
 
+#include <isula_libutils/isulad_daemon_configs.h>
+
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
 #endif
@@ -23,7 +25,7 @@ typedef enum {
     BROKEN_ROOTFS = 1
 } cleanup_ctx_data_t;
 
-int clean_module_init();
+int clean_module_init(const isulad_daemon_configs *args);
 
 void clean_module_fill_ctx(cleanup_ctx_data_t data_type, void *data);
 
