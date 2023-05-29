@@ -12,24 +12,42 @@
  * Create: 2018-11-08
  * Description: provide runtime functions
  ******************************************************************************/
-#include "runtime_runtime_service.h"
+#include "cri_runtime_runtime_service.h"
 #include <string>
 #include <memory>
 #include <vector>
+
+#include <isula_libutils/log.h>
 #include "stream_server.h"
 #include "route_callback_register.h"
-#include "isula_libutils/log.h"
+#include "network_plugin.h"
 #include "cri_runtime_service_impl.h"
 #include "cri_helpers.h"
 
 using namespace CRI;
 
-void RuntimeRuntimeServiceImpl::Init(Network::NetworkPluginConf mConf, isulad_daemon_configs *config, Errors &err)
+void RuntimeRuntimeServiceImpl::Init(const isulad_daemon_configs *config, Errors &err)
 {
     std::string podSandboxImage;
-    if (config->pod_sandbox_image != nullptr) {
-        podSandboxImage = config->pod_sandbox_image;
-    } else {
+    /* note: get config from args, now use defaults */
+    Network::NetworkPluginConf mConf;
+
+    if (config != nullptr) {
+        if (config->network_plugin != nullptr) {
+            mConf.SetPluginName(config->network_plugin);
+        }
+        if (config->cni_bin_dir != nullptr) {
+            mConf.SetPluginBinDir(config->cni_bin_dir);
+        }
+        if (config->cni_conf_dir != nullptr) {
+            mConf.SetPluginConfDir(config->cni_conf_dir);
+        }
+        if (config->pod_sandbox_image != nullptr) {
+            podSandboxImage = config->pod_sandbox_image;
+        }
+    }
+
+    if (podSandboxImage.empty()) {
         podSandboxImage = CRIHelpers::GetDefaultSandboxImage(err);
         if (err.NotEmpty()) {
             return;

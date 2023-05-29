@@ -18,16 +18,16 @@
 
 #include "api.grpc.pb.h"
 #include <memory>
+
+#include <isula_libutils/isulad_daemon_configs.h>
 #include "callback.h"
 #include "cri_runtime_service.h"
-#include "network_plugin.h"
-#include "isula_libutils/isulad_daemon_configs.h"
 #include "errors.h"
 
 // Implement of runtime RuntimeService
 class RuntimeRuntimeServiceImpl : public runtime::v1alpha2::RuntimeService::Service {
 public:
-    void Init(Network::NetworkPluginConf mConf, isulad_daemon_configs *config, Errors &err);
+    void Init(const isulad_daemon_configs *config, Errors &err);
     void Wait();
     void Shutdown();
     grpc::Status Version(grpc::ServerContext *context, const runtime::v1alpha2::VersionRequest *request,

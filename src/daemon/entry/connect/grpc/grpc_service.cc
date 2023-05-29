@@ -23,13 +23,12 @@
 #include "grpc_containers_service.h"
 #include "grpc_images_service.h"
 #include "grpc_volumes_service.h"
-#include "runtime_runtime_service.h"
-#include "runtime_image_service.h"
+#include "cri_runtime_runtime_service.h"
+#include "cri_runtime_image_service.h"
 #ifdef ENABLE_NATIVE_NETWORK
 #include "grpc_network_service.h"
 #endif
 #include "isula_libutils/log.h"
-#include "network_plugin.h"
 #include "errors.h"
 #include "grpc_server_tls_auth.h"
 
@@ -37,8 +36,7 @@ using grpc::SslServerCredentialsOptions;
 
 class GRPCServerImpl {
 public:
-    explicit GRPCServerImpl(Network::NetworkPluginConf &conf)
-        : m_conf(conf)
+    explicit GRPCServerImpl()
     {
     }
 
@@ -52,7 +50,7 @@ public:
         }
 
         Errors err;
-        m_runtimeRuntimeService.Init(m_conf, args->json_confs, err);
+        m_runtimeRuntimeService.Init(args->json_confs, err);
         if (err.NotEmpty()) {
             ERROR("Init runtime service failed: %s", err.GetCMessage());
             return -1;
@@ -81,13 +79,13 @@ public:
         m_builder.RegisterService(&m_containerService);
         m_builder.RegisterService(&m_imagesService);
         m_builder.RegisterService(&m_volumeService);
+#ifdef ENABLE_NATIVE_NETWORK
+        m_builder.RegisterService(&m_networkService);
+#endif
 
         // Register CRI services, runtime and image
         m_builder.RegisterService(&m_runtimeRuntimeService);
         m_builder.RegisterService(&m_runtimeImageService);
-#ifdef ENABLE_NATIVE_NETWORK
-        m_builder.RegisterService(&m_networkService);
-#endif
 
         // Finally assemble the server.
         m_server = m_builder.BuildAndStart();
@@ -197,7 +195,6 @@ private:
     }
 
 private:
-    Network::NetworkPluginConf m_conf;
     ContainerServiceImpl m_containerService;
     ImagesServiceImpl m_imagesService;
     VolumeServiceImpl m_volumeService;
@@ -226,20 +223,7 @@ int grpc_server_init(const struct service_arguments *args)
         return 0;
     }
 
-    /* note: get config from args, now use defaults */
-    Network::NetworkPluginConf conf;
-    if (args != nullptr && args->json_confs != nullptr) {
-        if (args->json_confs->network_plugin != nullptr) {
-            conf.SetPluginName(args->json_confs->network_plugin);
-        }
-        if (args->json_confs->cni_bin_dir != nullptr) {
-            conf.SetPluginBinDir(args->json_confs->cni_bin_dir);
-        }
-        if (args->json_confs->cni_conf_dir != nullptr) {
-            conf.SetPluginConfDir(args->json_confs->cni_conf_dir);
-        }
-    }
-    g_grpcserver = new (std::nothrow) GRPCServerImpl(conf);
+    g_grpcserver = new (std::nothrow) GRPCServerImpl();
     if (g_grpcserver == nullptr) {
         return -1;
     }

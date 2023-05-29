@@ -13,7 +13,7 @@
  * Description: provide runtime image functions
  ******************************************************************************/
 
-#include "runtime_image_service.h"
+#include "cri_runtime_image_service.h"
 #include <memory>
 #include <string>
 #include <vector>
