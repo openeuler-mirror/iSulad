@@ -264,9 +264,9 @@ out:
 
     if (ret != 0) {
         free(element);
-        element = 0;
+        element = NULL;
         free(values);
-        values = 0;
+        values = NULL;
     }
 
     return ret;

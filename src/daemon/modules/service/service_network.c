@@ -26,7 +26,7 @@
 #include "namespace.h"
 #include "path.h"
 
-#define SHORT_ID_SPACE 12 + 1
+#define SHORT_ID_SPACE (12 + 1)
 
 bool validate_native_network(host_config *hostconfig, container_network_settings *network_settings)
 {

@@ -30,7 +30,7 @@ struct dm_task;
 extern "C" {
 #endif
 
-#define DEV_ERR -1
+#define DEV_ERR (-1)
 #define DEV_OK 0
 #define DEV_INIT 1
 

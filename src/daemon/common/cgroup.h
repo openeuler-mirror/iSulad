@@ -15,15 +15,15 @@
 #ifndef DAEMON_COMMON_CGROUP_H
 #define DAEMON_COMMON_CGROUP_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
 #include <isula_libutils/log.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define CGROUP_VERSION_1 1
 #define CGROUP_VERSION_2 2
