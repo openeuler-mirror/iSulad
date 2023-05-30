@@ -1399,8 +1399,10 @@ static int create_resources_json_file(const char *workdir, const shim_client_cgr
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     __isula_auto_free parser_error perr = NULL;
     __isula_auto_free char *data = NULL;
+    int nret = 0;
 
-    if (snprintf(fname, fname_size, RESOURCE_FNAME_FORMATS, workdir) < 0) {
+    nret = snprintf(fname, fname_size, RESOURCE_FNAME_FORMATS, workdir);
+    if (nret < 0 || (size_t)nret >= fname_size) {
         ERROR("Failed make resources.json full path");
         return -1;
     }
@@ -1432,15 +1434,15 @@ int rt_isula_update(const char *id, const char *runtime, const rt_update_params_
     const char *opts[2] = { 0 };
     shim_client_cgroup_resources *cr = NULL;
 
-    if (id == NULL || runtime == NULL || params == NULL) {
+    if (id == NULL || runtime == NULL || params == NULL || params->state == NULL || strlen(params->state) == 0) {
         ERROR("Nullptr arguments not allowed");
         return -1;
     }
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s/update", params->state, id);
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
         ERROR("Failed join update full path");
-        return ret;
+        return -1;
     }
 
     ret = util_mkdir_p(workdir, DEFAULT_SECURE_DIRECTORY_MODE);
