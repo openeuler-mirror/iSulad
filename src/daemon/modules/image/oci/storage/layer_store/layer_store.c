@@ -1715,12 +1715,13 @@ static int load_layers_from_json_files()
 
         // check complete
         if (tl->slayer->incompelte) {
+            // item and tl will free after this function
             if (do_delete_layer(tl->slayer->id) != 0) {
                 ERROR("delete layer: %s failed", tl->slayer->id);
                 ret = -1;
                 goto unlock_out;
             }
-            should_save = true;
+            continue;
         }
 
         if (should_save && save_layer(tl) != 0) {
