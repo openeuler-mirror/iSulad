@@ -814,7 +814,6 @@ realexec:
     close(exec_fd[1]);
     close(shim_stdout_pipe[1]);
     num = util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
-    close(exec_fd[0]);
     if (num > 0) {
         ERROR("Exec failed: %s", exec_buff);
         ret = -1;
@@ -839,13 +838,14 @@ realexec:
         goto out;
     }
     ret = util_read_nointr(shim_stdout_pipe[0], exit_code, sizeof(int));
-    close(shim_stdout_pipe[0]);
     if (ret <= 0) {
         *exit_code = 137;
     }
     ret = 0;
 
 out:
+    close(exec_fd[0]);
+    close(shim_stdout_pipe[0]);
     if (ret != 0) {
         show_shim_runtime_errlog(workdir);
         if (timeout <= 0) {
