@@ -500,8 +500,8 @@ static int status_string_to_int(const char *status)
 static int runtime_call_status(const char *workdir, const char *runtime, const char *id,
                                struct runtime_container_status_info *ecsi)
 {
-    char *stdout = NULL;
-    char *stderr = NULL;
+    char *stdout_msg = NULL;
+    char *stderr_msg = NULL;
     oci_runtime_state *state = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error perr = NULL;
@@ -511,19 +511,19 @@ static int runtime_call_status(const char *workdir, const char *runtime, const c
 
     runtime_exec_info_init(&rei, workdir, runtime, "state", NULL, 0, id, params, PARAM_NUM);
 
-    if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout, &stderr)) {
-        ERROR("call runtime status failed: %s", stderr);
+    if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout_msg, &stderr_msg)) {
+        ERROR("call runtime status failed: %s", stderr_msg);
         ret = -1;
         goto out;
     }
 
-    if (stdout == NULL) {
-        ERROR("call runtime status no stdout");
+    if (stdout_msg == NULL) {
+        ERROR("call runtime status no stdout_msg");
         ret = -1;
         goto out;
     }
 
-    state = oci_runtime_state_parse_data(stdout, &ctx, &perr);
+    state = oci_runtime_state_parse_data(stdout_msg, &ctx, &perr);
     if (state == NULL) {
         ERROR("call runtime status parse json failed");
         ret = -1;
@@ -540,8 +540,8 @@ static int runtime_call_status(const char *workdir, const char *runtime, const c
 
 out:
     free_oci_runtime_state(state);
-    UTIL_FREE_AND_SET_NULL(stdout);
-    UTIL_FREE_AND_SET_NULL(stderr);
+    UTIL_FREE_AND_SET_NULL(stdout_msg);
+    UTIL_FREE_AND_SET_NULL(stderr_msg);
     UTIL_FREE_AND_SET_NULL(perr);
     return ret;
 }
@@ -549,8 +549,8 @@ out:
 static int runtime_call_stats(const char *workdir, const char *runtime, const char *id,
                               struct runtime_container_resources_stats_info *info)
 {
-    char *stdout = NULL;
-    char *stderr = NULL;
+    char *stdout_msg = NULL;
+    char *stderr_msg = NULL;
     shim_client_runtime_stats *stats = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error perr = NULL;
@@ -561,19 +561,19 @@ static int runtime_call_stats(const char *workdir, const char *runtime, const ch
 
     runtime_exec_info_init(&rei, workdir, runtime, "events", opts, 1, id, params, PARAM_NUM);
 
-    if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout, &stderr)) {
-        ERROR("call runtime events --stats failed: %s", stderr);
+    if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout_msg, &stderr_msg)) {
+        ERROR("call runtime events --stats failed: %s", stderr_msg);
         ret = -1;
         goto out;
     }
 
-    if (stdout == NULL) {
-        ERROR("call runtime events --stats no stdout");
+    if (stdout_msg == NULL) {
+        ERROR("call runtime events --stats no stdout_msg");
         ret = -1;
         goto out;
     }
 
-    stats = shim_client_runtime_stats_parse_data(stdout, &ctx, &perr);
+    stats = shim_client_runtime_stats_parse_data(stdout_msg, &ctx, &perr);
     if (stats == NULL) {
         ERROR("call runtime events --stats parse json failed");
         ret = -1;
@@ -600,8 +600,8 @@ static int runtime_call_stats(const char *workdir, const char *runtime, const ch
 
 out:
     free_shim_client_runtime_stats(stats);
-    UTIL_FREE_AND_SET_NULL(stdout);
-    UTIL_FREE_AND_SET_NULL(stderr);
+    UTIL_FREE_AND_SET_NULL(stdout_msg);
+    UTIL_FREE_AND_SET_NULL(stderr_msg);
     UTIL_FREE_AND_SET_NULL(perr);
     return ret;
 }
@@ -610,27 +610,27 @@ static int runtime_call_simple(const char *workdir, const char *runtime, const c
                                size_t opts_len, const char *id, handle_output_callback_t cb)
 {
     runtime_exec_info rei = { 0 };
-    char *stdout = NULL;
-    char *stderr = NULL;
+    char *stdout_msg = NULL;
+    char *stderr_msg = NULL;
     int ret = 0;
     char *params[PARAM_NUM] = { 0 };
 
     runtime_exec_info_init(&rei, workdir, runtime, subcmd, opts, opts_len, id, params, PARAM_NUM);
-    if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout, &stderr)) {
-        ERROR("call runtime %s failed stderr %s", subcmd, stderr);
+    if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout_msg, &stderr_msg)) {
+        ERROR("call runtime %s failed stderr %s", subcmd, stderr_msg);
         ret = -1;
         // additional handler for the stderr,
         // this intend to change the ret val of this function
         // for example, if output string contains some specific content,
         // we consider the runtime call simple succeeded,
         // even if the process exit with failure.
-        if (stderr != NULL && cb != NULL) {
-            ret = cb(stderr);
+        if (stderr_msg != NULL && cb != NULL) {
+            ret = cb(stderr_msg);
         }
     }
 
-    UTIL_FREE_AND_SET_NULL(stdout);
-    UTIL_FREE_AND_SET_NULL(stderr);
+    UTIL_FREE_AND_SET_NULL(stdout_msg);
+    UTIL_FREE_AND_SET_NULL(stderr_msg);
     return ret;
 }
 
@@ -1399,8 +1399,10 @@ static int create_resources_json_file(const char *workdir, const shim_client_cgr
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     __isula_auto_free parser_error perr = NULL;
     __isula_auto_free char *data = NULL;
+    int nret = 0;
 
-    if (snprintf(fname, fname_size, RESOURCE_FNAME_FORMATS, workdir) < 0) {
+    nret = snprintf(fname, fname_size, RESOURCE_FNAME_FORMATS, workdir);
+    if (nret < 0 || (size_t)nret >= fname_size) {
         ERROR("Failed make resources.json full path");
         return -1;
     }
@@ -1432,15 +1434,15 @@ int rt_isula_update(const char *id, const char *runtime, const rt_update_params_
     const char *opts[2] = { 0 };
     shim_client_cgroup_resources *cr = NULL;
 
-    if (id == NULL || runtime == NULL || params == NULL) {
+    if (id == NULL || runtime == NULL || params == NULL || params->state == NULL || strlen(params->state) == 0) {
         ERROR("Nullptr arguments not allowed");
         return -1;
     }
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s/update", params->state, id);
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
         ERROR("Failed join update full path");
-        return ret;
+        return -1;
     }
 
     ret = util_mkdir_p(workdir, DEFAULT_SECURE_DIRECTORY_MODE);
