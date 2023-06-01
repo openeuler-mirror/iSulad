@@ -44,8 +44,6 @@
 #define DEFAULT_IO_COPY_BUF (16 * 1024)
 #define DEFAULT_LOG_FILE_SIZE (4 * 1024)
 
-extern int g_log_fd;
-
 static shim_client_process_state *load_process()
 {
     parser_error err = NULL;
@@ -53,7 +51,7 @@ static shim_client_process_state *load_process()
 
     p_state = shim_client_process_state_parse_file("process.json", NULL, &err);
     if (p_state == NULL) {
-        write_message(g_log_fd, ERR_MSG, "parse process state failed");
+        write_message(ERR_MSG, "parse process state failed");
     }
     /* "err" will definitely be allocated memory in the function above */
     free(err);
@@ -68,7 +66,7 @@ static int open_fifo_noblock(const char *path, mode_t mode)
     /* By default, We consider that the file has been created by isulad */
     fd = open_no_inherit(path, mode | O_NONBLOCK, -1);
     if (fd < 0) {
-        write_message(g_log_fd, ERR_MSG, "open fifo file failed:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "open fifo file failed:%d", SHIM_SYS_ERR(errno));
         return -1;
     }
 
@@ -107,7 +105,7 @@ static int receive_fd(int sock)
      */
     int ret = recvmsg(sock, &msg, 0);
     if (ret <= 0) {
-        write_message(g_log_fd, ERR_MSG, "get console fd failed:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "get console fd failed:%d", SHIM_SYS_ERR(errno));
         free(cmptr);
         return -1;
     }
@@ -201,7 +199,7 @@ static int stdin_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *d
     w_count = write_nointr_in_total(*fd_to, p->buf, r_count);
     if (w_count < 0) {
         /* When any error occurs, set the write fd -1  */
-        write_message(g_log_fd, WARN_MSG, "write in_fd %d error:%d", *fd_to, SHIM_SYS_ERR(errno));
+        write_message(WARN_MSG, "write in_fd %d error:%d", *fd_to, SHIM_SYS_ERR(errno));
         close(*fd_to);
         *fd_to = -1;
     }
@@ -243,7 +241,7 @@ static int stdout_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     w_count = write_nointr_in_total(p->isulad_io->out, p->buf, r_count);
     if (w_count < 0) {
         /* When any error occurs, set the write fd -1  */
-        write_message(g_log_fd, WARN_MSG, "write out_fd %d error:%d", p->isulad_io->out, SHIM_SYS_ERR(errno));
+        write_message(WARN_MSG, "write out_fd %d error:%d", p->isulad_io->out, SHIM_SYS_ERR(errno));
         close(p->isulad_io->out);
         p->isulad_io->out = -1;
     }
@@ -285,7 +283,7 @@ static int stderr_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     w_count = write_nointr_in_total(p->isulad_io->err, p->buf, r_count);
     if (w_count < 0) {
         /* When any error occurs, set the write fd -1  */
-        write_message(g_log_fd, WARN_MSG, "write err_fd %d error:%d", p->isulad_io->err, SHIM_SYS_ERR(errno));
+        write_message(WARN_MSG, "write err_fd %d error:%d", p->isulad_io->err, SHIM_SYS_ERR(errno));
         close(p->isulad_io->err);
         p->isulad_io->err = -1;
     }
@@ -333,13 +331,13 @@ static int task_console_accept(int fd, uint32_t events, void *cbdata, struct epo
 
     conn_fd = accept(p->listen_fd, NULL, NULL);
     if (conn_fd < 0) {
-        write_message(g_log_fd, ERR_MSG, "accept from fd %d failed:%d", p->listen_fd, SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "accept from fd %d failed:%d", p->listen_fd, SHIM_SYS_ERR(errno));
         goto out;
     }
 
     p->recv_fd = receive_fd(conn_fd);
     if (check_fd(p->recv_fd) != true) {
-        write_message(g_log_fd, ERR_MSG, "check console fd failed");
+        write_message(ERR_MSG, "check console fd failed");
         goto out;
     }
 
@@ -348,19 +346,19 @@ static int task_console_accept(int fd, uint32_t events, void *cbdata, struct epo
     // p->isulad_io->in ----> p->recv_fd
     ret = epoll_loop_add_handler(descr, p->isulad_io->in, stdin_cb, p);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "add in fd %d to epoll loop failed:%d", p->isulad_io->in, SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "add in fd %d to epoll loop failed:%d", p->isulad_io->in, SHIM_SYS_ERR(errno));
         goto out;
     }
     // p->recv_fd ----> p->isulad_io->out
     ret = epoll_loop_add_handler(descr, p->recv_fd, stdout_cb, p);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "add recv_fd fd %d to epoll loop failed:%d", p->recv_fd, SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "add recv_fd fd %d to epoll loop failed:%d", p->recv_fd, SHIM_SYS_ERR(errno));
         goto out;
     }
     // p->isulad_io->resize ----> p->recv_fd
     ret = epoll_loop_add_handler(descr, p->isulad_io->resize, resize_cb, p);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "add resize fd %d to epoll loop failed:%d", p->isulad_io->resize, SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "add resize fd %d to epoll loop failed:%d", p->isulad_io->resize, SHIM_SYS_ERR(errno));
         goto out;
     }
 
@@ -416,7 +414,7 @@ static stdio_t *initialize_io(process_t *p)
     /* don't open resize pipe */
     if ((pipe2(stdio_fd[0], O_CLOEXEC | O_NONBLOCK) != 0) || (pipe2(stdio_fd[1], O_CLOEXEC | O_NONBLOCK) != 0) ||
         (pipe2(stdio_fd[2], O_CLOEXEC | O_NONBLOCK) != 0)) {
-        write_message(g_log_fd, ERR_MSG, "open pipe failed when init io:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "open pipe failed when init io:%d", SHIM_SYS_ERR(errno));
         goto failure;
     }
 
@@ -481,7 +479,7 @@ static int console_init(process_t *p, struct epoll_descr *descr)
 
     fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
-        write_message(g_log_fd, ERR_MSG, "create socket failed:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "create socket failed:%d", SHIM_SYS_ERR(errno));
         goto failure;
     }
 
@@ -491,13 +489,13 @@ static int console_init(process_t *p, struct epoll_descr *descr)
 
     ret = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
     if (ret < 0) {
-        write_message(g_log_fd, ERR_MSG, "bind console fd failed:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "bind console fd failed:%d", SHIM_SYS_ERR(errno));
         goto failure;
     }
 
     ret = listen(fd, 2);
     if (ret < 0) {
-        write_message(g_log_fd, ERR_MSG, "listen console fd failed:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "listen console fd failed:%d", SHIM_SYS_ERR(errno));
         goto failure;
     }
 
@@ -505,7 +503,7 @@ static int console_init(process_t *p, struct epoll_descr *descr)
 
     ret = epoll_loop_add_handler(descr, p->listen_fd, task_console_accept, p);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "add listen_fd fd %d to epoll loop failed:%d",  p->listen_fd, SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "add listen_fd fd %d to epoll loop failed:%d",  p->listen_fd, SHIM_SYS_ERR(errno));
         goto failure;
     }
 
@@ -523,7 +521,7 @@ static int open_terminal_io(process_t *p, struct epoll_descr *descr)
 
     ret = new_temp_console_path(p);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "get temp console sock path failed");
+        write_message(ERR_MSG, "get temp console sock path failed");
         return SHIM_ERR;
     }
 
@@ -545,19 +543,19 @@ static int open_generic_io(process_t *p, struct epoll_descr *descr)
     // p->isulad_io->in ----> p->shim_io->in
     ret = epoll_loop_add_handler(descr, p->isulad_io->in, stdin_cb, p);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "add in fd %d to epoll loop failed:%d", p->isulad_io->in, SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "add in fd %d to epoll loop failed:%d", p->isulad_io->in, SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
     // p->shim_io->out ----> p->isulad_io->out
     ret = epoll_loop_add_handler(descr, p->shim_io->out, stdout_cb, p);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "add  out fd %d to epoll loop failed:%d", p->shim_io->out, SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "add  out fd %d to epoll loop failed:%d", p->shim_io->out, SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
     // p->shim_io->err ----> p->isulad_io->err
     ret = epoll_loop_add_handler(descr, p->shim_io->err, stderr_cb, p);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "add err fd %d to epoll loop failed:%d", p->shim_io->err, SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "add err fd %d to epoll loop failed:%d", p->shim_io->err, SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
 
@@ -608,14 +606,14 @@ static void *io_epoll_loop(void *data)
 
     ret = epoll_loop_open(&descr);
     if (ret != 0) {
-        write_message(g_log_fd, ERR_MSG, "epoll loop open failed:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "epoll loop open failed:%d", SHIM_SYS_ERR(errno));
         exit(EXIT_FAILURE);
     }
 
     // sync fd: epoll loop will exit when recive sync fd event.
     ret = epoll_loop_add_handler(&descr, p->sync_fd, sync_exit_cb, p);
     if (ret != 0) {
-        write_message(g_log_fd, ERR_MSG, "add sync_fd %d to epoll loop failed:%d", p->sync_fd, SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "add sync_fd %d to epoll loop failed:%d", p->sync_fd, SHIM_SYS_ERR(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -625,7 +623,7 @@ static void *io_epoll_loop(void *data)
         ret = open_generic_io(p, &descr);
     }
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "open io failed:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "open io failed:%d", SHIM_SYS_ERR(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -633,7 +631,7 @@ static void *io_epoll_loop(void *data)
 
     ret = epoll_loop(&descr, -1);
     if (ret != 0) {
-        write_message(g_log_fd, ERR_MSG, "epoll loop failed");
+        write_message(ERR_MSG, "epoll loop failed");
         exit(EXIT_FAILURE);
     }
 
@@ -649,7 +647,7 @@ static void *io_epoll_loop(void *data)
     if (fd_out > 0) {
         ret = set_non_block(fd_out);
         if (ret != SHIM_OK) {
-            write_message(g_log_fd, ERR_MSG, "set fd %d non_block failed:%d", fd_out, SHIM_SYS_ERR(errno));
+            write_message(ERR_MSG, "set fd %d non_block failed:%d", fd_out, SHIM_SYS_ERR(errno));
             exit(EXIT_FAILURE);
         }
 
@@ -664,7 +662,7 @@ static void *io_epoll_loop(void *data)
     if (fd_err > 0) {
         ret = set_non_block(fd_err);
         if (ret != SHIM_OK) {
-            write_message(g_log_fd, ERR_MSG, "set fd %d non_block failed:%d", fd_err, SHIM_SYS_ERR(errno));
+            write_message(ERR_MSG, "set fd %d non_block failed:%d", fd_err, SHIM_SYS_ERR(errno));
             exit(EXIT_FAILURE);
         }
 
@@ -696,12 +694,12 @@ static int terminal_init(log_terminal **terminal, shim_client_process_state *p_s
 
     log_term = util_common_calloc_s(sizeof(log_terminal));
     if (log_term == NULL) {
-        write_message(g_log_fd, ERR_MSG, "Failed to calloc log_terminal");
+        write_message(ERR_MSG, "Failed to calloc log_terminal");
         goto clean_out;
     }
 
     if (pthread_rwlock_init(&log_term->log_terminal_rwlock, NULL) != 0) {
-        write_message(g_log_fd, ERR_MSG, "Failed to init isulad conf rwlock");
+        write_message(ERR_MSG, "Failed to init isulad conf rwlock");
         goto clean_out;
     }
 
@@ -777,25 +775,25 @@ static int init_isulad_stdio(process_t *p)
 
     ret = open_isulad_fd(STDID_IN, p->state->isulad_stdin, &p->isulad_io->in);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "Failed to open in isulad fd: %s",  p->state->isulad_stdin);
+        write_message(ERR_MSG, "Failed to open in isulad fd: %s",  p->state->isulad_stdin);
         goto failure;
     }
 
     ret = open_isulad_fd(STDID_OUT, p->state->isulad_stdout, &p->isulad_io->out);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "Failed to open out isulad fd: %s",  p->state->isulad_stdout);
+        write_message(ERR_MSG, "Failed to open out isulad fd: %s",  p->state->isulad_stdout);
         goto failure;
     }
 
     ret = open_isulad_fd(STDID_ERR, p->state->isulad_stderr, &p->isulad_io->err);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "Failed to open err isulad fd: %s",  p->state->isulad_stderr);
+        write_message(ERR_MSG, "Failed to open err isulad fd: %s",  p->state->isulad_stderr);
         goto failure;
     }
 
     ret = open_isulad_fd(EXEC_RESIZE, p->state->resize_fifo, &p->isulad_io->resize);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "Failed to open resize isulad fd: %s",  p->state->resize_fifo);
+        write_message(ERR_MSG, "Failed to open resize isulad fd: %s",  p->state->resize_fifo);
         goto failure;
     }
     return SHIM_OK;
@@ -862,7 +860,7 @@ process_t *new_process(char *id, char *bundle, char *runtime)
 
     p->sync_fd = eventfd(0, EFD_CLOEXEC);
     if (p->sync_fd < 0) {
-        write_message(g_log_fd, ERR_MSG, "Failed to create eventfd: %s", strerror(errno));
+        write_message(ERR_MSG, "Failed to create eventfd: %s", strerror(errno));
         goto failure;
     }
 
@@ -1001,7 +999,7 @@ static void process_delete(process_t *p)
 
     cwd = getcwd(NULL, 0);
     if (cwd == NULL) {
-        write_message(g_log_fd, ERR_MSG, "get cwd failed when do process delete");
+        write_message(ERR_MSG, "get cwd failed when do process delete");
         return;
     }
     int nret = snprintf(log_path, PATH_MAX, "%s/log.json", cwd);
@@ -1099,13 +1097,13 @@ int create_process(process_t *p)
     int nread = -1;
 
     if (pipe2(exec_fd, O_CLOEXEC) != 0) {
-        write_message(g_log_fd, ERR_MSG, "create pipe failed when create process:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "create pipe failed when create process:%d", SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
 
     pid_t pid = fork();
     if (pid == (pid_t) -1) {
-        write_message(g_log_fd, ERR_MSG, "fork failed when create process:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "fork failed when create process:%d", SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
 
@@ -1125,7 +1123,7 @@ int create_process(process_t *p)
     }
     nread = read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
     if (nread > 0) {
-        write_message(g_log_fd, ERR_MSG, "runtime error");
+        write_message(ERR_MSG, "runtime error");
         ret = SHIM_ERR;
         goto out;
     }
@@ -1133,7 +1131,7 @@ int create_process(process_t *p)
     /* block to wait runtime pid exit */
     ret = waitpid(pid, NULL, 0);
     if (ret != pid) {
-        write_message(g_log_fd, ERR_MSG, "wait runtime failed:%d", SHIM_SYS_ERR(errno));
+        write_message(ERR_MSG, "wait runtime failed:%d", SHIM_SYS_ERR(errno));
         ret = SHIM_ERR;
         goto out;
     }
@@ -1141,7 +1139,7 @@ int create_process(process_t *p)
     /* save runtime pid */
     data = read_text_file("pid");
     if (data == NULL) {
-        write_message(g_log_fd, ERR_MSG, "read pid of runtime failed");
+        write_message(ERR_MSG, "read pid of runtime failed");
         goto out;
     }
     int ctr_pid = atoi(data);
@@ -1204,12 +1202,12 @@ static int waitpid_with_timeout(int ctr_pid,  int *status, const uint64_t timeou
     if (*status == CONTAINER_ACTION_REBOOT) {
         nret = setenv("CONTAINER_ACTION", "reboot", 1);
         if (nret != SHIM_OK) {
-            write_message(g_log_fd, WARN_MSG, "set reboot action failed:%d", SHIM_SYS_ERR(errno));
+            write_message(WARN_MSG, "set reboot action failed:%d", SHIM_SYS_ERR(errno));
         }
     } else if (*status == CONTAINER_ACTION_SHUTDOWN) {
         nret = setenv("CONTAINER_ACTION", "shutdown", 1);
         if (nret != SHIM_OK) {
-            write_message(g_log_fd, WARN_MSG, "set shutdown action failed:%d", SHIM_SYS_ERR(errno));
+            write_message(WARN_MSG, "set shutdown action failed:%d", SHIM_SYS_ERR(errno));
         }
     }
     return SHIM_OK;
@@ -1233,12 +1231,12 @@ static int wait_container_process_with_timeout(process_t *p, const uint64_t time
             if (*status == CONTAINER_ACTION_REBOOT) {
                 ret = setenv("CONTAINER_ACTION", "reboot", 1);
                 if (ret != SHIM_OK) {
-                    write_message(g_log_fd, WARN_MSG, "set reboot action failed:%d", SHIM_SYS_ERR(errno));
+                    write_message(WARN_MSG, "set reboot action failed:%d", SHIM_SYS_ERR(errno));
                 }
             } else if (*status == CONTAINER_ACTION_SHUTDOWN) {
                 ret = setenv("CONTAINER_ACTION", "shutdown", 1);
                 if (ret != SHIM_OK) {
-                    write_message(g_log_fd, WARN_MSG, "set shutdown action failed:%d", SHIM_SYS_ERR(errno));
+                    write_message(WARN_MSG, "set shutdown action failed:%d", SHIM_SYS_ERR(errno));
                 }
             }
             return SHIM_OK;
@@ -1268,7 +1266,7 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const
         // kill container process to ensure process_kill_all effective
         nret = kill(p->ctr_pid, SIGKILL);
         if (nret < 0 && errno != ESRCH) {
-            write_message(g_log_fd, ERR_MSG, "Can not kill process (pid=%d) with SIGKILL", p->ctr_pid);
+            write_message(ERR_MSG, "Can not kill process (pid=%d) with SIGKILL", p->ctr_pid);
             return SHIM_ERR;
         }
     }
@@ -1278,7 +1276,7 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const
     // wait atmost 120 seconds
     DO_RETRY_CALL(120, 1000000, nret, try_wait_all_child);
     if (nret != 0) {
-        write_message(g_log_fd, ERR_MSG, "Failed to wait all child after 120 seconds");
+        write_message(ERR_MSG, "Failed to wait all child after 120 seconds");
     }
 
     process_delete(p);
@@ -1288,13 +1286,13 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const
 
     if (p->sync_fd > 0) {
         if (eventfd_write(p->sync_fd, 1)) {
-            write_message(g_log_fd, ERR_MSG, "Failed to write sync fd");
+            write_message(ERR_MSG, "Failed to write sync fd");
         }
     }
 
     nret = pthread_join(tid_epoll, NULL);
     if (nret != 0) {
-        write_message(g_log_fd, ERR_MSG, "Failed to join epoll loop thread");
+        write_message(ERR_MSG, "Failed to join epoll loop thread");
     }
 
     close(p->sync_fd);
@@ -1306,7 +1304,7 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const
     }
 
     if (ret == SHIM_ERR_TIMEOUT) {
-        write_message(g_log_fd, INFO_MSG, "Wait %d timeout", p->ctr_pid);
+        write_message(INFO_MSG, "Wait %d timeout", p->ctr_pid);
         return SHIM_ERR_TIMEOUT;
     }
 
