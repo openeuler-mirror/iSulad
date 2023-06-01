@@ -44,6 +44,15 @@ function exec_runc_test()
     isula exec -it $container_name date
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to exec date" && ((ret++))
 
+    isula exec -ti $container_name /bin/sh -c 'exit 1'
+    [[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - exit code should be 1" && ((ret++))
+
+    isula exec -ti $container_name /bin/sh -c 'exit 2'
+    [[ $? -ne 2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - exit code should be 2" && ((ret++))
+
+    isula exec -tid $container_name /bin/sh -c 'exit 2'
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - exit code should be 0" && ((ret++))
+
     ls /var/run/isulad/runc/${ID}/exec/
     ls /var/run/isulad/runc/${ID}/exec/ | wc -l | grep 0
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual dir after success exec" && ((ret++))
