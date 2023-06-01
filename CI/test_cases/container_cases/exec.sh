@@ -36,6 +36,18 @@ function exec_workdir()
     isula exec -ti --workdir /workdir cont_workdir pwd | grep "/workdir"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - workdir is not /workdir failed" && ((ret++))
 
+    isula exec -ti cont_workdir sh -c "echo $HOME | grep '/root'"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - HOME env is not /root failed" && ((ret++))
+
+    isula exec -ti cont_workdir /bin/sh -c 'exit 1'
+    [[ $? -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - exit code should be 1" && ((ret++))
+
+    isula exec -ti cont_workdir /bin/sh -c 'exit 2'
+    [[ $? -ne 2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - exit code should be 2" && ((ret++))
+
+    isula exec -tid cont_workdir /bin/sh -c 'exit 2'
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - exit code should be 0" && ((ret++))
+
     isula rm -f `isula ps -a -q`
 
     return ${ret}
