@@ -707,7 +707,7 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
                        int *exit_code, const char* timeout, int* shim_exit_code)
 {
     pid_t pid = 0;
-    int exec_fd[2] = { -1, -1 };
+    int shim_stderr_pipe[2] = { -1, -1 };
     int shim_stdout_pipe[2] = { -1, -1 };
     int num = 0;
     int ret = 0;
@@ -733,21 +733,21 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
         return -1;
     }
 
-    if (pipe2(exec_fd, O_CLOEXEC) != 0) {
-        ERROR("Failed to create pipe for shim create");
+    if (pipe2(shim_stderr_pipe, O_CLOEXEC) != 0) {
+        ERROR("Failed to create pipe for shim stderr");
         return -1;
     }
 
     if (pipe2(shim_stdout_pipe, O_CLOEXEC) != 0) {
-        ERROR("Failed to create pipe for shim exit code");
+        ERROR("Failed to create pipe for shim stdout");
         return -1;
     }
 
     pid = fork();
     if (pid < 0) {
         ERROR("Failed fork for shim parent %s", strerror(errno));
-        close(exec_fd[0]);
-        close(exec_fd[1]);
+        close(shim_stderr_pipe[0]);
+        close(shim_stderr_pipe[1]);
         close(shim_stdout_pipe[0]);
         close(shim_stdout_pipe[1]);
         return -1;
@@ -755,60 +755,64 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
 
     if (pid == (pid_t)0) {
         if (chdir(workdir) < 0) {
-            (void)dprintf(exec_fd[1], "%s: failed chdir to %s", id, workdir);
+            (void)dprintf(shim_stderr_pipe[1], "%s: failed chdir to %s", id, workdir);
             exit(EXIT_FAILURE);
         }
 
         if (fg) {
+            // child process, dup2 shim_stdout_pipe[1] to STDOUT
+            if (dup2(shim_stdout_pipe[1], STDOUT_FILENO) < 0) {
+                (void)dprintf(shim_stderr_pipe[1], "Dup stdout fd error: %s", strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+            // child process, dup2 shim_stderr_pipe[1] to STDERR
+            if (dup2(shim_stderr_pipe[1], STDERR_FILENO) < 0) {
+                (void)dprintf(shim_stderr_pipe[1], "Dup stderr fd error: %s", strerror(errno));
+                exit(EXIT_FAILURE);
+            }
             goto realexec;
         }
 
         // clear NOTIFY_SOCKET from the env to adapt runc create
         if (unsetenv("NOTIFY_SOCKET") != 0) {
-            (void)dprintf(exec_fd[1], "%s: unset env NOTIFY_SOCKET failed %s", id, strerror(errno));
+            (void)dprintf(shim_stderr_pipe[1], "%s: unset env NOTIFY_SOCKET failed %s", id, strerror(errno));
             exit(EXIT_FAILURE);
         }
 
         pid = fork();
         if (pid < 0) {
-            (void)dprintf(exec_fd[1], "%s: fork shim-process failed %s", id, strerror(errno));
+            (void)dprintf(shim_stderr_pipe[1], "%s: fork shim-process failed %s", id, strerror(errno));
             _exit(EXIT_FAILURE);
         }
         if (pid != 0) {
             if (file_write_int(fpid, pid) != 0) {
-                (void)dprintf(exec_fd[1], "%s: write %s with %d failed", id, fpid, pid);
+                (void)dprintf(shim_stderr_pipe[1], "%s: write %s with %d failed", id, fpid, pid);
             }
             _exit(EXIT_SUCCESS);
         }
 
 realexec:
         /* real shim process. */
-        close(exec_fd[0]);
+        close(shim_stderr_pipe[0]);
         close(shim_stdout_pipe[0]);
-        // child process, dup2 shim_stdout_pipe[1] to STDOUT
-        if (dup2(shim_stdout_pipe[1], STDOUT_FILENO) < 0) {
-            (void)dprintf(exec_fd[1], "Dup fd error: %s", strerror(errno));
-            exit(EXIT_FAILURE);
-        }
         
         if (setsid() < 0) {
-            (void)dprintf(exec_fd[1], "%s: failed setsid for process %d", id, getpid());
+            (void)dprintf(shim_stderr_pipe[1], "%s: failed setsid for process %d", id, getpid());
             exit(EXIT_FAILURE);
         }
-        int ignore_fd[2] = {-1, -1};
-        ignore_fd[0] = exec_fd[1];
-        ignore_fd[1] = shim_stdout_pipe[1];
-        if (util_check_inherited_exclude_fds(true, ignore_fd, 2) != 0) {
-            (void)dprintf(exec_fd[1], "close inherited fds failed");
+
+        if (util_check_inherited(true, shim_stderr_pipe[1]) != 0) {
+            (void)dprintf(shim_stderr_pipe[1], "close inherited fds failed");
+            exit(EXIT_FAILURE);
         }
 
         execvp(SHIM_BINARY, (char * const *)params);
-        (void)dprintf(exec_fd[1], "exec failed: %s", strerror(errno));
+        (void)dprintf(shim_stderr_pipe[1], "exec failed: %s", strerror(errno));
     }
 
-    close(exec_fd[1]);
+    close(shim_stderr_pipe[1]);
     close(shim_stdout_pipe[1]);
-    num = util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
+    num = util_read_nointr(shim_stderr_pipe[0], exec_buff, sizeof(exec_buff) - 1);
     if (num > 0) {
         ERROR("Exec failed: %s", exec_buff);
         ret = -1;
@@ -829,7 +833,14 @@ realexec:
         goto out;
     }
 
+    // exit_code is NULL when command is create.
     if (exit_code == NULL) {
+        goto out;
+    }
+
+    // when exec in background, exit code is shim exit code
+    if (!fg) {
+        *exit_code = *shim_exit_code;
         goto out;
     }
     ret = util_read_nointr(shim_stdout_pipe[0], exit_code, sizeof(int));
@@ -839,7 +850,7 @@ realexec:
     ret = 0;
 
 out:
-    close(exec_fd[0]);
+    close(shim_stderr_pipe[0]);
     close(shim_stdout_pipe[0]);
     if (ret != 0) {
         show_shim_runtime_errlog(workdir);
@@ -1146,19 +1157,63 @@ err_out:
     return NULL;
 }
 
+static int preparation_exec(const char *id, const char *runtime, const char *workdir, const char *exec_id,
+                            const rt_exec_params_t *params)
+{
+    int ret = 0;
+    size_t runtime_args_len = 0;
+    char resize_fifo_dir[PATH_MAX] = { 0 };
+    const char **runtime_args = NULL;
+    shim_client_process_state p = { 0 };
+    defs_process *process = NULL;
+
+    ret = util_mkdir_p(workdir, DEFAULT_SECURE_DIRECTORY_MODE);
+    if (ret < 0) {
+        ERROR("failed mkdir exec workdir %s", workdir);
+        return -1;
+    }
+
+    ret = snprintf(resize_fifo_dir, sizeof(resize_fifo_dir), "%s/%s", workdir, RESIZE_FIFO_NAME);
+    if (ret < 0) {
+        ERROR("failed join resize fifo full path");
+        return -1;
+    }
+
+    ret = console_fifo_create(resize_fifo_dir);
+    if (ret < 0) {
+        ERROR("failed create resize fifo file");
+        return -1;
+    }
+
+    process = params->spec;
+    runtime_args_len = get_runtime_args(runtime, &runtime_args);
+
+    p.exec = true;
+    p.isulad_stdin = (char *)params->console_fifos[0];
+    p.isulad_stdout = (char *)params->console_fifos[1];
+    p.isulad_stderr = (char *)params->console_fifos[2];
+    p.resize_fifo = resize_fifo_dir;
+    p.runtime_args = (char **)runtime_args;
+    p.runtime_args_len = runtime_args_len;
+    copy_process(&p, process);
+
+    ret = create_process_json_file(workdir, &p);
+    if (ret != 0) {
+        ERROR("%s: failed create exec json file", id);
+        return -1;
+    }
+
+    return 0;
+}
+
 int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *params, int *exit_code)
 {
-    char *exec_id = NULL;
-    defs_process *process = NULL;
-    const char **runtime_args = NULL;
-    size_t runtime_args_len = 0;
-    char workdir[PATH_MAX] = { 0 };
-    char resize_fifo_dir[PATH_MAX] = { 0 };
     const char *cmd = NULL;
+    char *exec_id = NULL;
     int ret = 0;
-    char bundle[PATH_MAX] = { 0 };
     int pid = 0;
-    shim_client_process_state p = { 0 };
+    char bundle[PATH_MAX] = { 0 };
+    char workdir[PATH_MAX] = { 0 };
     char *timeout = NULL;
     int shim_exit_code = 0;
 
@@ -1166,8 +1221,6 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
         ERROR("nullptr arguments not allowed");
         return -1;
     }
-    process = params->spec;
-    runtime_args_len = get_runtime_args(runtime, &runtime_args);
 
     ret = snprintf(bundle, sizeof(bundle), "%s/%s", params->rootpath, id);
     if (ret < 0) {
@@ -1191,36 +1244,10 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
         ERROR("failed join exec full path");
         goto out;
     }
-    ret = util_mkdir_p(workdir, DEFAULT_SECURE_DIRECTORY_MODE);
-    if (ret < 0) {
-        ERROR("failed mkdir exec workdir %s", workdir);
-        goto out;
-    }
 
-    ret = snprintf(resize_fifo_dir, sizeof(resize_fifo_dir), "%s/%s", workdir, RESIZE_FIFO_NAME);
-    if (ret < 0) {
-        ERROR("failed join resize fifo full path");
-        goto del_out;
-    }
-
-    ret = console_fifo_create(resize_fifo_dir);
-    if (ret < 0) {
-        ERROR("failed create resize fifo file");
-        goto del_out;
-    }
-
-    p.exec = true;
-    p.isulad_stdin = (char *)params->console_fifos[0];
-    p.isulad_stdout = (char *)params->console_fifos[1];
-    p.isulad_stderr = (char *)params->console_fifos[2];
-    p.resize_fifo = resize_fifo_dir;
-    p.runtime_args = (char **)runtime_args;
-    p.runtime_args_len = runtime_args_len;
-    copy_process(&p, process);
-
-    ret = create_process_json_file(workdir, &p);
+    ret = preparation_exec(id, runtime, workdir, exec_id, params);
     if (ret != 0) {
-        ERROR("%s: failed create exec json file", id);
+        ERROR("%s: failed to preparation for exec %s", id, exec_id);
         goto del_out;
     }
 
