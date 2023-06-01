@@ -214,10 +214,8 @@ static int client_copy_to_container(const struct client_arguments *args, const c
 
     config = get_connect_config(args);
     ret = ops->container.copy_to_container(&request, response, &config);
-    if (ret) {
-        goto out;
-    }
 
+    // archive reader close if copy to container failed
     nret = archive_reader.close(archive_reader.context, &archive_err);
     if (nret < 0) {
         ret = nret;
