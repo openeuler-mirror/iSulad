@@ -442,6 +442,27 @@ out:
     return value;
 }
 
+// by_digest returns the image which matches the specified name.
+static image_t *by_digest(const char *name)
+{
+    digest_image_t *digest_filter_images = NULL;
+    char *digest = NULL;
+    
+    // split digest for image name with digest
+    digest = strrchr(name, '@');
+    if (digest == NULL || util_reg_match(__DIGESTPattern, digest)) {
+        return NULL;
+    }
+    digest++;
+    digest_filter_images = (digest_image_t *)map_search(g_image_store->bydigest, (void *)digest);
+    if (digest_filter_images == NULL) {
+        return NULL;
+    }
+
+    // currently, a digest corresponds to an image, directly returning the first element
+    return linked_list_first_elem(&(digest_filter_images->images_list));
+}
+
 static image_t *lookup(const char *id)
 {
     image_t *value = NULL;
@@ -462,6 +483,12 @@ static image_t *lookup(const char *id)
     }
 
     value = get_image_for_store_by_prefix(id);
+    if (value != NULL) {
+        goto found;
+    }
+
+    // get image by digest
+    value = by_digest(id);
     if (value != NULL) {
         goto found;
     }
