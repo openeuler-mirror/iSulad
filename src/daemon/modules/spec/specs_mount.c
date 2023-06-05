@@ -2765,21 +2765,21 @@ int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2
 
     ret = chown_for_shm(spath, host_spec->user_remap);
     if (ret != 0) {
-        ret = -1;
-        goto out;
+        goto err_out;
     }
 
 #ifdef ENABLE_USERNS_REMAP
     if (change_shm_parent_dirs_owner_for_userns_remap(host_spec, spath) != 0) {
         ERROR("Failed to change shm directory owner for user remap.");
-        ret = -1;
-        goto out;
+        goto err_out;
     }
 #endif
 
-out:
+    return 0;
+
+err_out:
     (void)umount(spath);
-    return ret;
+    return -1;
 }
 
 static bool add_shm_mount(defs_mount ***all_mounts, size_t *all_mounts_len, const char *shm_path)
