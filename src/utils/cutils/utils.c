@@ -253,7 +253,7 @@ int util_sig_parse(const char *sig_name)
 
 void *util_smart_calloc_s(size_t unit_size, size_t count)
 {
-    if (unit_size == 0 ) {
+    if (unit_size == 0) {
         return NULL;
     }
 

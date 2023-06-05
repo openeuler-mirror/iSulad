@@ -105,7 +105,7 @@ static int parser_cb_header_value(http_parser *parser, const char *buf,
                                   size_t len)
 {
     struct parsed_http_message *m = parser->data;
-    
+
     if (m->num_headers == 0) {
         ERROR("Failed to parse header value because headers num is 0");
         return -1;

@@ -25,7 +25,7 @@ int clean_module_init(const isulad_daemon_configs *args)
     if (args->storage_enable_remote_layer) {
         // need to disable cleanup
         // cause cleanup may cleanup local broken RO layer
-        // while this RO layer is valid for remote 
+        // while this RO layer is valid for remote
         return 0;
     }
 

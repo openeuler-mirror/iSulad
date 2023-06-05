@@ -1107,7 +1107,7 @@ driver_remove:
     if (ret != 0) {
         (void)graphdriver_rm_layer(lid);
 #ifdef ENABLE_REMOTE_LAYER_STORE
-        if (g_enable_remote_layer) {
+        if (g_enable_remote_layer && !opts->writable) {
             (void)remote_layer_remove_ro_dir(lid);
         } else {
             (void)layer_store_remove_layer(lid);
@@ -1190,14 +1190,10 @@ static int do_delete_layer(const char *id)
     }
 
 #ifdef ENABLE_REMOTE_LAYER_STORE
-    if (!g_enable_remote_layer) {
-        ret = layer_store_remove_layer(l->slayer->id);
+    if (g_enable_remote_layer && !(l->slayer->writable)) {
+        ret = remote_layer_remove_ro_dir(l->slayer->id);
     } else {
-        if (l->slayer->writable) {
-            ret = layer_store_remove_layer(l->slayer->id);
-        } else {
-            ret = remote_layer_remove_ro_dir(l->slayer->id);
-        }
+        ret = layer_store_remove_layer(l->slayer->id);
     }
 #else
     ret = layer_store_remove_layer(l->slayer->id);
@@ -2165,11 +2161,6 @@ int remote_layer_remove_memory_stores_with_lock(const char *id)
         goto unlock_out;
     }
 
-    if (map_search(g_metadata.by_id, (void *)id) == NULL) {
-        DEBUG("remote layer already removed, don't delete: %s", id);
-        goto unlock_out;
-    }
-
     ret = remove_memory_stores(id);
 
 unlock_out:
@@ -2190,13 +2181,13 @@ static layer_t *load_one_layer_from_json(const char *id)
     nret = snprintf(tmpdir, PATH_MAX, "%s/%s", g_root_dir, id);
     if (nret < 0 || nret >= PATH_MAX) {
         ERROR("Sprintf: %s failed", id);
-        goto free_out;
+        return NULL;
     }
 
     mount_point_path = mountpoint_json_path(id);
     if (mount_point_path == NULL) {
         ERROR("Out of Memory");
-        goto free_out;
+        return NULL;
     }
 
     rpath = layer_json_path(id);

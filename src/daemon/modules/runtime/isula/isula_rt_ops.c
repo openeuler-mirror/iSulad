@@ -795,7 +795,7 @@ realexec:
             (void)dprintf(exec_fd[1], "Dup fd error: %s", strerror(errno));
             exit(EXIT_FAILURE);
         }
-        
+
         if (setsid() < 0) {
             (void)dprintf(exec_fd[1], "%s: failed setsid for process %d", id, getpid());
             exit(EXIT_FAILURE);

@@ -867,7 +867,7 @@ out:
 static int do_create_remote_ro(const char *id, const char *parent, const struct graphdriver *driver,
                                const struct driver_create_opts *create_opts)
 {
-    int ret = 0;
+    int ret = -1;
     int get_err = 0;
     char *ro_symlink = NULL;
     char *ro_home = NULL;
@@ -879,69 +879,51 @@ static int do_create_remote_ro(const char *id, const char *parent, const struct 
     ro_home = util_path_join(driver->home, OVERLAY_RO_DIR);
     if (ro_home == NULL) {
         ERROR("Failed to join ro_home");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     layer_dir = util_path_join(ro_home, id);
     if (layer_dir == NULL) {
-        ERROR("Failed to join layer_dir");
-        ret = -1;
+        ERROR("Failed to join layer dir: %s", id);
         goto out;
     }
 
     ro_symlink = util_path_join(driver->home, id);
     if (ro_symlink == NULL) {
         ERROR("Failed to join ro_symlink");
-        ret = -1;
-        goto out;
-    }
-
-    if (layer_dir == NULL) {
-        ERROR("Failed to join layer dir:%s", id);
-        ret = -1;
         goto out;
     }
 
     if (check_parent_valid(parent, driver) != 0) {
-        ret = -1;
         goto out;
     }
 
     if (util_mkdir_p(layer_dir, 0700) != 0) {
         ERROR("Unable to create layer directory %s.", layer_dir);
-        ret = -1;
         goto out;
     }
 
     // mk symbol link
     if (symlink(layer_dir, ro_symlink) != 0) {
         SYSERROR("Unable to create symbol link to layer directory %s", layer_dir);
-        ret = -1;
         goto err_out;
     }
 
 #ifdef ENABLE_USERNS_REMAP
     if (set_file_owner_for_userns_remap(layer_dir, userns_remap) != 0) {
         ERROR("Unable to change directory %s owner for user remap.", layer_dir);
-        ret = -1;
         goto out;
     }
 #endif
 
-    if (create_opts->storage_opt != NULL && create_opts->storage_opt->len != 0) {
-        if (set_layer_quota(layer_dir, create_opts->storage_opt, driver) != 0) {
-            ERROR("Unable to set layer quota %s", layer_dir);
-            ret = -1;
-            goto err_out;
-        }
-    }
+    // quota opts only setting on rw layer
 
     if (mk_sub_directories(id, parent, layer_dir, driver->home) != 0) {
-        ret = -1;
+        ERROR("Create layer: %s sub dir failed", id);
         goto err_out;
     }
 
+    ret = 0;
     goto out;
 
 err_out:
@@ -1118,12 +1100,10 @@ int overlay2_create_ro(const char *id, const char *parent, const struct graphdri
 #ifdef ENABLE_REMOTE_LAYER_STORE
     if (driver->enable_remote_layer) {
         return do_create_remote_ro(id, parent, driver, create_opts);
-    } else {
-        return do_create(id, parent, driver, create_opts);
     }
-#else
-    return do_create(id, parent, driver, create_opts);
 #endif
+
+    return do_create(id, parent, driver, create_opts);
 }
 
 static char *read_layer_link_file(const char *layer_dir)
