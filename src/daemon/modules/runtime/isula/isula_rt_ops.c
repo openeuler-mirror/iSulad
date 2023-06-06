@@ -843,7 +843,7 @@ out:
     close(shim_stdout_pipe[0]);
     if (ret != 0) {
         show_shim_runtime_errlog(workdir);
-        if (timeout <= 0) {
+        if (timeout != NULL) {
             kill(pid, SIGKILL); /* can kill other process? */
         }
     }
@@ -1313,9 +1313,6 @@ int rt_isula_attach(const char *id, const char *runtime, const rt_attach_params_
 
 static int to_engine_resources(const host_config *hostconfig, shim_client_cgroup_resources *cr)
 {
-    uint64_t period = 0;
-    int64_t quota = 0;
-
     if (hostconfig == NULL || cr == NULL) {
         return -1;
     }
@@ -1354,13 +1351,13 @@ static int to_engine_resources(const host_config *hostconfig, shim_client_cgroup
     // when --cpus=n is set, nano_cpus = n * 1e9.
     if (hostconfig->nano_cpus > 0) {
         // in the case, period will be set to the default value of 100000(0.1s).
-        period = (uint64_t)(100 * Time_Milli / Time_Micro);
+        uint64_t period = (uint64_t)(100 * Time_Milli / Time_Micro);
         // set quota = period * n, in order to let container process fully occupy n cpus.
         if ((hostconfig->nano_cpus / 1e9)  > (INT64_MAX / (int64_t)period)) {
             ERROR("Overflow of quota");
             return -1;
         }
-        quota = hostconfig->nano_cpus / 1e9 * (int64_t)period;
+        int64_t quota = hostconfig->nano_cpus / 1e9 * (int64_t)period;
         cr->cpu->period = period;
         cr->cpu->quota = quota;
     }

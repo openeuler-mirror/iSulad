@@ -1172,8 +1172,6 @@ static int waitpid_with_timeout(int ctr_pid,  int *status, const uint64_t timeou
 {
     int nret = 0;
     time_t start_time = time(NULL);
-    time_t end_time;
-    double interval;
     int st;
 
     for (;;) {
@@ -1181,8 +1179,8 @@ static int waitpid_with_timeout(int ctr_pid,  int *status, const uint64_t timeou
         if (nret == ctr_pid) {
             break;
         }
-        end_time = time(NULL);
-        interval = difftime(end_time, start_time);
+        time_t end_time = time(NULL);
+        double interval = difftime(end_time, start_time);
         if (nret == 0 && interval >= timeout) {
             return SHIM_ERR_TIMEOUT;
         }
@@ -1216,14 +1214,12 @@ static int waitpid_with_timeout(int ctr_pid,  int *status, const uint64_t timeou
  */
 static int wait_container_process_with_timeout(process_t *p, const uint64_t timeout, int *status)
 {
-    int ret = SHIM_ERR;
-
     if (timeout > 0) {
         return waitpid_with_timeout(p->ctr_pid, status, timeout);
     }
 
     for (;;) {
-        ret = reap_container(p->ctr_pid, status);
+        int ret = reap_container(p->ctr_pid, status);
         if (ret == SHIM_OK) {
             if (*status == CONTAINER_ACTION_REBOOT) {
                 ret = setenv("CONTAINER_ACTION", "reboot", 1);

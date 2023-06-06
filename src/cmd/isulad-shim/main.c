@@ -92,7 +92,6 @@ int main(int argc, char **argv)
     char *rt_name = NULL;
     char *log_level = NULL;
     int ret = SHIM_ERR;
-    int efd = -1;
     process_t *p = NULL;
     // execSync timeout
     uint64_t timeout = 0;
@@ -134,7 +133,7 @@ int main(int argc, char **argv)
      */
     if (!p->state->exec) {
         if (p->state->exit_fifo != NULL) {
-            efd = open_no_inherit("exit_fifo", O_WRONLY, -1);
+            int efd = open_no_inherit("exit_fifo", O_WRONLY, -1);
             if (efd < 0) {
                 write_message(g_log_fd, ERR_MSG, "open exit pipe failed:%d", SHIM_SYS_ERR(errno));
                 exit(EXIT_FAILURE);
