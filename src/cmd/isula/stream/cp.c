@@ -302,9 +302,11 @@ static int client_run_copy(const struct client_arguments *args, const char *sour
 
     if (direction == AcrossContainers) {
         COMMAND_ERROR("copying between containers is not supported");
+        ret = -1;
         goto cleanup;
     }
 
+    ret = -1;
     COMMAND_ERROR("must specify at least one container source");
 
 cleanup:
