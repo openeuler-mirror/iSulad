@@ -58,6 +58,8 @@ extern "C" {
 #define CONTAINER_ACTION_REBOOT 129
 #define CONTAINER_ACTION_SHUTDOWN 130
 
+int init_shim_log(void);
+
 void signal_routine(int sig);
 
 void util_usleep_nointerupt(unsigned long usec);
@@ -107,7 +109,7 @@ bool file_exists(const char *f);
 
 int cmd_combined_output(const char *binary, const char *params[], void *output, int *output_len);
 
-void write_message(int fd, const char *level, const char *fmt, ...);
+void write_message(const char *level, const char *fmt, ...);
 
 int generate_random_str(char *id, size_t len);
 

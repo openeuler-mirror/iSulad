@@ -31,11 +31,20 @@
 
 int g_log_fd = -1;
 
+int init_shim_log(void)
+{
+    g_log_fd = open_no_inherit(SHIM_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0640);
+    if (g_log_fd < 0) {
+        return SHIM_ERR;
+    }
+    return SHIM_OK;
+}
+
 void signal_routine(int sig)
 {
     switch (sig) {
         case SIGALRM:
-            write_message(g_log_fd, ERR_MSG, "runtime timeout");
+            write_message(ERR_MSG, "runtime timeout");
             exit(EXIT_FAILURE);
         default:
             break;
@@ -228,12 +237,12 @@ int generate_random_str(char *id, size_t len)
     return SHIM_OK;
 }
 
-void write_message(int fd, const char *level, const char *fmt, ...)
+void write_message(const char *level, const char *fmt, ...)
 {
 #define MAX_MSG_JSON_TEMPLATE 32
 #define MAX_MESSAGE_CONTENT_LEN 128
 #define MAX_MESSAGE_LEN (MAX_MSG_JSON_TEMPLATE + MAX_MESSAGE_CONTENT_LEN)
-    if (fd < 0) {
+    if (g_log_fd < 0) {
         return;
     }
 
@@ -247,7 +256,7 @@ void write_message(int fd, const char *level, const char *fmt, ...)
     va_end(arg_list);
 
     snprintf(msg, MAX_MESSAGE_LEN - 1, "{\"level\": \"%s\", \"msg\": \"%s\"}\n", level, buf);
-    nwrite = write_nointr_in_total(fd, msg, strlen(msg));
+    nwrite = write_nointr_in_total(g_log_fd, msg, strlen(msg));
     if (nwrite < 0 || (size_t)nwrite != strlen(msg)) {
         return;
     }
