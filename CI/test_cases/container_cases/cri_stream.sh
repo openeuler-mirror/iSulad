@@ -9,6 +9,27 @@ data_path=$(realpath $curr_path/criconfigs)
 pause_img_path=$(realpath $curr_path/test_data)
 source ../helpers.sh
 
+# $1 : retry limit
+# $2 : retry_interval
+# $3 : retry function
+function do_retry()
+{
+    for i in $(seq 1 "$1"); do
+        $3
+        if [ $? -ne 0 ]; then
+            return 0
+        fi
+        sleep $2
+    done
+    return 1
+}
+
+function get_ioCopy()
+{
+    ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
+    return $?
+}
+
 function do_pre()
 {
     local ret=0
@@ -60,7 +81,6 @@ function test_cri_exec_fun()
     local ret=0
     local retry_limit=20
     local retry_interval=1
-    local success=1
     local test="test_cri_exec_fun => (${FUNCNAME[@]})"
     msg_info "${test} starting..."
     declare -a fun_pids
@@ -77,15 +97,8 @@ function test_cri_exec_fun()
     done
     wait ${abn_pids[*]// /|}
 
-    for i in $(seq 1 "$retry_limit"); do
-        ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
-        if [ $? -ne 0 ]; then
-            success=0
-            break;
-        fi
-        sleep $retry_interval
-    done
-    [[ $success -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI exec operation" && ((ret++))
+    do_retry ${retry_limit} ${retry_interval} get_ioCopy
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI exec operation" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
     return ${ret}
@@ -96,7 +109,6 @@ function test_cri_exec_abn
     local ret=0
     local retry_limit=20
     local retry_interval=1
-    local success=1
     local test="test_cri_exec_abn => (${FUNCNAME[@]})"
     msg_info "${test} starting..."
 
@@ -105,15 +117,8 @@ function test_cri_exec_abn
     sleep 3
     kill -9 $pid
 
-    for i in $(seq 1 "$retry_limit"); do
-        ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
-        if [ $? -ne 0 ]; then
-            success=0
-            break;
-        fi
-        sleep $retry_interval
-    done
-    [[ $success -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI exec operation" && ((ret++))
+    do_retry ${retry_limit} ${retry_interval} get_ioCopy
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI exec operation" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
     return ${ret}
