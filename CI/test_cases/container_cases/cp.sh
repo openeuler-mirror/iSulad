@@ -320,6 +320,25 @@ test_cp_symlink_from_container()
     return ${ret}
 }
 
+test_cp_invalid()
+{
+    local ret=0
+
+    isula cp nonexists1:/111 nonexists2:/222 2>&1 | grep "copying between containers is not supported"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check output" && ((ret++))
+    
+    isula cp nonexists1:/111 nonexists2:/222
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy from container to container return success" && ((ret++))
+
+    isula cp 111 222 2>&1 | grep "must specify at least one container source"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check output" && ((ret++))
+
+    isula cp 111 222 2>&1
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy from host to host return success" && ((ret++))
+
+    return ${ret}
+}
+
 function cp_test_t()
 {
     local ret=0
@@ -363,6 +382,7 @@ function cp_test_t()
     test_cp_dir_to_container $containername || ((ret++))
     test_cp_symlink_to_container $containername || ((ret++))
     test_cp_symlink_from_container $containername || ((ret++))
+    test_cp_invalid || ((ret++))
 
     isula rm -f $containername
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container: ${containername}" && ((ret++))
