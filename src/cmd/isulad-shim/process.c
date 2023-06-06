@@ -1264,7 +1264,7 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const
         nret = kill(p->ctr_pid, SIGKILL);
         if (nret < 0 && errno != ESRCH) {
             write_message(g_log_fd, ERR_MSG, "Can not kill process (pid=%d) with SIGKILL", p->ctr_pid);
-            exit(EXIT_FAILURE);
+            return SHIM_ERR;
         }
     }
 
@@ -1302,8 +1302,10 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const
 
     if (ret == SHIM_ERR_TIMEOUT) {
         write_message(g_log_fd, INFO_MSG, "Wait %d timeout", p->ctr_pid);
-        exit(SHIM_EXIT_TIMEOUT);
+        return SHIM_ERR_TIMEOUT;
     }
-    return status;
 
+    // write container process exit_code in stdout
+    (void)write_nointr(STDOUT_FILENO, &status, sizeof(int));
+    return SHIM_OK;
 }
