@@ -30,7 +30,7 @@ function do_test_t()
     fn_check_eq "$?" "0" "shareable ipc lose shm mount point"
 
     isula rm -f test1
-    /proc/1/mountinfo | grep "$cid/mounts/shm"
+    cat /proc/1/mountinfo | grep "$cid/mounts/shm"
     fn_check_ne "$?" "0" "residual shm mount poit"
 
     return $TC_RET_T
