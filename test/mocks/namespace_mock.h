@@ -23,6 +23,7 @@
 class MockNamespace {
 public:
     virtual ~MockNamespace() = default;
+    MOCK_METHOD1(GetSandbox, char *(const char *mode));
     MOCK_METHOD1(ConnectedContainer, char *(const char *mode));
     MOCK_METHOD3(GetShareNamespacePath, int(const char *type, const char *src_path, char **dest_path));
     MOCK_METHOD4(GetNetworkNamespacePath, int(const host_config *host_spec,

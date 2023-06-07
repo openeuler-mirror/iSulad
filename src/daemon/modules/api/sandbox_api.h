@@ -22,6 +22,10 @@
 #include <isula_libutils/sandbox_config.h>
 #include "map.h"
 
+#if defined(__cplusplus) || defined(c_plusplus)
+extern "C" {
+#endif
+
 typedef enum {
     SANDBOX_UNKNOWN = 0,
     SANDBOX_NOT_READY = 1,
@@ -115,5 +119,9 @@ char *sandbox_name_index_get(const char *name);
 bool sandbox_name_index_add(const char *name, const char *id);
 
 map_t *sandbox_name_index_get_all(void);
+
+#if defined(__cplusplus) || defined(c_plusplus)
+}
+#endif
 
 #endif /* DAEMON_MODULES_API_SANDBOX_API_H */

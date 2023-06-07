@@ -35,6 +35,8 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../test/mocks/image_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../test/mocks/containers_store_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../test/mocks/container_unix_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../test/mocks/sandboxes_store_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../test/mocks/sandbox_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../test/mocks/engine_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../test/mocks/selinux_label_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../test/mocks/isulad_config_mock.cc

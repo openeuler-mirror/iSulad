@@ -30,6 +30,8 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/containers_store_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/container_unix_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/sandboxes_store_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/sandbox_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec/parse_volume.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec/specs_mount.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/volume/volume.c
@@ -53,6 +55,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/runtime/engines
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec/
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/container/
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/sandbox/
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/container/restart_manager
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/container/health_check
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage
