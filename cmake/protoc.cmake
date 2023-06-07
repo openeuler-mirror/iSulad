@@ -4,8 +4,9 @@ set(GRPC_OUT_PRE_PATH ${CMAKE_BINARY_DIR}/grpc)
 set(CONTAINER_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/containers)
 set(IMAGE_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/images)
 set(VOLUME_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/volumes)
-set(CRI_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/cri)
 set(IMAGE_SERVICE_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/image_client)
+
+set(CRI_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/cri)
 
 if (ENABLE_NATIVE_NETWORK)
 set(NETWORK_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/network)
@@ -31,7 +32,7 @@ if (GRPC_CONNECTOR)
     execute_process(COMMAND mkdir -p ${CONTAINER_PROTOS_OUT_PATH})
     execute_process(COMMAND mkdir -p ${IMAGE_PROTOS_OUT_PATH})
     execute_process(COMMAND mkdir -p ${VOLUME_PROTOS_OUT_PATH})
-    execute_process(COMMAND mkdir -p ${CRI_PROTOS_OUT_PATH})
+    execute_process(COMMAND mkdir -p ${CRI_PROTOS_OUT_PATH}/v1alpha)
 
     PROTOC_CPP_GEN(containers ${CONTAINER_PROTOS_OUT_PATH} ${PROTOS_PATH}/containers/container.proto)
     PROTOC_GRPC_GEN(containers ${CONTAINER_PROTOS_OUT_PATH} ${PROTOS_PATH}/containers/container.proto)
@@ -42,11 +43,18 @@ if (GRPC_CONNECTOR)
     PROTOC_CPP_GEN(volumes ${VOLUME_PROTOS_OUT_PATH} ${PROTOS_PATH}/volumes/volumes.proto)
     PROTOC_GRPC_GEN(volumes ${VOLUME_PROTOS_OUT_PATH} ${PROTOS_PATH}/volumes/volumes.proto)
 
-    PROTOC_CPP_GEN(cri ${CRI_PROTOS_OUT_PATH} ${PROTOS_PATH}/cri/api.proto)
-    PROTOC_GRPC_GEN(cri ${CRI_PROTOS_OUT_PATH} ${PROTOS_PATH}/cri/api.proto)
-
+    # generator v1alpha cri proto for iSulad
+    PROTOC_CPP_GEN(cri ${CRI_PROTOS_OUT_PATH} ${PROTOS_PATH}/cri/v1alpha/api.proto)
+    PROTOC_GRPC_GEN(cri ${CRI_PROTOS_OUT_PATH} ${PROTOS_PATH}/cri/v1alpha/api.proto)
     PROTOC_CPP_GEN(cri ${CRI_PROTOS_OUT_PATH} ${PROTOS_PATH}/cri/gogo.proto)
     PROTOC_GRPC_GEN(cri ${CRI_PROTOS_OUT_PATH} ${PROTOS_PATH}/cri/gogo.proto)
+
+    if (ENABLE_CRI_API_V1)
+        execute_process(COMMAND mkdir -p ${CRI_PROTOS_OUT_PATH}/v1)
+        # generator v1 cri proto for iSulad
+        PROTOC_CPP_GEN(cri ${CRI_PROTOS_OUT_PATH} ${PROTOS_PATH}/cri/v1/api_v1.proto)
+        PROTOC_GRPC_GEN(cri ${CRI_PROTOS_OUT_PATH} ${PROTOS_PATH}/cri/v1/api_v1.proto)
+    endif()
 
     if (ENABLE_NATIVE_NETWORK)
         execute_process(COMMAND mkdir -p ${NETWORK_PROTOS_OUT_PATH})

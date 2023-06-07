@@ -6,8 +6,7 @@ set(local_server_connect_incs ${CMAKE_CURRENT_SOURCE_DIR})
 if(GRPC_CONNECTOR)
     add_subdirectory(grpc)
     list(APPEND local_server_connect_srcs ${SERVICE_GRPC_SRCS})
-    list(APPEND local_server_connect_incs ${CMAKE_CURRENT_SOURCE_DIR}/grpc)
-    list(APPEND local_server_connect_incs ${CMAKE_CURRENT_SOURCE_DIR}/grpc/container)
+    list(APPEND local_server_connect_incs ${SERVICE_GRPC_INCS})
 
     if(NOT ENABLE_NATIVE_NETWORK)
         list(REMOVE_ITEM local_server_connect_incs "${CMAKE_CURRENT_SOURCE_DIR}/grpc/grpc_network_service.h")
@@ -33,8 +32,12 @@ if(GRPC_CONNECTOR)
     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/containers CONNECT_API_CONTAINERS)
     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/images CONNECT_API_IMAGES)
     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/volumes CONNECT_API_VOLUMES)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/cri CONNECT_API_CRI)
-    set(CONNECT_API ${CONNECT_API_CONTAINERS} ${CONNECT_API_VOLUMES} ${CONNECT_API_IMAGES} ${CONNECT_API_CRI})
+    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/cri CONNECT_API_CRIS)
+    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1alpha CONNECT_API_CRI_V1ALPHA)
+    if (ENABLE_CRI_API_V1)
+        aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1 CONNECT_API_CRI_V1)
+    endif()
+    set(CONNECT_API ${CONNECT_API_CONTAINERS} ${CONNECT_API_VOLUMES} ${CONNECT_API_IMAGES} ${CONNECT_API_CRIS} ${CONNECT_API_CRI_V1} ${CONNECT_API_CRI_V1ALPHA})
     list(APPEND local_server_connect_srcs ${CONNECT_API})
 
     list(APPEND local_server_connect_incs
@@ -42,7 +45,11 @@ if(GRPC_CONNECTOR)
         ${CMAKE_BINARY_DIR}/grpc/src/api/services/images
         ${CMAKE_BINARY_DIR}/grpc/src/api/services/volumes
         ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri
+        ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1alpha
     )
+    if (ENABLE_CRI_API_V1)
+        list(APPEND local_server_connect_incs ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1)
+    endif()
 
     if(ENABLE_NATIVE_NETWORK)
         aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/network CONNECT_API_NETWORK)

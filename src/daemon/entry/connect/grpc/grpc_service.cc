@@ -23,14 +23,15 @@
 #include "grpc_containers_service.h"
 #include "grpc_images_service.h"
 #include "grpc_volumes_service.h"
-#include "cri_runtime_runtime_service.h"
-#include "cri_runtime_image_service.h"
 #ifdef ENABLE_NATIVE_NETWORK
 #include "grpc_network_service.h"
 #endif
+#include "cri_service.h"
+
 #include "isula_libutils/log.h"
 #include "errors.h"
 #include "grpc_server_tls_auth.h"
+#include "utils.h"
 
 using grpc::SslServerCredentialsOptions;
 
@@ -49,10 +50,8 @@ public:
             return -1;
         }
 
-        Errors err;
-        m_runtimeRuntimeService.Init(args->json_confs, err);
-        if (err.NotEmpty()) {
-            ERROR("Init runtime service failed: %s", err.GetCMessage());
+        // cri need init CNI and stream services
+        if (m_criService.Init(args->json_confs) != 0) {
             return -1;
         }
 
@@ -70,7 +69,9 @@ public:
 #endif
         }
 
+        Errors err;
         if (ListeningPort(args, err)) {
+            ERROR("Listening GRPC port failed: %s", err.GetCMessage());
             return -1;
         }
 
@@ -83,9 +84,8 @@ public:
         m_builder.RegisterService(&m_networkService);
 #endif
 
-        // Register CRI services, runtime and image
-        m_builder.RegisterService(&m_runtimeRuntimeService);
-        m_builder.RegisterService(&m_runtimeImageService);
+        // Register all CRI GRPC services
+        m_criService.Register(m_builder);
 
         // Finally assemble the server.
         m_server = m_builder.BuildAndStart();
@@ -101,13 +101,18 @@ public:
         // Wait for the server to shutdown. Note that some other thread must be
         // responsible for shutting down the server for this call to ever return.
         m_server->Wait();
-        m_runtimeRuntimeService.Wait();
+
+        // Wait for stream server to shutdown
+        m_criService.Wait();
     }
 
     void Shutdown(void)
     {
         m_server->Shutdown();
-        m_runtimeRuntimeService.Shutdown();
+        
+        // call CRI to shutdown stream server
+        m_criService.Shutdown();
+
         // Shutdown daemon, this operation should remove socket file.
         for (const auto &address : m_socketPath) {
             if (address.find(UNIX_SOCKET_PREFIX) == 0) {
@@ -198,11 +203,12 @@ private:
     ContainerServiceImpl m_containerService;
     ImagesServiceImpl m_imagesService;
     VolumeServiceImpl m_volumeService;
-    RuntimeRuntimeServiceImpl m_runtimeRuntimeService;
-    RuntimeImageServiceImpl m_runtimeImageService;
 #ifdef ENABLE_NATIVE_NETWORK
     network::NetworkServiceImpl m_networkService;
 #endif
+    // CRI services
+    CRIUnify::CRIService m_criService;
+
     ServerBuilder m_builder;
 #ifdef ENABLE_GRPC_REMOTE_CONNECT
     std::vector<std::string> m_tcpPath;

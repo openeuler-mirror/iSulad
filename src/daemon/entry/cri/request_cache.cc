@@ -26,7 +26,7 @@
 std::atomic<RequestCache *> RequestCache::m_instance;
 std::mutex RequestCache::m_mutex;
 
-void CacheEntry::SetValue(const std::string &t, const std::string &id, ::google::protobuf::Message *request,
+void CacheEntry::SetValue(const std::string &t, const std::string &id, StreamRequest *request,
                           std::chrono::system_clock::time_point et)
 {
     token = t;
@@ -51,7 +51,7 @@ RequestCache *RequestCache::GetInstance() noexcept
     return cache;
 }
 
-std::string RequestCache::InsertRequest(const std::string &containerID, ::google::protobuf::Message *req)
+std::string RequestCache::InsertRequest(const std::string &containerID, StreamRequest *req)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     // Remove expired entries.
@@ -129,7 +129,7 @@ bool RequestCache::IsValidToken(const std::string &token)
 }
 
 // Consume the token (remove it from the cache) and return the cached request, if found.
-::google::protobuf::Message *RequestCache::ConsumeRequest(const std::string &token)
+StreamRequest *RequestCache::ConsumeRequest(const std::string &token)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 

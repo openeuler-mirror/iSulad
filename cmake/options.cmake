@@ -33,6 +33,13 @@ if (ENABLE_GRPC STREQUAL "ON")
     message("${Green}--  Use grpc connector${ColourReset}")
 endif()
 
+option(ENABLE_CRI_API_V1 "Enable CRI API V1" OFF)
+if (ENABLE_CRI_API_V1 STREQUAL "ON")
+    add_definitions(-DENABLE_CRI_API_V1)
+    set(ENABLE_CRI_API_V1 1)
+    message("${Green}--  Enable CRI API V1${ColourReset}")
+endif()
+
 option(ENABLE_SYSTEMD_NOTIFY "Enable systemd notify" ON)
 if (ENABLE_SYSTEMD_NOTIFY STREQUAL "ON")
     add_definitions(-DSYSTEMD_NOTIFY)

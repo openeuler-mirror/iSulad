@@ -27,7 +27,7 @@
 // Implement of runtime RuntimeService
 class RuntimeRuntimeServiceImpl : public runtime::v1alpha2::RuntimeService::Service {
 public:
-    void Init(const isulad_daemon_configs *config, Errors &err);
+    void Init(std::string &podSandboxImage, std::shared_ptr<Network::PluginManager> networkPlugin, Errors &err);
     void Wait();
     void Shutdown();
     grpc::Status Version(grpc::ServerContext *context, const runtime::v1alpha2::VersionRequest *request,

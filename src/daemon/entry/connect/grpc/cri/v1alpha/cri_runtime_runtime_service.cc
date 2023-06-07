@@ -18,78 +18,30 @@
 #include <vector>
 
 #include <isula_libutils/log.h>
-#include "stream_server.h"
-#include "route_callback_register.h"
 #include "network_plugin.h"
 #include "cri_runtime_service_impl.h"
-#include "cri_helpers.h"
 
 using namespace CRI;
 
-void RuntimeRuntimeServiceImpl::Init(const isulad_daemon_configs *config, Errors &err)
+void RuntimeRuntimeServiceImpl::Init(std::string &podSandboxImage, std::shared_ptr<Network::PluginManager> networkPlugin, Errors &err)
 {
-    std::string podSandboxImage;
-    /* note: get config from args, now use defaults */
-    Network::NetworkPluginConf mConf;
-
-    if (config != nullptr) {
-        if (config->network_plugin != nullptr) {
-            mConf.SetPluginName(config->network_plugin);
-        }
-        if (config->cni_bin_dir != nullptr) {
-            mConf.SetPluginBinDir(config->cni_bin_dir);
-        }
-        if (config->cni_conf_dir != nullptr) {
-            mConf.SetPluginConfDir(config->cni_conf_dir);
-        }
-        if (config->pod_sandbox_image != nullptr) {
-            podSandboxImage = config->pod_sandbox_image;
-        }
-    }
-
-    if (podSandboxImage.empty()) {
-        podSandboxImage = CRIHelpers::GetDefaultSandboxImage(err);
-        if (err.NotEmpty()) {
-            return;
-        }
-    }
     // Assembly implementation for CRIRuntimeServiceImpl
     service_executor_t *cb = get_service_executor();
     if (cb == nullptr) {
-        ERROR("Get callback failed");
+        ERROR("Init isulad service executor failure.");
+        err.SetError("Init isulad service executor failure.");
         return;
     }
 
-    std::vector<std::shared_ptr<Network::NetworkPlugin>> plugins;
-    Network::ProbeNetworkPlugins(mConf.GetPluginConfDir(), mConf.GetPluginBinDir(), &plugins);
-
-    std::shared_ptr<Network::NetworkPlugin> chosen { nullptr };
-    Network::InitNetworkPlugin(&plugins, mConf.GetPluginName(), mConf.GetHairpinMode(), mConf.GetNonMasqueradeCIDR(),
-                               mConf.GetMTU(), &chosen, err);
-    if (err.NotEmpty()) {
-        ERROR("Init network plugin failed: %s", err.GetCMessage());
-        return;
-    }
-
-    auto pluginManager = std::make_shared<Network::PluginManager>(chosen);
-
-    m_rService = std::unique_ptr<CRI::CRIRuntimeService>(new CRIRuntimeServiceImpl(podSandboxImage, cb, pluginManager));
-
-    websocket_server_init(err);
-    if (err.NotEmpty()) {
-        ERROR("%s", err.GetMessage().c_str());
-        return;
-    }
+    m_rService = std::unique_ptr<CRI::CRIRuntimeService>(new CRIRuntimeServiceImpl(podSandboxImage, cb, networkPlugin));
 }
 
 void RuntimeRuntimeServiceImpl::Wait()
 {
-    websocket_server_wait();
 }
 
 void RuntimeRuntimeServiceImpl::Shutdown()
 {
-    websocket_server_shutdown();
 }
 
 grpc::Status RuntimeRuntimeServiceImpl::Version(grpc::ServerContext *context,

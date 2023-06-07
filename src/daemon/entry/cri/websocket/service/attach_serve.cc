@@ -12,9 +12,7 @@
  * Create: 2018-11-08
  * Description: provide container attach functions
  ******************************************************************************/
-
 #include "attach_serve.h"
-#include "api.pb.h"
 #include "ws_server.h"
 #include "isula_libutils/log.h"
 #include "callback.h"
@@ -65,22 +63,20 @@ void AttachServe::SetServeThreadName()
     prctl(PR_SET_NAME, "AttachServe");
 }
 
-void *AttachServe::SetContainerStreamRequest(::google::protobuf::Message *request, const std::string &suffix)
+void *AttachServe::SetContainerStreamRequest(StreamRequest *grequest, const std::string &suffix)
 {
-    auto *grequest = dynamic_cast<runtime::v1alpha2::AttachRequest *>(request);
-
     auto *m_request = static_cast<container_attach_request *>(util_common_calloc_s(sizeof(container_attach_request)));
     if (m_request == nullptr) {
         ERROR("Out of memory");
         return nullptr;
     }
 
-    if (!grequest->container_id().empty()) {
-        m_request->container_id = util_strdup_s(grequest->container_id().c_str());
+    if (!grequest->containerID.empty()) {
+        m_request->container_id = util_strdup_s(grequest->containerID.c_str());
     }
-    m_request->attach_stdin = grequest->stdin();
-    m_request->attach_stdout = grequest->stdout();
-    m_request->attach_stderr = grequest->stderr();
+    m_request->attach_stdin = grequest->streamStdin;
+    m_request->attach_stdout = grequest->streamStdout;
+    m_request->attach_stderr = grequest->streamStderr;
 
     return m_request;
 }

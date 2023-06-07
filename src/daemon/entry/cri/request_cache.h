@@ -17,28 +17,38 @@
 #define DAEMON_ENTRY_CRI_REQUEST_CACHE_H
 #include <string>
 #include <list>
+#include <vector>
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
 #include <chrono>
 #include <typeinfo>
-#include <google/protobuf/message.h>
+
+class StreamRequest {
+public:
+    std::string containerID;
+    std::vector<std::string> streamCmds;
+    bool streamTty;
+    bool streamStdin;
+    bool streamStdout;
+    bool streamStderr;
+};
 
 struct CacheEntry {
     std::string token;
     std::string containerID;
-    ::google::protobuf::Message *req;
+    StreamRequest *req;
     std::chrono::system_clock::time_point expireTime;
 
-    void SetValue(const std::string &t, const std::string &id, ::google::protobuf::Message *request,
+    void SetValue(const std::string &t, const std::string &id, StreamRequest *request,
                   std::chrono::system_clock::time_point et);
 };
 
 class RequestCache {
 public:
     static RequestCache *GetInstance() noexcept;
-    std::string InsertRequest(const std::string &containerID, ::google::protobuf::Message *req);
-    ::google::protobuf::Message *ConsumeRequest(const std::string &token);
+    std::string InsertRequest(const std::string &containerID, StreamRequest *req);
+    StreamRequest *ConsumeRequest(const std::string &token);
     std::string GetContainerIDByToken(const std::string &token);
     bool IsValidToken(const std::string &token);
 

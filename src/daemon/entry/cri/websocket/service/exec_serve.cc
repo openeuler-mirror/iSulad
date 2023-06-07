@@ -18,6 +18,7 @@
 #include "io_wrapper.h"
 #include "ws_server.h"
 #include "utils.h"
+#include "callback.h"
 #include "cri_helpers.h"
 
 void ExecServe::SetServeThreadName()
@@ -25,35 +26,34 @@ void ExecServe::SetServeThreadName()
     prctl(PR_SET_NAME, "ExecServe");
 }
 
-void *ExecServe::SetContainerStreamRequest(::google::protobuf::Message *request, const std::string &suffix)
+void *ExecServe::SetContainerStreamRequest(StreamRequest *grequest, const std::string &suffix)
 {
-    auto *grequest = dynamic_cast<runtime::v1alpha2::ExecRequest *>(request);
-
     auto *m_request = static_cast<container_exec_request *>(util_common_calloc_s(sizeof(container_exec_request)));
     if (m_request == nullptr) {
         ERROR("Out of memory");
         return nullptr;
     }
 
-    m_request->tty = grequest->tty();
-    m_request->attach_stdin = grequest->stdin();
-    m_request->attach_stdout = grequest->stdout();
-    m_request->attach_stderr = grequest->stderr();
+    m_request->tty = grequest->streamTty;
+    m_request->attach_stdin = grequest->streamStdin;
+    m_request->attach_stdout = grequest->streamStdout;
+    m_request->attach_stderr = grequest->streamStderr;
 
-    if (!grequest->container_id().empty()) {
-        m_request->container_id = util_strdup_s(grequest->container_id().c_str());
+    if (!grequest->containerID.empty()) {
+        m_request->container_id = util_strdup_s(grequest->containerID.c_str());
     }
 
-    if (grequest->cmd_size() > 0) {
-        m_request->argv = (char **)util_smart_calloc_s(sizeof(char *), grequest->cmd_size());
+    if (grequest->streamCmds.size() > 0) {
+        m_request->argv = (char **)util_smart_calloc_s(sizeof(char *), grequest->streamCmds.size());
         if (m_request->argv == nullptr) {
             ERROR("Out of memory!");
             return nullptr;
         }
-        for (int i = 0; i < grequest->cmd_size(); i++) {
-            m_request->argv[i] = util_strdup_s(grequest->cmd(i).c_str());
+        size_t i;
+        for (i = 0; i < grequest->streamCmds.size(); i++) {
+            m_request->argv[i] = util_strdup_s(grequest->streamCmds.at(i).c_str());
         }
-        m_request->argv_len = static_cast<size_t>(grequest->cmd_size());
+        m_request->argv_len = static_cast<size_t>(grequest->streamCmds.size());
     }
 
     m_request->suffix = util_strdup_s(suffix.c_str());
