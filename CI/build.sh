@@ -449,6 +449,11 @@ if [[ "x$disk" != "xNULL" ]] && [[ "x${enable_gcov}" == "xON" ]]; then
     pid_dev="$!"
 fi
 
+# print critest log
+echo "===========================CRITEST RESULT============"
+cat ${testcases_data_dir}/critest.log
+echo "===========================CRITEST==================="
+
 if [[ "x$pid_dev" != "xNULL" ]]; then
     wait $pid_dev
 fi
