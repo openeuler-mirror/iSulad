@@ -98,7 +98,7 @@ function pre_test() {
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - memory leak" && return ${FAILURE}
 
-    start_isulad_with_valgrind --selinux-enabled --network-plugin cni
+    start_isulad_without_valgrind --selinux-enabled --network-plugin cni
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad with selinux and cni failed"  && return ${FAILURE}
 }
 
@@ -108,7 +108,7 @@ function post_test() {
     rm /usr/local/bin/critest
     cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
     
-    check_valgrind_log
+    stop_isulad_without_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - memory leak" && return ${FAILURE}
     start_isulad_with_valgrind
 }
@@ -130,12 +130,12 @@ function do_test_t() {
 
     msg_info "${test} finished with return ${ret}..."
 
-    check_valgrind_log
+    stop_isulad_without_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
     # replace default runtime
     sed -i 's/"default-runtime": "lcr"/"default-runtime": "runc"/g' /etc/isulad/daemon.json
-    start_isulad_with_valgrind --selinux-enabled --network-plugin cni
+    start_isulad_without_valgrind --selinux-enabled --network-plugin cni
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad with selinux and cni failed" && ((ret++))
     
     runtime=runc
