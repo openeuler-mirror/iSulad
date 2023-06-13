@@ -65,7 +65,7 @@ qemu-system-riscv64 \
 
 ## 源码编译及安装
 
-> 首先使用yum安装依赖的软件包，之后参考[build_guide](https://gitee.com/openeuler/iSulad/blob/master/docs/build_docs/guide/build_guide.md)的`逐步源码构建和安装iSulad`进行编译和安装,以下给出了编译过程中可能出现的错误以及其解决方案。
+> 首先使用yum安装依赖的软件包，之后参考[build_guide](https://gitee.com/openeuler/iSulad/blob/master/docs/build_docs/guide/build_guide_zh.md)的`逐步源码构建和安装iSulad`进行编译和安装,以下给出了编译过程中可能出现的错误以及其解决方案。
 
 ### 依赖软件包安装
 
@@ -94,7 +94,7 @@ sudo yum --enablerepo='*' install -y automake autoconf libtool cmake make libcap
 
 #### 源码编译安装protobuf
 
-源码编译安装protobuf时与[build_guide](https://gitee.com/openeuler/iSulad/blob/master/docs/build_docs/guide/build_guide.md)不同，需要选择按照以下两种方式的任意一种进行安装，以满足后面的grpc能够顺利编译：
+源码编译安装protobuf时与[build_guide](https://gitee.com/openeuler/iSulad/blob/master/docs/build_docs/guide/build_guide_zh.md)不同，需要选择按照以下两种方式的任意一种进行安装，以满足后面的grpc能够顺利编译：
 
 ##### 第一种安装方法
 

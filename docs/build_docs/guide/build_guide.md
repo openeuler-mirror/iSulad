@@ -12,7 +12,9 @@ You can automatically install isulad on openEuler directly by compiling dependen
 dnf builddep iSulad.spec
 ```
 
-`tips`：iSulad.spec directly uses the files in the isulad source code.
+`tips`：
+1. iSulad.spec directly uses the files in the isulad source code.
+2. Since isulad depends on capability.h, you need to use yum to install the libcap-devel library additionally.
 
 Then, you should build and install iSulad:
 
@@ -194,7 +196,6 @@ The consistency of the version includes the following four aspects:
 ```bash
 $ git clone https://gitee.com/src-openeuler/lxc.git
 $ cd lxc
-$ tar -zxf lxc-4.0.3.tar.gz
 $ ./apply-patches
 $ cd lxc-4.0.3
 $ sudo -E ./autogen.sh

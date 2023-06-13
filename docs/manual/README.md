@@ -16,6 +16,10 @@ Device Mapper is a kernel-based framework that underpins many advanced volume ma
 
 If you want to use native network in iSulad, please refer to [native_network](native_network.md).
 
+## Setup Bridge Network for Container
+
+If you want to Setup bridge network for Container, please refer to [setup_bridge_network](setup_bridge_network.md).
+
 ## Rootless Manual
 
 If you want to run iSulad with a non-root user, please refer to [rootless](rootless.md).

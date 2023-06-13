@@ -12,7 +12,9 @@
  dnf builddep iSulad.spec
 ```
 
-**注意**：iSulad.spec直接用源码中的文件即可。
+**注意**：
+1. iSulad.spec直接用源码中的文件即可。
+2. 由于isulad依赖于libcap-devel库的capability.h头文件，需要额外使用yum安装libcap-devel库。
 
 之后源码编译安装isulad：
 
@@ -192,7 +194,6 @@ $ sudo -E ldconfig
 ```bash
 $ git clone https://gitee.com/src-openeuler/lxc.git
 $ cd lxc
-$ tar -zxf lxc-4.0.3.tar.gz
 $ ./apply-patches
 $ cd lxc-4.0.3
 $ sudo -E ./autogen.sh
