@@ -35,6 +35,9 @@ KEEP_CONTAINERS_ALIVE_DIR="/tmp/containerslock"
 TESTCASE_ASSIGN="${CIDIR}/testcase_assign"
 devmapper_script="${TOPDIR}/CI/install_devmapper.sh"
 disk=NULL
+tbranch=`git branch --show-current`
+critest_result="/var/www/html/critest_result"
+date_str=`date "+%Y%m%d%H%M"`
 
 modprobe squashfs
 losetup -D
@@ -332,6 +335,21 @@ function exec_script() {
     return 0
 }
 
+function clean_old_critest_result() {
+    cnt=$(ls ${critest_result}/${tbranch}* | wc -l)
+    # we just save 4 days' critest result
+    if [ $cnt -le 4 ]; then
+        return
+    fi
+
+    pushd ${critest_result}
+    ls ${tbranch}* | head -1 | while read line; do
+        echo "clean old log: $line"
+        rm $line
+    done
+    popd
+}
+
 cptemp=${tmpdir_prefix}/${CONTAINER_NAME}_cptemp
 # container for testing restful and building
 copycontainer=${CONTAINER_NAME}_R1
@@ -449,15 +467,18 @@ if [[ "x$disk" != "xNULL" ]] && [[ "x${enable_gcov}" == "xON" ]]; then
     pid_dev="$!"
 fi
 
-# print critest log
-echo "===========================CRITEST RESULT============"
-cat ${testcases_data_dir}/critest.log
-echo "===========================CRITEST==================="
-
 if [[ "x$pid_dev" != "xNULL" ]]; then
     wait $pid_dev
 fi
 kill -9 $tailpid
+
+# save critest log
+if [ ! -d "${critest_result}" ]; then
+    mkdir ${critest_result}
+else
+    clean_old_critest_result 
+fi
+mv ${testcases_data_dir}/critest.log ${critest_result}/${tbranch}_${date_str}_critest.log
 
 if [[ "x${enable_gcov}" == "xON" ]]; then
   rm -rf ${tmpdir}/build

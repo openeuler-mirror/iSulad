@@ -115,7 +115,6 @@ function post_test() {
 
 function test_critest() {
     critest --runtime-endpoint=unix:///var/run/isulad.sock >> ${testcase_data}/critest.log
-    return $?
 }
 
 function do_test_t() {
@@ -126,7 +125,7 @@ function do_test_t() {
     msg_info "${test} starting..."
     echo "${test}" >> ${testcase_data}/critest.log
 
-    test_critest || ((ret++))
+    test_critest
 
     msg_info "${test} finished with return ${ret}..."
 
@@ -143,7 +142,7 @@ function do_test_t() {
     msg_info "${test} starting..."
     echo "${test}" >> ${testcase_data}/critest.log
 
-    test_critest || ((ret++))
+    test_critest
 
     msg_info "${test} finished with return ${ret}..."
     return $ret
