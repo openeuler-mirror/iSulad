@@ -23,6 +23,7 @@ declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ./helpers.sh
 data_path=$(realpath $curr_path/container_cases/criconfigs)
 pause_img_path=$(realpath $curr_path/container_cases/test_data)
+image_arr=($(isula images | awk 'NR>1{print $1}'))
 
 builddir=`env | grep BUILDDIR | awk -F '=' '{print $2}'`
 if [ "x$builddir" == "x" ];then
@@ -107,6 +108,15 @@ function post_test() {
     rm -rf ./cri-tools
     rm /usr/local/bin/critest
     cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
+
+    # clear env
+    isula rm -f `isula ps -qa`
+    isula rmi `isula images | awk 'NR>1{print $3}'`
+    # restore images
+    for image in "${image_arr[@]}"
+    do
+        isula pull ${image}
+    done
     
     stop_isulad_without_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - memory leak" && return ${FAILURE}
