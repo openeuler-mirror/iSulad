@@ -34,7 +34,7 @@ public:
 
 private:
     virtual void SetServeThreadName() override;
-    virtual void *SetContainerStreamRequest(::google::protobuf::Message *grequest, const std::string &suffix) override;
+    virtual void *SetContainerStreamRequest(StreamRequest *grequest, const std::string &suffix) override;
     virtual int ExecuteStreamCommand(SessionData *lwsCtx, void *request) override;
     virtual void CloseConnect(SessionData *lwsCtx) override;
     virtual void FreeRequest(void *m_request) override;

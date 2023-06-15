@@ -13,20 +13,21 @@
  * Description: provide cri container manager service function implementation
  *********************************************************************************/
 
-#include "cri_container_manager_service.h"
+#include "v1_cri_container_manager_service.h"
+#include "v1_cri_helpers.h"
 #include "cri_helpers.h"
 #include "utils.h"
 #include "errors.h"
 #include "isula_libutils/log.h"
 #include "isula_libutils/container_stop_request.h"
-#include "naming.h"
+#include "v1_naming.h"
 #include "path.h"
 #include "service_container_api.h"
 #include "request_cache.h"
 #include "url.h"
 #include "ws_server.h"
 
-namespace CRI {
+namespace CRIV1 {
 auto ContainerManagerService::GetContainerOrSandboxRuntime(const std::string &realID, Errors &error) -> std::string
 {
     std::string runtime;
@@ -55,7 +56,7 @@ cleanup:
 }
 
 auto ContainerManagerService::PackCreateContainerHostConfigDevices(
-    const runtime::v1alpha2::ContainerConfig &containerConfig, host_config *hostconfig, Errors &error) -> int
+    const runtime::v1::ContainerConfig &containerConfig, host_config *hostconfig, Errors &error) -> int
 {
     int ret { 0 };
 
@@ -90,7 +91,7 @@ out:
 }
 
 auto ContainerManagerService::PackCreateContainerHostConfigSecurityContext(
-    const runtime::v1alpha2::ContainerConfig &containerConfig, host_config *hostconfig, Errors &error) -> int
+    const runtime::v1::ContainerConfig &containerConfig, host_config *hostconfig, Errors &error) -> int
 {
     if (!containerConfig.linux().has_security_context()) {
         return 0;
@@ -98,20 +99,20 @@ auto ContainerManagerService::PackCreateContainerHostConfigSecurityContext(
     // security Opt Separator Change Version : k8s v1.23.0 (Corresponds to docker 1.11.x)
     // New version '=' , old version ':', iSulad cri is based on v18.09, so iSulad cri use new version separator
     const char securityOptSep { '=' };
-    const ::runtime::v1alpha2::LinuxContainerSecurityContext &context = containerConfig.linux().security_context();
-    CRIHelpers::commonSecurityContext commonContext = {
+    const ::runtime::v1::LinuxContainerSecurityContext &context = containerConfig.linux().security_context();
+    CRIHelpersV1::commonSecurityContext commonContext = {
         .hasSeccomp = context.has_seccomp(),
         .hasSELinuxOption = context.has_selinux_options(),
         .seccomp = context.seccomp(),
         .selinuxOption = context.selinux_options(),
         .seccompProfile = context.seccomp_profile_path(),
     };
-    std::vector<std::string> securityOpts = CRIHelpers::GetSecurityOpts(commonContext, securityOptSep, error);
+    std::vector<std::string> securityOpts = CRIHelpersV1::GetSecurityOpts(commonContext, securityOptSep, error);
     if (error.NotEmpty()) {
         error.Errorf("Failed to generate security options for container %s", containerConfig.metadata().name().c_str());
         return -1;
     }
-    CRIHelpers::AddSecurityOptsToHostConfig(securityOpts, hostconfig, error);
+    CRIHelpersV1::AddSecurityOptsToHostConfig(securityOpts, hostconfig, error);
     if (error.NotEmpty()) {
         error.Errorf("Failed to add securityOpts to hostconfig for container %s", containerConfig.metadata().name().c_str());
         return -1;
@@ -119,7 +120,7 @@ auto ContainerManagerService::PackCreateContainerHostConfigSecurityContext(
     return 0;
 }
 
-auto ContainerManagerService::DoUsePodLevelSELinuxConfig(const runtime::v1alpha2::ContainerConfig &containerConfig,
+auto ContainerManagerService::DoUsePodLevelSELinuxConfig(const runtime::v1::ContainerConfig &containerConfig,
                                                          host_config *hostconfig, const std::string &realPodSandboxID, Errors &error) -> int
 {
     int ret = -1;
@@ -141,7 +142,7 @@ auto ContainerManagerService::DoUsePodLevelSELinuxConfig(const runtime::v1alpha2
     }
 
     tmp_str = std::string(inspect->process_label);
-    selinuxLabelOpts = CRIHelpers::GetPodSELinuxLabelOpts(tmp_str, error);
+    selinuxLabelOpts = CRIHelpersV1::GetPodSELinuxLabelOpts(tmp_str, error);
     if (error.NotEmpty()) {
         ERROR("Failed to get SELinuxLabelOpts for container %s", containerConfig.metadata().name().c_str());
         goto cleanup;
@@ -174,7 +175,7 @@ cleanup:
     return ret;
 }
 
-auto ContainerManagerService::IsSELinuxLabelEmpty(const ::runtime::v1alpha2::SELinuxOption &selinuxOption) -> bool
+auto ContainerManagerService::IsSELinuxLabelEmpty(const ::runtime::v1::SELinuxOption &selinuxOption) -> bool
 {
     if (selinuxOption.user().length() == 0 && selinuxOption.role().length() == 0 && selinuxOption.type().length() == 0 &&
         selinuxOption.level().length() == 0) {
@@ -184,7 +185,7 @@ auto ContainerManagerService::IsSELinuxLabelEmpty(const ::runtime::v1alpha2::SEL
 }
 
 auto ContainerManagerService::GenerateCreateContainerHostConfig(
-    const runtime::v1alpha2::ContainerConfig &containerConfig,
+    const runtime::v1::ContainerConfig &containerConfig,
     const std::string &realPodSandboxID, Errors &error) -> host_config *
 {
     host_config *hostconfig = (host_config *)util_common_calloc_s(sizeof(host_config));
@@ -202,7 +203,7 @@ auto ContainerManagerService::GenerateCreateContainerHostConfig(
         }
         hostconfig->pids_limit = converted;
     }
-    CRIHelpers::GenerateMountBindings(containerConfig.mounts(), hostconfig, error);
+    CRIHelpersV1::GenerateMountBindings(containerConfig.mounts(), hostconfig, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
@@ -234,7 +235,7 @@ cleanup:
     return nullptr;
 }
 
-void ContainerManagerService::MakeContainerConfig(const runtime::v1alpha2::ContainerConfig &config,
+void ContainerManagerService::MakeContainerConfig(const runtime::v1::ContainerConfig &config,
                                                   container_config *cConfig, Errors &error)
 {
     if (config.command_size() > 0) {
@@ -279,7 +280,7 @@ void ContainerManagerService::MakeContainerConfig(const runtime::v1alpha2::Conta
             error.SetError("Out of memory");
             return;
         }
-        auto envVect = CRIHelpers::GenerateEnvList(config.envs());
+        auto envVect = CRIHelpersV1::GenerateEnvList(config.envs());
         for (size_t i = 0; i < envVect.size(); i++) {
             cConfig->env[i] = util_strdup_s(envVect.at(i).c_str());
             cConfig->env_len++;
@@ -293,8 +294,8 @@ void ContainerManagerService::MakeContainerConfig(const runtime::v1alpha2::Conta
 
 auto ContainerManagerService::GenerateCreateContainerCustomConfig(
     const std::string &containerName, const std::string &realPodSandboxID,
-    const runtime::v1alpha2::ContainerConfig &containerConfig,
-    const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error) -> container_config *
+    const runtime::v1::ContainerConfig &containerConfig,
+    const runtime::v1::PodSandboxConfig &podSandboxConfig, Errors &error) -> container_config *
 {
     container_config *custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     if (custom_config == nullptr) {
@@ -404,8 +405,8 @@ cleanup:
 
 container_create_request *
 ContainerManagerService::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
-                                                        const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                                        const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                                        const runtime::v1::ContainerConfig &containerConfig,
+                                                        const runtime::v1::PodSandboxConfig &podSandboxConfig,
                                                         const std::string &podSandboxRuntime, Errors &error)
 {
     struct parser_context ctx {
@@ -419,7 +420,7 @@ ContainerManagerService::GenerateCreateContainerRequest(const std::string &realP
         return nullptr;
     }
 
-    std::string cname = CRINaming::MakeContainerName(podSandboxConfig, containerConfig);
+    std::string cname = CRINamingV1::MakeContainerName(podSandboxConfig, containerConfig);
     request->id = util_strdup_s(cname.c_str());
 
     if (!podSandboxRuntime.empty()) {
@@ -450,7 +451,7 @@ ContainerManagerService::GenerateCreateContainerRequest(const std::string &realP
         goto cleanup;
     }
 
-    CRIHelpers::UpdateCreateConfig(custom_config, hostconfig, containerConfig, realPodSandboxID, error);
+    CRIHelpersV1::UpdateCreateConfig(custom_config, hostconfig, containerConfig, realPodSandboxID, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
@@ -479,8 +480,8 @@ cleanup:
 }
 
 std::string ContainerManagerService::CreateContainer(const std::string &podSandboxID,
-                                                     const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                                     const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                                     const runtime::v1::ContainerConfig &containerConfig,
+                                                     const runtime::v1::PodSandboxConfig &podSandboxConfig,
                                                      Errors &error)
 {
     std::string response_id;
@@ -615,7 +616,7 @@ void ContainerManagerService::RemoveContainer(const std::string &containerID, Er
     CRIHelpers::RemoveContainer(m_cb, containerID, error);
 }
 
-void ContainerManagerService::ListContainersFromGRPC(const runtime::v1alpha2::ContainerFilter *filter,
+void ContainerManagerService::ListContainersFromGRPC(const runtime::v1::ContainerFilter *filter,
                                                      container_list_request **request, Errors &error)
 {
     *request = (container_list_request *)util_common_calloc_s(sizeof(container_list_request));
@@ -646,7 +647,7 @@ void ContainerManagerService::ListContainersFromGRPC(const runtime::v1alpha2::Co
         }
         if (filter->has_state()) {
             if (CRIHelpers::FiltersAdd((*request)->filters, "status",
-                                       CRIHelpers::ToIsuladContainerStatus(filter->state())) != 0) {
+                                       CRIHelpersV1::ToIsuladContainerStatus(filter->state())) != 0) {
                 error.SetError("Failed to add filter");
                 return;
             }
@@ -669,11 +670,11 @@ void ContainerManagerService::ListContainersFromGRPC(const runtime::v1alpha2::Co
 }
 
 void ContainerManagerService::ListContainersToGRPC(container_list_response *response,
-                                                   std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *pods,
+                                                   std::vector<std::unique_ptr<runtime::v1::Container>> *pods,
                                                    Errors &error)
 {
     for (size_t i {}; i < response->containers_len; i++) {
-        std::unique_ptr<runtime::v1alpha2::Container> container(new (std::nothrow) runtime::v1alpha2::Container);
+        std::unique_ptr<runtime::v1::Container> container(new (std::nothrow) runtime::v1::Container);
         if (container == nullptr) {
             error.SetError("Out of memory");
             return;
@@ -689,7 +690,7 @@ void ContainerManagerService::ListContainersToGRPC(container_list_response *resp
 
         CRIHelpers::ExtractAnnotations(response->containers[i]->annotations, *container->mutable_annotations());
 
-        CRINaming::ParseContainerName(container->annotations(), container->mutable_metadata(), error);
+        CRINamingV1::ParseContainerName(container->annotations(), container->mutable_metadata(), error);
         if (error.NotEmpty()) {
             return;
         }
@@ -705,23 +706,23 @@ void ContainerManagerService::ListContainersToGRPC(container_list_response *resp
         }
 
         if (response->containers[i]->image != nullptr) {
-            runtime::v1alpha2::ImageSpec *image = container->mutable_image();
+            runtime::v1::ImageSpec *image = container->mutable_image();
             image->set_image(response->containers[i]->image);
             std::string imageID =
                 CRIHelpers::ToPullableImageID(response->containers[i]->image, response->containers[i]->image_ref);
             container->set_image_ref(imageID);
         }
 
-        runtime::v1alpha2::ContainerState state =
-            CRIHelpers::ContainerStatusToRuntime(Container_Status(response->containers[i]->status));
+        runtime::v1::ContainerState state =
+            CRIHelpersV1::ContainerStatusToRuntime(Container_Status(response->containers[i]->status));
         container->set_state(state);
 
         pods->push_back(move(container));
     }
 }
 
-void ContainerManagerService::ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
-                                             std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers,
+void ContainerManagerService::ListContainers(const runtime::v1::ContainerFilter *filter,
+                                             std::vector<std::unique_ptr<runtime::v1::Container>> *containers,
                                              Errors &error)
 {
     if (m_cb == nullptr || m_cb->container.list == nullptr) {
@@ -752,7 +753,7 @@ cleanup:
     free_container_list_response(response);
 }
 
-auto ContainerManagerService::PackContainerStatsFilter(const runtime::v1alpha2::ContainerStatsFilter *filter,
+auto ContainerManagerService::PackContainerStatsFilter(const runtime::v1::ContainerStatsFilter *filter,
                                                        container_stats_request *request, Errors &error) -> int
 {
     if (filter == nullptr) {
@@ -790,7 +791,7 @@ auto ContainerManagerService::PackContainerStatsFilter(const runtime::v1alpha2::
 }
 
 void ContainerManagerService::PackContainerStatsAttributes(
-    const char *id, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container, Errors &error)
+    const char *id, std::unique_ptr<runtime::v1::ContainerStats> &container, Errors &error)
 {
     if (id == nullptr) {
         return;
@@ -803,8 +804,8 @@ void ContainerManagerService::PackContainerStatsAttributes(
     }
 
     if (status->has_metadata()) {
-        std::unique_ptr<runtime::v1alpha2::ContainerMetadata> metadata(
-            new (std::nothrow) runtime::v1alpha2::ContainerMetadata(status->metadata()));
+        std::unique_ptr<runtime::v1::ContainerMetadata> metadata(
+            new (std::nothrow) runtime::v1::ContainerMetadata(status->metadata()));
         if (metadata == nullptr) {
             error.SetError("Out of memory");
             ERROR("Out of memory");
@@ -823,7 +824,7 @@ void ContainerManagerService::PackContainerStatsAttributes(
 }
 
 void ContainerManagerService::SetFsUsage(const imagetool_fs_info *fs_usage, int64_t timestamp,
-                                         std::unique_ptr<runtime::v1alpha2::ContainerStats> &container)
+                                         std::unique_ptr<runtime::v1::ContainerStats> &container)
 {
     if (fs_usage == nullptr || fs_usage->image_filesystems_len == 0 || fs_usage->image_filesystems[0] == nullptr) {
         container->mutable_writable_layer()->mutable_used_bytes()->set_value(0);
@@ -855,7 +856,7 @@ void ContainerManagerService::SetFsUsage(const imagetool_fs_info *fs_usage, int6
 
 void ContainerManagerService::PackContainerStatsFilesystemUsage(
     const char *id, const char *image_type, int64_t timestamp,
-    std::unique_ptr<runtime::v1alpha2::ContainerStats> &container)
+    std::unique_ptr<runtime::v1::ContainerStats> &container)
 {
     if (id == nullptr || image_type == nullptr) {
         return;
@@ -872,15 +873,15 @@ void ContainerManagerService::PackContainerStatsFilesystemUsage(
 
 void ContainerManagerService::ContainerStatsToGRPC(
     container_stats_response *response,
-    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
+    std::vector<std::unique_ptr<runtime::v1::ContainerStats>> *containerstats, Errors &error)
 {
     if (response == nullptr) {
         return;
     }
 
     for (size_t i {}; i < response->container_stats_len; i++) {
-        using ContainerStatsPtr = std::unique_ptr<runtime::v1alpha2::ContainerStats>;
-        ContainerStatsPtr container(new (std::nothrow) runtime::v1alpha2::ContainerStats);
+        using ContainerStatsPtr = std::unique_ptr<runtime::v1::ContainerStats>;
+        ContainerStatsPtr container(new (std::nothrow) runtime::v1::ContainerStats);
         if (container == nullptr) {
             ERROR("Out of memory");
             return;
@@ -927,8 +928,8 @@ void ContainerManagerService::ContainerStatsToGRPC(
 }
 
 void ContainerManagerService::ListContainerStats(
-    const runtime::v1alpha2::ContainerStatsFilter *filter,
-    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
+    const runtime::v1::ContainerStatsFilter *filter,
+    std::vector<std::unique_ptr<runtime::v1::ContainerStats>> *containerstats, Errors &error)
 {
     if (m_cb == nullptr || m_cb->container.stats == nullptr) {
         error.SetError("Unimplemented callback");
@@ -973,12 +974,12 @@ cleanup:
 }
 
 auto ContainerManagerService::ContainerStats(const std::string &containerID, Errors &error)
--> std::unique_ptr<runtime::v1alpha2::ContainerStats>
+-> std::unique_ptr<runtime::v1::ContainerStats>
 {
     container_stats_request *request { nullptr };
     container_stats_response *response { nullptr };
-    std::unique_ptr<runtime::v1alpha2::ContainerStats> contStats { nullptr };
-    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> contStatsVec;
+    std::unique_ptr<runtime::v1::ContainerStats> contStats { nullptr };
+    std::vector<std::unique_ptr<runtime::v1::ContainerStats>> contStatsVec;
 
     if (containerID.empty()) {
         error.SetError("Empty container id");
@@ -1027,7 +1028,7 @@ cleanup:
 }
 
 void ContainerManagerService::PackContainerImageToStatus(
-    container_inspect *inspect, std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error)
+    container_inspect *inspect, std::unique_ptr<runtime::v1::ContainerStatus> &contStatus, Errors &error)
 {
     if (inspect->config == nullptr) {
         return;
@@ -1043,9 +1044,9 @@ void ContainerManagerService::PackContainerImageToStatus(
 
 void ContainerManagerService::UpdateBaseStatusFromInspect(
     container_inspect *inspect, int64_t &createdAt, int64_t &startedAt, int64_t &finishedAt,
-    std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus)
+    std::unique_ptr<runtime::v1::ContainerStatus> &contStatus)
 {
-    runtime::v1alpha2::ContainerState state { runtime::v1alpha2::CONTAINER_UNKNOWN };
+    runtime::v1::ContainerState state { runtime::v1::CONTAINER_UNKNOWN };
     std::string reason;
     std::string message;
     int32_t exitCode { 0 };
@@ -1056,23 +1057,23 @@ void ContainerManagerService::UpdateBaseStatusFromInspect(
 
     if (inspect->state->running) {
         // Container is running
-        state = runtime::v1alpha2::CONTAINER_RUNNING;
+        state = runtime::v1::CONTAINER_RUNNING;
     } else {
         // Container is not running.
         if (finishedAt != 0) { // Case 1
-            state = runtime::v1alpha2::CONTAINER_EXITED;
+            state = runtime::v1::CONTAINER_EXITED;
             if (inspect->state->exit_code == 0) {
                 reason = "Completed";
             } else {
                 reason = "Error";
             }
         } else if (inspect->state->exit_code != 0) { // Case 2
-            state = runtime::v1alpha2::CONTAINER_EXITED;
+            state = runtime::v1::CONTAINER_EXITED;
             finishedAt = createdAt;
             startedAt = createdAt;
             reason = "ContainerCannotRun";
         } else { // Case 3
-            state = runtime::v1alpha2::CONTAINER_CREATED;
+            state = runtime::v1::CONTAINER_CREATED;
         }
         if (inspect->state->error != nullptr) {
             message = inspect->state->error;
@@ -1091,7 +1092,7 @@ pack_status:
 }
 
 void ContainerManagerService::PackLabelsToStatus(container_inspect *inspect,
-                                                 std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus)
+                                                 std::unique_ptr<runtime::v1::ContainerStatus> &contStatus)
 {
     if (inspect->config == nullptr || inspect->config->labels == nullptr) {
         return;
@@ -1107,31 +1108,31 @@ void ContainerManagerService::PackLabelsToStatus(container_inspect *inspect,
 }
 
 void ContainerManagerService::ConvertMountsToStatus(container_inspect *inspect,
-                                                    std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus)
+                                                    std::unique_ptr<runtime::v1::ContainerStatus> &contStatus)
 {
     for (size_t i = 0; i < inspect->mounts_len; i++) {
-        runtime::v1alpha2::Mount *mount = contStatus->add_mounts();
+        runtime::v1::Mount *mount = contStatus->add_mounts();
         mount->set_host_path(inspect->mounts[i]->source);
         mount->set_container_path(inspect->mounts[i]->destination);
         mount->set_readonly(!inspect->mounts[i]->rw);
         if (inspect->mounts[i]->propagation == nullptr || strcmp(inspect->mounts[i]->propagation, "rprivate") == 0) {
-            mount->set_propagation(runtime::v1alpha2::PROPAGATION_PRIVATE);
+            mount->set_propagation(runtime::v1::PROPAGATION_PRIVATE);
         } else if (strcmp(inspect->mounts[i]->propagation, "rslave") == 0) {
-            mount->set_propagation(runtime::v1alpha2::PROPAGATION_HOST_TO_CONTAINER);
+            mount->set_propagation(runtime::v1::PROPAGATION_HOST_TO_CONTAINER);
         } else if (strcmp(inspect->mounts[i]->propagation, "rshared") == 0) {
-            mount->set_propagation(runtime::v1alpha2::PROPAGATION_BIDIRECTIONAL);
+            mount->set_propagation(runtime::v1::PROPAGATION_BIDIRECTIONAL);
         }
         // Note: Can't set SeLinuxRelabel
     }
 }
 
 void ContainerManagerService::ConvertResourcesToStatus(container_inspect *inspect,
-                                                       std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus)
+                                                       std::unique_ptr<runtime::v1::ContainerStatus> &contStatus)
 {
     if (inspect->resources == nullptr) {
         return;
     }
-    runtime::v1alpha2::LinuxContainerResources *resources = contStatus->mutable_resources()->mutable_linux();
+    runtime::v1::LinuxContainerResources *resources = contStatus->mutable_resources()->mutable_linux();
     if (inspect->resources->cpu_shares != 0) {
         resources->set_cpu_shares(inspect->resources->cpu_shares);
     }
@@ -1148,7 +1149,7 @@ void ContainerManagerService::ConvertResourcesToStatus(container_inspect *inspec
         resources->set_memory_swap_limit_in_bytes(inspect->resources->memory_swap);
     }
     for (size_t i = 0; i < inspect->resources->hugetlbs_len; i++) {
-        runtime::v1alpha2::HugepageLimit *hugepage = resources->add_hugepage_limits();
+        runtime::v1::HugepageLimit *hugepage = resources->add_hugepage_limits();
         hugepage->set_page_size(inspect->resources->hugetlbs[i]->page_size);
         hugepage->set_limit(inspect->resources->hugetlbs[i]->limit);
     }
@@ -1161,7 +1162,7 @@ void ContainerManagerService::ConvertResourcesToStatus(container_inspect *inspec
 }
 
 void ContainerManagerService::ContainerStatusToGRPC(container_inspect *inspect,
-                                                    std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus,
+                                                    std::unique_ptr<runtime::v1::ContainerStatus> &contStatus,
                                                     Errors &error)
 {
     if (inspect->id != nullptr) {
@@ -1182,7 +1183,7 @@ void ContainerManagerService::ContainerStatusToGRPC(container_inspect *inspect,
     PackContainerImageToStatus(inspect, contStatus, error);
     UpdateBaseStatusFromInspect(inspect, createdAt, startedAt, finishedAt, contStatus);
     PackLabelsToStatus(inspect, contStatus);
-    CRINaming::ParseContainerName(contStatus->annotations(), contStatus->mutable_metadata(), error);
+    CRINamingV1::ParseContainerName(contStatus->annotations(), contStatus->mutable_metadata(), error);
     if (error.NotEmpty()) {
         return;
     }
@@ -1190,7 +1191,7 @@ void ContainerManagerService::ContainerStatusToGRPC(container_inspect *inspect,
     ConvertResourcesToStatus(inspect, contStatus);
 }
 
-std::unique_ptr<runtime::v1alpha2::ContainerStatus>
+std::unique_ptr<runtime::v1::ContainerStatus>
 ContainerManagerService::ContainerStatus(const std::string &containerID, Errors &error)
 {
     if (containerID.empty()) {
@@ -1213,8 +1214,8 @@ ContainerManagerService::ContainerStatus(const std::string &containerID, Errors 
         error.SetError("Get null inspect");
         return nullptr;
     }
-    using ContainerStatusPtr = std::unique_ptr<runtime::v1alpha2::ContainerStatus>;
-    ContainerStatusPtr contStatus(new (std::nothrow) runtime::v1alpha2::ContainerStatus);
+    using ContainerStatusPtr = std::unique_ptr<runtime::v1::ContainerStatus>;
+    ContainerStatusPtr contStatus(new (std::nothrow) runtime::v1::ContainerStatus);
     if (contStatus == nullptr) {
         error.SetError("Out of memory");
         free_container_inspect(inspect);
@@ -1228,7 +1229,7 @@ ContainerManagerService::ContainerStatus(const std::string &containerID, Errors 
 }
 
 void ContainerManagerService::UpdateContainerResources(const std::string &containerID,
-                                                       const runtime::v1alpha2::LinuxContainerResources &resources,
+                                                       const runtime::v1::LinuxContainerResources &resources,
                                                        Errors &error)
 {
     if (containerID.empty()) {
@@ -1391,7 +1392,7 @@ static auto WriteToString(void *context, const void *data, size_t len) -> ssize_
 
 void ContainerManagerService::ExecSync(const std::string &containerID,
                                        const google::protobuf::RepeatedPtrField<std::string> &cmd, int64_t timeout,
-                                       runtime::v1alpha2::ExecSyncResponse *reply, Errors &error)
+                                       runtime::v1::ExecSyncResponse *reply, Errors &error)
 {
     struct io_write_wrapper StdoutstringWriter = { 0 };
     struct io_write_wrapper StderrstringWriter = { 0 };
@@ -1461,7 +1462,7 @@ auto ContainerManagerService::InspectContainerState(const std::string &Id, Error
     return inspect_data;
 }
 
-auto ContainerManagerService::ValidateExecRequest(const runtime::v1alpha2::ExecRequest &req, Errors &error) -> int
+auto ContainerManagerService::ValidateExecRequest(const runtime::v1::ExecRequest &req, Errors &error) -> int
 {
     if (req.container_id().empty()) {
         error.SetError("missing required container id!");
@@ -1506,17 +1507,27 @@ auto ContainerManagerService::ValidateExecRequest(const runtime::v1alpha2::ExecR
     return 0;
 }
 
-void ContainerManagerService::Exec(const runtime::v1alpha2::ExecRequest &req, runtime::v1alpha2::ExecResponse *resp,
+void ContainerManagerService::Exec(const runtime::v1::ExecRequest &req, runtime::v1::ExecResponse *resp,
                                    Errors &error)
 {
     if (ValidateExecRequest(req, error) != 0) {
         return;
     }
-    auto execReq = new (std::nothrow) runtime::v1alpha2::ExecRequest(req);
+    auto execReq = new (std::nothrow) StreamRequest();
     if (execReq == nullptr) {
         error.SetError("out of memory");
         return;
     }
+    int i;
+    execReq->containerID = req.container_id();
+    execReq->streamTty = req.tty();
+    execReq->streamStdin = req.stdin();
+    execReq->streamStdout = req.stdout();
+    execReq->streamStderr = req.stderr();
+    for (i = 0; i < req.cmd_size(); i++) {
+        execReq->streamCmds.push_back(req.cmd(i));
+    }
+
     RequestCache *cache = RequestCache::GetInstance();
     std::string token = cache->InsertRequest(req.container_id(), execReq);
     if (token.empty()) {
@@ -1528,7 +1539,7 @@ void ContainerManagerService::Exec(const runtime::v1alpha2::ExecRequest &req, ru
     resp->set_url(url);
 }
 
-auto ContainerManagerService::ValidateAttachRequest(const runtime::v1alpha2::AttachRequest &req, Errors &error) -> int
+auto ContainerManagerService::ValidateAttachRequest(const runtime::v1::AttachRequest &req, Errors &error) -> int
 {
     if (req.container_id().empty()) {
         error.SetError("missing required container id!");
@@ -1552,8 +1563,8 @@ auto ContainerManagerService::ValidateAttachRequest(const runtime::v1alpha2::Att
     return 0;
 }
 
-void ContainerManagerService::Attach(const runtime::v1alpha2::AttachRequest &req,
-                                     runtime::v1alpha2::AttachResponse *resp, Errors &error)
+void ContainerManagerService::Attach(const runtime::v1::AttachRequest &req,
+                                     runtime::v1::AttachResponse *resp, Errors &error)
 {
     if (ValidateAttachRequest(req, error) != 0) {
         return;
@@ -1562,11 +1573,18 @@ void ContainerManagerService::Attach(const runtime::v1alpha2::AttachRequest &req
         error.SetError("Empty attach response arguments");
         return;
     }
-    auto attachReq = new (std::nothrow) runtime::v1alpha2::AttachRequest(req);
+
+    auto attachReq = new (std::nothrow) StreamRequest();
     if (attachReq == nullptr) {
         error.SetError("out of memory");
         return;
     }
+
+    attachReq->containerID = req.container_id();
+    attachReq->streamStdin = req.stdin();
+    attachReq->streamStdout = req.stdout();
+    attachReq->streamStderr = req.stderr();
+
     RequestCache *cache = RequestCache::GetInstance();
     std::string token = cache->InsertRequest(req.container_id(), attachReq);
     if (token.empty()) {

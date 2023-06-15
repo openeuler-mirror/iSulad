@@ -19,16 +19,17 @@
 #include <string>
 #include <vector>
 
-#include "api.pb.h"
+#include <google/protobuf/map.h>
+#include <isula_libutils/cri_pod_network.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/container_inspect.h>
+
 #include "callback.h"
 #include "checkpoint_handler.h"
 #include "constants.h"
 #include "errors.h"
 #include "image_api.h"
-#include "isula_libutils/cri_pod_network.h"
-#include "isula_libutils/docker_seccomp.h"
-#include "isula_libutils/host_config.h"
-#include "isula_libutils/container_inspect.h"
+
 namespace CRIHelpers {
 class Constants {
 public:
@@ -73,14 +74,6 @@ public:
     static const std::string IMAGE_NAME_ANNOTATION_KEY;
 };
 
-struct commonSecurityContext {
-    const bool hasSeccomp;
-    const bool hasSELinuxOption;
-    const ::runtime::v1alpha2::SecurityProfile seccomp;
-    const ::runtime::v1alpha2::SELinuxOption selinuxOption;
-    const std::string seccompProfile;
-};
-
 auto GetDefaultSandboxImage(Errors &err) -> std::string;
 
 auto MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels, Errors &error)
@@ -100,8 +93,6 @@ auto FiltersAddLabel(defs_filters *filters, const std::string &key, const std::s
 void ProtobufAnnoMapToStd(const google::protobuf::Map<std::string, std::string> &annotations,
                           std::map<std::string, std::string> &newAnnos);
 
-auto ContainerStatusToRuntime(Container_Status status) -> runtime::v1alpha2::ContainerState;
-
 auto StringVectorToCharArray(std::vector<std::string> &path) -> char **;
 
 auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_image_summary *;
@@ -115,40 +106,7 @@ auto IsImageNotFoundError(const std::string &err) -> bool;
 auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations,
                                 Errors &error) -> cri_pod_network_container *;
 
-auto CheckpointToSandbox(const std::string &id, const CRI::PodSandboxCheckpoint &checkpoint)
--> std::unique_ptr<runtime::v1alpha2::PodSandbox>;
-
 auto StringsJoin(const std::vector<std::string> &vec, const std::string &sep) -> std::string;
-
-void UpdateCreateConfig(container_config *createConfig, host_config *hc,
-                        const runtime::v1alpha2::ContainerConfig &config, const std::string &podSandboxID,
-                        Errors &error);
-
-void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1alpha2::Mount> &mounts,
-                           host_config *hostconfig, Errors &err);
-
-auto GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs)
--> std::vector<std::string>;
-
-auto ValidateCheckpointKey(const std::string &key, Errors &error) -> bool;
-
-auto ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state) -> std::string;
-
-auto GetSeccompSecurityOpts(const bool hasSeccomp, const ::runtime::v1alpha2::SecurityProfile &seccomp,
-                            const std::string &seccompProfile, const char &separator, Errors &error)
--> std::vector<std::string>;
-
-auto GetSELinuxLabelOpts(const bool hasSELinuxOption, const ::runtime::v1alpha2::SELinuxOption &selinux,
-                         const char &separator, Errors &error)
--> std::vector<std::string>;
-
-auto GetSecurityOpts(const commonSecurityContext &context, const char &separator, Errors &error)
--> std::vector<std::string>;
-
-auto GetPodSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
--> std::vector<std::string>;
-
-void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_config *hostconfig, Errors &error);
 
 auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string;
 

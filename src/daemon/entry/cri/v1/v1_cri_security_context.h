@@ -1,0 +1,33 @@
+/******************************************************************************
+ * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * Author: tanyifeng
+ * Create: 2017-11-22
+ * Description: provide cri security context function definition
+ *********************************************************************************/
+#ifndef DAEMON_ENTRY_CRI_V1_CRI_SECURITY_CONTEXT_H
+#define DAEMON_ENTRY_CRI_V1_CRI_SECURITY_CONTEXT_H
+
+#include "api_v1.pb.h"
+#include "errors.h"
+#include "isula_libutils/container_config.h"
+#include "isula_libutils/host_config.h"
+#include <string>
+
+namespace CRISecurityV1 {
+void ApplySandboxSecurityContext(const runtime::v1::LinuxPodSandboxConfig &lc, container_config *config,
+                                 host_config *hc, Errors &error);
+
+void ApplyContainerSecurityContext(const runtime::v1::LinuxContainerConfig &lc, const std::string &podSandboxID,
+                                   container_config *config, host_config *hc, Errors &errorr);
+
+} // namespace CRISecurityV1
+
+#endif // DAEMON_ENTRY_CRI_V1_CRI_SECURITY_CONTEXT_H

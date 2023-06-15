@@ -21,6 +21,7 @@
 #include "checkpoint_handler.h"
 #include "utils.h"
 #include "cri_helpers.h"
+#include "v1alpha_cri_helpers.h"
 #include "cri_security_context.h"
 #include "cri_constants.h"
 #include "naming.h"
@@ -198,7 +199,7 @@ void PodSandboxManagerService::MakeSandboxIsuladConfig(const runtime::v1alpha2::
         return;
     }
 
-    CRIHelpers::commonSecurityContext commonContext = {
+    CRIHelpersV1Alpha::commonSecurityContext commonContext = {
         .hasSeccomp = context.has_seccomp(),
         .hasSELinuxOption = context.has_selinux_options(),
         .seccomp = context.seccomp(),
@@ -206,13 +207,13 @@ void PodSandboxManagerService::MakeSandboxIsuladConfig(const runtime::v1alpha2::
         .seccompProfile = context.seccomp_profile_path(),
     };
 
-    std::vector<std::string> securityOpts = CRIHelpers::GetSecurityOpts(commonContext, securityOptSep, error);
+    std::vector<std::string> securityOpts = CRIHelpersV1Alpha::GetSecurityOpts(commonContext, securityOptSep, error);
     if (error.NotEmpty()) {
         error.Errorf("Failed to generate security options for sandbox %s: %s",
                      c.metadata().name().c_str(), error.GetMessage().c_str());
         return;
     }
-    CRIHelpers::AddSecurityOptsToHostConfig(securityOpts, hc, error);
+    CRIHelpersV1Alpha::AddSecurityOptsToHostConfig(securityOpts, hc, error);
     if (error.NotEmpty()) {
         error.Errorf("Failed to add securityOpts to hostconfig for sandbox %s: %s", c.metadata().name().c_str(),
                      error.GetMessage().c_str());
