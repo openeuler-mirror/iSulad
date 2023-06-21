@@ -1217,7 +1217,8 @@ static int waitpid_with_timeout(int ctr_pid,  int *status, const uint64_t timeou
  */
 static int wait_container_process_with_timeout(process_t *p, const uint64_t timeout, int *status)
 {
-    if (timeout > 0) {
+    // currently, kata runtime does not support setting timeout during exec
+    if (strcasecmp(p->runtime, "kata-runtime") != 0 && timeout > 0) {
         return waitpid_with_timeout(p->ctr_pid, status, timeout);
     }
 
