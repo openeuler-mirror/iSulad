@@ -26,35 +26,17 @@
 #include <thread>
 #include <libwebsockets.h>
 #include "route_callback_register.h"
+#include "session.h"
 #include "url.h"
 #include "errors.h"
 #include "read_write_lock.h"
 
 namespace {
 const int MAX_ECHO_PAYLOAD = 4096;
-const int MAX_ARRAY_LEN = 2;
 const int MAX_PROTOCOL_NUM = 2;
 } // namespace
 
-struct SessionData {
-    std::array<int, MAX_ARRAY_LEN> pipes;
-    volatile bool close;
-    std::mutex *sessionMutex;
-    sem_t *syncCloseSem;
-    std::list<unsigned char *> buffer;
-    std::string containerID;
-    std::string suffix;
-    volatile bool completeStdin;
-
-    unsigned char *FrontMessage();
-    void PopMessage();
-    int PushMessage(unsigned char *message);
-    bool IsClosed();
-    void CloseSession();
-    void EraseAllMessage();
-    bool IsStdinComplete();
-    void SetStdinComplete(bool complete);
-};
+enum WebsocketChannel { STDINCHANNEL = 0, STDOUTCHANNEL, STDERRCHANNEL, ERRORCHANNEL, RESIZECHANNEL };
 
 class WebsocketServer {
 public:
@@ -79,7 +61,7 @@ private:
     int Wswrite(struct lws *wsi, const unsigned char *message);
     inline void DumpHandshakeInfo(struct lws *wsi) noexcept;
     int RegisterStreamTask(struct lws *wsi) noexcept;
-    int GenerateSessionData(SessionData *session, const std::string containerID) noexcept;
+    int GenerateSessionData(SessionData *session, const std::string &containerID) noexcept;
     void ServiceWorkThread(int threadid);
     void CloseWsSession(int socketID);
     void CloseAllWsSession();
@@ -110,14 +92,7 @@ private:
     };
     RouteCallbackRegister m_handler;
     static std::unordered_map<int, SessionData *> m_wsis;
-    url::URLDatum m_url;
     int m_listenPort;
 };
-
-ssize_t WsWriteStdoutToClient(void *context, const void *data, size_t len);
-ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len);
-ssize_t WsDoNotWriteStdoutToClient(void *context, const void *data, size_t len);
-ssize_t WsDoNotWriteStderrToClient(void *context, const void *data, size_t len);
-int closeWsConnect(void *context, char **err);
 
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_WS_SERVER_H

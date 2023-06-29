@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include "route_callback_register.h"
 #include <isula_libutils/log.h>
-#include "ws_server.h"
 
 int StreamingServeInterface::Execute(SessionData *lwsCtx, const std::string &token)
 {

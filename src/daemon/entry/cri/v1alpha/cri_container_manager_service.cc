@@ -24,8 +24,7 @@
 #include "path.h"
 #include "service_container_api.h"
 #include "request_cache.h"
-#include "url.h"
-#include "ws_server.h"
+#include "stream_server.h"
 
 namespace CRI {
 auto ContainerManagerService::GetContainerOrSandboxRuntime(const std::string &realID, Errors &error) -> std::string
@@ -1445,9 +1444,8 @@ auto ContainerManagerService::BuildURL(const std::string &method, const std::str
 {
     url::URLDatum url;
     url.SetPathWithoutEscape("/cri/" + method + "/" + token);
-    WebsocketServer *server = WebsocketServer::GetInstance();
-    url::URLDatum wsurl = server->GetWebsocketUrl();
-    return wsurl.ResolveReference(&url)->String();
+
+    return cri_stream_server_url().ResolveReference(&url)->String();
 }
 
 auto ContainerManagerService::InspectContainerState(const std::string &Id, Errors &err) -> container_inspect_state *

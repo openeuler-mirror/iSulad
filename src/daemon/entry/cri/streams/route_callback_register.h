@@ -13,8 +13,8 @@
  * Create: 2019-01-02
  ******************************************************************************/
 
-#ifndef DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ROUTE_CALLBACK_REGISTER_H
-#define DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ROUTE_CALLBACK_REGISTER_H
+#ifndef DAEMON_ENTRY_CRI_STREAM_SERVICE_ROUTE_CALLBACK_REGISTER_H
+#define DAEMON_ENTRY_CRI_STREAM_SERVICE_ROUTE_CALLBACK_REGISTER_H
 #include <iostream>
 #include <string>
 #include <memory>
@@ -23,8 +23,7 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include "request_cache.h"
-
-struct SessionData;
+#include "session.h"
 
 class StreamingServeInterface {
 public:
@@ -79,4 +78,4 @@ private:
     std::string m_token;
 };
 
-#endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ROUTE_CALLBACK_REGISTER_H
+#endif // DAEMON_ENTRY_CRI_STREAM_SERVICE_ROUTE_CALLBACK_REGISTER_H

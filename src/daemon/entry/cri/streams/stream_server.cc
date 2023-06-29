@@ -16,27 +16,35 @@
 #include "stream_server.h"
 #include <memory>
 #include <string>
-#include "ws_server.h"
 #include "exec_serve.h"
 #include "attach_serve.h"
+#include "ws_server.h"
 
-void websocket_server_init(Errors &err)
+static url::URLDatum m_url;
+
+void cri_stream_server_init(Errors &err)
 {
     auto *server = WebsocketServer::GetInstance();
+    m_url = server->GetWebsocketUrl();
+    // register support service
     server->RegisterCallback(std::string("exec"), std::make_shared<ExecServe>());
     server->RegisterCallback(std::string("attach"), std::make_shared<AttachServe>());
     server->Start(err);
 }
 
-void websocket_server_wait(void)
+void cri_stream_server_wait(void)
 {
     auto *server = WebsocketServer::GetInstance();
     server->Wait();
 }
 
-void websocket_server_shutdown(void)
+void cri_stream_server_shutdown(void)
 {
     auto *server = WebsocketServer::GetInstance();
     server->Shutdown();
 }
 
+url::URLDatum cri_stream_server_url(void)
+{
+    return m_url;
+}

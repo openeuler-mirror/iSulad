@@ -91,7 +91,7 @@ int CRIService::Init(const isulad_daemon_configs *config)
     }
 #endif
 
-    websocket_server_init(err);
+    cri_stream_server_init(err);
     if (err.NotEmpty()) {
         ERROR("Init stream server failed: %s", err.GetMessage().c_str());
         return -1;
@@ -119,7 +119,7 @@ void CRIService::Wait(void)
 #ifdef ENABLE_CRI_API_V1
     m_runtimeV1RuntimeService.Wait();
 #endif
-    websocket_server_wait();
+    cri_stream_server_wait();
 }
 
 void CRIService::Shutdown(void)
@@ -128,5 +128,5 @@ void CRIService::Shutdown(void)
 #ifdef ENABLE_CRI_API_V1
     m_runtimeV1RuntimeService.Shutdown();
 #endif
-    websocket_server_shutdown();
+    cri_stream_server_shutdown();
 }
