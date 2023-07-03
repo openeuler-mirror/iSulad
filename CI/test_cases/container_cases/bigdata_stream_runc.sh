@@ -317,4 +317,10 @@ tear_down || ((ans++))
 
 test_memory_leak_with_bigdata_stream || ((ans++))
 
+ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
+[[ $? -eq 0 ]] && msg_err "IOCopy Thread residue"
+
+ps aux | grep "cat test_" | grep -v "grep"
+[[ $? -eq 0 ]] && msg_err "business process residual"
+
 show_result ${ans} "${curr_path}/${0}"

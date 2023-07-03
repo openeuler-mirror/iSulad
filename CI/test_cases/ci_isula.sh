@@ -151,6 +151,10 @@ else
     total=${#scripts[@]}
     for script in ${scripts[@]}
     do
+        # critest runs every wednesday
+        if [[ $(echo $script | grep 'critest') && $(date +%a) != 'Wed' ]];then
+            continue
+        fi
         index=$(($index+1))
         run_script "${script}" "${logdir}" "$runflag"
         if [[ -e ${script}.fail ]];then

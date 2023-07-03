@@ -160,11 +160,10 @@ function do_test_t() {
 
 declare -i ans=0
 
-# disable critest temporary
-# pre_test || (ans++)
+pre_test || (ans++)
 
-# do_test_t || ((ans++))
+do_test_t || ((ans++))
 
-# post_test || (ans++)
+post_test || (ans++)
 
 show_result ${ans} "${curr_path}/${0}"
