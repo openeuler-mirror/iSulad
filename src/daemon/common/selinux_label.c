@@ -438,7 +438,7 @@ static bool mcs_delete(const char *mcs)
         return false;
     }
 
-    ret = map_replace(g_selinux_state->mcs_list, (void *)mcs, (void *)&val);
+    ret = map_remove(g_selinux_state->mcs_list, (void *)mcs);
 
     if (pthread_rwlock_unlock(&g_selinux_state->rwlock) != 0) {
         ERROR("unlock name index failed");
