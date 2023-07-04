@@ -427,7 +427,6 @@ static bool mcs_add(const char *mcs)
 static bool mcs_delete(const char *mcs)
 {
     bool ret = false;
-    bool val = true;
 
     if (mcs == NULL) {
         return 0;
