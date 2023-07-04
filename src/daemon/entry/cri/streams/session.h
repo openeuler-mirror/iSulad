@@ -21,6 +21,7 @@
 #include <utility>
 #include <map>
 #include <unistd.h>
+#include <array>
 #include <semaphore.h>
 #include "request_cache.h"
 
