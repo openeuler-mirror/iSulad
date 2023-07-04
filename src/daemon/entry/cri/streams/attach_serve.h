@@ -13,13 +13,13 @@
  * Create: 2019-01-02
  ******************************************************************************/
 
-#ifndef DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ATTACH_SERVE_H
-#define DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ATTACH_SERVE_H
+#ifndef DAEMON_ENTRY_CRI_STREAMS_SERVICE_ATTACH_SERVE_H
+#define DAEMON_ENTRY_CRI_STREAMS_SERVICE_ATTACH_SERVE_H
 
 #include "route_callback_register.h"
 #include <string>
-#include "isula_libutils/container_attach_request.h"
-#include "isula_libutils/container_attach_response.h"
+#include <isula_libutils/container_attach_request.h>
+#include <isula_libutils/container_attach_response.h>
 
 class AttachServe : public StreamingServeInterface {
 public:
@@ -35,5 +35,5 @@ private:
     virtual void CloseConnect(SessionData *lwsCtx) override;
     virtual void FreeRequest(void *m_request) override;
 };
-#endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ATTACH_SERVE_H
+#endif // DAEMON_ENTRY_CRI_STREAMS_SERVICE_ATTACH_SERVE_H
 

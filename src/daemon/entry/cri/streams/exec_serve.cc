@@ -16,7 +16,7 @@
 #include "exec_serve.h"
 #include <isula_libutils/log.h>
 #include "io_wrapper.h"
-#include "ws_server.h"
+#include "session.h"
 #include "utils.h"
 #include "callback.h"
 #include "cri_helpers.h"
