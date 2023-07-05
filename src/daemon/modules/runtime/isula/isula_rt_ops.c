@@ -800,7 +800,7 @@ realexec:
         /* real shim process. */
         close(shim_stderr_pipe[0]);
         close(shim_stdout_pipe[0]);
-        
+
         if (setsid() < 0) {
             (void)dprintf(shim_stderr_pipe[1], "%s: failed setsid for process %d", id, getpid());
             exit(EXIT_FAILURE);

@@ -447,7 +447,7 @@ static image_t *by_digest(const char *name)
 {
     digest_image_t *digest_filter_images = NULL;
     char *digest = NULL;
-    
+
     // split digest for image name with digest
     digest = strrchr(name, '@');
     if (digest == NULL || util_reg_match(__DIGESTPattern, digest)) {

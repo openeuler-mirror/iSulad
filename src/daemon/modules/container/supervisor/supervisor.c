@@ -194,6 +194,14 @@ retry:
             goto retry;
         }
 
+        // get info of init process in container for debug problem of container
+        proc_t *c_proc = util_get_process_proc_info(pid);
+        if (c_proc != NULL) {
+            ERROR("Container %s into GC with process state: {cmd: %s, state: %c, pid: %d}", name, c_proc->cmd, c_proc->state,
+                  (int)pid);
+            free(c_proc);
+        }
+
         ret = gc_add_container(name, runtime, &data->pid_info);
         if (ret != 0) {
             ERROR("Failed to send container %s to garbage handler", name);
