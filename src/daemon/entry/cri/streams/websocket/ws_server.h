@@ -47,6 +47,7 @@ public:
     void RegisterCallback(const std::string &path, std::shared_ptr<StreamingServeInterface> callback);
     url::URLDatum GetWebsocketUrl();
     void SetLwsSendedFlag(int socketID, bool sended);
+    void SetListenPort(const int listenPort);
 
 private:
     WebsocketServer();

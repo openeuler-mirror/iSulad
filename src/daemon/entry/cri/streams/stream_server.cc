@@ -19,12 +19,21 @@
 #include "exec_serve.h"
 #include "attach_serve.h"
 #include "ws_server.h"
+#include "isulad_config.h"
 
 static url::URLDatum m_url;
 
 void cri_stream_server_init(Errors &err)
 {
+    int streamPort = conf_get_websocket_server_listening_port();
+    if (streamPort == 0) {
+        err.SetError("Failed to get stream server listening port from daemon config");
+        return;
+    }
     auto *server = WebsocketServer::GetInstance();
+    // set listen port before get Url, becasue Url format by listen port
+    server->SetListenPort(streamPort);
+
     m_url = server->GetWebsocketUrl();
     // register support service
     server->RegisterCallback(std::string("exec"), std::make_shared<ExecServe>());
