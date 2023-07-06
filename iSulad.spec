@@ -1,5 +1,5 @@
 %global _version 2.1.1
-%global _release 7
+%global _release 8
 %global is_systemd 1
 %global enable_shimv2 1
 %global is_embedded 1
@@ -65,6 +65,7 @@ Patch0049:	0049-add-runc-doc.patch
 Patch0050:	0050-fix-isula_rt_ops_ut-bugs.patch
 Patch0051:	0051-refactor-remote-ro-code.patch
 Patch0052:	0052-bugfix-when-refresh-can-t-load-or-pull-images.patch
+Patch0053:	fix-clang.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -128,6 +129,10 @@ Runtime Daemon, written by C.
 %autosetup -n iSulad-v%{_version} -Sgit -p1
 
 %build
+%if "%toolchain" == "clang"
+	export CFLAGS="$CFLAGS -Wno-error=unused-variable"
+	export CXXFLAGS="$CXXFLAGS -Wno-error=unused-variable"
+%endif
 mkdir -p build
 cd build
 %if 0%{?enable_shimv2}
@@ -307,6 +312,9 @@ fi
 %endif
 
 %changelog
+* Thu May 25 2023 yoo <sunyuechi@iscas.ac.cn> - %{_version}-%{_release}
+- fix clang build error
+
 * Thu Mar 23 2023 wangrunze <wangrunze13@huawei.com> - 2.1.1-7
 - Type: bugfix
 - ID: NA

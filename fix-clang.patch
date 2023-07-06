@@ -1,0 +1,61 @@
+diff -u -r iSulad-v2.1.1/src/daemon/entry/cri/cri_container_manager_service.cc iSulad-v2.1.1/src/daemon/entry/cri/cri_container_manager_service.cc
+--- iSulad-v2.1.1/src/daemon/entry/cri/cri_container_manager_service.cc	2023-02-06 19:06:11.000000000 +0800
++++ iSulad-v2.1.1/src/daemon/entry/cri/cri_container_manager_service.cc	2023-05-25 19:52:33.000000000 +0800
+@@ -650,7 +650,7 @@
+             CRIHelpers::ContainerStatusToRuntime(Container_Status(response->containers[i]->status));
+         container->set_state(state);
+ 
+-        pods->push_back(move(container));
++				pods->push_back(std::move(container));
+     }
+ }
+ 
+diff -u -r iSulad-v2.1.1/src/daemon/entry/cri/cri_image_manager_service_impl.cc iSulad-v2.1.1/src/daemon/entry/cri/cri_image_manager_service_impl.cc
+--- iSulad-v2.1.1/src/daemon/entry/cri/cri_image_manager_service_impl.cc	2023-02-06 19:06:11.000000000 +0800
++++ iSulad-v2.1.1/src/daemon/entry/cri/cri_image_manager_service_impl.cc	2023-05-25 19:53:01.000000000 +0800
+@@ -150,7 +150,7 @@
+ 
+         imagetool_image_summary *element = list_images->images[i];
+         conv_image_to_grpc(element, image);
+-        images->push_back(move(image));
++				images->push_back(std::move(image));
+     }
+ }
+ 
+diff -u -r iSulad-v2.1.1/test/cutils/utils_aes/utils_aes_ut.cc iSulad-v2.1.1/test/cutils/utils_aes/utils_aes_ut.cc
+--- iSulad-v2.1.1/test/cutils/utils_aes/utils_aes_ut.cc	2023-02-06 19:06:11.000000000 +0800
++++ iSulad-v2.1.1/test/cutils/utils_aes/utils_aes_ut.cc	2023-05-20 01:21:33.000000000 +0800
+@@ -19,7 +19,7 @@
+ TEST(utils_aes, test_util_aes_key)
+ {
+     std::string key_file = "./aes_key";
+-    unsigned char key_val[AES_256_CFB_KEY_LEN] = { 0 };
++    unsigned char key_val[AES_256_CFB_KEY_LEN + 1] = { 0 };
+ 
+     unlink(key_file.c_str());
+     ASSERT_NE(util_aes_key(key_file.c_str(), false, key_val), 0);
+@@ -34,7 +34,7 @@
+ TEST(utils_aes, test_util_aes_encode)
+ {
+     std::string key_file = "./aes_key";
+-    unsigned char key_val[AES_256_CFB_KEY_LEN] = { 0 };
++    unsigned char key_val[AES_256_CFB_KEY_LEN + 1] = { 0 };
+     std::string test_data = "hello world";
+     unsigned char *out = nullptr;
+ 
+@@ -52,7 +52,7 @@
+ TEST(utils_aes, test_util_aes_decode)
+ {
+     std::string key_file = "./aes_key";
+-    unsigned char key_val[AES_256_CFB_KEY_LEN] = { 0 };
++    unsigned char key_val[AES_256_CFB_KEY_LEN + 1] = { 0 };
+     std::string test_data = "hello world";
+     unsigned char *encode_data = nullptr;
+     unsigned char *decode_data = nullptr;
+@@ -71,4 +71,4 @@
+     ASSERT_NE(util_aes_decode(key_val, encode_data, aes_len, nullptr), 0);
+ 
+     unlink(key_file.c_str());
+-}
+\ No newline at end of file
++}
