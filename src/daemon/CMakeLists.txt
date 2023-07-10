@@ -25,6 +25,16 @@ set(local_daemon_incs
     ${DAEMON_COMMON_INCS}
     )
 
+if (ENABLE_CRI_API_V1)
+    add_subdirectory(sandbox)
+    list (APPEND local_daemon_srcs
+        ${SANDBOX_SRCS}
+        )
+    list (APPEND local_daemon_incs
+        ${SANDBOX_INCS}
+        )
+endif()
+
 set(DAEMON_SRCS
     ${local_daemon_srcs}
     PARENT_SCOPE

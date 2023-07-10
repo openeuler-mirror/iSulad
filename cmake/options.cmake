@@ -40,6 +40,13 @@ if (ENABLE_CRI_API_V1 STREQUAL "ON")
     message("${Green}--  Enable CRI API V1${ColourReset}")
 endif()
 
+option(ENABLE_SANDBOXER "Enable sandbox API" ON)
+if (ENABLE_SANDBOXER STREQUAL "ON")
+    add_definitions(-DENABLE_SANDBOXER)
+    set(ENABLE_SANDBOXER 1)
+    message("${Green}--  Enable sandbox API${ColourReset}")
+endif()
+
 option(ENABLE_SYSTEMD_NOTIFY "Enable systemd notify" ON)
 if (ENABLE_SYSTEMD_NOTIFY STREQUAL "ON")
     add_definitions(-DSYSTEMD_NOTIFY)
