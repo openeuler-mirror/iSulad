@@ -154,6 +154,11 @@ extern "C" {
 /* container id max length */
 #define CONTAINER_ID_MAX_LEN 64
 
+#ifdef ENABLE_CRI_API_V1
+/* sandbox id max length */
+#define SANDBOX_ID_MAX_LEN 64
+#endif
+
 #define CONTAINER_EXEC_ID_MAX_LEN 64
 
 #define SCMP_ARCH_X86_64 "SCMP_ARCH_X86_64"

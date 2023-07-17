@@ -10,7 +10,7 @@ add_executable(${EXE}
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1/api_v1.pb.cc
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/gogo.pb.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/sandbox/controller/sandboxer/client/grpc_sandboxer_client.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/entry/cri/errors.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cpputils/errors.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../test/mocks/controller_stub_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/sandboxer_client_ut.cc)
 
@@ -25,6 +25,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/sha256
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cpputils
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/sandbox
