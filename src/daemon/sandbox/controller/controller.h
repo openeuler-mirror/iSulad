@@ -31,7 +31,7 @@ struct ControllerMountInfo {
     std::string source;
     std::string destination;
     std::string type;
-    std::string options;
+    std::vector<std::string> options;
 };
 
 struct ControllerCreateParams {
@@ -51,7 +51,7 @@ struct ControllerSandboxInfo {
     std::string id;
     uint32_t pid;
     uint64_t createdAt;
-    google::protobuf::Map<std::string, std::string> &labels;
+    google::protobuf::Map<std::string, std::string> labels;
 };
 
 struct ControllerExitInfo {
