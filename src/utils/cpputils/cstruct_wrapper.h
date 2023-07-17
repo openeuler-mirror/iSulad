@@ -17,20 +17,21 @@
 
 #include <iostream>
 template<typename T>
-class CStructWrapper
-{
+class CStructWrapper {
 public:
     explicit CStructWrapper(T* ptr, void (*deleter)(T*)) : m_ptr(ptr), m_deleter(deleter) {}
 
     ~CStructWrapper()
     {
-        if (m_ptr)
-        {
+        if (m_ptr) {
             m_deleter(m_ptr);
         }
     }
 
-    T* get() const { return m_ptr; }
+    T* get() const
+    {
+        return m_ptr;
+    }
 
 private:
     T* m_ptr;
