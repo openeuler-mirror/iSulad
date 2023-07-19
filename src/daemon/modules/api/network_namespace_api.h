@@ -26,6 +26,7 @@ extern "C" {
 
 int prepare_network_namespace(const char *netns_path);
 int remove_network_namespace(const char *netns);
+int remove_network_namespace_file(const char *netns_path);
 char *get_sandbox_key(const container_inspect *inspect_data);
 
 #ifdef __cplusplus

@@ -62,6 +62,28 @@ int remove_network_namespace(const char *netns_path)
     return 0;
 }
 
+int remove_network_namespace_file(const char *netns_path)
+{
+    int get_err = 0;
+
+    if (netns_path == NULL) {
+        ERROR("Invalid netns path");
+        return -1;
+    }
+
+    if (!util_file_exists(netns_path)) {
+        WARN("Namespace file does not exist");
+        return 0;
+    }
+
+    if (!util_force_remove_file(netns_path, &get_err)) {
+        ERROR("Failed to remove file %s, error: %s", netns_path, strerror(get_err));
+        return -1;
+    }
+
+    return 0;
+}
+
 char *get_sandbox_key(const container_inspect *inspect_data)
 {
     char *sandbox_key = NULL;

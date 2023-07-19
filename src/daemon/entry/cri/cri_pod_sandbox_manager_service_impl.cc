@@ -485,10 +485,9 @@ cleanup:
 }
 
 void PodSandboxManagerServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::PodSandboxConfig &config,
-                                                       const std::string &response_id,
-                                                       const std::string &jsonCheckpoint, const container_inspect *inspect_data, Errors &error)
+                                                       const std::string &response_id, const std::string &jsonCheckpoint,
+                                                       const container_inspect *inspect_data, std::map<std::string, std::string> &stdAnnos, Errors &error)
 {
-    std::map<std::string, std::string> stdAnnos;
     std::map<std::string, std::string> networkOptions;
 
     // Setup sandbox files
@@ -525,9 +524,81 @@ void PodSandboxManagerServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::
                               Network::DEFAULT_NETWORK_INTERFACE_NAME, response_id, stdAnnos, networkOptions, error);
     if (error.NotEmpty()) {
         ERROR("SetupPod failed: %s", error.GetCMessage());
+        return;
     }
 
-    return;
+    SetNetworkReady(response_id, true, error);
+    DEBUG("set %s network ready", response_id.c_str());
+}
+
+void PodSandboxManagerServiceImpl::SetupNetowrkAndStartPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config,
+                                                                  const container_inspect *inspect_data,
+                                                                  std::string &response_id, std::string &jsonCheckpoint,
+                                                                  Errors &error)
+{
+    std::map<std::string, std::string> stdAnnos;
+    char *netnsPath = nullptr;
+
+    netnsPath = get_sandbox_key(inspect_data);
+    if (netnsPath == nullptr || !util_file_exists(netnsPath)) {
+        error.Errorf("Network namespace not exist");
+        ERROR("Network namespace not exist for %s", response_id.c_str());
+        goto cleanup;
+    }
+
+    if (util_mount_namespace(netnsPath) != 0) {
+        error.Errorf("Failed to mount network namespace");
+        ERROR("Failed to mount network namespace for %s", response_id.c_str());
+        goto cleanup;
+    }
+
+    // Step 5: Setup networking for the sandbox.
+    SetupSandboxNetwork(config, response_id, jsonCheckpoint, inspect_data, stdAnnos, error);
+    if (error.NotEmpty()) {
+        util_umount_namespace(netnsPath);
+        goto cleanup;
+    }
+
+    // Step 6: Start the sandbox container.
+    StartSandboxContainer(response_id, error);
+    if (error.NotEmpty()) {
+        std::vector<std::string> errlist;
+        if (ClearCniNetwork(response_id, config.linux().security_context().namespace_options().network() ==
+                            runtime::v1alpha2::NamespaceMode::NODE, config.metadata().namespace_(),
+                            config.metadata().name(), errlist, stdAnnos, error) != 0) {
+            Errors tmpErr;
+            tmpErr.SetAggregate(errlist);
+            ERROR("Failed to clear cni network: %s", tmpErr.GetCMessage());
+        }
+        // network namespace is umount in ClearCniNetwork
+        goto cleanup;
+    }
+
+cleanup:
+    free(netnsPath);
+}
+
+void PodSandboxManagerServiceImpl::StartPodSandboxAndSetupNetowrk(const runtime::v1alpha2::PodSandboxConfig &config,
+                                                                  const container_inspect *inspect_data,
+                                                                  std::string &response_id, std::string &jsonCheckpoint,
+                                                                  Errors &error)
+{
+    std::map<std::string, std::string> stdAnnos;
+
+    // Step 5: Start the sandbox container.
+    StartSandboxContainer(response_id, error);
+    if (error.NotEmpty()) {
+        return;
+    }
+
+    SetupSandboxNetwork(config, response_id, jsonCheckpoint, inspect_data, stdAnnos, error);
+    if (error.NotEmpty()) {
+        Errors tmpErr;
+        StopContainerHelper(response_id, tmpErr);
+        if (tmpErr.NotEmpty()) {
+            ERROR("Failed to stop container: %s", tmpErr.GetCMessage());
+        }
+    }
 }
 
 auto PodSandboxManagerServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config,
@@ -536,7 +607,6 @@ auto PodSandboxManagerServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSan
     std::string response_id;
     std::string jsonCheckpoint;
     container_inspect *inspect_data = nullptr;
-    char *netnsPath = nullptr;
 
     if (m_cb == nullptr || m_cb->container.create == nullptr || m_cb->container.start == nullptr) {
         error.SetError("Unimplemented callback");
@@ -576,49 +646,13 @@ auto PodSandboxManagerServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSan
     }
 
     if (namespace_is_file(inspect_data->host_config->network_mode)) {
-        netnsPath = get_sandbox_key(inspect_data);
-        if (!util_file_exists(netnsPath) || util_mount_namespace(netnsPath) != 0) {
-            error.Errorf("Failed to mount network namespace");
-            ERROR("Failed to mount network namespace");
-            goto cleanup;
-        }
-    }
-
-    // Step 5: Setup networking for the sandbox.
-    if (namespace_is_file(inspect_data->host_config->network_mode)) {
-        SetupSandboxNetwork(config, response_id, jsonCheckpoint, inspect_data, error);
-        if (error.NotEmpty()) {
-            goto cleanup;
-        }
-    }
-
-    // Step 6: Start the sandbox container.
-    StartSandboxContainer(response_id, error);
-    if (error.NotEmpty()) {
-        goto cleanup;
-    }
-
-    // If netns mode is not file, setup network after start sandbox container
-    if (!namespace_is_file(inspect_data->host_config->network_mode)) {
-        SetupSandboxNetwork(config, response_id, jsonCheckpoint, inspect_data, error);
-        if (error.NotEmpty()) {
-            StopContainerHelper(response_id, error);
-            goto cleanup;
-        }
+        SetupNetowrkAndStartPodSandbox(config, inspect_data, response_id, jsonCheckpoint, error);
+    } else {
+        StartPodSandboxAndSetupNetowrk(config, inspect_data, response_id, jsonCheckpoint, error);
     }
 
 cleanup:
-    if (error.Empty()) {
-        SetNetworkReady(response_id, true, error);
-        DEBUG("set %s ready", response_id.c_str());
-        error.Clear();
-    } else {
-        if (netnsPath != nullptr && remove_network_namespace(netnsPath) != 0) {
-            ERROR("Failed to remove network namespace");
-        }
-    }
     free_container_inspect(inspect_data);
-    free(netnsPath);
     return response_id;
 }
 

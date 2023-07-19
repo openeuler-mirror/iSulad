@@ -1477,13 +1477,13 @@ int container_create_cb(const container_create_request *request, container_creat
     if (merge_config_for_syscontainer(request, host_spec, v2_spec->config, oci_spec) != 0) {
         ERROR("Failed to merge config for syscontainer");
         cc = ISULAD_ERR_EXEC;
-        goto umount_shm;
+        goto clean_netns;
     }
 
     if (merge_network(host_spec, request->rootfs, runtime_root, id, container_spec->hostname) != 0) {
         ERROR("Failed to merge network config");
         cc = ISULAD_ERR_EXEC;
-        goto umount_shm;
+        goto clean_netns;
     }
 
     /* modify oci_spec by plugin. */
@@ -1491,14 +1491,14 @@ int container_create_cb(const container_create_request *request, container_creat
         ERROR("Plugin event pre create failed");
         (void)plugin_event_container_post_remove2(id, oci_spec); /* ignore error */
         cc = ISULAD_ERR_EXEC;
-        goto umount_shm;
+        goto clean_netns;
     }
 
     host_channel = dup_host_channel(host_spec->host_channel);
     if (prepare_host_channel(host_channel, host_spec->user_remap)) {
         ERROR("Failed to prepare host channel");
         cc = ISULAD_ERR_EXEC;
-        goto umount_shm;
+        goto clean_netns;
     }
 
     if (verify_container_settings(oci_spec) != 0) {
@@ -1533,6 +1533,10 @@ int container_create_cb(const container_create_request *request, container_creat
 
 umount_channel:
     umount_host_channel(host_channel);
+clean_netns:
+    if (namespace_is_file(host_spec->network_mode) && v2_spec->network_settings != NULL) {
+        (void)remove_network_namespace_file(v2_spec->network_settings->sandbox_key);
+    }
 umount_shm:
     umount_shm_by_configs(host_spec, v2_spec);
 
