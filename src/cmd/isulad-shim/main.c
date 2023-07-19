@@ -26,8 +26,6 @@
 #include "common.h"
 #include "process.h"
 
-extern int g_log_fd;
-
 static void set_timeout_exit(unsigned int timeout)
 {
     signal(SIGALRM, signal_routine);
@@ -97,8 +95,11 @@ int main(int argc, char **argv)
     uint64_t timeout = 0;
     pthread_t tid_epoll;
 
-    g_log_fd = open_no_inherit(SHIM_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0640);
-    if (g_log_fd < 0) {
+    ret = init_shim_log();
+    if (ret != SHIM_OK) {
+        // because shim log init error, print error msg to stderr.
+        // isulad can obtain the reason why shim exits.
+        dprintf(STDERR_FILENO, "failed to init shim log");
         _exit(EXIT_FAILURE);
     }
 
@@ -110,19 +111,19 @@ int main(int argc, char **argv)
 
     ret = set_subreaper();
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "set subreaper failed:%d", ret);
+        write_message(ERR_MSG, "set subreaper failed:%d", ret);
         exit(EXIT_FAILURE);
     }
 
     ret = parse_args(argc, argv, &container_id, &bundle, &rt_name, &log_level, &timeout);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "parse args failed:%d", ret);
+        write_message(ERR_MSG, "parse args failed:%d", ret);
         exit(EXIT_FAILURE);
     }
 
     p = new_process(container_id, bundle, rt_name);
     if (p == NULL) {
-        write_message(g_log_fd, ERR_MSG, "new process failed");
+        write_message(ERR_MSG, "new process failed");
         exit(EXIT_FAILURE);
     }
 
@@ -135,7 +136,7 @@ int main(int argc, char **argv)
         if (p->state->exit_fifo != NULL) {
             int efd = open_no_inherit("exit_fifo", O_WRONLY, -1);
             if (efd < 0) {
-                write_message(g_log_fd, ERR_MSG, "open exit pipe failed:%d", SHIM_SYS_ERR(errno));
+                write_message(ERR_MSG, "open exit pipe failed:%d", SHIM_SYS_ERR(errno));
                 exit(EXIT_FAILURE);
             }
             p->exit_fd = efd;
@@ -145,7 +146,7 @@ int main(int argc, char **argv)
     /* start epoll for io copy */
     ret = process_io_start(p, &tid_epoll);
     if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "process io init failed:%d", ret);
+        write_message(ERR_MSG, "process io init failed:%d", ret);
         exit(EXIT_FAILURE);
     }
 
