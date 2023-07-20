@@ -1236,10 +1236,14 @@ container_network_settings *generate_network_settings(const host_config *host_co
             ERROR("Failed to prepare bridge network element");
             goto err_out;
         }
-    } else
+    }
 #endif
 
+#ifdef ENABLE_NATIVE_NETWORK
+    if (!util_native_network_checker(host_config->network_mode) && !namespace_is_cni(host_config->network_mode)) {
+#else
     if (!namespace_is_cni(host_config->network_mode)) {
+#endif
         return settings;
     }
 

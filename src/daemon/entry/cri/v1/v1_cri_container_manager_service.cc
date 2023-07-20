@@ -423,8 +423,10 @@ ContainerManagerService::GenerateCreateContainerRequest(const std::string &realP
     request->id = util_strdup_s(cname.c_str());
 
     if (!podSandboxRuntime.empty()) {
-        request->runtime = CRIHelpers::cri_runtime_convert(podSandboxRuntime.c_str());
-        if (request->runtime == nullptr) {
+        std::string convertRuntime = CRIHelpers::CRIRuntimeConvert(podSandboxRuntime);
+        if (!convertRuntime.empty()) {
+            request->runtime = util_strdup_s(convertRuntime.c_str());
+        } else {
             request->runtime = util_strdup_s(podSandboxRuntime.c_str());
         }
     }
@@ -1194,7 +1196,7 @@ std::unique_ptr<runtime::v1::ContainerStatus>
 ContainerManagerService::ContainerStatus(const std::string &containerID, Errors &error)
 {
     if (containerID.empty()) {
-        error.SetError("Empty pod sandbox id");
+        error.SetError("Empty container id");
         return nullptr;
     }
 

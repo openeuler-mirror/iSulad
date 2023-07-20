@@ -132,7 +132,7 @@ void StopContainer(service_executor_t *cb, const std::string &containerID, int64
 
 char *GenerateExecSuffix();
 
-char *cri_runtime_convert(const char *runtime);
+std::string CRIRuntimeConvert(const std::string &runtime);
 
 int64_t ParseQuantity(const std::string &str, Errors &error);
 }; // namespace CRIHelpers

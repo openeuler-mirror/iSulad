@@ -272,8 +272,10 @@ container_create_request *PodSandboxManagerService::PackCreateContainerRequest(
     create_request->id = util_strdup_s(sandboxName.c_str());
 
     if (!runtimeHandler.empty()) {
-        create_request->runtime = CRIHelpers::cri_runtime_convert(runtimeHandler.c_str());
-        if (create_request->runtime == nullptr) {
+        auto convertRuntime = CRIHelpers::CRIRuntimeConvert(runtimeHandler);
+        if (!convertRuntime.empty()) {
+            create_request->runtime = util_strdup_s(convertRuntime.c_str());
+        } else {
             create_request->runtime = util_strdup_s(runtimeHandler.c_str());
         }
     }

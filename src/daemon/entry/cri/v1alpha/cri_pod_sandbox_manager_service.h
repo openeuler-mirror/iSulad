@@ -132,8 +132,7 @@ private:
     void ListPodSandboxToGRPC(container_list_response *response,
                               std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
                               bool filterOutReadySandboxes, Errors &error);
-    auto GenerateUpdateNetworkSettingsReqest(const std::string &id, const std::string &json, Errors &error)
-    -> container_update_network_settings_request *;
+    void UpdatePodSandboxNetworkSettings(const std::string &id, const std::string &json, Errors &error);
     auto GetNsenterPath(Errors &error) -> std::string;
     auto GetAvailableBytes(const uint64_t &memoryLimit, const uint64_t &workingSetBytes) -> uint64_t;
     void GetPodSandboxCgroupMetrics(const container_inspect *inspectData, cgroup_metrics_t &cgroupMetrics,

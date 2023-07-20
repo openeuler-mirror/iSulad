@@ -271,8 +271,10 @@ container_create_request *PodSandboxManagerService::PackCreateContainerRequest(
     create_request->id = util_strdup_s(sandboxName.c_str());
 
     if (!runtimeHandler.empty()) {
-        create_request->runtime = CRIHelpers::cri_runtime_convert(runtimeHandler.c_str());
-        if (create_request->runtime == nullptr) {
+        std::string convertRuntime = CRIHelpers::CRIRuntimeConvert(runtimeHandler);
+        if (!convertRuntime.empty()) {
+            create_request->runtime = util_strdup_s(convertRuntime.c_str());
+        } else {
             create_request->runtime = util_strdup_s(runtimeHandler.c_str());
         }
     }
@@ -554,26 +556,38 @@ void PodSandboxManagerService::SetupSandboxNetwork(const runtime::v1alpha2::PodS
         ERROR("SetupPod failed: %s", error.GetCMessage());
         return;
     }
+
+    SetNetworkReady(response_id, true, error);
+    DEBUG("set %s network ready", response_id.c_str());
 }
 
-auto PodSandboxManagerService::GenerateUpdateNetworkSettingsReqest(const std::string &id, const std::string &json,
-                                                                   Errors &error)
--> container_update_network_settings_request *
+void PodSandboxManagerService::UpdatePodSandboxNetworkSettings(const std::string &id, const std::string &json,
+                                                               Errors &error)
 {
     if (json.empty()) {
-        return nullptr;
+        return;
     }
 
-    container_update_network_settings_request *req = (container_update_network_settings_request *)util_common_calloc_s(
-                                                         sizeof(container_update_network_settings_request));
+    auto req = (container_update_network_settings_request *)util_common_calloc_s(
+                                                        sizeof(container_update_network_settings_request));
     if (req == nullptr) {
         error.Errorf("container update network settings request: Out of memory");
-        return nullptr;
+        return;
     }
     req->id = util_strdup_s(id.c_str());
     req->setting_json = util_strdup_s(json.c_str());
 
-    return req;
+    container_update_network_settings_response *response { nullptr };
+    if (m_cb->container.update_network_settings(req, &response) != 0) {
+        if (response != nullptr && response->errmsg != nullptr) {
+            error.SetError(response->errmsg);
+        } else {
+            error.SetError("Failed to update container network settings");
+        }
+    }
+
+    free_container_update_network_settings_request(req);
+    free_container_update_network_settings_response(response);
 }
 
 auto PodSandboxManagerService::RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config,
@@ -586,8 +600,6 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1alpha2::PodSandbox
     std::map<std::string, std::string> stdAnnos;
     std::map<std::string, std::string> networkOptions;
     container_inspect *inspect_data { nullptr };
-    container_update_network_settings_request *ips_request { nullptr };
-    container_update_network_settings_response *ips_response { nullptr };
     std::vector<std::string> errlist;
 
     if (m_cb == nullptr || m_cb->container.create == nullptr || m_cb->container.start == nullptr) {
@@ -655,21 +667,15 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1alpha2::PodSandbox
     }
 
     // Step 9: Save network settings json to disk
-    ips_request = GenerateUpdateNetworkSettingsReqest(response_id, network_setting_json, error);
-    if (!error.NotEmpty()) {
-        if (ips_request == nullptr) {
-            goto cleanup;
-        }
-
-        if (m_cb->container.update_network_settings(ips_request, &ips_response) == 0) {
-            goto cleanup;
-        }
-        if (ips_response != nullptr && ips_response->errmsg != nullptr) {
-            error.SetError(ips_response->errmsg);
-        } else {
-            error.SetError("Failed to update container network settings");
+    if (namespace_is_cni(inspect_data->host_config->network_mode)) {
+        Errors tmpErr;
+        UpdatePodSandboxNetworkSettings(response_id, network_setting_json, tmpErr);
+        // If saving network settings failed, ignore error
+        if (tmpErr.NotEmpty()) {
+            WARN("%s", tmpErr.GetCMessage());
         }
     }
+    goto cleanup;
 
 cleanup_network:
     if (ClearCniNetwork(response_id,
@@ -687,15 +693,7 @@ cleanup_ns:
     }
 
 cleanup:
-    if (error.Empty()) {
-        SetNetworkReady(response_id, true, error);
-        DEBUG("set %s ready", response_id.c_str());
-        error.Clear();
-    }
-
     free_container_inspect(inspect_data);
-    free_container_update_network_settings_request(ips_request);
-    free_container_update_network_settings_response(ips_response);
     return response_id;
 }
 

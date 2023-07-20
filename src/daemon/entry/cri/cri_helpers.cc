@@ -732,18 +732,18 @@ char *GenerateExecSuffix()
     return exec_suffix;
 }
 
-char *cri_runtime_convert(const char *runtime)
+std::string CRIRuntimeConvert(const std::string &runtime)
 {
-    char *runtime_val = nullptr;
+    std::string runtimeValue;
     json_map_string_string *cri_shimv2_runtimes = nullptr;
 
-    if (runtime == nullptr) {
-        return nullptr;
+    if (runtime.empty()) {
+        return runtimeValue;
     }
 
     if (isulad_server_conf_rdlock()) {
         ERROR("Lock isulad server conf failed");
-        return nullptr;
+        return runtimeValue;
     }
 
     struct service_arguments *args = conf_get_server_conf();
@@ -759,15 +759,15 @@ char *cri_runtime_convert(const char *runtime)
             continue;
         }
 
-        if (strcmp(runtime, cri_shimv2_runtimes->keys[i]) == 0) {
-            runtime_val = util_strdup_s(cri_shimv2_runtimes->values[i]);
+        if (runtime == std::string(cri_shimv2_runtimes->keys[i])) {
+            runtimeValue = std::string(cri_shimv2_runtimes->values[i]);
             break;
         }
     }
 
 out:
     (void)isulad_server_conf_unlock();
-    return runtime_val;
+    return runtimeValue;
 }
 
 bool ParseQuantitySuffix(const std::string &suffixStr, int64_t &base, int64_t &exponent)
