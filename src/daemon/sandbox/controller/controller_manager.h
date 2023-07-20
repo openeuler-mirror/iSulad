@@ -17,7 +17,6 @@
 #define DAEMON_SANDBOX_CONTROLLER_CONTROLLER_MANAGER_H
 
 #include "controller.h"
-#include "daemon_arguments.h"
 
 #include "errors.h"
 
@@ -25,16 +24,19 @@ namespace sandbox {
 
 class ControllerManager {
 public:
-    static std::shared_ptr<Controller> FindController(const std::string &sandboxer);
-    static bool Init(const isulad_daemon_configs *config);
+    static auto GetInstance() -> ControllerManager*;
 
+    bool Init(Errors &error);
+    auto GetController(const std::string &name) -> std::shared_ptr<Controller>;
 private:
-    auto RegisterController(const std::string &type, const std::string &sandboxer, const std::string &address,
-                            Errors &error) -> bool;
-    auto GetController(const std::string &sandboxer) -> std::shared_ptr<Controller>;
+    auto RegisterShimController(Errors &error) -> bool;
+    auto RegisterAllSandboxerControllers(Errors &error) -> bool;
+    auto LoadSandboxerControllersConfig(std::map<std::string, std::string> &config) -> bool;
+    auto RegisterSandboxerController(const std::string &sandboxer, const std::string &address, Errors &error) -> bool;
 
+protected:
     std::map<std::string, std::shared_ptr<Controller>> m_controllers;
-    static std::unique_ptr<ControllerManager> manager;
+    static std::atomic<ControllerManager *> m_instance;
 };
 
 } // namespace

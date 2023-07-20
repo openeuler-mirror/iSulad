@@ -18,7 +18,11 @@
 #ifndef DAEMON_SANDBOX_CONTROLLER_SANDBOXER_CONTROLLER_H
 #define DAEMON_SANDBOX_CONTROLLER_SANDBOXER_CONTROLLER_H
 
+#include <string>
+#include <memory>
+
 #include "controller.h"
+#include "grpc_sandboxer_client.h"
 
 namespace sandbox {
 
@@ -41,13 +45,14 @@ public:
                          const ControllerUpdateResourcesParams &params,
                          Errors &error) override;
     bool Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) override;
-    bool Wait(std::shared_ptr<SandboxExitCallback> cb, const std::string &sandboxId, Errors &error) = 0;
+    bool Wait(std::shared_ptr<SandboxExitCallback> cb, const std::string &sandboxId, Errors &error) override;
     std::unique_ptr<ControllerSandboxStatus> Status(const std::string &sandboxId, bool verbose, Errors &error) override;
     bool Shutdown(const std::string &sandboxId, Errors &error) override;
     bool UpdateNetworkSettings(const std::string &sandboxId, const std::string &networkSettings, Errors &error) override;
-private:
+protected:
     std::string m_sandboxer;
     std::string m_address;
+    std::unique_ptr<SandboxerClient> m_client;
 };
 
 } // namespace

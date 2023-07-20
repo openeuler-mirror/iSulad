@@ -73,10 +73,9 @@ private:
                                         ControllerPlatformInfo &platformInfo);
     void StatusResponseToSandboxStatus(const containerd::services::sandbox::v1::ControllerStatusResponse &response,
                                        ControllerSandboxStatus &sandboxStatus);
+protected:
     std::string m_sandboxer;
     std::string m_address;
-
-protected:
     std::unique_ptr<containerd::services::sandbox::v1::Controller::StubInterface> stub_;
 };
 

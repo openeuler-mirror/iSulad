@@ -1,14 +1,23 @@
+/******************************************************************************
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * Author: xuxuepeng
+ * Create: 2023-07-15
+ * Description: Sandboxer client UT
+ ******************************************************************************/
+
 #include "gtest/gtest.h"
 #include "controller_stub_mock.h"
 #include "grpc_sandboxer_client.h"
+#include "controller_common.h"
 #include "controller.h"
-
-const std::string DUMMY_SANDBOX_ID = "604db93a33ec4c7787e4f369338f5887";
-const std::string DUMMY_CONTAINER_ID = "504db93a32ec4c9789e4d369a38f3889";
-const std::string DUMMY_EXEC_ID = "504db93a32ec4c9789e4d369a38f37765";
-const uint64_t SECOND_TO_NANOS = 1000000000;
-const uint64_t DUMMY_CREATE_AT = 1588 * SECOND_TO_NANOS + 1588;
-const std::string DUMMY_TASK_ADDRESS = "vsock://18982:1";
 
 class SandboxerClientWrapper : public sandbox::SandboxerClient {
 public:
@@ -23,7 +32,7 @@ public:
     }
 };
 
-class ControllerSandboxerTest : public testing::Test {
+class ControllerSandboxerClientTest : public testing::Test {
 protected:
     void SetUp() override {
         m_sandboxer = "sandboxer";
@@ -51,22 +60,6 @@ protected:
     std::unique_ptr<SandboxerClientWrapper> m_sandboxerClient;
 };
 
-static std::unique_ptr<sandbox::ControllerMountInfo> CreateTestMountInfo() {
-    std::unique_ptr<sandbox::ControllerMountInfo> mountInfo(new sandbox::ControllerMountInfo());
-    mountInfo->source = "/rootfs";
-    mountInfo->destination = "/rootfs";
-    mountInfo->type = "bind";
-    return mountInfo;
-}
-
-static std::unique_ptr<sandbox::ControllerCreateParams> CreateTestCreateParams() {
-    std::unique_ptr<sandbox::ControllerCreateParams> params(new sandbox::ControllerCreateParams());
-    params->config = std::make_shared<runtime::v1::PodSandboxConfig>();
-    params->netNSPath = "/proc/1/ns/net";
-    params->mounts.push_back(std::move(CreateTestMountInfo()));
-    return params;
-}
-
 static std::unique_ptr<containerd::services::sandbox::v1::ControllerStartResponse> CreateTestGrpcStartResponse() {
     std::unique_ptr<containerd::services::sandbox::v1::ControllerStartResponse> response(new containerd::services::sandbox::v1::ControllerStartResponse());
     response->set_sandbox_id(DUMMY_SANDBOX_ID);
@@ -88,34 +81,6 @@ static std::unique_ptr<containerd::services::sandbox::v1::ControllerPlatformResp
     return response;
 }
 
-static std::unique_ptr<sandbox::ControllerStreamInfo> CreateTestStreamInfo() {
-    std::unique_ptr<sandbox::ControllerStreamInfo> streamInfo(new sandbox::ControllerStreamInfo());
-    streamInfo->stdin = "/tmp/stdin";
-    streamInfo->stdout = "/tmp/stdout";
-    streamInfo->stderr = "/tmp/stderr";
-    streamInfo->terminal = true;
-    return streamInfo;
-}
-
-static std::unique_ptr<sandbox::ControllerPrepareParams> CreateTestPrepareParams() {
-    std::unique_ptr<sandbox::ControllerPrepareParams> params(new sandbox::ControllerPrepareParams());
-    params->containerId = DUMMY_CONTAINER_ID;
-    params->execId = DUMMY_EXEC_ID;
-    params->spec = std::unique_ptr<std::string>(new std::string("{spec: test}"));
-    params->rootfs.push_back(std::move(CreateTestMountInfo()));
-    params->rootfs.push_back(std::move(CreateTestMountInfo()));
-    params->streamInfo = CreateTestStreamInfo();
-    return params;
-}
-
-static std::unique_ptr<sandbox::ControllerUpdateResourcesParams> CreateTestUpdateResourcesParams(google::protobuf::Map<std::string, std::string> &annotations) {
-    std::unique_ptr<std::string> resources(new std::string("{cpu: 12}"));
-    std::unique_ptr<sandbox::ControllerUpdateResourcesParams> params(
-        new sandbox::ControllerUpdateResourcesParams{DUMMY_SANDBOX_ID, std::move(resources), annotations}
-    );
-    return params;
-}
-
 // Create status response for test
 static std::unique_ptr<containerd::services::sandbox::v1::ControllerStatusResponse> CreateTestStatusResponse() {
     std::unique_ptr<containerd::services::sandbox::v1::ControllerStatusResponse> response(
@@ -135,7 +100,7 @@ static std::unique_ptr<containerd::services::sandbox::v1::ControllerStatusRespon
 }
 
 /************* Unit tests for Create *************/
-TEST_F(ControllerSandboxerTest, CreateTestSucceed) {
+TEST_F(ControllerSandboxerClientTest, CreateTestSucceed) {
     Errors err;
     std::unique_ptr<sandbox::ControllerCreateParams> params = CreateTestCreateParams();
     // Fake a grpc create response.
@@ -147,7 +112,7 @@ TEST_F(ControllerSandboxerTest, CreateTestSucceed) {
     EXPECT_TRUE(err.Empty());
 }
 
-TEST_F(ControllerSandboxerTest, CreateTestNullConfig) {
+TEST_F(ControllerSandboxerClientTest, CreateTestNullConfig) {
     Errors err;
     std::unique_ptr<sandbox::ControllerCreateParams> params(new sandbox::ControllerCreateParams());
     params->config = nullptr;
@@ -158,7 +123,7 @@ TEST_F(ControllerSandboxerTest, CreateTestNullConfig) {
     EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("Failed to init create request for sandboxer create request"));
 }
 
-TEST_F(ControllerSandboxerTest, CreateTestNullMount) {
+TEST_F(ControllerSandboxerClientTest, CreateTestNullMount) {
     Errors err;
     std::unique_ptr<sandbox::ControllerCreateParams> params = CreateTestCreateParams();
     params->mounts.push_back(nullptr);
@@ -171,7 +136,7 @@ TEST_F(ControllerSandboxerTest, CreateTestNullMount) {
     EXPECT_TRUE(err.Empty());
 }
 
-TEST_F(ControllerSandboxerTest, CreateTestStatusNotOK) {
+TEST_F(ControllerSandboxerClientTest, CreateTestStatusNotOK) {
     Errors err;
     std::unique_ptr<sandbox::ControllerCreateParams> params = CreateTestCreateParams();
     // Fake a grpc create response.
@@ -183,7 +148,7 @@ TEST_F(ControllerSandboxerTest, CreateTestStatusNotOK) {
 }
 
 /************* Unit tests for Start *************/
-TEST_F(ControllerSandboxerTest, StartTestSucceed) {
+TEST_F(ControllerSandboxerClientTest, StartTestSucceed) {
     Errors err;
     sandbox::ControllerSandboxInfo sandboxInfo;
     std::unique_ptr<containerd::services::sandbox::v1::ControllerStartResponse> response = CreateTestGrpcStartResponse();
@@ -197,7 +162,7 @@ TEST_F(ControllerSandboxerTest, StartTestSucceed) {
     EXPECT_EQ(sandboxInfo.labels["label1"], "value1");
 }
 
-TEST_F(ControllerSandboxerTest, StartTestStatusNotOK) {
+TEST_F(ControllerSandboxerClientTest, StartTestStatusNotOK) {
     Errors err;
     sandbox::ControllerSandboxInfo sandboxInfo;
     EXPECT_CALL(GetStub(), Start).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
@@ -206,7 +171,7 @@ TEST_F(ControllerSandboxerTest, StartTestStatusNotOK) {
 }
 
 /************* Unit tests for Prepare *************/
-TEST_F(ControllerSandboxerTest, PrepareTestSucceed) {
+TEST_F(ControllerSandboxerClientTest, PrepareTestSucceed) {
     Errors err;
     std::string bundle;
     std::unique_ptr<sandbox::ControllerPrepareParams> params = CreateTestPrepareParams();
@@ -220,7 +185,7 @@ TEST_F(ControllerSandboxerTest, PrepareTestSucceed) {
     EXPECT_EQ(bundle, "/tmp/bundle");
 }
 
-TEST_F(ControllerSandboxerTest, PrepareTestNullSpec) {
+TEST_F(ControllerSandboxerClientTest, PrepareTestNullSpec) {
     Errors err;
     std::string bundle;
     std::unique_ptr<sandbox::ControllerPrepareParams> params = CreateTestPrepareParams();
@@ -231,7 +196,7 @@ TEST_F(ControllerSandboxerTest, PrepareTestNullSpec) {
     EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("Failed to init prepare request for sandboxer prepare request"));
 }
 
-TEST_F(ControllerSandboxerTest, PrepareTestNullMount) {
+TEST_F(ControllerSandboxerClientTest, PrepareTestNullMount) {
     Errors err;
     std::string bundle;
     std::unique_ptr<sandbox::ControllerPrepareParams> params = CreateTestPrepareParams();
@@ -245,7 +210,7 @@ TEST_F(ControllerSandboxerTest, PrepareTestNullMount) {
     EXPECT_TRUE(err.Empty());
 }
 
-TEST_F(ControllerSandboxerTest, PrepareTestStatusNotOK) {
+TEST_F(ControllerSandboxerClientTest, PrepareTestStatusNotOK) {
     Errors err;
     std::string bundle;
     std::unique_ptr<sandbox::ControllerPrepareParams> params = CreateTestPrepareParams();
@@ -255,7 +220,7 @@ TEST_F(ControllerSandboxerTest, PrepareTestStatusNotOK) {
 }
 
 /************* Unit tests for Purge *************/
-TEST_F(ControllerSandboxerTest, PurgeTestSucceed) {
+TEST_F(ControllerSandboxerClientTest, PurgeTestSucceed) {
     Errors err;
     // Set response to return OK for stub_->Purge().
     EXPECT_CALL(GetStub(), Purge).Times(1).WillOnce(testing::Return(grpc::Status::OK));
@@ -263,7 +228,7 @@ TEST_F(ControllerSandboxerTest, PurgeTestSucceed) {
     EXPECT_TRUE(err.Empty());
 }
 
-TEST_F(ControllerSandboxerTest, PurgeTestStatusNotOK) {
+TEST_F(ControllerSandboxerClientTest, PurgeTestStatusNotOK) {
     Errors err;
     EXPECT_CALL(GetStub(), Purge).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
     EXPECT_FALSE(m_sandboxerClient->Purge(DUMMY_SANDBOX_ID, DUMMY_CONTAINER_ID, DUMMY_EXEC_ID, err));
@@ -271,7 +236,7 @@ TEST_F(ControllerSandboxerTest, PurgeTestStatusNotOK) {
 }
 
 /************* Unit tests for UpdateResources *************/
-TEST_F(ControllerSandboxerTest, UpdateResourcesTestSucceed) {
+TEST_F(ControllerSandboxerClientTest, UpdateResourcesTestSucceed) {
     Errors err;
     google::protobuf::Map<std::string, std::string> annotations;
     std::unique_ptr<sandbox::ControllerUpdateResourcesParams> params = CreateTestUpdateResourcesParams(annotations);
@@ -281,7 +246,7 @@ TEST_F(ControllerSandboxerTest, UpdateResourcesTestSucceed) {
     EXPECT_TRUE(err.Empty());
 }
 
-TEST_F(ControllerSandboxerTest, UpdateResourcesTestNullResources) {
+TEST_F(ControllerSandboxerClientTest, UpdateResourcesTestNullResources) {
     Errors err;
     google::protobuf::Map<std::string, std::string> annotations;
     std::unique_ptr<sandbox::ControllerUpdateResourcesParams> params = CreateTestUpdateResourcesParams(annotations);
@@ -292,7 +257,7 @@ TEST_F(ControllerSandboxerTest, UpdateResourcesTestNullResources) {
     EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("Failed to init update-resources request for sandboxer update-resources request"));
 }
 
-TEST_F(ControllerSandboxerTest, UpdateResourcesTestStatusNotOK) {
+TEST_F(ControllerSandboxerClientTest, UpdateResourcesTestStatusNotOK) {
     Errors err;
     google::protobuf::Map<std::string, std::string> annotations;
     std::unique_ptr<sandbox::ControllerUpdateResourcesParams> params = CreateTestUpdateResourcesParams(annotations);
@@ -302,7 +267,7 @@ TEST_F(ControllerSandboxerTest, UpdateResourcesTestStatusNotOK) {
 }
 
 /************* Unit tests for Platform *************/
-TEST_F(ControllerSandboxerTest, PlatformTestSucceed) {
+TEST_F(ControllerSandboxerClientTest, PlatformTestSucceed) {
     Errors err;
     sandbox::ControllerPlatformInfo platformInfo;
     std::unique_ptr<containerd::services::sandbox::v1::ControllerPlatformResponse> response = CreateTestPlatformResponse();
@@ -314,7 +279,7 @@ TEST_F(ControllerSandboxerTest, PlatformTestSucceed) {
     EXPECT_EQ(platformInfo.variant, "ubuntu");
 }
 
-TEST_F(ControllerSandboxerTest, PlatformTestStatusNotOK) {
+TEST_F(ControllerSandboxerClientTest, PlatformTestStatusNotOK) {
     Errors err;
     sandbox::ControllerPlatformInfo platformInfo;
     EXPECT_CALL(GetStub(), Platform).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
@@ -323,7 +288,7 @@ TEST_F(ControllerSandboxerTest, PlatformTestStatusNotOK) {
 }
 
 /************* Unit tests for Stop *************/
-TEST_F(ControllerSandboxerTest, StopTestSucceed) {
+TEST_F(ControllerSandboxerClientTest, StopTestSucceed) {
     Errors err;
     // Set response to return OK for stub_->Stop().
     EXPECT_CALL(GetStub(), Stop).Times(1).WillOnce(testing::Return(grpc::Status::OK));
@@ -331,7 +296,7 @@ TEST_F(ControllerSandboxerTest, StopTestSucceed) {
     EXPECT_TRUE(err.Empty());
 }
 
-TEST_F(ControllerSandboxerTest, StopTestStatusNotOK) {
+TEST_F(ControllerSandboxerClientTest, StopTestStatusNotOK) {
     Errors err;
     EXPECT_CALL(GetStub(), Stop).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
     EXPECT_FALSE(m_sandboxerClient->Stop(DUMMY_SANDBOX_ID, 0, err));
@@ -339,7 +304,7 @@ TEST_F(ControllerSandboxerTest, StopTestStatusNotOK) {
 }
 
 /************* Unit tests for Status *************/
-TEST_F(ControllerSandboxerTest, StatusTestSucceed) {
+TEST_F(ControllerSandboxerClientTest, StatusTestSucceed) {
     Errors err;
     sandbox::ControllerSandboxStatus sandboxStatus;
     std::unique_ptr<containerd::services::sandbox::v1::ControllerStatusResponse> response = CreateTestStatusResponse();
@@ -357,7 +322,7 @@ TEST_F(ControllerSandboxerTest, StatusTestSucceed) {
     EXPECT_EQ(sandboxStatus.extra, "{extra: test}");
 }
 
-TEST_F(ControllerSandboxerTest, StatusTestStatusNotOK) {
+TEST_F(ControllerSandboxerClientTest, StatusTestStatusNotOK) {
     Errors err;
     sandbox::ControllerSandboxStatus sandboxStatus;
     EXPECT_CALL(GetStub(), Status).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
@@ -366,7 +331,7 @@ TEST_F(ControllerSandboxerTest, StatusTestStatusNotOK) {
 }
 
 /************* Unit tests for Shutdown *************/
-TEST_F(ControllerSandboxerTest, ShutdownTestSucceed) {
+TEST_F(ControllerSandboxerClientTest, ShutdownTestSucceed) {
     Errors err;
     // Set response to return OK for stub_->Shutdown().
     EXPECT_CALL(GetStub(), Shutdown).Times(1).WillOnce(testing::Return(grpc::Status::OK));
@@ -374,7 +339,7 @@ TEST_F(ControllerSandboxerTest, ShutdownTestSucceed) {
     EXPECT_TRUE(err.Empty());
 }
 
-TEST_F(ControllerSandboxerTest, ShutdownTestStatusNotOK) {
+TEST_F(ControllerSandboxerClientTest, ShutdownTestStatusNotOK) {
     Errors err;
     EXPECT_CALL(GetStub(), Shutdown).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
     EXPECT_FALSE(m_sandboxerClient->Shutdown(DUMMY_SANDBOX_ID, err));

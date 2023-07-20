@@ -120,7 +120,7 @@ int isulad_server_conf_unlock()
 
 struct service_arguments *conf_get_server_conf()
 {
-    return nullptr;
+    return g_isulad_conf_mock->ConfGetServerConf();
 }
 
 int get_system_cpu_usage(uint64_t *val)

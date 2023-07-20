@@ -40,6 +40,7 @@ public:
     MOCK_METHOD0(InitIsuladDaemonConstants, int (void));
     MOCK_METHOD0(GetIsuladDaemonConstants, isulad_daemon_constants * (void));
     MOCK_METHOD0(ConfGetIsuladUsernsRemap, char *(void));
+    MOCK_METHOD0(ConfGetServerConf, struct service_arguments *(void));
 };
 
 void MockIsuladConf_SetMock(MockIsuladConf *mock);

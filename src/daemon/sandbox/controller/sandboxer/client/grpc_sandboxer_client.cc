@@ -13,12 +13,13 @@
  * Description: Sandboxer grpc client
  ******************************************************************************/
 
+#include "grpc_sandboxer_client.h"
+
 #include <grpc++/grpc++.h>
 #include <iostream>
 #include <memory>
 #include <string>
 
-#include "grpc_sandboxer_client.h"
 #include "sandbox/types/platform.pb.h"
 #include "sandbox.pb.h"
 #include "sandbox.grpc.pb.h"
