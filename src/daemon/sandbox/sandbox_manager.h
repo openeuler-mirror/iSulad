@@ -36,28 +36,29 @@ public:
     auto Init(Errors &error) -> int;
 
     // Create meanningful sandbox instance
-    auto CreateSandbox(const std::string &name, const std::string &sandboxer, const std::string &runtime, std::string netNsPath,
-                        const runtime::v1::PodSandboxConfig &sandboxConfig, Errors &error) -> std::shared_ptr<Sandbox>;
+    auto CreateSandbox(const std::string &name, const std::string &sandboxer, const std::string &runtime,
+                       std::string netNsPath,
+                       const runtime::v1::PodSandboxConfig &sandboxConfig, Errors &error) -> std::shared_ptr<Sandbox>;
 
     auto GetSandbox(const std::string &idOrName, Errors &error) -> std::shared_ptr<Sandbox>;
     auto DeleteSandbox(const std::string &idOrName, bool force, Errors &error) -> bool;
 
     auto RestoreSandboxes(Errors &error) -> bool;
     // list all sandboxes by filter
-    auto ListAllSandboxes(runtime::v1::PodSandboxFilter &filters,Errors &error) -> std::vector<std::shared_ptr<Sandbox>>;
+    auto ListAllSandboxes(runtime::v1::PodSandboxFilter &filters, Errors &error) -> std::vector<std::shared_ptr<Sandbox>>;
 private:
     SandboxManager() = default;
-	SandboxManager(const SandboxManager& other) = delete;
-	SandboxManager& operator=(const SandboxManager&) = delete;
+    SandboxManager(const SandboxManager &other) = delete;
+    SandboxManager &operator=(const SandboxManager &) = delete;
     virtual ~SandboxManager() = default;
-    
+
     auto StoreAdd(const std::string &id, std::shared_ptr<Sandbox> sandbox) -> bool;
     auto StoreRemove(const std::string &id) -> bool;
     auto StoreGetById(const std::string &id, Errors &error) -> std::shared_ptr<Sandbox>;
     auto StoreGetByName(const std::string &name, Errors &error) -> std::shared_ptr<Sandbox>;
     auto StoreGetByPrefix(const std::string &prefix, Errors &error) -> std::shared_ptr<Sandbox>;
 
-    auto NameIndexAdd(const std::string &name,const std::string &id) -> bool;
+    auto NameIndexAdd(const std::string &name, const std::string &id) -> bool;
     auto NameIndexRemove(const std::string &name) -> bool;
     auto NameIndexGet(const std::string &name) -> std::string;
     auto NameIndexGetAll(void) -> std::map<std::string, std::string>;

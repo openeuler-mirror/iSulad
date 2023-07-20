@@ -50,6 +50,7 @@ IF(ENABLE_UT)
     add_subdirectory(network)
     add_subdirectory(volume)
     add_subdirectory(cgroup)
+    add_subdirectory(id_name_manager)
 
 ENDIF(ENABLE_UT)
 

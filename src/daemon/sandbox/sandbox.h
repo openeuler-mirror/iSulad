@@ -83,11 +83,12 @@ private:
     RWMutex m_stateMutex;
 };
 
-class Sandbox : public SandboxExitCallback, public std::enable_shared_from_this<Sandbox>{
+class Sandbox : public SandboxExitCallback, public std::enable_shared_from_this<Sandbox> {
 public:
-    Sandbox(const std::string id, const std::string &rootdir, const std::string &statedir, const std::string &name = nullptr,
-        const std::string &sandboxer = nullptr, const std::string &runtime = nullptr, std::string netNsPath = nullptr,
-        const runtime::v1::PodSandboxConfig &sandboxConfig = runtime::v1::PodSandboxConfig::default_instance());
+    Sandbox(const std::string id, const std::string &rootdir, const std::string &statedir,
+            const std::string &name = nullptr,
+            const std::string &sandboxer = nullptr, const std::string &runtime = nullptr, std::string netNsPath = nullptr,
+            const runtime::v1::PodSandboxConfig &sandboxConfig = runtime::v1::PodSandboxConfig::default_instance());
     virtual ~Sandbox() = default;
 
     auto IsReady() -> bool;
@@ -120,7 +121,7 @@ public:
     auto Save(Errors &error) -> bool;
     // Load from file
     auto Load(Errors &error) -> bool;
-   
+
     void OnSandboxExit(const ControllerExitInfo &exitInfo);
 
     auto UpdateStatus(Errors &error) -> bool;
@@ -167,7 +168,7 @@ private:
 
 private:
     // Since the cri module will operate concurrently on the sandbox instance,
-    // use m_mutex to ensure the correctness of the sandbox instance 
+    // use m_mutex to ensure the correctness of the sandbox instance
     // and its member variables (m_statsInfo and m_networkSettings)
     RWMutex m_mutex;
     SandboxState m_state;
@@ -188,7 +189,7 @@ private:
     // container id lists
     std::vector<std::string> m_containers;
     // TOOD: m_sandboxConfig is a protobuf message, it can be converted to json string directly
-    //       if save json string directly for sandbox recover, we need to consider hot 
+    //       if save json string directly for sandbox recover, we need to consider hot
     //       upgrade between different CRI versions
     std::shared_ptr<runtime::v1::PodSandboxConfig> m_sandboxConfig;
 

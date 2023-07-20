@@ -25,7 +25,7 @@ int id_store_init(void);
 int name_store_init(void);
 void id_store_free(void);
 void name_store_free(void);
-char *try_generate_id(void);
+char *get_new_id(void);
 bool try_add_id(const char *id);
 bool try_remove_id(const char *id);
 bool try_add_name(const char *name);
