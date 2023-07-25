@@ -39,6 +39,7 @@ const std::string NETWORK_SETTINGS_JSON = "network_settings.json";
 
 // Keep consistent with the default values set in containerd and cri-o.
 const uint32_t DEFAULT_STOP_TIMEOUT = 10;
+const std::string DEFAULT_NETMODE = "cni";
 
 enum SandboxStatus {
     SANDBOX_STATUS_UNKNOWN = 0,
@@ -53,48 +54,37 @@ struct StatsInfo {
     uint64_t cpuUseNanos;
 };
 
-class SandboxState {
-public:
-    SandboxState() = default;
-    auto GetPid() -> uint32_t;
-    auto GetCreatedAt() -> uint64_t;
-    auto GetExitedAt() -> uint64_t;
-    auto GetUpdateAt() -> uint64_t;
-    auto GetStatus() -> SandboxStatus;
-    auto GetExitStatus() -> uint32_t;
+struct RuntimeInfo {
+    // container runtime
+    std::string runtime;
+    // sandbox type
+    std::string sandboxer;
+    // cri runtime handler
+    std::string runtimeHandler;
+};
 
-    void SetPid(uint32_t pid);
-    void SetUpdatedAt(uint64_t time);
-    void SetCreatedAt(uint64_t time);
-    void SetExitedAt(uint64_t time);
-    void SetExitStatus(uint32_t code);
-    void SetStatus(SandboxStatus st);
-
-    auto UpdateStatus(SandboxStatus st) -> SandboxStatus;
-
-private:
-    uint32_t m_pid;
-    uint64_t m_createdAt;
-    // now, m_updatedAt is unused
-    uint64_t m_updatedAt;
-    uint64_t m_exitedAt;
-    uint32_t m_exitStatus;
-    SandboxStatus m_status;
-    RWMutex m_stateMutex;
+struct SandboxState {
+    uint32_t pid;
+    uint64_t createdAt;
+    // now, updatedAt is unused
+    uint64_t updatedAt;
+    uint64_t exitedAt;
+    uint32_t exitStatus;
+    SandboxStatus status;
 };
 
 class Sandbox : public SandboxExitCallback, public std::enable_shared_from_this<Sandbox> {
 public:
-    Sandbox(const std::string id, const std::string &rootdir, const std::string &statedir,
-            const std::string &name = nullptr,
-            const std::string &sandboxer = nullptr, const std::string &runtime = nullptr, std::string netNsPath = nullptr,
-            const runtime::v1::PodSandboxConfig &sandboxConfig = runtime::v1::PodSandboxConfig::default_instance());
+    Sandbox(const std::string id, const std::string &rootdir, const std::string &statedir, const std::string name = "",
+            const RuntimeInfo info = {"", "", ""}, std::string netMode = DEFAULT_NETMODE, std::string netNsPath = "",
+            const runtime::v1::PodSandboxConfig sandboxConfig = runtime::v1::PodSandboxConfig::default_instance());
     virtual ~Sandbox() = default;
 
     auto IsReady() -> bool;
 
     auto GetId() -> const std::string &;
     auto GetName() -> const std::string &;
+    auto GetRuntime() -> const std::string &;
     auto GetSandboxer() -> const std::string &;
     auto GetRuntimeHandle() -> const std::string &;
     auto GetContainers() -> const std::vector<std::string> &;
@@ -103,18 +93,21 @@ public:
     auto GetStateDir() -> std::string;
     auto GetResolvPath() -> std::string;
     auto GetShmPath() -> std::string;
-    auto GetStatsInfo() -> const StatsInfo &;
+    auto GetStatsInfo() -> StatsInfo;
     auto GetNetworkReady() -> bool;
+    auto GetNetMode() -> const std::string &;
 
+    void SetNetMode(const std::string &mode);
+    void SetController(std::shared_ptr<Controller> controller);
     void AddAnnotations(const std::string &key, const std::string &value);
     void RemoveAnnotations(const std::string &key);
     void AddLabels(const std::string &key, const std::string &value);
     void RemoveLabels(const std::string &key);
     void AddContainer(const std::string &id);
     void SetConatiners(const std::vector<std::string> &cons);
-    void RemoveContainers(const std::string &id);
+    void RemoveContainer(const std::string &id);
     void UpdateNetworkSettings(const std::string &settingsJson, Errors &error);
-    auto UpdateStatsInfo(StatsInfo &info) -> StatsInfo;
+    auto UpdateStatsInfo(const StatsInfo &info) -> StatsInfo;
     void SetNetworkReady(bool ready);
 
     // Save to file
@@ -142,12 +135,12 @@ private:
     auto LoadNetworkSetting(Errors &error) -> bool;
 
     void SetSandboxConfig(const runtime::v1::PodSandboxConfig &config);
-    void SetNetworkSettings(std::string &settings, Errors &error);
+    void SetNetworkSettings(const std::string &settings, Errors &error);
     auto SetupSandboxFiles(Errors &error) -> int;
     void DoUpdateStatus(std::unique_ptr<ControllerSandboxStatus> status, Errors &error);
+    void DoUpdateExitedStatus(const ControllerExitInfo &exitInfo);
 
     auto GetTaskAddress() -> const std::string &;
-    auto GetNetworkSettings() -> const std::string &;
 
     auto GetHostnamePath() -> std::string;
     auto GetHostsPath() -> std::string;
@@ -165,24 +158,26 @@ private:
 
     auto DoStop(uint32_t timeoutSecs, Errors &error) -> bool;
     auto IsRemovalInProcess(Errors &error) -> bool;
+    auto isValidMetadata(std::unique_ptr<CStructWrapper<sandbox_metadata>> &metadata) -> bool;
 
 private:
     // Since the cri module will operate concurrently on the sandbox instance,
     // use m_mutex to ensure the correctness of the sandbox instance
-    // and its member variables (m_statsInfo and m_networkSettings)
     RWMutex m_mutex;
+    // use m_stateMutex to ensure the correctness of m_state, m_statsInfo and m_networkSettings
+    RWMutex m_stateMutex;
     SandboxState m_state;
     std::string m_id;
     std::string m_name;
-    std::string m_sandboxer;
-    std::string m_runtimeHandler;
-    // m_rootdir = conf->rootpath + / + sandbox
+    RuntimeInfo m_runtimeInfo;
+    // m_rootdir = conf->rootpath + / + sandbox + / + id
     std::string m_rootdir;
     std::string m_statedir;
     std::string m_taskAddress;
     StatsInfo m_statsInfo;
     // Store network information in the sandbox, which is convenient for the cri module to obtain
     // and update the network settings of the pause container in the shim-controller.
+    std::string m_netMode;
     std::string m_netNsPath;
     bool m_networkReady;
     std::string m_networkSettings;

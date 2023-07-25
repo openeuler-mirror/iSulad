@@ -31,9 +31,9 @@ auto ProtobufMapToJsonMapForString(const google::protobuf::Map<std::string, std:
 void JsonMapToProtobufMapForString(const json_map_string_string *src,
                                    google::protobuf::Map<std::string, std::string> &dest);
 
-auto StringVectorToCharArray(std::vector<std::string> &path) -> char **;
+auto StringVectorToCharArray(std::vector<std::string> &strVec) -> char **;
 
-void CharArrayToStringVector(const char **src, std::vector<std::string> &dest);
+void CharArrayToStringVector(const char **src, size_t len, std::vector<std::string> &dest);
 
 }; // namespace Transform
 

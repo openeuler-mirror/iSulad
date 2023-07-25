@@ -33,11 +33,10 @@ public:
     static SandboxManager *GetInstance() noexcept;
 
     // initialize value
-    auto Init(Errors &error) -> int;
+    auto Init(Errors &error) -> bool;
 
     // Create meanningful sandbox instance
-    auto CreateSandbox(const std::string &name, const std::string &sandboxer, const std::string &runtime,
-                       std::string netNsPath,
+    auto CreateSandbox(const std::string &name, RuntimeInfo &info, std::string &netNsPath, std::string &netMode,
                        const runtime::v1::PodSandboxConfig &sandboxConfig, Errors &error) -> std::shared_ptr<Sandbox>;
 
     auto GetSandbox(const std::string &idOrName, Errors &error) -> std::shared_ptr<Sandbox>;
@@ -54,21 +53,23 @@ private:
 
     auto StoreAdd(const std::string &id, std::shared_ptr<Sandbox> sandbox) -> bool;
     auto StoreRemove(const std::string &id) -> bool;
-    auto StoreGetById(const std::string &id, Errors &error) -> std::shared_ptr<Sandbox>;
-    auto StoreGetByName(const std::string &name, Errors &error) -> std::shared_ptr<Sandbox>;
-    auto StoreGetByPrefix(const std::string &prefix, Errors &error) -> std::shared_ptr<Sandbox>;
+    auto StoreGetById(const std::string &id) -> std::shared_ptr<Sandbox>;
+    auto StoreGetByName(const std::string &name) -> std::shared_ptr<Sandbox>;
+    auto StoreGetByPrefix(const std::string &prefix) -> std::shared_ptr<Sandbox>;
 
-    auto NameIndexAdd(const std::string &name, const std::string &id) -> bool;
-    auto NameIndexRemove(const std::string &name) -> bool;
+    void NameIndexAdd(const std::string &name, const std::string &id);
+    void NameIndexRemove(const std::string &name);
     auto NameIndexGet(const std::string &name) -> std::string;
     auto NameIndexGetAll(void) -> std::map<std::string, std::string>;
 
-    bool RemoveAllIndex(std::string id, std::string name);
+    auto RemoveSandboxFromStore(const std::string &id, const std::string &name) -> bool;
+    auto AddSandboxToStore(const std::string &id, const std::string &name, std::shared_ptr<Sandbox> sandbox,
+                           Errors &error) -> bool;
 
     auto GetSandboxRootpath() -> std::string;
     auto GetSandboxStatepath() -> std::string;
     auto TryGenerateId() -> std::string;
-    void ListAllSandboxdir(std::vector<std::string> &allSubdir);
+    bool ListAllSandboxdir(std::vector<std::string> &allSubdir);
 
 private:
     static std::atomic<SandboxManager *> m_instance;

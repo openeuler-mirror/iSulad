@@ -38,9 +38,8 @@ struct isulad_conf {
 
 #ifdef ENABLE_CRI_API_V1
 #define DEFAULT_SANDBOXER_NAME "shim"
-char *conf_get_sandbox_rootpath();
-char *conf_get_sandbox_statepath();
-char *conf_get_default_sandboxer();
+char *conf_get_sandbox_rootpath(void);
+char *conf_get_sandbox_statepath(void);
 #endif
 
 char *conf_get_isulad_pidfile();
