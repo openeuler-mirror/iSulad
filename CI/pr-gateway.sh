@@ -35,6 +35,7 @@ cd ~
 rm -rf lxc
 git clone https://gitee.com/src-openeuler/lxc.git
 pushd lxc
+git checkout origin/openEuler-22.03-LTS-SP2
 rm -rf lxc-4.0.3
 ./apply-patches || exit 1
 pushd lxc-4.0.3
