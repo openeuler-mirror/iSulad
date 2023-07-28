@@ -51,7 +51,6 @@ typedef struct health_check_manager {
     health_check_monitor_status_t monitor_status;
     // Used to wait for the health check minotor thread to close
     bool monitor_exist;
-    pthread_t monitor_tid;
 } health_check_manager_t;
 
 typedef struct _container_state_t_ {
