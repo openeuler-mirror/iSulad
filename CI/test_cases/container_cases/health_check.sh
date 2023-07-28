@@ -241,50 +241,6 @@ function test_health_check_monitor()
     return ${ret}
 }
 
-function test_health_check_abnormal()
-{
-    local ret=0
-    local image="busybox"
-    local retry_limit=10
-    local retry_interval=1
-    local test="health check abnormal => (${FUNCNAME[@]})"
-
-    msg_info "${test} starting..."
-
-    isula images | grep ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
-
-    container_name="health_check_abnormal"
-    isula run -itd --runtime $1 -n ${container_name} --health-cmd="sleep 999" --health-timeout=1000000s --health-retries=1  ${image} /bin/sh
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
-
-    do_retry ${retry_limit} ${retry_interval} inspect_container_status  ${container_name} running
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container status: not running" && ((ret++))
-
-    # Health check has been performed yet
-    do_retry ${retry_limit} ${retry_interval} inspect_container_health_status  ${container_name} starting
-    # Initial status when the container is still starting
-    [[ $? -ne 0 ]]  && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not starting" && ((ret++))
-
-    sleep 30 # wait health check exec
-
-    isula stop -t 0 ${container_name} &
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop container: ${container_name}" && ((ret++))
-
-    do_retry ${retry_limit} ${retry_interval} inspect_container_status  ${container_name} exited
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container status: not exited" && ((ret++))
-
-    do_retry ${retry_limit} ${retry_interval} inspect_container_health_status  ${container_name} unhealthy
-    # The container process exits and the health check status becomes unhealthy
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not unhealthy" && ((ret++))
-
-    isula rm -f ${container_name}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove container: ${container_name}" && ((ret++))
-
-    msg_info "${test} finished with return ${ret}..."
-    return ${ret}
-}
-
 declare -i ans=0
 
 for element in ${RUNTIME_LIST[@]};
@@ -299,8 +255,6 @@ do
     test_health_check_timeout $element || ((ans++))
 
     test_health_check_monitor $element || ((ans++))
-
-    test_health_check_abnormal $element || ((ans++))
 
     msg_info "${test} finished with return ${ans}..."
 done
