@@ -28,6 +28,7 @@
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/oci_runtime_spec.h>
 #include <isula_libutils/log.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "constants.h"
 #include "utils.h"
@@ -48,6 +49,11 @@
 static struct isulad_conf g_isulad_conf;
 static double g_jiffy = 0.0;
 static isulad_daemon_constants *g_isulad_daemon_constants = NULL;
+
+#ifdef ENABLE_CRI_API_V1
+#define SANDBOX_ROOTPATH_NAME "sandbox"
+#define SANDBOX_STATEPATH_NAME "sandbox"
+#endif
 
 /* tick to ns */
 static inline unsigned long long tick_to_ns(uint64_t tick)
@@ -196,16 +202,12 @@ char *conf_get_engine_rootpath()
         ERROR("Get rootpath failed");
         return epath;
     }
-    if (strlen(rootpath) > (SIZE_MAX - strlen(ENGINE_ROOTPATH_NAME)) - 2) {
+    if (strlen(rootpath) > (PATH_MAX - strlen(ENGINE_ROOTPATH_NAME)) - 2) {
         ERROR("Root path is too long");
         goto free_out;
     }
     len = strlen(rootpath) + 1 + strlen(ENGINE_ROOTPATH_NAME) + 1;
-    if (len > PATH_MAX) {
-        ERROR("The size of path exceeds the limit");
-        goto free_out;
-    }
-    epath = util_common_calloc_s(len);
+    epath = util_smart_calloc_s(sizeof(char), len);
     if (epath == NULL) {
         ERROR("Out of memory");
         goto free_out;
@@ -264,16 +266,12 @@ char *conf_get_graph_check_flag_file()
         return epath;
     }
     if (strlen(rootpath) >
-        ((SIZE_MAX - strlen(OCI_IMAGE_GRAPH_ROOTPATH_NAME)) - strlen(GRAPH_ROOTPATH_CHECKED_FLAG)) - 3) {
+        ((PATH_MAX - strlen(OCI_IMAGE_GRAPH_ROOTPATH_NAME)) - strlen(GRAPH_ROOTPATH_CHECKED_FLAG)) - 3) {
         ERROR("Root path is too long");
         goto free_out;
     }
     len = strlen(rootpath) + 1 + strlen(OCI_IMAGE_GRAPH_ROOTPATH_NAME) + 1 + strlen(GRAPH_ROOTPATH_CHECKED_FLAG) + 1;
-    if (len > PATH_MAX) {
-        ERROR("The size of path exceeds the limit");
-        goto free_out;
-    }
-    epath = util_common_calloc_s(len);
+    epath = util_smart_calloc_s(sizeof(char), len);
     if (epath == NULL) {
         ERROR("Out of memory");
         goto free_out;
@@ -370,7 +368,7 @@ char *conf_get_routine_statedir(const char *runtime)
     if (len > PATH_MAX) {
         goto out;
     }
-    path = util_common_calloc_s(sizeof(char) * len);
+    path = util_smart_calloc_s(sizeof(char), len);
     if (path == NULL) {
         goto out;
     }
@@ -386,6 +384,78 @@ out:
     (void)isulad_server_conf_unlock();
     return path;
 }
+
+#ifdef ENABLE_CRI_API_V1
+char *conf_get_sandbox_rootpath(void)
+{
+    char *epath = NULL;
+    __isula_auto_free char *rootpath = NULL;
+    size_t len;
+
+    rootpath = conf_get_isulad_rootdir();
+    if (rootpath == NULL) {
+        ERROR("Get rootpath failed");
+        return epath;
+    }
+    if (strlen(rootpath) > (PATH_MAX - strlen(ENGINE_ROOTPATH_NAME)) - 2) {
+        ERROR("Root path is too long");
+        return epath;
+    }
+    // rootpath + "/" + SANDBOX_ROOTPATH_NAME + "/0"
+    len = strlen(rootpath) + 1 + strlen(ENGINE_ROOTPATH_NAME) + 1;
+    epath = util_smart_calloc_s(sizeof(char), len);
+    if (epath == NULL) {
+        ERROR("Out of memory");
+        return epath;
+    }
+
+    int nret = snprintf(epath, len, "%s/%s", rootpath, SANDBOX_ROOTPATH_NAME);
+    if (nret < 0 || (size_t)nret >= len) {
+        ERROR("Failed to sprintf engine path");
+        free(epath);
+        epath = NULL;
+    }
+    return epath;
+}
+
+char *conf_get_sandbox_statepath(void)
+{
+    char *path = NULL;
+    struct service_arguments *conf = NULL;
+    size_t len = 0;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs->state == NULL) {
+        goto out;
+    }
+
+    /* path = conf->statepath + / + sandbox + /0 */
+    if (strlen(conf->json_confs->state) > (PATH_MAX - strlen(SANDBOX_STATEPATH_NAME)) - 2) {
+        ERROR("State path is too long");
+        goto out;
+    }
+    len = strlen(conf->json_confs->state) + 1 + strlen(SANDBOX_STATEPATH_NAME) + 1;
+    path = util_smart_calloc_s(sizeof(char), len);
+    if (path == NULL) {
+        goto out;
+    }
+
+    int nret = snprintf(path, len, "%s/%s", conf->json_confs->state, SANDBOX_STATEPATH_NAME);
+    if (nret < 0 || (size_t)nret >= len) {
+        ERROR("Failed to sprintf path");
+        free(path);
+        path = NULL;
+    }
+
+out:
+    (void)isulad_server_conf_unlock();
+    return path;
+}
+#endif
 
 /* conf get isulad rootdir */
 char *conf_get_isulad_rootdir()
@@ -541,7 +611,7 @@ static char *get_parent_mount_dir(char *graph)
         return NULL;
     }
 
-    rootfsdir = util_common_calloc_s(len);
+    rootfsdir = util_smart_calloc_s(sizeof(char), len);
     if (rootfsdir == NULL) {
         ERROR("Out of memory");
         return NULL;
@@ -697,16 +767,12 @@ char *conf_get_isulad_log_gather_fifo_path()
         ERROR("Get isulad statedir failed");
         goto err_out;
     }
-    if (strlen(statedir) > (SIZE_MAX - strlen(LOG_GATHER_FIFO_NAME)) - 1) {
+    if (strlen(statedir) > (PATH_MAX - strlen(LOG_GATHER_FIFO_NAME)) - 1) {
         ERROR("State path is too long");
         goto err_out;
     }
     len = strlen(statedir) + strlen(LOG_GATHER_FIFO_NAME) + 1;
-    if (len > PATH_MAX) {
-        ERROR("Too long path: %s", statedir);
-        goto err_out;
-    }
-    logfile = util_common_calloc_s(len);
+    logfile = util_smart_calloc_s(sizeof(char), len);
     if (logfile == NULL) {
         ERROR("Out of memory");
         goto err_out;
@@ -1646,6 +1712,10 @@ int merge_json_confs_into_global(struct service_arguments *args)
 
     args->json_confs->runtimes = tmp_json_confs->runtimes;
     tmp_json_confs->runtimes = NULL;
+#ifdef ENABLE_CRI_API_V1
+    args->json_confs->cri_sandboxers = tmp_json_confs->cri_sandboxers;
+    tmp_json_confs->cri_sandboxers = NULL;
+#endif
 
     if (merge_cri_runtimes_into_global(args, tmp_json_confs)) {
         ret = -1;

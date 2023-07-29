@@ -147,6 +147,22 @@ char *conf_get_isulad_rootdir()
     return nullptr;
 }
 
+char *conf_get_sandbox_rootpath()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetSandboxRootPath();
+    }
+    return nullptr;
+}
+
+char *conf_get_sandbox_statepath()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetSandboxStatePath();
+    }
+    return nullptr;
+}
+
 bool conf_get_use_decrypted_key_flag()
 {
     if (g_isulad_conf_mock != nullptr) {
