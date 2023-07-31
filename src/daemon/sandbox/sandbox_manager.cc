@@ -58,65 +58,83 @@ auto SandboxManager::Init(Errors &error) -> bool
     return true;
 }
 
-auto SandboxManager::TryGenerateId() -> std::string
+void SandboxManager::TryGenerateId(std::string &id)
 {
-    __isula_auto_free char *id = NULL;
-    std::string ret;
-    id = get_new_id();
-    if (id == NULL) {
-        return ret;
+    __isula_auto_free char *newId = NULL;
+    newId = get_new_id();
+    if (newId == NULL) {
+        return;
     }
-    ret = std::string(id);
-    return ret;
+    id = std::string(newId);
 }
 
-bool SandboxManager::RemoveSandboxFromStore(const std::string &id, const std::string &name)
+auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, std::string &netNsPath,
+                                   std::string &netMode, const runtime::v1::PodSandboxConfig &sandboxConfig, Errors &error) -> std::shared_ptr<Sandbox>
 {
-    bool ret = true;
-    if (!try_remove_id(id.c_str())) {
-        ret = false;
+    std::shared_ptr<Sandbox> sandbox;
+    std::string id;
+
+    if (!util_valid_container_id_or_name(name.c_str())) {
+        ERROR("Invalid sandbox name: %s", name.c_str());
+        error.Errorf("Invalid sandbox name: %s", name.c_str());
+        return nullptr;
     }
 
-    if (!try_remove_name(name.c_str())) {
-        ret = false;
+    if (netNsPath.empty() || netMode.empty()) {
+        ERROR("Invalid params for create sandbox %s", name.c_str());
+        error.Errorf("Invalid params for create sandbox %s", name.c_str());
+        return nullptr;
     }
 
-    NameIndexRemove(name.c_str());
-
-    if (!StoreRemove(id.c_str())) {
-        ret = false;
+    auto controller = ControllerManager::GetInstance()->GetController(info.sandboxer);
+    if (controller == nullptr) {
+        ERROR("Invalid sandboxer name: %s", info.sandboxer.c_str());
+        error.Errorf("Invalid sandboxer name: %s", info.sandboxer.c_str());
+        return nullptr;
     }
 
-    return ret;
-}
-
-bool SandboxManager::AddSandboxToStore(const std::string &id, const std::string &name, std::shared_ptr<Sandbox> sandbox,
-                                       Errors &error)
-{
-    if (!try_add_id(id.c_str())) {
-        error.Errorf("Failed add %s to id map", id.c_str());
-        return false;
+    std::shared_ptr<Sandbox> old = GetSandbox(name, error);
+    if (old != nullptr) {
+        ERROR("Conflict. The name \"%s\" is already in use by sandbox %s. "
+              "You have to remove that sandbox to be able to reuse that name.",
+              name.c_str(), old->GetId().c_str());
+        error.Errorf("Conflict. The name \"%s\" is already in use by sandbox %s. "
+                     "You have to remove that sandbox to be able to reuse that name.",
+                     name.c_str(), old->GetId().c_str());
+        return nullptr;
     }
 
-    if (!try_add_name(name.c_str())) {
-        error.Errorf("Failed add %s to name map", name.c_str());
-        goto error_load;
+    if (!IDNameManagerNewEntry(id, name, true, error)) {
+        ERROR("Failed add sandbox %s to id name manager", id.c_str());
+        return nullptr;
     }
 
-    NameIndexAdd(name, id);
-
-    if (!StoreAdd(id, sandbox)) {
-        error.Errorf("Failed to add %s into store", id.c_str());
-        goto error_load;
+    sandbox = std::shared_ptr<Sandbox>(new Sandbox(id, m_rootdir, m_statedir, name, info, netMode, netNsPath,
+                                                   sandboxConfig));
+    if (sandbox == nullptr) {
+        ERROR("Failed to malloc for sandbox: %s", name.c_str());
+        error.Errorf("Failed to malloc for sandbox: %s", name.c_str());
+        goto out;
     }
 
-    return true;
+    sandbox->SetController(controller);
 
-error_load:
-    if (!RemoveSandboxFromStore(id, name)) {
-        WARN("Failed to remove sandbox form store: %s", name.c_str());
+    if (!sandbox->Create(error)) {
+        error.AppendError("Failed to create sandbox.");
+        ERROR("Failed to create sandbox: %s", name.c_str());
+        goto out;
     }
-    return false;
+
+    SaveSandboxToStore(id, sandbox);
+
+    return sandbox;
+
+out:
+    // delete unexited id or name will generate WARN img.
+    if (!IDNameManagerRemoveEntry(id, name)) {
+        WARN("Failed to remove %s form id name manager", name.c_str());
+    }
+    return nullptr;
 }
 
 auto SandboxManager::RestoreSandboxes(Errors &error) -> bool
@@ -128,7 +146,7 @@ auto SandboxManager::RestoreSandboxes(Errors &error) -> bool
         return false;
     }
 
-    for (const auto &id : subdir) {
+    for (auto &id : subdir) {
         if (!util_valid_container_id_or_name(id.c_str())) {
             ERROR("Invalid sandbox name: %s", id.c_str());
             continue;
@@ -145,32 +163,86 @@ auto SandboxManager::RestoreSandboxes(Errors &error) -> bool
             continue;
         }
 
-        if (!AddSandboxToStore(id, sandbox->GetName(), sandbox, error)) {
-            ERROR("Failed add sandbox to store:%s", id.c_str());
+        if (!IDNameManagerNewEntry(id, sandbox->GetName(), false, error)) {
+            ERROR("Failed add sandbox %s to id name manager", id.c_str());
+            continue;
+        }
+
+        SaveSandboxToStore(id, sandbox);
+    }
+
+    return true;
+}
+
+// Delete the id and name of the sandbox from the map of the id_name_manager module
+bool SandboxManager::IDNameManagerRemoveEntry(const std::string &id, const std::string &name)
+{
+    bool ret = true;
+    if (!try_remove_id(id.c_str())) {
+        ret = false;
+    }
+
+    if (!try_remove_name(name.c_str())) {
+        ret = false;
+    }
+
+    return ret;
+}
+
+// Save the id and name of the sandbox to the map of the id_name_manager module
+bool SandboxManager::IDNameManagerNewEntry(std::string &id, const std::string &name, bool generateId, Errors &error)
+{
+    if (generateId) {
+        TryGenerateId(id);
+        if (id.empty()) {
+            error.Errorf("Failed to generate id for sandbox: %s", name.c_str());
+            return false;
+        }
+    } else {
+        if (!try_add_id(id.c_str())) {
+            error.Errorf("Failed add %s to id map", id.c_str());
+            return false;
         }
     }
 
+    if (!try_add_name(name.c_str())) {
+        error.Errorf("Failed to add %s to name map", name.c_str());
+        goto error_load;
+    }
+
     return true;
+
+error_load:
+    if (!IDNameManagerRemoveEntry(id, name)) {
+        WARN("Failed to remove %s form id name manager", name.c_str());
+    }
+    return false;
 }
 
-auto SandboxManager::StoreAdd(const std::string &id, std::shared_ptr<Sandbox> sandbox) -> bool
+// Save sandbox to the map of the sandbox manager module
+void SandboxManager::SaveSandboxToStore(const std::string &id, std::shared_ptr<Sandbox> sandbox)
 {
-    if (id.length() == 0) {
-        return false;
-    }
+    NameIndexAdd(sandbox->GetName(), id);
+    StoreAdd(id, sandbox);
+}
+
+// Delete sandbox from the map of the sandbox manager module
+void SandboxManager::DeleteSandboxFromStore(const std::string &id, const std::string &name)
+{
+    NameIndexRemove(name);
+    StoreRemove(id);
+}
+
+void SandboxManager::StoreAdd(const std::string &id, std::shared_ptr<Sandbox> sandbox)
+{
     WriteGuard<RWMutex> lock(m_storeRWMutex);
     m_storeMap[id] = sandbox;
-    return true;
 }
 
-auto SandboxManager::StoreRemove(const std::string &id) -> bool
+void SandboxManager::StoreRemove(const std::string &id)
 {
-    if (id.length() == 0) {
-        return false;
-    }
     WriteGuard<RWMutex> lock(m_storeRWMutex);
     m_storeMap.erase(id);
-    return true;
 }
 
 auto SandboxManager::GetSandbox(const std::string &idOrName, Errors &error) -> std::shared_ptr<Sandbox>

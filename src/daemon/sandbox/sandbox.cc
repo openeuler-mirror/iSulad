@@ -42,6 +42,38 @@
 
 namespace sandbox {
 
+static int WriteDefaultSandboxHosts(const std::string &path, const std::string &hostname)
+{
+    std::string defaultConfig = "127.0.0.1       localhost\n"
+                                "::1     localhost ip6-localhost ip6-loopback\n"
+                                "fe00::0 ip6-localnet\n"
+                                "ff00::0 ip6-mcastprefix\n"
+                                "ff02::1 ip6-allnodes\n"
+                                "ff02::2 ip6-allrouters\n";
+    std::string loopIp = "127.0.0.1    ";
+    std::string content;
+
+    if (hostname.length() > (((SIZE_MAX - defaultConfig.length()) - loopIp.length()) - 2)) {
+        ERROR("Hosts content greater than SIZE_MAX");
+        return -1;
+    }
+
+    content = defaultConfig + loopIp + hostname + std::string("\n");
+    if (util_write_file(path.c_str(), content.c_str(), content.length(), NETWORK_MOUNT_FILE_MODE) != 0) {
+        ERROR("Failed to write default hosts");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int WriteDefaultSandboxResolve(const std::string &path)
+{
+    std::string defaultIpv4Dns = "\nnameserver 8.8.8.8\nnameserver 8.8.4.4\n";
+
+    return util_write_file(path.c_str(), defaultIpv4Dns.c_str(), defaultIpv4Dns.length(), NETWORK_MOUNT_FILE_MODE);
+}
+
 Sandbox::Sandbox(const std::string id, const std::string &rootdir, const std::string &statedir, const std::string name,
                  const RuntimeInfo info, std::string netMode, std::string netNsPath, const runtime::v1::PodSandboxConfig sandboxConfig)
 {
@@ -145,7 +177,7 @@ auto Sandbox::GetNetMode() -> const std::string &
     return m_netMode;
 }
 
-auto GetNetNsPath() -> const std::string &
+auto Sandbox::GetNetNsPath() -> const std::string &
 {
     return m_netNsPath;
 }
@@ -156,6 +188,69 @@ void Sandbox::DoUpdateExitedStatus(const ControllerExitInfo &exitInfo)
     m_state.exitStatus = exitInfo.exitStatus;
     m_state.exitedAt = exitInfo.exitedAt;
     m_state.status = SANDBOX_STATUS_STOPPED;
+}
+
+auto Sandbox::SetupSandboxFiles(Errors &error) -> bool
+{
+    int ret = 0;
+    bool shareHost = false;
+    std::string hostname;
+    std::string hostnameContent;
+    char tmp_name[MAX_HOST_NAME_LEN] = { 0x00 };
+
+    shareHost = namespace_is_host(m_netMode.c_str());
+
+    // create hostname
+    if (m_sandboxConfig->hostname().length() == 0) {
+        if (shareHost) {
+            ret = gethostname(tmp_name, sizeof(tmp_name));
+            if (ret != 0) {
+                error.Errorf("Create hostname error");
+                ERROR("Create hostname error");
+                return false;
+            }
+            hostname = std::string(tmp_name);
+        } else {
+            hostname = m_id;
+        }
+        m_sandboxConfig->set_hostname(hostname);
+    }
+
+    hostnameContent = m_sandboxConfig->hostname() + std::string("\n");
+    if (util_write_file(GetHostnamePath().c_str(), hostnameContent.c_str(), hostnameContent.length(),
+                        NETWORK_MOUNT_FILE_MODE) != 0) {
+        error.Errorf("Failed to create default hostname");
+        ERROR("Failed to create default hostname");
+        return false;
+    }
+
+    // create hosts
+    if (shareHost && util_file_exists(ETC_HOSTS)) {
+        ret = util_copy_file(ETC_HOSTS, GetHostsPath().c_str(), NETWORK_MOUNT_FILE_MODE);
+    } else {
+        ret = WriteDefaultSandboxHosts(GetHostsPath(), m_sandboxConfig->hostname());
+    }
+
+    if (ret != 0) {
+        error.Errorf("Failed to create default hosts");
+        ERROR("Failed to create default hosts");
+        return false;
+    }
+
+    // create resolv.conf
+    if (util_file_exists(RESOLV_CONF_PATH)) {
+        ret = util_copy_file(RESOLV_CONF_PATH, GetResolvPath().c_str(), NETWORK_MOUNT_FILE_MODE);
+    } else {
+        ret = WriteDefaultSandboxResolve(GetResolvPath());
+    }
+
+    if (ret != 0) {
+        error.Errorf("Failed to create default resolv.conf");
+        ERROR("Failed to create default resolv.conf");
+        return false;
+    }
+
+    return true;
 }
 
 void Sandbox::DoUpdateStatus(std::unique_ptr<ControllerSandboxStatus> status, Errors &error)
@@ -343,6 +438,68 @@ auto Sandbox::UpdateStatus(Errors &error) -> bool
         return false;
     }
     return true;
+}
+
+auto Sandbox::Create(Errors &error) -> bool
+{
+    int nret = -1;
+    mode_t mask = umask(S_IWOTH);
+    struct ControllerCreateParams params;
+#ifdef ENABLE_USERNS_REMAP
+    __isula_auto_free char *userns_remap = conf_get_isulad_userns_remap();
+#endif
+
+    nret = util_mkdir_p(m_rootdir.c_str(), CONFIG_DIRECTORY_MODE);
+    if (nret != 0 && errno != EEXIST) {
+        error.Errorf("Failed to create sandbox path %s", m_rootdir);
+        SYSERROR("Failed to create sandbox path %s", m_rootdir);
+        return false;
+    }
+#ifdef ENABLE_USERNS_REMAP
+    if (set_file_owner_for_userns_remap(m_rootdir.c_str(), userns_remap) != 0) {
+        error.Errorf("Unable to change directory %s owner for user remap.", m_rootdir.c_str());
+        ERROR("Unable to change directory %s owner for user remap.", m_rootdir.c_str());
+        return false;
+    }
+#endif
+
+    if (!SetupSandboxFiles(error)) {
+        ERROR("Failed to set up sandbox files, %s", m_id.c_str());
+        goto out;
+    }
+
+    if (!Save(error)) {
+        ERROR("Failed to save sandbox, %s", m_id.c_str());
+        goto out;
+    }
+
+    nret = util_mkdir_p(m_statedir.c_str(), TEMP_DIRECTORY_MODE);
+    if (nret < 0) {
+        error.Errorf("Unable to create sandbox state directory %s.", m_statedir.c_str());
+        ERROR("Unable to create sandbox state directory %s.", m_statedir.c_str());
+        goto out;
+    }
+
+    // currently, params.mounts is unused.
+    params.config = m_sandboxConfig;
+    params.netNSPath = m_netNsPath;
+
+    if (!m_controller->Create(m_id, params, error)) {
+        ERROR("Failed to create sandbox by controller, %s", m_id.c_str());
+        goto out;
+    }
+    umask(mask);
+    return true;
+
+out:
+    umask(mask);
+    if (util_recursive_rmdir(m_rootdir.c_str(), 0) != 0) {
+        ERROR("Failed to delete container's root directory %s", m_rootdir.c_str());
+    }
+    if (util_recursive_rmdir(m_statedir.c_str(), 0) != 0) {
+        ERROR("Failed to delete container's state directory %s", m_rootdir.c_str());
+    }
+    return false;
 }
 
 auto Sandbox::GenerateSandboxStateJson(sandbox_state *state) -> std::string

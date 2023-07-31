@@ -51,8 +51,8 @@ private:
     SandboxManager &operator=(const SandboxManager &) = delete;
     virtual ~SandboxManager() = default;
 
-    auto StoreAdd(const std::string &id, std::shared_ptr<Sandbox> sandbox) -> bool;
-    auto StoreRemove(const std::string &id) -> bool;
+    void StoreAdd(const std::string &id, std::shared_ptr<Sandbox> sandbox);
+    void StoreRemove(const std::string &id);
     auto StoreGetById(const std::string &id) -> std::shared_ptr<Sandbox>;
     auto StoreGetByName(const std::string &name) -> std::shared_ptr<Sandbox>;
     auto StoreGetByPrefix(const std::string &prefix) -> std::shared_ptr<Sandbox>;
@@ -62,19 +62,22 @@ private:
     auto NameIndexGet(const std::string &name) -> std::string;
     auto NameIndexGetAll(void) -> std::map<std::string, std::string>;
 
-    auto RemoveSandboxFromStore(const std::string &id, const std::string &name) -> bool;
-    auto AddSandboxToStore(const std::string &id, const std::string &name, std::shared_ptr<Sandbox> sandbox,
-                           Errors &error) -> bool;
+    auto IDNameManagerRemoveEntry(const std::string &id, const std::string &name) -> bool;
+    auto IDNameManagerNewEntry(std::string &id, const std::string &name, bool generateId, Errors &error) -> bool;
+
+    void SaveSandboxToStore(const std::string &id, std::shared_ptr<Sandbox> sandbox);
+    void DeleteSandboxFromStore(const std::string &id, const std::string &name);
 
     auto GetSandboxRootpath() -> std::string;
     auto GetSandboxStatepath() -> std::string;
-    auto TryGenerateId() -> std::string;
+    void TryGenerateId(std::string &id);
     bool ListAllSandboxdir(std::vector<std::string> &allSubdir);
 
 private:
     static std::atomic<SandboxManager *> m_instance;
     std::string m_rootdir;
     std::string m_statedir;
+    // id --> sandbox map
     std::map<std::string, std::shared_ptr<Sandbox>> m_storeMap;
     // name --> id map
     std::map<std::string, std::string> m_nameIndexMap;
