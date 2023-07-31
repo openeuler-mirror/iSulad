@@ -1180,28 +1180,6 @@ static int generate_network_element(const char **bridges, const size_t len, defs
 }
 #endif
 
-static char *new_sandbox_key(void)
-{
-    int nret = 0;
-    char random[NETNS_LEN + 1] = { 0x00 };
-    char netns[PATH_MAX] = { 0x00 };
-    const char *netns_fmt = RUNPATH"/netns/isulacni-%s";
-
-    nret = util_generate_random_str(random, NETNS_LEN);
-    if (nret != 0) {
-        ERROR("Failed to generate random netns");
-        return NULL;
-    }
-
-    nret = snprintf(netns, sizeof(netns), netns_fmt, random);
-    if (nret < 0 || (size_t)nret >= sizeof(netns)) {
-        ERROR("snprintf netns failed");
-        return NULL;
-    }
-
-    return util_strdup_s(netns);
-}
-
 container_network_settings *generate_network_settings(const host_config *host_config)
 {
     container_network_settings *settings = NULL;
@@ -1247,7 +1225,7 @@ container_network_settings *generate_network_settings(const host_config *host_co
         return settings;
     }
 
-    settings->sandbox_key = new_sandbox_key();
+    settings->sandbox_key = new_sandbox_network_key();
     if (settings->sandbox_key == NULL) {
         ERROR("Failed to generate sandbox key");
         goto err_out;

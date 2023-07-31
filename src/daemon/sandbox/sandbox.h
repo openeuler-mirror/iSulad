@@ -96,7 +96,7 @@ public:
     auto GetStatsInfo() -> StatsInfo;
     auto GetNetworkReady() -> bool;
     auto GetNetMode() -> const std::string &;
-
+    auto GetNetNsPath() -> const std::string &;
     void SetNetMode(const std::string &mode);
     void SetController(std::shared_ptr<Controller> controller);
     void AddAnnotations(const std::string &key, const std::string &value);
@@ -109,6 +109,7 @@ public:
     void UpdateNetworkSettings(const std::string &settingsJson, Errors &error);
     auto UpdateStatsInfo(const StatsInfo &info) -> StatsInfo;
     void SetNetworkReady(bool ready);
+    void SetNetworkMode(const std::string &networkMode);
 
     // Save to file
     auto Save(Errors &error) -> bool;
@@ -179,6 +180,7 @@ private:
     // and update the network settings of the pause container in the shim-controller.
     std::string m_netMode;
     std::string m_netNsPath;
+    std::string m_networkMode;
     bool m_networkReady;
     std::string m_networkSettings;
     // container id lists

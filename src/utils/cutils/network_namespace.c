@@ -237,3 +237,25 @@ int remove_network_namespace_file(const char *netns_path)
 
     return 0;
 }
+
+char *new_sandbox_network_key(void)
+{
+    int nret = 0;
+    char random[NETNS_LEN + 1] = { 0x00 };
+    char netns[PATH_MAX] = { 0x00 };
+    const char *netns_fmt = RUNPATH"/netns/isulacni-%s";
+
+    nret = util_generate_random_str(random, NETNS_LEN);
+    if (nret != 0) {
+        ERROR("Failed to generate random netns");
+        return NULL;
+    }
+
+    nret = snprintf(netns, sizeof(netns), netns_fmt, random);
+    if (nret < 0 || (size_t)nret >= sizeof(netns)) {
+        ERROR("Failed to snprintf");
+        return NULL;
+    }
+
+    return util_strdup_s(netns);
+}

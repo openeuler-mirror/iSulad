@@ -30,6 +30,7 @@
 #include "isula_libutils/container_inspect.h"
 #include "checkpoint_handler.h"
 #include "cgroup.h"
+#include "sandbox.h"
 #include "v1_cri_container_manager_service.h"
 
 namespace CRIV1 {
@@ -72,48 +73,23 @@ public:
                      Errors &error);
 
 private:
-    auto EnsureSandboxImageExists(const std::string &image, Errors &error) -> bool;
-    auto CreateSandboxContainer(const runtime::v1::PodSandboxConfig &config, const std::string &image,
-                                std::string &jsonCheckpoint, const std::string &runtimeHandler, Errors &error)
-    -> std::string;
-    auto GenerateSandboxCreateContainerRequest(const runtime::v1::PodSandboxConfig &config,
-                                               const std::string &image, std::string &jsonCheckpoint,
-                                               const std::string &runtimeHandler, Errors &error)
-    -> container_create_request *;
-    void SetHostConfigDefaultValue(host_config *hc);
-    void MakeSandboxIsuladConfig(const runtime::v1::PodSandboxConfig &c, host_config *hc,
-                                 container_config *custom_config, Errors &error);
-    void ApplySandboxLinuxOptions(const runtime::v1::LinuxPodSandboxConfig &lc, host_config *hc,
-                                  container_config *custom_config, Errors &error);
-    void ApplySandboxResources(const runtime::v1::LinuxPodSandboxConfig *lc, host_config *hc, Errors &error);
-    void ConstructPodSandboxCheckpoint(const runtime::v1::PodSandboxConfig &config,
-                                       CRI::PodSandboxCheckpoint &checkpoint);
+    void PrepareSandboxData(const runtime::v1::PodSandboxConfig &config, const std::string &runtimeHandler,
+                            std::string &sandboxName, RuntimeInfo &runtimeInfo, std::string &networkMode);
+    auto EnsureSandboxImageExists(const std::string &image, const std::string &sandboxer, Errors &error) -> bool;
+    void PrepareSandboxKey(std::string &sandboxKey, Errors &error);
+    void ApplySandboxDefaultResources(runtime::v1::LinuxPodSandboxConfig *linuxConfig);
     auto ParseCheckpointProtocol(runtime::v1::Protocol protocol) -> std::string;
-    auto PackCreateContainerRequest(const runtime::v1::PodSandboxConfig &config, const std::string &image,
-                                    host_config *hostconfig, container_config *custom_config,
-                                    const std::string &runtimeHandler, Errors &error) -> container_create_request *;
-    void SetNetworkReady(const std::string &podSandboxID, bool ready, Errors &error);
-    void StartSandboxContainer(const std::string &response_id, Errors &error);
-    auto GetSandboxKey(const container_inspect *inspect_data) -> std::string;
-    void GetSandboxNetworkInfo(const runtime::v1::PodSandboxConfig &config, const std::string &jsonCheckpoint,
-                               const container_inspect *inspect_data, std::string &sandbox_key,
-                               std::map<std::string, std::string> &networkOptions,
-                               std::map<std::string, std::string> &stdAnnos, Errors &error);
-    void SetupSandboxNetwork(const runtime::v1::PodSandboxConfig &config, const std::string &response_id,
-                             const container_inspect *inspect_data,
-                             const std::map<std::string, std::string> &networkOptions,
-                             const std::map<std::string, std::string> &stdAnnos, std::string &network_settings_json,
-                             Errors &error);
-    void SetupSandboxFiles(const std::string &resolvPath, const runtime::v1::PodSandboxConfig &config,
-                           Errors &error);
+    void ConstructPodSandboxCheckpoint(const runtime::v1::PodSandboxConfig &config, CRI::PodSandboxCheckpoint &checkpoint);
+    void PrepareSandboxCheckpoint(const runtime::v1::PodSandboxConfig &config, std::string &jsonCheckpoint, Errors &error);
+    void UpdateSandboxConfig(const runtime::v1::PodSandboxConfig &config, std::string &jsonCheckpoint, Errors &error);
+    void SetupSandboxFiles(const std::string &resolvPath, const runtime::v1::PodSandboxConfig &config, Errors &error);
+    void SetupSandboxNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, std::string &network_settings_json, Errors &error);
+    void ClearCniNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, Errors &error);
     void StopContainerHelper(const std::string &containerID, Errors &error);
     auto GetRealSandboxIDToStop(const std::string &podSandboxID, bool &hostNetwork, std::string &name, std::string &ns,
                                 std::string &realSandboxID, std::map<std::string, std::string> &stdAnnos, Errors &error)
     -> int;
     auto StopAllContainersInSandbox(const std::string &realSandboxID, Errors &error) -> int;
-    auto ClearCniNetwork(const std::string &realSandboxID, bool hostNetwork, const std::string &ns,
-                         const std::string &name, std::vector<std::string> &errlist,
-                         std::map<std::string, std::string> &stdAnnos, Errors &error) -> int;
     auto GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool;
     auto RemoveAllContainersInSandbox(const std::string &realSandboxID, std::vector<std::string> &errors) -> int;
     int DoRemovePodSandbox(const std::string &realSandboxID, std::vector<std::string> &errors);

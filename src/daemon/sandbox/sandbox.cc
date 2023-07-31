@@ -145,6 +145,11 @@ auto Sandbox::GetNetMode() -> const std::string &
     return m_netMode;
 }
 
+auto GetNetNsPath() -> const std::string &
+{
+    return m_netNsPath;
+}
+
 void Sandbox::DoUpdateExitedStatus(const ControllerExitInfo &exitInfo)
 {
     WriteGuard<RWMutex> lock(m_stateMutex);
