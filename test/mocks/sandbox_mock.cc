@@ -139,6 +139,7 @@ bool Sandbox::GetNetworkReady()
     return true;
 }
 
+void Sandbox::SetController(std::shared_ptr<Controller> controller) {}
 void Sandbox::AddAnnotations(const std::string &key, const std::string &value) {}
 void Sandbox::RemoveAnnotations(const std::string &key) {}
 void Sandbox::AddLabels(const std::string &key, const std::string &value) {}

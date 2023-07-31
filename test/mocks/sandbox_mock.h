@@ -40,6 +40,7 @@ public:
     MOCK_METHOD0(GetStatsInfo, StatsInfo());
     MOCK_METHOD0(GetNetworkReady, bool());
 
+    MOCK_METHOD1(SetController, void(std::shared_ptr<Controller> controller));
     MOCK_METHOD2(AddAnnotations, void(const std::string &key, const std::string &value));
     MOCK_METHOD1(RemoveAnnotations, void(const std::string &key));
     MOCK_METHOD2(AddLabels, void(const std::string &key, const std::string &value));
