@@ -15,9 +15,14 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/sandbox_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/sandbox_manager.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/id_name_manager.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/isulad_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/isulad_config_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/daemon_arguments.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/controller_manager.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/shim/shim_controller.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/sandboxer/sandboxer_controller.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/sandboxer/client/grpc_sandboxer_client.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/controller_stub_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/sandbox_manager_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
@@ -27,6 +32,9 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/entry/cri
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/shim
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/sandboxer
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/sandboxer/client
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cpputils

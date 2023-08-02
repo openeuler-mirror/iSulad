@@ -43,7 +43,6 @@ const std::string DEFAULT_NETMODE = "cni";
 
 enum SandboxStatus {
     SANDBOX_STATUS_UNKNOWN = 0,
-    SANDBOX_STATUS_CREATED,
     SANDBOX_STATUS_RUNNING,
     SANDBOX_STATUS_STOPPED,
     SANDBOX_STATUS_REMOVING,
@@ -137,7 +136,7 @@ private:
 
     void SetSandboxConfig(const runtime::v1::PodSandboxConfig &config);
     void SetNetworkSettings(const std::string &settings, Errors &error);
-    auto SetupSandboxFiles(Errors &error) -> int;
+    auto SetupSandboxFiles(Errors &error) -> bool;
     void DoUpdateStatus(std::unique_ptr<ControllerSandboxStatus> status, Errors &error);
     void DoUpdateExitedStatus(const ControllerExitInfo &exitInfo);
 
