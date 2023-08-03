@@ -31,7 +31,7 @@ public:
     MOCK_METHOD0(GetName, const std::string & ());
     MOCK_METHOD0(GetSandboxer, const std::string & ());
     MOCK_METHOD0(GetRuntimeHandle, const std::string & ());
-    MOCK_METHOD0(GetContainers, const std::vector<std::string> &());
+    MOCK_METHOD0(GetContainers, std::vector<std::string>());
     MOCK_METHOD0(GetSandboxConfig, std::shared_ptr<runtime::v1::PodSandboxConfig>());
     MOCK_METHOD0(GetRootDir, std::string());
     MOCK_METHOD0(GetStateDir, std::string());
@@ -59,8 +59,8 @@ public:
     MOCK_METHOD1(Create, bool(Errors &error));
     MOCK_METHOD1(Start, bool(Errors &error));
     MOCK_METHOD2(Stop, bool(uint32_t timeoutSecs, Errors &error));
-    MOCK_METHOD2(Remove, bool(bool force, Errors &error));
-    MOCK_METHOD1(Status, std::unique_ptr<runtime::v1::PodSandboxStatus>(Errors &error));
+    MOCK_METHOD1(Remove, bool(Errors &error));
+    MOCK_METHOD1(Status, void(runtime::v1::PodSandboxStatus &status));
 };
 
 void MockSandbox_SetMock(MockSandbox *mock);
