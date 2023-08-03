@@ -87,7 +87,7 @@ public:
     auto GetRuntime() -> const std::string &;
     auto GetSandboxer() -> const std::string &;
     auto GetRuntimeHandle() -> const std::string &;
-    auto GetContainers() -> const std::vector<std::string> &;
+    auto GetContainers() -> std::vector<std::string>;
     auto GetSandboxConfig() -> std::shared_ptr<runtime::v1::PodSandboxConfig>;
     auto GetRootDir() -> std::string;
     auto GetStateDir() -> std::string;
@@ -97,6 +97,7 @@ public:
     auto GetNetworkReady() -> bool;
     auto GetNetMode() -> const std::string &;
     auto GetNetNsPath() -> const std::string &;
+    auto GetNetworkSettings() -> std::string;
     void SetNetMode(const std::string &mode);
     void SetController(std::shared_ptr<Controller> controller);
     void AddAnnotations(const std::string &key, const std::string &value);
@@ -125,8 +126,8 @@ public:
     auto Create(Errors &error) -> bool;
     auto Start(Errors &error) -> bool;
     auto Stop(uint32_t timeoutSecs, Errors &error) -> bool;
-    auto Remove(bool force, Errors &error) -> bool;
-    auto Status(Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStatus>;
+    auto Remove(Errors &error) -> bool;
+    void Status(runtime::v1::PodSandboxStatus &status);
 
 private:
     auto SaveState(Errors &error) -> bool;
@@ -160,7 +161,8 @@ private:
     auto ParseSandboxMetadataFile() ->std::unique_ptr<CStructWrapper<sandbox_metadata>>;
 
     auto DoStop(uint32_t timeoutSecs, Errors &error) -> bool;
-    auto IsRemovalInProcess(Errors &error) -> bool;
+    auto IsRemovalInProcess() -> bool;
+    auto IsStopped() -> bool;
     auto isValidMetadata(std::unique_ptr<CStructWrapper<sandbox_metadata>> &metadata) -> bool;
 
 private:

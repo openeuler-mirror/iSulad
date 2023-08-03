@@ -1573,20 +1573,6 @@ out:
     return ret;
 }
 
-int umount_residual_shm(const char *mount_info, const char *target)
-{
-    if (strncmp(mount_info, target, strlen(target)) != 0) {
-        return 0;
-    }
-
-    DEBUG("Try to umount: %s", mount_info);
-    if (umount2(mount_info, MNT_DETACH)) {
-        SYSERROR("Failed to umount residual mount: %s", mount_info);
-    }
-
-    return 0;
-}
-
 int cleanup_mounts_by_id(const char *id, const char *engine_root_path)
 {
     char target[PATH_MAX] = { 0 };
@@ -1598,7 +1584,7 @@ int cleanup_mounts_by_id(const char *id, const char *engine_root_path)
         return -1;
     }
 
-    if (!util_deal_with_mount_info(umount_residual_shm, target)) {
+    if (!util_deal_with_mount_info(util_umount_residual_shm, target)) {
         ERROR("Cleanup mounts failed");
         return -1;
     }

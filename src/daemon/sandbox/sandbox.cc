@@ -14,7 +14,6 @@
  *********************************************************************************/
 #include "sandbox.h"
 
-#include <sys/mount.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string>
@@ -97,10 +96,7 @@ Sandbox::Sandbox(const std::string id, const std::string &rootdir, const std::st
 auto Sandbox::IsReady() -> bool
 {
     ReadGuard<RWMutex> lock(m_stateMutex);
-    if (m_state.status == SANDBOX_STATUS_RUNNING) {
-        return true;
-    }
-    return false;
+    return m_state.status == SANDBOX_STATUS_RUNNING;
 }
 
 auto Sandbox::GetId() -> const std::string &
@@ -128,7 +124,7 @@ auto Sandbox::GetRuntimeHandle() -> const std::string &
     return m_runtimeInfo.runtimeHandler;
 }
 
-auto Sandbox::GetContainers() -> const std::vector<std::string> &
+auto Sandbox::GetContainers() -> std::vector<std::string>
 {
     return m_containers;
 }
@@ -180,6 +176,12 @@ auto Sandbox::GetNetMode() -> const std::string &
 auto Sandbox::GetNetNsPath() -> const std::string &
 {
     return m_netNsPath;
+}
+
+auto Sandbox::GetNetworkSettings() -> std::string
+{
+    ReadGuard<RWMutex> lock(m_stateMutex);
+    return m_networkSettings;
 }
 
 void Sandbox::DoUpdateExitedStatus(const ControllerExitInfo &exitInfo)
@@ -412,24 +414,34 @@ auto Sandbox::Load(Errors &error) -> bool
 void Sandbox::OnSandboxReady()
 {
     WriteGuard<RWMutex> lock(m_stateMutex);
-    if (m_state.status == SANDBOX_STATUS_STOPPED || m_state.status == SANDBOX_STATUS_REMOVING){
+    if (m_state.status == SANDBOX_STATUS_STOPPED || m_state.status == SANDBOX_STATUS_REMOVING) {
         return;
     }
+    INFO("sandbox %s is ready", m_id.c_str());
     m_state.status = SANDBOX_STATUS_RUNNING;
 }
 
 void Sandbox::OnSandboxPending()
 {
     WriteGuard<RWMutex> lock(m_stateMutex);
-    if (m_state.status == SANDBOX_STATUS_STOPPED || m_state.status == SANDBOX_STATUS_REMOVING){
+    if (m_state.status == SANDBOX_STATUS_STOPPED || m_state.status == SANDBOX_STATUS_REMOVING) {
         return;
     }
+    INFO("sandbox %s is pending", m_id.c_str());
     m_state.status = SANDBOX_STATUS_PENDING;
 }
 
 void Sandbox::OnSandboxExit(const ControllerExitInfo &exitInfo)
 {
     Errors error;
+
+    // When stop is called multiple times, only the first exit is valid,
+    // and subsequent exits do not need to update the status.
+    // Likewise, the exits during deletion does not require updating state.
+    if (IsStopped() || IsRemovalInProcess()) {
+        return;
+    }
+
     DoUpdateExitedStatus(exitInfo);
 
     if (!SaveState(error)) {
@@ -518,6 +530,163 @@ out:
         ERROR("Failed to delete container's state directory %s", m_rootdir.c_str());
     }
     return false;
+}
+
+auto Sandbox::IsRemovalInProcess() -> bool
+{
+    ReadGuard<RWMutex> lock(m_stateMutex);
+    return m_state.status == SANDBOX_STATUS_REMOVING;
+}
+
+auto Sandbox::IsStopped() -> bool
+{
+    ReadGuard<RWMutex> lock(m_stateMutex);
+    return m_state.status == SANDBOX_STATUS_STOPPED;
+}
+
+// There is no competition between start, but there is competition between stop and remove
+auto Sandbox::Start(Errors &error) -> bool
+{
+    if (IsRemovalInProcess()) {
+        error.Errorf("Sandbox is marked for removal and cannot be started, id='%s'", m_id.c_str());
+        ERROR("Sandbox is marked for removal and cannot be started, id='%s'", m_id.c_str());
+        return false;
+    }
+    WriteGuard<RWMutex> lock(m_mutex);
+
+    std::unique_ptr<ControllerSandboxInfo> info = m_controller->Start(m_id, error);
+    if (!error.Empty()) {
+        ERROR("Failed to start Sandbox, id='%s' : %s", m_id.c_str(), error.GetMessage().c_str());
+        return false;
+    }
+
+    std::vector<std::string> seLabels = CXXUtils::Split(info->labels[std::string("selinux_label")], ':');
+    if (seLabels.size() == 4) {
+        m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_selinux_options()->set_user(seLabels[0]);
+        m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_selinux_options()->set_role(seLabels[1]);
+        m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_selinux_options()->set_type(seLabels[2]);
+        m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_selinux_options()->set_level(seLabels[3]);
+    }
+
+    m_state.pid = info->pid;
+    m_state.createdAt = info->createdAt;
+
+    // TODO: The start function in the updated sandbox API will return the task address without calling the status function
+    if (!UpdateStatus(error)) {
+        return false;
+    }
+
+    if (!IsReady()) {
+        error.Errorf("Sandbox is still not ready after start, id='%s'", m_id.c_str());
+        ERROR("Sandbox is still not ready after start, id='%s'", m_id.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+auto Sandbox::DoStop(uint32_t timeoutSecs, Errors &error) -> bool
+{
+    if (!m_controller->Stop(m_id, timeoutSecs, error)) {
+        ERROR("Failed to stop Sandbox, id='%s'", m_id.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+auto Sandbox::Stop(uint32_t timeoutSecs, Errors &error) -> bool
+{
+    if (IsRemovalInProcess()) {
+        error.Errorf("Sandbox is marked for removal and cannot be stopped, id='%s'", m_id.c_str());
+        ERROR("Sandbox is marked for removal and cannot be stopped, id='%s'", m_id.c_str());
+        return false;
+    }
+    // If the sandbox is already in the notready state or the removal state, stop is meaningless.
+    // So first judge the state to reduce meaningless lock competition.
+    if (!IsReady()) {
+        INFO("Sandbox has already been not ready, id='%s'", m_id.c_str());
+        return true;
+    }
+    WriteGuard<RWMutex> lock(m_mutex);
+
+    // Although the state of the sandbox has been judged before, the state of the sandbox may have
+    // changed during the period of competing for the lock. Here, the state is determined again after the lock is obtained.
+    if (!IsReady()) {
+        INFO("Sandbox has already been not ready, id='%s'", m_id.c_str());
+        return true;
+    }
+
+    if (!DoStop(timeoutSecs, error)) {
+        return false;
+    }
+
+    return true;
+}
+
+auto Sandbox::Remove(Errors &error) -> bool
+{
+    Errors tmp_error;
+
+    if (IsRemovalInProcess()) {
+        error.Errorf("Sandbox is marked for removal and cannot be removed, id='%s'", m_id.c_str());
+        ERROR("Sandbox is marked for removal and cannot be removed, id='%s'", m_id.c_str());
+        return false;
+    }
+
+    WriteGuard<RWMutex> lock(m_mutex);
+
+    if (!DoStop(DEFAULT_STOP_TIMEOUT, error)) {
+        ERROR("Failed to stop Sandbox before removing, id='%s'", m_id.c_str());
+        return false;
+    }
+
+    SandboxStatus before = m_state.status;
+    m_state.status = SANDBOX_STATUS_REMOVING;
+
+    if (!m_controller->Shutdown(m_id, error)) {
+        ERROR("Failed to shutdown Sandbox, id='%s'", m_id.c_str());
+        goto error_out;
+    }
+
+    if (util_recursive_rmdir(GetStateDir().c_str(), 0) != 0) {
+        ERROR("Failed to delete sandbox's state directory %s", GetStateDir().c_str());
+    }
+
+    if (!util_deal_with_mount_info(util_umount_residual_shm, GetRootDir().c_str())) {
+        ERROR("Failed to clean sandbox's mounts");
+    }
+
+    if (util_recursive_rmdir(GetRootDir().c_str(), 0) != 0) {
+        ERROR("Failed to delete sandbox's root directory %s", GetRootDir().c_str());
+    }
+    return true;
+error_out:
+    m_state.status = before;
+    return false;
+}
+
+void Sandbox::Status(runtime::v1::PodSandboxStatus &status)
+{
+    // networkStatus set in network module
+    runtime::v1::NamespaceOption *options { nullptr };
+    runtime::v1::LinuxPodSandboxStatus linuxs;
+    status.set_id(m_id);
+    status.set_allocated_metadata(m_sandboxConfig->mutable_metadata());
+    status.set_state(IsReady() ? runtime::v1::SANDBOX_READY : runtime::v1::SANDBOX_NOTREADY);
+    status.set_created_at(m_state.createdAt);
+
+    options = status.mutable_linux()->mutable_namespaces()->mutable_options();
+    options->set_network(
+        m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_namespace_options()->network());
+    options->set_pid(m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_namespace_options()->pid());
+    options->set_ipc(m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_namespace_options()->ipc());
+
+    status.mutable_labels()->insert(m_sandboxConfig->mutable_labels()->begin(), m_sandboxConfig->mutable_labels()->end());
+    status.mutable_annotations()->insert(m_sandboxConfig->mutable_annotations()->begin(),
+                                         m_sandboxConfig->mutable_annotations()->end());
+
+    status.set_runtime_handler(m_runtimeInfo.runtimeHandler);
 }
 
 auto Sandbox::GenerateSandboxStateJson(sandbox_state *state) -> std::string
