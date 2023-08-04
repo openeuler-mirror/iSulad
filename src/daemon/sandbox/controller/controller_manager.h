@@ -26,7 +26,8 @@ class ControllerManager {
 public:
     static auto GetInstance() -> ControllerManager*;
 
-    bool Init(Errors &error);
+    auto Init(Errors &error) -> bool;
+    auto Cleanup(Errors &error) -> bool;
     auto GetController(const std::string &name) -> std::shared_ptr<Controller>;
 private:
     auto RegisterShimController(Errors &error) -> bool;

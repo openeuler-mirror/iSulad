@@ -51,6 +51,14 @@ bool ControllerManager::Init(Errors &error)
     return true;
 }
 
+bool ControllerManager::Cleanup(Errors &error)
+{
+    for (auto &it : m_controllers) {
+        it.second->Destroy();
+    }
+    return true;
+}
+
 auto ControllerManager::RegisterShimController(Errors &error) -> bool
 {
     if (m_controllers.find(SHIM_CONTROLLER_NAME) != m_controllers.end()) {

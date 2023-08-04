@@ -409,6 +409,24 @@ auto Sandbox::Load(Errors &error) -> bool
     return true;
 }
 
+void Sandbox::OnSandboxReady()
+{
+    WriteGuard<RWMutex> lock(m_stateMutex);
+    if (m_state.status == SANDBOX_STATUS_STOPPED || m_state.status == SANDBOX_STATUS_REMOVING){
+        return;
+    }
+    m_state.status = SANDBOX_STATUS_RUNNING;
+}
+
+void Sandbox::OnSandboxPending()
+{
+    WriteGuard<RWMutex> lock(m_stateMutex);
+    if (m_state.status == SANDBOX_STATUS_STOPPED || m_state.status == SANDBOX_STATUS_REMOVING){
+        return;
+    }
+    m_state.status = SANDBOX_STATUS_PENDING;
+}
+
 void Sandbox::OnSandboxExit(const ControllerExitInfo &exitInfo)
 {
     Errors error;

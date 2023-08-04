@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #include "grpc_sandboxer_client_mock.h"
+#include "controller_stub_mock.h"
 
 static std::shared_ptr<SandboxerClientMock> g_sandboxer_client_mock = NULL;
 
@@ -21,6 +22,24 @@ SandboxerClient::SandboxerClient(const std::string &sandboxer, const std::string
 {
     m_sandboxer = sandboxer;
     m_address = address;
+    m_channel = grpc::CreateChannel(m_address, grpc::InsecureChannelCredentials());
+    m_stub = NewDummyControllerStub();
+}
+
+void SandboxerClient::Init(Errors &error)
+{
+    if (g_sandboxer_client_mock == NULL) {
+        return;
+    }
+    g_sandboxer_client_mock->Init(error);
+}
+
+void SandboxerClient::Destroy()
+{
+    if (g_sandboxer_client_mock == NULL) {
+        return;
+    }
+    return g_sandboxer_client_mock->Destroy();
 }
 
 auto SandboxerClient::Create(const std::string &sandboxId, const ControllerCreateParams &params, Errors &error) -> bool
@@ -80,12 +99,12 @@ auto SandboxerClient::Stop(const std::string &sandboxId, uint32_t timeoutSecs, E
     return g_sandboxer_client_mock->Stop(sandboxId, timeoutSecs, error);
 }
 
-auto SandboxerClient::Wait(const std::string &sandboxId, Errors &error) -> bool
+auto SandboxerClient::Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error) -> bool
 {
     if (g_sandboxer_client_mock == NULL) {
         return true;
     }
-    return g_sandboxer_client_mock->Wait(sandboxId, error);
+    return g_sandboxer_client_mock->Wait(cb, sandboxId, error);
 }
 
 auto SandboxerClient::Status(const std::string &sandboxId, bool verbose, ControllerSandboxStatus &sandboxStatus, Errors &error) -> bool

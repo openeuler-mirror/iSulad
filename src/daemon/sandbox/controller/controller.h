@@ -92,7 +92,10 @@ struct ControllerUpdateResourcesParams {
     google::protobuf::Map<std::string, std::string> &annotations;
 };
 
-class SandboxExitCallback {
+class SandboxStatusCallback {
+public:
+    virtual void OnSandboxReady() = 0;
+    virtual void OnSandboxPending() = 0;
     virtual void OnSandboxExit(const ControllerExitInfo &exitInfo) = 0;
 };
 
@@ -100,6 +103,7 @@ class Controller {
 public:
     virtual ~Controller() {};
     virtual bool Init(Errors &error) = 0;
+    virtual void Destroy() = 0;
     virtual bool Create(const std::string &sandboxId,
                         const ControllerCreateParams &params,
                         Errors &error) = 0;
@@ -114,7 +118,7 @@ public:
                                  const ControllerUpdateResourcesParams &params,
                                  Errors &error) = 0;
     virtual bool Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) = 0;
-    virtual bool Wait(std::shared_ptr<SandboxExitCallback> cb, const std::string &sandboxId, Errors &error) = 0;
+    virtual bool Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error) = 0;
     virtual std::unique_ptr<ControllerSandboxStatus> Status(const std::string &sandboxId, bool verbose, Errors &error) = 0;
     virtual bool Shutdown(const std::string &sandboxId, Errors &error) = 0;
     virtual bool UpdateNetworkSettings(const std::string &sandboxId, const std::string &networkSettings, Errors &error) = 0;

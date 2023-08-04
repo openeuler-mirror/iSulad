@@ -175,6 +175,10 @@ bool Sandbox::Load(Errors &error)
     return true;
 }
 
+void Sandbox::OnSandboxReady() {}
+
+void Sandbox::OnSandboxPending() {}
+
 void Sandbox::OnSandboxExit(const ControllerExitInfo &exitInfo) {}
 
 bool Sandbox::UpdateStatus(Errors &error)

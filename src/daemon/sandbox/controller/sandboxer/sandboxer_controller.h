@@ -31,6 +31,7 @@ public:
     SandboxerController(const std::string &sandboxer, const std::string &address);
     virtual ~SandboxerController();
     bool Init(Errors &error) override;
+    void Destroy() override;
     bool Create(const std::string &sandboxId,
                 const ControllerCreateParams &params,
                 Errors &error) override;
@@ -45,14 +46,14 @@ public:
                          const ControllerUpdateResourcesParams &params,
                          Errors &error) override;
     bool Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) override;
-    bool Wait(std::shared_ptr<SandboxExitCallback> cb, const std::string &sandboxId, Errors &error) override;
+    bool Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error) override;
     std::unique_ptr<ControllerSandboxStatus> Status(const std::string &sandboxId, bool verbose, Errors &error) override;
     bool Shutdown(const std::string &sandboxId, Errors &error) override;
     bool UpdateNetworkSettings(const std::string &sandboxId, const std::string &networkSettings, Errors &error) override;
 protected:
     std::string m_sandboxer;
     std::string m_address;
-    std::unique_ptr<SandboxerClient> m_client;
+    std::shared_ptr<SandboxerClient> m_client;
 };
 
 } // namespace

@@ -44,6 +44,7 @@ const std::string DEFAULT_NETMODE = "cni";
 enum SandboxStatus {
     SANDBOX_STATUS_UNKNOWN = 0,
     SANDBOX_STATUS_RUNNING,
+    SANDBOX_STATUS_PENDING,
     SANDBOX_STATUS_STOPPED,
     SANDBOX_STATUS_REMOVING,
 };
@@ -72,7 +73,7 @@ struct SandboxState {
     SandboxStatus status;
 };
 
-class Sandbox : public SandboxExitCallback, public std::enable_shared_from_this<Sandbox> {
+class Sandbox : public SandboxStatusCallback, public std::enable_shared_from_this<Sandbox> {
 public:
     Sandbox(const std::string id, const std::string &rootdir, const std::string &statedir, const std::string name = "",
             const RuntimeInfo info = {"", "", ""}, std::string netMode = DEFAULT_NETMODE, std::string netNsPath = "",
@@ -115,6 +116,8 @@ public:
     // Load from file
     auto Load(Errors &error) -> bool;
 
+    void OnSandboxReady();
+    void OnSandboxPending();
     void OnSandboxExit(const ControllerExitInfo &exitInfo);
 
     auto UpdateStatus(Errors &error) -> bool;
