@@ -1,22 +1,19 @@
 project(iSulad_UT)
 
-SET(EXE sandbox_controller_ut)
+SET(EXE sandboxer_client_async_wait_call_ut)
 
 add_executable(${EXE}
     ${grpc_sandbox_type_srcs}
-    ${CMAKE_BINARY_DIR}/grpc/src/api/services/sandbox/sandbox.pb.cc
-    ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1/api_v1.pb.cc
-    ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/gogo.pb.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/sandbox/controller/sandboxer/client/grpc_async_wait_call.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/sandbox/controller/sandboxer/client/grpc_client_utils.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cpputils/errors.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/sandbox/controller/sandboxer/sandboxer_controller.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../test/mocks/grpc_sandboxer_client_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../test/mocks/controller_stub_mock.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../test/sandbox/controller/controller_common.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/sandboxer_controller_ut.cc)
+    ${CMAKE_CURRENT_SOURCE_DIR}/async_wait_call_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../test/sandbox/controller
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../test/sandbox/controller/sandboxer/async_wait_call
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../test/mocks
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/entry/cri
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/sandbox/controller
@@ -30,6 +27,8 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/sandbox
+    ${CMAKE_BINARY_DIR}/grpc/src/api/services/sandbox/google/protobuf
+    ${CMAKE_BINARY_DIR}/grpc/src/api/services/sandbox/sandbox/types
 )
 
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)

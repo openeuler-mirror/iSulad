@@ -26,6 +26,8 @@ bool ShimController::Init(Errors &error)
     return true;
 }
 
+void ShimController::Destroy() {}
+
 bool ShimController::Create(const std::string &sandboxId,
                             const ControllerCreateParams &params,
                             Errors &error)
@@ -68,7 +70,7 @@ bool ShimController::Stop(const std::string &sandboxId, uint32_t timeoutSecs, Er
     return true;
 }
 
-bool ShimController::Wait(std::shared_ptr<SandboxExitCallback> cb, const std::string &sandboxId, Errors &error)
+bool ShimController::Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error)
 {
     return true;
 }

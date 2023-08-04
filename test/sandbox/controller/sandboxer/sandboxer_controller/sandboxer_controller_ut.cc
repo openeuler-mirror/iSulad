@@ -26,7 +26,8 @@ protected:
         m_contoller = std::move(std::unique_ptr<SandboxerController>(new SandboxerController(m_sandboxer, m_address)));
         m_sandboxerClientMock = std::make_shared<SandboxerClientMock>();
         MockSandboxerClient_SetMock(m_sandboxerClientMock);
-        EXPECT_TRUE(m_contoller->Init(err));
+        EXPECT_CALL(*m_sandboxerClientMock, Init).Times(1);
+        m_contoller->Init(err);
     }
 
     void TearDown() override {

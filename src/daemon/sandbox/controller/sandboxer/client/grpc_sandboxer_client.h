@@ -18,11 +18,14 @@
 
 #include <string>
 #include <memory>
+#include <future>
 
 #include "sandbox/types/mount.pb.h"
 #include "sandbox.pb.h"
 #include "sandbox.grpc.pb.h"
 #include "controller.h"
+#include "grpc_async_wait_call.h"
+#include "grpc_sandboxer_monitor.h"
 
 using containerd::types::Mount;
 using google::protobuf::Timestamp;
@@ -34,6 +37,10 @@ public:
     SandboxerClient(const std::string &sandboxer, const std::string &address);
 
     ~SandboxerClient() = default;
+
+    void Init(Errors &error);
+
+    void Destroy();
 
     auto Create(const std::string &sandboxId, const ControllerCreateParams &params, Errors &error) -> bool;
 
@@ -50,7 +57,7 @@ public:
 
     auto Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) -> bool;
 
-    auto Wait(const std::string &sandboxId, Errors &error) -> bool;
+    auto Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error) -> bool;
 
     auto Status(const std::string &sandboxId, bool verbose, ControllerSandboxStatus &sandboxStatus, Errors &error) -> bool;
 
@@ -61,7 +68,6 @@ private:
     auto InitCreateRequest(containerd::services::sandbox::v1::ControllerCreateRequest &request,
                            const std::string &sandboxId,
                            const ControllerCreateParams &params) -> bool;
-    auto TimestampToNanos(const Timestamp &timestamp) -> uint64_t;
     void StartResponseToSandboxInfo(const containerd::services::sandbox::v1::ControllerStartResponse &response,
                                     ControllerSandboxInfo &sandboxInfo);
     auto InitPrepareRequest(containerd::services::sandbox::v1::PrepareRequest &request,
@@ -76,7 +82,9 @@ private:
 protected:
     std::string m_sandboxer;
     std::string m_address;
-    std::unique_ptr<containerd::services::sandbox::v1::Controller::StubInterface> stub_;
+    std::shared_ptr<grpc::Channel> m_channel;
+    std::unique_ptr<containerd::services::sandbox::v1::Controller::StubInterface> m_stub;
+    std::unique_ptr<SandboxerClientMonitor> m_monitor;
 };
 
 } // namespace

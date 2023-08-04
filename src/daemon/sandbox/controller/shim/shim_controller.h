@@ -29,6 +29,7 @@ public:
     ShimController(const std::string &sandboxer);
     virtual ~ShimController();
     bool Init(Errors &error) override;
+    void Destroy() override;
     bool Create(const std::string &sandboxId,
                 const ControllerCreateParams &params,
                 Errors &error) override;
@@ -43,7 +44,7 @@ public:
                          const ControllerUpdateResourcesParams &params,
                          Errors &error) override;
     bool Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) override;
-    bool Wait(std::shared_ptr<SandboxExitCallback> cb, const std::string &sandboxId, Errors &error) override;
+    bool Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error) override;
     std::unique_ptr<ControllerSandboxStatus> Status(const std::string &sandboxId, bool verbose, Errors &error) override;
     bool Shutdown(const std::string &sandboxId, Errors &error) override;
     bool UpdateNetworkSettings(const std::string &sandboxId, const std::string &networkSettings, Errors &error) override;

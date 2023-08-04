@@ -20,14 +20,20 @@ namespace sandbox {
 SandboxerController::SandboxerController(const std::string &sandboxer, const std::string &address)
     : m_sandboxer(sandboxer), m_address(address)
 {
-    m_client = std::move(std::unique_ptr<SandboxerClient>(new SandboxerClient(m_sandboxer, m_address)));
+    m_client = std::make_shared<SandboxerClient>(m_sandboxer, m_address);
 }
 
 SandboxerController::~SandboxerController() {}
 
 bool SandboxerController::Init(Errors &error)
 {
+    m_client->Init(error);
     return true;
+}
+
+void SandboxerController::Destroy()
+{
+    m_client->Destroy();
 }
 
 bool SandboxerController::Create(const std::string &sandboxId,
@@ -84,7 +90,7 @@ bool SandboxerController::Stop(const std::string &sandboxId, uint32_t timeoutSec
     return m_client->Stop(sandboxId, timeoutSecs, error);
 }
 
-bool SandboxerController::Wait(std::shared_ptr<SandboxExitCallback> cb, const std::string &sandboxId, Errors &error)
+bool SandboxerController::Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error)
 {
     return true;
 }

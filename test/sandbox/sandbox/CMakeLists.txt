@@ -16,11 +16,11 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/controller_manager.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/shim/shim_controller.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/sandboxer/sandboxer_controller.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/sandboxer/client/grpc_sandboxer_client.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/id_name_manager.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/isulad_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/sandbox/controller/controller_common.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/daemon_arguments.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/grpc_sandboxer_client_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/controller_stub_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sandbox_ut.cc)
@@ -45,5 +45,8 @@ target_include_directories(${EXE} PUBLIC
 )
 
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+if(ABSL_SYNC_LIB)
+    target_link_libraries(${EXE} -Wl,--no-as-needed ${ABSL_SYNC_LIB})
+endif()
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
 set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
