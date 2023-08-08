@@ -20,7 +20,7 @@ namespace sandbox {
 MockSandbox *g_sandbox_mock = nullptr;
 
 static const std::string defaultStr;
-const std::vector<std::string> defaultVec;
+std::vector<std::string> defaultVec;
 StatsInfo statsInfo;
 static const std::string defaultName = "test";
 
@@ -75,7 +75,7 @@ const std::string &Sandbox::GetRuntimeHandle()
     return defaultStr;
 }
 
-const std::vector<std::string> &Sandbox::GetContainers()
+std::vector<std::string> Sandbox::GetContainers()
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetContainers();
@@ -213,10 +213,10 @@ bool Sandbox::Stop(uint32_t timeoutSecs, Errors &error)
     return true;
 }
 
-bool Sandbox::Remove(bool force, Errors &error)
+bool Sandbox::Remove(Errors &error)
 {
     if (g_sandbox_mock != nullptr) {
-        return g_sandbox_mock->Remove(force, error);
+        return g_sandbox_mock->Remove(error);
     }
     return true;
 }

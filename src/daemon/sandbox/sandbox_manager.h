@@ -40,11 +40,11 @@ public:
                        const runtime::v1::PodSandboxConfig &sandboxConfig, Errors &error) -> std::shared_ptr<Sandbox>;
 
     auto GetSandbox(const std::string &idOrName, Errors &error) -> std::shared_ptr<Sandbox>;
-    auto DeleteSandbox(const std::string &idOrName, bool force, Errors &error) -> bool;
+    auto DeleteSandbox(const std::string &idOrName, Errors &error) -> bool;
 
     auto RestoreSandboxes(Errors &error) -> bool;
     // list all sandboxes by filter
-    auto ListAllSandboxes(runtime::v1::PodSandboxFilter &filters, Errors &error) -> std::vector<std::shared_ptr<Sandbox>>;
+    void ListAllSandboxes(runtime::v1::PodSandboxFilter &filters, std::vector<std::shared_ptr<Sandbox>> &sandboxes);
 private:
     SandboxManager() = default;
     SandboxManager(const SandboxManager &other) = delete;
@@ -53,6 +53,7 @@ private:
 
     void StoreAdd(const std::string &id, std::shared_ptr<Sandbox> sandbox);
     void StoreRemove(const std::string &id);
+    void StoreGetAll(std::vector<std::shared_ptr<Sandbox>> &sandboxes);
     auto StoreGetById(const std::string &id) -> std::shared_ptr<Sandbox>;
     auto StoreGetByName(const std::string &name) -> std::shared_ptr<Sandbox>;
     auto StoreGetByPrefix(const std::string &prefix) -> std::shared_ptr<Sandbox>;

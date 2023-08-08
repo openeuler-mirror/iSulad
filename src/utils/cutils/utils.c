@@ -34,6 +34,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
+#include <sys/mount.h>
 #include <termios.h> // IWYU pragma: keep
 #include <strings.h>
 #include <time.h>
@@ -1602,4 +1603,18 @@ out:
     }
 
     return dst;
+}
+
+int util_umount_residual_shm(const char *mount_info, const char *target)
+{
+    if (strncmp(mount_info, target, strlen(target)) != 0) {
+        return 0;
+    }
+
+    DEBUG("Try to umount: %s", mount_info);
+    if (umount2(mount_info, MNT_DETACH)) {
+        SYSERROR("Failed to umount residual mount: %s", mount_info);
+    }
+
+    return 0;
 }

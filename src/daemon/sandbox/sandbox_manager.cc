@@ -174,6 +174,43 @@ auto SandboxManager::RestoreSandboxes(Errors &error) -> bool
     return true;
 }
 
+void SandboxManager::ListAllSandboxes(runtime::v1::PodSandboxFilter &filters,
+                                      std::vector<std::shared_ptr<Sandbox>> &sandboxes)
+{
+    // 1. get all sandboxes
+    std::vector<std::shared_ptr<Sandbox>> allsandboxes;
+    StoreGetAll(allsandboxes);
+    // 2. filter sandboxes by filter
+    for (const auto &sandbox : allsandboxes) {
+        // (1) filter by id
+        if (!filters.id().empty() && filters.id() != sandbox->GetId()) {
+            continue;
+        }
+        // (2) filter by state
+        if (filters.has_state()) {
+            if (filters.state().state() == runtime::v1::SANDBOX_READY && !sandbox->IsReady()) {
+                continue;
+            }
+            if (filters.state().state() == runtime::v1::SANDBOX_NOTREADY && sandbox->IsReady()) {
+                continue;
+            }
+        }
+        // (3) filter by labels
+        bool match = true;
+        auto labels = sandbox->GetSandboxConfig()->labels();
+        for (auto &iter : filters.label_selector()) {
+            auto val = labels.find(iter.first);
+            if (val == labels.end() || val->second != iter.second) {
+                match = false;
+                break;
+            }
+        }
+        if (match) {
+            sandboxes.push_back(sandbox);
+        }
+    }
+}
+
 // Delete the id and name of the sandbox from the map of the id_name_manager module
 bool SandboxManager::IDNameManagerRemoveEntry(const std::string &id, const std::string &name)
 {
@@ -274,6 +311,46 @@ auto SandboxManager::GetSandbox(const std::string &idOrName, Errors &error) -> s
     }
 
     return nullptr;
+}
+
+auto SandboxManager::DeleteSandbox(const std::string &idOrName, Errors &error) -> bool
+{
+    if (!util_valid_container_id_or_name(idOrName.c_str())) {
+        ERROR("Invalid sandbox name: %s", idOrName.c_str());
+        error.Errorf("Invalid sandbox name: %s", idOrName.c_str());
+        return false;
+    }
+
+    std::shared_ptr<Sandbox> sandbox = GetSandbox(idOrName, error);
+    if (sandbox == nullptr) {
+        ERROR("Failed to find sandbox %s", idOrName.c_str());
+        error.AppendError("Failed to find sandbox.");
+        return false;
+    }
+
+    if (!sandbox->Remove(error)) {
+        ERROR("Failed to do delete sandbox %s", idOrName.c_str());
+        return false;
+    }
+
+    auto id = sandbox->GetId();
+    auto name = sandbox->GetName();
+
+    if (!IDNameManagerRemoveEntry(id, name)) {
+        ERROR("Failed to remove sandbox form id name manager: %s", name.c_str());
+    }
+
+    DeleteSandboxFromStore(id, name);
+
+    return true;
+}
+
+void SandboxManager::StoreGetAll(std::vector<std::shared_ptr<Sandbox>> &sandboxes)
+{
+    ReadGuard<RWMutex> lock(m_storeRWMutex);
+    for (const auto &pair : m_storeMap) {
+        sandboxes.push_back(pair.second);
+    }
 }
 
 auto SandboxManager::StoreGetById(const std::string &id) -> std::shared_ptr<Sandbox>
