@@ -33,7 +33,7 @@ int verify_container_settings_start(const oci_runtime_spec *oci_spec);
 
 int verify_host_config_settings(host_config *hostconfig, bool update);
 
-int verify_container_config(const container_config *container_spec);
+int verify_container_config(const container_config *container_spec, const char *runtime);
 
 #ifdef __cplusplus
 }
