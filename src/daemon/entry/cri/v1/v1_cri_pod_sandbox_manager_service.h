@@ -74,22 +74,19 @@ public:
 
 private:
     void PrepareSandboxData(const runtime::v1::PodSandboxConfig &config, const std::string &runtimeHandler,
-                            std::string &sandboxName, RuntimeInfo &runtimeInfo, std::string &networkMode);
+                            std::string &sandboxName, sandbox::RuntimeInfo &runtimeInfo, std::string &networkMode);
     auto EnsureSandboxImageExists(const std::string &image, const std::string &sandboxer, Errors &error) -> bool;
     void PrepareSandboxKey(std::string &sandboxKey, Errors &error);
     void ApplySandboxDefaultResources(runtime::v1::LinuxPodSandboxConfig *linuxConfig);
     auto ParseCheckpointProtocol(runtime::v1::Protocol protocol) -> std::string;
     void ConstructPodSandboxCheckpoint(const runtime::v1::PodSandboxConfig &config, CRI::PodSandboxCheckpoint &checkpoint);
     void PrepareSandboxCheckpoint(const runtime::v1::PodSandboxConfig &config, std::string &jsonCheckpoint, Errors &error);
-    void UpdateSandboxConfig(const runtime::v1::PodSandboxConfig &config, std::string &jsonCheckpoint, Errors &error);
-    void SetupSandboxFiles(const std::string &resolvPath, const runtime::v1::PodSandboxConfig &config, Errors &error);
+    void UpdateSandboxConfig(runtime::v1::PodSandboxConfig &config, std::string &jsonCheckpoint, Errors &error);
+    void SetupSandboxFiles(const std::string &resolvPath, const std::shared_ptr<runtime::v1::PodSandboxConfig> config, Errors &error);
     void SetupSandboxNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, std::string &network_settings_json, Errors &error);
     void ClearCniNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, Errors &error);
     void StopContainerHelper(const std::string &containerID, Errors &error);
-    auto GetRealSandboxIDToStop(const std::string &podSandboxID, bool &hostNetwork, std::string &name, std::string &ns,
-                                std::string &realSandboxID, std::map<std::string, std::string> &stdAnnos, Errors &error)
-    -> int;
-    auto StopAllContainersInSandbox(const std::string &realSandboxID, Errors &error) -> int;
+    auto StopAllContainersInSandbox(const std::vector<std::string> &cons, Errors &error) -> bool;
     auto GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool;
     auto RemoveAllContainersInSandbox(const std::string &realSandboxID, std::vector<std::string> &errors) -> int;
     int DoRemovePodSandbox(const std::string &realSandboxID, std::vector<std::string> &errors);
@@ -114,6 +111,7 @@ private:
     auto GetAvailableBytes(const uint64_t &memoryLimit, const uint64_t &workingSetBytes) -> uint64_t;
     void GetPodSandboxCgroupMetrics(const container_inspect *inspectData, cgroup_metrics_t &cgroupMetrics,
                                     Errors &error);
+    auto GetSandboxKey(const container_inspect *inspect_data) -> std::string;
     void GetPodSandboxNetworkMetrics(const container_inspect *inspectData,
                                      std::map<std::string, std::string> &annotations,
                                      std::vector<Network::NetworkInterfaceStats> &netMetrics, Errors &error);
