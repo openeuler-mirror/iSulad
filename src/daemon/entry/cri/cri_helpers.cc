@@ -674,9 +674,42 @@ cleanup:
     free_container_delete_response(response);
 }
 
+void StopContainerHelper(service_executor_t *cb, const std::string &containerID, int64_t timeout, Errors &error)
+{
+    int ret = 0;
+    container_stop_request *request { nullptr };
+    container_stop_response *response { nullptr };
+
+    if (cb == nullptr || cb->container.stop == nullptr) {
+        ERROR("Unimplemented callback");
+        error.SetError("Unimplemented callback");
+        return;
+    }
+
+    request = (container_stop_request *)util_common_calloc_s(sizeof(container_stop_request));
+    if (request == nullptr) {
+        ERROR("Out of memory");
+        error.SetError("Out of memory");
+        return;
+    }
+    request->id = util_strdup_s(containerID.c_str());
+    request->timeout = timeout;
+
+    ret = cb->container.stop(request, &response);
+    if (ret != 0) {
+        std::string msg = (response != nullptr && response->errmsg != nullptr) ? response->errmsg : "internal";
+        ERROR("Failed to stop sandbox %s: %s", containerID.c_str(), msg.c_str());
+        error.SetError(msg);
+    }
+cleanup:
+    free_container_stop_request(request);
+    free_container_stop_response(response);
+}
+
 void StopContainer(service_executor_t *cb, const std::string &containerID, int64_t timeout, Errors &error)
 {
     if (containerID.empty()) {
+        ERROR("Invalid empty container id.");
         error.SetError("Invalid empty container id.");
         return;
     }
@@ -687,32 +720,7 @@ void StopContainer(service_executor_t *cb, const std::string &containerID, int64
         return;
     }
 
-    if (cb == nullptr || cb->container.stop == nullptr) {
-        error.SetError("Unimplemented callback");
-        return;
-    }
-    container_stop_response *response { nullptr };
-    container_stop_request *request = (container_stop_request *)util_common_calloc_s(sizeof(container_stop_request));
-    if (request == nullptr) {
-        error.SetError("Out of memory");
-        goto cleanup;
-    }
-    request->id = util_strdup_s(realContainerID.c_str());
-    // int32 is enough for timeout
-    request->timeout = CRIHelpers::ToInt32Timeout(timeout);
-
-    if (cb->container.stop(request, &response) != 0) {
-        if (response != nullptr && response->errmsg != nullptr) {
-            error.SetError(response->errmsg);
-        } else {
-            error.SetError("Failed to call stop container callback");
-        }
-        goto cleanup;
-    }
-
-cleanup:
-    free_container_stop_request(request);
-    free_container_stop_response(response);
+    StopContainerHelper(cb, containerID, timeout, error);
 }
 
 char *GenerateExecSuffix()
