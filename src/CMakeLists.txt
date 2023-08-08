@@ -48,7 +48,7 @@ target_include_directories(libisulad_tools
     PUBLIC ${ISULA_LIBUTILS_INCLUDE_DIR}
 )
 set_target_properties(libisulad_tools PROPERTIES PREFIX "")
-target_link_libraries(libisulad_tools ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${CRYPTO_LIBRARY})
+target_link_libraries(libisulad_tools ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${CRYPTO_LIBRARY} ${CAP_LIBRARY})
 
 if (ENABLE_OCI_IMAGE)
     target_link_libraries(libisulad_tools ${LIBARCHIVE_LIBRARY})

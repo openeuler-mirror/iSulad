@@ -76,3 +76,7 @@ void clean_module_do_clean()
     g_clean_ctx = NULL;
 }
 
+void isulad_tmpdir_cleaner(void)
+{
+    do_isulad_tmpdir_cleaner();
+}

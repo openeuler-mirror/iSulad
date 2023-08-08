@@ -30,6 +30,12 @@ else()
     message("--  found linux capability.h --- no")
 endif()
 
+# check libcapability
+pkg_check_modules(PC_LIBCAP REQUIRED "libcap")
+find_library(CAP_LIBRARY cap
+    HINTS ${PC_LIBCAP_LIBDIR} ${PC_CAP_LIBRARY_DIRS})
+_CHECK(CAP_LIBRARY "CAP_LIBRARY-NOTFOUND" "libcap.so")
+
 # check zlib
 pkg_check_modules(PC_ZLIB "zlib>=1.2.8")
 find_path(ZLIB_INCLUDE_DIR zlib.h
