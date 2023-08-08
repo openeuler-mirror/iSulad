@@ -2817,7 +2817,8 @@ static int implicit_digest(map_t *digests, image_t *img)
         return 0;
     }
 
-    if (get_index_by_key((const char **)img->simage->big_data_digests->keys, img->simage->big_data_digests->len,
+    // Find whether the manifest in big_data_digests exists, if not, return 0 directly
+    if (!get_index_by_key((const char **)img->simage->big_data_digests->keys, img->simage->big_data_digests->len,
                          IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
         return 0;
     }
