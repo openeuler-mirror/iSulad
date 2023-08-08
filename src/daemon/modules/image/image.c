@@ -2332,7 +2332,7 @@ int im_search_images(im_search_request *request, im_search_response **response)
     }
 
     *response = (im_search_response *)util_common_calloc_s(sizeof(im_search_response));
-    if (response == NULL) {
+    if (*response == NULL) {
         ERROR("Out of memory");
         return -1;
     }
