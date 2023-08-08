@@ -12,7 +12,11 @@
  * Create: 2022-10-31
  * Description: provide cleanup functions
  *********************************************************************************/
+#include <sys/mount.h>
+
 #include "utils.h"
+#include "utils_fs.h"
+#include "path.h"
 #include "cleanup.h"
 #include "oci_rootfs_clean.h"
 
@@ -131,4 +135,80 @@ void cleaners_do_clean(struct cleaners *clns, struct clean_ctx *ctx)
             clns->done_clean++;
         }
     }
+}
+
+// always return true;
+// if umount/remove failed, just ignore it
+static bool walk_isulad_tmpdir_cb(const char *path_name, const struct dirent *sub_dir, void *context)
+{
+    int nret = 0;
+    char tmpdir[PATH_MAX] = { 0 };
+    const char *chroot_prefix = "tar-chroot-";
+
+    if (sub_dir == NULL || !util_has_prefix(sub_dir->d_name, chroot_prefix)) {
+        // only umount/remove chroot directory
+        return true;
+    }
+
+    nret = snprintf(tmpdir, PATH_MAX, "%s/%s", path_name, sub_dir->d_name);
+    if (nret < 0 || nret >= PATH_MAX) {
+        WARN("Failed to snprintf for %s", sub_dir->d_name);
+        return true;
+    }
+
+    if (util_detect_mounted(tmpdir)) {
+        if (umount(tmpdir) != 0) {
+            ERROR("Failed to umount target %s, error: %s", tmpdir, strerror(errno));
+        }
+    }
+
+    if (util_path_remove(tmpdir) != 0) {
+        WARN("Failed to remove path %s", tmpdir);
+    }
+
+    return true;
+}
+
+static void cleanup_path(char *dir)
+{
+    int nret;
+    char tmp_dir[PATH_MAX] = { 0 };
+    char cleanpath[PATH_MAX] = { 0 };
+
+    nret = snprintf(tmp_dir, PATH_MAX, "%s/isulad_tmpdir", dir);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Failed to snprintf");
+        return;
+    }
+
+    if (util_clean_path(tmp_dir, cleanpath, sizeof(cleanpath)) == NULL) {
+        ERROR("clean path for %s failed", tmp_dir);
+        return;
+    }
+
+    if (!util_dir_exists(cleanpath)) {
+        return;
+    }
+
+    nret = util_scan_subdirs(cleanpath, walk_isulad_tmpdir_cb, NULL);
+    if (nret != 0) {
+        ERROR("failed to scan isulad tmp subdirs");
+    }
+}
+
+// try to umount/remove isulad_tmpdir/tar-chroot-XXX directory
+// ignore return value
+void do_isulad_tmpdir_cleaner(void)
+{
+    char *isula_tmp_dir = NULL;
+
+    isula_tmp_dir = getenv("ISULAD_TMPDIR");
+    if (util_valid_str(isula_tmp_dir)) {
+        cleanup_path(isula_tmp_dir);
+    }
+    // No matter whether ISULAD_TMPDIR is set or not,
+    // clean up the "/tmp" directory to prevent the mount point from remaining
+    cleanup_path("/tmp");
+
+    return;
 }

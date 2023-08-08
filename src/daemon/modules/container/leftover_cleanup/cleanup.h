@@ -45,6 +45,7 @@ void destroy_cleaners(struct cleaners *clns);
 
 void cleaners_do_clean(struct cleaners *clns, struct clean_ctx *ctx);
 
+void do_isulad_tmpdir_cleaner(void);
 
 #if defined(__cplusplus) || defined(c_plusplus)
 }

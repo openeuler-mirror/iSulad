@@ -1249,6 +1249,9 @@ static int isulad_server_init_common()
         goto out;
     }
 #endif
+    // clean tmpdir before image module init
+    // because tmpdir will remove failed if chroot mount point exist under tmpdir
+    isulad_tmpdir_cleaner();
 
     if (volume_init(args->json_confs->graph) != 0) {
         ERROR("Failed to init volume");

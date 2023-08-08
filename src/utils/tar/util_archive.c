@@ -29,6 +29,10 @@
 #include <sys/wait.h>
 #include <sys/xattr.h>
 #include <unistd.h>
+#include <pwd.h>
+#include <netdb.h>
+#include <sys/mount.h>
+#include <sys/capability.h>
 
 #include <isula_libutils/log.h>
 #include <isula_libutils/go_crc64.h>
@@ -61,6 +65,7 @@ struct archive_context {
     int stdout_fd;
     int stderr_fd;
     pid_t pid;
+    char *safe_dir;
 };
 
 struct archive_content_data {
@@ -77,6 +82,123 @@ ssize_t read_content(struct archive *a, void *client_data, const void **buff)
     *buff = mydata->buff;
 
     return mydata->content->read(mydata->content->context, mydata->buff, sizeof(mydata->buff));
+}
+
+static void do_disable_unneccessary_caps()
+{
+    cap_t caps;
+    caps = cap_get_proc();
+    if (caps == NULL) {
+        SYSERROR("Failed to do get cap");
+        return;
+    }
+    cap_value_t cap_list[] = { CAP_SETUID };
+    // clear all capabilities
+    cap_clear(caps);
+
+    if (cap_set_flag(caps, CAP_EFFECTIVE, sizeof(cap_list) / sizeof(cap_value_t), cap_list, CAP_SET) != 0) {
+        SYSERROR("Failed to clear caps");
+        return;
+    }
+
+    cap_set_proc(caps);
+    cap_free(caps);
+}
+
+static int make_safedir_is_noexec(const char *dstdir, char **safe_dir)
+{
+    struct stat buf;
+    char *isulad_tmpdir_env = NULL;
+    char isula_tmpdir[PATH_MAX] = { 0 };
+    char cleanpath[PATH_MAX] = { 0 };
+    char tmp_dir[PATH_MAX] = { 0 };
+    int nret;
+
+    isulad_tmpdir_env = getenv("ISULAD_TMPDIR");
+    if (!util_valid_str(isulad_tmpdir_env)) {
+        // if not setted isulad tmpdir, just use /tmp
+        isulad_tmpdir_env = "/tmp";
+    }
+
+    nret = snprintf(isula_tmpdir, PATH_MAX, "%s/isulad_tmpdir", isulad_tmpdir_env);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Failed to snprintf");
+        return -1;
+    }
+
+    if (util_clean_path(isula_tmpdir, cleanpath, sizeof(cleanpath)) == NULL) {
+        ERROR("clean path for %s failed", isula_tmpdir);
+        return -1;
+    }
+
+    nret = snprintf(tmp_dir, PATH_MAX, "%s/tar-chroot-XXXXXX", cleanpath);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Failed to snprintf string");
+        return -1;
+    }
+
+    if (stat(dstdir, &buf) < 0) {
+        SYSERROR("Check chroot dir failed");
+        return -1;
+    }
+
+    // ensure parent dir is exist
+    if (util_mkdir_p(cleanpath, buf.st_mode) != 0) {
+        return -1;
+    }
+
+    if (mkdtemp(tmp_dir) == NULL) {
+        SYSERROR("Create temp dir failed");
+        return -1;
+    }
+
+    // ensure mode of new safe dir, same to dstdir
+    if (util_mkdir_p(tmp_dir, buf.st_mode) != 0) {
+        return -1;
+    }
+
+    if (mount(dstdir, tmp_dir, "none", MS_BIND, NULL) != 0) {
+        SYSERROR("Mount safe dir failed");
+        if (util_path_remove(tmp_dir) != 0) {
+            ERROR("Failed to remove path %s", tmp_dir);
+        }
+        return -1;
+    }
+
+    if (mount(tmp_dir, tmp_dir, "none", MS_BIND | MS_REMOUNT | MS_NOEXEC, NULL) != 0) {
+        SYSERROR("Mount safe dir failed");
+        if (umount(tmp_dir) != 0) {
+            ERROR("Failed to umount target %s", tmp_dir);
+        }
+        if (util_path_remove(tmp_dir) != 0) {
+            ERROR("Failed to remove path %s", tmp_dir);
+        }
+        return -1;
+    }
+
+    *safe_dir = util_strdup_s(tmp_dir);
+    return 0;
+}
+
+// fix loading of nsswitch based config inside chroot under glibc
+static int do_safe_chroot(const char *dstdir)
+{
+    // don't call getpwnam
+    // because it will change file with nobody uid/gid which copied from host to container
+    // if nobody uid/gid is different between host and container
+
+    // set No New Privileges
+    prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+
+    if (chroot(dstdir) != 0) {
+        SYSERROR("Failed to chroot to %s", dstdir);
+        fprintf(stderr, "Failed to chroot to %s: %s", dstdir, strerror(errno));
+        return -1;
+    }
+
+    do_disable_unneccessary_caps();
+
+    return 0;
 }
 
 static bool overlay_whiteout_convert_read(struct archive_entry *entry, const char *dst_path, map_t *unpacked_path_map)
@@ -604,6 +726,12 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
     int keepfds[] = { -1, -1, -1 };
     int pipe_stderr[2] = { -1, -1 };
     char errbuf[BUFSIZ + 1] = { 0 };
+    char *safe_dir = NULL;
+
+    if (make_safedir_is_noexec(dstdir, &safe_dir) != 0) {
+        ERROR("Prepare safe dir failed");
+        return -1;
+    }
 
     if (pipe2(pipe_stderr, O_CLOEXEC) != 0) {
         ERROR("Failed to create pipe");
@@ -636,9 +764,9 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
             goto child_out;
         }
 
-        if (chroot(dstdir) != 0) {
-            SYSERROR("Failed to chroot to %s", dstdir);
-            fprintf(stderr, "Failed to chroot to %s: %s", dstdir, strerror(errno));
+        if (do_safe_chroot(safe_dir) != 0) {
+            SYSERROR("Failed to chroot to %s", safe_dir);
+            fprintf(stderr, "Failed to chroot to %s: %s", safe_dir, strerror(errno));
             ret = -1;
             goto child_out;
         }
@@ -676,6 +804,13 @@ cleanup:
     if (errmsg != NULL && strlen(errbuf) != 0) {
         *errmsg = util_strdup_s(errbuf);
     }
+    if (umount(safe_dir) != 0) {
+        ERROR("Failed to umount target %s", safe_dir);
+    }
+    if (util_path_remove(safe_dir) != 0) {
+        ERROR("Failed to remove path %s", safe_dir);
+    }
+    free(safe_dir);
     return ret;
 }
 
@@ -989,6 +1124,12 @@ int archive_chroot_tar(char *path, char *file, char **errmsg)
     int keepfds[] = { -1, -1 };
     char errbuf[BUFSIZ + 1] = { 0 };
     int fd = 0;
+    char *safe_dir = NULL;
+
+    if (make_safedir_is_noexec(path, &safe_dir) != 0) {
+        ERROR("Prepare safe dir failed");
+        return -1;
+    }
 
     if (pipe2(pipe_for_read, O_CLOEXEC) != 0) {
         ERROR("Failed to create pipe");
@@ -1028,9 +1169,9 @@ int archive_chroot_tar(char *path, char *file, char **errmsg)
             goto child_out;
         }
 
-        if (chroot(path) != 0) {
-            ERROR("Failed to chroot to %s", path);
-            fprintf(stderr, "Failed to chroot to %s\n", path);
+        if (do_safe_chroot(safe_dir) != 0) {
+            ERROR("Failed to chroot to %s", safe_dir);
+            fprintf(stderr, "Failed to chroot to %s\n", safe_dir);
             ret = -1;
             goto child_out;
         }
@@ -1071,7 +1212,13 @@ cleanup:
     if (errmsg != NULL && strlen(errbuf) != 0) {
         *errmsg = util_strdup_s(errbuf);
     }
-
+    if (umount(safe_dir) != 0) {
+        ERROR("Failed to umount target %s", safe_dir);
+    }
+    if (util_path_remove(safe_dir) != 0) {
+        ERROR("Failed to remove path %s", safe_dir);
+    }
+    free(safe_dir);
     return ret;
 }
 
@@ -1176,6 +1323,16 @@ static int archive_context_close(void *context, char **err)
         ret = -1;
     }
 
+    if (ctx->safe_dir != NULL) {
+        if (umount(ctx->safe_dir) != 0) {
+            ERROR("Failed to umount target %s", ctx->safe_dir);
+        }
+        if (util_path_remove(ctx->safe_dir) != 0) {
+            ERROR("Failed to remove path %s", ctx->safe_dir);
+        }
+        free(ctx->safe_dir);
+        ctx->safe_dir = NULL;
+    }
     free(marshaled);
     free(ctx);
     return ret;
@@ -1199,10 +1356,10 @@ int archive_chroot_untar_stream(const struct io_read_wrapper *context, const cha
                .src_base = src_base,
                .dst_base = dst_base
     };
+    char *safe_dir = NULL;
 
-    buf = util_common_calloc_s(buf_len);
-    if (buf == NULL) {
-        ERROR("Out of memory");
+    if (make_safedir_is_noexec(chroot_dir, &safe_dir) != 0) {
+        ERROR("Prepare safe dir failed");
         return -1;
     }
 
@@ -1239,8 +1396,8 @@ int archive_chroot_untar_stream(const struct io_read_wrapper *context, const cha
             goto child_out;
         }
 
-        if (chroot(chroot_dir) != 0) {
-            SYSERROR("Failed to chroot to %s", chroot_dir);
+        if (do_safe_chroot(safe_dir) != 0) {
+            SYSERROR("Failed to chroot to %s", safe_dir);
             ret = -1;
             goto child_out;
         }
@@ -1268,6 +1425,12 @@ child_out:
     pipe_stderr[1] = -1;
     close(pipe_stream[0]);
     pipe_stream[0] = -1;
+
+    buf = util_common_calloc_s(buf_len);
+    if (buf == NULL) {
+        ERROR("Out of memory");
+        goto cleanup;
+    }
 
     ctx = util_common_calloc_s(sizeof(struct archive_context));
     if (ctx == NULL) {
@@ -1299,6 +1462,13 @@ cleanup:
     ret = (cret != 0) ? cret : ret;
     close_archive_pipes_fd(pipe_stderr, 2);
     close_archive_pipes_fd(pipe_stream, 2);
+    if (umount(safe_dir) != 0) {
+        ERROR("Failed to umount target %s", safe_dir);
+    }
+    if (util_path_remove(safe_dir) != 0) {
+        ERROR("Failed to remove path %s", safe_dir);
+    }
+    free(safe_dir);
 
     return ret;
 }
@@ -1313,6 +1483,12 @@ int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, cons
     int ret = -1;
     pid_t pid;
     struct archive_context *ctx = NULL;
+    char *safe_dir = NULL;
+
+    if (make_safedir_is_noexec(chroot_dir, &safe_dir) != 0) {
+        ERROR("Prepare safe dir failed");
+        return -1;
+    }
 
     if (pipe(pipe_stderr) != 0) {
         ERROR("Failed to create pipe: %s", strerror(errno));
@@ -1350,9 +1526,9 @@ int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, cons
             goto child_out;
         }
 
-        if (chroot(chroot_dir) != 0) {
-            ERROR("Failed to chroot to %s", chroot_dir);
-            fprintf(stderr, "Failed to chroot to %s\n", chroot_dir);
+        if (do_safe_chroot(safe_dir) != 0) {
+            ERROR("Failed to chroot to %s", safe_dir);
+            fprintf(stderr, "Failed to chroot to %s\n", safe_dir);
             ret = -1;
             goto child_out;
         }
@@ -1402,6 +1578,8 @@ child_out:
     ctx->stderr_fd = pipe_stderr[0];
     pipe_stderr[0] = -1;
     ctx->pid = pid;
+    ctx->safe_dir = safe_dir;
+    safe_dir = NULL;
 
     reader->close = archive_context_close;
     reader->context = ctx;
@@ -1413,6 +1591,15 @@ free_out:
     close_archive_pipes_fd(pipe_stderr, 2);
     close_archive_pipes_fd(pipe_stream, 2);
     free(ctx);
+    if (safe_dir != NULL) {
+        if (umount(safe_dir) != 0) {
+            ERROR("Failed to umount target %s", safe_dir);
+        }
+        if (util_path_remove(safe_dir) != 0) {
+            ERROR("Failed to remove path %s", safe_dir);
+        }
+        free(safe_dir);
+    }
 
     return ret;
 }

@@ -31,6 +31,8 @@ void clean_module_fill_ctx(cleanup_ctx_data_t data_type, void *data);
 
 void clean_module_do_clean();
 
+void isulad_tmpdir_cleaner(void);
+
 #if defined(__cplusplus) || defined(c_plusplus)
 }
 #endif
