@@ -2160,12 +2160,24 @@ static inline bool is_less_than_one_second(int64_t timeout)
     return timeout != 0 && timeout < Time_Second;
 }
 
-static int verify_health_check_parameter(const container_config *container_spec)
+static inline bool is_more_than_ten_minutes(int64_t timeout)
+{
+    return timeout > (10LL * Time_Minute);
+}
+
+static int verify_health_check_parameter(const container_config *container_spec, const char *runtime)
 {
     int ret = 0;
 
     if (container_spec == NULL || container_spec->healthcheck == NULL) {
         return ret;
+    }
+
+    if (strcasecmp(runtime, "kata-runtime") == 0) {
+        ERROR("kata-runtime does not support command line health check");
+        isulad_set_error_message("kata-runtime does not support command line health check");
+        ret = -1;
+        goto out;
     }
 
     if (is_less_than_one_second(container_spec->healthcheck->interval)) {
@@ -2177,6 +2189,12 @@ static int verify_health_check_parameter(const container_config *container_spec)
     if (is_less_than_one_second(container_spec->healthcheck->timeout)) {
         ERROR("Timeout in Healthcheck cannot be less than one second");
         isulad_set_error_message("Timeout in Healthcheck cannot be less than one second");
+        ret = -1;
+        goto out;
+    }
+    if (is_more_than_ten_minutes(container_spec->healthcheck->timeout)) {
+        ERROR("Timeout in Healthcheck cannot be more than ten minutes");
+        isulad_set_error_message("Timeout in Healthcheck cannot be more than ten minutes");
         ret = -1;
         goto out;
     }
@@ -2219,11 +2237,11 @@ out:
     return ret;
 }
 
-int verify_container_config(const container_config *container_spec)
+int verify_container_config(const container_config *container_spec, const char *runtime)
 {
     int ret = 0;
 
-    if (verify_health_check_parameter(container_spec) != 0) {
+    if (verify_health_check_parameter(container_spec, runtime) != 0) {
         ret = -1;
         goto out;
     }
