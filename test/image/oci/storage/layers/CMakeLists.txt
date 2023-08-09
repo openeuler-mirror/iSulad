@@ -66,7 +66,7 @@ target_link_libraries(${DRIVER_EXE}
     ${CMAKE_THREAD_LIBS_INIT}
     ${ISULA_LIBUTILS_LIBRARY}
     ${LIBTAR_LIBRARY}
-    -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz)
+    -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz -lcap)
 
 add_test(NAME ${DRIVER_EXE} COMMAND ${DRIVER_EXE}  --gtest_output=xml:${DRIVER_EXE}-Results.xml)
 set_tests_properties(${DRIVER_EXE} PROPERTIES TIMEOUT 120)
@@ -144,7 +144,7 @@ target_link_libraries(${LAYER_EXE}
     ${CMAKE_THREAD_LIBS_INIT}
     ${ISULA_LIBUTILS_LIBRARY}
     ${LIBTAR_LIBRARY}
-    -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz)
+    -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz -lcap)
 
 add_test(NAME ${LAYER_EXE} COMMAND ${LAYER_EXE} --gtest_output=xml:${LAYER_EXE}-Results.xml)
 set_tests_properties(${LAYER_EXE} PROPERTIES TIMEOUT 120)
