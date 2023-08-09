@@ -117,6 +117,54 @@ function test_health_check_paraments()
     return ${ret}
 }
 
+function test_health_check_invalid_runtime()
+{
+    local ret=0
+    local retry_limit=10
+    local retry_interval=1
+    local invalid_runtime="kata-runtime"
+    local test="test health check with invalid runtime => (${FUNCNAME[@]})"
+
+    msg_info "${test} starting..."
+
+    isula images | grep ${image}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
+
+    # health check with invalid runtime
+    container_name="health_check_invalid_para"
+    isula run -itd --runtime ${invalid_runtime} -n ${container_name} --health-cmd 'date' --health-interval 5s ${image} /bin/sh  2>&1 | grep "not support command line health check"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container with invalid runtime:${invalid_runtime} should be fail" && ((ret++))
+
+    isula rm -f ${container_name}
+
+    msg_info "${test} finished with return ${ret}..."
+    return ${ret}
+}
+
+function test_health_check_invalid_paraments()
+{
+    local ret=0
+    local retry_limit=10
+    local retry_interval=1
+    local test="test health check with invalid paraments => (${FUNCNAME[@]})"
+
+    msg_info "${test} starting..."
+
+    isula images | grep ${image}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
+
+    # health check with invalid timeout
+    container_name="health_check_invalid_para"
+    isula run -itd --runtime $1 -n ${container_name} --health-cmd 'echo "iSulad" ; exit 1' \
+        --health-interval 5s --health-timeout 11m --health-start-period 8s --health-exit-on-unhealthy ${image} /bin/sh
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container with invalid timeout should be fail" && ((ret++))
+
+    isula rm -f ${container_name}
+
+    msg_info "${test} finished with return ${ret}..."
+    return ${ret}
+}
+
 function test_health_check_normally()
 {
     local ret=0
@@ -243,10 +291,14 @@ function test_health_check_monitor()
 
 declare -i ans=0
 
+test_health_check_invalid_runtime || ((ans++))
+
 for element in ${RUNTIME_LIST[@]};
 do
     test="health check test => (${element})"
     msg_info "${test} starting..."
+
+    test_health_check_invalid_paraments $element || ((ans++))
 
     test_health_check_paraments $element || ((ans++))
 

@@ -1432,7 +1432,7 @@ int container_create_cb(const container_create_request *request, container_creat
         goto clean_rootfs;
     }
 
-    if (verify_container_config(v2_spec->config) != 0) {
+    if (verify_container_config(v2_spec->config, runtime) != 0) {
         cc = ISULAD_ERR_EXEC;
         goto clean_rootfs;
     }
