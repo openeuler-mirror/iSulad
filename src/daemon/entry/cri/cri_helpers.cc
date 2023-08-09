@@ -627,20 +627,10 @@ cleanup:
     return realID;
 }
 
-void RemoveContainer(service_executor_t *cb, const std::string &containerID, Errors &error)
+void RemoveContainerHelper(service_executor_t *cb, const std::string &containerID, Errors &error)
 {
-    if (containerID.empty()) {
-        error.SetError("Invalid empty container id.");
-        return;
-    }
-    std::string realContainerID = GetRealContainerOrSandboxID(cb, containerID, false, error);
-    if (error.NotEmpty()) {
-        ERROR("Failed to find container id %s: %s", containerID.c_str(), error.GetCMessage());
-        error.Errorf("Failed to find container id %s: %s", containerID.c_str(), error.GetCMessage());
-        return;
-    }
-
     if (cb == nullptr || cb->container.remove == nullptr) {
+        ERROR("Unimplemented callback");
         error.SetError("Unimplemented callback");
         return;
     }
@@ -649,13 +639,14 @@ void RemoveContainer(service_executor_t *cb, const std::string &containerID, Err
     container_delete_request *request =
         (container_delete_request *)util_common_calloc_s(sizeof(container_delete_request));
     if (request == nullptr) {
+        ERROR("Out of memory");
         error.SetError("Out of memory");
         goto cleanup;
     }
-    request->id = util_strdup_s(realContainerID.c_str());
+    request->id = util_strdup_s(containerID.c_str());
     request->force = true;
 
-    RemoveContainerLogSymlink(realContainerID, error);
+    RemoveContainerLogSymlink(containerID, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
@@ -672,6 +663,23 @@ void RemoveContainer(service_executor_t *cb, const std::string &containerID, Err
 cleanup:
     free_container_delete_request(request);
     free_container_delete_response(response);
+}
+
+void RemoveContainer(service_executor_t *cb, const std::string &containerID, Errors &error)
+{
+    if (containerID.empty()) {
+        ERROR("Invalid empty container id.");
+        error.SetError("Invalid empty container id.");
+        return;
+    }
+    std::string realContainerID = GetRealContainerOrSandboxID(cb, containerID, false, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to find container id %s: %s", containerID.c_str(), error.GetCMessage());
+        error.Errorf("Failed to find container id %s: %s", containerID.c_str(), error.GetCMessage());
+        return;
+    }
+
+    RemoveContainerHelper(cb, realContainerID, error);
 }
 
 void StopContainerHelper(service_executor_t *cb, const std::string &containerID, int64_t timeout, Errors &error)
@@ -701,7 +709,7 @@ void StopContainerHelper(service_executor_t *cb, const std::string &containerID,
         ERROR("Failed to stop sandbox %s: %s", containerID.c_str(), msg.c_str());
         error.SetError(msg);
     }
-cleanup:
+
     free_container_stop_request(request);
     free_container_stop_response(response);
 }

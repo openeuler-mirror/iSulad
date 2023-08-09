@@ -82,14 +82,15 @@ private:
     void ConstructPodSandboxCheckpoint(const runtime::v1::PodSandboxConfig &config, CRI::PodSandboxCheckpoint &checkpoint);
     void PrepareSandboxCheckpoint(const runtime::v1::PodSandboxConfig &config, std::string &jsonCheckpoint, Errors &error);
     void UpdateSandboxConfig(runtime::v1::PodSandboxConfig &config, std::string &jsonCheckpoint, Errors &error);
-    void SetupSandboxFiles(const std::string &resolvPath, const std::shared_ptr<runtime::v1::PodSandboxConfig> config, Errors &error);
-    void SetupSandboxNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, std::string &network_settings_json, Errors &error);
+    void SetupSandboxFiles(const std::string &resolvPath, const std::shared_ptr<runtime::v1::PodSandboxConfig> config,
+                           Errors &error);
+    void SetupSandboxNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, std::string &network_settings_json,
+                             Errors &error);
     void ClearCniNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, Errors &error);
     void StopContainerHelper(const std::string &containerID, Errors &error);
-    auto StopAllContainersInSandbox(const std::vector<std::string> &cons, Errors &error) -> bool;
+    auto StopAllContainersInSandbox(const std::vector<std::string> &containers, Errors &error) -> bool;
     auto GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool;
-    auto RemoveAllContainersInSandbox(const std::string &realSandboxID, std::vector<std::string> &errors) -> int;
-    int DoRemovePodSandbox(const std::string &realSandboxID, std::vector<std::string> &errors);
+    void RemoveAllContainersInSandbox(const std::vector<std::string> &containers, std::vector<std::string> &errors);
     void ClearNetworkReady(const std::string &podSandboxID);
     void PodSandboxStatusToGRPC(const container_inspect *inspect, const std::string &podSandboxID,
                                 std::unique_ptr<runtime::v1::PodSandboxStatus> &podStatus, Errors &error);

@@ -126,6 +126,8 @@ void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt
 auto GetRealContainerOrSandboxID(service_executor_t *cb, const std::string &id,
                                  bool isSandbox, Errors &error) -> std::string;
 
+void RemoveContainerHelper(service_executor_t *cb, const std::string &containerID, Errors &error);
+
 void RemoveContainer(service_executor_t *cb, const std::string &containerID, Errors &error);
 
 void StopContainerHelper(service_executor_t *cb, const std::string &containerID, int64_t timeout, Errors &error);

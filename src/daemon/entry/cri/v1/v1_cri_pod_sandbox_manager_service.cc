@@ -110,11 +110,13 @@ void PodSandboxManagerService::PrepareSandboxKey(std::string &sandboxKey, Errors
 void PodSandboxManagerService::ApplySandboxDefaultResources(runtime::v1::LinuxPodSandboxConfig *linuxConfig)
 {
     if (!linuxConfig->has_resources()) {
-        linuxConfig->mutable_resources()->set_memory_swap_limit_in_bytes((google::protobuf::int64)CRI::Constants::DefaultMemorySwap);
+        linuxConfig->mutable_resources()->set_memory_swap_limit_in_bytes((google::protobuf::int64)
+                                                                         CRI::Constants::DefaultMemorySwap);
         linuxConfig->mutable_resources()->set_cpu_shares((google::protobuf::int64)CRI::Constants::DefaultSandboxCPUshares);
         linuxConfig->mutable_resources()->set_cpu_quota((google::protobuf::int64)CRI::Constants::DefaultSandboxCPUQuota);
         linuxConfig->mutable_resources()->set_cpu_period((google::protobuf::int64)CRI::Constants::DefaultSandboxCPUPeriod);
-        linuxConfig->mutable_resources()->set_memory_limit_in_bytes((google::protobuf::int64)CRI::Constants::DefaultSandboxMemoryLimitInBytes);
+        linuxConfig->mutable_resources()->set_memory_limit_in_bytes((google::protobuf::int64)
+                                                                    CRI::Constants::DefaultSandboxMemoryLimitInBytes);
     }
 
     // set default oom score adj
@@ -172,7 +174,8 @@ void PodSandboxManagerService::UpdateSandboxConfig(runtime::v1::PodSandboxConfig
     // Apply a container name label for infra container. This is used in summary v1.
     (*labels)[CRIHelpers::Constants::KUBERNETES_CONTAINER_NAME_LABEL] = CRIHelpers::Constants::POD_INFRA_CONTAINER_NAME;
 
-    (*annotations)[CRIHelpers::Constants::CONTAINER_TYPE_ANNOTATION_KEY] = CRIHelpers::Constants::CONTAINER_TYPE_ANNOTATION_SANDBOX;
+    (*annotations)[CRIHelpers::Constants::CONTAINER_TYPE_ANNOTATION_KEY] =
+        CRIHelpers::Constants::CONTAINER_TYPE_ANNOTATION_SANDBOX;
     // Add checkpoint into annotations
     (*annotations)[CRIHelpers::Constants::POD_CHECKPOINT_KEY] = jsonCheckpoint;
 
@@ -186,7 +189,8 @@ void PodSandboxManagerService::UpdateSandboxConfig(runtime::v1::PodSandboxConfig
     ApplySandboxDefaultResources(config.mutable_linux());
 }
 
-void PodSandboxManagerService::SetupSandboxFiles(const std::string &resolvPath, const std::shared_ptr<runtime::v1::PodSandboxConfig> config, Errors &error)
+void PodSandboxManagerService::SetupSandboxFiles(const std::string &resolvPath,
+                                                 const std::shared_ptr<runtime::v1::PodSandboxConfig> config, Errors &error)
 {
     if (resolvPath.empty()) {
         return;
@@ -329,7 +333,7 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
 
     // Step 6: Create sandbox
     auto sandbox = sandbox::SandboxManager::GetInstance()->CreateSandbox(sandboxName, runtimeInfo, sandboxKey,
-                                                                        networkMode, copyConfig, error);
+                                                                         networkMode, copyConfig, error);
     if (error.NotEmpty()) {
         if (namespace_is_cni(networkMode.c_str())) {
             (void)remove_network_namespace_file(sandboxKey.c_str());
@@ -390,8 +394,8 @@ void PodSandboxManagerService::ClearCniNetwork(const std::shared_ptr<sandbox::Sa
     stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY, sandboxKey));
 
     Errors pluginErr;
-    m_pluginManager->TearDownPod(config->metadata().namespace_(), config->metadata().name(), Network::DEFAULT_NETWORK_INTERFACE_NAME, 
-                                 sandbox->GetId(), stdAnnos, pluginErr);
+    m_pluginManager->TearDownPod(config->metadata().namespace_(), config->metadata().name(),
+                                 Network::DEFAULT_NETWORK_INTERFACE_NAME, sandbox->GetId(), stdAnnos, pluginErr);
     if (pluginErr.NotEmpty()) {
         WARN("TearDownPod cni network failed: %s", pluginErr.GetCMessage());
         error.AppendError(pluginErr.GetMessage());
@@ -418,10 +422,11 @@ auto PodSandboxManagerService::GetSandboxKey(const container_inspect *inspect_da
     return std::string(inspect_data->network_settings->sandbox_key);
 }
 
-auto PodSandboxManagerService::StopAllContainersInSandbox(const std::vector<std::string> &cons, Errors &error) -> bool
+auto PodSandboxManagerService::StopAllContainersInSandbox(const std::vector<std::string> &containers,
+                                                          Errors &error) -> bool
 {
     // Stop all containers in the sandbox.
-    for (const auto &con : cons) {
+    for (const auto &con : containers) {
         Errors stopError;
         CRIHelpers::StopContainerHelper(m_cb, con, 0, stopError);
         if (stopError.NotEmpty() && !CRIHelpers::IsContainerNotFoundError(stopError.GetMessage())) {
@@ -489,63 +494,18 @@ void PodSandboxManagerService::StopPodSandbox(const std::string &podSandboxID, E
     sandbox->Stop(sandbox::DEFAULT_STOP_TIMEOUT, error);
 }
 
-auto PodSandboxManagerService::RemoveAllContainersInSandbox(const std::string &realSandboxID,
-                                                            std::vector<std::string> &errors) -> int
+void PodSandboxManagerService::RemoveAllContainersInSandbox(const std::vector<std::string> &containers,
+                                                            std::vector<std::string> &errors)
 {
-    int ret = 0;
-    container_list_request *list_request { nullptr };
-    container_list_response *list_response { nullptr };
-
-    if (m_cb == nullptr || m_cb->container.list == nullptr) {
-        errors.push_back("Unimplemented callback");
-        return -1;
-    }
-
-    // list all containers to stop
-    list_request = (container_list_request *)util_common_calloc_s(sizeof(container_list_request));
-    if (list_request == nullptr) {
-        errors.push_back("Out of memory");
-        return -1;
-    }
-    list_request->all = true;
-
-    list_request->filters = (defs_filters *)util_common_calloc_s(sizeof(defs_filters));
-    if (list_request->filters == nullptr) {
-        errors.push_back("Out of memory");
-        ret = -1;
-        goto cleanup;
-    }
-
-    // Add sandbox label
-    if (CRIHelpers::FiltersAddLabel(list_request->filters, CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY,
-                                    realSandboxID) != 0) {
-        errors.push_back("Faild to add label");
-        ret = -1;
-        goto cleanup;
-    }
-
-    ret = m_cb->container.list(list_request, &list_response);
-    if (ret != 0) {
-        if (list_response != nullptr && list_response->errmsg != nullptr) {
-            errors.push_back(list_response->errmsg);
-        } else {
-            errors.push_back("Failed to call list container callback");
-        }
-    }
-
     // Remove all containers in the sandbox.
-    for (size_t i = 0; list_response != nullptr && i < list_response->containers_len; i++) {
+    for (const auto &con : containers) {
         Errors rmError;
-        CRIHelpers::RemoveContainer(m_cb, list_response->containers[i]->id, rmError);
+        CRIHelpers::RemoveContainerHelper(m_cb, con, rmError);
         if (rmError.NotEmpty() && !CRIHelpers::IsContainerNotFoundError(rmError.GetMessage())) {
-            ERROR("Error remove container: %s: %s", list_response->containers[i]->id, rmError.GetCMessage());
+            ERROR("Error remove container: %s: %s", con.c_str(), rmError.GetCMessage());
             errors.push_back(rmError.GetMessage());
         }
     }
-cleanup:
-    free_container_list_request(list_request);
-    free_container_list_response(list_response);
-    return ret;
 }
 
 void PodSandboxManagerService::ClearNetworkReady(const std::string &podSandboxID)
@@ -558,75 +518,47 @@ void PodSandboxManagerService::ClearNetworkReady(const std::string &podSandboxID
     }
 }
 
-int PodSandboxManagerService::DoRemovePodSandbox(const std::string &realSandboxID, std::vector<std::string> &errors)
-{
-    int ret = 0;
-    container_delete_request *remove_request { nullptr };
-    container_delete_response *remove_response { nullptr };
-
-    if (m_cb == nullptr || m_cb->container.remove == nullptr) {
-        errors.push_back("Unimplemented callback");
-        return -1;
-    }
-
-    remove_request = (container_delete_request *)util_common_calloc_s(sizeof(container_delete_request));
-    if (remove_request == nullptr) {
-        errors.push_back("Out of memory");
-        return -1;
-    }
-    remove_request->id = util_strdup_s(realSandboxID.c_str());
-    remove_request->force = true;
-
-    ret = m_cb->container.remove(remove_request, &remove_response);
-    if (ret == 0 || (remove_response != nullptr && remove_response->errmsg != nullptr &&
-                     CRIHelpers::IsContainerNotFoundError(remove_response->errmsg))) {
-        // Only clear network ready when the sandbox has actually been
-        // removed from docker or doesn't exist
-        ClearNetworkReady(realSandboxID);
-    } else {
-        if (remove_response != nullptr && (remove_response->errmsg != nullptr)) {
-            errors.push_back(remove_response->errmsg);
-        } else {
-            errors.push_back("Failed to call remove container callback");
-        }
-    }
-    free_container_delete_request(remove_request);
-    free_container_delete_response(remove_response);
-    return ret;
-}
-
 void PodSandboxManagerService::RemovePodSandbox(const std::string &podSandboxID, Errors &error)
 {
     std::vector<std::string> errors;
-    Errors localErr;
     std::string realSandboxID;
 
+    if (m_cb == nullptr || m_cb->container.remove == nullptr) {
+        ERROR("Unimplemented callback");
+        error.SetError("Unimplemented callback");
+        return;
+    }
+
     if (podSandboxID.empty()) {
-        errors.push_back("Invalid empty sandbox id.");
-        goto cleanup;
+        ERROR("Empty pod sandbox id");
+        error.SetError("Empty pod sandbox id");
+        return;
     }
-    realSandboxID = CRIHelpers::GetRealContainerOrSandboxID(m_cb, podSandboxID, true, error);
+
+    auto sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID, error);
     if (error.NotEmpty()) {
-        if (CRIHelpers::IsContainerNotFoundError(error.GetMessage())) {
-            error.Clear();
-            realSandboxID = podSandboxID;
-        } else {
-            ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
-            errors.push_back("Failed to find sandbox id " + podSandboxID + ": " + error.GetMessage());
-            goto cleanup;
-        }
+        ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
+        return;
+    }
+    // Do not return error if the id doesn't exist.
+    if (sandbox == nullptr) {
+        TRACE("RemovePodSandbox called for sandbox %s that does not exist", podSandboxID.c_str());
+        return;
     }
 
-    if (RemoveAllContainersInSandbox(realSandboxID, errors) != 0) {
-        goto cleanup;
+    // Remove all containers inside the sandbox.
+    // container may still be created, so production should not rely on this behavior.
+    // TODO: according to the state(stopping and removal) in sandbox to avoid future container creation.
+    RemoveAllContainersInSandbox(sandbox->GetContainers(), errors);
+    if (errors.size() != 0) {
+        error.SetAggregate(errors);
+        return;
     }
 
-    if (DoRemovePodSandbox(realSandboxID, errors) != 0) {
-        goto cleanup;
+    if (!sandbox::SandboxManager::GetInstance()->DeleteSandbox(podSandboxID, error)) {
+        ERROR("Failed to delete sandbox %s: %s", podSandboxID.c_str(), error.GetCMessage());
     }
 
-cleanup:
-    error.SetAggregate(errors);
 }
 
 auto PodSandboxManagerService::SharesHostNetwork(const container_inspect *inspect) -> runtime::v1::NamespaceMode
