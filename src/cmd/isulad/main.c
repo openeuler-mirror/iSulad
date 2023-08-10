@@ -80,6 +80,7 @@
 #ifdef ENABLE_NETWORK
 #include "network_api.h"
 #endif
+#include "id_name_manager.h"
 
 sem_t g_daemon_shutdown_sem;
 sem_t g_daemon_wait_shutdown_sem;
@@ -1252,6 +1253,11 @@ static int isulad_server_init_common()
     // clean tmpdir before image module init
     // because tmpdir will remove failed if chroot mount point exist under tmpdir
     isulad_tmpdir_cleaner();
+
+    if (id_name_manager_init() != 0) {
+        ERROR("Failed to init id name manager");
+        goto out;
+    }
 
     if (volume_init(args->json_confs->graph) != 0) {
         ERROR("Failed to init volume");

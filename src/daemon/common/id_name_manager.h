@@ -21,15 +21,12 @@
 extern "C" {
 #endif
 
-int id_store_init(void);
-int name_store_init(void);
-void id_store_free(void);
-void name_store_free(void);
-char *get_new_id(void);
-bool try_add_id(const char *id);
-bool try_remove_id(const char *id);
-bool try_add_name(const char *name);
-bool try_remove_name(const char *name);
+int id_name_manager_init(void);
+void id_name_manager_release(void);
+bool id_name_manager_add_entry_with_existing_id(const char *id, const char *name);
+bool id_name_manager_add_entry_with_new_id(const char *name, char **id);
+bool id_name_manager_add_entry_with_new_id_and_name(char **id, char **name);
+bool id_name_manager_remove_entry(const char *id, const char *name);
 
 #ifdef __cplusplus
 }
