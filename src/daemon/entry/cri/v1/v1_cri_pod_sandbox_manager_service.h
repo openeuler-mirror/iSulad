@@ -92,15 +92,12 @@ private:
     auto GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool;
     void RemoveAllContainersInSandbox(const std::vector<std::string> &containers, std::vector<std::string> &errors);
     void ClearNetworkReady(const std::string &podSandboxID);
-    void PodSandboxStatusToGRPC(const container_inspect *inspect, const std::string &podSandboxID,
-                                std::unique_ptr<runtime::v1::PodSandboxStatus> &podStatus, Errors &error);
     auto SharesHostNetwork(const container_inspect *inspect) -> runtime::v1::NamespaceMode;
     auto SharesHostPid(const container_inspect *inspect) -> runtime::v1::NamespaceMode;
     auto SharesHostIpc(const container_inspect *inspect) -> runtime::v1::NamespaceMode;
-    void SetSandboxStatusNetwork(const container_inspect *inspect, const std::string &podSandboxID,
-                                 std::unique_ptr<runtime::v1::PodSandboxStatus> &podStatus, Errors &error);
-    void GetIPs(const std::string &podSandboxID, const container_inspect *inspect, const std::string &networkInterface,
-                std::vector<std::string> &ips, Errors &error);
+    void SetSandboxStatusNetwork(std::shared_ptr<sandbox::Sandbox> sandbox,
+                                 std::unique_ptr<runtime::v1::PodSandboxStatus> &podStatus);
+    void GetIPs(std::shared_ptr<sandbox::Sandbox> sandbox, std::vector<std::string> &ips);
     void ListPodSandboxFromGRPC(const runtime::v1::PodSandboxFilter *filter, container_list_request **request,
                                 bool *filterOutReadySandboxes, Errors &error);
     void ListPodSandboxToGRPC(container_list_response *response,
