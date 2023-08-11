@@ -588,48 +588,66 @@ auto PodSandboxManagerService::SharesHostIpc(const container_inspect *inspect) -
     return runtime::v1::NamespaceMode::POD;
 }
 
-void PodSandboxManagerService::GetIPs(const std::string &podSandboxID, const container_inspect *inspect,
-                                      const std::string &networkInterface, std::vector<std::string> &ips, Errors &error)
+void PodSandboxManagerService::GetIPs(std::shared_ptr<sandbox::Sandbox> sandbox, std::vector<std::string> &ips)
 {
-    if (inspect == nullptr) {
+    const auto id = sandbox->GetId();
+    parser_error err;
+    if (sandbox == nullptr) {
         return;
     }
 
-    if (SharesHostNetwork(inspect) != 0) {
+    if (namespace_is_host(sandbox->GetNetMode().c_str())) {
         // For sandboxes using host network, the shim is not responsible for reporting the IP.
         return;
     }
 
-    bool ready = GetNetworkReady(podSandboxID, error);
-    if (error.Empty() && !ready) {
-        WARN("Network %s do not ready", podSandboxID.c_str());
+    bool ready = sandbox->GetNetworkReady();
+    if (!ready) {
+        WARN("Network %s is not ready", id.c_str());
         return;
     }
 
-    error.Clear();
-    if (inspect->network_settings == NULL || inspect->network_settings->networks == NULL) {
-        WARN("inspect network is empty");
+    std::string networkSettings = sandbox->GetNetworkSettings();
+    if (networkSettings.empty()) {
+        WARN("NetworkSettings of %s is empty", id.c_str());
         return;
     }
 
-    for (size_t i = 0; i < inspect->network_settings->networks->len; i++) {
-        if (inspect->network_settings->networks->values[i] != nullptr &&
-            inspect->network_settings->networks->values[i]->ip_address != nullptr) {
-            WARN("Use container inspect ip: %s", inspect->network_settings->networks->values[i]->ip_address);
-            ips.push_back(inspect->network_settings->networks->values[i]->ip_address);
+    container_network_settings *network_settings = container_network_settings_parse_data(networkSettings.c_str(), NULL,
+                                                                                         &err);
+    if (network_settings == NULL) {
+        ERROR("Failed to Parse network settings: %s", err);
+        return;
+    }
+
+    auto settings = std::unique_ptr<CStructWrapper<container_network_settings>>(new 
+                        CStructWrapper<container_network_settings>(network_settings, free_container_network_settings));
+    if (settings == nullptr) {
+        ERROR("Out of memory");
+        return;
+    }
+
+    if (settings->get()->networks == NULL) {
+        WARN("NetworkSettings of %s is empty", id.c_str());
+        return;
+    }
+
+    for (size_t i = 0; i < settings->get()->networks->len; i++) {
+        if (settings->get()->networks->values[i] != nullptr &&
+            settings->get()->networks->values[i]->ip_address != nullptr) {
+            WARN("Use container inspect ip: %s", settings->get()->networks->values[i]->ip_address);
+            ips.push_back(settings->get()->networks->values[i]->ip_address);
         }
     }
 }
 
-void PodSandboxManagerService::SetSandboxStatusNetwork(const container_inspect *inspect,
-                                                       const std::string &podSandboxID,
-                                                       std::unique_ptr<runtime::v1::PodSandboxStatus> &podStatus,
-                                                       Errors &error)
+void PodSandboxManagerService::SetSandboxStatusNetwork(std::shared_ptr<sandbox::Sandbox> sandbox,
+                                                       std::unique_ptr<runtime::v1::PodSandboxStatus> &podStatus)
 {
     std::vector<std::string> ips;
     size_t i;
 
-    GetIPs(podSandboxID, inspect, Network::DEFAULT_NETWORK_INTERFACE_NAME, ips, error);
+    GetIPs(sandbox, ips);
     if (ips.size() == 0) {
         return;
     }
@@ -641,78 +659,34 @@ void PodSandboxManagerService::SetSandboxStatusNetwork(const container_inspect *
     }
 }
 
-void PodSandboxManagerService::PodSandboxStatusToGRPC(const container_inspect *inspect, const std::string &podSandboxID,
-                                                      std::unique_ptr<runtime::v1::PodSandboxStatus> &podStatus,
-                                                      Errors &error)
-{
-    int64_t createdAt {};
-    runtime::v1::NamespaceOption *options { nullptr };
-
-    if (inspect->id != nullptr) {
-        podStatus->set_id(inspect->id);
-    }
-
-    CRIHelpers::GetContainerTimeStamps(inspect, &createdAt, nullptr, nullptr, error);
-    if (error.NotEmpty()) {
-        return;
-    }
-    podStatus->set_created_at(createdAt);
-
-    if ((inspect->state != nullptr) && inspect->state->running) {
-        podStatus->set_state(runtime::v1::SANDBOX_READY);
-    } else {
-        podStatus->set_state(runtime::v1::SANDBOX_NOTREADY);
-    }
-
-    if (inspect->config == nullptr) {
-        ERROR("Invalid container information! Must include config info");
-        return;
-    }
-
-    CRIHelpers::ExtractLabels(inspect->config->labels, *podStatus->mutable_labels());
-    CRIHelpers::ExtractAnnotations(inspect->config->annotations, *podStatus->mutable_annotations());
-    CRINamingV1::ParseSandboxName(podStatus->annotations(), *podStatus->mutable_metadata(), error);
-    if (error.NotEmpty()) {
-        return;
-    }
-
-    options = podStatus->mutable_linux()->mutable_namespaces()->mutable_options();
-    options->set_network(SharesHostNetwork(inspect));
-    options->set_pid(SharesHostPid(inspect));
-    options->set_ipc(SharesHostIpc(inspect));
-
-    // add networks
-    // get default network status
-    SetSandboxStatusNetwork(inspect, podSandboxID, podStatus, error);
-    if (error.NotEmpty()) {
-        ERROR("Set network status failed: %s", error.GetCMessage());
-        return;
-    }
-}
-
 std::unique_ptr<runtime::v1::PodSandboxStatus>
 PodSandboxManagerService::PodSandboxStatus(const std::string &podSandboxID, Errors &error)
 {
-    container_inspect *inspect { nullptr };
     std::unique_ptr<runtime::v1::PodSandboxStatus> podStatus(new runtime::v1::PodSandboxStatus);
+    if (podStatus == nullptr) {
+        ERROR("Out of memory");
+        error.SetError("Out of memory");
+        return nullptr;
+    }
 
     if (podSandboxID.empty()) {
+        ERROR("Empty pod sandbox id");
         error.SetError("Empty pod sandbox id");
         return nullptr;
     }
-    std::string realSandboxID = CRIHelpers::GetRealContainerOrSandboxID(m_cb, podSandboxID, true, error);
-    if (error.NotEmpty()) {
+
+    auto sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID, error);
+    if (sandbox == nullptr) {
         ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
         error.Errorf("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
         return nullptr;
     }
-    inspect = CRIHelpers::InspectContainer(realSandboxID, error, true);
-    if (error.NotEmpty()) {
-        ERROR("Inspect pod failed: %s", error.GetCMessage());
-        return nullptr;
-    }
-    PodSandboxStatusToGRPC(inspect, realSandboxID, podStatus, error);
-    free_container_inspect(inspect);
+
+    sandbox->Status(*podStatus);
+
+    // add networks
+    // get default network status
+    SetSandboxStatusNetwork(sandbox, podStatus);
     return podStatus;
 }
 
