@@ -131,7 +131,7 @@ static int container_state_changed(container_t *cont, const struct isulad_events
 
             pid = container_state_get_pid(cont->state);
             if (pid != (int)events->pid) {
-                DEBUG("Container's pid \'%d\' is not equal to event's pid \'%d\', ignore STOPPED event", pid,
+                DEBUG("Container's pid \'%d\' is not equal to event's pid \'%u\', ignore STOPPED event", pid,
                       events->pid);
                 container_unlock(cont);
                 ret = 0;
@@ -212,7 +212,7 @@ static int handle_one(container_t *cont, container_events_handler_t *handler)
     events_handler_unlock(handler);
 
     events = (struct isulad_events_format *)it->elem;
-    INFO("Received event %s with pid %d", events->id, events->pid);
+    INFO("Received event %s with pid %u", events->id, events->pid);
 
     if (container_state_changed(cont, events)) {
         ERROR("Failed to change container %s state", cont->common_config->id);

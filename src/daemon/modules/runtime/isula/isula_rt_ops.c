@@ -709,7 +709,7 @@ static int status_to_exit_code(int status)
     shim_exit_code records the exit code of isulad-shim, obtained through waitpid;
 */
 static int shim_create(bool fg, const char *id, const char *workdir, const char *bundle, const char *runtime_cmd,
-                       int *exit_code, const char* timeout, int* shim_exit_code)
+                       int *exit_code, const char *timeout, int *shim_exit_code)
 {
     pid_t pid = 0;
     int shim_stderr_pipe[2] = { -1, -1 };

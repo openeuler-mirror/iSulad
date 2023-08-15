@@ -24,8 +24,6 @@ struct io_read_wrapper;
 extern "C" {
 #endif
 
-#define ARCHIVE_BLOCK_SIZE (32 * 1024)
-
 struct archive_copy_info {
     char *path;
     bool exists;

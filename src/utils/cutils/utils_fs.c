@@ -111,7 +111,7 @@ static struct fs_element const g_fs_names[] = {
 struct mount_option_element {
     const char *option;
     bool clear;
-    int flag;
+    unsigned long flag;
 };
 
 static struct mount_option_element const g_mount_options[] = {

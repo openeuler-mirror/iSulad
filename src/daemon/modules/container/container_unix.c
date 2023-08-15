@@ -476,7 +476,7 @@ out:
 int container_v2_spec_merge_container_spec(container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
-    int i = 0;
+    size_t i = 0;
     container_config *container_spec = NULL;
 
     if (v2_spec == NULL) {
