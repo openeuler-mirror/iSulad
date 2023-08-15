@@ -1389,7 +1389,7 @@ static char *get_cpu_variant()
 int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant)
 {
     int ret = 0;
-    int i = 0;
+    size_t i;
     struct utsname uts;
     char *tmp_variant = NULL;
 

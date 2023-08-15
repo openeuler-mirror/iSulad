@@ -776,9 +776,8 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
 child_out:
         if (ret != 0) {
             exit(EXIT_FAILURE);
-        } else {
-            exit(EXIT_SUCCESS);
         }
+        exit(EXIT_SUCCESS);
     }
     close(pipe_stderr[1]);
     pipe_stderr[1] = -1;
@@ -1037,6 +1036,12 @@ static ssize_t stream_write_data(struct archive *a, void *client_data, const voi
     struct io_write_wrapper *writer = (struct io_write_wrapper *)client_data;
     size_t written_length = 0;
     size_t size = 0;
+
+    if (length > SSIZE_MAX) {
+        ERROR("Too large data to write.");
+        return -1;
+    }
+
     while (length > written_length) {
         if (length - written_length > ARCHIVE_WRITE_BUFFER_SIZE) {
             size = ARCHIVE_WRITE_BUFFER_SIZE;
@@ -1050,7 +1055,7 @@ static ssize_t stream_write_data(struct archive *a, void *client_data, const voi
         written_length += size;
     }
 
-    return size;
+    return (ssize_t)written_length;
 }
 
 static int tar_all(const struct io_write_wrapper *writer, const char *tar_dir, const char *src_base,
@@ -1264,7 +1269,7 @@ static int close_wait_pid(struct archive_context *ctx, int *status)
 
     if (ctx->pid > 0) {
         if (waitpid(ctx->pid, status, 0) != ctx->pid) {
-            ERROR("Failed to wait pid %u", ctx->pid);
+            ERROR("Failed to wait pid %d", ctx->pid);
             ret = -1;
         }
     }
@@ -1409,9 +1414,8 @@ int archive_chroot_untar_stream(const struct io_read_wrapper *context, const cha
 child_out:
         if (ret != 0) {
             exit(EXIT_FAILURE);
-        } else {
-            exit(EXIT_SUCCESS);
         }
+        exit(EXIT_SUCCESS);
     }
 
     close(pipe_stderr[1]);

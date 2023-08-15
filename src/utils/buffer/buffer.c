@@ -36,11 +36,7 @@ Buffer *buffer_alloc(size_t initial_size)
         return NULL;
     }
 
-    if (initial_size > SIZE_MAX / sizeof(char)) {
-        free(buf);
-        return NULL;
-    }
-    tmp = calloc(1, initial_size * sizeof(char));
+    tmp = util_smart_calloc_s(sizeof(char), initial_size);
     if (tmp == NULL) {
         free(buf);
         return NULL;

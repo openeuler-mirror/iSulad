@@ -17,7 +17,7 @@
 #include "container.grpc.pb.h"
 #include "isula_libutils/container_copy_to_request.h"
 #include "isula_libutils/container_exec_request.h"
-#include "isulad_tar.h"
+#include "util_archive.h"
 #include "stoppable_thread.h"
 #include "utils.h"
 #include <fstream>

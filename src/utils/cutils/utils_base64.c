@@ -173,13 +173,13 @@ out:
     return ret;
 }
 
-size_t util_base64_decode_len(const char *input, size_t len)
+static size_t util_base64_decode_len(const char *input, size_t len)
 {
     size_t padding_count = 0;
 
     if (input == NULL || len < 4 || len % 4 != 0) {
         ERROR("Invalid param for base64 decode length, length is %zu", len);
-        return -1;
+        return 0;
     }
 
     if (input[len - 1] == '=') {
@@ -189,7 +189,7 @@ size_t util_base64_decode_len(const char *input, size_t len)
         }
     }
 
-    return (strlen(input) / 4 * 3) - padding_count;
+    return (((strlen(input) / 4) * 3) - padding_count);
 }
 
 int util_base64_decode(const char *input, size_t len, unsigned char **out, size_t *out_len)
@@ -219,6 +219,10 @@ int util_base64_decode(const char *input, size_t len, unsigned char **out, size_
     io = BIO_push(base64, io);
 
     out_put_len = util_base64_decode_len(input, len);
+    if (out_put_len == 0) {
+        ret = -1;
+        goto out;
+    }
     out_put = util_common_calloc_s(out_put_len + 1); // '+1' for '\0'
     if (out_put == NULL) {
         ERROR("out of memory");

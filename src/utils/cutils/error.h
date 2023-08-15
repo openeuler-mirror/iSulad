@@ -60,11 +60,11 @@ static inline void format_errorf(char **err, const char *format, ...)
     char errbuf[BUFSIZ + 1] = { 0 };
 
     va_list argp;
-    va_start(argp, format);
 
     if (err == NULL) {
         return;
     }
+    va_start(argp, format);
 
     ret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
