@@ -421,7 +421,7 @@ extern "C" {
       "health-timeout",                                                                                                                                   \
       0,                                                                                                                                                  \
       &(cmdargs).custom_conf.health_timeout,                                                                                                              \
-      "Maximum time to allow one check to run (ms|s|m|h) (default 30s)",                                                                                  \
+      "Maximum time to allow one check to run (ms|s|m) (default 30s, maximum is 10 minutes)",                                                             \
       command_convert_nanoseconds },                                                                                                                      \
     { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
       false,                                                                                                                                              \
