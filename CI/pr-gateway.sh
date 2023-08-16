@@ -22,12 +22,13 @@ sed -i "s#http://repo.openeuler.org#https://repo.huaweicloud.com/openeuler#g" /e
 
 dnf update -y
 
-dnf install -y gtest-devel gmock-devel diffutils cmake gcc-c++ yajl-devel patch make libtool libevent-devel libevhtp-devel grpc grpc-plugins grpc-devel protobuf-devel libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel http-parser-devel libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel systemd-devel git chrpath
+dnf install -y docbook2X doxygen gtest-devel gmock-devel diffutils cmake gcc-c++ yajl-devel patch make libtool libevent-devel libevhtp-devel grpc grpc-plugins grpc-devel protobuf-devel libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel http-parser-devel libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel systemd-devel git chrpath
 if [ $? -ne 0 ]; then
     echo "install dependences failed"
     exit 1
 fi
 
+pip3 install meson ninja
 # dnf install -y cargo rust rust-packaging
 
 cd ~
@@ -35,12 +36,12 @@ cd ~
 rm -rf lxc
 git clone https://gitee.com/src-openeuler/lxc.git
 pushd lxc
-rm -rf lxc-4.0.3
+rm -rf lxc-5.0.2
 ./apply-patches || exit 1
-pushd lxc-4.0.3
-./autogen.sh && ./configure || exit 1
-make -j $(nproc) || exit 1
-make install
+pushd lxc-5.0.2
+mkdir -p build
+meson setup -Dtests=true -Dprefix=/usr build || exit 1
+meson install -C build || exit 1
 popd
 popd
 
@@ -52,7 +53,8 @@ git checkout ${tbranch}
 rm -rf build
 mkdir build
 pushd build
-cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE ../ || exit 1
+# disable lcr first
+cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DENABLE_LIBLCR=OFF ../ || exit 1
 make -j $(nproc) || exit 1
 make install
 popd
