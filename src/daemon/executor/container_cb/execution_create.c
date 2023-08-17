@@ -61,6 +61,7 @@
 #include "selinux_label.h"
 #include "opt_log.h"
 #include "runtime_api.h"
+#include "id_name_manager.h"
 
 static int create_request_check(const container_create_request *request)
 {
@@ -529,42 +530,6 @@ out:
     return ret;
 }
 
-static char *try_generate_id()
-{
-    int i = 0;
-    int max_time = 10;
-    char *id = NULL;
-    container_t *value = NULL;
-
-    id = util_smart_calloc_s(sizeof(char), (CONTAINER_ID_MAX_LEN + 1));
-    if (id == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    for (i = 0; i < max_time; i++) {
-        if (util_generate_random_str(id, (size_t)CONTAINER_ID_MAX_LEN)) {
-            ERROR("Generate id failed");
-            goto err_out;
-        }
-
-        value = containers_store_get(id);
-        if (value != NULL) {
-            container_unref(value);
-            value = NULL;
-            continue;
-        } else {
-            goto out;
-        }
-    }
-
-err_out:
-    free(id);
-    id = NULL;
-out:
-    return id;
-}
-
 static int inspect_image(const char *image, imagetool_image_summary **result)
 {
     int ret = 0;
@@ -737,43 +702,44 @@ static int maintain_container_id(const container_create_request *request, char *
     int ret = 0;
     char *id = NULL;
     char *name = NULL;
+    bool nret = false;
 
-    id = try_generate_id();
-    if (id == NULL) {
-        ERROR("Failed to generate container ID");
-        isulad_set_error_message("Failed to generate container ID");
+    if (request->id != NULL) {
+        name = util_strdup_s(request->id);
+    }
+
+    if (name == NULL) {
+        nret = id_name_manager_add_entry_with_new_id_and_name(&id, &name);
+    } else {
+        nret = id_name_manager_add_entry_with_new_id(name, &id);
+    }
+
+    if (!nret) {
+        ERROR("Failed to add entry to id name manager with new id and name");
+        isulad_set_error_message("Failed to add entry to id name manager with new id and name");
         ret = -1;
         goto out;
     }
 
     isula_libutils_set_log_prefix(id);
 
-    if (request->id != NULL) {
-        name = util_strdup_s(request->id);
-    } else {
-        name = util_strdup_s(id);
-    }
-
-    if (!util_valid_container_name(name)) {
-        ERROR("Invalid container name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-]+$ are allowed.", name);
-        isulad_set_error_message("Invalid container name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-]+$ are allowed.", name);
-        ret = -1;
-        goto out;
-    }
-
     EVENT("Event: {Object: %s, Type: Creating %s}", id, name);
 
-    if (!container_name_index_add(name, id)) {
-        char *used_id = NULL;
-        used_id = container_name_index_get(name);
-        ERROR("Name %s is in use by container %s", name, used_id);
-        isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
-                                 "You have to remove (or rename) that container to be able to reuse that name.",
-                                 name, used_id);
-        free(used_id);
-        used_id = NULL;
-        ret = -1;
+    if (container_name_index_add(name, id)) {
         goto out;
+    }
+
+    char *used_id = NULL;
+    used_id = container_name_index_get(name);
+    ERROR("Name %s is in use by container %s", name, used_id);
+    isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
+                                "You have to remove (or rename) that container to be able to reuse that name.",
+                                name, used_id);
+    free(used_id);
+    used_id = NULL;
+    ret = -1;
+    if (!id_name_manager_remove_entry(id, name)) {
+        WARN("Failed to remove %s and %s from id name manager", id, name);
     }
 
 out:

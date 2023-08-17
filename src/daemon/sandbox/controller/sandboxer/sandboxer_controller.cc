@@ -92,7 +92,7 @@ bool SandboxerController::Stop(const std::string &sandboxId, uint32_t timeoutSec
 
 bool SandboxerController::Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error)
 {
-    return true;
+    return m_client->Wait(cb, sandboxId, error);
 }
 
 std::unique_ptr<ControllerSandboxStatus> SandboxerController::Status(const std::string &sandboxId, bool verbose,

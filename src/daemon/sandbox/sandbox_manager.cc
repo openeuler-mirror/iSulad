@@ -29,6 +29,8 @@
 #include "cstruct_wrapper.h"
 #include "transform.h"
 #include "id_name_manager.h"
+#include "namespace.h"
+#include "utils.h"
 
 namespace sandbox {
 std::atomic<SandboxManager *> SandboxManager::m_instance;
@@ -58,16 +60,6 @@ auto SandboxManager::Init(Errors &error) -> bool
     return true;
 }
 
-void SandboxManager::TryGenerateId(std::string &id)
-{
-    __isula_auto_free char *newId = NULL;
-    newId = get_new_id();
-    if (newId == NULL) {
-        return;
-    }
-    id = std::string(newId);
-}
-
 auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, std::string &netNsPath,
                                    std::string &netMode, const runtime::v1::PodSandboxConfig &sandboxConfig, Errors &error) -> std::shared_ptr<Sandbox>
 {
@@ -80,9 +72,15 @@ auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, s
         return nullptr;
     }
 
-    if (netNsPath.empty() || netMode.empty()) {
-        ERROR("Invalid params for create sandbox %s", name.c_str());
-        error.Errorf("Invalid params for create sandbox %s", name.c_str());
+    if (netMode.empty()) {
+        ERROR("Empty netMode for creating sandbox %s", name.c_str());
+        error.Errorf("Empty netMode for creating sandbox %s", name.c_str());
+        return nullptr;
+    }
+
+    if (netMode == SHARE_NAMESPACE_CNI && netNsPath.empty()) {
+        ERROR("Empty netNsPath for create sandbox %s when net Mode is cni", name.c_str());
+        error.Errorf("Empty netNsPath for create sandbox %s when net Mode is cni", name.c_str());
         return nullptr;
     }
 
@@ -104,8 +102,9 @@ auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, s
         return nullptr;
     }
 
-    if (!IDNameManagerNewEntry(id, name, true, error)) {
-        ERROR("Failed add sandbox %s to id name manager", id.c_str());
+    if (!IDNameManagerNewEntry(id, name)) {
+        error.Errorf("Failed add sandbox %s to id name manager", name.c_str());
+        ERROR("Failed add sandbox %s to id name manager", name.c_str());
         return nullptr;
     }
 
@@ -137,6 +136,9 @@ out:
     return nullptr;
 }
 
+// TODO: if the sandbox metadata is lost, do I need to clean up the sandbox and its containers?
+// if the metadata of the pause container is lost or the sandbox in kuasar is abnormal,
+// the sandbox will fail to load because it cannot updatestatus, and isulad cannot manage the sandbox
 auto SandboxManager::RestoreSandboxes(Errors &error) -> bool
 {
     std::vector<std::string> subdir;
@@ -147,28 +149,13 @@ auto SandboxManager::RestoreSandboxes(Errors &error) -> bool
     }
 
     for (auto &id : subdir) {
-        if (!util_valid_container_id_or_name(id.c_str())) {
-            ERROR("Invalid sandbox name: %s", id.c_str());
+        std::shared_ptr<Sandbox> sandbox = LoadSandbox(id);
+        if (sandbox != nullptr) {
+            SaveSandboxToStore(id, sandbox);
             continue;
         }
-
-        std::shared_ptr<Sandbox> sandbox = std::shared_ptr<Sandbox>(new Sandbox(id, m_rootdir, m_statedir));
-        if (sandbox == nullptr) {
-            ERROR("Failed to malloc for sandboxes: %s", id.c_str());
-            continue;
-        }
-
-        if (!sandbox->Load(error)) {
-            ERROR("Failed to load subdir:%s", id.c_str());
-            continue;
-        }
-
-        if (!IDNameManagerNewEntry(id, sandbox->GetName(), false, error)) {
-            ERROR("Failed add sandbox %s to id name manager", id.c_str());
-            continue;
-        }
-
-        SaveSandboxToStore(id, sandbox);
+        // If loading fails, delete the residual directory
+        CleanInValidSandboxDir(id);
     }
 
     return true;
@@ -196,6 +183,15 @@ void SandboxManager::ListAllSandboxes(const runtime::v1::PodSandboxFilter &filte
             }
         }
         // (3) filter by labels
+        if (filters.label_selector_size() == 0) {
+            sandboxes.push_back(sandbox);
+            continue;
+        }
+
+        if (sandbox->GetSandboxConfig() == nullptr) {
+            continue;
+        }
+
         bool match = true;
         auto labels = sandbox->GetSandboxConfig()->labels();
         for (auto &iter : filters.label_selector()) {
@@ -214,46 +210,25 @@ void SandboxManager::ListAllSandboxes(const runtime::v1::PodSandboxFilter &filte
 // Delete the id and name of the sandbox from the map of the id_name_manager module
 bool SandboxManager::IDNameManagerRemoveEntry(const std::string &id, const std::string &name)
 {
-    bool ret = true;
-    if (!try_remove_id(id.c_str())) {
-        ret = false;
-    }
-
-    if (!try_remove_name(name.c_str())) {
-        ret = false;
-    }
-
-    return ret;
+    return id_name_manager_remove_entry(id.c_str(), name.c_str());
 }
 
 // Save the id and name of the sandbox to the map of the id_name_manager module
-bool SandboxManager::IDNameManagerNewEntry(std::string &id, const std::string &name, bool generateId, Errors &error)
+bool SandboxManager::IDNameManagerNewEntry(std::string &id, const std::string &name)
 {
-    if (generateId) {
-        TryGenerateId(id);
-        if (id.empty()) {
-            error.Errorf("Failed to generate id for sandbox: %s", name.c_str());
-            return false;
-        }
+    __isula_auto_free char *tmpId = NULL;
+    bool ret = false;
+    if (id.empty()) {
+        ret = id_name_manager_add_entry_with_new_id(name.c_str(), &tmpId);
+        id = tmpId;
     } else {
-        if (!try_add_id(id.c_str())) {
-            error.Errorf("Failed add %s to id map", id.c_str());
-            return false;
-        }
+        ret = id_name_manager_add_entry_with_existing_id(id.c_str(), name.c_str());
     }
-
-    if (!try_add_name(name.c_str())) {
-        error.Errorf("Failed to add %s to name map", name.c_str());
-        goto error_load;
+    if (!ret) {
+        ERROR("Failed to add a new entry to id_name_manager");
+        return false;
     }
-
     return true;
-
-error_load:
-    if (!IDNameManagerRemoveEntry(id, name)) {
-        WARN("Failed to remove %s form id name manager", name.c_str());
-    }
-    return false;
 }
 
 // Save sandbox to the map of the sandbox manager module
@@ -454,6 +429,8 @@ bool SandboxManager::ListAllSandboxdir(std::vector<std::string> &allSubdir)
     char **subdir = NULL;
     int nret = -1;
 
+    // If m_rootdir does not exist, an error still needs to be reported,
+    // because it is not known whether the folder is missing or the folder has never been created
     nret = util_list_all_subdir(m_rootdir.c_str(), &subdir);
     if (nret != 0) {
         return false;
@@ -462,6 +439,54 @@ bool SandboxManager::ListAllSandboxdir(std::vector<std::string> &allSubdir)
     Transform::CharArrayToStringVector((const char **)subdir, util_array_len((const char **)subdir), allSubdir);
     util_free_array(subdir);
     return true;
+}
+
+auto SandboxManager::LoadSandbox(std::string &id) -> std::shared_ptr<Sandbox>
+{
+    std::shared_ptr<Sandbox> sandbox = nullptr;
+
+    if (!util_valid_container_id_or_name(id.c_str())) {
+        ERROR("Invalid sandbox name: %s", id.c_str());
+        return nullptr;
+    }
+
+    sandbox = std::shared_ptr<Sandbox>(new Sandbox(id, m_rootdir, m_statedir));
+    if (sandbox == nullptr) {
+        ERROR("Failed to malloc for sandboxes: %s", id.c_str());
+        return nullptr;
+    }
+
+    Errors tmpError;
+
+    if (!sandbox->Load(tmpError)) {
+        ERROR("Failed to load subdir:%s", id.c_str());
+        return nullptr;
+    }
+
+    if (!IDNameManagerNewEntry(id, sandbox->GetName())) {
+        ERROR("Failed add sandbox %s to id name manager", id.c_str());
+        return nullptr;
+    }
+
+    return sandbox;
+}
+
+void SandboxManager::CleanInValidSandboxDir(const std::string &id)
+{
+    std::string rootDir = m_rootdir + "/" + id;
+    std::string stateDir = m_statedir + "/" + id;
+
+    if (util_recursive_rmdir(stateDir.c_str(), 0) != 0) {
+        ERROR("Failed to delete sandbox's state directory %s", stateDir.c_str());
+    }
+
+    if (!util_deal_with_mount_info(util_umount_residual_shm, rootDir.c_str())) {
+        ERROR("Failed to clean sandbox's mounts: %s", id.c_str());
+    }
+
+    if (util_recursive_rmdir(rootDir.c_str(), 0) != 0) {
+        ERROR("Failed to delete sandbox's root directory %s", rootDir.c_str());
+    }
 }
 
 }

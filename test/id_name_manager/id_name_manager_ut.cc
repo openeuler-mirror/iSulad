@@ -16,42 +16,38 @@
 
 #include "id_name_manager.h"
 
-TEST(id_name_manager, test_id_manager)
+TEST(id_name_manager, test_id_name_manager)
 {
-    // before id_store_init()
-    char *id = get_new_id();
+    char *id = NULL;
+    // before id_name_manager_init()
+    ASSERT_EQ(id_name_manager_add_entry_with_new_id("name", &id), false);
     ASSERT_EQ(id, nullptr);
-    ASSERT_EQ(try_add_id("id"), false);
 
-    // after id_store_init()
-    ASSERT_EQ(id_store_init(), 0);
-    id = get_new_id();
+    // after id_name_manager_init()
+    ASSERT_EQ(id_name_manager_init(), 0);
+
+    ASSERT_EQ(id_name_manager_add_entry_with_existing_id(NULL, "name_testNULL"), false);
+    ASSERT_EQ(id_name_manager_add_entry_with_new_id_and_name(&id, NULL), false);
+    ASSERT_EQ(id_name_manager_add_entry_with_new_id(NULL, NULL), false);
+
+    ASSERT_EQ(id_name_manager_add_entry_with_new_id("", &id), false);
+    ASSERT_EQ(id_name_manager_add_entry_with_new_id("name", &id), true);
     ASSERT_NE(id, nullptr);
-    ASSERT_EQ(try_add_id(""), false);
-    ASSERT_EQ(try_add_id("id"), true);
-    ASSERT_EQ(try_add_id(id), false);
+    ASSERT_EQ(id_name_manager_add_entry_with_existing_id(id, "name2"), false);
+    ASSERT_EQ(id_name_manager_add_entry_with_existing_id("12345678", "name"), false);
 
-    ASSERT_EQ(try_remove_id(""), false);
-    ASSERT_EQ(try_remove_id(id), true);
-    ASSERT_EQ(try_remove_id(id), false);
-    id_store_free();
+    char *name = NULL;
+    char *id2 = NULL;
+    ASSERT_EQ(id_name_manager_add_entry_with_new_id_and_name(&id2, &name), true);
+    ASSERT_STREQ(id2, name);
+
+    ASSERT_EQ(id_name_manager_remove_entry("", NULL), false);
+    ASSERT_EQ(id_name_manager_remove_entry("12345678", "name2"), false);
+
+    ASSERT_EQ(id_name_manager_remove_entry(NULL, NULL), true);
+    ASSERT_EQ(id_name_manager_remove_entry(id, "name"), true);
+    ASSERT_EQ(id_name_manager_remove_entry(id2, name), true);
+
+    id_name_manager_release();
     free(id);
-}
-
-TEST(id_name_manager, test_name_manager)
-{
-    // before name_store_init()
-    ASSERT_EQ(try_add_name("name"), false);
-
-    // after name_store_init()
-    std::string name = "name";
-    ASSERT_EQ(name_store_init(), 0);
-    ASSERT_EQ(try_add_name(""), false);
-    ASSERT_EQ(try_add_name(name.c_str()), true);
-    ASSERT_EQ(try_add_name(name.c_str()), false);
-
-    ASSERT_EQ(try_remove_name(""), false);
-    ASSERT_EQ(try_remove_name(name.c_str()), true);
-    ASSERT_EQ(try_remove_name(name.c_str()), false);
-    name_store_free();
 }

@@ -68,6 +68,7 @@
 #ifdef ENABLE_NATIVE_NETWORK
 #include "service_network_api.h"
 #endif
+#include "id_name_manager.h"
 
 #define KATA_RUNTIME "kata-runtime"
 
@@ -1280,6 +1281,11 @@ static int do_delete_container(container_t *cont)
 
     if (!container_name_index_remove(name)) {
         ERROR("Failed to remove '%s' from name index", name);
+        ret = -1;
+    }
+
+    if (!id_name_manager_remove_entry(id, name)) {
+        ERROR("Failed to remove %s and %s from id name manager", id, name);
         ret = -1;
     }
 

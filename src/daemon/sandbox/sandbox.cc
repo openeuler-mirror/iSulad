@@ -495,7 +495,7 @@ auto Sandbox::Create(Errors &error) -> bool
     if (set_file_owner_for_userns_remap(m_rootdir.c_str(), userns_remap) != 0) {
         error.Errorf("Unable to change directory %s owner for user remap.", m_rootdir.c_str());
         ERROR("Unable to change directory %s owner for user remap.", m_rootdir.c_str());
-        return false;
+        goto out;
     }
 #endif
 
@@ -504,15 +504,15 @@ auto Sandbox::Create(Errors &error) -> bool
         goto out;
     }
 
-    if (!Save(error)) {
-        ERROR("Failed to save sandbox, %s", m_id.c_str());
-        goto out;
-    }
-
     nret = util_mkdir_p(m_statedir.c_str(), TEMP_DIRECTORY_MODE);
     if (nret < 0) {
         error.Errorf("Unable to create sandbox state directory %s.", m_statedir.c_str());
         ERROR("Unable to create sandbox state directory %s.", m_statedir.c_str());
+        goto out;
+    }
+
+    if (!Save(error)) {
+        ERROR("Failed to save sandbox, %s", m_id.c_str());
         goto out;
     }
 
@@ -588,6 +588,11 @@ auto Sandbox::Start(Errors &error) -> bool
         return false;
     }
 
+    if (!m_controller->Wait(shared_from_this(), m_id, error)) {
+        ERROR("Failed to wait sandbox, id=%s", m_id.c_str());
+        return false;
+    }
+
     return true;
 }
 
@@ -660,7 +665,7 @@ auto Sandbox::Remove(Errors &error) -> bool
     }
 
     if (!util_deal_with_mount_info(util_umount_residual_shm, GetRootDir().c_str())) {
-        ERROR("Failed to clean sandbox's mounts");
+        ERROR("Failed to clean sandbox's mounts: %s", m_id.c_str());
     }
 
     if (util_recursive_rmdir(GetRootDir().c_str(), 0) != 0) {
@@ -678,7 +683,6 @@ void Sandbox::Status(runtime::v1::PodSandboxStatus &status)
     runtime::v1::NamespaceOption *options { nullptr };
     runtime::v1::LinuxPodSandboxStatus linuxs;
     status.set_id(m_id);
-    status.set_allocated_metadata(m_sandboxConfig->mutable_metadata());
     status.set_state(IsReady() ? runtime::v1::SANDBOX_READY : runtime::v1::SANDBOX_NOTREADY);
     status.set_created_at(m_state.createdAt);
 
@@ -688,9 +692,9 @@ void Sandbox::Status(runtime::v1::PodSandboxStatus &status)
     options->set_pid(m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_namespace_options()->pid());
     options->set_ipc(m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_namespace_options()->ipc());
 
-    status.mutable_labels()->insert(m_sandboxConfig->mutable_labels()->begin(), m_sandboxConfig->mutable_labels()->end());
-    status.mutable_annotations()->insert(m_sandboxConfig->mutable_annotations()->begin(),
-                                         m_sandboxConfig->mutable_annotations()->end());
+    status.mutable_metadata()->CopyFrom(m_sandboxConfig->metadata());
+    *status.mutable_labels() = m_sandboxConfig->labels();
+    *status.mutable_annotations() = m_sandboxConfig->annotations();
 
     status.set_runtime_handler(m_runtimeInfo.runtimeHandler);
 }
@@ -769,10 +773,13 @@ auto Sandbox::GenerateSandboxMetadataJson(sandbox_metadata *metadata) -> std::st
 
 auto Sandbox::SaveMetadata(Errors &error) -> bool
 {
+    sandbox_metadata_runtime_info info = { 0 };
     sandbox_metadata metadata = { 0 };
     int nret = -1;
     const std::string path = GetMetadataJsonPath();
     std::string metadataJson;
+
+    metadata.runtime_info = &info;
 
     FillSandboxMetadata(&metadata, error);
     if (!error.Empty()) {
@@ -798,14 +805,12 @@ auto Sandbox::ParseSandboxStateFile() ->std::unique_ptr<CStructWrapper<sandbox_s
     __isula_auto_free parser_error err = NULL;
     const std::string path = GetStatePath();
     sandbox_state *state = NULL;
-    std::unique_ptr<CStructWrapper<sandbox_state>> ret;
 
     state = sandbox_state_parse_file(path.c_str(), NULL, &err);
     if (state == NULL) {
-        return ret;
+        return nullptr;
     }
-    ret = std::unique_ptr<CStructWrapper<sandbox_state>>(new CStructWrapper<sandbox_state>(state, free_sandbox_state));
-    return ret;
+    return std::unique_ptr<CStructWrapper<sandbox_state>>(new CStructWrapper<sandbox_state>(state, free_sandbox_state));
 }
 
 auto Sandbox::LoadState(Errors &error) -> bool
@@ -813,7 +818,7 @@ auto Sandbox::LoadState(Errors &error) -> bool
     std::unique_ptr<CStructWrapper<sandbox_state>> state;
 
     state = ParseSandboxStateFile();
-    if (state == nullptr) {
+    if (state == nullptr || state->get() == nullptr) {
         error.Errorf("Failed to parse sandbox state file");
         return false;
     }
@@ -832,26 +837,23 @@ auto Sandbox::LoadState(Errors &error) -> bool
 auto Sandbox::ParseSandboxMetadataFile() -> std::unique_ptr<CStructWrapper<sandbox_metadata>>
 {
     __isula_auto_free parser_error err = NULL;
-    const std::string path = GetStatePath();
+    const std::string path = GetMetadataJsonPath();
     sandbox_metadata *metadata = NULL;
-    std::unique_ptr<CStructWrapper<sandbox_metadata>> ret;
 
     metadata = sandbox_metadata_parse_file(path.c_str(), NULL, &err);
     if (metadata == NULL) {
-        return ret;
+        return nullptr;
     }
-    ret = std::unique_ptr<CStructWrapper<sandbox_metadata>>(new CStructWrapper<sandbox_metadata>(metadata,
-                                                                                                 free_sandbox_metadata));
-    return ret;
+    return std::unique_ptr<CStructWrapper<sandbox_metadata>>(new CStructWrapper<sandbox_metadata>(metadata, free_sandbox_metadata));
 }
 
 auto Sandbox::isValidMetadata(std::unique_ptr<CStructWrapper<sandbox_metadata>> &metadata) -> bool
 {
-    bool unvalid = metadata->get()->id == nullptr || metadata->get()->name == nullptr ||
+    bool invalid = metadata->get()->id == nullptr || metadata->get()->name == nullptr ||
                    metadata->get()->runtime_info->runtime == nullptr || metadata->get()->runtime_info->sandboxer == nullptr ||
                    metadata->get()->runtime_info->runtime_handler == nullptr || metadata->get()->net_mode == nullptr ||
                    metadata->get()->task_address == nullptr || metadata->get()->net_ns_path == nullptr;
-    if (unvalid) {
+    if (invalid) {
         return false;
     }
     return true;
@@ -864,7 +866,7 @@ auto Sandbox::LoadMetadata(Errors &error) -> bool
     std::unique_ptr<CStructWrapper<sandbox_metadata>> metadata;
 
     metadata = ParseSandboxMetadataFile();
-    if (metadata == nullptr) {
+    if (metadata == nullptr || metadata->get() == nullptr) {
         error.Errorf("Failed to parse sandbox metadata file for sandbox: '%s'", m_id.c_str());
         return false;
     }
@@ -899,6 +901,11 @@ auto Sandbox::LoadNetworkSetting(Errors &error) -> bool
 {
     __isula_auto_free char *settings = NULL;
     const std::string path = GetNetworkSettingsPath();
+
+    // for the sandbox whose net_mode is host. No need to load networkSetting.
+    if (namespace_is_host(m_netMode.c_str())) {
+        return true;
+    }
 
     settings = util_read_content_from_file(path.c_str());
     if (settings == NULL || strlen(settings) == 0 || strcmp(settings, "\n") == 0) {

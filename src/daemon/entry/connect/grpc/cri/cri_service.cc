@@ -19,6 +19,10 @@
 #include "stream_server.h"
 #include "errors.h"
 #include "cri_helpers.h"
+#ifdef ENABLE_CRI_API_V1
+#include "sandbox_manager.h"
+#include "controller_manager.h"
+#endif
 
 using namespace CRIUnify;
 
@@ -89,6 +93,25 @@ int CRIService::Init(const isulad_daemon_configs *config)
         ERROR("Init CRI v1 runtime service failed: %s", err.GetCMessage());
         return -1;
     }
+
+    sandbox::ControllerManager::GetInstance()->Init(err);
+    if (err.NotEmpty()) {
+        ERROR("Failed to init ControllerManager: %s", err.GetCMessage());
+        return -1;
+    }
+
+    sandbox::SandboxManager::GetInstance()->Init(err);
+    if (err.NotEmpty()) {
+        ERROR("Failed to init SandboxManager: %s", err.GetCMessage());
+        return -1;
+    }
+
+    // if restore failed, just log it, and continue.
+    if (!sandbox::SandboxManager::GetInstance()->RestoreSandboxes(err)) {
+        ERROR("Failed to restore Sandboxes: %s", err.GetCMessage());
+        err.Clear();
+    }
+
 #endif
 
     cri_stream_server_init(err);

@@ -42,16 +42,22 @@ static void map_store_free(map_store *store)
     free(store);
 }
 
-void id_store_free(void)
+static void id_store_free(void)
 {
     map_store_free(g_id_store);
     g_id_store = NULL;
 }
 
-void name_store_free(void)
+static void name_store_free(void)
 {
     map_store_free(g_name_store);
     g_name_store = NULL;
+}
+
+void id_name_manager_release(void)
+{
+    id_store_free();
+    name_store_free();
 }
 
 static map_store *map_store_new(void)
@@ -90,11 +96,6 @@ static bool map_store_add(map_store *map_store, const char *item)
         return false;
     }
 
-    if (!util_valid_container_id_or_name(item)) {
-        ERROR("Invalid sandbox id or name: %s", item);
-        return false;
-    }
-
     if (pthread_mutex_lock(&map_store->lock)) {
         ERROR("Failed to lock map_store");
         return false;
@@ -125,11 +126,6 @@ static bool map_store_remove(map_store *map_store, const char *item)
         return false;
     }
 
-    if (!util_valid_container_id_or_name(item)) {
-        ERROR("Invalid sandbox id or name: %s", item);
-        return false;
-    }
-
     if (pthread_mutex_lock(&map_store->lock)) {
         ERROR("Failed to lock map_store");
         return false;
@@ -144,7 +140,7 @@ static bool map_store_remove(map_store *map_store, const char *item)
     return true;
 }
 
-int id_store_init(void)
+static int id_store_init(void)
 {
     g_id_store = map_store_new();
     if (g_id_store == NULL) {
@@ -153,7 +149,7 @@ int id_store_init(void)
     return 0;
 }
 
-int name_store_init(void)
+static int name_store_init(void)
 {
     g_name_store = map_store_new();
     if (g_name_store == NULL) {
@@ -162,7 +158,103 @@ int name_store_init(void)
     return 0;
 }
 
-char *get_new_id(void)
+int id_name_manager_init(void)
+{
+    if (id_store_init() != 0) {
+        ERROR("Failed to init id manager");
+        return -1;
+    }
+    if (name_store_init() != 0) {
+        ERROR("Failed to init name manager");
+        id_store_free();
+        return -1;
+    }
+    return 0;
+}
+
+// if adding name successfully, return true;
+// if name is NULL or name is invalid container id, return false;
+static bool try_add_id(const char *id)
+{
+    if (id == NULL) {
+        ERROR("Failed to add empty id");
+        return false;
+    }
+
+    if (!util_valid_container_id(id)) {
+        ERROR("Failed to add invalid id: %s", id);
+        return false;
+    }
+
+    if (map_store_add(g_id_store, id)) {
+        return true;
+    }
+    ERROR("Failed to add %s to g_id_store", id);
+    return false;
+}
+
+// if id is NULL or removing id successfully, return true;
+// if id is invalid container id, return false;
+static bool try_remove_id(const char *id)
+{
+    if (id == NULL) {
+        return true;
+    }
+
+    if (!util_valid_container_id(id)) {
+        ERROR("Failed to remove invalid id: %s", id);
+        return false;
+    }
+
+    if (map_store_remove(g_id_store, id)) {
+        return true;
+    }
+    ERROR("Failed to remove %s from g_id_store", id);
+    return false;
+}
+
+// if adding name successfully, return true;
+// if name is NULL or name is invalid container name, return false;
+static bool try_add_name(const char *name)
+{
+    if (name == NULL) {
+        ERROR("Failed to add empty name");
+        return false;
+    }
+
+    if (!util_valid_container_name(name)) {
+        ERROR("Failed to add invalid name: %s", name);
+        return false;
+    }
+
+    if (map_store_add(g_name_store, name)) {
+        return true;
+    }
+    ERROR("Failed to add %s to g_name_store", name);
+    return false;
+}
+
+// if name is NULL or removing name successfully, return true;
+// if name is invalid container name, return false;
+static bool try_remove_name(const char *name)
+{
+    if (name == NULL) {
+        return true;
+    }
+
+    if (!util_valid_container_name(name)) {
+        ERROR("Failed to remove invalid name: %s", name);
+        return false;
+    }
+
+    if (map_store_remove(g_name_store, name)) {
+        return true;
+    }
+    ERROR("Failed to remove %s from g_name_store", name);
+    return false;
+}
+
+static char *get_new_id(void)
 {
     int i = 0;
     const int max_time = 10;
@@ -193,38 +285,101 @@ char *get_new_id(void)
     return NULL;
 }
 
-bool try_add_id(const char *id)
+bool id_name_manager_add_entry_with_existing_id(const char *id, const char *name)
 {
-    if (map_store_add(g_id_store, id)) {
-        return true;
+    if (id == NULL || name == NULL) {
+        ERROR("Failed add empty id or name to id name map with existing id");
+        return false;
     }
-    ERROR("Failed to add %s to g_id_store", id);
+
+    if (!try_add_id(id)) {
+        ERROR("Failed add %s to id map", id);
+        return false;
+    }
+
+    if (!try_add_name(name)) {
+        ERROR("Failed to add %s to name map", name);
+        goto error_load;
+    }
+    return true;
+
+error_load:
+    if (!try_remove_id(id)) {
+        WARN("Failed to remove %s form id manager", id);
+    }
     return false;
 }
 
-bool try_remove_id(const char *id)
+bool id_name_manager_add_entry_with_new_id(const char *name, char **id)
 {
-    if (map_store_remove(g_id_store, id)) {
-        return true;
+    if (id == NULL || name == NULL) {
+        ERROR("Failed add empty id or name to id name map with new id");
+        return false;
     }
-    ERROR("Failed to remove %s from g_id_store", id);
+
+    *id = get_new_id();
+    if (*id == NULL) {
+        ERROR("Failed to generate id");
+        return false;
+    }
+
+    if (!try_add_name(name)) {
+        ERROR("Failed to add %s to name map", name);
+        goto error_load;
+    }
+    return true;
+
+error_load:
+    if (!try_remove_id(*id)) {
+        WARN("Failed to remove %s form id manager", *id);
+    }
+    free(*id);
+    *id = NULL;
     return false;
 }
 
-bool try_add_name(const char *name)
+bool id_name_manager_add_entry_with_new_id_and_name(char **id, char **name)
 {
-    if (map_store_add(g_name_store, name)) {
-        return true;
+    if (id == NULL || name == NULL) {
+        ERROR("Failed add empty id or name to id name map with new id and name");
+        return false;
     }
-    ERROR("Failed to add %s to g_name_store", name);
+
+    *id = get_new_id();
+    if (*id == NULL) {
+        ERROR("Failed to generate id");
+        return NULL;
+    }
+
+    *name = util_strdup_s(*id);
+
+    if (!try_add_name(*name)) {
+        ERROR("Failed to add %s to name map", *name);
+        goto error_load;
+    }
+    return true;
+
+error_load:
+    if (!try_remove_id(*id)) {
+        WARN("Failed to remove %s form id manager", *id);
+    }
+    free(*id);
+    *id = NULL;
+    free(*name);
+    *name = NULL;
     return false;
 }
 
-bool try_remove_name(const char *name)
+bool id_name_manager_remove_entry(const char *id, const char *name)
 {
-    if (map_store_remove(g_name_store, name)) {
-        return true;
+    bool ret = true;
+    if (!try_remove_id(id)) {
+        ret = false;
     }
-    ERROR("Failed to remove %s from g_name_store", name);
-    return false;
+
+    if (!try_remove_name(name)) {
+        ret = false;
+    }
+
+    return ret;
 }

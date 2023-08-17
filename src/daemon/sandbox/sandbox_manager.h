@@ -64,15 +64,16 @@ private:
     auto NameIndexGetAll(void) -> std::map<std::string, std::string>;
 
     auto IDNameManagerRemoveEntry(const std::string &id, const std::string &name) -> bool;
-    auto IDNameManagerNewEntry(std::string &id, const std::string &name, bool generateId, Errors &error) -> bool;
+    auto IDNameManagerNewEntry(std::string &id, const std::string &name) -> bool;
 
     void SaveSandboxToStore(const std::string &id, std::shared_ptr<Sandbox> sandbox);
     void DeleteSandboxFromStore(const std::string &id, const std::string &name);
 
     auto GetSandboxRootpath() -> std::string;
     auto GetSandboxStatepath() -> std::string;
-    void TryGenerateId(std::string &id);
     bool ListAllSandboxdir(std::vector<std::string> &allSubdir);
+    auto LoadSandbox(std::string &id) -> std::shared_ptr<Sandbox>;
+    void CleanInValidSandboxDir(const std::string &id);
 
 private:
     static std::atomic<SandboxManager *> m_instance;
