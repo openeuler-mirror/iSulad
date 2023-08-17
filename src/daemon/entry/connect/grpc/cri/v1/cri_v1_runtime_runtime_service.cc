@@ -347,7 +347,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::ListPodSandbox(grpc::ServerContext *co
     INFO("Event: {Object: CRI, Type: Listing all Pods}");
 
     std::vector<std::unique_ptr<runtime::v1::PodSandbox>> pods;
-    m_rService->ListPodSandbox(request->has_filter() ? &request->filter() : nullptr, &pods, error);
+    runtime::v1::PodSandboxFilter emptyFilters;
+    m_rService->ListPodSandbox(request->has_filter() ? request->filter() : emptyFilters, pods, error);
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to list all pods: %s", error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());

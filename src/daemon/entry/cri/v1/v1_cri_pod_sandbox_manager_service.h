@@ -57,8 +57,8 @@ public:
     auto PodSandboxStatus(const std::string &podSandboxID, Errors &error)
     -> std::unique_ptr<runtime::v1::PodSandboxStatus>;
 
-    void ListPodSandbox(const runtime::v1::PodSandboxFilter *filter,
-                        std::vector<std::unique_ptr<runtime::v1::PodSandbox>> *pods, Errors &error);
+    void ListPodSandbox(const runtime::v1::PodSandboxFilter &filter,
+                        std::vector<std::unique_ptr<runtime::v1::PodSandbox>> &pods, Errors &error);
 
     auto PodSandboxStats(const std::string &podSandboxID,
                          const std::unique_ptr<ContainerManagerService> &containerManager,
@@ -98,11 +98,6 @@ private:
     void SetSandboxStatusNetwork(std::shared_ptr<sandbox::Sandbox> sandbox,
                                  std::unique_ptr<runtime::v1::PodSandboxStatus> &podStatus);
     void GetIPs(std::shared_ptr<sandbox::Sandbox> sandbox, std::vector<std::string> &ips);
-    void ListPodSandboxFromGRPC(const runtime::v1::PodSandboxFilter *filter, container_list_request **request,
-                                bool *filterOutReadySandboxes, Errors &error);
-    void ListPodSandboxToGRPC(container_list_response *response,
-                              std::vector<std::unique_ptr<runtime::v1::PodSandbox>> *pods,
-                              bool filterOutReadySandboxes, Errors &error);
     auto GenerateUpdateNetworkSettingsReqest(const std::string &id, const std::string &json, Errors &error)
     -> container_update_network_settings_request *;
     auto GetNsenterPath(Errors &error) -> std::string;

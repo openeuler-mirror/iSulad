@@ -44,7 +44,7 @@ public:
 
     auto RestoreSandboxes(Errors &error) -> bool;
     // list all sandboxes by filter
-    void ListAllSandboxes(runtime::v1::PodSandboxFilter &filters, std::vector<std::shared_ptr<Sandbox>> &sandboxes);
+    void ListAllSandboxes(const runtime::v1::PodSandboxFilter &filters, std::vector<std::shared_ptr<Sandbox>> &sandboxes);
 private:
     SandboxManager() = default;
     SandboxManager(const SandboxManager &other) = delete;

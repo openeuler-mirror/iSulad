@@ -130,8 +130,8 @@ auto CRIRuntimeServiceImpl::PodSandboxStatus(const std::string &podSandboxID, Er
     return m_podSandboxManager->PodSandboxStatus(podSandboxID, error);
 }
 
-void CRIRuntimeServiceImpl::ListPodSandbox(const runtime::v1::PodSandboxFilter *filter,
-                                           std::vector<std::unique_ptr<runtime::v1::PodSandbox>> *pods,
+void CRIRuntimeServiceImpl::ListPodSandbox(const runtime::v1::PodSandboxFilter &filter,
+                                           std::vector<std::unique_ptr<runtime::v1::PodSandbox>> &pods,
                                            Errors &error)
 {
     m_podSandboxManager->ListPodSandbox(filter, pods, error);

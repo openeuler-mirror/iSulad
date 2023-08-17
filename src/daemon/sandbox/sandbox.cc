@@ -184,6 +184,12 @@ auto Sandbox::GetNetworkSettings() -> std::string
     return m_networkSettings;
 }
 
+auto Sandbox::GetCreatedAt() -> uint64_t
+{
+    ReadGuard<RWMutex> lock(m_stateMutex);
+    return m_state.createdAt;
+}
+
 void Sandbox::DoUpdateExitedStatus(const ControllerExitInfo &exitInfo)
 {
     WriteGuard<RWMutex> lock(m_stateMutex);

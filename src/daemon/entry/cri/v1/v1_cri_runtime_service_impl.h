@@ -75,8 +75,8 @@ public:
     auto PodSandboxStatus(const std::string &podSandboxID, Errors &error)
     -> std::unique_ptr<runtime::v1::PodSandboxStatus> override;
 
-    void ListPodSandbox(const runtime::v1::PodSandboxFilter *filter,
-                        std::vector<std::unique_ptr<runtime::v1::PodSandbox>> *pods, Errors &error) override;
+    void ListPodSandbox(const runtime::v1::PodSandboxFilter &filter,
+                        std::vector<std::unique_ptr<runtime::v1::PodSandbox>> &pods, Errors &error) override;
 
     auto PodSandboxStats(const std::string &podSandboxID,
                          Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStats> override;

@@ -690,117 +690,35 @@ PodSandboxManagerService::PodSandboxStatus(const std::string &podSandboxID, Erro
     return podStatus;
 }
 
-void PodSandboxManagerService::ListPodSandboxFromGRPC(const runtime::v1::PodSandboxFilter *filter,
-                                                      container_list_request **request, bool *filterOutReadySandboxes,
-                                                      Errors &error)
+void PodSandboxManagerService::ListPodSandbox(const runtime::v1::PodSandboxFilter &filter,
+                                              std::vector<std::unique_ptr<runtime::v1::PodSandbox>> &pods,
+                                              Errors &error)
 {
-    *request = (container_list_request *)util_common_calloc_s(sizeof(container_list_request));
-    if (*request == nullptr) {
-        error.SetError("Out of memory");
-        return;
-    }
-    (*request)->filters = (defs_filters *)util_common_calloc_s(sizeof(defs_filters));
-    if ((*request)->filters == nullptr) {
-        error.SetError("Out of memory");
-        return;
-    }
-    (*request)->all = true;
+    std::vector<std::shared_ptr<sandbox::Sandbox>> sandboxes;
 
-    if (CRIHelpers::FiltersAddLabel((*request)->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
-                                    CRIHelpers::Constants::CONTAINER_TYPE_LABEL_SANDBOX) != 0) {
-        error.SetError("Failed to add label");
-        return;
-    }
+    sandbox::SandboxManager::GetInstance()->ListAllSandboxes(filter, sandboxes);
 
-    if (filter != nullptr) {
-        if (!filter->id().empty()) {
-            if (CRIHelpers::FiltersAdd((*request)->filters, "id", filter->id()) != 0) {
-                error.SetError("Failed to add label");
-                return;
-            }
-        }
-        if (filter->has_state()) {
-            if (filter->state().state() == runtime::v1::SANDBOX_READY) {
-                (*request)->all = false;
-            } else {
-                *filterOutReadySandboxes = true;
-            }
-        }
-
-        // Add some label
-        for (auto &iter : filter->label_selector()) {
-            if (CRIHelpers::FiltersAddLabel((*request)->filters, iter.first, iter.second) != 0) {
-                error.SetError("Failed to add label");
-                return;
-            }
-        }
-    }
-}
-
-void PodSandboxManagerService::ListPodSandboxToGRPC(container_list_response *response,
-                                                    std::vector<std::unique_ptr<runtime::v1::PodSandbox>> *pods,
-                                                    bool filterOutReadySandboxes, Errors &error)
-{
-    for (size_t i = 0; i < response->containers_len; i++) {
+    for (const auto sandbox : sandboxes) {
         std::unique_ptr<runtime::v1::PodSandbox> pod(new runtime::v1::PodSandbox);
 
-        if (response->containers[i]->id != nullptr) {
-            pod->set_id(response->containers[i]->id);
-        }
-        if (response->containers[i]->status == CONTAINER_STATUS_RUNNING) {
+        pod->set_id(sandbox->GetId());
+        if (sandbox->IsReady()) {
             pod->set_state(runtime::v1::SANDBOX_READY);
         } else {
             pod->set_state(runtime::v1::SANDBOX_NOTREADY);
         }
-        pod->set_created_at(response->containers[i]->created);
+        pod->set_created_at(sandbox->GetCreatedAt());
 
-        CRIHelpers::ExtractLabels(response->containers[i]->labels, *pod->mutable_labels());
+        auto config = sandbox->GetSandboxConfig();
 
-        CRIHelpers::ExtractAnnotations(response->containers[i]->annotations, *pod->mutable_annotations());
+        *pod->mutable_labels() = config->labels();
 
-        CRINamingV1::ParseSandboxName(pod->annotations(), *pod->mutable_metadata(), error);
+        *pod->mutable_annotations() = config->annotations();
 
-        if (filterOutReadySandboxes && pod->state() == runtime::v1::SANDBOX_READY) {
-            continue;
-        }
+        *pod->mutable_metadata() = config->metadata();
 
-        pods->push_back(std::move(pod));
+        pods.push_back(std::move(pod));
     }
-}
-
-void PodSandboxManagerService::ListPodSandbox(const runtime::v1::PodSandboxFilter *filter,
-                                              std::vector<std::unique_ptr<runtime::v1::PodSandbox>> *pods,
-                                              Errors &error)
-{
-    int ret = 0;
-    container_list_request *request { nullptr };
-    container_list_response *response { nullptr };
-    bool filterOutReadySandboxes { false };
-
-    if (m_cb == nullptr || m_cb->container.list == nullptr) {
-        error.SetError("Unimplemented callback");
-        return;
-    }
-
-    ListPodSandboxFromGRPC(filter, &request, &filterOutReadySandboxes, error);
-    if (error.NotEmpty()) {
-        goto cleanup;
-    }
-
-    ret = m_cb->container.list(request, &response);
-    if (ret != 0) {
-        if (response != nullptr && (response->errmsg != nullptr)) {
-            error.SetError(response->errmsg);
-        } else {
-            error.SetError("Failed to call start container callback");
-        }
-        goto cleanup;
-    }
-    ListPodSandboxToGRPC(response, pods, filterOutReadySandboxes, error);
-
-cleanup:
-    free_container_list_request(request);
-    free_container_list_response(response);
 }
 
 void PodSandboxManagerService::GetPodSandboxCgroupMetrics(const container_inspect *inspectData,

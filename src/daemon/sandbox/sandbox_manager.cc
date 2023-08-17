@@ -174,7 +174,7 @@ auto SandboxManager::RestoreSandboxes(Errors &error) -> bool
     return true;
 }
 
-void SandboxManager::ListAllSandboxes(runtime::v1::PodSandboxFilter &filters,
+void SandboxManager::ListAllSandboxes(const runtime::v1::PodSandboxFilter &filters,
                                       std::vector<std::shared_ptr<Sandbox>> &sandboxes)
 {
     // 1. get all sandboxes

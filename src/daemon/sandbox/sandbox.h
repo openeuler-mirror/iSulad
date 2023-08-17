@@ -98,6 +98,7 @@ public:
     auto GetNetMode() -> const std::string &;
     auto GetNetNsPath() -> const std::string &;
     auto GetNetworkSettings() -> std::string;
+    auto GetCreatedAt() -> uint64_t;
     void SetNetMode(const std::string &mode);
     void SetController(std::shared_ptr<Controller> controller);
     void AddAnnotations(const std::string &key, const std::string &value);
