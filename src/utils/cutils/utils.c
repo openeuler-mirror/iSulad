@@ -1418,7 +1418,7 @@ static void normalized_host_arch(char **host_arch, struct utsname uts)
         { "mips64le", "mips64le" },
         { "mips64el", "mips64le" }
     };
-    int i = 0;
+    size_t i = 0;
 
     *host_arch = util_strdup_s(uts.machine);
 
@@ -1433,7 +1433,6 @@ static void normalized_host_arch(char **host_arch, struct utsname uts)
 
 static void normalized_host_variant(const char *host_arch, char **host_variant)
 {
-    int i = 0;
     char *tmp_variant = NULL;
     const char *variant_map[][2] = { { "5", "v5" },
         { "6", "v6" },
@@ -1459,6 +1458,7 @@ static void normalized_host_variant(const char *host_arch, char **host_variant)
     }
 
     if (!strcmp(host_arch, "arm") && *host_variant != NULL) {
+        size_t i;
         tmp_variant = *host_variant;
         *host_variant = util_strdup_s(tmp_variant);
         for (i = 0; i < sizeof(variant_map) / sizeof(variant_map[0]); ++i) {

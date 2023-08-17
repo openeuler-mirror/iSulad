@@ -129,7 +129,8 @@ static inline bool atomic_int_compare_exchange(volatile uint64_t *atomic, uint64
 
     atomic_mutex_lock(&g_atomic_lock);
 
-    if ((success = (*atomic == oldval))) {
+    success = (*atomic == oldval);
+    if (success) {
         *atomic = newval;
     }
 

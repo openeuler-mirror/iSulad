@@ -32,7 +32,6 @@ int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode)
     int srcfd = 0;
     gzFile stream = NULL;
     ssize_t size = 0;
-    size_t n = 0;
     void *buffer = 0;
     const char *gzerr = NULL;
     int errnum = 0;
@@ -58,6 +57,7 @@ int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode)
     }
 
     while (true) {
+        int n;
         size = util_read_nointr(srcfd, buffer, BLKSIZE);
         if (size < 0) {
             ERROR("read file %s failed: %s", srcfile, strerror(errno));
@@ -68,7 +68,7 @@ int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode)
         }
 
         n = gzwrite(stream, buffer, size);
-        if (n <= 0 || n != (size_t)size) {
+        if (n <= 0 || n != size) {
             gzerr = gzerror(stream, &errnum);
             if (gzerr != NULL && strcmp(gzerr, "") != 0) {
                 ERROR("gzread error: %s", gzerr);
@@ -104,7 +104,6 @@ int util_gzip_d(const char *srcfile, const FILE *dstfp)
     int ret = 0;
     size_t size = 0;
     void *buffer = NULL;
-    size_t n = 0;
 
     stream = gzopen(srcfile, "r");
     if (stream == NULL) {
@@ -120,6 +119,7 @@ int util_gzip_d(const char *srcfile, const FILE *dstfp)
     }
 
     while (true) {
+        size_t n;
         n = gzread(stream, buffer, BLKSIZE);
         if (n <= 0) {
             gzerr = gzerror(stream, &errnum);
