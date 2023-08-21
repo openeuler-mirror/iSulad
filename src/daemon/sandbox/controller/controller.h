@@ -51,6 +51,7 @@ struct ControllerSandboxInfo {
     std::string id;
     uint32_t pid;
     uint64_t createdAt;
+    std::string taskAddress;
     google::protobuf::Map<std::string, std::string> labels;
 };
 

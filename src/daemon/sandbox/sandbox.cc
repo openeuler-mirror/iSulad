@@ -667,9 +667,11 @@ auto Sandbox::Start(Errors &error) -> bool
 
     m_state.pid = info->pid;
     m_state.createdAt = info->createdAt;
+    m_taskAddress = info->taskAddress;
+    m_state.status = SANDBOX_STATUS_RUNNING;
 
-    // TODO: The start function in the updated sandbox API will return the task address without calling the status function
-    if (!UpdateStatus(error)) {
+    if (!SaveState(error)) {
+        ERROR("Failed to save sandbox state, %s", m_id.c_str());
         return false;
     }
 

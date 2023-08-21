@@ -121,6 +121,7 @@ void SandboxerClient::StartResponseToSandboxInfo(const containerd::services::san
     sandboxInfo.id = response.sandbox_id();
     sandboxInfo.pid = response.pid();
     sandboxInfo.createdAt = TimestampToNanos(response.created_at());
+    sandboxInfo.taskAddress = response.task_address();
     sandboxInfo.labels = response.labels();
 }
 
