@@ -25,6 +25,7 @@
 #include "service_container_api.h"
 #include "request_cache.h"
 #include "stream_server.h"
+#include "sandbox_manager.h"
 
 namespace CRIV1 {
 auto ContainerManagerService::GetContainerOrSandboxRuntime(const std::string &realID, Errors &error) -> std::string
@@ -119,73 +120,10 @@ auto ContainerManagerService::PackCreateContainerHostConfigSecurityContext(
     return 0;
 }
 
-auto ContainerManagerService::DoUsePodLevelSELinuxConfig(const runtime::v1::ContainerConfig &containerConfig,
-                                                         host_config *hostconfig, const std::string &realPodSandboxID, Errors &error) -> int
-{
-    int ret = -1;
-    size_t newSize = 0;
-    size_t oldSize = 0;
-    container_inspect *inspect = nullptr;
-    std::vector<std::string> selinuxLabelOpts;
-    char **tmp_security_opt = nullptr;
-    std::string tmp_str;
-
-    inspect = CRIHelpers::InspectContainer(realPodSandboxID, error, true);
-    if (error.NotEmpty()) {
-        return -1;
-    }
-
-    if (inspect->process_label == nullptr) {
-        ret = 0;
-        goto cleanup;
-    }
-
-    tmp_str = std::string(inspect->process_label);
-    selinuxLabelOpts = CRIHelpersV1::GetPodSELinuxLabelOpts(tmp_str, error);
-    if (error.NotEmpty()) {
-        ERROR("Failed to get SELinuxLabelOpts for container %s", containerConfig.metadata().name().c_str());
-        goto cleanup;
-    }
-    if (selinuxLabelOpts.empty()) {
-        error.Errorf("SElinuxLabelOpts for container %s is empty", containerConfig.metadata().name().c_str());
-        goto cleanup;
-    }
-    if (selinuxLabelOpts.size() > (SIZE_MAX / sizeof(char *)) - hostconfig->security_opt_len) {
-        ERROR("Out of memory");
-        error.Errorf("Out of memory");
-        goto cleanup;
-    }
-    newSize = (hostconfig->security_opt_len + selinuxLabelOpts.size()) * sizeof(char *);
-    oldSize = hostconfig->security_opt_len * sizeof(char *);
-    ret = util_mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostconfig->security_opt, oldSize);
-    if (ret != 0) {
-        ERROR("Out of memory");
-        error.Errorf("Out of memory");
-        goto cleanup;
-    }
-    hostconfig->security_opt = tmp_security_opt;
-    for (const auto &securityOpt : selinuxLabelOpts) {
-        hostconfig->security_opt[hostconfig->security_opt_len] = util_strdup_s(securityOpt.c_str());
-        hostconfig->security_opt_len++;
-    }
-
-cleanup:
-    free_container_inspect(inspect);
-    return ret;
-}
-
-auto ContainerManagerService::IsSELinuxLabelEmpty(const ::runtime::v1::SELinuxOption &selinuxOption) -> bool
-{
-    if (selinuxOption.user().length() == 0 && selinuxOption.role().length() == 0 && selinuxOption.type().length() == 0 &&
-        selinuxOption.level().length() == 0) {
-        return true;
-    }
-    return false;
-}
-
 auto ContainerManagerService::GenerateCreateContainerHostConfig(
+    sandbox::Sandbox &sandbox,
     const runtime::v1::ContainerConfig &containerConfig,
-    const std::string &realPodSandboxID, Errors &error) -> host_config *
+    Errors &error) -> host_config *
 {
     host_config *hostconfig = (host_config *)util_common_calloc_s(sizeof(host_config));
     if (hostconfig == nullptr) {
@@ -217,15 +155,7 @@ auto ContainerManagerService::GenerateCreateContainerHostConfig(
         goto cleanup;
     }
 
-    // If selinux label is not specified in container config, use pod level SELinux config
-    if (!containerConfig.linux().has_security_context() ||
-        !containerConfig.linux().security_context().has_selinux_options() ||
-        IsSELinuxLabelEmpty(containerConfig.linux().security_context().selinux_options())) {
-        if (DoUsePodLevelSELinuxConfig(containerConfig, hostconfig, realPodSandboxID, error) != 0) {
-            error.SetError("Failed to security context to host config");
-            goto cleanup;
-        }
-    }
+    // TODO: Add support for selinux
 
     return hostconfig;
 
@@ -402,11 +332,34 @@ cleanup:
     return nullptr;
 }
 
+auto ContainerManagerService::GenerateSandboxInfo(
+    sandbox::Sandbox &sandbox, Errors &err) -> container_sandbox_info *
+{
+    container_sandbox_info *sandbox_info = nullptr;
+    sandbox_info = (container_sandbox_info *)util_common_calloc_s(sizeof(container_sandbox_info));
+    if (sandbox_info == nullptr) {
+        err.SetError("Failed to generate sandbox info, out of memory");
+        return nullptr;
+    }
+
+    sandbox_info->sandboxer = util_strdup_s(sandbox.GetSandboxer().c_str());
+    sandbox_info->id = util_strdup_s(sandbox.GetId().c_str());
+    sandbox_info->pid = sandbox.GetPid();
+    sandbox_info->task_address = util_strdup_s(sandbox.GetTaskAddress().c_str());
+    sandbox_info->hostname = util_strdup_s(sandbox.GetSandboxConfig().hostname().c_str());
+    sandbox_info->hostname_path = util_strdup_s(sandbox.GetHostnamePath().c_str());
+    sandbox_info->hosts_path = util_strdup_s(sandbox.GetHostsPath().c_str());
+    sandbox_info->resolv_conf_path = util_strdup_s(sandbox.GetResolvPath().c_str());
+    sandbox_info->shm_path = util_strdup_s(sandbox.GetShmPath().c_str());
+
+    return sandbox_info;
+}
+
 container_create_request *
-ContainerManagerService::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
+ContainerManagerService::GenerateCreateContainerRequest(sandbox::Sandbox &sandbox,
                                                         const runtime::v1::ContainerConfig &containerConfig,
                                                         const runtime::v1::PodSandboxConfig &podSandboxConfig,
-                                                        const std::string &podSandboxRuntime, Errors &error)
+                                                        Errors &error)
 {
     struct parser_context ctx {
         OPT_GEN_SIMPLIFY, 0
@@ -422,13 +375,12 @@ ContainerManagerService::GenerateCreateContainerRequest(const std::string &realP
     std::string cname = CRINamingV1::MakeContainerName(podSandboxConfig, containerConfig);
     request->id = util_strdup_s(cname.c_str());
 
-    if (!podSandboxRuntime.empty()) {
-        std::string convertRuntime = CRIHelpers::CRIRuntimeConvert(podSandboxRuntime);
-        if (!convertRuntime.empty()) {
-            request->runtime = util_strdup_s(convertRuntime.c_str());
-        } else {
-            request->runtime = util_strdup_s(podSandboxRuntime.c_str());
-        }
+    request->runtime = util_strdup_s(sandbox.GetRuntime().c_str());
+
+    request->sandbox = GenerateSandboxInfo(sandbox, error);
+    if (error.NotEmpty()) {
+        free_container_create_request(request);
+        return nullptr;
     }
 
     if (!containerConfig.image().image().empty()) {
@@ -437,7 +389,7 @@ ContainerManagerService::GenerateCreateContainerRequest(const std::string &realP
 
     container_config *custom_config { nullptr };
 
-    host_config *hostconfig = GenerateCreateContainerHostConfig(containerConfig, realPodSandboxID, error);
+    host_config *hostconfig = GenerateCreateContainerHostConfig(sandbox, containerConfig, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
@@ -447,12 +399,12 @@ ContainerManagerService::GenerateCreateContainerRequest(const std::string &realP
     }
 
     custom_config =
-        GenerateCreateContainerCustomConfig(cname, realPodSandboxID, containerConfig, podSandboxConfig, error);
+        GenerateCreateContainerCustomConfig(cname, sandbox.GetId(), containerConfig, podSandboxConfig, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
 
-    CRIHelpersV1::UpdateCreateConfig(custom_config, hostconfig, containerConfig, realPodSandboxID, error);
+    CRIHelpersV1::UpdateCreateConfig(custom_config, hostconfig, containerConfig, sandbox.GetId(), error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
@@ -486,7 +438,7 @@ std::string ContainerManagerService::CreateContainer(const std::string &podSandb
                                                      Errors &error)
 {
     std::string response_id;
-    std::string podSandboxRuntime;
+    std::shared_ptr<sandbox::Sandbox> sandbox { nullptr };
 
     if (m_cb == nullptr || m_cb->container.create == nullptr) {
         error.SetError("Unimplemented callback");
@@ -495,17 +447,14 @@ std::string ContainerManagerService::CreateContainer(const std::string &podSandb
     container_create_request *request { nullptr };
     container_create_response *response { nullptr };
 
-    std::string realPodSandboxID = CRIHelpers::GetRealContainerOrSandboxID(m_cb, podSandboxID, true, error);
+    // Get sandbox from sandboxmanager
+    sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID, error);
     if (error.NotEmpty()) {
-        ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
-        error.Errorf("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
-        goto cleanup;
+        WARN("Failed get sandbox instance for creating container: %s", error.GetCMessage());
+        return response_id;
     }
 
-    podSandboxRuntime = GetContainerOrSandboxRuntime(realPodSandboxID, error);
-
-    request = GenerateCreateContainerRequest(realPodSandboxID, containerConfig, podSandboxConfig, podSandboxRuntime,
-                                             error);
+    request = GenerateCreateContainerRequest(*sandbox, containerConfig, podSandboxConfig, error);
     if (error.NotEmpty()) {
         error.SetError("Failed to generate create container request");
         goto cleanup;
@@ -521,6 +470,7 @@ std::string ContainerManagerService::CreateContainer(const std::string &podSandb
     }
 
     response_id = response->id;
+    sandbox->AddContainer(response_id);
 
 cleanup:
     free_container_create_request(request);
@@ -612,9 +562,45 @@ void ContainerManagerService::StopContainer(const std::string &containerID, int6
     CRIHelpers::StopContainer(m_cb, containerID, timeout, error);
 }
 
+// TODO: Consider to refactor the way we handle container list in sandbox.
+//       This function might be removed after that.
+void ContainerManagerService::RemoveContainerIDFromSandbox(const std::string &containerID)
+{
+    std::string podSandboxID;
+    Errors error;
+
+    CRIHelpersV1::GetContainerSandboxID(containerID, podSandboxID, error);
+    if (error.NotEmpty()) {
+        WARN("Failed to get sandbox id for container %s: %s", containerID.c_str(), error.GetCMessage());
+        return;
+    }
+
+    std::shared_ptr<sandbox::Sandbox> sandbox =
+        sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID, error);
+    if (error.NotEmpty()) {
+        WARN("Failed get sandbox instance for removing container %s: %s", containerID.c_str(), error.GetCMessage());
+        return;
+    }
+
+    if (sandbox == nullptr) {
+        WARN("Failed to find sandbox %s for removing container %s", podSandboxID.c_str(), containerID.c_str());
+        return;
+    }
+
+    sandbox->RemoveContainer(containerID);
+}
+
 void ContainerManagerService::RemoveContainer(const std::string &containerID, Errors &error)
 {
+    // TODO: Refactor after adding the ability to use sandbox manager for sandboxid query
+    //       This will remove container id from sandbox container_list first,
+    //       if the following operation failed, it could cause inconsistency.
+    RemoveContainerIDFromSandbox(containerID);
+
     CRIHelpers::RemoveContainer(m_cb, containerID, error);
+    if (error.NotEmpty()) {
+        WARN("Failed to remove container %s", containerID.c_str());
+    }
 }
 
 void ContainerManagerService::ListContainersFromGRPC(const runtime::v1::ContainerFilter *filter,
@@ -671,7 +657,7 @@ void ContainerManagerService::ListContainersFromGRPC(const runtime::v1::Containe
 }
 
 void ContainerManagerService::ListContainersToGRPC(container_list_response *response,
-                                                   std::vector<std::unique_ptr<runtime::v1::Container>> *pods,
+                                                   std::vector<std::unique_ptr<runtime::v1::Container>> *containers,
                                                    Errors &error)
 {
     for (size_t i {}; i < response->containers_len; i++) {
@@ -718,7 +704,7 @@ void ContainerManagerService::ListContainersToGRPC(container_list_response *resp
             CRIHelpersV1::ContainerStatusToRuntime(Container_Status(response->containers[i]->status));
         container->set_state(state);
 
-        pods->push_back(move(container));
+        containers->push_back(move(container));
     }
 }
 

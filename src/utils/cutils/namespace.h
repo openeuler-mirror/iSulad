@@ -18,6 +18,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+#ifdef ENABLE_CRI_API_V1
+#include <isula_libutils/container_sandbox_info.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -108,6 +112,9 @@ static inline bool namespace_is_shareable(const char *mode)
     return false;
 }
 
+#ifdef ENABLE_CRI_API_V1
+bool namespace_is_sandbox(const char *mode, const container_sandbox_info *sandbox_info);
+#endif
 char *namespace_get_connected_container(const char *mode);
 char *namespace_get_host_namespace_path(const char *type);
 

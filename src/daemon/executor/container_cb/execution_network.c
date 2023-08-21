@@ -1076,11 +1076,60 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_CRI_API_V1
+static int init_container_network_confs_sandbox(const char *id, const char *rootpath,
+                                                container_config_v2_common_config *v2_spec)
+{
+    const container_sandbox_info *sandbox_info = v2_spec->sandbox_info;
+
+    if (sandbox_info->hostname != NULL && sandbox_info->hostname_path != NULL) {
+        free(v2_spec->config->hostname);
+        v2_spec->config->hostname = util_strdup_s(sandbox_info->hostname);
+        free(v2_spec->hostname_path);
+        v2_spec->hostname_path = util_strdup_s(sandbox_info->hostname_path);
+    } else {
+        if (create_default_hostname(id, rootpath, false, v2_spec) != 0) {
+            ERROR("Failed to create default hostname");
+            return -1;
+        }
+    }
+
+    if (sandbox_info->hosts_path != NULL) {
+        free(v2_spec->hosts_path);
+        v2_spec->hosts_path = util_strdup_s(sandbox_info->hosts_path);
+    } else {
+        if (create_default_hosts(id, rootpath, false, v2_spec) != 0) {
+            ERROR("Failed to create default hosts");
+            return -1;
+        }
+    }
+
+    if (sandbox_info->resolv_conf_path != NULL) {
+        free(v2_spec->resolv_conf_path);
+        v2_spec->resolv_conf_path = util_strdup_s(sandbox_info->resolv_conf_path);
+    } else {
+        if (create_default_resolv(id, rootpath, v2_spec) != 0) {
+            ERROR("Failed to create default resolv.conf");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+#endif
+
 int init_container_network_confs(const char *id, const char *rootpath, const host_config *hc,
                                  container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
     bool share_host = namespace_is_host(hc->network_mode);
+
+#ifdef ENABLE_CRI_API_V1
+    // If container is sandbox, use sandbox's network config.
+    if (namespace_is_sandbox(hc->network_mode, v2_spec->sandbox_info)) {
+        return init_container_network_confs_sandbox(id, rootpath, v2_spec);
+    }
+#endif
 
     // is container mode
     if (namespace_is_container(hc->network_mode)) {

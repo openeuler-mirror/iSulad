@@ -20,6 +20,7 @@
 #include <mutex>
 #include <memory>
 #include <sstream>
+#include <sys/mount.h>
 
 #include <isula_libutils/log.h>
 #include <isula_libutils/sandbox_metadata.h>
@@ -40,6 +41,8 @@
 #define SANDBOX_NOTREADY_STATE_STR "SANDBOX_NOTREADY"
 
 namespace sandbox {
+
+const std::string SHM_MOUNT_POINT = "/dev/shm";
 
 static int WriteDefaultSandboxHosts(const std::string &path, const std::string &hostname)
 {
@@ -99,27 +102,27 @@ auto Sandbox::IsReady() -> bool
     return m_state.status == SANDBOX_STATUS_RUNNING;
 }
 
-auto Sandbox::GetId() -> const std::string &
+auto Sandbox::GetId() const -> const std::string &
 {
     return m_id;
 }
 
-auto Sandbox::GetName() -> const std::string &
+auto Sandbox::GetName() const -> const std::string &
 {
     return m_name;
 }
 
-auto Sandbox::GetRuntime() -> const std::string &
+auto Sandbox::GetRuntime() const -> const std::string &
 {
     return m_runtimeInfo.runtime;
 }
 
-auto Sandbox::GetSandboxer() -> const std::string &
+auto Sandbox::GetSandboxer() const -> const std::string &
 {
     return m_runtimeInfo.sandboxer;
 }
 
-auto Sandbox::GetRuntimeHandle() -> const std::string &
+auto Sandbox::GetRuntimeHandle() const -> const std::string &
 {
     return m_runtimeInfo.runtimeHandler;
 }
@@ -129,29 +132,34 @@ auto Sandbox::GetContainers() -> std::vector<std::string>
     return m_containers;
 }
 
-auto Sandbox::GetSandboxConfig() -> std::shared_ptr<runtime::v1::PodSandboxConfig>
+auto Sandbox::GetSandboxConfig() const -> const runtime::v1::PodSandboxConfig &
+{
+    return *m_sandboxConfig;
+}
+
+auto Sandbox::GetMutableSandboxConfig() -> std::shared_ptr<runtime::v1::PodSandboxConfig>
 {
     return m_sandboxConfig;
 }
 
-auto Sandbox::GetRootDir() -> std::string
+auto Sandbox::GetRootDir() const -> const std::string &
 {
     return m_rootdir;
 }
 
-auto Sandbox::GetStateDir() -> std::string
+auto Sandbox::GetStateDir() const -> const std::string &
 {
     return m_statedir;
 }
 
-auto Sandbox::GetResolvPath() -> std::string
+auto Sandbox::GetResolvPath() const -> std::string
 {
     return m_rootdir + std::string("/resolv.conf");
 }
 
-auto Sandbox::GetShmPath() -> std::string
+auto Sandbox::GetShmPath() const -> std::string
 {
-    return m_rootdir + std::string("/dev/shm");
+    return m_rootdir + std::string("/mounts/shm");
 }
 
 auto Sandbox::GetStatsInfo() -> StatsInfo
@@ -163,22 +171,22 @@ auto Sandbox::GetStatsInfo() -> StatsInfo
     return info;
 }
 
-auto Sandbox::GetNetworkReady() -> bool
+auto Sandbox::GetNetworkReady() const -> bool
 {
     return m_networkReady;
 }
 
-auto Sandbox::GetNetMode() -> const std::string &
+auto Sandbox::GetNetMode() const -> const std::string &
 {
     return m_netMode;
 }
 
-auto Sandbox::GetNetNsPath() -> const std::string &
+auto Sandbox::GetNetNsPath() const -> const std::string &
 {
     return m_netNsPath;
 }
 
-auto Sandbox::GetNetworkSettings() -> std::string
+auto Sandbox::GetNetworkSettings() -> const std::string &
 {
     ReadGuard<RWMutex> lock(m_stateMutex);
     return m_networkSettings;
@@ -190,6 +198,12 @@ auto Sandbox::GetCreatedAt() -> uint64_t
     return m_state.createdAt;
 }
 
+auto Sandbox::GetPid() -> uint32_t
+{
+    ReadGuard<RWMutex> lock(m_stateMutex);
+    return m_state.pid;
+}
+
 void Sandbox::DoUpdateExitedStatus(const ControllerExitInfo &exitInfo)
 {
     WriteGuard<RWMutex> lock(m_stateMutex);
@@ -198,17 +212,12 @@ void Sandbox::DoUpdateExitedStatus(const ControllerExitInfo &exitInfo)
     m_state.status = SANDBOX_STATUS_STOPPED;
 }
 
-auto Sandbox::SetupSandboxFiles(Errors &error) -> bool
+auto Sandbox::CreateHostname(bool shareHost, Errors &error) -> bool
 {
     int ret = 0;
-    bool shareHost = false;
     std::string hostname;
     std::string hostnameContent;
     char tmp_name[MAX_HOST_NAME_LEN] = { 0x00 };
-
-    shareHost = namespace_is_host(m_netMode.c_str());
-
-    // create hostname
     if (m_sandboxConfig->hostname().length() == 0) {
         if (shareHost) {
             ret = gethostname(tmp_name, sizeof(tmp_name));
@@ -232,7 +241,13 @@ auto Sandbox::SetupSandboxFiles(Errors &error) -> bool
         return false;
     }
 
-    // create hosts
+    return true;
+}
+
+auto Sandbox::CreateHosts(bool shareHost, Errors &error) -> bool
+{
+    int ret = 0;
+
     if (shareHost && util_file_exists(ETC_HOSTS)) {
         ret = util_copy_file(ETC_HOSTS, GetHostsPath().c_str(), NETWORK_MOUNT_FILE_MODE);
     } else {
@@ -245,7 +260,14 @@ auto Sandbox::SetupSandboxFiles(Errors &error) -> bool
         return false;
     }
 
-    // create resolv.conf
+    return true;
+}
+
+// Might be overwritten by network setup
+auto Sandbox::CreateResolvConf(Errors &error) -> bool
+{
+    int ret = 0;
+
     if (util_file_exists(RESOLV_CONF_PATH)) {
         ret = util_copy_file(RESOLV_CONF_PATH, GetResolvPath().c_str(), NETWORK_MOUNT_FILE_MODE);
     } else {
@@ -258,6 +280,65 @@ auto Sandbox::SetupSandboxFiles(Errors &error) -> bool
         return false;
     }
 
+    return true;
+}
+
+auto Sandbox::CreateShmDev(Errors &error) -> bool
+{
+    if (m_sandboxConfig->linux().has_security_context() &&
+        m_sandboxConfig->linux().security_context().namespace_options().ipc() == runtime::v1::NamespaceMode::NODE) {
+        if (!util_file_exists(SHM_MOUNT_POINT.c_str())) {
+            ERROR("/dev/shm is not mounted, but must be for --ipc=host");
+            return false;
+        }
+    } else {
+        if (util_create_shm_path(GetShmPath().c_str(), DEFAULT_SHM_SIZE) != 0) {
+            error.Errorf("Failed to create default shm");
+            ERROR("Failed to create default shm");
+            return false;
+        }
+#ifdef ENABLE_USERNS_REMAP
+        if (util_chown_for_shm(spath, host_spec->user_remap) != 0) {
+            error.Errorf("Failed to change shm owner");
+            ERROR("Failed to change shm owner");
+            return false;
+        }
+#endif
+    }
+
+    return true;
+}
+
+auto Sandbox::SetupSandboxFiles(Errors &error) -> bool
+{
+    bool shareHost = namespace_is_host(m_netMode.c_str());
+
+    if (!CreateHostname(shareHost, error)) {
+        return false;
+    }
+    if (!CreateHosts(shareHost, error)) {
+        return false;
+    }
+    if (!CreateResolvConf(error)) {
+        return false;
+    }
+    if (!CreateShmDev(error)) {
+        return false;
+    }
+
+    return true;
+}
+
+auto Sandbox::CleanupSandboxFiles(Errors &error) -> bool
+{
+    if (m_sandboxConfig->linux().has_security_context() &&
+        m_sandboxConfig->linux().security_context().namespace_options().ipc() != runtime::v1::NamespaceMode::NODE) {
+        if (!util_deal_with_mount_info(util_umount_residual_shm, GetShmPath().c_str())) {
+            error.Errorf("Failed to umount residual shm, %s", GetShmPath().c_str());
+            ERROR("Failed to umount residual shm, %s", GetShmPath().c_str());
+            return false;
+        }
+    }
     return true;
 }
 
@@ -476,6 +557,21 @@ auto Sandbox::UpdateStatus(Errors &error) -> bool
     return true;
 }
 
+void Sandbox::CleanupSandboxDirs()
+{
+    if (!util_deal_with_mount_info(util_umount_residual_shm, GetRootDir().c_str())) {
+        ERROR("Failed to clean sandbox's mounts: %s", m_id.c_str());
+    }
+
+    if (util_recursive_rmdir(m_rootdir.c_str(), 0) != 0) {
+        ERROR("Failed to delete sandbox's root directory %s", m_rootdir.c_str());
+    }
+
+    if (util_recursive_rmdir(m_statedir.c_str(), 0) != 0) {
+        ERROR("Failed to delete sandbox's state directory %s", m_rootdir.c_str());
+    }
+}
+
 auto Sandbox::Create(Errors &error) -> bool
 {
     int nret = -1;
@@ -529,12 +625,7 @@ auto Sandbox::Create(Errors &error) -> bool
 
 out:
     umask(mask);
-    if (util_recursive_rmdir(m_rootdir.c_str(), 0) != 0) {
-        ERROR("Failed to delete container's root directory %s", m_rootdir.c_str());
-    }
-    if (util_recursive_rmdir(m_statedir.c_str(), 0) != 0) {
-        ERROR("Failed to delete container's state directory %s", m_rootdir.c_str());
-    }
+    CleanupSandboxDirs();
     return false;
 }
 
@@ -660,17 +751,7 @@ auto Sandbox::Remove(Errors &error) -> bool
         goto error_out;
     }
 
-    if (util_recursive_rmdir(GetStateDir().c_str(), 0) != 0) {
-        ERROR("Failed to delete sandbox's state directory %s", GetStateDir().c_str());
-    }
-
-    if (!util_deal_with_mount_info(util_umount_residual_shm, GetRootDir().c_str())) {
-        ERROR("Failed to clean sandbox's mounts: %s", m_id.c_str());
-    }
-
-    if (util_recursive_rmdir(GetRootDir().c_str(), 0) != 0) {
-        ERROR("Failed to delete sandbox's root directory %s", GetRootDir().c_str());
-    }
+    CleanupSandboxDirs();
     return true;
 error_out:
     m_state.status = before;
@@ -932,17 +1013,17 @@ void Sandbox::SetNetworkSettings(const std::string &settings, Errors &error)
     }
 }
 
-auto Sandbox::GetTaskAddress() -> const std::string &
+auto Sandbox::GetTaskAddress() const -> const std::string &
 {
     return m_taskAddress;
 }
 
-auto Sandbox::GetHostnamePath() -> std::string
+auto Sandbox::GetHostnamePath() const -> std::string
 {
     return m_rootdir + std::string("/hostname");
 }
 
-auto Sandbox::GetHostsPath() -> std::string
+auto Sandbox::GetHostsPath() const -> std::string
 {
     return m_rootdir + std::string("/hosts");
 }

@@ -315,6 +315,7 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
     int ret = 0;
     int pid = 0;
     int fd = -1;
+    const char *task_address = NULL;
     char addr[PATH_MAX] = {0};
     char *exit_fifo_path = NULL;
     char *state_path = NULL;
@@ -354,16 +355,25 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
     }
     close(fd);
 
-    if (shim_bin_v2_create(runtime, id, params->bundle, NULL, addr, state_path) != 0) {
-        ERROR("%s: failed to create v2 shim", id);
-        ret = -1;
-        goto out;
+    /**
+     * If task address is not set, create a new shim-v2 and get the address.
+     * If task address is set, use it directly. 
+     */
+    if (params->task_addr == NULL) {
+        if (shim_bin_v2_create(runtime, id, params->bundle, NULL, addr, state_path) != 0) {
+            ERROR("%s: failed to create v2 shim", id);
+            ret = -1;
+            goto out;
+        }
+        task_address = addr;
+    } else {
+        task_address = params->task_addr;
     }
 
-    INFO("%s: get shim-v2 address %s", id, addr);
+    INFO("%s: get shim-v2 address %s", id, task_address);
 
-    if (shim_v2_new(id, addr) != 0) {
-        ERROR("%s: failed to init shim v2 connection on address %s", id, addr);
+    if (shim_v2_new(id, task_address) != 0) {
+        ERROR("%s: failed to init shim v2 connection on address %s", id, task_address);
         ret = -1;
         goto out;
     }

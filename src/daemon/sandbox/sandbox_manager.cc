@@ -92,7 +92,7 @@ auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, s
     }
 
     std::shared_ptr<Sandbox> old = GetSandbox(name, error);
-    if (old != nullptr) {
+    if (error.NotEmpty()) {
         ERROR("Conflict. The name \"%s\" is already in use by sandbox %s. "
               "You have to remove that sandbox to be able to reuse that name.",
               name.c_str(), old->GetId().c_str());
@@ -188,12 +188,12 @@ void SandboxManager::ListAllSandboxes(const runtime::v1::PodSandboxFilter &filte
             continue;
         }
 
-        if (sandbox->GetSandboxConfig() == nullptr) {
+        if (sandbox->GetMutableSandboxConfig() == nullptr) {
             continue;
         }
 
         bool match = true;
-        auto labels = sandbox->GetSandboxConfig()->labels();
+        auto labels = sandbox->GetMutableSandboxConfig()->labels();
         for (auto &iter : filters.label_selector()) {
             auto val = labels.find(iter.first);
             if (val == labels.end() || val->second != iter.second) {
@@ -285,6 +285,8 @@ auto SandboxManager::GetSandbox(const std::string &idOrName, Errors &error) -> s
         return sandbox;
     }
 
+    error.SetError("Sandbox not found");
+    ERROR("Sandbox not found: %s", idOrName.c_str());
     return nullptr;
 }
 
@@ -297,7 +299,7 @@ auto SandboxManager::DeleteSandbox(const std::string &idOrName, Errors &error) -
     }
 
     std::shared_ptr<Sandbox> sandbox = GetSandbox(idOrName, error);
-    if (sandbox == nullptr) {
+    if (error.NotEmpty()) {
         ERROR("Failed to find sandbox %s", idOrName.c_str());
         error.AppendError("Failed to find sandbox.");
         return false;

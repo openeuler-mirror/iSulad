@@ -1534,7 +1534,8 @@ out:
     return ret;
 }
 
-static int merge_share_single_namespace(const oci_runtime_spec *oci_spec, const char *path, const char *type)
+static int merge_share_single_namespace(const oci_runtime_spec *oci_spec, const char *path,
+                                        const char *type, const container_sandbox_info *sandbox_info)
 {
     int ret = 0;
     char *ns_path = NULL;
@@ -1543,11 +1544,29 @@ static int merge_share_single_namespace(const oci_runtime_spec *oci_spec, const 
         return 0;
     }
 
+#ifdef ENABLE_CRI_API_V1
+    if (namespace_is_sandbox(path, sandbox_info)) {
+        ns_path = format_share_namespace_path(sandbox_info->pid, type);
+        if (ns_path == NULL) {
+            ERROR("Failed to get sandbox namespace path");
+            return -1;
+        }
+    } else {
+        ret = get_share_namespace_path(type, path, &ns_path);
+        if (ret != 0) {
+            ERROR("Failed to get share ns type:%s path:%s", type, path);
+            return -1;
+        }
+    }
+#else
+    (void)sandbox_info;
     ret = get_share_namespace_path(type, path, &ns_path);
     if (ret != 0) {
         ERROR("Failed to get share ns type:%s path:%s", type, path);
         return -1;
     }
+#endif
+
 
     ret = merge_share_namespace_helper(oci_spec, ns_path, type);
     if (ret != 0) {
@@ -1559,7 +1578,8 @@ static int merge_share_single_namespace(const oci_runtime_spec *oci_spec, const 
 }
 
 static int merge_share_network_namespace(const oci_runtime_spec *oci_spec, const host_config *host_spec,
-                                         const container_network_settings *network_settings, const char *type)
+                                         const container_network_settings *network_settings, const char *type,
+                                         const container_sandbox_info *sandbox_info)
 {
     int ret = 0;
     char *ns_path = NULL;
@@ -1568,12 +1588,28 @@ static int merge_share_network_namespace(const oci_runtime_spec *oci_spec, const
         return 0;
     }
 
+#ifdef ENABLE_CRI_API_V1
+    if (namespace_is_sandbox(host_spec->network_mode, sandbox_info)) {
+        ns_path = format_share_namespace_path(sandbox_info->pid, type);
+        if (ns_path == NULL) {
+            ERROR("Failed to get sandbox namespace path");
+            return -1;
+        }
+    } else {
+        ret = get_network_namespace_path(host_spec, network_settings, type, &ns_path);
+        if (ret != 0) {
+            ERROR("Failed to get network namespace path");
+            return -1;
+        }
+    }
+#else
+    (void)sandbox_info;
     ret = get_network_namespace_path(host_spec, network_settings, type, &ns_path);
     if (ret != 0) {
         ERROR("Failed to get network namespace path");
         return -1;
     }
-
+#endif
     ret = merge_share_namespace_helper(oci_spec, ns_path, type);
     if (ret != 0) {
         ERROR("Failed to merge share namespace namespace helper");
@@ -1594,11 +1630,13 @@ static bool userns_remap_is_enabled(const oci_runtime_spec *oci_spec)
 #endif
 
 int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
+                          const container_config_v2_common_config *v2_spec,
                           const container_network_settings *network_settings)
 {
     int ret = -1;
+    const container_sandbox_info *sandbox_info = NULL;
 
-    if (oci_spec == NULL || host_spec == NULL) {
+    if (oci_spec == NULL || host_spec == NULL || v2_spec == NULL) {
         goto out;
     }
 
@@ -1606,51 +1644,53 @@ int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_sp
         goto out;
     }
 
+    sandbox_info = v2_spec->sandbox_info;
+
 #ifdef ENABLE_USERNS_REMAP
     // user
-    if (userns_remap_is_enabled(oci_spec) && merge_share_single_namespace(oci_spec, "user", TYPE_NAMESPACE_USER) != 0) {
+    if (userns_remap_is_enabled(oci_spec) && merge_share_single_namespace(oci_spec, "user", TYPE_NAMESPACE_USER, sandbox_info) != 0) {
         ret = -1;
         goto out;
     }
 #else
-    if (merge_share_single_namespace(oci_spec, host_spec->userns_mode, TYPE_NAMESPACE_USER) != 0) {
+    if (merge_share_single_namespace(oci_spec, host_spec->userns_mode, TYPE_NAMESPACE_USER, sandbox_info) != 0) {
         ret = -1;
         goto out;
     }
 
     // user remap
-    if (host_spec->user_remap != NULL && merge_share_single_namespace(oci_spec, "user", TYPE_NAMESPACE_USER) != 0) {
+    if (host_spec->user_remap != NULL && merge_share_single_namespace(oci_spec, "user", TYPE_NAMESPACE_USER, sandbox_info) != 0) {
         ret = -1;
         goto out;
     }
 #endif
 
     // network
-    if (merge_share_network_namespace(oci_spec, host_spec, network_settings, TYPE_NAMESPACE_NETWORK) != 0) {
+    if (merge_share_network_namespace(oci_spec, host_spec, network_settings, TYPE_NAMESPACE_NETWORK, sandbox_info) != 0) {
         ret = -1;
         goto out;
     }
 
     // ipc
-    if (merge_share_single_namespace(oci_spec, host_spec->ipc_mode, TYPE_NAMESPACE_IPC) != 0) {
+    if (merge_share_single_namespace(oci_spec, host_spec->ipc_mode, TYPE_NAMESPACE_IPC, sandbox_info) != 0) {
         ret = -1;
         goto out;
     }
 
     // pid
-    if (merge_share_single_namespace(oci_spec, host_spec->pid_mode, TYPE_NAMESPACE_PID) != 0) {
+    if (merge_share_single_namespace(oci_spec, host_spec->pid_mode, TYPE_NAMESPACE_PID, sandbox_info) != 0) {
         ret = -1;
         goto out;
     }
 
     // uts
-    if (merge_share_single_namespace(oci_spec, host_spec->uts_mode, TYPE_NAMESPACE_UTS) != 0) {
+    if (merge_share_single_namespace(oci_spec, host_spec->uts_mode, TYPE_NAMESPACE_UTS, sandbox_info) != 0) {
         ret = -1;
         goto out;
     }
 
     // cgroup
-    if (merge_share_single_namespace(oci_spec, host_spec->cgroupns_mode, TYPE_NAMESPACE_CGROUP) != 0) {
+    if (merge_share_single_namespace(oci_spec, host_spec->cgroupns_mode, TYPE_NAMESPACE_CGROUP, sandbox_info) != 0) {
         ret = -1;
         goto out;
     }

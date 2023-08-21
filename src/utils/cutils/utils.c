@@ -38,6 +38,7 @@
 #include <termios.h> // IWYU pragma: keep
 #include <strings.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include "isula_libutils/log.h"
 #include "utils_array.h"
@@ -1614,6 +1615,61 @@ int util_umount_residual_shm(const char *mount_info, const char *target)
     DEBUG("Try to umount: %s", mount_info);
     if (umount2(mount_info, MNT_DETACH)) {
         SYSERROR("Failed to umount residual mount: %s", mount_info);
+    }
+
+    return 0;
+}
+
+int util_create_shm_path(const char *spath, const int64_t shm_size)
+{
+#define SHM_DIR_MODE 0700
+#define MAX_PROPERTY_LEN 64
+    char shmproperty[MAX_PROPERTY_LEN] = { 0 };
+    int nret = 0;
+
+    nret = util_mkdir_p(spath, SHM_DIR_MODE);
+    if (nret != 0) {
+        ERROR("Build shm dir failed");
+        return -1;
+    }
+
+    nret = snprintf(shmproperty, MAX_PROPERTY_LEN, "mode=1777,size=%" PRId64, shm_size);
+    if (nret < 0 || nret >= MAX_PROPERTY_LEN) {
+        ERROR("Sprintf failed");
+        return -1;
+    }
+
+    nret = mount("shm", spath, "tmpfs", MS_NOEXEC | MS_NODEV | MS_NOSUID, shmproperty);
+    if (nret < 0) {
+        ERROR("Mount %s failed: %s", spath, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+int util_chown_for_shm(const char *shm_path, const char *user_remap)
+{
+    unsigned int host_uid = 0;
+    unsigned int host_gid = 0;
+    unsigned int size = 0;
+
+    if (shm_path == NULL) {
+        return 0;
+    }
+
+    if (user_remap == NULL) {
+        return 0;
+    }
+
+    if (util_parse_user_remap(user_remap, &host_uid, &host_gid, &size)) {
+        ERROR("Failed to split string '%s'.", user_remap);
+        return -1;
+    }
+
+    if (chown(shm_path, host_uid, host_gid) != 0) {
+        ERROR("Failed to chown host path '%s'.", shm_path);
+        return -1;
     }
 
     return 0;

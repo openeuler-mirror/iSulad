@@ -232,8 +232,7 @@ TEST_F(SandboxManagerTest, TestListAllSandboxes)
     auto labels = sandboxConfig.mutable_labels();
     (*labels)["app"] = "mysql";
     filters3.mutable_label_selector()->insert({"app", "nginx"});
-    auto expectedConfig = std::make_shared<runtime::v1::PodSandboxConfig>(sandboxConfig);
-    EXPECT_CALL(*m_sandbox, GetSandboxConfig()).Times(4).WillRepeatedly(testing::Return(expectedConfig));
+    EXPECT_CALL(*m_sandbox, GetSandboxConfig()).Times(4).WillRepeatedly(testing::ReturnRef(sandboxConfig));
     // auto sandboxConfig = runtime::v1::PodSandboxConfig::default_instance();
     // EXPECT_CALL(*m_sandbox, GetSandboxConfig).Times(2).WillRepeatedly(testing::Return(sandboxConfig));
     SandboxManager::GetInstance()->ListAllSandboxes(filters3, sandboxes3);

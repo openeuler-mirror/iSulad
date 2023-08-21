@@ -63,6 +63,17 @@
 #include "runtime_api.h"
 #include "id_name_manager.h"
 
+#ifdef ENABLE_CRI_API_V1
+static bool validate_sandbox_info(const container_sandbox_info *sandbox)
+{
+    bool valid = (sandbox->sandboxer != NULL && sandbox->id != NULL &&
+                  sandbox->task_address != NULL && sandbox->hostname != NULL &&
+                  sandbox->hostname_path == NULL && sandbox->hosts_path != NULL &&
+                  sandbox->resolv_conf_path != NULL);
+    return valid;
+}
+#endif
+
 static int create_request_check(const container_create_request *request)
 {
     int ret = 0;
@@ -86,6 +97,14 @@ static int create_request_check(const container_create_request *request)
         ret = -1;
         goto out;
     }
+
+#ifdef ENABLE_CRI_API_V1
+    if (request->sandbox != NULL && !validate_sandbox_info(request->sandbox)) {
+        ERROR("Invalid sandbox info");
+        ret = -1;
+        goto out;
+    }
+#endif
 
     if (request->hostconfig == NULL) {
         ERROR("Receive NULL Request hostconfig");
@@ -1276,6 +1295,48 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_CRI_API_V1
+static int dup_container_sandbox_info(const container_sandbox_info *src, container_sandbox_info **dest)
+{
+    __isula_auto_free char *json = NULL;
+    __isula_auto_free parser_error err = NULL;
+
+    if (src == NULL) {
+        *dest = NULL;
+        return 0;
+    }
+
+    json = container_sandbox_info_generate_json(src, NULL, &err);
+    if (json == NULL) {
+        ERROR("Failed to generate json: %s", err);
+        return -1;
+    }
+    *dest = container_sandbox_info_parse_data(json, NULL, &err);
+    if (*dest == NULL) {
+        ERROR("Failed to parse json: %s", err);
+        return -1;
+    }
+
+    return 0;
+}
+
+static int v2_spec_fill_sandbox_info(const container_sandbox_info *sandbox_info,
+                                     container_config_v2_common_config *v2_spec)
+{
+    if (sandbox_info == NULL) {
+        v2_spec->sandbox_info = NULL;
+        return 0;
+    }
+
+    if(dup_container_sandbox_info(sandbox_info, &v2_spec->sandbox_info) != 0) {
+        ERROR("Failed to dup sandbox info");
+        return -1;
+    }
+
+    return 0;
+}
+#endif
+
 static int save_container_config_before_create(const char *id, const char *runtime_root, host_config *host_spec,
                                                container_config_v2_common_config *v2_spec)
 {
@@ -1352,6 +1413,14 @@ int container_create_cb(const container_create_request *request, container_creat
     }
 
     v2_spec_fill_basic_info(id, name, image_name, image_type, container_spec, v2_spec);
+
+#ifdef ENABLE_CRI_API_V1
+    if(v2_spec_fill_sandbox_info(request->sandbox, v2_spec) != 0) {
+        ERROR("Failed to fill sandbox info");
+        cc = ISULAD_ERR_INPUT;
+        goto clean_container_root_dir;
+    }
+#endif
 
     if (save_container_config_before_create(id, runtime_root, host_spec, v2_spec) != 0) {
         ERROR("Failed to malloc container_config_v2_common_config");

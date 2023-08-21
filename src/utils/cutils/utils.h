@@ -398,6 +398,10 @@ defs_map_string_object * dup_map_string_empty_object(defs_map_string_object *src
 
 int util_umount_residual_shm(const char *mount_info, const char *target);
 
+int util_create_shm_path(const char *spath, const int64_t shm_size);
+
+int util_chown_for_shm(const char *shm_path, const char *user_remap);
+
 /**
  * retry_cnt: max count of call cb;
  * interval_us: how many us to sleep, after call cb;

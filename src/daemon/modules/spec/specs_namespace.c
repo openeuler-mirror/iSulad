@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <isula_libutils/log.h>
 #include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "utils.h"
 #include "utils_network.h"
@@ -29,15 +30,35 @@
 #include "err_msg.h"
 #include "network_namespace.h"
 
+char *format_share_namespace_path(int pid, const char *type)
+{
+    const char *ns_type = NULL;
+    char ns_path[PATH_MAX] = { 0 };
+    int ret = 0;
+
+    if (strcmp(type, TYPE_NAMESPACE_NETWORK) == 0) {
+        ns_type = "net";
+    } else if (strcmp(type, TYPE_NAMESPACE_MOUNT) == 0) {
+        ns_type = "mnt";
+    } else {
+        ns_type = type;
+    }
+
+    ret = snprintf(ns_path, PATH_MAX, "/proc/%d/ns/%s", pid, ns_type);
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
+        ERROR("Failed to print string %s", ns_type);
+        return NULL;
+    }
+
+    return util_strdup_s(ns_path);
+}
+
 static char *parse_share_namespace_with_prefix(const char *type, const char *path)
 {
     char *tmp_cid = NULL;
     char *result = NULL;
     container_t *cont = NULL;
     int pid;
-    int ret = 0;
-    char ns_path[PATH_MAX] = { 0 };
-    char *ns_type = NULL;
 
     tmp_cid = namespace_get_connected_container(path);
     if (tmp_cid == NULL) {
@@ -67,26 +88,11 @@ static char *parse_share_namespace_with_prefix(const char *type, const char *pat
         goto out;
     }
 
-    if (strcmp(type, TYPE_NAMESPACE_NETWORK) == 0) {
-        ns_type = util_strdup_s("net");
-    } else if (strcmp(type, TYPE_NAMESPACE_MOUNT) == 0) {
-        ns_type = util_strdup_s("mnt");
-    } else {
-        ns_type = util_strdup_s(type);
-    }
-
-    ret = snprintf(ns_path, PATH_MAX, "/proc/%d/ns/%s", pid, ns_type);
-    if (ret < 0 || (size_t)ret >= PATH_MAX) {
-        ERROR("Failed to print string %s", ns_type);
-        goto out;
-    }
-
-    result = util_strdup_s(ns_path);
+    result = format_share_namespace_path(pid, type);
 
 out:
     container_unref(cont);
     free(tmp_cid);
-    free(ns_type);
     return result;
 }
 

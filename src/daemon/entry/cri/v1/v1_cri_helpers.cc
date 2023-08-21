@@ -460,5 +460,31 @@ void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_co
     }
 
 }
+void GetContainerSandboxID(const std::string &containerID, std::string &sandboxID, Errors &error)
+{
+    std::string PodID;
+    container_inspect *info = CRIHelpers::InspectContainer(containerID, error, false);
+    if (error.NotEmpty()) {
+        error.Errorf("Failed to inspect container %s: %s", containerID.c_str(), error.GetCMessage());
+        return;
+    }
 
-} // v1alpha namespace CRIHelpers
+    // TODO: Refactor after adding the ability to use sandbox manager for sandboxid query
+    if (info->config != nullptr && info->config->labels != nullptr) {
+        for (size_t j = 0; j < info->config->labels->len; j++) {
+            if (strcmp(info->config->labels->keys[j], CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str()) == 0
+                && strcmp(info->config->labels->values[j], "") != 0) {
+                PodID = info->config->labels->values[j];
+                break;
+            }
+        }
+    }
+
+    if (PodID.empty()) {
+        error.Errorf("Failed to get sandbox id for container %s", containerID.c_str());
+    } else {
+        sandboxID = PodID;
+    }
+}
+
+} // v1 namespace CRIHelpers

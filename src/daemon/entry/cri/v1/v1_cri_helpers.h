@@ -73,6 +73,8 @@ auto GetPodSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
 
 void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_config *hostconfig, Errors &error);
 
+void GetContainerSandboxID(const std::string &containerID, std::string &sandboxID, Errors &error);
+
 }; // namespace CRIHelpers
 
 #endif // DAEMON_ENTRY_CRI_V1ALPHA_CRI_HELPERS_H

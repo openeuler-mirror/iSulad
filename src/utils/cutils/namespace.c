@@ -15,6 +15,7 @@
 #include "namespace.h"
 
 #include <string.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "utils.h"
 
@@ -50,3 +51,25 @@ char *namespace_get_host_namespace_path(const char *type)
     }
     return NULL;
 }
+
+#ifdef ENABLE_CRI_API_V1
+bool namespace_is_sandbox(const char *mode, const container_sandbox_info *sandbox_info)
+{
+    __isula_auto_free char *connected_id = NULL;
+
+    if (sandbox_info == NULL) {
+        return false;
+    }
+
+    if (sandbox_info->id == NULL) {
+        return false;
+    }
+
+    connected_id = namespace_get_connected_container(mode);
+    if (connected_id == NULL) {
+        return false;
+    }
+
+    return strcmp(sandbox_info->id, connected_id) == 0;
+}
+#endif

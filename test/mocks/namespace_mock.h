@@ -28,6 +28,10 @@ public:
     MOCK_METHOD4(GetNetworkNamespacePath, int(const host_config *host_spec,
                                               const container_network_settings *network_settings, const char *type, char **dest_path));
     MOCK_METHOD1(GetContainerProcessLabel, char *(const char *path));
+#ifdef ENABLE_CRI_API_V1
+    MOCK_METHOD2(NamespaceIsSandbox, bool(const char *mode, const container_sandbox_info *sandbox_info));
+#endif
+    MOCK_METHOD2(FormatShareNamespacePath, char *(int pid, const char *type));
 };
 
 void MockNamespace_SetMock(MockNamespace *mock);

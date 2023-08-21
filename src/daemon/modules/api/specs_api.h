@@ -39,6 +39,7 @@ int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, ch
                        size_t *label_opts_len, char **seccomp_profile);
 
 int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
+                          const container_config_v2_common_config *v2_spec,
                           const container_network_settings *network_settings);
 #ifdef __cplusplus
 }

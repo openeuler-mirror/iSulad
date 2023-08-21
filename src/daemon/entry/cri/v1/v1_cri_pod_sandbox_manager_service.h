@@ -82,7 +82,7 @@ private:
     void ConstructPodSandboxCheckpoint(const runtime::v1::PodSandboxConfig &config, CRI::PodSandboxCheckpoint &checkpoint);
     void PrepareSandboxCheckpoint(const runtime::v1::PodSandboxConfig &config, std::string &jsonCheckpoint, Errors &error);
     void UpdateSandboxConfig(runtime::v1::PodSandboxConfig &config, std::string &jsonCheckpoint, Errors &error);
-    void SetupSandboxFiles(const std::string &resolvPath, const std::shared_ptr<runtime::v1::PodSandboxConfig> config,
+    void SetupSandboxFiles(const std::string &resolvPath, const runtime::v1::PodSandboxConfig &config,
                            Errors &error);
     void SetupSandboxNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, std::string &network_settings_json,
                              Errors &error);

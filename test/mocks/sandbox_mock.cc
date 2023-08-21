@@ -23,6 +23,7 @@ static const std::string defaultStr;
 std::vector<std::string> defaultVec;
 StatsInfo statsInfo;
 static const std::string defaultName = "test";
+runtime::v1::PodSandboxConfig defaultConfig;
 
 Sandbox::Sandbox(const std::string id, const std::string &rootdir, const std::string &statedir, const std::string name,
                  const RuntimeInfo info, std::string netMode, std::string netNsPath, const runtime::v1::PodSandboxConfig sandboxConfig)
@@ -43,7 +44,7 @@ bool Sandbox::IsReady()
     return true;
 }
 
-const std::string &Sandbox::GetId()
+const std::string &Sandbox::GetId() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetId();
@@ -51,7 +52,7 @@ const std::string &Sandbox::GetId()
     return defaultStr;
 }
 
-const std::string &Sandbox::GetName()
+const std::string &Sandbox::GetName() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetName();
@@ -59,7 +60,7 @@ const std::string &Sandbox::GetName()
     return defaultStr;
 }
 
-const std::string &Sandbox::GetSandboxer()
+const std::string &Sandbox::GetSandboxer() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetSandboxer();
@@ -67,7 +68,7 @@ const std::string &Sandbox::GetSandboxer()
     return defaultStr;
 }
 
-const std::string &Sandbox::GetRuntimeHandle()
+const std::string &Sandbox::GetRuntimeHandle() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetRuntimeHandle();
@@ -83,31 +84,39 @@ std::vector<std::string> Sandbox::GetContainers()
     return defaultVec;
 }
 
-std::shared_ptr<runtime::v1::PodSandboxConfig> Sandbox::GetSandboxConfig()
+const runtime::v1::PodSandboxConfig & Sandbox::GetSandboxConfig() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetSandboxConfig();
     }
+    return defaultConfig;
+}
+
+std::shared_ptr<runtime::v1::PodSandboxConfig> Sandbox::GetMutableSandboxConfig()
+{
+    if (g_sandbox_mock != nullptr) {
+        return g_sandbox_mock->GetMutableSandboxConfig();
+    }
     return nullptr;
 }
 
-std::string Sandbox::GetRootDir()
+const std::string &Sandbox::GetRootDir() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetRootDir();
     }
-    return nullptr;
+    return defaultStr;
 }
 
-std::string Sandbox::GetStateDir()
+const std::string &Sandbox::GetStateDir() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetStateDir();
     }
-    return nullptr;
+    return defaultStr;
 }
 
-std::string Sandbox::GetResolvPath()
+std::string Sandbox::GetResolvPath() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetResolvPath();
@@ -115,7 +124,7 @@ std::string Sandbox::GetResolvPath()
     return nullptr;
 }
 
-std::string Sandbox::GetShmPath()
+std::string Sandbox::GetShmPath() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetShmPath();
@@ -131,7 +140,7 @@ StatsInfo Sandbox::GetStatsInfo()
     return statsInfo;
 }
 
-bool Sandbox::GetNetworkReady()
+bool Sandbox::GetNetworkReady() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetNetworkReady();

@@ -69,6 +69,9 @@
 #include "service_network_api.h"
 #endif
 #include "id_name_manager.h"
+#ifdef ENABLE_CRI_API_V1
+#include "sandbox_ops.h"
+#endif
 
 #define KATA_RUNTIME "kata-runtime"
 
@@ -237,7 +240,7 @@ static int renew_oci_config(const container_t *cont, oci_runtime_spec *oci_spec)
         goto out;
     }
 
-    ret = merge_share_namespace(oci_spec, cont->hostconfig, cont->network_settings);
+    ret = merge_share_namespace(oci_spec, cont->hostconfig, cont->common_config, cont->network_settings);
     if (ret != 0) {
         ERROR("Failed to merge share ns");
         goto out;
@@ -805,6 +808,16 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
+#ifdef ENABLE_CRI_API_V1
+    if (cont->common_config->sandbox_info != NULL &&
+        sandbox_prepare_container(cont->common_config,
+                                  oci_spec, console_fifos, tty) != 0) {
+        ERROR("Failed to prepare in sandbox");
+        ret = -1;
+        goto close_exit_fd;
+    }
+#endif
+
     create_params.bundle = bundle;
     create_params.state = cont->state_path;
     create_params.oci_config_data = oci_spec;
@@ -815,6 +828,11 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     create_params.exit_fifo = exit_fifo;
     create_params.tty = tty;
     create_params.open_stdin = open_stdin;
+#ifdef ENABLE_CRI_API_V1
+    if (cont->common_config->sandbox_info != NULL) {
+        create_params.task_addr = cont->common_config->sandbox_info->task_address;
+    }
+#endif
 
     if (runtime_create(id, runtime, &create_params) != 0) {
         ret = -1;
@@ -1539,6 +1557,15 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
         }
     }
 
+#ifdef ENABLE_CRI_API_V1
+    if (cont->common_config->sandbox_info != NULL &&
+        sandbox_purge_container(cont->common_config) != 0) {
+        ERROR("Failed to remove container %s from sandbox", id);
+        ret = -1;
+        goto out;
+    }
+#endif
+
 out:
     if (restart) {
         cont->hostconfig->auto_remove = cont->hostconfig->auto_remove_bak;
@@ -1984,6 +2011,16 @@ static int do_exec_container(const container_t *cont, const char *runtime, char 
         goto out;
     }
 
+#ifdef ENABLE_CRI_API_V1
+    if (cont->common_config->sandbox_info != NULL &&
+        sandbox_prepare_exec(cont->common_config, request->suffix,
+                             process_spec, (const char **)console_fifos, request->tty) != 0) {
+        ERROR("Failed to prepare exec for container %s", id);
+        ret = -1;
+        goto out;
+    }
+#endif
+
     params.loglevel = loglevel;
     params.logpath = engine_log_path;
     params.console_fifos = (const char **)console_fifos;
@@ -2041,9 +2078,16 @@ out:
     return ret;
 }
 
-static void exec_container_end(container_exec_response *response, uint32_t cc, int exit_code, int sync_fd,
-                               pthread_t thread_id)
+static void exec_container_end(container_exec_response *response, const container_t *cont,
+                               const char *exec_id, uint32_t cc,
+                               int exit_code, int sync_fd, pthread_t thread_id)
 {
+#ifdef ENABLE_CRI_API_V1
+    if (cont->common_config->sandbox_info != NULL &&
+        sandbox_purge_exec(cont->common_config, exec_id) != 0) {
+        ERROR("Failed to purge container for exec %s", exec_id);
+    }
+#endif
     if (response != NULL) {
         response->cc = cc;
         response->exit_code = (uint32_t)exit_code;
@@ -2202,7 +2246,7 @@ int exec_container(const container_t *cont, const container_exec_request *reques
     (void)isulad_monitor_send_container_event(id, EXEC_DIE, -1, 0, NULL, NULL);
 
 pack_response:
-    exec_container_end(response, cc, exit_code, sync_fd, thread_id);
+    exec_container_end(response, cont, request->suffix, cc, exit_code, sync_fd, thread_id);
     delete_daemon_fifos(fifopath, (const char **)fifos);
     free(fifos[0]);
     free(fifos[1]);

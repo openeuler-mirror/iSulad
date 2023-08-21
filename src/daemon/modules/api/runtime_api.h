@@ -79,6 +79,7 @@ typedef struct _rt_create_params_t {
     const char *exit_fifo;
     bool tty;
     bool open_stdin;
+    const char *task_addr;
 } rt_create_params_t;
 
 typedef struct _rt_start_params_t {

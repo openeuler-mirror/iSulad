@@ -56,3 +56,21 @@ char *get_container_process_label(const char *path)
     }
     return nullptr;
 }
+
+#ifdef ENABLE_CRI_API_V1
+bool namespace_is_sandbox(const char *mode, const container_sandbox_info *sandbox_info)
+{
+    if (g_namespace_mock != nullptr) {
+        return g_namespace_mock->NamespaceIsSandbox(mode, sandbox_info);
+    }
+    return false;
+}
+#endif
+
+char *format_share_namespace_path(int pid, const char *type)
+{
+    if (g_namespace_mock != nullptr) {
+        return g_namespace_mock->FormatShareNamespacePath(pid, type);
+    }
+    return nullptr;
+}

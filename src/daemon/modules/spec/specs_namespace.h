@@ -25,6 +25,7 @@
 extern "C" {
 #endif
 
+char *format_share_namespace_path(int pid, const char *type);
 int get_share_namespace_path(const char *type, const char *src_path, char **dest_path);
 char *get_container_process_label(const char *path);
 int get_network_namespace_path(const host_config *host_spec,

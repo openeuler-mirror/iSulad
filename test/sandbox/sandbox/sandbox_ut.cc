@@ -53,7 +53,7 @@ TEST_F(SandboxTest, TestDefaultGetters)
     ASSERT_STREQ(sandbox->GetRootDir().c_str(), sandbox_rootdir.c_str());
     ASSERT_STREQ(sandbox->GetStateDir().c_str(), sandbox_statedir.c_str());
     ASSERT_STREQ(sandbox->GetResolvPath().c_str(), (sandbox_rootdir + "/resolv.conf").c_str());
-    ASSERT_STREQ(sandbox->GetShmPath().c_str(), (sandbox_rootdir + "/dev/shm").c_str());
+    ASSERT_STREQ(sandbox->GetShmPath().c_str(), (sandbox_rootdir + "/mounts/shm").c_str());
     ASSERT_EQ(sandbox->GetStatsInfo().timestamp, 0);
     ASSERT_EQ(sandbox->GetStatsInfo().cpuUseNanos, 0);
     ASSERT_EQ(sandbox->GetNetworkReady(), false);
@@ -74,16 +74,16 @@ TEST_F(SandboxTest, TestGettersAndSetters)
     ASSERT_STREQ(sandbox->GetNetMode().c_str(), mode.c_str());
 
     sandbox->AddAnnotations("key", "value");
-    EXPECT_EQ(sandbox->GetSandboxConfig()->mutable_annotations()->at("key"), "value");
+    EXPECT_EQ(sandbox->GetSandboxConfig().annotations().at("key"), "value");
 
     sandbox->RemoveAnnotations("key");
-    EXPECT_TRUE(sandbox->GetSandboxConfig()->mutable_annotations());
+    EXPECT_TRUE(sandbox->GetSandboxConfig().annotations().empty());
 
     sandbox->AddLabels("key", "value");
-    EXPECT_EQ(sandbox->GetSandboxConfig()->mutable_labels()->at("key"), "value");
+    EXPECT_EQ(sandbox->GetSandboxConfig().labels().at("key"), "value");
 
     sandbox->RemoveLabels("key");
-    EXPECT_TRUE(sandbox->GetSandboxConfig()->mutable_labels()->empty());
+    EXPECT_TRUE(sandbox->GetSandboxConfig().labels().empty());
 
     std::string containerId = "container_id";
     sandbox->AddContainer(containerId);

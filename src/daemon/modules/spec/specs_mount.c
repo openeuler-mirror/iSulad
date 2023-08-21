@@ -2547,29 +2547,6 @@ out:
     return ret;
 }
 
-static int chown_for_shm(const char *shm_path, const char *user_remap)
-{
-    unsigned int host_uid = 0;
-    unsigned int host_gid = 0;
-    unsigned int size = 0;
-
-    if (shm_path == NULL) {
-        return 0;
-    }
-
-    if (user_remap != NULL) {
-        if (util_parse_user_remap(user_remap, &host_uid, &host_gid, &size)) {
-            ERROR("Failed to split string '%s'.", user_remap);
-            return -1;
-        }
-        if (chown(shm_path, host_uid, host_gid) != 0) {
-            ERROR("Failed to chown host path '%s'.", shm_path);
-            return -1;
-        }
-    }
-    return 0;
-}
-
 static char *get_prepare_share_shm_path(const char *truntime, const char *cid)
 {
 #define SHM_MOUNT_FILE_NAME "/mounts/shm"
@@ -2701,34 +2678,6 @@ static inline bool is_shareable_ipc(char *ipc_mode)
     return ipc_mode == NULL || namespace_is_shareable(ipc_mode);
 }
 
-static int create_shm_path(const char *spath, const int64_t shm_size)
-{
-#define SHM_DIR_MODE 0700
-#define MAX_PROPERTY_LEN 64
-    char shmproperty[MAX_PROPERTY_LEN] = { 0 };
-    int nret = 0;
-
-    nret = util_mkdir_p(spath, SHM_DIR_MODE);
-    if (nret != 0) {
-        ERROR("Build shm dir failed");
-        return -1;
-    }
-
-    nret = snprintf(shmproperty, MAX_PROPERTY_LEN, "mode=1777,size=%" PRId64, shm_size);
-    if (nret < 0 || nret >= MAX_PROPERTY_LEN) {
-        ERROR("Sprintf failed");
-        return -1;
-    }
-
-    nret = mount("shm", spath, "tmpfs", MS_NOEXEC | MS_NODEV | MS_NOSUID, shmproperty);
-    if (nret < 0) {
-        ERROR("Mount %s failed: %s", spath, strerror(errno));
-        return -1;
-    }
-
-    return 0;
-}
-
 int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
@@ -2757,13 +2706,13 @@ int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2
         return 0;
     }
 
-    ret = create_shm_path(spath, host_spec->shm_size);
+    ret = util_create_shm_path(spath, host_spec->shm_size);
     if (ret != 0) {
         ERROR("Failed to create shm path");
         return -1;
     }
 
-    ret = chown_for_shm(spath, host_spec->user_remap);
+    ret = util_chown_for_shm(spath, host_spec->user_remap);
     if (ret != 0) {
         goto err_out;
     }
@@ -2863,6 +2812,16 @@ static int set_shm_path(host_config *host_spec, container_config_v2_common_confi
 
         return 0;
     }
+
+#ifdef ENABLE_CRI_API_V1
+    // Sandbox API is used and the connected container is actually a sandbox
+    // Use the sandbox config
+    if (namespace_is_sandbox(host_spec->ipc_mode, v2_spec->sandbox_info)) {
+        free(v2_spec->shm_path);
+        v2_spec->shm_path = util_strdup_s(v2_spec->sandbox_info->shm_path);
+        goto out;
+    }
+#endif
 
     if (namespace_is_container(host_spec->ipc_mode)) {
         tmp_cid = namespace_get_connected_container(host_spec->ipc_mode);

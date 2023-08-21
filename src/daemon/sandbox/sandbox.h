@@ -82,23 +82,28 @@ public:
 
     auto IsReady() -> bool;
 
-    auto GetId() -> const std::string &;
-    auto GetName() -> const std::string &;
-    auto GetRuntime() -> const std::string &;
-    auto GetSandboxer() -> const std::string &;
-    auto GetRuntimeHandle() -> const std::string &;
-    auto GetContainers() -> std::vector<std::string>;
-    auto GetSandboxConfig() -> std::shared_ptr<runtime::v1::PodSandboxConfig>;
-    auto GetRootDir() -> std::string;
-    auto GetStateDir() -> std::string;
-    auto GetResolvPath() -> std::string;
-    auto GetShmPath() -> std::string;
+    auto GetId() const -> const std::string &;
+    auto GetName() const -> const std::string &;
+    auto GetRuntime() const -> const std::string &;
+    auto GetSandboxer() const -> const std::string &;
+    auto GetRuntimeHandle() const -> const std::string &;
+    auto GetSandboxConfig() const -> const runtime::v1::PodSandboxConfig &;
+    auto GetMutableSandboxConfig() -> std::shared_ptr<runtime::v1::PodSandboxConfig>;
+    auto GetRootDir() const -> const std::string &;
+    auto GetStateDir() const -> const std::string &;
+    auto GetResolvPath() const -> std::string;
+    auto GetHostnamePath() const -> std::string;
+    auto GetHostsPath() const -> std::string;
+    auto GetShmPath() const -> std::string;
     auto GetStatsInfo() -> StatsInfo;
-    auto GetNetworkReady() -> bool;
-    auto GetNetMode() -> const std::string &;
-    auto GetNetNsPath() -> const std::string &;
-    auto GetNetworkSettings() -> std::string;
+    auto GetNetworkReady() const -> bool;
+    auto GetNetMode() const -> const std::string &;
+    auto GetNetNsPath() const -> const std::string &;
+    auto GetNetworkSettings() -> const std::string &;
     auto GetCreatedAt() -> uint64_t;
+    auto GetPid() -> uint32_t;
+    auto GetTaskAddress() const -> const std::string &;
+    auto GetContainers() -> std::vector<std::string>;
     void SetNetMode(const std::string &mode);
     void SetController(std::shared_ptr<Controller> controller);
     void AddAnnotations(const std::string &key, const std::string &value);
@@ -112,6 +117,7 @@ public:
     auto UpdateStatsInfo(const StatsInfo &info) -> StatsInfo;
     void SetNetworkReady(bool ready);
     void SetNetworkMode(const std::string &networkMode);
+    auto CleanupSandboxFiles(Errors &error) -> bool;
 
     // Save to file
     auto Save(Errors &error) -> bool;
@@ -141,14 +147,14 @@ private:
 
     void SetSandboxConfig(const runtime::v1::PodSandboxConfig &config);
     void SetNetworkSettings(const std::string &settings, Errors &error);
+    auto CreateHostname(bool shareHost, Errors &error) -> bool;
+    auto CreateHosts(bool shareHost, Errors &error) -> bool;
+    auto CreateResolvConf(Errors &error) -> bool;
+    auto CreateShmDev(Errors &error) -> bool;
     auto SetupSandboxFiles(Errors &error) -> bool;
     void DoUpdateStatus(std::unique_ptr<ControllerSandboxStatus> status, Errors &error);
     void DoUpdateExitedStatus(const ControllerExitInfo &exitInfo);
 
-    auto GetTaskAddress() -> const std::string &;
-
-    auto GetHostnamePath() -> std::string;
-    auto GetHostsPath() -> std::string;
     auto GetMetadataJsonPath() ->  std::string;
     auto GetStatePath() -> std::string;
     auto GetNetworkSettingsPath() -> std::string;
@@ -165,6 +171,8 @@ private:
     auto IsRemovalInProcess() -> bool;
     auto IsStopped() -> bool;
     auto isValidMetadata(std::unique_ptr<CStructWrapper<sandbox_metadata>> &metadata) -> bool;
+
+    void CleanupSandboxDirs();
 
 private:
     // Since the cri module will operate concurrently on the sandbox instance,

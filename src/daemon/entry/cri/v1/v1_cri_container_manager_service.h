@@ -21,14 +21,17 @@
 #include "api_v1.pb.h"
 #include "errors.h"
 #include "callback.h"
-#include "isula_libutils/container_config.h"
-#include "isula_libutils/host_config.h"
-#include "isula_libutils/container_create_request.h"
-#include "isula_libutils/container_list_response.h"
-#include "isula_libutils/container_inspect.h"
-#include "isula_libutils/container_exec_request.h"
-#include "isula_libutils/container_inspect.h"
-#include "isula_libutils/imagetool_fs_info.h"
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/container_create_request.h>
+#include <isula_libutils/container_list_response.h>
+#include <isula_libutils/container_inspect.h>
+#include <isula_libutils/container_exec_request.h>
+#include <isula_libutils/container_inspect.h>
+#include <isula_libutils/imagetool_fs_info.h>
+#include <isula_libutils/container_sandbox_info.h>
+
+#include "sandbox.h"
 
 namespace CRIV1 {
 class ContainerManagerService {
@@ -71,15 +74,16 @@ public:
 
 private:
     auto GetContainerOrSandboxRuntime(const std::string &realID, Errors &error) -> std::string;
-    auto GenerateCreateContainerRequest(const std::string &realPodSandboxID,
+    auto GenerateCreateContainerRequest(sandbox::Sandbox &sandbox,
                                         const runtime::v1::ContainerConfig &containerConfig,
                                         const runtime::v1::PodSandboxConfig &podSandboxConfig,
-                                        const std::string &podSandboxRuntime, Errors &error)
+                                        Errors &error)
     -> container_create_request *;
-    auto GenerateCreateContainerHostConfig(const runtime::v1::ContainerConfig &containerConfig,
-                                           const std::string &realPodSandboxID,
+    auto GenerateCreateContainerHostConfig(sandbox::Sandbox &sandbox,
+                                           const runtime::v1::ContainerConfig &containerConfig,
                                            Errors &error)
     -> host_config *;
+    auto GenerateSandboxInfo(sandbox::Sandbox &sandbox, Errors &error) -> container_sandbox_info *;
     auto GenerateCreateContainerCustomConfig(const std::string &containerName, const std::string &realPodSandboxID,
                                              const runtime::v1::ContainerConfig &containerConfig,
                                              const runtime::v1::PodSandboxConfig &podSandboxConfig, Errors &error)
@@ -88,12 +92,10 @@ private:
                                               host_config *hostconfig, Errors &error) -> int;
     auto PackCreateContainerHostConfigSecurityContext(const runtime::v1::ContainerConfig &containerConfig,
                                                       host_config *hostconfig, Errors &error) -> int;
-    auto DoUsePodLevelSELinuxConfig(const runtime::v1::ContainerConfig &containerConfig,
-                                    host_config *hostconfig,
-                                    const std::string &realPodSandboxID, Errors &error) -> int;
     void MakeContainerConfig(const runtime::v1::ContainerConfig &config, container_config *cConfig,
                              Errors &error);
     void CreateContainerLogSymlink(const std::string &containerID, Errors &error);
+    void RemoveContainerIDFromSandbox(const std::string &containerID);
     void ListContainersFromGRPC(const runtime::v1::ContainerFilter *filter, container_list_request **request,
                                 Errors &error);
     void ListContainersToGRPC(container_list_response *response,
