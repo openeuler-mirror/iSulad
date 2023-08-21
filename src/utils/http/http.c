@@ -266,7 +266,6 @@ static void free_rpath(char *rpath)
 
 static void check_buf_len(struct http_get_options *options, char *errbuf, CURLcode curl_result)
 {
-    int nret = 0;
     size_t len = 0;
 
     if (options == NULL || options->errmsg != NULL) {
@@ -275,6 +274,7 @@ static void check_buf_len(struct http_get_options *options, char *errbuf, CURLco
 
     len = strlen(errbuf);
     if (len == 0) {
+        int nret = 0;
         nret = snprintf(errbuf, CURL_ERROR_SIZE, "curl response error code %d", curl_result);
         if (nret < 0 || (size_t)nret >= CURL_ERROR_SIZE) {
             ERROR("Failed to print string for error buffer, errcode %d", curl_result);

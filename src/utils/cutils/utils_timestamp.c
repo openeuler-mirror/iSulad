@@ -495,7 +495,7 @@ bool util_get_tm_from_str(const char *str, struct tm *tm, int32_t *nanos)
     if (util_strings_contains_any(str, ".")) {
         format = rFC339NanoLocal;
     } else if (util_strings_contains_any(str, "T")) {
-        int tcolons = util_strings_count(str, ':');
+        size_t tcolons = util_strings_count(str, ':');
         switch (tcolons) {
             case 0:
                 format = "2016-01-02T15";
@@ -952,7 +952,7 @@ err_out:
 int util_to_unix_nanos_from_str(const char *str, int64_t *nanos)
 {
     struct tm tm = { 0 };
-    struct types_timezone tz;
+    struct types_timezone tz = { 0 };
     int32_t nano = 0;
     types_timestamp_t ts;
     const int s_hour = 3600;

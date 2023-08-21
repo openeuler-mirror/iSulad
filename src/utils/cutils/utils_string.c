@@ -83,11 +83,10 @@ bool util_strings_contains_word(const char *str, const char *substr)
     return false;
 }
 
-int util_strings_count(const char *str, unsigned char c)
+size_t util_strings_count(const char *str, unsigned char c)
 {
-    size_t i = 0;
-    int res = 0;
-    size_t len = 0;
+    size_t i, len;
+    size_t res = 0;
 
     if (str == NULL) {
         return 0;

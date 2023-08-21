@@ -67,8 +67,6 @@ static int parse_mount_item_type(const char *value, char *mount_str, mount_spec 
 
 static int parse_mount_item_src(const char *value, char *mount_str, mount_spec *m, char *errmsg)
 {
-    char srcpath[PATH_MAX] = { 0 };
-
     /* If value of source is NULL, ignore it */
     if (value == NULL) {
         return 0;
@@ -87,6 +85,7 @@ static int parse_mount_item_src(const char *value, char *mount_str, mount_spec *
 #endif
 
     if (value[0] == '/') {
+        char srcpath[PATH_MAX] = { 0 };
         if (!util_clean_path(value, srcpath, sizeof(srcpath))) {
             CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Can't translate source path to clean path",
                          mount_str);

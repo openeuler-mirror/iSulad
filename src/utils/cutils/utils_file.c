@@ -120,14 +120,19 @@ int util_path_remove(const char *path)
 
 ssize_t util_write_nointr_in_total(int fd, const char *buf, size_t count)
 {
-    ssize_t nret = 0;
-    ssize_t nwritten;
+    size_t nwritten;
 
     if (buf == NULL) {
         return -1;
     }
 
+    if (count > SSIZE_MAX) {
+        ERROR("Too large data to write");
+        return -1;
+    }
+
     for (nwritten = 0; nwritten < count;) {
+        ssize_t nret;
         nret = write(fd, buf + nwritten, count - nwritten);
         if (nret < 0) {
             if (errno == EINTR || errno == EAGAIN) {
@@ -140,7 +145,7 @@ ssize_t util_write_nointr_in_total(int fd, const char *buf, size_t count)
         }
     }
 
-    return nwritten;
+    return (ssize_t)nwritten;
 }
 
 ssize_t util_write_nointr(int fd, const void *buf, size_t count)
@@ -1700,9 +1705,10 @@ int util_set_file_group(const char *fname, const char *group)
     grp = getgrnam(group);
     if (grp != NULL) {
         gid = grp->gr_gid;
-        DEBUG("Group %s found, gid: %d", group, gid);
+        DEBUG("Group %s found, gid: %u", group, gid);
+        // set owner to -1, will not change owner
         if (chown(fname, -1, gid) != 0) {
-            ERROR("Failed to chown %s to gid: %d", fname, gid);
+            ERROR("Failed to chown %s to gid: %u", fname, gid);
             ret = -1;
             goto out;
         }
@@ -2032,7 +2038,7 @@ static int copy_file(char *copy_dst, char *copy_src, struct stat *src_stat, map_
     } else if (S_ISCHR(src_stat->st_mode) || S_ISBLK(src_stat->st_mode)) {
         ret = copy_device(copy_dst, copy_src, src_stat);
     } else { // fifo and socket
-        ERROR("copy %s failed, unsupported type %d", copy_src, src_stat->st_mode);
+        ERROR("copy %s failed, unsupported type %u", copy_src, src_stat->st_mode);
         return -1;
     }
     if (ret != 0) {

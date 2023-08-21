@@ -307,10 +307,8 @@ struct archive_copy_info *copy_info_destination_path(const char *path, char **er
     nret = copy_info_destination_path_ret(info, st, err, ret, path);
     if (nret == 0) {
         return info;
-    } else {
-        goto cleanup;
     }
-cleanup:
+
     free(info);
     return NULL;
 }

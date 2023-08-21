@@ -28,7 +28,7 @@ bool util_strings_contains_any(const char *str, const char *substr);
 
 bool util_strings_contains_word(const char *str, const char *substr);
 
-int util_strings_count(const char *str, unsigned char c);
+size_t util_strings_count(const char *str, unsigned char c);
 
 bool util_strings_in_slice(const char **strarray, size_t alen, const char *str);
 
