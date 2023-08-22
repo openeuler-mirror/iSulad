@@ -78,7 +78,7 @@ void buffer_empty(Buffer *buf)
 }
 
 /* buffer grow */
-int buffer_grow(Buffer *buffer, size_t min_size)
+static int buffer_grow(Buffer *buffer, size_t min_size)
 {
     size_t factor = 0;
     size_t new_size = 0;
@@ -126,6 +126,10 @@ int buffer_append(Buffer *buf, const char *append, size_t len)
 
     if (buf == NULL) {
         return -1;
+    }
+
+    if (append == NULL || len == 0) {
+        return 0;
     }
 
     desired_length = len + 1;

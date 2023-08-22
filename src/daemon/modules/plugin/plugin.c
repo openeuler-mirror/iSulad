@@ -794,7 +794,7 @@ static int plugin_set_activated(plugin_t *plugin, bool activated, const char *er
 
 int plugin_set_manifest(plugin_t *plugin, const plugin_manifest_t *manifest)
 {
-    if (manifest == NULL) {
+    if (plugin == NULL || manifest == NULL) {
         return -1;
     }
 
@@ -974,7 +974,7 @@ static bool plugin_useby_container(const plugin_t *plugin, const container_t *co
     }
 
     free(plugin_names);
-    free(pnames);
+    util_free_array(pnames);
     return ok;
 }
 
@@ -1175,6 +1175,11 @@ out:
 int pm_add_plugin(plugin_t *plugin)
 {
     int ok = 0;
+
+    if (plugin == NULL) {
+        return -1;
+    }
+
     pm_wrlock();
     ok = map_insert(g_plugin_manager->np, (void *)plugin->name, plugin);
     pm_unlock();
@@ -1191,6 +1196,11 @@ int pm_add_plugin(plugin_t *plugin)
 int pm_del_plugin(const plugin_t *plugin)
 {
     int ok;
+
+    if (plugin == NULL) {
+        return -1;
+    }
+
     pm_wrlock();
     /* plugin_put() called in map_remove() by pm_np_item_free() */
     ok = map_remove(g_plugin_manager->np, (void *)plugin->name);
@@ -1204,6 +1214,10 @@ int pm_del_plugin(const plugin_t *plugin)
 
 int pm_get_plugin(const char *name, plugin_t **rplugin)
 {
+    if (rplugin == NULL) {
+        return -1;
+    }
+
     if (do_get_plugin(name, rplugin) == 0) {
         return 0;
     }

@@ -37,6 +37,10 @@ int epoll_loop(struct epoll_descr *descr, int t)
     struct epoll_loop_handler *epoll_handler = NULL;
     struct epoll_event evs[MAX_EVENTS];
 
+    if (descr == NULL) {
+        return -1;
+    }
+
     while (1) {
         int ep_fds = epoll_wait(descr->fd, evs, MAX_EVENTS, t);
         if (ep_fds < 0) {
@@ -77,6 +81,10 @@ int epoll_loop_add_handler(struct epoll_descr *descr, int fd, epoll_loop_callbac
     struct epoll_loop_handler *epoll_handler = NULL;
     struct linked_list *node = NULL;
 
+    if (descr == NULL) {
+        return -1;
+    }
+
     epoll_handler = util_common_calloc_s(sizeof(*epoll_handler));
     if (epoll_handler == NULL) {
         goto fail_out;
@@ -114,6 +122,10 @@ int epoll_loop_del_handler(struct epoll_descr *descr, int fd)
     struct epoll_loop_handler *epoll_handler = NULL;
     struct linked_list *index = NULL;
 
+    if (descr == NULL) {
+        return -1;
+    }
+
     linked_list_for_each(index, &descr->handler_list) {
         epoll_handler = index->elem;
 
@@ -136,6 +148,10 @@ fail_out:
 /* epoll loop open */
 int epoll_loop_open(struct epoll_descr *descr)
 {
+    if (descr == NULL) {
+        return -1;
+    }
+
     descr->fd = epoll_create1(EPOLL_CLOEXEC);
     if (descr->fd < 0) {
         return -1;
@@ -152,6 +168,11 @@ int epoll_loop_close(struct epoll_descr *descr)
 {
     struct linked_list *index = NULL;
     struct linked_list *next = NULL;
+    int ret = 0;
+
+    if (descr == NULL) {
+        return ret;
+    }
 
     linked_list_for_each_safe(index, &(descr->handler_list), next) {
         linked_list_del(index);
@@ -159,5 +180,8 @@ int epoll_loop_close(struct epoll_descr *descr)
         free(index);
     }
 
-    return close(descr->fd);
+    ret = close(descr->fd);
+    descr->fd = -1;
+
+    return ret;
 }

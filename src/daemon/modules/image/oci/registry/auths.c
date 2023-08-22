@@ -103,6 +103,9 @@ static int decode_auth_aes(char *encoded, char **username, char **password)
         goto out;
     }
 
+    free(*username);
+    util_free_sensitive_string(*password);
+
     *username = util_strdup_s(auth_parts[0]);
     *password = util_strdup_s(auth_parts[1]);
     (void)memset(auth_parts[0], 0, strlen(auth_parts[0]));

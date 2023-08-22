@@ -1182,6 +1182,10 @@ int util_input_readall(char *buf, size_t maxlen)
     size_t i = 0;
     int ret = 0;
 
+    if (buf == NULL) {
+        return 0;
+    }
+
     for (;;) {
         int c = getchar();
         if (c == EOF) {
@@ -1234,12 +1238,18 @@ static int util_input(char *buf, size_t maxlen, bool echo_back)
 // Get input from stdin, echo back if get any character.
 int util_input_echo(char *buf, size_t maxlen)
 {
+    if (buf == NULL) {
+        return 0;
+    }
     return util_input(buf, maxlen, true);
 }
 
 // Get input from stdin, no echo back.
 int util_input_noecho(char *buf, size_t maxlen)
 {
+    if (buf == NULL) {
+        return 0;
+    }
     return util_input(buf, maxlen, false);
 }
 
@@ -1268,6 +1278,10 @@ int util_generate_random_str(char *id, size_t len)
     int num = 0;
     size_t i;
     const int m = 256;
+
+    if (id == NULL) {
+        return -1;
+    }
 
     len = len / 2;
     fd = open("/dev/urandom", O_RDONLY);

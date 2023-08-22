@@ -41,7 +41,7 @@
 #include "utils_array.h"
 #include "utils_string.h"
 
-int copy_dir_recursive(char *copy_dst, char *copy_src, map_t *inodes);
+static int copy_dir_recursive(char *copy_dst, char *copy_src, map_t *inodes);
 static void do_calculate_dir_size_without_hardlink(const char *dirpath, int recursive_depth, int64_t *total_size,
                                                    int64_t *total_inode, map_t *map);
 
@@ -303,14 +303,18 @@ out:
 
 bool util_force_remove_file(const char *fname, int *saved_errno)
 {
+    if (fname == NULL) {
+        return true;
+    }
+
     if (unlink(fname) == 0) {
         return true;
     }
 
-    WARN("Failed to delete %s: %s", fname, strerror(errno));
-    if (*saved_errno == 0) {
+    if (saved_errno != NULL && *saved_errno == 0) {
         *saved_errno = errno;
     }
+    WARN("Failed to delete %s: %s", fname, strerror(errno));
 
     if (mark_file_mutable(fname) != 0) {
         WARN("Failed to mark file mutable");
@@ -710,6 +714,10 @@ int util_gzip_compressed(const char *filename, bool *gzip)
     int i = 0;
     FILE *f = NULL;
     int ret = 0;
+
+    if (filename == NULL || gzip == NULL) {
+        return -1;
+    }
 
     f = fopen(filename, "rb");
     if (f == NULL) {
@@ -1663,7 +1671,7 @@ int util_proc_file_line_by_line(FILE *fp, read_line_callback_t cb, void *context
     ssize_t nret = 0;
     int ret = 0;
 
-    if (fp == NULL) {
+    if (fp == NULL || cb == NULL) {
         ERROR("Invalid parameter");
         return -1;
     }
@@ -1729,6 +1737,10 @@ out:
 int util_recursive_remove_path(const char *path)
 {
     int ret = 0;
+
+    if (path == NULL) {
+        return -1;
+    }
 
     if (unlink(path) != 0 && errno != ENOENT) {
         ret = util_recursive_rmdir(path, 0);
@@ -2053,6 +2065,10 @@ int util_copy_dir_recursive(char *copy_dst, char *copy_src)
     int ret = 0;
     map_t *inodes = NULL;
 
+    if (copy_dst == NULL || copy_src == NULL) {
+        return -1;
+    }
+
     // key: source inode, value: target file path
     inodes = map_new(MAP_INT_STR, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
     if (inodes == NULL) {
@@ -2067,7 +2083,7 @@ int util_copy_dir_recursive(char *copy_dst, char *copy_src)
     return ret;
 }
 
-int copy_dir_recursive(char *copy_dst, char *copy_src, map_t *inodes)
+static int copy_dir_recursive(char *copy_dst, char *copy_src, map_t *inodes)
 {
     char **entries = NULL;
     size_t entry_num = 0;
