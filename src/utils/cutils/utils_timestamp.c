@@ -214,6 +214,10 @@ out:
 /* get time buffer */
 bool util_get_time_buffer(const types_timestamp_t *timestamp, char *timebuffer, size_t maxsize)
 {
+    if (timestamp == NULL) {
+        return false;
+    }
+
     return get_time_buffer_help(timestamp, timebuffer, maxsize, false);
 }
 
@@ -382,7 +386,7 @@ bool util_parsing_time(const char *format, const char *time, struct tm *tm, int3
     size_t len_time = 0;
     size_t index_nanos = 0;
 
-    if (format == NULL || time == NULL) {
+    if (format == NULL || time == NULL || tm == NULL || nanos == NULL) {
         return false;
     }
 

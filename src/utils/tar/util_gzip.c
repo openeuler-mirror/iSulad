@@ -36,6 +36,10 @@ int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode)
     const char *gzerr = NULL;
     int errnum = 0;
 
+    if (srcfile == NULL || dstfile == NULL) {
+        return -1;
+    }
+
     srcfd = util_open(srcfile, O_RDONLY, SECURE_CONFIG_FILE_MODE);
     if (srcfd < 0) {
         ERROR("Open src file: %s, failed: %s", srcfile, strerror(errno));
@@ -104,6 +108,10 @@ int util_gzip_d(const char *srcfile, const FILE *dstfp)
     int ret = 0;
     size_t size = 0;
     void *buffer = NULL;
+
+    if (srcfile == NULL || dstfp == NULL) {
+        return -1;
+    }
 
     stream = gzopen(srcfile, "r");
     if (stream == NULL) {

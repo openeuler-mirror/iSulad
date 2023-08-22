@@ -89,6 +89,11 @@ static int file_rotate_me(const char *file_name)
         return -1;
     }
 
+    if (chmod(tmp_path, ARCH_LOG_FILE_MODE) != 0) {
+        ERROR("Change mode of %s failed", tmp_path);
+        return -1;
+    }
+
     if (gzip(tmp_path, sizeof(tmp_path))) {
         WARN("Gzip file failed");
         return -2;

@@ -73,7 +73,7 @@ struct archive_content_data {
     char buff[ARCHIVE_READ_BUFFER_SIZE];
 };
 
-ssize_t read_content(struct archive *a, void *client_data, const void **buff)
+static ssize_t read_content(struct archive *a, void *client_data, const void **buff)
 {
     struct archive_content_data *mydata = client_data;
 
@@ -542,8 +542,6 @@ static void try_to_replace_exited_dst(const char *dst_path, struct archive_entry
     if (util_recursive_remove_path(dst_path) != 0) {
         ERROR("Failed to remove path %s while unpack", dst_path);
     }
-
-    return;
 }
 
 int archive_unpack_handler(const struct io_read_wrapper *content, const struct archive_options *options)

@@ -251,12 +251,14 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
     }
 
     close(exec_fd[1]);
+    exec_fd[1] = -1;
     if (util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1) > 0) {
         ERROR("exec failed: %s", exec_buff);
         ret = -1;
         goto out;
     }
     close(exec_fd[0]);
+    exec_fd[0] = -1;
 
     status = util_wait_for_pid_status(pid);
     if (status < 0) {
@@ -270,9 +272,13 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
     close(out_fd[1]);
     util_read_nointr(out_fd[0], stdout_buff, sizeof(stdout_buff) - 1);
     close(out_fd[0]);
+    out_fd[0] = -1;
+    out_fd[1] = -1;
     close(err_fd[1]);
     util_read_nointr(err_fd[0], stderr_buff, sizeof(stderr_buff) - 1);
     close(err_fd[0]);
+    err_fd[0] = -1;
+    err_fd[1] = -1;
 
     if (status != 0) {
         ERROR("shim-v2 binary %d exit in %d with %s, %s", pid, status, stdout_buff, stderr_buff);
@@ -416,7 +422,7 @@ int rt_shim_clean_resource(const char *id, const char *runtime, const rt_clean_p
     int ret = 0;
     int nret = 0;
     char workdir[PATH_MAX] = {0};
-    struct DeleteResponse res = {};
+    struct DeleteResponse res = {0};
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("Invalid input params");
@@ -592,7 +598,7 @@ int rt_shim_status(const char *id, const char *runtime, const rt_status_params_t
     char address[PATH_MAX] = {0};
     int ret = 0;
     int nret = 0;
-    struct State ss = {};
+    struct State ss = {0};
 
     if (id == NULL || params == NULL || status == NULL) {
         ERROR("Invalid input params");

@@ -287,6 +287,7 @@ bool filters_args_match(const struct filters_args *filters, const char *field, c
     map_t *field_values_map = NULL;
     map_itor *itor = NULL;
 
+    // if filters == NULL, filters_args_exact_match will return true
     if (filters_args_exact_match(filters, field, source)) {
         return true;
     }

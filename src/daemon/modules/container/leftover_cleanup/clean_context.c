@@ -62,7 +62,7 @@ void clean_ctx_fill_broken_rootfs(struct clean_ctx *ctx, const char *id)
     struct linked_list *new_node = NULL;
     char *broken_id = NULL;
 
-    if (!ctx->inited) {
+    if (ctx == NULL || !ctx->inited) {
         return;
     }
 

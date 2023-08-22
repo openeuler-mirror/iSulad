@@ -307,8 +307,7 @@ int parse_http(const char *buf, size_t len, struct parsed_http_message *m,
 
     parser = parser_init(type, m);
     if (parser == NULL) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     nparsed = parse(buf, len, parser);
@@ -320,7 +319,6 @@ int parse_http(const char *buf, size_t len, struct parsed_http_message *m,
 
 free_out:
     parser_free(parser);
-out:
     return ret;
 }
 
