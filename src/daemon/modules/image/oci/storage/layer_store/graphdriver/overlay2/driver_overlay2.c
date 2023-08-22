@@ -231,7 +231,7 @@ static void rm_invalid_symlink(const char *dirpath)
         (void)memset(fname, 0, sizeof(fname));
 
         pathname_len = snprintf(fname, PATH_MAX, "%s/%s", dirpath, pdirent->d_name);
-        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+        if (pathname_len < 0 || (size_t)pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             continue;
         }
@@ -475,14 +475,14 @@ static int do_diff_symlink(const char *id, char *link_id, const char *driver_hom
     char clean_path[PATH_MAX] = { 0 };
 
     nret = snprintf(target_path, PATH_MAX, "../%s/diff", id);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to get target path %s", id);
         ret = -1;
         goto out;
     }
 
     nret = snprintf(link_path, PATH_MAX, "%s/%s/%s", driver_home, OVERLAY_LINK_DIR, link_id);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to get link path %s", link_id);
         ret = -1;
         goto out;
@@ -723,7 +723,7 @@ static char *get_lower(const char *parent, const char *driver_home)
     } else {
         nret = snprintf(lower, lower_len, "%s/%s", OVERLAY_LINK_DIR, parent_link);
     }
-    if (nret < 0 || nret >= lower_len) {
+    if (nret < 0 || (size_t)nret >= lower_len) {
         ERROR("lower %s too large", parent_link);
         goto err_out;
     }
@@ -1167,7 +1167,7 @@ int overlay2_rm_layer(const char *id, const struct graphdriver *driver)
     link_id = read_layer_link_file(layer_dir);
     if (link_id != NULL) {
         nret = snprintf(link_path, PATH_MAX, "%s/%s/%s", driver->home, OVERLAY_LINK_DIR, link_id);
-        if (nret < 0 || nret >= PATH_MAX) {
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
             ERROR("Failed to get link path %s", link_id);
             ret = -1;
             goto out;
@@ -2071,7 +2071,7 @@ int overlay2_get_driver_status(const struct graphdriver *driver, struct graphdri
     status->backing_fs = util_strdup_s(driver->backing_fs);
 
     nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %s\n", BACK_FS, driver->backing_fs);
-    if (nret < 0 || nret >= MAX_INFO_LENGTH) {
+    if (nret < 0 || (size_t)nret >= MAX_INFO_LENGTH) {
         ERROR("Failed to get backing fs");
         ret = -1;
         goto out;

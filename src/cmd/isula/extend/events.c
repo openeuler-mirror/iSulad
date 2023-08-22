@@ -34,36 +34,71 @@ struct client_arguments g_cmd_events_args = {
     .until = NULL,
 };
 
-static size_t calacute_annotations_msg_len(const container_events_format_t *event)
+static bool calacute_annotations_msg_len(const container_events_format_t *event, size_t max, size_t *anno_len)
 {
-    size_t annos_msg_len = 0;
     size_t i;
 
-    for (i = 0; i < event->annotations_len; i++) {
-        annos_msg_len += strlen(event->annotations[i]);
+    if (event->annotations_len == 0) {
+        return true;
     }
-    annos_msg_len += event->annotations_len * 2;
 
-    return annos_msg_len;
+    if (event->annotations_len > (max - 3) / 2) {
+        ERROR("Annotations len is too long");
+        return false;
+    }
+
+    max = max - event->annotations_len * 2 - 3;
+
+    for (i = 0; i < event->annotations_len; i++) {
+        if (strlen(event->annotations[i]) > max) {
+            ERROR("Annotations is too long");
+            return false;
+        }
+        max = max - strlen(event->annotations[i]);
+        *anno_len += strlen(event->annotations[i]);
+    }
+
+    // For each annotation, it needs to add two characters(',' and ' ').
+    *anno_len += event->annotations_len * 2;
+    // For the entire annotation, it needs to add three characters('(' and ')' and '\0).
+    *anno_len += 3;
+
+    return true;
 }
 
-static size_t calacute_event_msg_len(const container_events_format_t *event, const char *timebuffer)
+static bool calacute_event_msg_len(const container_events_format_t *event, const char *timebuffer, size_t *msg_len)
 {
-    size_t msg_len = 0;
-    // format : timestamp (container|image opt) id (annotaions)
-    msg_len += strlen(timebuffer) + 1 + strlen(event->opt) + 1 + strlen(event->id) + 1;
-    msg_len += calacute_annotations_msg_len(event);
-    msg_len += 1; // '\0'
+    size_t anno_len = 0;
+    bool ret = false;
 
-    return msg_len;
+    // The addition of lengths will not overflow, no need to judge overflow
+    // format : timestamp (container|image opt) id (annotaions)
+    *msg_len += strlen(timebuffer) + 1 + strlen(event->opt) + 1 + strlen(event->id) + 1;
+
+    ret = calacute_annotations_msg_len(event, SIZE_MAX - *msg_len, &anno_len);
+    if (!ret) {
+        ERROR("Failed to calacute annotations msg len");
+        return false;
+    }
+
+    *msg_len += anno_len;
+
+    return true;
 }
 
 static int generate_annotations_msg(const container_events_format_t *event, char **anno_msg)
 {
     size_t i;
-    size_t anno_msg_len = calacute_annotations_msg_len(event) + 1;
+    size_t anno_msg_len = 0;
+    bool ret = false;
 
-    if (anno_msg_len == 1) {
+    ret = calacute_annotations_msg_len(event, SIZE_MAX, &anno_msg_len);
+    if (!ret) {
+        ERROR("Failed to calacute annotations msg len");
+        return -1;
+    }
+
+    if (anno_msg_len == 0) {
         return 0;
     }
 
@@ -127,6 +162,7 @@ static void print_events_callback(const container_events_format_t *event)
     char timebuffer[TIME_STR_SIZE] = { 0 };
     char *msg = NULL;
     size_t msg_len = 0;
+    bool ret = false;
 
     if (event == NULL) {
         return;
@@ -136,7 +172,11 @@ static void print_events_callback(const container_events_format_t *event)
         (void)strcpy(timebuffer, "-");
     }
 
-    msg_len = calacute_event_msg_len(event, timebuffer);
+    ret = calacute_event_msg_len(event, timebuffer, &msg_len);
+    if (!ret) {
+        printf("Failed to calacute calacute event msg len");
+        return;
+    }
 
     msg = generate_event_msg(event, timebuffer, msg_len);
     if (msg == NULL) {

@@ -74,7 +74,7 @@ static int search_image_with_config_host(struct oci_image_module_data *oci_image
         }
 
         ret = snprintf(temp_search_name, PATH_MAX, "%s/%s", host, options->search_name);
-        if (ret < 0 || ret >= PATH_MAX) {
+        if (ret < 0 || (size_t)ret >= PATH_MAX) {
             DEBUG("Get complete search name failed");
             free(host);
             continue;

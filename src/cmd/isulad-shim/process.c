@@ -462,7 +462,7 @@ static int new_temp_console_path(process_t *p)
         return SHIM_ERR;
     }
     int nret = snprintf(p->console_sock_path, MAX_CONSOLE_SOCK_LEN, "/run/isulad%s-pty.sock", str_rand);
-    if (nret < 0 || nret >= MAX_CONSOLE_SOCK_LEN) {
+    if (nret < 0 || (size_t)nret >= MAX_CONSOLE_SOCK_LEN) {
         free(p->console_sock_path);
         p->console_sock_path = NULL;
         return SHIM_ERR;
@@ -1003,7 +1003,7 @@ static void process_delete(process_t *p)
         return;
     }
     int nret = snprintf(log_path, PATH_MAX, "%s/log.json", cwd);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         free(cwd);
         return;
     }
@@ -1060,11 +1060,11 @@ static void exec_runtime_process(process_t *p, int exec_fd)
     }
 
     int nret = snprintf(log_path, PATH_MAX, "%s/log.json", cwd);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         _exit(EXIT_FAILURE);
     }
     nret = snprintf(pid_path, PATH_MAX, "%s/pid", cwd);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         _exit(EXIT_FAILURE);
     }
 
@@ -1076,7 +1076,7 @@ static void exec_runtime_process(process_t *p, int exec_fd)
             _exit(EXIT_FAILURE);
         }
         nret = snprintf(process_desc, PATH_MAX, "%s/process.json", cwd);
-        if (nret < 0 || nret >= PATH_MAX) {
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
             _exit(EXIT_FAILURE);
         }
     }

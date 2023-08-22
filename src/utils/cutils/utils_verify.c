@@ -231,7 +231,7 @@ bool util_valid_cap(const char *cap)
     }
 
     nret = snprintf(tmpcap, sizeof(tmpcap), "CAP_%s", cap);
-    if (nret < 0 || nret >= sizeof(tmpcap)) {
+    if (nret < 0 || (size_t)nret >= sizeof(tmpcap)) {
         ERROR("Failed to print string");
         return false;
     }

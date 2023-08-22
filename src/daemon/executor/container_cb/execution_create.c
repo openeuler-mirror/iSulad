@@ -233,7 +233,7 @@ static int do_set_default_log_path_for_json_file(const char *id, const char *roo
     char default_path[PATH_MAX] = { 0 };
 
     nret = snprintf(default_path, PATH_MAX, "%s/%s/console.log", root, id);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Create default log path for container %s failed", id);
         return -1;
     }
@@ -606,6 +606,7 @@ static int conf_get_image_id(const char *image, char **id)
         goto out;
     }
 
+    // it can guarantee that ir->id is not too long internally, and there is no need to judge overflow
     len = strlen("sha256:") + strlen(ir->id) + 1;
     image_id = (char *)util_smart_calloc_s(sizeof(char), len);
     if (image_id == NULL) {

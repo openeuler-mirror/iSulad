@@ -45,7 +45,7 @@ static char *make_backing_fs_device(const char *home_dir)
     struct stat current_stat = { 0 };
 
     ret = snprintf(full_path, PATH_MAX, "%s/%s", home_dir, "backingFsBlockDev");
-    if (ret < 0 || ret >= PATH_MAX) {
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         ERROR("Failed to get backing fs device");
         goto err_out;
     }
@@ -276,7 +276,7 @@ static void get_next_project_id(const char *dirpath, struct pquota_control *ctrl
         (void)memset(fname, 0, sizeof(fname));
 
         pathname_len = snprintf(fname, PATH_MAX, "%s/%s", dirpath, pdirent->d_name);
-        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+        if (pathname_len < 0 || (size_t)pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             continue;
         }

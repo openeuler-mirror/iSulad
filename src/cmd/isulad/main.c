@@ -477,7 +477,7 @@ int check_and_save_pid(const char *fn)
     }
 
     len = snprintf(pidbuf, sizeof(pidbuf), "%lu\n", (unsigned long)getpid());
-    if (len < 0 || len >= sizeof(pidbuf)) {
+    if (len < 0 || (size_t)len >= sizeof(pidbuf)) {
         ERROR("failed sprint pidbuf");
         ret = -1;
         goto out;

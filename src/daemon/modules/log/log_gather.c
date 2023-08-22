@@ -54,13 +54,13 @@ static int file_rotate_gz(const char *file_name, int i)
     char to_path[PATH_MAX] = { 0 };
 
     ret = snprintf(from_path, PATH_MAX, "%s.%d.gz", file_name, (i - 1));
-    if (ret >= PATH_MAX || ret < 0) {
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         ERROR("sprint zip file name failed");
         return -1;
     }
 
     ret = snprintf(to_path, PATH_MAX, "%s.%d.gz", file_name, i);
-    if (ret >= PATH_MAX || ret < 0) {
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         ERROR("sprint zip file name failed");
         return -1;
     }
@@ -79,7 +79,7 @@ static int file_rotate_me(const char *file_name)
     char tmp_path[PATH_MAX] = { 0 };
 
     ret = snprintf(tmp_path, PATH_MAX, "%s.1", file_name);
-    if (ret >= PATH_MAX || ret < 0) {
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         ERROR("Out of memory");
         return -1;
     }

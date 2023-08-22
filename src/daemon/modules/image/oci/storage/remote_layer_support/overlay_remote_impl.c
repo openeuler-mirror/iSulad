@@ -112,14 +112,14 @@ static int do_diff_symlink(const char *id, char *link_id, const char *driver_hom
     char clean_path[PATH_MAX] = { 0 };
 
     nret = snprintf(target_path, PATH_MAX, "../%s/diff", id);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to get target path %s", id);
         ret = -1;
         goto out;
     }
 
     nret = snprintf(link_path, PATH_MAX, "%s/%s/%s", driver_home, OVERLAY_LINK_DIR, link_id);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to get link path %s", link_id);
         ret = -1;
         goto out;

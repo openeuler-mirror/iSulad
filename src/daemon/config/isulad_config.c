@@ -605,11 +605,12 @@ static char *get_parent_mount_dir(char *graph)
     size_t len;
     char *rootfsdir = NULL;
 
-    len = strlen(graph) + strlen("/mnt/rootfs") + 1;
-    if (len > PATH_MAX) {
-        ERROR("The size of path exceeds the limit");
+    if (strlen(graph) > (PATH_MAX - strlen("/mnt/rootfs") - 1)) {
+        ERROR("Graph path is too long");
         return NULL;
     }
+
+    len = strlen(graph) + strlen("/mnt/rootfs") + 1;
 
     rootfsdir = util_smart_calloc_s(sizeof(char), len);
     if (rootfsdir == NULL) {
@@ -827,6 +828,12 @@ char *conf_get_engine_log_file()
         ERROR("conf_get_isulad_log_gather_fifo_path failed");
         goto out;
     }
+
+    if (strlen(logfile) > (SIZE_MAX - strlen(prefix) - 1)) {
+        ERROR("Logfile path is too long");
+        return NULL;
+    }
+
     len = strlen(prefix) + strlen(logfile) + 1;
     if (len > PATH_MAX) {
         ERROR("The size of path exceeds the limit");

@@ -768,7 +768,7 @@ static int device_file_walk(struct device_set *devset)
 
         (void)memset(fname, 0, sizeof(fname));
         pathname_len = snprintf(fname, PATH_MAX, "%s/%s", metadir, entry->d_name);
-        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+        if (pathname_len < 0 || (size_t)pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             continue;
         }
@@ -3350,7 +3350,7 @@ struct status *device_set_status(struct device_set *devset)
         char msg[PATH_MAX] = { 0 };
 
         msg_len = snprintf(msg, PATH_MAX, "system semaphore nums has attached limit: %d", sem_usz);
-        if (msg_len < 0 || msg_len >= PATH_MAX) {
+        if (msg_len < 0 || (size_t)msg_len >= PATH_MAX) {
             ERROR("Cannot get semaphore err msg");
             free_devmapper_status(st);
             st = NULL;
@@ -3397,7 +3397,7 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
 
         (void)memset(fname, 0, sizeof(fname));
         pathname_len = snprintf(fname, PATH_MAX, "%s/%s", mnt_root, entry->d_name);
-        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+        if (pathname_len < 0 || (size_t)pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             continue;
         }

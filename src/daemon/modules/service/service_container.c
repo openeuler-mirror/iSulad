@@ -319,6 +319,7 @@ static int write_env_content(const char *env_path, const char **env, size_t env_
     int fd = -1;
     size_t i = 0;
     ssize_t nret = 0;
+    int env_max = 4096;
 
     ret = create_env_path_dir(env_path);
     if (ret < 0) {
@@ -333,6 +334,11 @@ static int write_env_content(const char *env_path, const char **env, size_t env_
     }
     if (env != NULL) {
         for (i = 0; i < env_len; i++) {
+            if (strlen(env[i]) > env_max) {
+                ERROR("Env is too long");
+                ret = -1;
+                goto out;
+            }
             size_t len = strlen(env[i]) + strlen("\n") + 1;
             char *env_content = NULL;
             env_content = util_common_calloc_s(len);
@@ -1612,7 +1618,7 @@ int cleanup_mounts_by_id(const char *id, const char *engine_root_path)
     int nret = 0;
 
     nret = snprintf(target, PATH_MAX, "%s/%s", engine_root_path, id);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Sprintf failed");
         return -1;
     }

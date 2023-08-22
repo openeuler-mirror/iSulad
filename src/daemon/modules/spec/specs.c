@@ -2390,7 +2390,7 @@ int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec
     parser_error err = NULL;
 
     nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, OCI_CONFIG_JSON);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to print string");
         ret = -1;
         goto out_free;

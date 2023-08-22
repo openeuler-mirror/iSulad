@@ -1010,7 +1010,7 @@ static int append_seccomp_to_security_opts(const char *full_opt, const char *sec
         goto out;
     }
     nret = snprintf(tmp_str, size, "seccomp=%s", seccomp_json);
-    if (nret < 0 || nret >= size) {
+    if (nret < 0 || (size_t)nret >= size) {
         COMMAND_ERROR("failed to sprintf buffer!");
         ret = -1;
         goto out;
