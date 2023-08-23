@@ -38,6 +38,22 @@ void util_free_array_by_len(char **array, size_t len)
     free(array);
 }
 
+void util_free_sensitive_array_by_len(char **array, size_t len)
+{
+    size_t i = 0;
+
+    if (array == NULL) {
+        return;
+    }
+
+    for (; i < len; i++) {
+        util_free_sensitive_string(array[i]);
+        array[i] = NULL;
+    }
+
+    free(array);
+}
+
 size_t util_array_len(const char **array)
 {
     const char **pos;
@@ -56,6 +72,17 @@ void util_free_array(char **array)
 
     for (p = array; p != NULL && *p != NULL; p++) {
         UTIL_FREE_AND_SET_NULL(*p);
+    }
+    free(array);
+}
+
+void util_free_sensitive_array(char **array)
+{
+    char **p;
+
+    for (p = array; p != NULL && *p != NULL; p++) {
+        util_free_sensitive_string(*p);
+        *p = NULL;
     }
     free(array);
 }

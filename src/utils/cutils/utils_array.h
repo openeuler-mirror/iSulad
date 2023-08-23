@@ -36,6 +36,10 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
 
 int util_array_append(char ***array, const char *element);
 
+void util_free_sensitive_array(char **array);
+
+void util_free_sensitive_array_by_len(char **array, size_t len);
+
 #ifdef __cplusplus
 }
 #endif

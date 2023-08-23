@@ -213,6 +213,7 @@ int auths_load(char *host, char **username, char **password)
     }
 
 out:
+    // it is not nessasary to clean auths, because it has been encrypted and load from file.
     free_registry_auths(auths);
     auths = NULL;
     free(err);
@@ -397,6 +398,7 @@ int auths_save(char *host, char *username, char *password)
     }
 
 out:
+    // it is not nessasary to clean auth, auths and json, because it has been encrypted and write to file.
     free(json);
     json = NULL;
     free_registry_auths(auths);

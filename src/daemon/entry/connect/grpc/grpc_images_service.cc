@@ -517,6 +517,8 @@ Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *requ
     (void)cb->image.login(image_req, &image_res);
     response_to_grpc(image_res, reply);
 
+    util_memset_sensitive_string(image_req->password);
+
     free_image_login_request(image_req);
     free_image_login_response(image_res);
 

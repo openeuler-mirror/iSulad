@@ -32,7 +32,7 @@ void free_challenge(challenge *c)
     c->realm = NULL;
     free(c->service);
     c->service = NULL;
-    free(c->cached_token);
+    util_free_sensitive_string(c->cached_token);
     c->cached_token = NULL;
     c->expires_time = 0;
 

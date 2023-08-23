@@ -618,6 +618,7 @@ static int image_login_request_to_rest(const struct isula_login_request *request
 
 out:
     free(err);
+    util_memset_sensitive_string(crequest->password);
     free_image_login_request(crequest);
     return ret;
 }
@@ -654,6 +655,7 @@ out:
     if (output != NULL) {
         buffer_free(output);
     }
+    util_memset_sensitive_string(body);
     put_body(body);
     return ret;
 }
