@@ -97,7 +97,7 @@ static int register_layer(import_desc *desc)
         return -1;
     }
 
-    id = util_without_sha256_prefix(desc->uncompressed_digest);
+    id = oci_image_id_from_digest(desc->uncompressed_digest);
     if (id == NULL) {
         ERROR("Invalid NULL param");
         return -1;
@@ -318,8 +318,16 @@ static int register_image(import_desc *desc)
     opts.create_time = &desc->now_time;
     opts.digest = desc->manifest_digest;
 
-    image_id = util_without_sha256_prefix(desc->config_digest);
-    top_layer_id = util_without_sha256_prefix(desc->uncompressed_digest);
+    image_id = oci_image_id_from_digest(desc->config_digest);
+    if (image_id == NULL) {
+        ret = -1;
+        goto out;
+    }
+    top_layer_id = oci_image_id_from_digest(desc->uncompressed_digest);
+    if (top_layer_id == NULL) {
+        ret = -1;
+        goto out;
+    }
     ret = storage_img_create(image_id, top_layer_id, NULL, &opts);
     if (ret != 0) {
         pre_top_layer = storage_get_img_top_layer(image_id);
