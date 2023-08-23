@@ -290,16 +290,6 @@ out:
     return full_digest;
 }
 
-static char *oci_load_without_sha256_prefix(char *digest)
-{
-    if (digest == NULL) {
-        ERROR("Invalid digest NULL when strip sha256 prefix");
-        return NULL;
-    }
-
-    return digest + strlen(SHA256_PREFIX);
-}
-
 static int registry_layer_from_tarball(const load_layer_blob_t *layer, const char *id, const char *parent)
 {
     int ret = 0;
@@ -345,7 +335,7 @@ static int oci_load_register_layers(load_image_t *desc)
     }
 
     for (i = 0; i < desc->layers_len; i++) {
-        id = oci_load_without_sha256_prefix(desc->layers[i]->chain_id);
+        id = oci_image_id_from_digest(desc->layers[i]->chain_id);
         if (id == NULL) {
             ERROR("layer %zu have NULL digest for image %s", i, desc->im_id);
             ret = -1;
@@ -457,7 +447,7 @@ static int oci_load_create_image(load_image_t *desc, const char *dst_tag)
     top_layer_index = desc->layers_len - 1;
     opts.create_time = &timestamp;
     opts.digest = desc->manifest_digest;
-    top_layer_id = oci_load_without_sha256_prefix(desc->layers[top_layer_index]->chain_id);
+    top_layer_id = oci_image_id_from_digest(desc->layers[top_layer_index]->chain_id);
     if (top_layer_id == NULL) {
         ERROR("NULL top layer id found for image %s", desc->im_id);
         ret = -1;
@@ -764,7 +754,7 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
         }
         parent_chain_id_sha256 = im->layers[i]->chain_id;
 
-        id = oci_load_without_sha256_prefix(im->layers[i]->chain_id);
+        id = oci_image_id_from_digest(im->layers[i]->chain_id);
         if (id == NULL) {
             ERROR("Wipe out sha256 prefix failed from layer with chain id : %s", im->layers[i]->chain_id);
             ret = -1;
@@ -832,7 +822,8 @@ static load_image_t *oci_load_process_manifest(const image_manifest_items_elemen
         goto out;
     }
 
-    image_id = oci_load_without_sha256_prefix(image_digest);
+    // call util_valid_digest to ensure digest is valid, so image id is valid
+    image_id = oci_image_id_from_digest(image_digest);
     if (image_id == NULL) {
         ret = -1;
         ERROR("Remove sha256 prefix error from image digest %s", image_digest);
@@ -872,7 +863,7 @@ static int64_t get_layer_size_from_storage(char *chain_id_pre)
         return -1;
     }
 
-    id = oci_load_without_sha256_prefix(chain_id_pre);
+    id = oci_image_id_from_digest(chain_id_pre);
     if (id == NULL) {
         ERROR("Get chain id failed from value:%s", chain_id_pre);
         return -1;
