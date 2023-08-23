@@ -102,6 +102,10 @@ int util_mount_namespace(const char *netns_path)
     int ret = 0;
     void *status = NULL;
 
+    if (netns_path == NULL) {
+        return -1;
+    }
+
     ret = pthread_create(&newns_thread, NULL, mount_netns, (void *)netns_path);
     if (ret != 0) {
         ERROR("Failed to create thread");
@@ -135,8 +139,10 @@ out:
 int util_umount_namespace(const char *netns_path)
 {
     int i = 0;
+
     if (netns_path == NULL) {
-        WARN("Invalid path to umount");
+        WARN("Empty netns path to umount");
+        return 0;
     }
 
     for (i = 0; i < 50; i++) {

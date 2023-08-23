@@ -97,7 +97,7 @@ cleanup:
     return ret;
 }
 
-int resolve_host_source_path(const char *path, bool follow_link, char **resolved_path, char **rebase_name, char **err)
+static int resolve_host_source_path(const char *path, bool follow_link, char **resolved_path, char **rebase_name, char **err)
 {
     int ret = -1;
     int nret = 0;
@@ -173,6 +173,10 @@ struct archive_copy_info *copy_info_source_path(const char *path, bool follow_li
     struct stat st;
     char *resolved_path = NULL;
     char *rebase_name = NULL;
+
+    if (path == NULL || err == NULL) {
+        return NULL;
+    }
 
     info = util_common_calloc_s(sizeof(struct archive_copy_info));
     if (info == NULL) {
@@ -283,7 +287,7 @@ cleanup:
     return -1;
 }
 
-struct archive_copy_info *copy_info_destination_path(const char *path, char **err)
+static struct archive_copy_info *copy_info_destination_path(const char *path, char **err)
 {
     struct archive_copy_info *info = NULL;
     struct stat st;
@@ -389,6 +393,10 @@ int archive_copy_to(const struct io_read_wrapper *content, const struct archive_
     char *src_base = NULL;
     char *dst_base = NULL;
 
+    if (err == NULL || dstpath == NULL || srcinfo == NULL || content == NULL) {
+        return -1;
+    }
+
     dstinfo = copy_info_destination_path(dstpath, err);
     if (dstinfo == NULL) {
         ERROR("Can not get destination info: %s", dstpath);
@@ -444,5 +452,9 @@ cleanup:
 
 int tar_resource(const struct archive_copy_info *info, struct io_read_wrapper *archive_reader, char **err)
 {
+    if (info == NULL || archive_reader == NULL || err == NULL) {
+        return -1;
+    }
+
     return tar_resource_rebase(info->path, info->rebase_name, archive_reader, err);
 }

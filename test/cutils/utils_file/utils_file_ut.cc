@@ -197,8 +197,11 @@ TEST(utils_file, test_util_proc_file_line_by_line)
     fp = util_fopen(path.c_str(), "r");
     checked_layers = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
     ASSERT_EQ(util_proc_file_line_by_line(fp, parse_checked_layer_cb, (void *)checked_layers), 0);
+    ASSERT_EQ(util_proc_file_line_by_line(fp, nullptr, (void *)checked_layers), -1);
     fclose(fp);
     ASSERT_EQ(util_path_remove(path.c_str()), 0);
+    
+    ASSERT_EQ(util_proc_file_line_by_line(nullptr, parse_checked_layer_cb, (void *)checked_layers), -1);
 }
 
 TEST(utils_file, test_util_recursive_remove_path)

@@ -121,7 +121,7 @@ int runtime_create(const char *name, const char *runtime, const rt_create_params
     int ret = 0;
     const struct rt_ops *ops = NULL;
 
-    if (name == NULL || runtime == NULL) {
+    if (name == NULL || runtime == NULL || params == NULL) {
         ERROR("Invalide arguments for runtime create");
         ret = -1;
         goto out;
@@ -145,7 +145,7 @@ int runtime_start(const char *name, const char *runtime, const rt_start_params_t
     int ret = 0;
     const struct rt_ops *ops = NULL;
 
-    if (name == NULL || runtime == NULL || pid_info == NULL) {
+    if (name == NULL || runtime == NULL || params == NULL || pid_info == NULL) {
         ERROR("Invalide arguments for runtime start");
         ret = -1;
         goto out;
@@ -169,7 +169,7 @@ int runtime_kill(const char *name, const char *runtime, const rt_kill_params_t *
     int ret = 0;
     const struct rt_ops *ops = NULL;
 
-    if (name == NULL || runtime == NULL) {
+    if (name == NULL || runtime == NULL || params == NULL) {
         ERROR("Invalid arguments for runtime kill");
         ret = -1;
         goto out;
@@ -193,7 +193,7 @@ int runtime_restart(const char *name, const char *runtime, const rt_restart_para
     int ret = 0;
     const struct rt_ops *ops = NULL;
 
-    if (name == NULL || runtime == NULL) {
+    if (name == NULL || runtime == NULL || params == NULL) {
         ERROR("Invalide arguments for runtime restart");
         ret = -1;
         goto out;
@@ -217,7 +217,7 @@ int runtime_clean_resource(const char *name, const char *runtime, const rt_clean
     int ret = 0;
     const struct rt_ops *ops = NULL;
 
-    if (name == NULL || runtime == NULL) {
+    if (name == NULL || runtime == NULL || params == NULL) {
         ERROR("Invalide arguments for runtime clean");
         ret = -1;
         goto out;
@@ -241,7 +241,7 @@ int runtime_rm(const char *name, const char *runtime, const rt_rm_params_t *para
     int ret = 0;
     const struct rt_ops *ops = NULL;
 
-    if (name == NULL || runtime == NULL) {
+    if (name == NULL || runtime == NULL || params == NULL) {
         ERROR("Invalide arguments for runtime rm");
         ret = -1;
         goto out;
@@ -266,7 +266,7 @@ int runtime_status(const char *name, const char *runtime, const rt_status_params
     int ret = 0;
     const struct rt_ops *ops = NULL;
 
-    if (name == NULL || runtime == NULL || status == NULL) {
+    if (name == NULL || runtime == NULL || params == NULL || status == NULL) {
         ERROR("Invalide arguments for runtime status");
         ret = -1;
         goto out;
@@ -291,7 +291,7 @@ int runtime_resources_stats(const char *name, const char *runtime, const rt_stat
     int ret = 0;
     const struct rt_ops *ops = NULL;
 
-    if (name == NULL || runtime == NULL || rs_stats == NULL) {
+    if (name == NULL || runtime == NULL || params == NULL || rs_stats == NULL) {
         ERROR("Invalide arguments for runtime stats");
         ret = -1;
         goto out;
@@ -315,7 +315,7 @@ int runtime_exec(const char *name, const char *runtime, const rt_exec_params_t *
     int ret = 0;
     const struct rt_ops *ops = NULL;
 
-    if (name == NULL || runtime == NULL || exit_code == NULL) {
+    if (name == NULL || runtime == NULL || params == NULL || exit_code == NULL) {
         ERROR("Invalide arguments for runtime exec");
         ret = -1;
         goto out;

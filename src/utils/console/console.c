@@ -208,6 +208,11 @@ int console_fifo_create(const char *fifo_path)
 {
     int ret;
 
+    if (fifo_path == NULL || strlen(fifo_path) > PATH_MAX) {
+        ERROR("Invalid input!");
+        return -1;
+    }
+
     ret = mknod(fifo_path, S_IFIFO | S_IRUSR | S_IWUSR, (dev_t)0);
     if (ret < 0 && errno != EEXIST) {
         ERROR("Failed to mknod monitor fifo %s: %s.", fifo_path, strerror(errno));

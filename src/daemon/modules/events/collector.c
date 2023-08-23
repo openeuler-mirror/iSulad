@@ -514,8 +514,6 @@ out:
 static void events_append(const struct isulad_events_format *event)
 {
     struct isulad_events_format *tmpevent = NULL;
-    struct linked_list *newnode = NULL;
-    struct linked_list *firstnode = NULL;
 
     if (pthread_mutex_lock(&g_events_buffer.event_mutex)) {
         WARN("Failed to lock");
@@ -523,6 +521,7 @@ static void events_append(const struct isulad_events_format *event)
     }
 
     if (g_events_buffer.size < EVENTSLIMIT) {
+        struct linked_list *newnode = NULL;
         newnode = util_common_calloc_s(sizeof(struct linked_list));
         if (newnode == NULL) {
             CRIT("Memory allocation error.");
@@ -547,6 +546,7 @@ static void events_append(const struct isulad_events_format *event)
         linked_list_add_tail(&g_events_buffer.event_list, newnode);
         g_events_buffer.size++;
     } else {
+        struct linked_list *firstnode = NULL;
         firstnode = linked_list_first_node(&g_events_buffer.event_list);
         if (firstnode != NULL) {
             linked_list_del(firstnode);

@@ -567,6 +567,10 @@ char *util_get_resource_path(const char *rootpath, const char *path)
     char tmppath[PATH_MAX] = { 0 };
     char fullpath[PATH_MAX] = { 0 };
 
+    if (rootpath == NULL) {
+        return NULL;
+    }
+
     nret = snprintf(tmppath, sizeof(tmppath), "/%s/%s", rootpath, path);
     if (nret < 0 || (size_t)nret >= sizeof(tmppath)) {
         return NULL;

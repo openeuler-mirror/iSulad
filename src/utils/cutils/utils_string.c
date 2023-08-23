@@ -190,6 +190,10 @@ int util_parse_size_int_and_float(const char *numstr, int64_t mlt, int64_t *conv
     char *dot = NULL;
     int nret;
 
+    if (numstr == NULL || converted == NULL) {
+        return -1;
+    }
+
     dot = strchr(numstr, '.');
     if (dot != NULL) {
         char tmp;
@@ -823,6 +827,10 @@ int util_string_array_unique(const char **elements, size_t length, char ***uniqu
     map_itor *itor = NULL;
     char **tmp_elements = NULL;
     size_t tmp_elements_len = 0;
+
+    if (unique_elements == NULL || unique_elements_len == NULL) {
+        return -1;
+    }
 
     if (elements == NULL || length == 0) {
         return 0;
