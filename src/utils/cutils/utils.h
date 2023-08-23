@@ -76,6 +76,8 @@ int malloc_trim(size_t pad);
 
 #define PARAM_NUM 100
 
+#define MAX_OCI_RUNTIME_ARGS 50
+
 /* image error start */
 #define EIMAGEBUSY 2
 #define ENAMECONFLICT 3

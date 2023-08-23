@@ -314,7 +314,7 @@ out:
     }
 }
 
-static int get_runtime_args(const char *runtime, const char ***args)
+static int get_runtime_args(const char *runtime, const char ***args, size_t *args_len)
 {
     int ret = 0;
     struct service_arguments *gargs = NULL;
@@ -344,11 +344,18 @@ static int get_runtime_args(const char *runtime, const char ***args)
     }
 
     for (i = 0; i < runtimes->len; i++) {
-        if (strcmp(runtime, runtimes->keys[i]) == 0) {
-            *args = (const char **)runtimes->values[i]->runtime_args;
-            ret = runtimes->values[i]->runtime_args_len;
-            goto unlock_out;
+        if (strcmp(runtime, runtimes->keys[i]) != 0) {
+            continue;
         }
+        if (runtimes->values[i]->runtime_args_len > MAX_OCI_RUNTIME_ARGS) {
+            isulad_set_error_message("Too many runtimeArgs, runtimeArgs must be less than %d", MAX_OCI_RUNTIME_ARGS);
+            ERROR("Too many runtimeArgs, runtimeArgs must be less than %d", MAX_OCI_RUNTIME_ARGS);
+            ret = -1;
+        } else {
+            *args = (const char **)runtimes->values[i]->runtime_args;
+            *args_len = runtimes->values[i]->runtime_args_len;
+        }
+        goto unlock_out;
     }
 unlock_out:
     if (isulad_server_conf_unlock()) {
@@ -438,12 +445,16 @@ static void runtime_exec_param_init(runtime_exec_info *rei)
     }
 }
 
-static void runtime_exec_info_init(runtime_exec_info *rei, const char *workdir, const char *runtime, const char *subcmd,
+static int runtime_exec_info_init(runtime_exec_info *rei, const char *workdir, const char *runtime, const char *subcmd,
                                    const char **opts, size_t opts_len, const char *id, char **params, size_t params_num)
 {
+    int ret = 0;
     rei->workdir = workdir;
     rei->runtime = runtime;
-    rei->args_len = get_runtime_args(runtime, &rei->args);
+    ret = get_runtime_args(runtime, &rei->args, &rei->args_len);
+    if (ret != 0) {
+        return -1;
+    }
     get_runtime_cmd(runtime, &rei->cmd);
     rei->subcmd = subcmd;
     rei->opts = opts;
@@ -454,6 +465,7 @@ static void runtime_exec_info_init(runtime_exec_info *rei, const char *workdir, 
 
     runtime_exec_param_init(rei);
     runtime_exec_param_dump((const char **)rei->params);
+    return 0;
 }
 
 static void runtime_exec_func(void *arg)
@@ -507,7 +519,12 @@ static int runtime_call_status(const char *workdir, const char *runtime, const c
     int ret = 0;
     char *params[PARAM_NUM] = { 0 };
 
-    runtime_exec_info_init(&rei, workdir, runtime, "state", NULL, 0, id, params, PARAM_NUM);
+    ret = runtime_exec_info_init(&rei, workdir, runtime, "state", NULL, 0, id, params, PARAM_NUM);
+    if (ret != 0) {
+        ERROR("Failed to init runtime exec info");
+        ret = -1;
+        goto out;
+    }
 
     if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout_msg, &stderr_msg)) {
         ERROR("call runtime status failed: %s", stderr_msg);
@@ -557,7 +574,12 @@ static int runtime_call_stats(const char *workdir, const char *runtime, const ch
     char *params[PARAM_NUM] = { 0 };
     const char *opts[1] = { "--stats" };
 
-    runtime_exec_info_init(&rei, workdir, runtime, "events", opts, 1, id, params, PARAM_NUM);
+    ret = runtime_exec_info_init(&rei, workdir, runtime, "events", opts, 1, id, params, PARAM_NUM);
+    if (ret != 0) {
+        ERROR("Failed to init runtime exec info");
+        ret = -1;
+        goto out;
+    }
 
     if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout_msg, &stderr_msg)) {
         ERROR("call runtime events --stats failed: %s", stderr_msg);
@@ -610,7 +632,12 @@ static int runtime_call_simple(const char *workdir, const char *runtime, const c
     int ret = 0;
     char *params[PARAM_NUM] = { 0 };
 
-    runtime_exec_info_init(&rei, workdir, runtime, subcmd, opts, opts_len, id, params, PARAM_NUM);
+    ret = runtime_exec_info_init(&rei, workdir, runtime, subcmd, opts, opts_len, id, params, PARAM_NUM);
+    if (ret != 0) {
+        ERROR("Failed to init runtime exec info");
+        return -1;
+    }
+
     if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout_msg, &stderr_msg)) {
         ERROR("call runtime %s failed stderr %s", subcmd, stderr_msg);
         ret = -1;
@@ -940,7 +967,11 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
         return -1;
     }
     config = params->oci_config_data;
-    runtime_args_len = get_runtime_args(runtime, &runtime_args);
+    ret = get_runtime_args(runtime, &runtime_args, &runtime_args_len);
+    if (ret != 0) {
+        ERROR("Failed to get runtime args");
+        return -1;
+    }
 
     if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
         INFO("make full workdir failed");
@@ -1186,7 +1217,11 @@ static int preparation_exec(const char *id, const char *runtime, const char *wor
     }
 
     process = params->spec;
-    runtime_args_len = get_runtime_args(runtime, &runtime_args);
+    ret = get_runtime_args(runtime, &runtime_args, &runtime_args_len);
+    if (ret < 0) {
+        ERROR("Failed to get runtime args");
+        return -1;
+    }
 
     p.exec = true;
     p.isulad_stdin = (char *)params->console_fifos[0];
