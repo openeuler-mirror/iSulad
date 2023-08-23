@@ -924,10 +924,10 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
             ret = gethostname(hostname, sizeof(hostname));
         } else {
             // max length of hostname from ID is 12 + '\0'
+            // the purpose is to truncate the first 12 bits of id,
+            // nret is 64, no need to judge
             nret = snprintf(hostname, 13, "%s", id);
-            if (nret < 0 || (size_t)nret >= 13) {
-                ret = -1;
-            }
+            ret = nret < 0 ? 1 : 0;
         }
         if (ret != 0) {
             ERROR("Create hostname error");
