@@ -32,16 +32,19 @@ bool ShimController::Create(const std::string &sandboxId,
                             const ControllerCreateParams &params,
                             Errors &error)
 {
-    return true;
+    error.SetError("Not supported");
+    return false;
 }
 
 std::unique_ptr<ControllerSandboxInfo> ShimController::Start(const std::string &sandboxId, Errors &error)
 {
+    error.SetError("Not supported");
     return nullptr;
 }
 
 std::unique_ptr<ControllerPlatformInfo> ShimController::Platform(const std::string &sandboxId, Errors &error)
 {
+    error.SetError("Not supported");
     return nullptr;
 }
 
@@ -49,47 +52,55 @@ std::string ShimController::Prepare(const std::string &sandboxId,
                                     const ControllerPrepareParams &params,
                                     Errors &error)
 {
+    error.SetError("Not supported");
     return std::string("");
 }
 
 bool ShimController::Purge(const std::string &sandboxId, const std::string &containerId,
                            const std::string &execId, Errors &error)
 {
-    return true;
+    error.SetError("Not supported");
+    return false;
 }
 
 bool ShimController::UpdateResources(const std::string &sandboxId,
                                      const ControllerUpdateResourcesParams &params,
                                      Errors &error)
 {
-    return true;
+    error.SetError("Not supported");
+    return false;
 }
 
 bool ShimController::Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error)
 {
-    return true;
+    error.SetError("Not supported");
+    return false;
 }
 
 bool ShimController::Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error)
 {
-    return true;
+    error.SetError("Not supported");
+    return false;
 }
 
 std::unique_ptr<ControllerSandboxStatus> ShimController::Status(const std::string &sandboxId, bool verbose,
                                                                 Errors &error)
 {
+    error.SetError("Not supported");
     return nullptr;
 }
 
 bool ShimController::Shutdown(const std::string &sandboxId, Errors &error)
 {
-    return true;
+    error.SetError("Not supported");
+    return false;
 }
 
 bool ShimController::UpdateNetworkSettings(const std::string &sandboxId, const std::string &networkSettings,
                                            Errors &error)
 {
-    return true;
+    error.SetError("Not supported");
+    return false;
 }
 
 } // namespace

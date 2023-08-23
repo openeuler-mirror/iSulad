@@ -91,8 +91,8 @@ auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, s
         return nullptr;
     }
 
-    std::shared_ptr<Sandbox> old = GetSandbox(name, error);
-    if (error.NotEmpty()) {
+    std::shared_ptr<Sandbox> old = GetSandbox(name);
+    if (old != nullptr) {
         ERROR("Conflict. The name \"%s\" is already in use by sandbox %s. "
               "You have to remove that sandbox to be able to reuse that name.",
               name.c_str(), old->GetId().c_str());
@@ -257,12 +257,11 @@ void SandboxManager::StoreRemove(const std::string &id)
     m_storeMap.erase(id);
 }
 
-auto SandboxManager::GetSandbox(const std::string &idOrName, Errors &error) -> std::shared_ptr<Sandbox>
+auto SandboxManager::GetSandbox(const std::string &idOrName) -> std::shared_ptr<Sandbox>
 {
     std::shared_ptr<Sandbox> sandbox = nullptr;
 
     if (!util_valid_container_id_or_name(idOrName.c_str())) {
-        error.Errorf("Invalid sandbox name: %s", idOrName.c_str());
         ERROR("Invalid sandbox name: %s", idOrName.c_str());
         return nullptr;
     }
@@ -285,8 +284,7 @@ auto SandboxManager::GetSandbox(const std::string &idOrName, Errors &error) -> s
         return sandbox;
     }
 
-    error.SetError("Sandbox not found");
-    ERROR("Sandbox not found: %s", idOrName.c_str());
+    // Error message not set here since it might make sense: 1. after deleted 2. before created
     return nullptr;
 }
 
@@ -298,10 +296,10 @@ auto SandboxManager::DeleteSandbox(const std::string &idOrName, Errors &error) -
         return false;
     }
 
-    std::shared_ptr<Sandbox> sandbox = GetSandbox(idOrName, error);
-    if (error.NotEmpty()) {
+    std::shared_ptr<Sandbox> sandbox = GetSandbox(idOrName);
+    if (sandbox == nullptr) {
         ERROR("Failed to find sandbox %s", idOrName.c_str());
-        error.AppendError("Failed to find sandbox.");
+        error.Errorf("Failed to find sandbox %s", idOrName.c_str());
         return false;
     }
 

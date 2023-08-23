@@ -40,7 +40,8 @@
 namespace CRIV1 {
 void PodSandboxManagerService::PrepareSandboxData(const runtime::v1::PodSandboxConfig &config,
                                                   const std::string &runtimeHandler, std::string &sandboxName,
-                                                  sandbox::RuntimeInfo &runtimeInfo, std::string &networkMode)
+                                                  sandbox::RuntimeInfo &runtimeInfo, std::string &networkMode,
+                                                  Errors &error)
 {
     // Prepare sandboxName
     sandboxName = CRINamingV1::MakeSandboxName(config.metadata());
@@ -51,9 +52,9 @@ void PodSandboxManagerService::PrepareSandboxData(const runtime::v1::PodSandboxC
     if (runtimeInfo.runtime.empty()) {
         runtimeInfo.runtime = std::string(runtimeHandler);
     }
-    runtimeInfo.sandboxer = CRIHelpers::CRISandboxerConvert(runtimeHandler);
+    runtimeInfo.sandboxer = CRIHelpersV1::CRISandboxerConvert(runtimeHandler);
     if (runtimeInfo.sandboxer.empty()) {
-        runtimeInfo.sandboxer = std::string(DEFAULT_SANDBOXER_NAME);
+        runtimeInfo.sandboxer = std::string(runtimeHandler);
     }
 
     // Prepare network mode
@@ -300,7 +301,10 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
     runtime::v1::PodSandboxConfig copyConfig = config;
 
     // Step 1: Parepare sandbox name, runtime and networkMode
-    PrepareSandboxData(config, runtimeHandler, sandboxName, runtimeInfo, networkMode);
+    PrepareSandboxData(config, runtimeHandler, sandboxName, runtimeInfo, networkMode, error);
+    if (error.NotEmpty()) {
+        return response_id;
+    }
 
     // Step 2: Pull the image for the sandbox.
     // Maybe we should pull image in shim controller ?
@@ -471,9 +475,10 @@ void PodSandboxManagerService::StopPodSandbox(const std::string &podSandboxID, E
         return;
     }
 
-    std::shared_ptr<sandbox::Sandbox> sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID, error);
-    if (error.NotEmpty()) {
-        ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
+    std::shared_ptr<sandbox::Sandbox> sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID);
+    if (sandbox == nullptr) {
+        ERROR("Failed to find sandbox id %s", podSandboxID.c_str());
+        error.Errorf("Failed to find sandbox id %s", podSandboxID.c_str());
         return;
     }
 
@@ -537,9 +542,10 @@ void PodSandboxManagerService::RemovePodSandbox(const std::string &podSandboxID,
         return;
     }
 
-    auto sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID, error);
-    if (error.NotEmpty()) {
-        ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
+    auto sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID);
+    if (sandbox == nullptr) {
+        ERROR("Failed to find sandbox id %s", podSandboxID.c_str());
+        error.Errorf("Failed to find sandbox id %s", podSandboxID.c_str());
         return;
     }
 
@@ -672,10 +678,10 @@ PodSandboxManagerService::PodSandboxStatus(const std::string &podSandboxID, Erro
         return nullptr;
     }
 
-    auto sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID, error);
-    if (error.NotEmpty()) {
-        ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
-        error.Errorf("Failed to find sandbox id %s: %s", podSandboxID.c_str(), error.GetCMessage());
+    auto sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID);
+    if (sandbox == nullptr) {
+        ERROR("Failed to find sandbox id %s", podSandboxID.c_str());
+        error.Errorf("Failed to find sandbox id %s", podSandboxID.c_str());
         return nullptr;
     }
 

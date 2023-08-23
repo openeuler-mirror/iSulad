@@ -68,7 +68,7 @@ static bool validate_sandbox_info(const container_sandbox_info *sandbox)
 {
     bool valid = (sandbox->sandboxer != NULL && sandbox->id != NULL &&
                   sandbox->task_address != NULL && sandbox->hostname != NULL &&
-                  sandbox->hostname_path == NULL && sandbox->hosts_path != NULL &&
+                  sandbox->hostname_path != NULL && sandbox->hosts_path != NULL &&
                   sandbox->resolv_conf_path != NULL);
     return valid;
 }

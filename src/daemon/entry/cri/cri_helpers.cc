@@ -786,45 +786,6 @@ out:
     return runtimeValue;
 }
 
-std::string CRISandboxerConvert(const std::string &runtime)
-{
-    std::string sandboxer;
-    defs_map_string_object_sandboxer *criSandboxerList = nullptr;
-
-    if (runtime.empty()) {
-        return sandboxer;
-    }
-
-    if (isulad_server_conf_rdlock()) {
-        ERROR("Lock isulad server conf failed");
-        return sandboxer;
-    }
-
-    struct service_arguments *args = conf_get_server_conf();
-    if (args == nullptr || args->json_confs == nullptr || args->json_confs->cri_sandboxers == nullptr) {
-        ERROR("Cannot get cri sandboxer list");
-        goto out;
-    }
-
-    criSandboxerList = args->json_confs->cri_sandboxers;
-    for (size_t i = 0; i < criSandboxerList->len; i++) {
-        if (criSandboxerList->keys[i] == nullptr || criSandboxerList->values[i] == nullptr ||
-            criSandboxerList->values[i]->name == nullptr) {
-            WARN("CRI runtimes key or value is null");
-            continue;
-        }
-
-        if (runtime == std::string(criSandboxerList->keys[i])) {
-            sandboxer = std::string(criSandboxerList->values[i]->name);
-            break;
-        }
-    }
-
-out:
-    (void)isulad_server_conf_unlock();
-    return sandboxer;
-}
-
 bool ParseQuantitySuffix(const std::string &suffixStr, int64_t &base, int64_t &exponent)
 {
     std::map<std::string, int16_t> binHandler {

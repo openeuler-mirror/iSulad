@@ -75,6 +75,8 @@ void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_co
 
 void GetContainerSandboxID(const std::string &containerID, std::string &sandboxID, Errors &error);
 
+std::string CRISandboxerConvert(const std::string &runtime);
+
 }; // namespace CRIHelpers
 
 #endif // DAEMON_ENTRY_CRI_V1ALPHA_CRI_HELPERS_H

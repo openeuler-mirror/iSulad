@@ -138,8 +138,6 @@ char *GenerateExecSuffix();
 
 std::string CRIRuntimeConvert(const std::string &runtime);
 
-std::string CRISandboxerConvert(const std::string &runtime);
-
 int64_t ParseQuantity(const std::string &str, Errors &error);
 }; // namespace CRIHelpers
 

@@ -174,7 +174,7 @@ TEST_F(SandboxManagerTest, TestCreateSandbox)
     result = SandboxManager::GetInstance()->CreateSandbox(name, info, netNspath, netMode, sandboxConfig, error);
     ASSERT_EQ(result, nullptr);
     error.Clear();
-    ASSERT_EQ(SandboxManager::GetInstance()->GetSandbox(name, error), nullptr);
+    ASSERT_EQ(SandboxManager::GetInstance()->GetSandbox(name), nullptr);
 
     // testcase for sandbox create success
     // create sandbox(id: randomly generated; name: "test2")
@@ -182,7 +182,7 @@ TEST_F(SandboxManagerTest, TestCreateSandbox)
     EXPECT_CALL(*m_sandbox, GetName).Times(1).WillOnce(testing::ReturnRef(name));
     result = SandboxManager::GetInstance()->CreateSandbox(name, info, netNspath, netMode, sandboxConfig, error);
     ASSERT_NE(result, nullptr);
-    ASSERT_NE(SandboxManager::GetInstance()->GetSandbox(name, error), nullptr);
+    ASSERT_NE(SandboxManager::GetInstance()->GetSandbox(name), nullptr);
 
     // testcase for sandbox create repeat
     EXPECT_CALL(*m_sandbox, GetId).Times(2).WillRepeatedly(testing::ReturnRef(testId));
@@ -196,10 +196,10 @@ TEST_F(SandboxManagerTest, TestGetSandboxes)
     std::string testNmae = "test";
     Errors error;
 
-    ASSERT_EQ(SandboxManager::GetInstance()->GetSandbox("", error), nullptr);
-    ASSERT_NE(SandboxManager::GetInstance()->GetSandbox(testNmae, error), nullptr);
-    ASSERT_NE(SandboxManager::GetInstance()->GetSandbox(testId, error), nullptr);
-    ASSERT_NE(SandboxManager::GetInstance()->GetSandbox(prefixId, error), nullptr);
+    ASSERT_EQ(SandboxManager::GetInstance()->GetSandbox(""), nullptr);
+    ASSERT_NE(SandboxManager::GetInstance()->GetSandbox(testNmae), nullptr);
+    ASSERT_NE(SandboxManager::GetInstance()->GetSandbox(testId), nullptr);
+    ASSERT_NE(SandboxManager::GetInstance()->GetSandbox(prefixId), nullptr);
 }
 
 TEST_F(SandboxManagerTest, TestListAllSandboxes)
@@ -232,7 +232,8 @@ TEST_F(SandboxManagerTest, TestListAllSandboxes)
     auto labels = sandboxConfig.mutable_labels();
     (*labels)["app"] = "mysql";
     filters3.mutable_label_selector()->insert({"app", "nginx"});
-    EXPECT_CALL(*m_sandbox, GetSandboxConfig()).Times(4).WillRepeatedly(testing::ReturnRef(sandboxConfig));
+    auto expectedConfig = std::make_shared<runtime::v1::PodSandboxConfig>(sandboxConfig);
+    EXPECT_CALL(*m_sandbox, GetMutableSandboxConfig()).Times(4).WillRepeatedly(testing::Return(expectedConfig));
     // auto sandboxConfig = runtime::v1::PodSandboxConfig::default_instance();
     // EXPECT_CALL(*m_sandbox, GetSandboxConfig).Times(2).WillRepeatedly(testing::Return(sandboxConfig));
     SandboxManager::GetInstance()->ListAllSandboxes(filters3, sandboxes3);
@@ -245,10 +246,12 @@ TEST_F(SandboxManagerTest, TestDeleteSandbox)
     Errors error;
     auto result = SandboxManager::GetInstance()->DeleteSandbox("", error);
     ASSERT_FALSE(result);
+    error.Clear();
 
     EXPECT_CALL(*m_sandbox, Remove).Times(1).WillOnce(testing::Return(false));
     result = SandboxManager::GetInstance()->DeleteSandbox(testId, error);
     ASSERT_FALSE(result);
+    error.Clear();
 
     EXPECT_CALL(*m_sandbox, Remove).Times(1).WillOnce(testing::Return(true));
     EXPECT_CALL(*m_sandbox, GetName).Times(1).WillOnce(testing::ReturnRef(testNmae));

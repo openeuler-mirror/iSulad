@@ -74,7 +74,8 @@ public:
 
 private:
     void PrepareSandboxData(const runtime::v1::PodSandboxConfig &config, const std::string &runtimeHandler,
-                            std::string &sandboxName, sandbox::RuntimeInfo &runtimeInfo, std::string &networkMode);
+                            std::string &sandboxName, sandbox::RuntimeInfo &runtimeInfo, std::string &networkMode,
+                            Errors &error);
     auto EnsureSandboxImageExists(const std::string &image, const std::string &sandboxer, Errors &error) -> bool;
     void PrepareSandboxKey(std::string &sandboxKey, Errors &error);
     void ApplySandboxDefaultResources(runtime::v1::LinuxPodSandboxConfig *linuxConfig);

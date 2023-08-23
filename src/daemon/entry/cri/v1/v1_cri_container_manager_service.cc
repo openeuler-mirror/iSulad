@@ -447,10 +447,10 @@ std::string ContainerManagerService::CreateContainer(const std::string &podSandb
     container_create_request *request { nullptr };
     container_create_response *response { nullptr };
 
-    // Get sandbox from sandboxmanager
-    sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID, error);
-    if (error.NotEmpty()) {
-        WARN("Failed get sandbox instance for creating container: %s", error.GetCMessage());
+    sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID);
+    if (sandbox == nullptr) {
+        ERROR("Failed to get sandbox instance: %s for creating container", podSandboxID.c_str());
+        error.Errorf("Failed to get sandbox instance: %s for creating container", podSandboxID.c_str());
         return response_id;
     }
 
@@ -575,15 +575,10 @@ void ContainerManagerService::RemoveContainerIDFromSandbox(const std::string &co
         return;
     }
 
-    std::shared_ptr<sandbox::Sandbox> sandbox =
-        sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID, error);
-    if (error.NotEmpty()) {
-        WARN("Failed get sandbox instance for removing container %s: %s", containerID.c_str(), error.GetCMessage());
-        return;
-    }
-
+    std::shared_ptr<sandbox::Sandbox> sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID);
     if (sandbox == nullptr) {
-        WARN("Failed to find sandbox %s for removing container %s", podSandboxID.c_str(), containerID.c_str());
+        ERROR("Failed to get sandbox instance: %s for creating container", podSandboxID.c_str());
+        error.Errorf("Failed to get sandbox instance: %s for creating container", podSandboxID.c_str());
         return;
     }
 
