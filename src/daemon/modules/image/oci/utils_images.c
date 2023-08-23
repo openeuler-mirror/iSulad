@@ -639,3 +639,18 @@ out:
 
     return ret;
 }
+
+char *oci_image_id_from_digest(char *digest)
+{
+    if (digest == NULL) {
+        ERROR("Empty digest");
+        return NULL;
+    }
+
+    if (!util_valid_digest(digest)) {
+        ERROR("Load image with invalid digest: %s", digest);
+        return NULL;
+    }
+
+    return digest + strlen(SHA256_PREFIX);
+}

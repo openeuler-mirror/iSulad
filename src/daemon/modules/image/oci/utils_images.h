@@ -58,6 +58,9 @@ char *get_hostname_to_strip();
 
 char *oci_image_digest_pos(const char *name);
 
+// return a pointer to digest string without 'sha256:' prefix
+char *oci_image_id_from_digest(char *digest);
+
 #ifdef __cplusplus
 }
 #endif

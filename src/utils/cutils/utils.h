@@ -379,8 +379,6 @@ int util_generate_random_str(char *id, size_t len);
 
 int util_check_inherited_exclude_fds(bool closeall, int *fds_to_ignore, size_t len_fds);
 
-char *util_without_sha256_prefix(char *digest);
-
 int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant);
 
 int util_read_pid_ppid_info(uint32_t pid, pid_ppid_info_t *pid_info);

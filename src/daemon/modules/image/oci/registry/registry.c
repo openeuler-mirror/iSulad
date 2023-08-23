@@ -869,7 +869,13 @@ static int register_image(pull_descriptor *desc)
 
     // lock when create image to make sure image content all exist
     mutex_lock(&g_shared->image_mutex);
-    image_id = util_without_sha256_prefix(desc->config.digest);
+    image_id = oci_image_id_from_digest(desc->config.digest);
+    if (image_id == NULL) {
+        ERROR("Invalid digest: %s", desc->config.digest);
+        isulad_try_set_error_message("invalid image digest: %s", desc->config.digest);
+        ret = -1;
+        goto out;
+    }
     ret = create_image(desc, image_id, &reuse);
     if (ret != 0) {
         ERROR("create image %s failed", desc->image_name);
