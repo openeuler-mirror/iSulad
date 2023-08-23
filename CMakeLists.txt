@@ -91,8 +91,10 @@ ENDIF(ENABLE_FUZZ AND (NOT ENABLE_UT))
 # install all files
 install(FILES ${CMAKE_BINARY_DIR}/conf/isulad.pc
   DESTINATION ${LIB_INSTALL_DIR_DEFAULT}/pkgconfig PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
-install(FILES src/daemon/modules/api/image_api.h
-    DESTINATION include/isulad)
+if (EANBLE_IMAGE_LIBARAY)
+    install(FILES src/daemon/modules/api/image_api.h
+        DESTINATION include/isulad)
+endif()
 
 # install config files
 set(conf_prefix "/etc")

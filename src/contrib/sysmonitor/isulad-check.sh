@@ -10,7 +10,6 @@
 # - PURPOSE.
 # - See the Mulan PSL v2 for more details.
 ##- @Description: isulad check
-##- @Author: maoweiyong
 ##- @Create: 2019-02-25
 #######################################################################*/
 
