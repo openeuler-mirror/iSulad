@@ -362,6 +362,10 @@ bool util_detect_mounted(const char *path)
     size_t length = 0;
     bool bret = false;
 
+    if (path == NULL) {
+        return false;
+    }
+
     fp = util_fopen("/proc/self/mountinfo", "r");
     if (fp == NULL) {
         ERROR("Failed opening /proc/self/mountinfo");
@@ -395,6 +399,10 @@ bool util_deal_with_mount_info(mount_info_call_back_t cb, const char *pattern)
     size_t length = 0;
     bool bret = true;
     int nret = 0;
+
+    if (cb == NULL) {
+        return false;
+    }
 
     fp = util_fopen("/proc/self/mountinfo", "r");
     if (fp == NULL) {
@@ -582,6 +590,10 @@ int util_mount_from(const char *base, const char *src, const char *dst, const ch
     pid_t pid = -1;
     int keepfds[] = { -1 };
 
+    if (base == NULL || src == NULL || dst == NULL || mtype == NULL) {
+        return -1;
+    }
+
     pid = fork();
     if (pid == (pid_t) -1) {
         ERROR("Failed to fork: %s", strerror(errno));
@@ -627,6 +639,10 @@ bool util_check_readonly_fs(const char *path)
     int i;
     const int max_retry = 10;
     struct statfs fsbuf;
+
+    if (path == NULL) {
+        return false;
+    }
 
     for (i = 0; i < max_retry; i++) {
         if (statfs(path, &fsbuf) == 0) {

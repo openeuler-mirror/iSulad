@@ -545,6 +545,11 @@ int authz_http_request(const char *username, const char *action, char **resp)
     int nret = 0;
     size_t length = 0;
     struct http_get_options *options = NULL;
+
+    if (username == NULL || action == NULL || resp == NULL) {
+        return -1;
+    }
+
     if (strlen(username) > ((SIZE_MAX - strlen(action)) - strlen(":")) - 1) {
         ERROR("Invalid arguments");
         return -1;

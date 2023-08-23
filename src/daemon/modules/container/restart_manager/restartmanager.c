@@ -431,7 +431,7 @@ bool restart_manager_should_restart(const char *id, uint32_t exit_code, bool has
     restart_manager_set_items(rm, exit_code, exec_duration);
 
     restart = should_be_restart(rm, exit_code, has_been_manually_stopped);
-    if (restart) {
+    if (restart && timeout != NULL) {
         *timeout = (uint64_t)rm->timeout;
     }
 

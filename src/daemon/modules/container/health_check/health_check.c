@@ -376,6 +376,7 @@ static void *stop_container_on_unhealthy(void *arg)
     ret = pthread_detach(pthread_self());
     if (ret != 0) {
         CRIT("Set thread detach fail");
+        return NULL;
     }
 
     if (arg == NULL) {
@@ -603,7 +604,7 @@ static void health_check_run(const char *container_id)
     cont = containers_store_get(container_id);
     if (cont == NULL) {
         ERROR("Failed to get container info");
-        goto out;
+        return;
     }
 
     config = cont->common_config->config;

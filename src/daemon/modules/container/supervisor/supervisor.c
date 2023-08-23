@@ -170,6 +170,7 @@ static void *clean_resources_thread(void *arg)
     ret = pthread_detach(pthread_self());
     if (ret != 0) {
         CRIT("Set thread detach fail");
+        return NULL;
     }
 
     prctl(PR_SET_NAME, "Clean resource");
@@ -217,7 +218,7 @@ retry:
 }
 
 /* new clean resources thread */
-int new_clean_resources_thread(struct supervisor_handler_data *data)
+static int new_clean_resources_thread(struct supervisor_handler_data *data)
 {
     int ret = 0;
     pthread_t clean_thread;
