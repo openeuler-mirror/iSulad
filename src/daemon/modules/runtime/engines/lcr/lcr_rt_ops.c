@@ -323,13 +323,13 @@ static int generate_user_string_by_uid_gid(const defs_process_user *puser, char 
     int nret = 0;
 
     nret = snprintf(uid_str, ISULAD_NUMSTRLEN32, "%u", (unsigned int)puser->uid);
-    if (nret < 0 || nret >= ISULAD_NUMSTRLEN32) {
+    if (nret < 0 || (size_t)nret >= ISULAD_NUMSTRLEN32) {
         ERROR("Invalid UID:%u", (unsigned int)puser->uid);
         return -1;
     }
 
     nret = snprintf(gid_str, ISULAD_NUMSTRLEN32, "%u", (unsigned int)puser->gid);
-    if (nret < 0 || nret >= ISULAD_NUMSTRLEN32) {
+    if (nret < 0 || (size_t)nret >= ISULAD_NUMSTRLEN32) {
         ERROR("Invalid attach uid value :%u", (unsigned int)puser->gid);
         return -1;
     }
@@ -369,7 +369,7 @@ static char **covert_gids_to_string(const gid_t *gids, const size_t gids_len)
         char gid_str[ISULAD_NUMSTRLEN32] = { 0 };
 
         nret = snprintf(gid_str, ISULAD_NUMSTRLEN32, "%u", (unsigned int)gids[i]);
-        if (nret < 0 || nret >= ISULAD_NUMSTRLEN32) {
+        if (nret < 0 || (size_t)nret >= ISULAD_NUMSTRLEN32) {
             ERROR("Invalid gid :%u", (unsigned int)gids[i]);
             util_free_array_by_len(result, len);
             return NULL;

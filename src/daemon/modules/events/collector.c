@@ -199,7 +199,7 @@ static int supplement_operator_for_container_msg(const struct monitord_msg *msg,
     } else {
         nret = snprintf(opt, sizeof(opt), "container %s", isulad_event_sta2str(msg->value));
     }
-    if (nret < 0 || nret >= sizeof(opt)) {
+    if (nret < 0 || (size_t)nret >= sizeof(opt)) {
         return -1;
     }
 
@@ -220,7 +220,7 @@ static int supplement_pid_for_container_msg(const container_t *cont, const struc
     }
 
     nret = snprintf(info, sizeof(info), "pid=%u", cont->state->state->pid);
-    if (nret < 0 || nret >= sizeof(info)) {
+    if (nret < 0 || (size_t)nret >= sizeof(info)) {
         return -1;
     }
 
@@ -250,7 +250,7 @@ static int supplement_exitcode_for_container_msg(const container_t *cont, const 
     }
 
     nret = snprintf(info, sizeof(info), "exitCode=%d", exit_code);
-    if (nret < 0 || nret >= sizeof(info)) {
+    if (nret < 0 || (size_t)nret >= sizeof(info)) {
         return -1;
     }
 
@@ -273,7 +273,7 @@ static int supplement_image_for_container_msg(const container_t *cont, const str
     }
 
     nret = snprintf(info, sizeof(info), "image=%s", cont->common_config->image);
-    if (nret < 0 || nret >= sizeof(info)) {
+    if (nret < 0 || (size_t)nret >= sizeof(info)) {
         return -1;
     }
 
@@ -296,7 +296,7 @@ static int supplement_name_for_container_msg(const container_t *cont, const stru
     }
 
     nret = snprintf(info, sizeof(info), "name=%s", cont->common_config->name);
-    if (nret < 0 || nret >= sizeof(info)) {
+    if (nret < 0 || (size_t)nret >= sizeof(info)) {
         return -1;
     }
 
@@ -322,7 +322,7 @@ static int supplement_labels_for_container_msg(const container_t *cont, const st
         char info[EVENT_EXTRA_ANNOTATION_MAX] = { 0x00 };
         int nret = snprintf(info, sizeof(info), "%s=%s", cont->common_config->config->labels->keys[i],
                             cont->common_config->config->labels->values[i]);
-        if (nret < 0 || nret >= sizeof(info)) {
+        if (nret < 0 || (size_t)nret >= sizeof(info)) {
             return -1;
         }
 
@@ -407,7 +407,7 @@ static int supplement_msg_for_image(struct monitord_msg *msg, struct isulad_even
     format_msg->id = util_strdup_s(msg->name);
 
     nret = snprintf(opt, sizeof(opt), "image %s", isulad_image_event_sta2str(msg->value));
-    if (nret < 0 || nret >= sizeof(opt)) {
+    if (nret < 0 || (size_t)nret >= sizeof(opt)) {
         ERROR("Get operator operator info failed");
         ret = -1;
         goto out;

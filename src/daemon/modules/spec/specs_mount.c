@@ -197,7 +197,7 @@ static bool valid_dirent_info(const char *dir, const struct dirent *info_archivo
     }
 
     nret = snprintf(fullpath, PATH_MAX, "%s/%s", dir, info_archivo->d_name);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("get_devices: Failed to combine device path");
         return false;
     }
@@ -310,7 +310,7 @@ static int get_devices(const char *dir, char ***devices, size_t *device_len, int
             return -1;
         }
         nret = snprintf(fullpath, PATH_MAX, "%s/%s", dir, info_archivo->d_name);
-        if (nret < 0 || nret >= PATH_MAX) {
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
             ERROR("get_devices: Failed to combine device path");
             closedir(midir);
             free(fullpath);
@@ -2603,7 +2603,7 @@ static char *get_prepare_share_shm_path(const char *truntime, const char *cid)
     }
 
     nret = snprintf(spath, slen, "%s/%s/mounts/shm", real_root_path, cid);
-    if (nret < 0 || nret >= slen) {
+    if (nret < 0 || (size_t)nret >= slen) {
         ERROR("Sprintf failed");
         goto err_out;
     }

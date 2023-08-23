@@ -239,8 +239,9 @@ static int create_process_json_file(const char *workdir, const shim_client_proce
     char fname[PATH_MAX] = { 0 };
     int retcode = 0;
 
-    if (snprintf(fname, sizeof(fname), "%s/process.json", workdir) < 0) {
-        ERROR("failed make process.json full path");
+    int nret = snprintf(fname, sizeof(fname), "%s/process.json", workdir);
+    if (nret < 0 || (size_t)nret >= sizeof(fname)) {
+        ERROR("Failed make process.json full path");
         return -1;
     }
 
@@ -743,6 +744,7 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
     const char *params[PARAM_NUM] = { 0 };
     int i = 0;
     int status = 0;
+    int nret = 0;
 
     params[i++] = SHIM_BINARY;
     params[i++] = id;
@@ -755,8 +757,9 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
     }
     runtime_exec_param_dump(params);
 
-    if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
-        ERROR("Failed make shim-pid full path");
+    nret = snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir);
+    if (nret < 0 || (size_t)nret >= sizeof(fpid)) {
+        ERROR("failed make shim-pid full path");
         return -1;
     }
 
@@ -896,7 +899,8 @@ static int get_container_process_pid(const char *workdir)
     struct timespec beg = { 0 };
     struct timespec end = { 0 };
 
-    if (snprintf(fname, sizeof(fname), "%s/pid", workdir) < 0) {
+    int nret = snprintf(fname, sizeof(fname), "%s/pid", workdir);
+    if (nret < 0 || (size_t)nret >= sizeof(fname)) {
         ERROR("failed make pid full path");
         return -1;
     }
@@ -934,7 +938,8 @@ static void shim_kill_force(const char *workdir)
     int pid = 0;
     char fpid[PATH_MAX] = { 0 };
 
-    if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
+    int nret = snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir);
+    if (nret < 0 || (size_t)nret >= sizeof(fpid)) {
         INFO("shim-pid not exist");
         return;
     }
@@ -961,6 +966,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     char workdir[PATH_MAX] = { 0 };
     shim_client_process_state p = { 0 };
     int shim_exit_code = 0;
+    int nret = 0;
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -973,7 +979,8 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
         return -1;
     }
 
-    if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
+    nret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
+    if (nret < 0 || (size_t)nret >= sizeof(workdir)) {
         INFO("make full workdir failed");
         ret = -1;
         goto out;
@@ -1018,18 +1025,21 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
     int splice_ret = 0;
     proc_t *proc = NULL;
     proc_t *p_proc = NULL;
+    int nret = 0;
 
     if (id == NULL || runtime == NULL || params == NULL || pid_info == NULL) {
         ERROR("nullptr arguments not allowed");
         return -1;
     }
-    if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
+
+    nret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
+    if (nret < 0 || (size_t)nret >= sizeof(workdir)) {
         ERROR("%s: missing shim workdir", id);
         return -1;
     }
 
     splice_ret = snprintf(shim_pid_file_name, sizeof(shim_pid_file_name), "%s/shim-pid", workdir);
-    if (splice_ret < 0 || splice_ret >= sizeof(shim_pid_file_name)) {
+    if (splice_ret < 0 || (size_t)splice_ret >= sizeof(shim_pid_file_name)) {
         ERROR("%s: wrong shim workdir", id);
         return -1;
     }
@@ -1090,7 +1100,7 @@ int rt_isula_restart(const char *name, const char *runtime, const rt_restart_par
 int rt_isula_clean_resource(const char *id, const char *runtime, const rt_clean_params_t *params)
 {
     char workdir[PATH_MAX] = { 0 };
-    int nret;
+    int nret = 0;
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -1102,7 +1112,8 @@ int rt_isula_clean_resource(const char *id, const char *runtime, const rt_clean_
         return -1;
     }
 
-    if (snprintf(workdir, sizeof(workdir), "%s/%s", params->statepath, id) < 0) {
+    nret = snprintf(workdir, sizeof(workdir), "%s/%s", params->statepath, id);
+    if (nret < 0 || (size_t)nret >= sizeof(workdir)) {
         ERROR("failed get shim workdir");
         return -1;
     }
@@ -1135,6 +1146,7 @@ int rt_isula_clean_resource(const char *id, const char *runtime, const rt_clean_
 int rt_isula_rm(const char *id, const char *runtime, const rt_rm_params_t *params)
 {
     char libdir[PATH_MAX] = { 0 };
+    int nret = 0;
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -1144,7 +1156,9 @@ int rt_isula_rm(const char *id, const char *runtime, const rt_rm_params_t *param
         ERROR("missing root path");
         return -1;
     }
-    if (snprintf(libdir, sizeof(libdir), "%s/%s", params->rootpath, id) < 0) {
+
+    nret = snprintf(libdir, sizeof(libdir), "%s/%s", params->rootpath, id);
+    if (nret < 0 || (size_t)nret >= sizeof(libdir)) {
         ERROR("failed get shim workdir");
         return -1;
     }
@@ -1205,7 +1219,7 @@ static int preparation_exec(const char *id, const char *runtime, const char *wor
     }
 
     ret = snprintf(resize_fifo_dir, sizeof(resize_fifo_dir), "%s/%s", workdir, RESIZE_FIFO_NAME);
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= sizeof(resize_fifo_dir)) {
         ERROR("failed join resize fifo full path");
         return -1;
     }
@@ -1258,7 +1272,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     }
 
     ret = snprintf(bundle, sizeof(bundle), "%s/%s", params->rootpath, id);
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= sizeof(bundle)) {
         ERROR("failed join bundle path for exec");
         return -1;
     }
@@ -1275,7 +1289,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     }
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s/exec/%s", params->state, id, exec_id);
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
         ERROR("failed join exec full path");
         goto out;
     }
@@ -1349,7 +1363,7 @@ int rt_isula_status(const char *id, const char *runtime, const rt_status_params_
     }
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
         ERROR("failed join full workdir %s/%s", params->rootpath, id);
         goto out;
     }
@@ -1531,13 +1545,15 @@ del_out:
 int rt_isula_pause(const char *id, const char *runtime, const rt_pause_params_t *params)
 {
     char workdir[PATH_MAX] = { 0 };
+    int ret = 0;
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
         return -1;
     }
 
-    if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
+    ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
         ERROR("failed join workdir %s/%s", params->state, id);
         return -1;
     }
@@ -1548,13 +1564,15 @@ int rt_isula_pause(const char *id, const char *runtime, const rt_pause_params_t 
 int rt_isula_resume(const char *id, const char *runtime, const rt_resume_params_t *params)
 {
     char workdir[PATH_MAX] = { 0 };
+    int ret = 0;
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
         return -1;
     }
 
-    if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
+    ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
         ERROR("failed join workdir %s/%s", params->state, id);
         return -1;
     }
@@ -1581,7 +1599,7 @@ int rt_isula_resources_stats(const char *id, const char *runtime, const rt_stats
     }
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
         ERROR("failed join full workdir %s/%s", params->rootpath, id);
         goto out;
     }
@@ -1625,17 +1643,20 @@ int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resi
         return 0;
     }
 
-    if (snprintf(workdir, sizeof(workdir), "%s/%s/exec/%s", params->state, id, params->suffix) < 0) {
-        ERROR("failed to join exec workdir path");
-        return -1;
+    ret = snprintf(workdir, sizeof(workdir), "%s/%s/exec/%s", params->state, id, params->suffix);
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
+        ERROR("failed join full workdir %s/%s", params->rootpath, id);
+        goto out;
     }
 
-    if (snprintf(resize_fifo_path, sizeof(resize_fifo_path), "%s/%s", workdir, RESIZE_FIFO_NAME) < 0) {
+    ret = snprintf(resize_fifo_path, sizeof(resize_fifo_path), "%s/%s", workdir, RESIZE_FIFO_NAME);
+    if (ret < 0 || (size_t)ret >= sizeof(resize_fifo_path)) {
         ERROR("failed to join exec fifo path");
         return -1;
     }
 
-    if (snprintf(data, sizeof(data), "%u %u", params->width, params->height) < 0) {
+    ret = snprintf(data, sizeof(data), "%u %u", params->width, params->height);
+    if (ret < 0 || (size_t)ret >= sizeof(data)) {
         ERROR("failed to write resize data");
         return -1;
     }

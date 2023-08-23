@@ -2121,7 +2121,7 @@ static int valid_crc64(storage_entry *entry, char *rootfs)
     char *fname = NULL;
 
     nret = snprintf(file, PATH_MAX, "%s/%s", rootfs, entry->name);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("snprintf %s/%s failed", rootfs, entry->name);
         ret = -1;
         goto out;
@@ -2195,7 +2195,7 @@ static tar_split *new_tar_split(layer_t *l, const char *tspath)
     }
 
     nret = snprintf(path, sizeof(path), ".%s.tmp", tspath);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("sprintf .%s.tmp failed", tspath);
         ret = -1;
         goto out;
@@ -2401,7 +2401,7 @@ static layer_t *load_one_layer_from_json(const char *id)
     bool layer_valid = false;
 
     nret = snprintf(tmpdir, PATH_MAX, "%s/%s", g_root_dir, id);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Sprintf: %s failed", id);
         return NULL;
     }

@@ -57,7 +57,7 @@ static int get_rebase_name(const char *path, const char *real_path, char **resol
     char *resolved_base = NULL;
 
     nret = snprintf(resolved, PATH_MAX, "%s", real_path);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to print string");
         return -1;
     }

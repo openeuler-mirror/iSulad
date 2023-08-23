@@ -844,7 +844,7 @@ static bool time_human_duration(int64_t seconds, char *str, size_t len)
         }
     }
 
-    if (nret < 0 || nret >= len) {
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Sprintf buffer failed");
         return false;
     }

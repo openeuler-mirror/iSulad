@@ -134,13 +134,13 @@ int create_daemon_fifos(const char *id, const char *runtime, bool attach_stdin, 
 
     nret = snprintf(subpath, PATH_MAX, "%s/%s/%u_%u_%u", id, operation, (unsigned int)tid, (unsigned int)now.tv_sec,
                     (unsigned int)(now.tv_nsec));
-    if (nret >= PATH_MAX || nret < 0) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to print string");
         goto cleanup;
     }
 
     nret = snprintf(fifodir, PATH_MAX, "%s/%s", statepath, subpath);
-    if (nret >= PATH_MAX || nret < 0) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to print string");
         goto cleanup;
     }

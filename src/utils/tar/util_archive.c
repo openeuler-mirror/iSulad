@@ -114,7 +114,7 @@ static int make_safedir_is_noexec(const char *dstdir, char **safe_dir)
     }
 
     nret = snprintf(isula_tmpdir, PATH_MAX, "%s/isulad_tmpdir", isulad_tmpdir_env);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to snprintf");
         return -1;
     }
@@ -125,7 +125,7 @@ static int make_safedir_is_noexec(const char *dstdir, char **safe_dir)
     }
 
     nret = snprintf(tmp_dir, PATH_MAX, "%s/tar-chroot-XXXXXX", cleanpath);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to snprintf string");
         return -1;
     }
@@ -305,7 +305,7 @@ static int remove_files_in_opq_dir(const char *dirpath, int recursive_depth, map
         (void)memset(fname, 0, sizeof(fname));
 
         pathname_len = snprintf(fname, PATH_MAX, "%s/%s", dirpath, pdirent->d_name);
-        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+        if (pathname_len < 0 || (size_t)pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             ret = -1;
             continue;

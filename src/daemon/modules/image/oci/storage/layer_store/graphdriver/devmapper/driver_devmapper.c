@@ -520,7 +520,7 @@ static void status_append(const char *name, const char *value, uint64_t u_data, 
             break;
     }
 
-    if (nret < 0 || nret >= MAX_INFO_LENGTH) {
+    if (nret < 0 || (size_t)nret >= MAX_INFO_LENGTH) {
         ERROR("Failed to print status");
         return;
     }

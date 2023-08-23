@@ -239,7 +239,7 @@ static int get_current_label(char **content)
     char path[PATH_MAX] = { 0 };
 
     nret = snprintf(path, sizeof(path), "/proc/self/task/%ld/attr/current", (long int)syscall(__NR_gettid));
-    if (nret < 0 || nret >= sizeof(path)) {
+    if (nret < 0 || (size_t)nret >= sizeof(path)) {
         ERROR("Humanize sprintf failed!");
         return -1;
     }
@@ -482,7 +482,7 @@ static int uniq_mcs(unsigned int range, char *mcs, size_t len)
         }
 
         nret = snprintf(mcs, len, "s0:c%u,c%u", c1, c2);
-        if (nret < 0 || nret >= len) {
+        if (nret < 0 || (size_t)nret >= len) {
             ERROR("Failed to compose mcs");
             return -1;
         }
@@ -911,7 +911,7 @@ static int recurse_set_file_label(const char *basePath, const char *label)
             continue;
         } else {
             int nret = snprintf(base, sizeof(base), "%s/%s", basePath, ptr->d_name);
-            if (nret < 0 || nret >= sizeof(base)) {
+            if (nret < 0 || (size_t)nret >= sizeof(base)) {
                 ERROR("Failed to get path");
                 ret = -1;
                 goto out;
@@ -1032,7 +1032,7 @@ static int append_security_opt_string(const char *field, const char *value, char
         goto out;
     }
     nret = snprintf(sec_opt, temp_len, "%s%s", field, value);
-    if (nret < 0 || nret >= temp_len) {
+    if (nret < 0 || (size_t)nret >= temp_len) {
         ERROR("Out of memory");
         ret = -1;
         goto out;

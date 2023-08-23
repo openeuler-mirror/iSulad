@@ -389,7 +389,7 @@ static int get_plugin_addr_and_name(char *plugin_addr, char *plugin_name, const 
 
     plugin_name[str_length - PLUGIN_SOCKET_FILE_SUFFIX_LEN] = 0;
     nret = snprintf(plugin_addr, PATH_MAX, "%s/%s", plugin_dir, filename);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("get plugin addr failed %s", filename);
         goto out;
     }
@@ -577,7 +577,7 @@ static int reload_plugin(const char *name)
     }
 
     ret = snprintf(filename, PATH_MAX, "%s.sock", name);
-    if (ret < 0 || ret >= PATH_MAX) {
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         ERROR("get plugin addr failed %s", filename);
         return -1;
     }
@@ -914,7 +914,7 @@ int pm_activate_plugin(plugin_t *plugin)
 
     body_len = strlen(body) + 1;
     nret = snprintf(socket, PATH_MAX, "unix://%s", plugin->addr);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("get plugin socket failed");
         ret = -1;
         goto out;
@@ -1136,7 +1136,7 @@ static int pm_init_plugin(const plugin_t *plugin)
 
     body_len = strlen(body) + 1;
     nret = snprintf(socket, PATH_MAX, "unix://%s", plugin->addr);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;

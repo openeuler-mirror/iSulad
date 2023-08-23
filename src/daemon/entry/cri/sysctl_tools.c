@@ -34,7 +34,7 @@ int get_sysctl(const char *sysctl, char **err)
     char buff[MAX_BUFFER_SIZE + 1] = { 0 };
 
     ret = snprintf(fullpath, PATH_MAX, "%s/%s", SYSCTL_BASE, sysctl);
-    if (ret < 0 || ret >= PATH_MAX) {
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         *err = util_strdup_s("Out of memory");
         goto free_out;
     }
@@ -81,12 +81,12 @@ int set_sysctl(const char *sysctl, int new_value, char **err)
     char buff[ISULAD_NUMSTRLEN64] = { 0 };
 
     ret = snprintf(fullpath, PATH_MAX, "%s/%s", SYSCTL_BASE, sysctl);
-    if (ret < 0 || ret >= PATH_MAX) {
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         *err = util_strdup_s("Out of memory");
         goto free_out;
     }
     ret = snprintf(buff, ISULAD_NUMSTRLEN64, "%d", new_value);
-    if (ret < 0 || ret >= ISULAD_NUMSTRLEN64) {
+    if (ret < 0 || (size_t)ret >= ISULAD_NUMSTRLEN64) {
         *err = util_strdup_s("Out of memory");
         goto free_out;
     }

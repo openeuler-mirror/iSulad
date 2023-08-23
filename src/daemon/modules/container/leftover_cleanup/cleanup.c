@@ -151,7 +151,7 @@ static bool walk_isulad_tmpdir_cb(const char *path_name, const struct dirent *su
     }
 
     nret = snprintf(tmpdir, PATH_MAX, "%s/%s", path_name, sub_dir->d_name);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         WARN("Failed to snprintf for %s", sub_dir->d_name);
         return true;
     }
@@ -176,7 +176,7 @@ static void cleanup_path(char *dir)
     char cleanpath[PATH_MAX] = { 0 };
 
     nret = snprintf(tmp_dir, PATH_MAX, "%s/isulad_tmpdir", dir);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to snprintf");
         return;
     }

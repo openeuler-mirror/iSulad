@@ -71,7 +71,7 @@ static char *trans_time(int64_t created)
 
     nret = snprintf(formated_time, sizeof(formated_time), "%04d-%02d-%02d %02d:%02d:%02d", t.tm_year + 1900,
                     t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
-    if (nret < 0 || nret >= sizeof(formated_time)) {
+    if (nret < 0 || (size_t)nret >= sizeof(formated_time)) {
         ERROR("format created time failed");
         return NULL;
     }

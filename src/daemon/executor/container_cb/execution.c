@@ -326,7 +326,7 @@ static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const
     }
 
     ret = snprintf(fpath, sizeof(fpath), "%s/%s", path, file);
-    if (ret < 0 || ret >= sizeof(fpath)) {
+    if (ret < 0 || (size_t)ret >= sizeof(fpath)) {
         ERROR("Failed to print string");
         return -1;
     }

@@ -1127,7 +1127,7 @@ static int do_read_all_container_logs(int64_t require_line, const char *path, co
 
     for (; i > 0; i--) {
         int nret = snprintf(log_path, PATH_MAX, "%s.%d", path, i);
-        if (nret >= PATH_MAX || nret < 0) {
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
             ERROR("Sprintf failed");
             goto out;
         }
@@ -1166,7 +1166,7 @@ static int do_show_all_logs(const struct container_log_config *conf, const strea
 
     while (index > 0) {
         int nret = snprintf(log_path, PATH_MAX, "%s.%d", conf->path, index);
-        if (nret >= PATH_MAX || nret < 0) {
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
             ERROR("Sprintf failed");
             ret = -1;
             goto out;
@@ -1301,7 +1301,7 @@ static int do_tail_container_logs(int64_t require_line, const struct container_l
         left -= get_line;
         get_line = 0;
         int nret = snprintf(log_path, PATH_MAX, "%s.%d", conf->path, i);
-        if (nret >= PATH_MAX || nret < 0) {
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
             ERROR("Sprintf failed");
             goto out;
         }

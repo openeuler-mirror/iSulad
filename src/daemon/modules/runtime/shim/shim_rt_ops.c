@@ -362,7 +362,7 @@ int rt_shim_clean_resource(const char *id, const char *runtime, const rt_clean_p
     }
 
     nret = snprintf(workdir, sizeof(workdir), "%s/%s", params->statepath, id);
-    if (nret < 0 || nret >= sizeof(workdir)) {
+    if (nret < 0 || (size_t)nret >= sizeof(workdir)) {
         ERROR("failed to get shim workdir");
         ret = -1;
         goto out;
@@ -406,7 +406,7 @@ int rt_shim_rm(const char *id, const char *runtime, const rt_rm_params_t *params
     }
 
     nret = snprintf(libdir, sizeof(libdir), "%s/%s", params->rootpath, id);
-    if (nret < 0 || nret >= sizeof(libdir)) {
+    if (nret < 0 || (size_t)nret >= sizeof(libdir)) {
         ERROR("failed to get shim workdir");
         ret = -1;
         goto out;

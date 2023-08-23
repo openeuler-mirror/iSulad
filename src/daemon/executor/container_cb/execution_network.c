@@ -720,7 +720,7 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
     }
 
     nret = snprintf(root_path, PATH_MAX, "%s/%s", runtime_root, id);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to print string");
         ret = -1;
         goto out;
@@ -925,7 +925,9 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
         } else {
             // max length of hostname from ID is 12 + '\0'
             nret = snprintf(hostname, 13, "%s", id);
-            ret = nret < 0 ? 1 : 0;
+            if (nret < 0 || (size_t)nret >= 13) {
+                ret = -1;
+            }
         }
         if (ret != 0) {
             ERROR("Create hostname error");
@@ -935,7 +937,7 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
     }
 
     nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "hostname");
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to print string");
         ret = -1;
         goto out;
@@ -1012,7 +1014,7 @@ static int create_default_hosts(const char *id, const char *rootpath, bool share
     char file_path[PATH_MAX] = { 0x0 };
 
     ret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "hosts");
-    if (ret < 0 || ret >= PATH_MAX) {
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         ERROR("Failed to print string");
         ret = -1;
         goto out;
@@ -1049,7 +1051,7 @@ static int create_default_resolv(const char *id, const char *rootpath, container
     char file_path[PATH_MAX] = { 0x0 };
 
     ret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "resolv.conf");
-    if (ret < 0 || ret >= PATH_MAX) {
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         ERROR("Failed to print string");
         ret = -1;
         goto out;

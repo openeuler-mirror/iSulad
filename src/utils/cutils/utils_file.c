@@ -381,7 +381,7 @@ static int recursive_rmdir_helper(const char *dirpath, int recursive_depth, int 
         (void)memset(fname, 0, sizeof(fname));
 
         pathname_len = snprintf(fname, PATH_MAX, "%s/%s", dirpath, pdirent->d_name);
-        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+        if (pathname_len < 0 || (size_t)pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             failure = 1;
             continue;
@@ -490,7 +490,7 @@ char *util_path_join(const char *dir, const char *file)
     }
 
     nret = snprintf(path, PATH_MAX, "%s/%s", dir, file);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("dir or file too long failed");
         return NULL;
     }
@@ -611,7 +611,7 @@ char *util_human_size(uint64_t val)
     }
 
     ret = snprintf(out, len, "%llu%s", (unsigned long long)ui, uf[index]);
-    if (ret < 0 || ret >= len) {
+    if (ret < 0 || (size_t)ret >= len) {
         ERROR("Failed to print string");
         free(out);
         return NULL;
@@ -637,7 +637,7 @@ char *util_human_size_decimal(int64_t val)
     } else {
         nret = snprintf(out, sizeof(out), "%lldB", (long long int)val);
     }
-    if (nret < 0 || nret >= sizeof(out)) {
+    if (nret < 0 || (size_t)nret >= sizeof(out)) {
         ERROR("Failed to print string");
         return NULL;
     }
@@ -1258,7 +1258,7 @@ static void recursive_cal_dir_size_helper(const char *dirpath, int recursive_dep
         (void)memset(fname, 0, sizeof(fname));
 
         pathname_len = snprintf(fname, PATH_MAX, "%s/%s", dirpath, pdirent->d_name);
-        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+        if (pathname_len < 0 || (size_t)pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             continue;
         }
@@ -1346,7 +1346,7 @@ static void recursive_cal_dir_size__without_hardlink_helper(const char *dirpath,
         (void)memset(fname, 0, sizeof(fname));
 
         pathname_len = snprintf(fname, PATH_MAX, "%s/%s", dirpath, pdirent->d_name);
-        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+        if (pathname_len < 0 || (size_t)pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             continue;
         }
@@ -1478,7 +1478,7 @@ static char *get_random_tmp_file(const char *fname)
     }
 
     nret = snprintf(rpath, PATH_MAX, ".tmp-%s-%s", base, random_tmp);
-    if (nret < 0 || nret >= PATH_MAX) {
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to generate tmp base file");
         goto out;
     }

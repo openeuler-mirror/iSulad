@@ -38,35 +38,34 @@
 
 static int shim_rename_old_log_file(log_terminal *terminal)
 {
-    int ret;
+    int nret;
+    int ret = SHIM_ERR;
     unsigned int i;
     char tmp[PATH_MAX] = { 0 };
     char *rename_fname = NULL;
 
     for (i = terminal->log_maxfile - 1; i > 1; i--) {
-        ret = snprintf(tmp, PATH_MAX, "%s.%u", terminal->log_path, i);
-        if (ret < 0 || ret >= PATH_MAX) {
-            free(rename_fname);
-            return SHIM_ERR;
+        nret = snprintf(tmp, PATH_MAX, "%s.%u", terminal->log_path, i);
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
+            goto out;
         }
         free(rename_fname);
         rename_fname = safe_strdup(tmp);
 
-        ret = snprintf(tmp, PATH_MAX, "%s.%u", terminal->log_path, (i - 1));
-        if (ret < 0 || ret >= PATH_MAX) {
-            free(rename_fname);
-            return SHIM_ERR;
+        nret = snprintf(tmp, PATH_MAX, "%s.%u", terminal->log_path, (i - 1));
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
+            goto out;
         }
 
-        ret = rename(tmp, rename_fname);
-        if (ret < 0 && errno != ENOENT) {
-            free(rename_fname);
-            return SHIM_ERR;
+        nret = rename(tmp, rename_fname);
+        if (nret < 0 && errno != ENOENT) {
+            goto out;
         }
     }
-
+    ret = SHIM_OK;
+out:
     free(rename_fname);
-    return SHIM_OK;
+    return ret;
 }
 
 static int shim_dump_log_file(log_terminal *terminal)
@@ -86,7 +85,7 @@ static int shim_dump_log_file(log_terminal *terminal)
         return SHIM_ERR;
     }
 
-    file_newname = calloc(len_path, 1);
+    file_newname = util_smart_calloc_s(1, len_path);
     if (file_newname == NULL) {
         return SHIM_ERR;
     }
@@ -192,7 +191,7 @@ static bool util_get_time_buffer(struct timespec *timestamp, char *timebuffer, s
     nanos = (int32_t)timestamp->tv_nsec;
     len = strlen(timebuffer);
     ret = snprintf(timebuffer + len, (maxsize - len), ".%09dZ", nanos);
-    if (ret < 0 || ret >= (maxsize - len)) {
+    if (ret < 0 || (size_t)ret >= (maxsize - len)) {
         return false;
     }
 

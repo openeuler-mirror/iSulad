@@ -182,14 +182,14 @@ static int handle_running_status(const char *start_at, const struct isula_contai
 
     if (in->health_state != NULL) {
         nret = snprintf(status, len, "Up %s (%s)", start_at, in->health_state);
-        if (nret < 0 || nret >= len) {
+        if (nret < 0 || (size_t)nret >= len) {
             ERROR("Failed to compose string");
             ret = -1;
             goto out;
         }
     } else {
         nret = snprintf(status, len, "Up %s", start_at);
-        if (nret < 0 || nret >= len) {
+        if (nret < 0 || (size_t)nret >= len) {
             ERROR("Failed to compose string");
             ret = -1;
             goto out;

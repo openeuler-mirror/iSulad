@@ -584,7 +584,7 @@ static int ulimit_flag_join(char *out_msg, const size_t msg_len, const size_t de
     char *tmp = NULL;
 
     int nret = snprintf(out_msg, msg_len, "[");
-    if (nret < 0 || nret >= msg_len) {
+    if (nret < 0 || (size_t)nret >= msg_len) {
         ERROR("Failed to print string");
         goto out;
     }
@@ -593,7 +593,7 @@ static int ulimit_flag_join(char *out_msg, const size_t msg_len, const size_t de
         tmp = util_strdup_s(out_msg);
         nret = snprintf(out_msg, msg_len, "%s %s=%lld:%lld", tmp, default_ulimit[i]->name,
                         (long long int)default_ulimit[i]->soft, (long long int)default_ulimit[i]->hard);
-        if (nret < 0 || nret >= msg_len) {
+        if (nret < 0 || (size_t)nret >= msg_len) {
             ERROR("Failed to print string");
             goto out;
         }
@@ -603,7 +603,7 @@ static int ulimit_flag_join(char *out_msg, const size_t msg_len, const size_t de
 
     tmp = util_strdup_s(out_msg);
     nret = snprintf(out_msg, msg_len, "%s ]", tmp);
-    if (nret < 0 || nret >= msg_len) {
+    if (nret < 0 || (size_t)nret >= msg_len) {
         ERROR("Failed to print string");
         goto out;
     }
@@ -624,7 +624,7 @@ static int ulimit_file_join(char *out_msg, const size_t msg_len,
     isulad_daemon_configs_default_ulimits_element *ptr = NULL;
 
     int nret = snprintf(out_msg, msg_len, "[");
-    if (nret < 0 || nret >= msg_len) {
+    if (nret < 0 || (size_t)nret >= msg_len) {
         ERROR("Failed to print string");
         goto out;
     }
@@ -633,7 +633,7 @@ static int ulimit_file_join(char *out_msg, const size_t msg_len,
         tmp = util_strdup_s(out_msg);
         nret = snprintf(out_msg, msg_len, "%s %s=%lld:%lld", tmp, ptr->name, (long long int)(ptr->soft),
                         (long long int)(ptr->hard));
-        if (nret < 0 || nret >= msg_len) {
+        if (nret < 0 || (size_t)nret >= msg_len) {
             ERROR("Failed to print string");
             goto out;
         }
@@ -643,7 +643,7 @@ static int ulimit_file_join(char *out_msg, const size_t msg_len,
 
     tmp = util_strdup_s(out_msg);
     nret = snprintf(out_msg, msg_len, "%s ]", tmp);
-    if (nret < 0 || nret >= msg_len) {
+    if (nret < 0 || (size_t)nret >= msg_len) {
         ERROR("Failed to print string");
         goto out;
     }

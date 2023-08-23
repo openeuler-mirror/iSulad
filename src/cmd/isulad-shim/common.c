@@ -220,13 +220,15 @@ int generate_random_str(char *id, size_t len)
     }
     for (i = 0; i < len; i++) {
         int nret;
+        size_t tmp_len;
         if (read_nointr(fd, &num, sizeof(int)) < 0) {
             close(fd);
             return SHIM_ERR;
         }
         unsigned char rs = (unsigned char)(num % m);
-        nret = snprintf((id + i * 2), ((len - i) * 2 + 1), "%02x", (unsigned int)rs);
-        if (nret < 0) {
+        tmp_len = ((len - i) * 2 + 1);
+        nret = snprintf((id + i * 2), tmp_len, "%02x", (unsigned int)rs);
+        if (nret < 0 || (size_t)nret >= tmp_len) {
             close(fd);
             return SHIM_ERR;
         }
@@ -252,10 +254,17 @@ void write_message(const char *level, const char *fmt, ...)
 
     va_list arg_list;
     va_start(arg_list, fmt);
-    vsnprintf(buf, MAX_MESSAGE_CONTENT_LEN, fmt, arg_list);
+    nwrite = vsnprintf(buf, MAX_MESSAGE_CONTENT_LEN, fmt, arg_list);
     va_end(arg_list);
+    if (nwrite < 0) {
+        return;
+    }
 
-    snprintf(msg, MAX_MESSAGE_LEN - 1, "{\"level\": \"%s\", \"msg\": \"%s\"}\n", level, buf);
+    nwrite = snprintf(msg, MAX_MESSAGE_LEN - 1, "{\"level\": \"%s\", \"msg\": \"%s\"}\n", level, buf);
+    if (nwrite < 0 || (size_t)nwrite >= (MAX_MESSAGE_LEN - 1)) {
+        return;
+    }
+
     nwrite = write_nointr_in_total(g_log_fd, msg, strlen(msg));
     if (nwrite < 0 || (size_t)nwrite != strlen(msg)) {
         return;
