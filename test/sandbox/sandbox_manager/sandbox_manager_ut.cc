@@ -170,15 +170,8 @@ TEST_F(SandboxManagerTest, TestCreateSandbox)
     ASSERT_EQ(result, nullptr);
     error.Clear();
 
-    EXPECT_CALL(*m_sandbox, Create).Times(1).WillOnce(testing::Return(false));
-    result = SandboxManager::GetInstance()->CreateSandbox(name, info, netNspath, netMode, sandboxConfig, error);
-    ASSERT_EQ(result, nullptr);
-    error.Clear();
-    ASSERT_EQ(SandboxManager::GetInstance()->GetSandbox(name), nullptr);
-
     // testcase for sandbox create success
     // create sandbox(id: randomly generated; name: "test2")
-    EXPECT_CALL(*m_sandbox, Create).Times(1).WillOnce(testing::Return(true));
     EXPECT_CALL(*m_sandbox, GetName).Times(1).WillOnce(testing::ReturnRef(name));
     result = SandboxManager::GetInstance()->CreateSandbox(name, info, netNspath, netMode, sandboxConfig, error);
     ASSERT_NE(result, nullptr);

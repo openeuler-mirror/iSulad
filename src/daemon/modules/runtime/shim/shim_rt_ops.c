@@ -29,6 +29,8 @@
 #include "error.h"
 #include "err_msg.h"
 #include "engine.h"
+#include "shim_rt_monitor.h"
+#include "supervisor.h"
 
 #define EXIT_SIGNAL_OFFSET_X 128
 
@@ -408,7 +410,7 @@ int rt_shim_start(const char *id, const char *runtime, const rt_start_params_t *
 
     pid_info->pid = pid;
 
-    return 0;
+    return shim_rt_monitor(id, params->exit_fifo);
 }
 
 int rt_shim_restart(const char *id, const char *runtime, const rt_restart_params_t *params)
@@ -596,6 +598,7 @@ int rt_shim_status(const char *id, const char *runtime, const rt_status_params_t
 {
     char address_file[PATH_MAX] = {0};
     char address[PATH_MAX] = {0};
+    char container_state[PATH_MAX] = { 0 };
     int ret = 0;
     int nret = 0;
     struct State ss = {0};
@@ -605,17 +608,25 @@ int rt_shim_status(const char *id, const char *runtime, const rt_status_params_t
         return -1;
     }
 
-    nret = snprintf(address_file, sizeof(address_file), "%s/%s/address", params->rootpath, id);
-    if (nret < 0 || (size_t)nret >= sizeof(address_file)) {
-        ERROR("Failed to join full workdir %s/%s", params->rootpath, id);
-        ret = -1;
-        goto out;
-    }
+    if (params->task_address != NULL) {
+        if (strlen(params->task_address) >= PATH_MAX) {
+            ERROR("Invalid task address");
+            return -1;
+        }
+        (void)strcpy(address, params->task_address);
+    } else {
+        nret = snprintf(address_file, sizeof(address_file), "%s/%s/address", params->rootpath, id);
+        if (nret < 0 || (size_t)nret >= sizeof(address_file)) {
+            ERROR("Failed to join full workdir %s/%s", params->rootpath, id);
+            ret = -1;
+            goto out;
+        }
 
-    if (file_read_address(address_file, address) != 0) {
-        ERROR("%s: could not read address on %s", id, address_file);
-        ret = -1;
-        goto out;
+        if (file_read_address(address_file, address) != 0) {
+            ERROR("%s: could not read address on %s", id, address_file);
+            ret = -1;
+            goto out;
+        }
     }
 
     if (shim_v2_new(id, address) != 0) {
@@ -634,6 +645,18 @@ int rt_shim_status(const char *id, const char *runtime, const rt_status_params_t
     status->pid = ss.pid;
     if (ss.pid != 0) {
         status->has_pid = true;
+    }
+
+    nret = snprintf(container_state, sizeof(container_state), "%s/%s", params->state, id);
+    if (nret < 0 || (size_t)nret >= sizeof(container_state)) {
+        ERROR("Failed to sprintf container state %s/%s", params->state, id);
+        ret = -1;
+        goto out;
+    }
+    // shim_rt_monitor will check if the container is monitored, if not, it will monitor it.
+    if (shim_rt_monitor(id, exit_fifo_name(container_state)) != 0) {
+        ERROR("Failed to monitor container %s", id);
+        ret = -1;
     }
 
 out:

@@ -460,7 +460,7 @@ void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_co
     }
 
 }
-void GetContainerSandboxID(const std::string &containerID, std::string &sandboxID, Errors &error)
+void GetContainerSandboxID(const std::string &containerID, std::string &realContainerID, std::string &sandboxID, Errors &error)
 {
     std::string PodID;
     container_inspect *info = CRIHelpers::InspectContainer(containerID, error, false);
@@ -485,6 +485,7 @@ void GetContainerSandboxID(const std::string &containerID, std::string &sandboxI
     } else {
         sandboxID = PodID;
     }
+    realContainerID = info->id;
 }
 
 std::string CRISandboxerConvert(const std::string &runtime)

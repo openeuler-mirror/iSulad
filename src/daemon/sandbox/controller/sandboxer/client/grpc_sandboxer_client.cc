@@ -64,13 +64,7 @@ auto SandboxerClient::InitCreateRequest(containerd::services::sandbox::v1::Contr
         ERROR("Sandboxer controller create request failed, config is null");
         return false;
     }
-    std::string configOptions;
-    auto status = google::protobuf::util::MessageToJsonString(*params.config, &configOptions);
-    if (!status.ok()) {
-        ERROR("Failed to convert pod config to json string, %s", status.ToString().c_str());
-        return false;
-    }
-    request.mutable_options()->set_value(configOptions);
+    request.mutable_options()->PackFrom(*params.config);
     request.set_sandboxer(m_sandboxer);
     request.set_sandbox_id(sandboxId);
     for (const auto &entry : params.mounts) {

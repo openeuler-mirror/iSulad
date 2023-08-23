@@ -118,12 +118,6 @@ auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, s
 
     sandbox->SetController(controller);
 
-    if (!sandbox->Create(error)) {
-        error.AppendError("Failed to create sandbox.");
-        ERROR("Failed to create sandbox: %s", name.c_str());
-        goto out;
-    }
-
     SaveSandboxToStore(id, sandbox);
 
     return sandbox;

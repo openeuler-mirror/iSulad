@@ -566,10 +566,11 @@ void ContainerManagerService::StopContainer(const std::string &containerID, int6
 //       This function might be removed after that.
 void ContainerManagerService::RemoveContainerIDFromSandbox(const std::string &containerID)
 {
+    std::string realContainerID;
     std::string podSandboxID;
     Errors error;
 
-    CRIHelpersV1::GetContainerSandboxID(containerID, podSandboxID, error);
+    CRIHelpersV1::GetContainerSandboxID(containerID, realContainerID, podSandboxID, error);
     if (error.NotEmpty()) {
         WARN("Failed to get sandbox id for container %s: %s", containerID.c_str(), error.GetCMessage());
         return;
@@ -582,7 +583,7 @@ void ContainerManagerService::RemoveContainerIDFromSandbox(const std::string &co
         return;
     }
 
-    sandbox->RemoveContainer(containerID);
+    sandbox->RemoveContainer(realContainerID);
 }
 
 void ContainerManagerService::RemoveContainer(const std::string &containerID, Errors &error)

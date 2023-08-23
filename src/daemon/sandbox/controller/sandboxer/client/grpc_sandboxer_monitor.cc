@@ -227,6 +227,8 @@ void SandboxerClientMonitor::AsyncCompleteRpcThread()
     INFO("Start thread to monitor wait call completion queue for sandboxer, sandboxer: %s",
          m_sandboxer.c_str());
 
+    pthread_setname_np(pthread_self(), "SandboxerAsyncWaitThread");
+
     // Next only return false when the completion queue is shutdown and
     // the queue is fully drained
     while (m_cq.Next(&got_tag, &ok)) {
@@ -277,6 +279,7 @@ void SandboxerClientMonitor::MonitorThread()
 {
     INFO("Start wait call monitoring thread, sandboxer: %s",
          m_sandboxer.c_str());
+    pthread_setname_np(pthread_self(), "SandboxerMonitorThread");
     while (!m_teardown) {
         // 1. Clean up futures that are ready
         CheckCompletedFutures();

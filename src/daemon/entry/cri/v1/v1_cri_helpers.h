@@ -73,7 +73,7 @@ auto GetPodSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
 
 void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_config *hostconfig, Errors &error);
 
-void GetContainerSandboxID(const std::string &containerID, std::string &sandboxID, Errors &error);
+void GetContainerSandboxID(const std::string &containerID, std::string &realContainerID, std::string &sandboxID, Errors &error);
 
 std::string CRISandboxerConvert(const std::string &runtime);
 

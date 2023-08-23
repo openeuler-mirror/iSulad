@@ -269,6 +269,11 @@ static void restore_state(container_t *cont)
 
     params.rootpath = cont->root_path;
     params.state = cont->state_path;
+#ifdef ENABLE_CRI_API_V1
+    if (cont->common_config->sandbox_info != NULL) {
+        params.task_address = cont->common_config->sandbox_info->task_address;
+    }
+#endif
     nret = runtime_status(id, runtime, &params, &real_status);
     if (nret != 0) {
         WARN("Failed to restore container %s, make real status to STOPPED. Due to can not load container with status %d",

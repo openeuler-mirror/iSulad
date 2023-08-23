@@ -128,6 +128,7 @@ typedef struct _rt_rm_params_t {
 typedef struct _rt_status_params_t {
     const char *rootpath;
     const char *state;
+    const char *task_address;
 } rt_status_params_t;
 
 typedef struct _rt_stats_params_t {
