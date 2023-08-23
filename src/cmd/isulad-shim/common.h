@@ -50,7 +50,7 @@ extern "C" {
 #define MAX_RT_NAME_LEN 64
 #define MAX_CONSOLE_SOCK_LEN 32
 
-#define MAX_RUNTIME_ARGS 20
+#define MAX_RUNTIME_ARGS 100
 
 #define SHIM_BINARY "isulad-shim"
 #define SHIM_LOG_NAME "shim-log.json"
