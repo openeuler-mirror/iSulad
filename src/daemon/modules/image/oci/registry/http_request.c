@@ -164,11 +164,11 @@ static char *encode_auth(const char *username, const char *password)
     }
 
 out:
-    free(auth);
+    util_free_sensitive_string(auth);
     auth = NULL;
 
     if (ret != 0) {
-        free(auth_base64);
+        util_free_sensitive_string(auth_base64);
         auth_base64 = NULL;
     }
 
@@ -236,10 +236,10 @@ static char *basic_auth_header(const char *schema, const char *username, const c
     }
 
 out:
-    free(auth_base64);
+    util_free_sensitive_string(auth_base64);
     auth_base64 = NULL;
     if (ret != 0) {
-        free(auth_header);
+        util_free_sensitive_string(auth_header);
         auth_header = NULL;
     }
 
@@ -273,7 +273,7 @@ static int setup_auth_basic(pull_descriptor *desc, char ***custom_headers)
     }
 
 out:
-    free(auth_header);
+    util_free_sensitive_string(auth_header);
     auth_header = NULL;
 
     return ret;
@@ -297,7 +297,7 @@ static int get_bearer_token(pull_descriptor *desc, challenge *c)
         return 0;
     }
 
-    free(c->cached_token);
+    util_free_sensitive_string(c->cached_token);
     c->cached_token = NULL;
     c->expires_time = 0;
 
@@ -317,8 +317,10 @@ static int get_bearer_token(pull_descriptor *desc, challenge *c)
 
     if (token->token != NULL) {
         c->cached_token = util_strdup_s(token->token);
+        util_memset_sensitive_string(token->token);
     } else if (token->access_token != NULL) {
         c->cached_token = util_strdup_s(token->access_token);
+        util_memset_sensitive_string(token->access_token);
     } else {
         ret = -1;
         ERROR("no valid token found");
@@ -399,7 +401,7 @@ static int setup_auth_challenges(pull_descriptor *desc, char ***custom_headers)
             goto out;
         }
         count++;
-        free(auth_header);
+        util_free_sensitive_string(auth_header);
         auth_header = NULL;
     }
 
@@ -408,7 +410,7 @@ static int setup_auth_challenges(pull_descriptor *desc, char ***custom_headers)
     }
 
 out:
-    free(auth_header);
+    util_free_sensitive_string(auth_header);
     auth_header = NULL;
 
     return ret;

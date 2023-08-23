@@ -64,7 +64,7 @@ void free_http_get_options(struct http_get_options *options)
     free(options->unix_socket_path);
     options->unix_socket_path = NULL;
 
-    util_free_array(options->custom_headers);
+    util_free_sensitive_array(options->custom_headers);
     options->custom_headers = NULL;
 
     free(options->ca_file);

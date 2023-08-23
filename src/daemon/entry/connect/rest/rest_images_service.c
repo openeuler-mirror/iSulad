@@ -19,6 +19,7 @@
 #include "isula_libutils/log.h"
 #include "callback.h"
 #include "image.rest.h"
+#include "utils.h"
 #include "rest_service_common.h"
 #include "constants.h"
 
@@ -570,6 +571,7 @@ static int image_login_request_from_rest(evhtp_request_t *req, image_login_reque
     }
 
 out:
+    util_memset_sensitive_string(body);
     put_body(body);
     free(err);
     return ret;
@@ -630,6 +632,7 @@ static void rest_image_login_cb(evhtp_request_t *req, void *arg)
     evhtp_send_image_login_repsponse(req, cresponse, RESTFUL_RES_OK);
 
 out:
+    util_memset_sensitive_string(crequest->password);
     free_image_login_request(crequest);
     free_image_login_response(cresponse);
 }

@@ -53,6 +53,10 @@ int util_append_string_array(string_array *sarr, const char *val);
 
 bool util_string_array_contain(const string_array *sarr, const char *elem);
 
+void util_free_sensitive_array(char **array);
+
+void util_free_sensitive_array_by_len(char **array, size_t len);
+
 #ifdef __cplusplus
 }
 #endif
