@@ -1316,7 +1316,13 @@ static auto WriteToString(void *context, const void *data, size_t len) -> ssize_
         return 0;
     }
 
+    // Limit the response size of ExecSync, outside of the response limit will never be seen
+    // Allow last write to exceed the limited size since every single write has a limit len
+    const size_t max_stream_size = 1024 * 1024 * 16;
     std::string *str = reinterpret_cast<std::string *>(context);
+    if (str->length() >= max_stream_size) {
+        return (ssize_t)len;
+    }
 
     str->append(reinterpret_cast<const char *>(data), len);
     return (ssize_t)len;
