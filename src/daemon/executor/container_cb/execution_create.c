@@ -1570,6 +1570,7 @@ clean_container_root_dir:
 
 clean_nameindex:
     container_name_index_remove(name);
+    id_name_manager_remove_entry(id, name);
 
 pack_response:
     pack_create_response(*response, id, cc);
