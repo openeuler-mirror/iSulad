@@ -193,7 +193,7 @@ static int parse_auth(pull_descriptor *desc, char *auth)
     }
 
 out:
-    free(origin_tmp_auth);
+    util_free_sensitive_string(origin_tmp_auth);
     origin_tmp_auth = NULL;
 
     return ret;

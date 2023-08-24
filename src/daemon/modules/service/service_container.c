@@ -2146,7 +2146,7 @@ static void get_exec_command(const container_exec_request *request, char *exec_c
     for (i = 0; i < request->argv_len; i++) {
         if (strlen(request->argv[i]) < len - strlen(exec_command)) {
             (void)strcat(exec_command, request->argv[i]);
-            if (i != (request->argv_len - 1)) {
+            if (i != (request->argv_len - 1) && len - strlen(exec_command) > 1) {
                 (void)strcat(exec_command, " ");
             }
         } else {
