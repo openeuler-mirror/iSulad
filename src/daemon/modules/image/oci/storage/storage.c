@@ -192,6 +192,11 @@ int storage_inc_hold_refs(const char *layer_id)
 {
     int ret = 0;
 
+    if (layer_id == NULL) {
+        ERROR("Empty layer id");
+        return -1;
+    }
+
     if (!storage_lock(&g_storage_rwlock, true)) {
         ERROR("Failed to lock image store when increase hold refs number for layer %s", layer_id);
         return -1;
@@ -207,6 +212,11 @@ int storage_inc_hold_refs(const char *layer_id)
 int storage_dec_hold_refs(const char *layer_id)
 {
     int ret = 0;
+    
+    if (layer_id == NULL) {
+        ERROR("Empty layer id");
+        return -1;
+    }
 
     if (!storage_lock(&g_storage_rwlock, true)) {
         ERROR("Failed to lock image store when decrease hold refs number for layer %s", layer_id);
@@ -281,6 +291,11 @@ struct layer_list *storage_layers_get_by_compress_digest(const char *digest)
 {
     int ret = 0;
     struct layer_list *layers = NULL;
+
+    if (digest == NULL) {
+        ERROR("Empty digest");
+        return NULL;
+    }
 
     layers = util_common_calloc_s(sizeof(struct layer_list));
     if (layers == NULL) {
@@ -537,7 +552,7 @@ char *storage_img_get_image_id(const char *img_name)
     return image_store_lookup(img_name);
 }
 
-bool is_top_layer_of_other_image(const char *img_id, const imagetool_images_list *all_images, const char *layer_id)
+static bool is_top_layer_of_other_image(const char *img_id, const imagetool_images_list *all_images, const char *layer_id)
 {
     size_t i = 0;
 
@@ -911,6 +926,11 @@ int storage_img_set_image_size(const char *image_id)
     int ret = 0;
     int64_t image_size = 0;
 
+    if (image_id == NULL) {
+        ERROR("Empty image id");
+        return -1;
+    }
+
     image_size = storage_img_cal_image_size(image_id);
     if (image_size < 0) {
         ERROR("Failed to get image %s size", image_id);
@@ -959,7 +979,7 @@ bool storage_image_exist(const char *image_or_id)
     return image_store_exists(image_or_id);
 }
 
-size_t storage_get_img_count()
+size_t storage_get_img_count(void)
 {
     return image_store_get_images_number();
 }
@@ -1248,8 +1268,8 @@ int storage_rootfs_fs_usgae(const char *container_id, imagetool_fs_info *fs_info
     }
 
     rootfs_info = rootfs_store_get_rootfs(container_id);
-    if (rootfs_info == NULL) {
-        ERROR("Failed to get rootfs %s info", container_id);
+    if (rootfs_info == NULL || rootfs_info->layer == NULL) {
+        ERROR("Failed to get valid rootfs %s info", container_id);
         ret = -1;
         goto out;
     }
@@ -1276,7 +1296,7 @@ char *storage_rootfs_mount(const char *container_id)
     }
 
     rootfs_info = rootfs_store_get_rootfs(container_id);
-    if (rootfs_info == NULL) {
+    if (rootfs_info == NULL || rootfs_info->layer == NULL) {
         ERROR("Failed to get rootfs %s info", container_id);
         goto out;
     }
@@ -1723,6 +1743,11 @@ container_inspect_graph_driver *storage_get_metadata_by_container_id(const char 
 {
     storage_rootfs *rootfs_info = NULL;
     container_inspect_graph_driver *container_metadata = NULL;
+
+    if (id == NULL) {
+        ERROR("Empty id");
+        return NULL;
+    }
 
     rootfs_info = rootfs_store_get_rootfs(id);
     if (rootfs_info == NULL) {

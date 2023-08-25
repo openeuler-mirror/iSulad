@@ -29,7 +29,7 @@ int image_spec_merge_env(const char **env, size_t env_len, container_config *con
     char **im_kv = NULL;
     char **custom_kv = NULL;
 
-    if (env == NULL || env_len == 0) {
+    if (env == NULL || env_len == 0 || container_spec == NULL) {
         return 0;
     }
 

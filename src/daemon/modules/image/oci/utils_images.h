@@ -54,7 +54,7 @@ bool oci_valid_time(char *time);
 
 char *oci_get_isulad_tmpdir(const char *root_dir);
 int makesure_isulad_tmpdir_perm_right(const char *root_dir);
-char *get_hostname_to_strip();
+char *get_hostname_to_strip(void);
 
 char *oci_image_digest_pos(const char *name);
 

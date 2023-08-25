@@ -498,14 +498,14 @@ bool has_metadata(const char *hash, struct device_set *devset)
     bool ret = true;
     int nret = 0;
 
-    if (hash == NULL) {
+    if (hash == NULL || devset == NULL) {
         return true;
     }
 
     metadata_path = metadata_dir(devset);
     if (metadata_path == NULL) {
         ERROR("Failed to get meta data directory");
-        goto out;
+        return false;
     }
 
     nret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, util_valid_str(hash) ? hash : "base");
@@ -540,7 +540,7 @@ static image_devmapper_device_info *load_metadata(const struct device_set *devse
     metadata_path = metadata_dir(devset);
     if (metadata_path == NULL) {
         ERROR("Failed to get meta data directory");
-        goto out;
+        return NULL;
     }
 
     nret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, util_valid_str(hash) ? hash : "base");
@@ -3072,7 +3072,7 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
     char *dev_fname = NULL;
     char *options = NULL;
 
-    if (hash == NULL || path == NULL) {
+    if (hash == NULL || path == NULL || devset == NULL) {
         ERROR("devmapper: invalid input params to mount device");
         return -1;
     }
@@ -3232,7 +3232,7 @@ int export_device_metadata(struct device_metadata *dev_metadata, const char *has
     char *dm_name = NULL;
     devmapper_device_info_t *device_info = NULL;
 
-    if (hash == NULL || dev_metadata == NULL) {
+    if (hash == NULL || dev_metadata == NULL || devset == NULL) {
         ERROR("Invalid input params");
         return -1;
     }

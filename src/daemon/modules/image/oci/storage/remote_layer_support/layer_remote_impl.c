@@ -31,6 +31,11 @@ static map_t *layer_byid_new = NULL;
 
 struct remote_layer_data *remote_layer_create(const char *layer_home, const char *layer_ro)
 {
+    if (layer_home == NULL || layer_ro == NULL) {
+        ERROR("Empty layer home or layer ro");
+        return NULL;
+    }
+
     struct remote_layer_data *data = util_common_calloc_s(sizeof(struct remote_layer_data));
     if (data == NULL) {
         ERROR("Out of memory");
@@ -232,6 +237,11 @@ static int remote_layer_add(struct remote_layer_data *data)
 
 void remote_layer_refresh(struct remote_layer_data *data)
 {
+    if (data == NULL) {
+        ERROR("Skip refresh remote layer for empty data");
+        return;
+    }
+
     if (remote_dir_scan(data) != 0) {
         ERROR("remote layer failed to scan dir, skip refresh");
         return;

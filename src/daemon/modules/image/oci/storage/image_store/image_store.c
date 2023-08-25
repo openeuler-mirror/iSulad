@@ -145,7 +145,7 @@ static void free_image_store(image_store_t *store)
     free(store);
 }
 
-void image_store_free()
+void image_store_free(void)
 {
     free_image_store(g_image_store);
     g_image_store = NULL;
@@ -1184,6 +1184,11 @@ int image_store_set_big_data(const char *id, const char *key, const char *data)
         return -1;
     }
 
+    if (id == NULL || data == NULL) {
+        ERROR("Empty id or data");
+        return -1;
+    }
+
     if (g_image_store == NULL) {
         ERROR("Image store is not ready");
         return -1;
@@ -1286,7 +1291,7 @@ int image_store_add_name(const char *id, const char *name)
     size_t i;
 
     if (id == NULL || name == NULL) {
-        ERROR("Invalid input paratemer: id(%s), name(%s)", id, name);
+        ERROR("Invalid input paratemer");
         return -1;
     }
 
@@ -1514,7 +1519,7 @@ int image_store_set_metadata(const char *id, const char *metadata)
     image_t *img = NULL;
 
     if (id == NULL || metadata == NULL) {
-        ERROR("Invalid paratemer: id(%s), metadata(%s)", id, metadata);
+        ERROR("Invalid paratemer");
         return -1;
     }
 
@@ -1663,7 +1668,6 @@ char *image_store_big_data(const char *id, const char *key)
     }
 
     ret = get_data_path(img->simage->id, key, filename, sizeof(filename));
-
     if (ret != 0) {
         ERROR("Failed to get big data file path: %s.", key);
         goto out;
@@ -1808,7 +1812,7 @@ char *image_store_big_data_digest(const char *id, const char *key)
     image_t *img = NULL;
     char *digest = NULL;
 
-    if (key == NULL || strlen(key) == 0) {
+    if (key == NULL || strlen(key) == 0 || id == NULL) {
         ERROR("Not a valid name for a big data item, can't retrieve image big data value for empty name");
         return NULL;
     }
@@ -1853,8 +1857,8 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
     int ret = 0;
     image_t *img = NULL;
 
-    if (id == NULL) {
-        ERROR("Invalid parameter, id is NULL");
+    if (id == NULL || names == NULL || names_len == NULL) {
+        ERROR("Invalid parameter");
         return -1;
     }
 
@@ -2723,7 +2727,7 @@ unlock:
     return ret;
 }
 
-size_t image_store_get_images_number()
+size_t image_store_get_images_number(void)
 {
     size_t number = 0;
 
@@ -3140,6 +3144,11 @@ int image_store_validate_manifest_schema_version_1(const char *path, bool *valid
     parser_error err = NULL;
     char manifest_path[PATH_MAX] = { 0x00 };
     bool valid_v2_config = false;
+
+    if (path == NULL || valid == NULL) {
+        ERROR("Empty path or valid");
+        return -1;
+    }
 
     *valid = false;
     nret = snprintf(manifest_path, sizeof(manifest_path), "%s/%s", path, IMAGE_DIGEST_BIG_DATA_KEY);
@@ -3699,6 +3708,11 @@ int remote_append_image_by_directory_with_lock(const char *id)
         return -1;
     }
 
+    if (g_image_store == NULL) {
+        ERROR("Image store is not ready");
+        return -1;
+    }
+
     if (!image_store_lock(EXCLUSIVE)) {
         ERROR("Failed to lock remote image store when handle: %s", id);
         return -1;
@@ -3733,6 +3747,11 @@ int remote_remove_image_from_memory_with_lock(const char *id)
         return -1;
     }
 
+    if (g_image_store == NULL) {
+        ERROR("Image store is not ready");
+        return -1;
+    }
+
     if (!image_store_lock(EXCLUSIVE)) {
         ERROR("Failed to lock remote image store when handle: %s", id);
         return -1;
@@ -3758,6 +3777,16 @@ char *remote_image_get_top_layer_from_json(const char *img_id)
     char image_path[PATH_MAX] = { 0x00 };
     storage_image *im = NULL;
     parser_error err = NULL;
+
+    if (img_id == NULL) {
+        ERROR("Empty img id");
+        return NULL;
+    }
+
+    if (g_image_store == NULL) {
+        ERROR("Image store is not ready");
+        return NULL;
+    }
 
     nret = snprintf(image_path, sizeof(image_path), "%s/%s/%s", g_image_store->dir, img_id, IMAGE_JSON);
     if (nret < 0 || (size_t)nret >= sizeof(image_path)) {

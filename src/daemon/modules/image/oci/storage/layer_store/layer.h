@@ -43,7 +43,7 @@ typedef struct _layer_t_ {
     uint64_t refcnt;
 } layer_t;
 
-layer_t *create_empty_layer();
+layer_t *create_empty_layer(void);
 
 void free_layer_t(layer_t *ptr);
 void layer_ref_inc(layer_t *layer);

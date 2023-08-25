@@ -347,7 +347,7 @@ out:
     return ret;
 }
 
-void oci_exit()
+void oci_exit(void)
 {
     storage_module_exit();
     free_oci_image_data();
@@ -390,7 +390,7 @@ int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs)
 {
     int ret = 0;
 
-    if (request == NULL) {
+    if (request == NULL || request->container_id == NULL) {
         ERROR("Bim is NULL");
         return -1;
     }
@@ -451,7 +451,7 @@ int oci_mount_rf(const im_mount_request *request)
 {
     char *mount_point = NULL;
 
-    if (request == NULL) {
+    if (request == NULL || request->name_id == NULL) {
         ERROR("Invalid arguments");
         return -1;
     }
@@ -790,7 +790,7 @@ int oci_export_rf(const im_export_request *request)
 {
     int ret = 0;
 
-    if (request == NULL) {
+    if (request == NULL || request->name_id == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }

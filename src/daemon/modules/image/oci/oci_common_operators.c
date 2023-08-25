@@ -59,7 +59,7 @@ char *oci_resolve_image_name(const char *name)
 
 int oci_get_user_conf(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser)
 {
-    if (basefs == NULL || puser == NULL) {
+    if (basefs == NULL || puser == NULL || hc == NULL) {
         ERROR("Empty basefs or puser");
         return -1;
     }
@@ -373,6 +373,11 @@ int oci_list_images(const im_list_request *request, imagetool_images_list **imag
     int ret = 0;
     struct filters_args *image_filters = NULL;
 
+    if (request == NULL || images == NULL) {
+        ERROR("Empty request or images");
+        return -1;
+    }
+
     if (request != NULL && request->image_filters != NULL) {
         image_filters = request->image_filters;
     }
@@ -410,7 +415,7 @@ int oci_summary_image(im_summary_request *request, im_summary_response *response
     char *image_ref = NULL;
     char *resolved_name = NULL;
 
-    if (response == NULL) {
+    if (request == NULL || response == NULL) {
         ERROR("Invalid arguments");
         return -1;
     }

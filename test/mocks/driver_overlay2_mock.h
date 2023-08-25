@@ -24,7 +24,6 @@ public:
     virtual ~MockDriverOverlay2() = default;
     MOCK_METHOD1(Overlay2Init, int(struct graphdriver *));
     MOCK_METHOD3(Overlay2ParseOptions, int(struct graphdriver *, const char **, size_t));
-    MOCK_METHOD2(Overlay2IsQuotaOptions, bool(struct graphdriver *, const char *));
 };
 
 void MockDriverOverlay2_SetMock(MockDriverOverlay2* mock);

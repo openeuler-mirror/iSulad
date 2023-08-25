@@ -121,7 +121,7 @@ static void free_rootfs_store(rootfs_store_t *store)
     free(store);
 }
 
-void rootfs_store_free()
+void rootfs_store_free(void)
 {
     free_rootfs_store(g_rootfs_store);
     g_rootfs_store = NULL;
@@ -1085,7 +1085,7 @@ out:
     return ret;
 }
 
-int rootfs_store_wipe()
+int rootfs_store_wipe(void)
 {
     int ret = 0;
     char *id = NULL;
@@ -1125,7 +1125,7 @@ int rootfs_store_set_metadata(const char *id, const char *metadata)
     cntrootfs_t *cntr = NULL;
 
     if (id == NULL || metadata == NULL) {
-        ERROR("Invalid paratemer: id(%s), metadata(%s)", id, metadata);
+        ERROR("Invalid paratemer");
         return -1;
     }
 
@@ -1331,7 +1331,7 @@ out:
     return ret;
 }
 
-char *rootfs_store_get_data_dir()
+char *rootfs_store_get_data_dir(void)
 {
     return util_strdup_s(g_rootfs_store->dir);
 }

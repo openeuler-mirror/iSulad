@@ -98,13 +98,13 @@ int image_store_set_image_size(const char *id, uint64_t size);
 int image_store_get_all_images(imagetool_images_list *images_list);
 
 // On success, the number of the known images is returned. On failure, (size_t)-1 is returned
-size_t image_store_get_images_number();
+size_t image_store_get_images_number(void);
 
 // Retrieves image file system info
 int image_store_get_fs_info(imagetool_fs_info *fs_info);
 
 // Free memory of image store, but will not delete the persisted files
-void image_store_free();
+void image_store_free(void);
 
 imagetool_image_summary *image_store_get_image_summary(const char *id);
 

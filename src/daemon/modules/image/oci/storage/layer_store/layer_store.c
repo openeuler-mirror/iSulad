@@ -122,7 +122,7 @@ static inline void layer_store_unlock()
     }
 }
 
-void layer_store_cleanup()
+void layer_store_cleanup(void)
 {
     struct linked_list *item = NULL;
     struct linked_list *next = NULL;
@@ -235,7 +235,7 @@ static inline void delete_g_layer_list_item(struct linked_list *item, bool rm_va
     g_metadata.layers_list_len -= 1;
 }
 
-void remove_layer_list_tail()
+void remove_layer_list_tail(void)
 {
     struct linked_list *item = NULL;
 
@@ -1451,18 +1451,6 @@ int layer_store_delete(const char *id)
     return ret;
 }
 
-bool layer_store_exists(const char *id)
-{
-    layer_t *l = lookup_with_lock(id);
-
-    if (l == NULL) {
-        return false;
-    }
-
-    layer_ref_dec(l);
-    return true;
-}
-
 static void copy_json_to_layer(const layer_t *jl, struct layer *l)
 {
     if (jl->slayer == NULL) {
@@ -1574,7 +1562,7 @@ int layer_store_by_compress_digest(const char *digest, struct layer_list *resp)
 {
     int ret = 0;
 
-    if (resp == NULL) {
+    if (digest == NULL || resp == NULL) {
         return -1;
     }
 
@@ -1583,22 +1571,6 @@ int layer_store_by_compress_digest(const char *digest, struct layer_list *resp)
     }
 
     ret = layers_by_digest_map(g_metadata.by_compress_digest, digest, resp);
-    layer_store_unlock();
-    return ret;
-}
-
-int layer_store_by_uncompress_digest(const char *digest, struct layer_list *resp)
-{
-    int ret = 0;
-
-    if (resp == NULL) {
-        return -1;
-    }
-    if (!layer_store_lock(false)) {
-        return -1;
-    }
-
-    ret = layers_by_digest_map(g_metadata.by_uncompress_digest, digest, resp);
     layer_store_unlock();
     return ret;
 }
@@ -1711,6 +1683,10 @@ int layer_store_try_repair_lowers(const char *id)
 {
     layer_t *l = NULL;
     int ret = 0;
+
+    if (id == NULL) {
+        return -1;
+    }
 
     l = lookup_with_lock(id);
     if (l == NULL) {
@@ -2027,7 +2003,7 @@ free_out:
     return -1;
 }
 
-void layer_store_exit()
+void layer_store_exit(void)
 {
     graphdriver_cleanup();
 }
@@ -2336,6 +2312,11 @@ int layer_store_check(const char *id)
     int ret = 0;
     char *rootfs = NULL;
 
+    if (id == NULL) {
+        ERROR("Failed to do layer store check for Empty id");
+        return -1;
+    }
+
     layer_t *l = lookup_with_lock(id);
     if (l == NULL || l->slayer == NULL) {
         ERROR("layer %s not found when checking integration", id);
@@ -2376,6 +2357,11 @@ container_inspect_graph_driver *layer_store_get_metadata_by_layer_id(const char 
 int remote_layer_remove_memory_stores_with_lock(const char *id)
 {
     int ret = 0;
+
+    if (id == NULL) {
+        ERROR("Failed to lock layer store for empty id");
+        return -1;
+    }
 
     if (!layer_store_lock(true)) {
         ERROR("Failed to lock layer store when handle: %s", id);
@@ -2456,6 +2442,11 @@ int remote_load_one_layer(const char *id)
     int ret = 0;
     layer_t *tl = NULL;
     size_t i = 0;
+
+    if (id == NULL) {
+        ERROR("Failed to do remote load one layer for empty id");
+        return -1;
+    }
 
     if (!layer_store_lock(true)) {
         return -1;

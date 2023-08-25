@@ -46,7 +46,7 @@ void free_layer_t(layer_t *ptr)
     free(ptr);
 }
 
-layer_t *create_empty_layer()
+layer_t *create_empty_layer(void)
 {
     layer_t *result = NULL;
     int nret = 0;
