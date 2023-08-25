@@ -198,7 +198,7 @@ int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
     }
 
     if (delete_device(id, false, driver->devset) != 0) {
-        ERROR("failed to remove device %s", id);
+        ERROR("Failed to remove device %s", id);
         return -1;
     }
 
@@ -624,7 +624,7 @@ int devmapper_clean_up(struct graphdriver *driver)
 {
     int ret = 0;
 
-    if (driver == NULL) {
+    if (driver == NULL || driver->devset == NULL || driver->home == NULL) {
         ERROR("Invalid input param to cleanup devicemapper");
         return -1;
     }

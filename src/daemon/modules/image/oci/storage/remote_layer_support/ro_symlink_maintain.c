@@ -37,6 +37,8 @@ static char *layer_home;
 static char *overlay_ro_dir;
 static char *overlay_home;
 
+#define LAYER_RO_DIR_MODE 0700
+
 int remote_image_init(const char *root_dir)
 {
     if (root_dir == NULL) {
@@ -67,7 +69,7 @@ int remote_layer_init(const char *root_dir)
         ERROR("Failed join path when init remote layer maintainer");
         goto out;
     }
-    if (!util_file_exists(layer_ro_dir) && util_mkdir_p(layer_ro_dir, 0700) != 0) {
+    if (!util_file_exists(layer_ro_dir) && util_mkdir_p(layer_ro_dir, LAYER_RO_DIR_MODE) != 0) {
         ERROR("Failed to create RO dir under overlay");
         goto out;
     }
@@ -127,6 +129,11 @@ static int do_build_ro_dir(const char *home, const char *id)
     int nret = 0;
     int ret = 0;
 
+    if (home == NULL || id == NULL) {
+        ERROR("Empty home or id");
+        return -1;
+    }
+
     nret = asprintf(&ro_symlink, "%s/%s", home, id);
     if (nret < 0 || nret > PATH_MAX) {
         SYSERROR("Failed create ro layer dir sym link path");
@@ -183,7 +190,7 @@ int do_remove_ro_dir(const char *home, const char *id)
     int ret = 0;
     int nret = 0;
 
-    if (id == NULL) {
+    if (home == NULL || id == NULL) {
         return 0;
     }
 

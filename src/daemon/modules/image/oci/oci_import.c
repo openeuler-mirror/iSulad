@@ -268,6 +268,7 @@ static int create_manifest(import_desc *desc)
     manifest->layers[0]->size = desc->compressed_size;
     manifest->layers[0]->digest = util_strdup_s(desc->compressed_digest);
 
+    // the image manifest schema version is v2
     manifest->schema_version = 2;
     manifest->media_type = util_strdup_s(DOCKER_MANIFEST_SCHEMA2_JSON);
 

@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
 * iSulad licensed under the Mulan PSL v2.
 * You can use this software according to the terms and conditions of the Mulan PSL v2.
 * You may obtain a copy of Mulan PSL v2 at:
@@ -70,7 +70,7 @@ out:
     return ret;
 }
 
-static void update_option_insecure_registry(registry_pull_options *options, char **insecure_registries, char *host)
+static void update_option_insecure_registry(registry_pull_options *options, char **insecure_registries, const char *host)
 {
     char **registry = NULL;
 

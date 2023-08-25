@@ -35,8 +35,6 @@ extern "C" {
 
 int overlay2_init(struct graphdriver *driver, const char *driver_home, const char **options, size_t len);
 
-bool overlay2_is_quota_options(struct graphdriver *driver, const char *option);
-
 int overlay2_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
                        struct driver_create_opts *create_opts);
 

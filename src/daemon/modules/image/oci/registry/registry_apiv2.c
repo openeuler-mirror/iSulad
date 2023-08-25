@@ -632,7 +632,7 @@ static int split_head_body(char *file, char **http_head)
     }
     body += strlen(deli);
 
-    ret = util_write_file(file, body, strlen(body), 0600);
+    ret = util_write_file(file, body, strlen(body), BODY_FILE_MODE);
     if (ret != 0) {
         ERROR("rewrite body to file failed");
         ret = -1;

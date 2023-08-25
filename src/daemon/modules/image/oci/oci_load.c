@@ -851,20 +851,17 @@ static int64_t get_layer_size_from_storage(char *chain_id_pre)
     id = oci_load_without_sha256_prefix(chain_id_pre);
     if (id == NULL) {
         ERROR("Get chain id failed from value:%s", chain_id_pre);
-        size = -1;
-        goto out;
+        return -1;
     }
 
     l = storage_layer_get(id);
     if (l == NULL) {
         ERROR("Layer with chain id:%s is not exist in store", id);
-        size = -1;
-        goto out;
+        return -1;
     }
 
     size = l->compress_size;
 
-out:
     free_layer(l);
     return size;
 }
@@ -883,8 +880,7 @@ static int oci_load_set_manifest_info(load_image_t *im)
     im->manifest = util_common_calloc_s(sizeof(oci_image_manifest));
     if (im->manifest == NULL) {
         ERROR("Out of memory");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     im->manifest->schema_version = OCI_SCHEMA_VERSION;

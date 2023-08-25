@@ -192,7 +192,7 @@ cleanup:
     return NULL;
 }
 
-char *dev_get_driver_version()
+char *dev_get_driver_version(void)
 {
     struct dm_task *dmt = NULL;
     char *version = NULL;
@@ -234,7 +234,7 @@ cleanup:
 }
 
 // dev_get_library_version return the device mapper library version
-char *dev_get_library_version()
+char *dev_get_library_version(void)
 {
     char version[128] = { 0 };
 
@@ -679,7 +679,7 @@ cleanup:
     return ret;
 }
 
-bool udev_sync_supported()
+bool udev_sync_supported(void)
 {
     return dm_udev_get_sync_support() != 0;
 }
@@ -705,7 +705,8 @@ int dev_create_device(const char *pool_fname, int device_id)
     int ret = 0;
     int nret = 0;
     uint64_t sector = 0;
-    char message[PATH_MAX] = { 0 }; // 临时字符缓冲区上限
+    // temporary character buffer limit
+    char message[PATH_MAX] = { 0 };
     struct dm_task *dmt = NULL;
 
     if (pool_fname == NULL) {
@@ -1066,7 +1067,7 @@ static void log_cb(int level, const char *file, int line, int dm_errno_or_class,
     free(buffer);
 }
 
-void log_with_errno_init()
+void log_with_errno_init(void)
 {
     dm_log_with_errno_init(log_cb);
 }
@@ -1136,7 +1137,8 @@ int dev_set_transaction_id(const char *pool_name, uint64_t old_id, uint64_t new_
     int ret = 0;
     int nret = 0;
     uint64_t sector = 0;
-    char message[PATH_MAX] = { 0 }; // 临时字符缓冲区上限
+    // temporary character buffer limit
+    char message[PATH_MAX] = { 0 };
     struct dm_task *dmt = NULL;
 
     if (pool_name == NULL) {

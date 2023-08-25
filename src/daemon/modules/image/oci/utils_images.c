@@ -247,7 +247,7 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
     return 0;
 }
 
-char *get_hostname_to_strip()
+char *get_hostname_to_strip(void)
 {
     char *name = NULL;
 
@@ -319,6 +319,11 @@ char *make_big_data_base_name(const char *key)
     char *b64_encode_name = NULL;
     char *base_name = NULL;
     size_t name_size;
+
+    if (key == NULL) {
+        ERROR("Empty key");
+        return NULL;
+    }
 
     if (should_use_origin_name(key)) {
         return util_strdup_s(key);
