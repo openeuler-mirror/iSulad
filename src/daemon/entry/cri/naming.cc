@@ -18,7 +18,7 @@
 #include <vector>
 #include <sstream>
 #include <string>
-#include <errno.h>
+#include <cerrno>
 
 #include "cri_constants.h"
 #include "cri_helpers.h"

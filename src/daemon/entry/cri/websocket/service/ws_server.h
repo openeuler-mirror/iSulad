@@ -79,7 +79,7 @@ private:
     int Wswrite(struct lws *wsi, const unsigned char *message);
     inline void DumpHandshakeInfo(struct lws *wsi) noexcept;
     int RegisterStreamTask(struct lws *wsi) noexcept;
-    int GenerateSessionData(SessionData *session, const std::string containerID) noexcept;
+    int GenerateSessionData(SessionData *session, const std::string &containerID) noexcept;
     void ServiceWorkThread(int threadid);
     void CloseWsSession(int socketID);
     void CloseAllWsSession();

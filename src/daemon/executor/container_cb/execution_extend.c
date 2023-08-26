@@ -69,7 +69,6 @@ static int service_events_handler(const struct isulad_events_request *request, c
     container_t *container = NULL;
 
     name = util_strdup_s(request->id);
-
     /* check whether specified container exists */
     if (name != NULL) {
         container = containers_store_get(name);

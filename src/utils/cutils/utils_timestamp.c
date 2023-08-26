@@ -155,6 +155,7 @@ static bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timeb
     int32_t nanos;
     struct tm tm_local = { 0 };
     size_t tmp_size = 0;
+    size_t timebuffer_len = 0;
     time_t seconds;
     bool west_timezone = false;
     long int tm_gmtoff = 0;
@@ -167,7 +168,11 @@ static bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timeb
 
     seconds = (time_t)timestamp->seconds;
     localtime_r(&seconds, &tm_local);
-    strftime(timebuffer, maxsize, "%Y-%m-%dT%H:%M:%S", &tm_local);
+    timebuffer_len = strftime(timebuffer, maxsize, "%Y-%m-%dT%H:%M:%S", &tm_local);
+    if (timebuffer_len == 0) {
+        ERROR("Failed to strftime");
+        return false;
+    }
 
     if (timestamp->has_nanos) {
         nanos = timestamp->nanos;
@@ -175,10 +180,10 @@ static bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timeb
         nanos = 0;
     }
 
-    tmp_size = maxsize - strlen(timebuffer);
+    tmp_size = maxsize - timebuffer_len;
 
     if (local_utc) {
-        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09dZ", nanos);
+        nret = snprintf(timebuffer + timebuffer_len, tmp_size, ".%09dZ", nanos);
         goto out;
     }
 
@@ -197,9 +202,9 @@ static bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timeb
     tm_zone_min = (tm_gmtoff - tm_zone_hour * seconds_per_hour) / seconds_per_minutes;
 
     if (!west_timezone) {
-        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d+%02d:%02d", nanos, tm_zone_hour, tm_zone_min);
+        nret = snprintf(timebuffer + timebuffer_len, tmp_size, ".%09d+%02d:%02d", nanos, tm_zone_hour, tm_zone_min);
     } else {
-        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d-%02d:%02d", nanos, tm_zone_hour, tm_zone_min);
+        nret = snprintf(timebuffer + timebuffer_len, tmp_size, ".%09d-%02d:%02d", nanos, tm_zone_hour, tm_zone_min);
     }
 
 out:

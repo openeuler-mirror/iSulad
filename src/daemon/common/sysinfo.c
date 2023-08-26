@@ -142,6 +142,7 @@ static int add_null_to_list(void ***list)
         }
     }
 
+    // add 2 size for element and NULL
     if (index > SIZE_MAX / sizeof(void **) - 2) {
         ERROR("Out of range");
         return -1;
@@ -179,7 +180,7 @@ static int append_subsystem_to_list(char ***klist, char ***nlist, const char *pt
 {
     int ret = 0;
 
-    if (strncmp(ptoken, "name=", 5) == 0) {
+    if (strncmp(ptoken, "name=", strlen("name=")) == 0) {
         ret = append_string(nlist, ptoken);
         if (ret != 0) {
             ERROR("Failed to append string");
@@ -271,26 +272,26 @@ static bool list_contain_string(const char **a_list, const char *str)
 
 static char *cgroup_legacy_must_prefix_named(const char *entry)
 {
-    size_t len;
+    size_t entry_len;
     char *prefixed = NULL;
     const char *prefix = "name=";
+    const size_t prefix_len = strlen(prefix);
 
-    len = strlen(entry);
-
-    if (((SIZE_MAX - len) - 1) < strlen(prefix)) {
+    entry_len = strlen(entry);
+    if ((SIZE_MAX - entry_len) < (prefix_len + 1)) {
         ERROR("Out of memory");
         return NULL;
     }
 
-    prefixed = util_common_calloc_s(len + strlen(prefix) + 1);
+    prefixed = util_common_calloc_s(entry_len + prefix_len + 1);
     if (prefixed == NULL) {
         ERROR("Out of memory");
         return NULL;
     }
-    (void)memcpy(prefixed, prefix, strlen(prefix));
-    (void)memcpy(prefixed + strlen(prefix), entry, len);
+    (void)memcpy(prefixed, prefix, prefix_len);
+    (void)memcpy(prefixed + prefix_len, entry, entry_len);
 
-    prefixed[len + strlen(prefix)] = '\0';
+    prefixed[entry_len + prefix_len] = '\0';
     return prefixed;
 }
 
@@ -310,7 +311,7 @@ static int append_controller(const char **klist, const char **nlist, char ***cli
         return -1;
     }
 
-    if (strncmp(entry, "name=", 5) == 0) {
+    if (strncmp(entry, "name=", strlen("name=")) == 0) {
         dup_entry = util_strdup_s(entry);
     } else if (list_contain_string(klist, entry)) {
         dup_entry = util_strdup_s(entry);
@@ -345,6 +346,8 @@ static char **cgroup_get_controllers(const char **klist, const char **nlist, con
     char *sep = ",";
     char **pret = NULL;
 
+    // line example
+    // 108 99 0:55 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,mode=755
     for (index = 0; index < 4; index++) {
         pos = strchr(pos, ' ');
         if (pos == NULL) {
@@ -413,6 +416,8 @@ int cgroup_get_mountpoint_and_root(char *pline, char **mountpoint, char **root)
     char *pos = pline;
 
     // find root
+    // line example
+    // 108 99 0:55 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,mode=755
     for (index = 0; index < 3; index++) {
         pos = strchr(pos, ' ');
         if (pos == NULL) {
@@ -1509,6 +1514,8 @@ void free_mount_info(mountinfo_t *info)
     free(info);
 }
 
+// line example
+// 108 99 0:55 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,mode=755
 mountinfo_t *get_mount_info(const char *pline)
 {
     size_t length;

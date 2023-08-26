@@ -15,7 +15,7 @@
 #include "checkpoint_handler.h"
 
 #include <cstring>
-#include <errno.h>
+#include <cerrno>
 #include <linux/limits.h>
 #include <memory>
 #include <string>

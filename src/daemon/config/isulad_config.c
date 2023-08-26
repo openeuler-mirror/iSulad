@@ -297,6 +297,7 @@ char *conf_get_routine_rootdir(const char *runtime)
     char *path = NULL;
     struct service_arguments *conf = NULL;
     size_t len = 0;
+    size_t graph_len = 0;
 
     if (runtime == NULL) {
         ERROR("Runtime is NULL");
@@ -314,11 +315,12 @@ char *conf_get_routine_rootdir(const char *runtime)
     }
 
     /* path = conf->rootpath + / + engines + / + runtime + /0 */
-    if (strlen(conf->json_confs->graph) > (SIZE_MAX - strlen(ENGINE_ROOTPATH_NAME) - strlen(runtime)) - 3) {
+    graph_len = strlen(conf->json_confs->graph);
+    if (graph_len > (SIZE_MAX - strlen(ENGINE_ROOTPATH_NAME) - strlen(runtime)) - 3) {
         ERROR("Graph path is too long");
         goto out;
     }
-    len = strlen(conf->json_confs->graph) + 1 + strlen(ENGINE_ROOTPATH_NAME) + 1 + strlen(runtime) + 1;
+    len = graph_len + 1 + strlen(ENGINE_ROOTPATH_NAME) + 1 + strlen(runtime) + 1;
     if (len > PATH_MAX / sizeof(char)) {
         ERROR("The size of path exceeds the limit");
         goto out;
@@ -1685,13 +1687,13 @@ out:
 static bool valid_isulad_daemon_constants(isulad_daemon_constants *config)
 {
     json_map_string_string *registry_transformation = NULL;
-    size_t i = 0;
 
     if (config == NULL) {
         return false;
     }
 
     if (config->registry_transformation != NULL) {
+        size_t i;
         registry_transformation = config->registry_transformation;
         for (i = 0; i < registry_transformation->len; i++) {
             if (!util_valid_host_name(registry_transformation->keys[i]) ||

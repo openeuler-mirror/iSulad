@@ -96,6 +96,7 @@ static int handle_dm_thinpooldev(char *val, struct device_set *devset)
         return -1;
     }
     tmp_val = util_trim_prefice_string(val, "/dev/mapper/");
+    free(devset->thin_pool_device);
     devset->thin_pool_device = util_strdup_s(tmp_val);
 
     return 0;
@@ -160,6 +161,7 @@ static int handle_dm_mountopt(char *val, struct device_set *devset)
         isulad_set_error_message("Invalid dm.mountopt or devicemapper.mountopt value");
         return -1;
     }
+    free(devset->mount_options);
     devset->mount_options = util_strdup_s(val);
 
     return 0;

@@ -47,15 +47,15 @@
 #include "utils.h"
 #include "isula_libutils/log.h"
 
-size_t strlncat(char *dststr, size_t size, const char *srcstr, size_t nsize)
+size_t strlncat(char *dststr, size_t dststr_size, const char *srcstr, size_t srcstr_size)
 {
     size_t ssize, dsize;
 
-    ssize = (size_t)strnlen(srcstr, nsize);
-    dsize = (size_t)strnlen(dststr, size);
+    ssize = (size_t)strnlen(srcstr, srcstr_size);
+    dsize = (size_t)strnlen(dststr, dststr_size);
 
-    if (dsize < size) {
-        size_t rsize = size - dsize;
+    if (dsize < dststr_size) {
+        size_t rsize = dststr_size - dsize;
         size_t ncpy = ssize < rsize ? ssize : (rsize - 1);
         (void)memcpy(dststr + dsize, srcstr, ncpy);
         dststr[dsize + ncpy] = '\0';
