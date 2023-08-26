@@ -117,7 +117,7 @@ static int parser_cb_header_value(http_parser *parser, const char *buf,
 }
 
 /* parser check body is final */
-static void parser_check_body_is_final(const http_parser *parser)
+static int parser_check_body_is_final(const http_parser *parser)
 {
     struct parsed_http_message *m = parser->data;
 
@@ -125,9 +125,10 @@ static void parser_check_body_is_final(const http_parser *parser)
         fprintf(stderr, "\n\n *** Error http_body_is_final() should return 1 "
                 "on last on_body callback call "
                 "but it doesn't! ***\n\n");
-        abort();
+        return -1;
     }
     m->body_is_final = http_body_is_final(parser);
+    return 0;
 }
 
 /* parser body cb */
@@ -155,8 +156,7 @@ static int parser_body_cb(http_parser *parser, const char *buf, size_t len)
 
     strlncat(m->body, newsize, buf, len);
     m->body_size += len;
-    parser_check_body_is_final(parser);
-    return 0;
+    return parser_check_body_is_final(parser);
 }
 
 /* parser message begin cb */
@@ -189,7 +189,7 @@ static int parser_message_complete_cb(http_parser *p)
         fprintf(stderr, "\n\n *** Error http_should_keep_alive() should have same "
                 "value in both on_message_complete and on_headers_complete "
                 "but it doesn't! ***\n\n");
-        abort();
+        return -1;
     }
 
     if (m->body_size &&
@@ -198,11 +198,10 @@ static int parser_message_complete_cb(http_parser *p)
         fprintf(stderr, "\n\n *** Error http_body_is_final() should return 1 "
                 "on last on_body callback call "
                 "but it doesn't! ***\n\n");
-        abort();
+        return -1;
     }
 
     m->message_complete_cb_called = TRUE;
-
 
     return 0;
 }
