@@ -480,9 +480,7 @@ auto Sandbox::Load(Errors &error) -> bool
         return false;
     }
 
-    if (!LoadNetworkSetting(error)) {
-        return false;
-    }
+    LoadNetworkSetting();
 
     if (!UpdateStatus(error)) {
         ERROR("Failed to update status of Sandbox, id='%s'", m_id.c_str());
@@ -980,24 +978,25 @@ auto Sandbox::LoadMetadata(Errors &error) -> bool
     return true;
 }
 
-auto Sandbox::LoadNetworkSetting(Errors &error) -> bool
+void Sandbox::LoadNetworkSetting()
 {
     __isula_auto_free char *settings = NULL;
     const std::string path = GetNetworkSettingsPath();
 
     // for the sandbox whose net_mode is host. No need to load networkSetting.
     if (namespace_is_host(m_netMode.c_str())) {
-        return true;
+        return;
     }
 
     settings = util_read_content_from_file(path.c_str());
     if (settings == NULL || strlen(settings) == 0 || strcmp(settings, "\n") == 0) {
-        error.Errorf("%s: failed to read file %s", m_id.c_str(), path.c_str());
-        return false;
+        // If isulad has not cni set, the network json file will be empty
+        // RunPodSandbox allows empty network setting json file
+        WARN("%s: failed to read file %s", m_id.c_str(), path.c_str());
+        return;
     }
 
     m_networkSettings = std::string(settings);
-    return true;
 }
 
 void Sandbox::SetSandboxConfig(const runtime::v1::PodSandboxConfig &config)

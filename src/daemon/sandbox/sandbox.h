@@ -143,7 +143,7 @@ private:
 
     auto LoadState(Errors &error) -> bool;
     auto LoadMetadata(Errors &error) -> bool;
-    auto LoadNetworkSetting(Errors &error) -> bool;
+    void LoadNetworkSetting();
 
     void SetSandboxConfig(const runtime::v1::PodSandboxConfig &config);
     void SetNetworkSettings(const std::string &settings, Errors &error);
