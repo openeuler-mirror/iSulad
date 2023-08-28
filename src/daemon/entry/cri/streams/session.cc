@@ -155,6 +155,11 @@ void DoWriteToClient(SessionData *session, const void *data, size_t len, Websock
         ERROR("Out of memory");
         return;
     }
+    if (len > MAX_BUFFER_SIZE) {
+        ERROR("Message exceeds maximum length %d, len = %zu", MAX_BUFFER_SIZE, len);
+        free(buf);
+        return;
+    }
     // Determine if it is standard output channel or error channel
     buf[LWS_PRE] = static_cast<int>(channel);
 

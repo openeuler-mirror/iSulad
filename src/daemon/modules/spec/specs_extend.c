@@ -384,6 +384,10 @@ int merge_env_target_file(oci_runtime_spec *oci_spec, const char *env_target_fil
     char *env_path = NULL;
     json_map_string_string *env_map = NULL;
 
+    if (oci_spec == NULL) {
+        return -1;
+    }
+
     if (env_target_file == NULL) {
         return 0;
     }
@@ -484,6 +488,10 @@ char *oci_container_get_env(const oci_runtime_spec *oci_spec, const char *key)
 
 int make_sure_oci_spec_linux(oci_runtime_spec *oci_spec)
 {
+    if (oci_spec == NULL) {
+        return -1;
+    }
+
     if (oci_spec->linux == NULL) {
         oci_spec->linux = util_common_calloc_s(sizeof(oci_runtime_config_linux));
         if (oci_spec->linux == NULL) {
@@ -495,6 +503,10 @@ int make_sure_oci_spec_linux(oci_runtime_spec *oci_spec)
 
 int make_sure_oci_spec_process(oci_runtime_spec *oci_spec)
 {
+    if (oci_spec == NULL) {
+        return -1;
+    }
+
     if (oci_spec->process == NULL) {
         oci_spec->process = util_common_calloc_s(sizeof(defs_process));
         if (oci_spec->process == NULL) {

@@ -571,6 +571,12 @@ static int file_read_address(const char *fname, char *addr)
         goto out;
     }
 
+    if (strlen(buf) >= PATH_MAX) {
+        ERROR("address in file %s is too long", fname);
+        ret = -1;
+        goto out;
+    }
+
     (void)stpcpy(addr, buf);
 
 out:
