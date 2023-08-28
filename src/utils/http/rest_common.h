@@ -21,8 +21,6 @@
 #include "http/http.h"
 #include "parser.h"
 
-struct parsed_http_message;
-
 #ifdef __cplusplus
 extern "C" {
 #endif

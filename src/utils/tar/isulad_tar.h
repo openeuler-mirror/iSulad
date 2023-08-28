@@ -18,7 +18,7 @@
 
 #include <stdbool.h>
 
-struct io_read_wrapper;
+#include "io_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -15,10 +15,8 @@
 #ifndef UTILS_CPPUTILS_READ_WRITE_LOCK_H
 #define UTILS_CPPUTILS_READ_WRITE_LOCK_H
 
-#include <iostream>
 #include <mutex>
 #include <condition_variable>
-#include <thread>
 
 class RWMutex {
 public:
