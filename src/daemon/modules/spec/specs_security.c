@@ -501,11 +501,6 @@ static size_t docker_seccomp_arches_count(const char *seccomp_architecture, cons
     size_t count = 0;
     size_t i = 0;
 
-    if (seccomp_architecture == NULL) {
-        ERROR("Invalid input seccomp architecture");
-        return -1;
-    }
-
     for (i = 0; i < docker_seccomp_spec->arch_map_len; ++i) {
         if (docker_seccomp_spec->arch_map[i] == NULL || docker_seccomp_spec->arch_map[i]->architecture == NULL) {
             continue;
@@ -532,10 +527,6 @@ static int dup_architectures_to_oci_spec(const char *seccomp_architecture, const
     }
 
     arch_size = docker_seccomp_arches_count(seccomp_architecture, docker_seccomp_spec);
-    if (arch_size < 0) {
-        ERROR("Failed to get arches count from docker seccomp spec");
-        return -1;
-    }
 
     if (arch_size == 0) {
         WARN("arch map is not provided in specified seccomp profile");
@@ -743,7 +734,7 @@ int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const defs_process_ca
     oci_runtime_config_linux_seccomp *oci_seccomp_spec = NULL;
     docker_seccomp *docker_seccomp_spec = NULL;
 
-    if (oci_spec->process == NULL || oci_spec->process->capabilities == NULL) {
+    if (oci_spec == NULL || oci_spec->process == NULL || oci_spec->process->capabilities == NULL) {
         return 0;
     }
 

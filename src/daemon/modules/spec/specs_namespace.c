@@ -200,12 +200,14 @@ int get_network_namespace_path(const host_config *host_spec,
         { SHARE_NAMESPACE_FILE, handle_get_path_from_file },
     };
     size_t jump_table_size = sizeof(handler_jump_table) / sizeof(handler_jump_table[0]);
-    const char *network_mode = host_spec->network_mode;
+    const char *network_mode = NULL;
 
-    if (network_mode == NULL || dest_path == NULL) {
+    if (host_spec == NULL || host_spec->network_mode == NULL || dest_path == NULL) {
         ERROR("Invalid input");
         return -1;
     }
+
+    network_mode = host_spec->network_mode;
 
     for (index = 0; index < jump_table_size; ++index) {
         if (strncmp(network_mode, handler_jump_table[index].mode, strlen(handler_jump_table[index].mode)) == 0) {

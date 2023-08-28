@@ -112,6 +112,11 @@ static int check_mount_source(const defs_mount *m)
 
 int append_default_tmpfs_options(defs_mount *m)
 {
+
+    if (m == NULL) {
+        return -1;
+    }
+
     if (util_array_append(&m->options, "noexec") != 0) {
         ERROR("append default tmpfs options noexec failed");
         return -1;

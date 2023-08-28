@@ -403,6 +403,7 @@ static struct volume *volume_create_nolock(char *name)
 
     if (!map_insert(g_volumes->vols_by_name, v->name, v)) {
         ERROR("failed to insert volume %s", v->name);
+        ret = -1;
         goto out;
     }
 
@@ -630,7 +631,7 @@ int register_local_volume(char *root_dir)
     }
 
     local_volume_root_dir = util_path_join(root_dir, LOCAL_VOLUME_ROOT_DIR_NAME);
-    if (root_dir == NULL) {
+    if (local_volume_root_dir == NULL) {
         ERROR("out of memory");
         ret = -1;
         goto out;

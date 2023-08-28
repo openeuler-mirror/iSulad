@@ -32,9 +32,9 @@
 
 namespace Network {
 #define UNUSED(x) ((void)(x))
-static const std::string CNI_PLUGIN_NAME { "cni" };
-static const std::string DEFAULT_NET_DIR { "/etc/cni/net.d" };
-static const std::string DEFAULT_CNI_DIR { "/opt/cni/bin" };
+const std::string CNI_PLUGIN_NAME { "cni" };
+const std::string DEFAULT_NET_DIR { "/etc/cni/net.d" };
+const std::string DEFAULT_CNI_DIR { "/opt/cni/bin" };
 
 class CNINetwork {
 public:

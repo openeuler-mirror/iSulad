@@ -1374,7 +1374,7 @@ static int force_kill(container_t *cont)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
-    int stop_signal = container_stop_signal(cont);
+    uint32_t stop_signal = container_stop_signal(cont);
 
     ret = kill_with_signal(cont, SIGKILL);
     if (ret != 0) {
@@ -1401,7 +1401,7 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
 {
     int ret = 0;
     char *id = NULL;
-    int stop_signal = 0;
+    uint32_t stop_signal = 0;
 
     if (cont == NULL) {
         ERROR("Invalid input arguments");
