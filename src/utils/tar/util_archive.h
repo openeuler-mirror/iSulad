@@ -26,8 +26,6 @@
 
 #define ARCHIVE_BLOCK_SIZE (32 * 1024)
 
-struct io_read_wrapper;
-
 #ifdef __cplusplus
 extern "C" {
 #endif

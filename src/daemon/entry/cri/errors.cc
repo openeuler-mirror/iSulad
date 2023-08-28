@@ -50,6 +50,7 @@ std::string &Errors::GetMessage()
     return m_message;
 }
 
+// never save return pointer, we just use for printf of logging
 const char *Errors::GetCMessage() const
 {
     return m_message.empty() ? "" : m_message.c_str();
