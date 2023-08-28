@@ -649,18 +649,20 @@ static int register_layer(pull_descriptor *desc, size_t i)
 
 static int get_top_layer_index(pull_descriptor *desc, size_t *top_layer_index)
 {
-    int i = 0;
+    size_t i;
 
     if (desc == NULL || top_layer_index == NULL) {
         ERROR("Invalid NULL pointer");
         return -1;
     }
-
-    for (i = desc->layers_len - 1; i >= 0; i--) {
-        if (desc->layers[i].empty_layer) {
+    // iterate over the layers array in reverse order, starting from the last layer
+    // since i is an unsigned number, i traverses from layers_len to 1
+    for (i = desc->layers_len; i > 0; i--) {
+        // the corresponding array index is [i - 1]: layers_len - 1 -> 0
+        if (desc->layers[i - 1].empty_layer) {
             continue;
         }
-        *top_layer_index = i;
+        *top_layer_index = i - 1;
         return 0;
     }
 

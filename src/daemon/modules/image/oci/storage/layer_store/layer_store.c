@@ -752,7 +752,7 @@ out:
 static int insert_memory_stores(const char *id, const struct layer_opts *opts, layer_t *l)
 {
     int ret = 0;
-    int i = 0;
+    size_t i = 0;
 
     if (!append_layer_into_list(l)) {
         ret = -1;
@@ -793,9 +793,12 @@ clear_compress_digest:
         (void)delete_digest_from_map(g_metadata.by_compress_digest, l->slayer->compressed_diff_digest, id);
     }
 clear_by_name:
-    for (i = i - 1; i >= 0; i--) {
-        if (!map_remove(g_metadata.by_name, (void *)opts->names[i])) {
-            WARN("Remove name: %s failed", opts->names[i]);
+    // iterate over the names in reverse order, starting from the last name
+    // since i is an unsigned number, i traverses from inserted name len to 1
+    for (; i > 0; i--) {
+        // the corresponding array index is [i - 1]: inserted name len - 1 -> 0
+        if (!map_remove(g_metadata.by_name, (void *)opts->names[i - 1])) {
+            WARN("Remove name: %s failed", opts->names[i - 1]);
         }
     }
     if (!map_remove(g_metadata.by_id, (void *)id)) {
@@ -2032,7 +2035,7 @@ void layer_store_exit()
 static uint64_t payload_to_crc(char *payload)
 {
     int ret = 0;
-    int i = 0;
+    size_t i = 0;
     uint64_t crc = 0;
     uint8_t *crc_sums = NULL;
     size_t crc_sums_len = 0;
@@ -2452,7 +2455,7 @@ int remote_load_one_layer(const char *id)
 {
     int ret = 0;
     layer_t *tl = NULL;
-    int i = 0;
+    size_t i = 0;
 
     if (!layer_store_lock(true)) {
         return -1;

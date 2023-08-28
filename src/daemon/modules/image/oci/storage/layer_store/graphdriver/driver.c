@@ -342,7 +342,7 @@ int graphdriver_apply_diff(const char *id, const struct io_read_wrapper *content
 container_inspect_graph_driver *graphdriver_get_metadata(const char *id)
 {
     int ret = -1;
-    int i = 0;
+    size_t i = 0;
     container_inspect_graph_driver *inspect_driver = NULL;
     json_map_string_string *metadata = NULL;
 

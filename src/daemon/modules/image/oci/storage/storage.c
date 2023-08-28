@@ -1536,7 +1536,7 @@ out:
 
 static bool is_rootfs_layer(const char *layer_id, const struct rootfs_list *all_rootfs)
 {
-    int j;
+    size_t j;
 
     if (all_rootfs == NULL || layer_id == NULL) {
         return false;

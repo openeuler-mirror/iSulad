@@ -239,7 +239,7 @@ typedef struct container_events_format {
     char *opt;
     char *id;
     char **annotations;
-    char annotations_len;
+    size_t annotations_len;
 } container_events_format_t;
 
 typedef void (*container_events_callback_t)(const container_events_format_t *event);

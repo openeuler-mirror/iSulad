@@ -159,7 +159,7 @@ static void oci_load_free_layer(load_layer_blob_t *l)
 
 static void oci_load_free_image(load_image_t *im)
 {
-    int i = 0;
+    size_t i = 0;
 
     if (im == NULL) {
         return;
@@ -391,7 +391,7 @@ out:
 
 static int check_time_valid(oci_image_spec *conf)
 {
-    int i = 0;
+    size_t i = 0;
 
     if (!oci_valid_time(conf->created)) {
         ERROR("Invalid created time %s", conf->created);

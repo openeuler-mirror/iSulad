@@ -310,7 +310,6 @@ static int write_env_content(const char *env_path, const char **env, size_t env_
     int fd = -1;
     size_t i = 0;
     ssize_t nret = 0;
-    int env_max = 4096;
 
     ret = create_env_path_dir(env_path);
     if (ret < 0) {
@@ -325,6 +324,7 @@ static int write_env_content(const char *env_path, const char **env, size_t env_
     }
     if (env != NULL) {
         for (i = 0; i < env_len; i++) {
+            size_t env_max = 4096;
             if (strlen(env[i]) > env_max) {
                 ERROR("Env is too long");
                 ret = -1;
