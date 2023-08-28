@@ -164,7 +164,7 @@ void SandboxManager::ListAllSandboxes(const runtime::v1::PodSandboxFilter &filte
     // 2. filter sandboxes by filter
     for (const auto &sandbox : allsandboxes) {
         // (1) filter by id
-        if (!filters.id().empty() && filters.id() != sandbox->GetId()) {
+        if (!filters.id().empty() && sandbox->GetId().compare(0, filters.id().length(), filters.id()) != 0) {
             continue;
         }
         // (2) filter by state
