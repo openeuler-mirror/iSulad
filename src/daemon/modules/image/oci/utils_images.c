@@ -450,7 +450,7 @@ static char *convert_created_by(image_manifest_v1_compatibility *config)
 int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
                            docker_image_config_v2 *config)
 {
-    int i = 0;
+    size_t i = 0;
     int ret = 0;
     size_t history_index = 0;
     parser_error err = NULL;
@@ -511,7 +511,7 @@ int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const re
 
         ret = util_array_append(&config->rootfs->diff_ids, layers[i].diff_id);
         if (ret != 0) {
-            ERROR("append diff id of layer %u to rootfs failed, diff id is %s", i, layers[i].diff_id);
+            ERROR("append diff id of layer %zu to rootfs failed, diff id is %s", i, layers[i].diff_id);
             ret = -1;
             goto out;
         }
