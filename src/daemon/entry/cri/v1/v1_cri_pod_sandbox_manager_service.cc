@@ -564,6 +564,13 @@ void PodSandboxManagerService::RemovePodSandbox(const std::string &podSandboxID,
         return;
     }
 
+    if (namespace_is_cni(sandbox->GetNetMode().c_str()) &&
+        remove_network_namespace_file(sandbox->GetNetNsPath().c_str()) != 0) {
+        ERROR("Failed to delete networkns file: %s", sandbox->GetNetNsPath().c_str());
+        error.Errorf("Failed to delete networkns file: %s", sandbox->GetNetNsPath().c_str());
+        return;
+    }
+
     // Remove all containers inside the sandbox.
     // container may still be created, so production should not rely on this behavior.
     // TODO: according to the state(stopping and removal) in sandbox to avoid future container creation.
