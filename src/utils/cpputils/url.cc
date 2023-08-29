@@ -31,6 +31,7 @@ bool GetHexDigit(char c, char &d)
     if (c >= '0' && c <= '9') {
         d = c - '0';
     } else if (c >= 'a' && c <= 'f') {
+        // 10 equal to a in hex
         d = c - 'a' + 10;
     } else {
         d = c - 'A' + 10;
@@ -104,10 +105,10 @@ std::string QueryUnescape(const std::string &s)
 
 int UnescapeDealWithPercentSign(size_t &i, std::string &s, const EncodeMode &mode)
 {
-    std::string percent_sign = "%25";
+    std::string percentSign = "%25";
     // URL encoding replaces unsafe ASCII characters with a "%" followed by two hexadecimal digits
-    if ((size_t)(i + 2) >= s.length() || !IsHex(s[i + 1]) || !IsHex(s[i + 2])) {
-        s.erase(s.begin(), s.begin() + (long)i);
+    if ((i + 2) >= s.length() || !IsHex(s[i + 1]) || !IsHex(s[i + 2])) {
+        s.erase(s.begin(), s.begin() + static_cast<long>(i));
         // Remaining "%" with two hexadecimal digits
         if (s.length() > 3) {
             s.erase(s.begin() + 3, s.end());
@@ -119,15 +120,16 @@ int UnescapeDealWithPercentSign(size_t &i, std::string &s, const EncodeMode &mod
     if (!GetHexDigit(s[i + 1], s1) || !GetHexDigit(s[i + 2], s2)) {
         return -1;
     }
+    // for 3 bit hex, max value is 8
     if (mode == EncodeMode::ENCODE_HOST && s1 < 8 &&
-        std::string(s.begin() + (long)i, s.begin() + (long)i + 3) != percent_sign) {
-        ERROR("invalid URL escape %s", std::string(s.begin() + (long)i, s.begin() + (long)i + 3).c_str());
+        std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i+3)) != percentSign) {
+        ERROR("invalid URL escape %s", std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i + 3)).c_str());
         return -1;
     }
     if (mode == EncodeMode::ENCODE_ZONE) {
         char v = static_cast<char>((static_cast<unsigned char>(s1) << 4) | static_cast<unsigned char>(s2));
-        if (std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i) + 3) != percent_sign && v != ' ' &&
-            ShouldEscape(v, EncodeMode::ENCODE_HOST)) {
+        if (std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i) + 3) != percentSign &&
+            v != ' ' && ShouldEscape(v, EncodeMode::ENCODE_HOST)) {
             ERROR("invalid URL escape %s",
                   std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i) + 3).c_str());
             return -1;
@@ -178,7 +180,8 @@ void DoUnescape(std::string &t, const std::string &s, const EncodeMode &mode)
                     if (!GetHexDigit(s[i + 1], s1) || !GetHexDigit(s[i + 2], s2)) {
                         return;
                     }
-                    t[j++] = (char)(((unsigned char)s1 << 4) | (unsigned char)s2);
+                    // we use 4 high bit of 1 + 4 low bit of s2 to create new char
+                    t[j++] = (char)((static_cast<unsigned char>(s1) << 4) | static_cast<unsigned char>(s2));
                     i += 3;
                 }
                 break;
@@ -249,7 +252,9 @@ std::string Escape(const std::string &s, const EncodeMode &mode)
             t[j++] = '+';
         } else if (ShouldEscape(c, mode)) {
             t[j] = '%';
-            t[j + 1] = "0123456789ABCDEF"[(unsigned char)c >> 4];
+            // get 4 high bit of c
+            t[j + 1] = "0123456789ABCDEF"[static_cast<unsigned char>(c) >> 4];
+            // get 4 low bit of c
             t[j + 2] = "0123456789ABCDEF"[c & 15];
             j += 3;
         } else {
@@ -288,8 +293,8 @@ int Getscheme(const std::string &rawurl, std::string &scheme, std::string &path)
                 ERROR("missing protocol scheme");
                 return -1;
             }
-            scheme = std::string(rawurl.begin(), rawurl.begin() + (long)i);
-            path = std::string(rawurl.begin() + (long)i + 1, rawurl.end());
+            scheme = std::string(rawurl.begin(), rawurl.begin() + static_cast<long>(i));
+            path = std::string(rawurl.begin() + static_cast<long>(i + 1), rawurl.end());
             return 0;
         } else {
             scheme = "";
@@ -355,25 +360,25 @@ int SplitOffPossibleLeading(std::string &scheme, const std::string &rawurl, URLD
 }
 
 URLDatum *HandleNonBackslashPrefix(URLDatum *url, const std::string &scheme, const std::string &rest, bool viaRequest,
-                                   bool &should_ret)
+                                   bool &shouldRet)
 {
     if (rest.at(0) == '/') {
         return nullptr;
     }
     if (!scheme.empty()) {
-        should_ret = true;
+        shouldRet = true;
         url->SetOpaque(rest);
         return url;
     }
     if (viaRequest) {
-        should_ret = true;
+        shouldRet = true;
         ERROR("invalid URI for request");
         return nullptr;
     }
     size_t colon = rest.find(":");
     size_t slash = rest.find("/");
     if (colon != std::string::npos && (slash == std::string::npos || colon < slash)) {
-        should_ret = true;
+        shouldRet = true;
         ERROR("first path segment in URL cannot contain colon");
         return nullptr;
     }
@@ -420,9 +425,9 @@ URLDatum *Parse(const std::string &rawurl, bool viaRequest)
     if (SplitOffPossibleLeading(scheme, rawurl, url, rest) != 0) {
         return nullptr;
     }
-    bool should_ret = false;
-    auto *tmpret = HandleNonBackslashPrefix(url, scheme, rest, viaRequest, should_ret);
-    if (should_ret) {
+    bool shouldRet = false;
+    auto *tmpret = HandleNonBackslashPrefix(url, scheme, rest, viaRequest, shouldRet);
+    if (shouldRet) {
         return tmpret;
     }
     if (SetURLDatumInfo(url, scheme, viaRequest, rest) != 0) {

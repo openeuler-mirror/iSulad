@@ -25,7 +25,7 @@ public:
         : m_message(copy.m_message), m_code(copy.m_code)
     {
     }
-    Errors &operator=(const Errors &);
+    Errors &operator=(const Errors &other);
     virtual ~Errors();
 
     void Clear();

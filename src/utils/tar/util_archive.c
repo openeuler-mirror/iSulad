@@ -39,7 +39,6 @@
 #include <isula_libutils/storage_entry.h>
 
 #include "error.h"
-#include "io_wrapper.h"
 #include "map.h"
 #include "path.h"
 #include "stdbool.h"

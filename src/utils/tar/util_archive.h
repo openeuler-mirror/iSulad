@@ -18,9 +18,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define ARCHIVE_BLOCK_SIZE (32 * 1024)
+#include "io_wrapper.h"
 
-struct io_read_wrapper;
+#define ARCHIVE_BLOCK_SIZE (32 * 1024)
 
 #ifdef __cplusplus
 extern "C" {
