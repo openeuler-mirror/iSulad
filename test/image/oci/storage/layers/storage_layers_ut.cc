@@ -278,19 +278,6 @@ TEST_F(StorageLayersUnitTest, test_layers_load)
     free_layer_list(layer_list);
 }
 
-TEST_F(StorageLayersUnitTest, test_layer_store_exists)
-{
-    if (!support_overlay) {
-        return;
-    }
-
-    std::string id { "7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b" };
-    std::string incorrectId { "50551ff67da98ab8540d7132" };
-
-    ASSERT_TRUE(layer_store_exists(id.c_str()));
-    ASSERT_FALSE(layer_store_exists(incorrectId.c_str()));
-}
-
 TEST_F(StorageLayersUnitTest, test_layer_store_create)
 {
     if (!support_overlay) {
@@ -334,27 +321,6 @@ TEST_F(StorageLayersUnitTest, test_layer_store_by_compress_digest)
     struct layer **layers = layer_list->layers;
     ASSERT_STREQ(layers[0]->id, id.c_str());
     ASSERT_STREQ(layers[0]->compressed_digest, compress.c_str());
-
-    free_layer_list(layer_list);
-}
-
-TEST_F(StorageLayersUnitTest, test_layer_store_by_uncompress_digest)
-{
-    if (!support_overlay) {
-        return;
-    }
-
-    std::string uncompress { "sha256:9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
-    std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
-    struct layer_list *layer_list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
-
-    ASSERT_EQ(layer_store_by_uncompress_digest(uncompress.c_str(), layer_list), 0);
-    ASSERT_EQ(layer_list->layers_len, 1);
-
-    struct layer **layers = layer_list->layers;
-    ASSERT_STREQ(layers[0]->id, id.c_str());
-    ASSERT_STREQ(layers[0]->uncompressed_digest, uncompress.c_str());
-    ASSERT_EQ(layers[0]->uncompress_size, 1672256);
 
     free_layer_list(layer_list);
 }

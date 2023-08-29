@@ -51,20 +51,18 @@ struct layer_opts {
 };
 
 int layer_store_init(const struct storage_module_init_options *conf);
-void layer_store_exit();
-void layer_store_cleanup();
+void layer_store_exit(void);
+void layer_store_cleanup(void);
 
-void remove_layer_list_tail();
+void remove_layer_list_tail(void);
 int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *content,
                        char **new_id);
 int layer_inc_hold_refs(const char *layer_id);
 int layer_dec_hold_refs(const char *layer_id);
 int layer_get_hold_refs(const char *layer_id, int *ref_num);
 int layer_store_delete(const char *id);
-bool layer_store_exists(const char *id);
 int layer_store_list(struct layer_list *resp);
 int layer_store_by_compress_digest(const char *digest, struct layer_list *resp);
-int layer_store_by_uncompress_digest(const char *digest, struct layer_list *resp);
 struct layer *layer_store_lookup(const char *name);
 char *layer_store_mount(const char *id);
 int layer_store_umount(const char *id, bool force);

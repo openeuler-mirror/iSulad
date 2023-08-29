@@ -37,6 +37,11 @@ static map_t *overlay_id_link = NULL;
 
 struct remote_overlay_data *remote_overlay_create(const char *remote_home, const char *remote_ro)
 {
+    if (remote_home == NULL || remote_ro == NULL) {
+        ERROR("Empty remote home or remote ro");
+        return NULL;
+    }
+
     struct remote_overlay_data *data = util_common_calloc_s(sizeof(struct remote_overlay_data));
     if (data == NULL) {
         ERROR("Out of memory");
@@ -341,6 +346,11 @@ static int remote_overlay_add(struct remote_overlay_data *data)
 
 void remote_overlay_refresh(struct remote_overlay_data *data)
 {
+    if (data == NULL) {
+        ERROR("Skip refresh remote overlay for empty data");
+        return;
+    }
+
     if (remote_dir_scan(data) != 0) {
         ERROR("remote overlay failed to scan dir, skip refresh");
         return;

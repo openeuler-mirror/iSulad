@@ -222,7 +222,7 @@ struct graphdriver_status {
 
 int image_module_init(const isulad_daemon_configs *args);
 
-void image_module_exit();
+void image_module_exit(void);
 
 int im_get_container_filesystem_usage(const char *image_type, const char *id, imagetool_fs_info **fs_usage);
 

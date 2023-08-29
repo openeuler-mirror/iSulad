@@ -39,11 +39,3 @@ int overlay2_parse_options(struct graphdriver *driver, const char **options, siz
     }
     return -1;
 }
-
-bool overlay2_is_quota_options(struct graphdriver *driver, const char *option)
-{
-    if (g_driver_overlay2_mock != nullptr) {
-        return g_driver_overlay2_mock->Overlay2IsQuotaOptions(driver, option);
-    }
-    return false;
-}

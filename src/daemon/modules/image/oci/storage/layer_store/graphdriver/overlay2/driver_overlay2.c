@@ -400,12 +400,6 @@ out:
     return ret;
 }
 
-bool overlay2_is_quota_options(struct graphdriver *driver, const char *option)
-{
-    return strncmp(option, QUOTA_SIZE_OPTION, strlen(QUOTA_SIZE_OPTION)) == 0 ||
-           strncmp(option, QUOTA_BASESIZE_OPTIONS, strlen(QUOTA_BASESIZE_OPTIONS)) == 0;
-}
-
 static int check_parent_valid(const char *parent, const struct graphdriver *driver)
 {
     int ret = 0;
@@ -1152,7 +1146,7 @@ int overlay2_rm_layer(const char *id, const struct graphdriver *driver)
     struct stat stat_buf;
 #endif
 
-    if (id == NULL || driver == NULL) {
+    if (id == NULL || driver == NULL || driver->home == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }
@@ -1838,6 +1832,11 @@ bool overlay2_layer_exists(const char *id, const struct graphdriver *driver)
     char *layer_dir = NULL;
     char *link_id = NULL;
 
+    if (id == NULL || driver == NULL || driver->home == NULL) {
+        ERROR("Failed to verify overlay2 layer exists for empty id or driver");
+        return false;
+    }
+
     layer_dir = util_path_join(driver->home, id);
     if (layer_dir == NULL) {
         ERROR("Failed to join layer dir:%s", id);
@@ -2060,7 +2059,7 @@ int overlay2_get_driver_status(const struct graphdriver *driver, struct graphdri
     int nret = 0;
     char tmp[MAX_INFO_LENGTH] = { 0 };
 
-    if (driver == NULL || status == NULL) {
+    if (driver == NULL || status == NULL || driver->backing_fs == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }
@@ -2102,7 +2101,7 @@ int overlay2_clean_up(struct graphdriver *driver)
 {
     int ret = 0;
 
-    if (driver == NULL) {
+    if (driver == NULL || driver->home == NULL) {
         ERROR("Invalid input arguments");
         ret = -1;
         goto out;

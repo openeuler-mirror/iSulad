@@ -85,6 +85,11 @@ int remote_start_refresh_thread(pthread_rwlock_t *remote_lock)
     pthread_t a_thread;
     maintain_context ctx = get_maintain_context();
 
+    if (remote_lock == NULL) {
+        ERROR("Invalid remote lock");
+        return -1;
+    }
+
     supporters.image_data = remote_image_create(ctx.image_home, NULL);
     if (supporters.image_data == NULL) {
         goto free_out;

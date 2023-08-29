@@ -138,13 +138,17 @@ int ext_list_images(const im_list_request *request, imagetool_images_list **list
 {
     int ret = 0;
 
+    if (request == NULL || list == NULL) {
+        ERROR("Empty request or list");
+        return -1;
+    }
+
     *list = util_common_calloc_s(sizeof(imagetool_images_list));
     if (*list == NULL) {
         ERROR("Memory out");
         ret = -1;
-        goto out;
     }
-out:
+
     return ret;
 }
 
