@@ -137,7 +137,7 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
 
 out:
     memset(buf, 0, sizeof(buf));
-    memset(pwbufp, 0, sizeof(struct passwd));
+    memset(&pw, 0, sizeof(struct passwd));
     return ret;
 }
 
