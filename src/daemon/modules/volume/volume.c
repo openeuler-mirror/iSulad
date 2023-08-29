@@ -130,7 +130,7 @@ static int insert_driver(char *name, volume_driver *driver)
     }
 
     if (!map_insert(g_vs.drivers, name, d)) {
-        ERROR("out of memory");
+        ERROR("Failed to insert volume driver %s", name);
         ret = -1;
         goto out;
     }

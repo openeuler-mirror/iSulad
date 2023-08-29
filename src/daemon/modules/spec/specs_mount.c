@@ -144,7 +144,7 @@ int adapt_settings_for_mounts(oci_runtime_spec *oci_spec, container_config *cont
     int ret = 0;
     char **array_str = NULL;
 
-    if (container_spec == NULL) {
+    if (oci_spec == NULL || container_spec == NULL) {
         return -1;
     }
 
@@ -1235,6 +1235,10 @@ int merge_all_devices_and_all_permission(oci_runtime_spec *oci_spec)
     defs_resources *ptr = NULL;
     defs_device_cgroup *spec_dev_cgroup = NULL;
 
+    if (oci_spec == NULL) {
+        return -1;
+    }
+
     ret = merge_all_devices_in_dir("/dev", NULL, NULL, oci_spec);
     if (ret != 0) {
         ERROR("Failed to merge all devices in /dev");
@@ -2212,6 +2216,11 @@ int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec)
 {
     int ret = 0;
 
+    if (oci_spec == NULL || host_spec == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
     /* blkio weight devices */
     if (host_spec->blkio_weight_device != NULL && host_spec->blkio_weight_device_len != 0) {
         ret = merge_blkio_weight_device(oci_spec, host_spec->blkio_weight_device, host_spec->blkio_weight_device_len);
@@ -2879,7 +2888,7 @@ static int calc_volumes_from_len(host_config *host_spec, size_t *len)
     char *mode = NULL;
     container_t *cont = NULL;
     int ret = 0;
-    int i = 0;
+    size_t i = 0;
 
     *len = 0;
     for (i = 0; i < host_spec->volumes_from_len; i++) {
@@ -3317,10 +3326,17 @@ out:
 int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
-    container_config *container_spec = v2_spec->config;
+    container_config *container_spec = NULL;
     defs_mount **all_fs_mounts = NULL;
     size_t all_fs_mounts_len = 0;
     bool mounted = false;
+
+    if (oci_spec == NULL || host_spec == NULL || v2_spec == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    container_spec = v2_spec->config;
 
     ret = im_mount_container_rootfs(v2_spec->image_type, v2_spec->image, v2_spec->id);
     if (ret != 0) {
@@ -3349,6 +3365,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
     if (host_spec->host_channel != NULL) {
         if (!add_host_channel_mount(&all_fs_mounts, &all_fs_mounts_len, host_spec->host_channel)) {
             ERROR("Failed to merge host channel mount");
+            ret = -1;
             goto out;
         }
     }
@@ -3372,7 +3389,11 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
     /* add ipc mount */
     if (v2_spec->shm_path != NULL) {
         // check whether duplication
-        add_shm_mount(&all_fs_mounts, &all_fs_mounts_len, v2_spec->shm_path);
+        if (!add_shm_mount(&all_fs_mounts, &all_fs_mounts_len, v2_spec->shm_path)) {
+            ERROR("Failed to add shm mount");
+            ret = -1;
+            goto out;
+        }
     }
 
     if (!host_spec->system_container) {
@@ -3417,6 +3438,11 @@ int add_rootfs_mount(const container_config *container_spec)
 {
     int ret = 0;
     char *mntparent = NULL;
+
+    if (container_spec == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
 
     mntparent = conf_get_isulad_mount_rootfs();
     if (mntparent == NULL) {
