@@ -564,10 +564,26 @@ void PodSandboxManagerService::RemovePodSandbox(const std::string &podSandboxID,
         return;
     }
 
-    if (namespace_is_cni(sandbox->GetNetMode().c_str()) &&
-        remove_network_namespace_file(sandbox->GetNetNsPath().c_str()) != 0) {
-        ERROR("Failed to delete networkns file: %s", sandbox->GetNetNsPath().c_str());
-        error.Errorf("Failed to delete networkns file: %s", sandbox->GetNetNsPath().c_str());
+    // TODO: On sandbox exited by reasons rather than stopp, we might not have cleared the network
+    // or cleaned up the sandbox files. For now, 1. we check if the network is ready and then cleared
+    // the cni network 2. clean up the sandbox files the second time anyway. Fix it later.
+    if (namespace_is_cni(sandbox->GetNetMode().c_str())) {
+        if (sandbox->GetNetworkReady()) {
+            ClearCniNetwork(sandbox, error);
+            if (error.NotEmpty()) {
+                ERROR("Failed to clear network that is ready");
+                return;
+            }
+        }
+
+        // Do not return even if removal failed, file in /var/run/... would not remain once reboot
+        if (remove_network_namespace_file(sandbox->GetNetNsPath().c_str()) != 0) {
+            WARN("Failed to delete networkns file: %s", sandbox->GetNetNsPath().c_str());
+        }
+    }
+
+    if (!sandbox->CleanupSandboxFiles(error)) {
+        ERROR("Failed to clean up sandbox files");
         return;
     }
 
