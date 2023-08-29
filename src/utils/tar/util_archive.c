@@ -598,7 +598,7 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const struct a
 
     ret = archive_read_open(a, mydata, NULL, read_content, NULL);
     if (ret != 0) {
-        SYSERROR("Failed to open archive");
+        ERROR("Failed to open archive: %s", archive_error_string(a));
         fprintf(stderr, "Failed to open archive: %s", strerror(errno));
         ret = -1;
         goto out;
@@ -709,6 +709,13 @@ static void close_archive_pipes_fd(int *pipes, size_t pipe_size)
     }
 }
 
+static void set_child_process_pdeathsig(void)
+{
+    if (prctl(PR_SET_PDEATHSIG, SIGKILL) < 0) {
+        SYSERROR("Failed to set child process pdeathsig");
+    }
+}
+
 int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, const struct archive_options *options,
                    char **errmsg)
 {
@@ -737,6 +744,8 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
     }
 
     if (pid == (pid_t)0) {
+        set_child_process_pdeathsig();
+
         keepfds[0] = isula_libutils_get_log_fd();
         keepfds[1] = *(int *)(content->context);
         keepfds[2] = pipe_stderr[1];
@@ -1141,6 +1150,8 @@ int archive_chroot_tar(char *path, char *file, char **errmsg)
     }
 
     if (pid == (pid_t)0) {
+        set_child_process_pdeathsig();
+
         keepfds[0] = isula_libutils_get_log_fd();
         keepfds[1] = pipe_for_read[1];
         ret = util_check_inherited_exclude_fds(true, keepfds, 2);
@@ -1375,6 +1386,8 @@ int archive_chroot_untar_stream(const struct io_read_wrapper *context, const cha
     }
 
     if (pid == (pid_t)0) {
+        set_child_process_pdeathsig();
+
         keepfds[0] = isula_libutils_get_log_fd();
         keepfds[1] = pipe_stderr[1];
         keepfds[2] = pipe_stream[0];
@@ -1503,6 +1516,8 @@ int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, cons
     if (pid == (pid_t)0) {
         char *tar_dir_name = NULL;
         char *tar_base_name = NULL;
+
+        set_child_process_pdeathsig();
 
         keepfds[0] = isula_libutils_get_log_fd();
         keepfds[1] = pipe_stderr[1];
