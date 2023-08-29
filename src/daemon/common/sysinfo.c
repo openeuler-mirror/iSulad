@@ -46,7 +46,6 @@
 #define CGROUP_CPU_RT_RUNTIME "cpu.rt_runtime_us"
 #define CGROUP_CPUSET_CPUS "cpuset.cpus"
 #define CGROUP_CPUSET_MEMS "cpuset.mems"
-#define CGROUP_MEMORY_LIMIT "memory.limit_in_bytes"
 #define CGROUP_MEMORY_SWAP "memory.memsw.limit_in_bytes"
 #define CGROUP_MEMORY_SWAPPINESS "memory.swappiness"
 #define CGROUP_MEMORY_RESERVATION "memory.soft_limit_in_bytes"

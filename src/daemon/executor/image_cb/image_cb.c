@@ -592,7 +592,7 @@ static int trans_one_image(image_list_images_response *response, size_t image_in
             goto out;
         }
 
-        if (!unix_nanos_to_timestamp(created_nanos, &timestamp) != 0) {
+        if (!unix_nanos_to_timestamp(created_nanos, &timestamp)) {
             ERROR("Failed to translate nanos to timestamp");
             ret = -1;
             goto out;
@@ -666,19 +666,6 @@ static int trans_im_list_images(const im_list_response *im_list, image_list_imag
 
 out:
     return ret;
-}
-
-static im_list_request *image_list_context_new(const image_list_images_request *request)
-{
-    im_list_request *ctx = NULL;
-
-    ctx = util_common_calloc_s(sizeof(im_list_request));
-    if (ctx == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    return ctx;
 }
 
 #ifdef ENABLE_OCI_IMAGE
@@ -769,11 +756,12 @@ static im_list_request *fold_filter(const image_list_images_request *request)
 {
     im_list_request *ctx = NULL;
 
-    ctx = image_list_context_new(request);
+    ctx = (im_list_request *)util_common_calloc_s(sizeof(im_list_request));
     if (ctx == NULL) {
         ERROR("Out of memory");
         goto error_out;
     }
+
 #ifdef ENABLE_OCI_IMAGE
     size_t i;
     if (request->filters == NULL) {

@@ -80,11 +80,20 @@ out:
 
 static int fopen_network(FILE **fp, char **file_path, const char *rootfs, const char *filename)
 {
+    int64_t size = 0;
+
     if (util_realpath_in_scope(rootfs, filename, file_path) < 0) {
         SYSERROR("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
         isulad_set_error_message("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
         return -1;
     }
+
+    size = util_file_size(*file_path);
+    if (size > REGULAR_FILE_SIZE) {
+        ERROR("Target file '%s', size exceed limit: %lld", *file_path, REGULAR_FILE_SIZE);
+        return -1;
+    }
+
     *fp = util_fopen(*file_path, "a+");
     if (*fp == NULL) {
         SYSERROR("Failed to open %s", *file_path);

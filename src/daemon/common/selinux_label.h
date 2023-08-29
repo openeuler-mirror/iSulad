@@ -24,14 +24,14 @@ extern "C" {
 #endif
 
 int selinux_state_init(void);
-void selinux_set_disabled();
-bool selinux_get_enable();
-int init_label(const char **label_opts, size_t label_opts_len, char **process_label, char **mount_label);
+void selinux_set_disabled(void);
+bool selinux_get_enable(void);
+int init_label(const char **label_opts, size_t label_opts_len, char **dst_process_label, char **dst_mount_label);
 int relabel(const char *path, const char *file_label, bool shared);
 int get_disable_security_opt(char ***labels, size_t *labels_len);
 int dup_security_opt(const char *src, char ***dst, size_t *len);
 char *selinux_format_mountlabel(const char *src, const char *mount_label);
-void selinux_state_free();
+void selinux_state_free(void);
 #ifdef __cplusplus
 }
 #endif

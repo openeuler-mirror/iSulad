@@ -247,7 +247,7 @@ static int get_current_label(char **content)
     return read_con(path, content);
 }
 
-bool selinux_get_enable()
+bool selinux_get_enable(void)
 {
     bool enabled_set = false;
     bool enabled = false;
@@ -295,7 +295,7 @@ bool selinux_get_enable()
 }
 
 // just disable selinux support for iSulad
-void selinux_set_disabled()
+void selinux_set_disabled(void)
 {
     (void)set_state_enable(false);
 }
@@ -376,9 +376,10 @@ int selinux_state_init(void)
     return 0;
 }
 
-void selinux_state_free()
+void selinux_state_free(void)
 {
     do_selinux_state_free(g_selinux_state);
+    g_selinux_state = NULL;
 }
 
 /* MCS already exists */
@@ -987,6 +988,11 @@ int relabel(const char *path, const char *file_label, bool shared)
         return 0;
     }
 
+    if (path == NULL) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
     tmp_file_label = util_strdup_s(file_label);
     if (is_exclude_relabel_path(path)) {
         ERROR("SELinux relabeling of %s is not allowed", path);
@@ -1060,6 +1066,11 @@ int dup_security_opt(const char *src, char ***dst, size_t *len)
         return 0;
     }
 
+    if (dst == NULL || len == NULL) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
     context_t con = context_new(src);
     if (con == NULL) {
         ERROR("context new failed");
@@ -1108,6 +1119,11 @@ out:
 
 int get_disable_security_opt(char ***labels, size_t *labels_len)
 {
+    if (labels == NULL || labels_len == NULL) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
     if (util_array_append(labels, "disable") != 0) {
         ERROR("Failed to append label");
         return -1;

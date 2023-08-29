@@ -119,7 +119,7 @@ out:
 }
 
 /* isulad server conf wrlock */
-int isulad_server_conf_wrlock()
+int isulad_server_conf_wrlock(void)
 {
     int ret = 0;
 
@@ -132,7 +132,7 @@ int isulad_server_conf_wrlock()
 }
 
 /* isulad server conf rdlock */
-int isulad_server_conf_rdlock()
+int isulad_server_conf_rdlock(void)
 {
     int ret = 0;
 
@@ -145,7 +145,7 @@ int isulad_server_conf_rdlock()
 }
 
 /* isulad server conf unlock */
-int isulad_server_conf_unlock()
+int isulad_server_conf_unlock(void)
 {
     int ret = 0;
 
@@ -157,13 +157,13 @@ int isulad_server_conf_unlock()
     return ret;
 }
 
-struct service_arguments *conf_get_server_conf()
+struct service_arguments *conf_get_server_conf(void)
 {
     return g_isulad_conf.server_conf;
 }
 
 /* conf get isulad pidfile */
-char *conf_get_isulad_pidfile()
+char *conf_get_isulad_pidfile(void)
 {
     char *filename = NULL;
     struct service_arguments *conf = NULL;
@@ -185,7 +185,7 @@ out:
 }
 
 /* conf get engine rootpath */
-char *conf_get_engine_rootpath()
+char *conf_get_engine_rootpath(void)
 {
     char *epath = NULL;
     char *rootpath = NULL;
@@ -236,7 +236,7 @@ int conf_get_cgroup_cpu_rt(int64_t *cpu_rt_period, int64_t *cpu_rt_runtime)
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL) {
+    if (conf == NULL || conf->json_confs == NULL) {
         (void)isulad_server_conf_unlock();
         return -1;
     }
@@ -252,7 +252,7 @@ int conf_get_cgroup_cpu_rt(int64_t *cpu_rt_period, int64_t *cpu_rt_runtime)
 }
 
 /* conf get graph checked flag file path */
-char *conf_get_graph_check_flag_file()
+char *conf_get_graph_check_flag_file(void)
 {
     char *epath = NULL;
     char *rootpath = NULL;
@@ -309,7 +309,7 @@ char *conf_get_routine_rootdir(const char *runtime)
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->graph == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->graph == NULL) {
         ERROR("Server conf is NULL or rootpath is NULL");
         goto out;
     }
@@ -359,7 +359,7 @@ char *conf_get_routine_statedir(const char *runtime)
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->state == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->state == NULL) {
         goto out;
     }
 
@@ -390,7 +390,7 @@ out:
 }
 
 /* conf get isulad rootdir */
-char *conf_get_isulad_rootdir()
+char *conf_get_isulad_rootdir(void)
 {
     char *path = NULL;
     struct service_arguments *conf = NULL;
@@ -400,7 +400,7 @@ char *conf_get_isulad_rootdir()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->graph == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->graph == NULL) {
         goto out;
     }
 
@@ -412,7 +412,7 @@ out:
 }
 
 /* conf get registry */
-char **conf_get_registry_list()
+char **conf_get_registry_list(void)
 {
     int nret = 0;
     size_t i;
@@ -425,7 +425,7 @@ char **conf_get_registry_list()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->registry_mirrors_len == 0) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->registry_mirrors_len == 0) {
         goto out;
     }
 
@@ -448,7 +448,7 @@ out:
 }
 
 /* conf get insecure registry */
-char **conf_get_insecure_registry_list()
+char **conf_get_insecure_registry_list(void)
 {
     int nret = 0;
     size_t i;
@@ -461,7 +461,7 @@ char **conf_get_insecure_registry_list()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->insecure_registries_len == 0) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->insecure_registries_len == 0) {
         goto out;
     }
 
@@ -484,7 +484,7 @@ out:
 }
 
 /* conf get isulad statedir */
-char *conf_get_isulad_statedir()
+char *conf_get_isulad_statedir(void)
 {
     char *path = NULL;
     struct service_arguments *conf = NULL;
@@ -494,7 +494,7 @@ char *conf_get_isulad_statedir()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->state == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->state == NULL) {
         goto out;
     }
 
@@ -506,7 +506,7 @@ out:
 }
 
 /* isulad monitor fifo name */
-char *conf_get_isulad_monitor_fifo_path()
+char *conf_get_isulad_monitor_fifo_path(void)
 {
     int ret;
     char fifo_file_path[PATH_MAX] = { 0 };
@@ -561,7 +561,7 @@ static char *get_parent_mount_dir(char *graph)
 }
 
 /* conf get isulad mount rootfs */
-char *conf_get_isulad_mount_rootfs()
+char *conf_get_isulad_mount_rootfs(void)
 {
     char *path = NULL;
     struct service_arguments *conf = NULL;
@@ -583,7 +583,7 @@ out:
 }
 
 /* conf get isulad umask for containers */
-char *conf_get_isulad_native_umask()
+char *conf_get_isulad_native_umask(void)
 {
     char *umask = NULL;
     struct service_arguments *conf = NULL;
@@ -593,7 +593,7 @@ char *conf_get_isulad_native_umask()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->native_umask == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->native_umask == NULL) {
         goto out;
     }
 
@@ -605,7 +605,7 @@ out:
 }
 
 /* conf get isulad cgroup parent for containers */
-char *conf_get_isulad_cgroup_parent()
+char *conf_get_isulad_cgroup_parent(void)
 {
     char *cgroup_parent = NULL;
     struct service_arguments *conf = NULL;
@@ -615,7 +615,7 @@ char *conf_get_isulad_cgroup_parent()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->cgroup_parent == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->cgroup_parent == NULL) {
         goto out;
     }
 
@@ -627,7 +627,7 @@ out:
 }
 
 /* conf get isulad engine */
-char *conf_get_isulad_engine()
+char *conf_get_isulad_engine(void)
 {
     char *engine = NULL;
     struct service_arguments *conf = NULL;
@@ -637,7 +637,7 @@ char *conf_get_isulad_engine()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->engine == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->engine == NULL) {
         goto out;
     }
 
@@ -649,7 +649,7 @@ out:
 }
 
 /* conf get isulad loglevel */
-char *conf_get_isulad_loglevel()
+char *conf_get_isulad_loglevel(void)
 {
     char *loglevel = NULL;
     struct service_arguments *conf = NULL;
@@ -659,7 +659,7 @@ char *conf_get_isulad_loglevel()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->log_level == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->log_level == NULL) {
         goto out;
     }
 
@@ -677,7 +677,7 @@ char *get_log_file_helper(const struct service_arguments *conf, const char *suff
     size_t len = 0;
     int nret = 0;
 
-    if (suffix == NULL) {
+    if (conf == NULL || suffix == NULL) {
         return NULL;
     }
 
@@ -709,7 +709,7 @@ out:
 }
 
 /* conf get isulad log gather fifo path */
-char *conf_get_isulad_log_gather_fifo_path()
+char *conf_get_isulad_log_gather_fifo_path(void)
 {
 #define LOG_GATHER_FIFO_NAME "/isulad_log_gather_fifo"
     char *logfile = NULL;
@@ -752,7 +752,7 @@ out:
 }
 
 /* conf get isulad log file */
-char *conf_get_isulad_log_file()
+char *conf_get_isulad_log_file(void)
 {
     char *logfile = NULL;
     struct service_arguments *conf = NULL;
@@ -774,7 +774,7 @@ out:
 }
 
 /* conf get engine log file */
-char *conf_get_engine_log_file()
+char *conf_get_engine_log_file(void)
 {
     char *logfile = NULL;
     char *full_path = NULL;
@@ -841,7 +841,7 @@ int conf_get_daemon_log_config(char **loglevel, char **logdriver, char **engine_
 }
 
 /* conf get isulad logdriver */
-char *conf_get_isulad_logdriver()
+char *conf_get_isulad_logdriver(void)
 {
     char *logdriver = NULL;
     struct service_arguments *conf = NULL;
@@ -851,7 +851,7 @@ char *conf_get_isulad_logdriver()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->log_driver == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->log_driver == NULL) {
         goto out;
     }
 
@@ -871,12 +871,17 @@ int conf_get_container_log_opts(isulad_daemon_configs_container_log **opts)
     size_t i;
     int ret = 0;
 
+    if (opts == NULL) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
     if (isulad_server_conf_rdlock() != 0) {
         return -1;
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->container_log == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->container_log == NULL) {
         goto out;
     }
     work = conf->json_confs->container_log;
@@ -918,7 +923,7 @@ out:
 }
 
 /* conf get image layer check flag */
-bool conf_get_image_layer_check_flag()
+bool conf_get_image_layer_check_flag(void)
 {
     bool check_flag = false;
     struct service_arguments *conf = NULL;
@@ -928,7 +933,7 @@ bool conf_get_image_layer_check_flag()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL) {
+    if (conf == NULL || conf->json_confs == NULL) {
         goto out;
     }
 
@@ -940,7 +945,7 @@ out:
 }
 
 /* conf get flag of use decrypted key to pull image */
-bool conf_get_use_decrypted_key_flag()
+bool conf_get_use_decrypted_key_flag(void)
 {
     bool check_flag = true;
     struct service_arguments *conf = NULL;
@@ -950,7 +955,7 @@ bool conf_get_use_decrypted_key_flag()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->use_decrypted_key == NULL) {
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->use_decrypted_key == NULL) {
         goto out;
     }
 
@@ -961,7 +966,7 @@ out:
     return check_flag;
 }
 
-bool conf_get_skip_insecure_verify_flag()
+bool conf_get_skip_insecure_verify_flag(void)
 {
     bool check_flag = false;
     struct service_arguments *conf = NULL;
@@ -971,7 +976,7 @@ bool conf_get_skip_insecure_verify_flag()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL) {
+    if (conf == NULL || conf->json_confs == NULL) {
         goto out;
     }
 
@@ -982,69 +987,86 @@ out:
     return check_flag;
 }
 
-#define OCI_STR_ARRAY_DUP(src, dest, srclen, destlen, ret)               \
-    do {                                                                 \
-        if ((src) != NULL) {                                             \
-            (dest) = util_str_array_dup((const char **)(src), (srclen)); \
-            if ((dest) == NULL) {                                        \
-                (ret) = -1;                                              \
-                goto out;                                                \
-            }                                                            \
-            (destlen) = (srclen);                                        \
-        }                                                                \
-    } while (0)
+static defs_hook *hooks_elem_dup(const defs_hook *src)
+{
+    defs_hook *dest = NULL;
 
-#define HOOKS_ELEM_DUP_DEF(item)                                                      \
-    defs_hook *hooks_##item##_elem_dup(const defs_hook *src)                          \
-    {                                                                                 \
-        int ret = 0;                                                                  \
-        defs_hook *dest = NULL;                                                       \
-        if (src == NULL)                                                              \
-            return NULL;                                                              \
-        dest = util_common_calloc_s(sizeof(defs_hook));                               \
-        if (dest == NULL)                                                             \
-            return NULL;                                                              \
-        dest->path = util_strdup_s(src->path);                                        \
-        OCI_STR_ARRAY_DUP(src->args, dest->args, src->args_len, dest->args_len, ret); \
-        OCI_STR_ARRAY_DUP(src->env, dest->env, src->env_len, dest->env_len, ret);     \
-        dest->timeout = src->timeout;                                                 \
-    out:                                                                              \
-        if (ret != 0 && dest != NULL) {                                               \
-            free_defs_hook(dest);                                                     \
-            dest = NULL;                                                              \
-        }                                                                             \
-        return dest;                                                                  \
+    if (src == NULL) {
+        return NULL;
     }
 
-/* HOOKS ELEM DUP DEF */
-HOOKS_ELEM_DUP_DEF(prestart)
-/* HOOKS ELEM DUP DEF */
-HOOKS_ELEM_DUP_DEF(poststart)
-/* HOOKS ELEM DUP DEF */
-HOOKS_ELEM_DUP_DEF(poststop)
-
-#define HOOKS_ITEM_DUP_DEF(item)                                                            \
-    int hooks_##item##_dup(oci_runtime_spec_hooks *dest, const oci_runtime_spec_hooks *src) \
-    {                                                                                       \
-        int i = 0;                                                                          \
-        dest->item = util_smart_calloc_s(sizeof(defs_hook *), (src->item##_len + 1));       \
-        if (dest->item == NULL)                                                             \
-            return -1;                                                                      \
-        dest->item##_len = src->item##_len;                                                 \
-        for (; (size_t)i < src->item##_len; ++i) {                                          \
-            dest->item[i] = hooks_##item##_elem_dup(src->item[i]);                          \
-            if (dest->item[i] == NULL)                                                      \
-                return -1;                                                                  \
-        }                                                                                   \
-        return 0;                                                                           \
+    dest = (defs_hook *)util_common_calloc_s(sizeof(defs_hook));
+    if (dest == NULL) {
+        ERROR("Out of memory");
+        return NULL;        
     }
 
-/* HOOKS ITEM DUP DEF */
-HOOKS_ITEM_DUP_DEF(prestart)
-/* HOOKS ITEM DUP DEF */
-HOOKS_ITEM_DUP_DEF(poststart)
-/* HOOKS ITEM DUP DEF */
-HOOKS_ITEM_DUP_DEF(poststop)
+    dest->path = util_strdup_s(src->path);
+    dest->timeout = src->timeout;
+
+    if (src->args_len != 0) {
+        dest->args = util_str_array_dup((const char **)(src->args), src->args_len);
+        if (dest->args == NULL) {
+            ERROR("Failed to duplicate string array");
+            goto err_out;
+        }
+        dest->args_len = src->args_len;
+    }
+
+    if (src->env_len != 0) {
+        dest->env = util_str_array_dup((const char **)(src->env), src->env_len);
+        if (dest->env == NULL) {
+            ERROR("Failed to duplicate string array");
+            goto err_out;
+        }
+        dest->env_len = src->env_len;
+    }
+
+    return dest;
+
+err_out:
+    free_defs_hook(dest);
+    return NULL;
+}
+
+static int hooks_array_dup(const defs_hook **src, const size_t src_len, defs_hook ***dst, size_t *dst_len)
+{
+    size_t i;
+    size_t tmp_len = 0;
+    defs_hook **tmp_dst = NULL;
+
+    if (src_len > SIZE_MAX - 1) {
+        ERROR("Invalid hooks array length");
+        return -1;
+    }
+
+    tmp_dst = (defs_hook **)util_smart_calloc_s(sizeof(defs_hook *), src_len + 1);
+    if (tmp_dst == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for(i = 0; i < src_len; i++) {
+        tmp_dst[i] = hooks_elem_dup(src[i]);
+        if (tmp_dst[i] == NULL) {
+            ERROR("Failed to duplicate hooks element");
+            goto err_out;
+        }
+        tmp_len++;
+    }
+
+    *dst = tmp_dst;
+    *dst_len = tmp_len;
+    return 0;
+
+err_out:
+    for(i = 0; i < tmp_len; i++) {
+        free_defs_hook(tmp_dst[i]);
+    }
+    free(tmp_dst);
+
+    return -1;
+}
 
 /* hooks_dup */
 oci_runtime_spec_hooks *hooks_dup(const oci_runtime_spec_hooks *src)
@@ -1060,17 +1082,17 @@ oci_runtime_spec_hooks *hooks_dup(const oci_runtime_spec_hooks *src)
         return NULL;
     }
 
-    ret = hooks_prestart_dup(dest, src);
+    ret = hooks_array_dup((const defs_hook **)src->prestart, src->prestart_len, &dest->prestart, &dest->prestart_len);
     if (ret != 0) {
         goto out;
     }
 
-    ret = hooks_poststart_dup(dest, src);
+    ret = hooks_array_dup((const defs_hook **)src->poststart, src->poststart_len, &dest->poststart, &dest->poststart_len);
     if (ret != 0) {
         goto out;
     }
 
-    ret = hooks_poststop_dup(dest, src);
+    ret = hooks_array_dup((const defs_hook **)src->poststop, src->poststop_len, &dest->poststop, &dest->poststop_len);
 
 out:
     if (ret != 0) {
@@ -1085,6 +1107,11 @@ int conf_get_isulad_hooks(oci_runtime_spec_hooks **phooks)
 {
     int ret = 0;
     struct service_arguments *conf = NULL;
+
+    if (phooks == NULL) {
+        ERROR("Empty arguments");
+        return -1;
+    }
 
     if (isulad_server_conf_rdlock() != 0) {
         return -1;
@@ -1140,7 +1167,7 @@ out:
 }
 
 /* conf get start timeout */
-unsigned int conf_get_start_timeout()
+unsigned int conf_get_start_timeout(void)
 {
     struct service_arguments *conf = NULL;
     unsigned int ret = 0;
@@ -1160,7 +1187,7 @@ out:
     return ret;
 }
 
-char *conf_get_default_runtime()
+char *conf_get_default_runtime(void)
 {
     struct service_arguments *conf = NULL;
     char *result = NULL;
@@ -1182,7 +1209,7 @@ out:
     return result;
 }
 
-char *conf_get_enable_plugins()
+char *conf_get_enable_plugins(void)
 {
     struct service_arguments *conf = NULL;
     char *plugins = NULL;
@@ -1205,7 +1232,7 @@ out:
 }
 
 #ifdef ENABLE_USERNS_REMAP
-char *conf_get_isulad_userns_remap()
+char *conf_get_isulad_userns_remap(void)
 {
     struct service_arguments *conf = NULL;
     char *userns_remap = NULL;
@@ -1229,7 +1256,7 @@ out:
 #endif
 
 /* conf get websocket server listening port */
-int32_t conf_get_websocket_server_listening_port()
+int32_t conf_get_websocket_server_listening_port(void)
 {
     int32_t port = 0;
     struct service_arguments *conf = NULL;
@@ -1239,7 +1266,7 @@ int32_t conf_get_websocket_server_listening_port()
     }
 
     conf = conf_get_server_conf();
-    if (conf == NULL) {
+    if (conf == NULL || conf->json_confs == NULL) {
         goto out;
     }
 
@@ -1295,6 +1322,10 @@ int set_unix_socket_group(const char *socket, const char *group)
         return -1;
     }
 
+    if (!util_has_prefix(socket, UNIX_SOCKET_PREFIX)) {
+        ERROR("Invalid unix socket: %s", socket);
+        return -1;
+    }
     path = socket + strlen(UNIX_SOCKET_PREFIX);
 
     if (strlen(path) > PATH_MAX || realpath(path, rpath) == NULL) {
@@ -1324,15 +1355,6 @@ out:
     return ret;
 }
 
-#define OVERRIDE_STRING_VALUE(dst, src)            \
-    do {                                           \
-        if ((src) != NULL && strlen((src)) != 0) { \
-            free((dst));                           \
-            (dst) = (src);                         \
-            (src) = NULL;                          \
-        }                                          \
-    } while (0)
-
 static int string_array_append(char **suffix, size_t suffix_len, size_t *curr_len, char ***result)
 {
     if (suffix_len > 0) {
@@ -1356,6 +1378,11 @@ static int string_array_append(char **suffix, size_t suffix_len, size_t *curr_le
 int parse_log_opts(struct service_arguments *args, const char *key, const char *value)
 {
     int ret = -1;
+
+    if (args == NULL) {
+        ERROR("Empty arguments");
+        return -1;
+    }
 
     if (key == NULL || value == NULL) {
         return 0;
@@ -1576,6 +1603,11 @@ int merge_json_confs_into_global(struct service_arguments *args)
     parser_error err = NULL;
     int ret = 0;
 
+    if (args == NULL) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
     tmp_json_confs = isulad_daemon_configs_parse_file(ISULAD_DAEMON_JSON_CONF_FILE, NULL, &err);
     if (tmp_json_confs == NULL) {
         COMMAND_ERROR("Load isulad json config failed: %s", err != NULL ? err : "");
@@ -1715,7 +1747,7 @@ static bool valid_isulad_daemon_constants(isulad_daemon_constants *config)
     return true;
 }
 
-int init_isulad_daemon_constants()
+int init_isulad_daemon_constants(void)
 {
     parser_error err = NULL;
     int ret = 0;
@@ -1742,7 +1774,7 @@ out:
     return ret;
 }
 
-isulad_daemon_constants *get_isulad_daemon_constants()
+isulad_daemon_constants *get_isulad_daemon_constants(void)
 {
     return g_isulad_daemon_constants;
 }

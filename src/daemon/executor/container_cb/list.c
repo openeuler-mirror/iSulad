@@ -166,14 +166,14 @@ static int append_ids(const map_t *matches, char ***filtered_ids)
     return 0;
 }
 
-static int insert_matched_id(char **ids, map_t *matches, void *value, size_t ids_len)
+static int insert_matched_id(char **ids, map_t *matches, bool *value, size_t ids_len)
 {
     size_t i;
 
     for (i = 0; i < ids_len; i++) {
         container_t *cont = containers_store_get_by_prefix(ids[i]);
         if (cont != NULL) {
-            bool inserted = map_insert(matches, cont->common_config->id, value);
+            bool inserted = map_insert(matches, (void *)cont->common_config->id, (void *)value);
             container_unref(cont);
             if (!inserted) {
                 ERROR("Insert map failed: %s", ids[i]);
