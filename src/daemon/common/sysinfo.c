@@ -452,6 +452,8 @@ void free_mount_info(mountinfo_t *info)
     free(info);
 }
 
+// line example
+// 108 99 0:55 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,mode=755
 mountinfo_t *get_mount_info(const char *pline)
 {
     size_t length;

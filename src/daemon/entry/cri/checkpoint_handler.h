@@ -48,6 +48,7 @@ private:
 
 class CheckpointData {
 public:
+    CheckpointData() = default;
     void CheckpointDataToCStruct(cri_checkpoint_data **data, Errors &error);
     void CStructToCheckpointData(const cri_checkpoint_data *data, Errors &error);
 

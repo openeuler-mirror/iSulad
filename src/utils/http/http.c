@@ -372,7 +372,8 @@ static size_t calc_replaced_url_len(const char *url)
             max++;
             continue;
         }
-        max += 3;    /* ' ' to %20 so size should add 3 */
+        /* ' ' to %20 so size should add 3 */
+        max += 3;
     }
 
     return max + 1; /* +1 for terminator */
@@ -503,7 +504,6 @@ int http_request(const char *url, struct http_get_options *options, long *respon
 
     /* get it! */
     curl_result = curl_easy_perform(curl_handle);
-
     if (curl_result != CURLE_OK) {
         check_buf_len(options, errbuf, curl_result);
         ret = -1;

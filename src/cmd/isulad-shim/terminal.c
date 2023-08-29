@@ -186,10 +186,12 @@ static bool util_get_time_buffer(struct timespec *timestamp, char *timebuffer, s
 
     seconds = (time_t)timestamp->tv_sec;
     gmtime_r(&seconds, &tm_utc);
-    strftime(timebuffer, maxsize, "%Y-%m-%dT%H:%M:%S", &tm_utc);
+    len = strftime(timebuffer, maxsize, "%Y-%m-%dT%H:%M:%S", &tm_utc);
+    if (len == 0) {
+        return false;
+    }
 
     nanos = (int32_t)timestamp->tv_nsec;
-    len = strlen(timebuffer);
     ret = snprintf(timebuffer + len, (maxsize - len), ".%09dZ", nanos);
     if (ret < 0 || (size_t)ret >= (maxsize - len)) {
         return false;

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -1948,7 +1948,6 @@ static int get_lower_dirs(const char *layer_dir, const struct graphdriver *drive
     lowers_str = read_layer_lower_file(layer_dir);
     lowers = util_string_split(lowers_str, ':');
     lowers_size = util_array_len((const char **)lowers);
-
     if (lowers_size == 0) {
         ret = 0;
         goto out;

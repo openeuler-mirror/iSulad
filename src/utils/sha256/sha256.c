@@ -173,18 +173,16 @@ char *sha256_digest_file(const char *filename, bool isgzip)
             break;
         }
 
-        if (n > 0) {
 #if OPENSSL_VERSION_MAJOR >= 3
-            if (!EVP_DigestUpdate(ctx, (unsigned char *)buffer, n)) {
-                ERROR("Failed to pass the message to be digested");
-                ERR_print_errors_fp(stderr);
-                ret = -1;
-                goto out;
-            }
-#else
-            SHA256_Update(&ctx, buffer, n);
-#endif
+        if (!EVP_DigestUpdate(ctx, (unsigned char *)buffer, n)) {
+            ERROR("Failed to pass the message to be digested");
+            ERR_print_errors_fp(stderr);
+            ret = -1;
+            goto out;
         }
+#else
+        SHA256_Update(&ctx, buffer, n);
+#endif
 
         if (stream_check_eof(stream, isgzip)) {
             break;

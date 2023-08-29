@@ -345,7 +345,7 @@ void WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
 
         lws_hdr_copy(wsi, buf, sizeof(buf), (lws_token_indexes)n);
         buf[sizeof(buf) - 1] = '\0';
-        DEBUG("    %s = %s", (char *)c, buf);
+        DEBUG("    %s = %s", reinterpret_cast<char *>(const_cast<unsigned char *>(c)), buf);
         n++;
     } while (c != nullptr);
 }
@@ -440,14 +440,14 @@ void WebsocketServer::Receive(int socketID, void *in, size_t len, bool complete)
     if (!it->second->IsStdinComplete()) {
         DEBUG("Receive remaning stdin data with length %zu", len);
         // Too much data may cause error 'resource temporarily unavaliable' by using 'write'
-        if (util_write_nointr_in_total(m_wsis[socketID]->pipes.at(1), (char *)in, len) < 0) {
+        if (util_write_nointr_in_total(m_wsis[socketID]->pipes.at(1), static_cast<char *>(in), len) < 0) {
             ERROR("Sub write over! err msg: %s", strerror(errno));
         }
         goto out;
     }
 
     if (*static_cast<char *>(in) == WebsocketChannel::RESIZECHANNEL) {
-        if (ResizeTerminal(socketID, (char *)in + 1, len, it->second->containerID, it->second->suffix) != 0) {
+        if (ResizeTerminal(socketID, static_cast<char *>(in) + 1, len, it->second->containerID, it->second->suffix) != 0) {
             ERROR("Failed to resize terminal tty");
         }
         if (!complete) {
@@ -457,13 +457,13 @@ void WebsocketServer::Receive(int socketID, void *in, size_t len, bool complete)
     }
 
     if (*static_cast<char *>(in) == WebsocketChannel::STDINCHANNEL) {
-        if (util_write_nointr_in_total(m_wsis[socketID]->pipes.at(1), (char *)in + 1, len - 1) < 0) {
+        if (util_write_nointr_in_total(m_wsis[socketID]->pipes.at(1), static_cast<char *>(in) + 1, len - 1) < 0) {
             ERROR("Sub write over! err msg: %s", strerror(errno));
         }
         goto out;
     }
 
-    ERROR("Invalid data: %s", (char *)in);
+    ERROR("Invalid data: %s", static_cast<char *>(in));
 
 out:
     it->second->SetStdinComplete(complete);

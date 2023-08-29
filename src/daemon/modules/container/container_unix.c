@@ -1321,15 +1321,13 @@ bool container_reset_restart_manager(container_t *cont, bool reset_count)
 /* get restart manager */
 restart_manager_t *get_restart_manager(container_t *cont)
 {
-    int failue_count = 0;
-
     if (cont == NULL) {
         ERROR("Invalid input arguments");
         return NULL;
     }
 
     if (cont->rm == NULL) {
-        failue_count = container_state_get_restart_count(cont->state);
+        int failue_count = container_state_get_restart_count(cont->state);
         cont->rm = restart_manager_new(cont->hostconfig->restart_policy, failue_count);
         if (cont->rm == NULL) {
             return NULL;

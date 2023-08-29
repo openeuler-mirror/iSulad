@@ -162,7 +162,7 @@ static int append_subsystem_to_list(char ***klist, char ***nlist, const char *pt
 {
     int ret = 0;
 
-    if (strncmp(ptoken, "name=", 5) == 0) {
+    if (strncmp(ptoken, "name=", strlen("name=")) == 0) {
         ret = util_array_append(nlist, ptoken);
         if (ret != 0) {
             ERROR("Failed to append string");
@@ -283,6 +283,8 @@ static char **cgroup_get_controllers(const char **klist, const char **nlist, con
     char *sep = ",";
     char **pret = NULL;
 
+    // line example
+    // 108 99 0:55 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,mode=755
     for (index = 0; index < 4; index++) {
         pos = strchr(pos, ' ');
         if (pos == NULL) {
@@ -329,6 +331,8 @@ int cgroup_get_mountpoint_and_root(char *pline, char **mountpoint, char **root)
     char *pos = pline;
 
     // find root
+    // line example
+    // 108 99 0:55 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,mode=755
     for (index = 0; index < 3; index++) {
         pos = strchr(pos, ' ');
         if (pos == NULL) {

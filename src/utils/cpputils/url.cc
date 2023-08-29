@@ -105,8 +105,10 @@ std::string QueryUnescape(const std::string &s)
 int UnescapeDealWithPercentSign(size_t &i, std::string &s, const EncodeMode &mode)
 {
     std::string percent_sign = "%25";
+    // URL encoding replaces unsafe ASCII characters with a "%" followed by two hexadecimal digits
     if ((size_t)(i + 2) >= s.length() || !IsHex(s[i + 1]) || !IsHex(s[i + 2])) {
         s.erase(s.begin(), s.begin() + (long)i);
+        // Remaining "%" with two hexadecimal digits
         if (s.length() > 3) {
             s.erase(s.begin() + 3, s.end());
         }
@@ -172,6 +174,7 @@ void DoUnescape(std::string &t, const std::string &s, const EncodeMode &mode)
         switch (s[i]) {
             case '%': {
                     char s1, s2;
+                    // the "%" is followed by two hexadecimal digits
                     if (!GetHexDigit(s[i + 1], s1) || !GetHexDigit(s[i + 2], s2)) {
                         return;
                     }
