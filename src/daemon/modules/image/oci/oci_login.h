@@ -15,8 +15,6 @@
 #ifndef DAEMON_MODULES_IMAGE_OCI_OCI_LOGIN_H
 #define DAEMON_MODULES_IMAGE_OCI_OCI_LOGIN_H
 
-#include <stdbool.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

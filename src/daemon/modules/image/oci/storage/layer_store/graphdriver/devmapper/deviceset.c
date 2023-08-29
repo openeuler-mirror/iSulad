@@ -106,7 +106,6 @@ static int handle_dm_min_free_space(char *val, struct device_set *devset)
 {
     long converted = 0;
     int ret = util_parse_percent_string(val, &converted);
-
     if (ret != 0 || converted >= 100) {
         ERROR("Invalid min free space: '%s': %s", val, strerror(-ret));
         isulad_set_error_message("Invalid min free space: '%s': %s", val, strerror(-ret));
@@ -292,7 +291,8 @@ static char *deviceset_meta_file(const struct device_set *devset)
     return file;
 }
 
-// get_dm_name return value format:container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
+// get_dm_name return value format:
+// container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
 static char *get_dm_name(const struct device_set *devset, const char *hash)
 {
     int nret = 0;
@@ -311,7 +311,8 @@ static char *get_dm_name(const struct device_set *devset, const char *hash)
     return util_strdup_s(buff);
 }
 
-// get_dev_name return value fromat:/dev/mapper/container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
+// get_dev_name return value fromat:
+// /dev/mapper/container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
 static char *get_dev_name(const char *name)
 {
     return util_string_append(name, DEVMAPPER_DECICE_DIRECTORY);
@@ -2350,7 +2351,6 @@ static int setup_base_image(struct device_set *devset)
     devmapper_device_info_t *device_info = NULL;
 
     device_info = lookup_device(devset, "base");
-
     // base image already exists. If it is initialized properly, do UUID
     // verification and return. Otherwise remove image and set it up
     // fresh.
@@ -2502,7 +2502,6 @@ static void cleanup_deleted_devices(struct graphdriver *driver)
         ERROR("Lock to deviceset failed");
         goto unlock_driver;
     }
-
 
     if (driver->devset->nr_deleted_devices == 0) {
         DEBUG("devmapper: no devices to delete");

@@ -24,10 +24,6 @@
 #include "storage.h"
 #include "rootfs.h"
 
-struct rootfs_list;
-struct storage_module_init_options;
-struct storage_rootfs_options;
-
 #ifdef __cplusplus
 extern "C" {
 #endif

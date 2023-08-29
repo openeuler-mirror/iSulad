@@ -24,10 +24,6 @@
 #include "storage.h"
 #include "io_wrapper.h"
 
-struct io_read_wrapper;
-struct layer_list;
-struct storage_module_init_options;
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -24,8 +24,6 @@
 
 #include "driver.h"
 
-struct dm_task;
-
 #ifdef __cplusplus
 extern "C" {
 #endif

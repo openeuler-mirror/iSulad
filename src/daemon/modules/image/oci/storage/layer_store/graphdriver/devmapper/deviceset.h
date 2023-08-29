@@ -23,10 +23,7 @@
 
 #include "driver.h"
 #include "metadata_store.h"
-
-struct device_set;
-struct driver_mount_opts;
-struct graphdriver;
+#include "devices_constants.h"
 
 #ifdef __cplusplus
 extern "C" {

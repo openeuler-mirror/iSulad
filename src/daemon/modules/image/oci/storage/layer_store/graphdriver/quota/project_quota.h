@@ -33,7 +33,6 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <linux/magic.h>
 #include <linux/dqblk_xfs.h>
 #include <errno.h>
 #include <libgen.h>

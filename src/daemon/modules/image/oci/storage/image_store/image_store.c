@@ -2122,7 +2122,6 @@ static int pack_repo_digest(char ***old_repo_digests, const char **image_tags, c
     }
 
     for (i = 0; i < util_array_len((const char **)*repo_digests); i++) {
-        bool value = true;
         if (!map_replace(digest_map, (void *)(*repo_digests)[i], &value)) {
             ERROR("Failed to insert pair to digest map: %s", (*repo_digests)[i]);
             ret = -1;

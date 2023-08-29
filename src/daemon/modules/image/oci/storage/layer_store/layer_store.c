@@ -886,7 +886,6 @@ static int caculate_playload(struct archive *ar, char **result)
     bool empty = true;
 
     ctab = new_isula_crc_table(ISO_POLY);
-
     if (ctab == NULL) {
         return -1;
     }

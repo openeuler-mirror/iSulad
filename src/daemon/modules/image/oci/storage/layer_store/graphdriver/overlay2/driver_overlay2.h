@@ -22,12 +22,8 @@
 #include <stdint.h>
 
 #include "driver.h"
-
-struct driver_create_opts;
-struct driver_mount_opts;
-struct graphdriver;
-struct graphdriver_status;
-struct io_read_wrapper;
+#include "image_api.h"
+#include "io_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {
