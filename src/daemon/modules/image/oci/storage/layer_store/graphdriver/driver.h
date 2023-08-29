@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -20,25 +20,42 @@
 #include <stddef.h>
 #include <pthread.h>
 #include <isula_libutils/imagetool_fs_info.h>
+#include <isula_libutils/container_inspect.h>
+#include <isula_libutils/json_common.h>
 
-#include "isula_libutils/container_inspect.h"
-#include "isula_libutils/json_common.h"
 #include "io_wrapper.h"
 #include "driver_overlay2_types.h"
 #include "devices_constants.h"
 #include "storage.h"
 #include "image_api.h"
-#include "isula_libutils/container_inspect.h"
-
-struct graphdriver_status;
-struct io_read_wrapper;
-struct storage_module_init_options;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct graphdriver;
+struct graphdriver {
+    // common implement
+    const struct graphdriver_ops *ops;
+    const char *name;
+    const char *home;
+    char *backing_fs;
+    bool support_dtype;
+
+    bool support_quota;
+#ifdef ENABLE_REMOTE_LAYER_STORE
+    bool enable_remote_layer;
+#endif
+    struct pquota_control *quota_ctrl;
+
+    // options for overlay2
+    struct overlay_options *overlay_opts;
+
+    // options for device mapper
+    struct device_set *devset;
+
+    // lock to protect graphdriver between cleanup and other operations
+    pthread_rwlock_t rwlock;
+};
 
 struct driver_create_opts {
     char *mount_label;
@@ -79,30 +96,6 @@ struct graphdriver_ops {
     int (*try_repair_lowers)(const char *id, const char *parent, const struct graphdriver *driver);
 
     int (*get_layer_fs_info)(const char *id, const struct graphdriver *driver, imagetool_fs_info *fs_info);
-};
-
-struct graphdriver {
-    // common implement
-    const struct graphdriver_ops *ops;
-    const char *name;
-    const char *home;
-    char *backing_fs;
-    bool support_dtype;
-
-    bool support_quota;
-#ifdef ENABLE_REMOTE_LAYER_STORE
-    bool enable_remote_layer;
-#endif
-    struct pquota_control *quota_ctrl;
-
-    // options for overlay2
-    struct overlay_options *overlay_opts;
-
-    // options for device mapper
-    struct device_set *devset;
-
-    // lock to protect graphdriver between cleanup and other operations
-    pthread_rwlock_t rwlock;
 };
 
 int graphdriver_init(const struct storage_module_init_options *opts);

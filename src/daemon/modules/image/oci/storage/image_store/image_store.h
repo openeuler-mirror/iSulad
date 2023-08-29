@@ -29,8 +29,6 @@
 #include "isula_libutils/imagetool_images_list.h"
 #include "isula_libutils/imagetool_image_summary.h"
 
-struct storage_module_init_options;
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -185,7 +185,6 @@ static int remove_one_remote_overlay_layer(struct remote_overlay_data *data, con
     }
 
     link_id = (char *)map_search(overlay_id_link, (void *)overlay_id);
-
     if (link_id == NULL) {
         ERROR("Failed to find link id for overlay layer: %s", overlay_id);
         ret = -1;
