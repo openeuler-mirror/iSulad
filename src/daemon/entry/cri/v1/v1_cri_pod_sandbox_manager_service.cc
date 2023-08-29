@@ -739,7 +739,7 @@ void PodSandboxManagerService::ListPodSandbox(const runtime::v1::PodSandboxFilte
 
     sandbox::SandboxManager::GetInstance()->ListAllSandboxes(filter, sandboxes);
 
-    for (const auto sandbox : sandboxes) {
+    for (const auto &sandbox : sandboxes) {
         std::unique_ptr<runtime::v1::PodSandbox> pod(new runtime::v1::PodSandbox);
 
         pod->set_id(sandbox->GetId());
