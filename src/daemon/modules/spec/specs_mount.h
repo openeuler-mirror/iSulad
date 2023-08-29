@@ -41,8 +41,6 @@ int set_mounts_readwrite_option(const oci_runtime_spec *oci_spec);
 
 int merge_all_devices_and_all_permission(oci_runtime_spec *oci_spec);
 
-bool mount_run_tmpfs(oci_runtime_spec *container, const host_config *host_spec, const char *path);
-
 int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec);
 
 int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2_spec);

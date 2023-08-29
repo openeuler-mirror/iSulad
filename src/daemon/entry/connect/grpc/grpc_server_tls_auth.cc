@@ -24,7 +24,7 @@ std::string auth_plugin = "";
 } // namespace AuthorizationPluginConfig
 
 namespace GrpcServerTlsAuth {
-Status auth(ServerContext *context, std::string action)
+Status auth(ServerContext *context, const std::string &action)
 {
 #ifdef ENABLE_GRPC_REMOTE_CONNECT
     const std::multimap<grpc::string_ref, grpc::string_ref> &init_metadata = context->client_metadata();

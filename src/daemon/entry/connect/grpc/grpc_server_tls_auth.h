@@ -27,7 +27,7 @@ extern std::string auth_plugin;
 }; // namespace AuthorizationPluginConfig
 
 namespace GrpcServerTlsAuth {
-Status auth(ServerContext *context, std::string action);
+Status auth(ServerContext *context, const std::string &action);
 }; // namespace GrpcServerTlsAuth
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_SERVER_TLS_AUTH_H
