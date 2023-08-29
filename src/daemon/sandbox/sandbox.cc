@@ -581,8 +581,8 @@ auto Sandbox::Create(Errors &error) -> bool
 
     nret = util_mkdir_p(m_rootdir.c_str(), CONFIG_DIRECTORY_MODE);
     if (nret != 0 && errno != EEXIST) {
-        error.Errorf("Failed to create sandbox path %s", m_rootdir);
-        SYSERROR("Failed to create sandbox path %s", m_rootdir);
+        error.Errorf("Failed to create sandbox path %s", m_rootdir.c_str());
+        SYSERROR("Failed to create sandbox path %s", m_rootdir.c_str());
         return false;
     }
 #ifdef ENABLE_USERNS_REMAP
