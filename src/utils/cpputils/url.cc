@@ -266,12 +266,7 @@ std::string Escape(const std::string &s, const EncodeMode &mode)
 
 UserInfo *User(const std::string &username) noexcept
 {
-    return new UserInfo { username, "", false };
-}
-
-UserInfo *UserPassword(const std::string &username, const std::string &password) noexcept
-{
-    return new UserInfo { username, password, true };
+    return new UserInfo { username };
 }
 
 int Getscheme(const std::string &rawurl, std::string &scheme, std::string &path)
@@ -324,24 +319,6 @@ void Split(const std::string &s, const std::string &c, bool cutc, std::string &t
     u = s.substr(i, s.size());
 }
 
-URLDatum *Parse(const std::string &rawurl)
-{
-    std::string u, frag;
-    Split(rawurl, "#", true, u, frag);
-    auto *url = Parse(u, false);
-    if (url == nullptr) {
-        return nullptr;
-    }
-    if (frag.empty()) {
-        return url;
-    }
-    url->SetFragment(Unescape(frag, EncodeMode::ENCODE_FRAGMENT));
-    if (url->GetFragment().empty()) {
-        return nullptr;
-    }
-    return url;
-}
-
 int SplitOffPossibleLeading(std::string &scheme, const std::string &rawurl, URLDatum *url, std::string &rest)
 {
     if (Getscheme(rawurl, scheme, rest) != 0) {
@@ -383,108 +360,6 @@ URLDatum *HandleNonBackslashPrefix(URLDatum *url, const std::string &scheme, con
         return nullptr;
     }
     return nullptr;
-}
-
-int SetURLDatumInfo(URLDatum *url, const std::string &scheme, bool viaRequest, std::string &rest)
-{
-    if ((!scheme.empty() || (!viaRequest && rest.substr(0, 3) == "///")) && rest.substr(0, 2) == "//") {
-        std::string authority;
-        Split(rest.substr(2, rest.size()), "/", false, authority, rest);
-        std::string host = url->GetHost();
-        UserInfo *user = url->GetUser();
-        if (ParseAuthority(authority, &user, host)) {
-            return -1;
-        }
-        url->SetHost(host);
-        url->SetUser(user);
-    }
-    if (url->SetPath(rest)) {
-        return -1;
-    }
-    url->SetScheme(scheme);
-    return 0;
-}
-
-URLDatum *Parse(const std::string &rawurl, bool viaRequest)
-{
-    if (rawurl.empty() && viaRequest) {
-        ERROR("empty url!");
-        return nullptr;
-    }
-    auto *url = new (std::nothrow) URLDatum;
-    if (url == nullptr) {
-        ERROR("Out of memory");
-        return nullptr;
-    }
-    if (rawurl == "*") {
-        url->SetPathWithoutEscape("*");
-        return url;
-    }
-    std::string scheme = url->GetScheme();
-    std::string rest;
-    if (SplitOffPossibleLeading(scheme, rawurl, url, rest) != 0) {
-        return nullptr;
-    }
-    bool shouldRet = false;
-    auto *tmpret = HandleNonBackslashPrefix(url, scheme, rest, viaRequest, shouldRet);
-    if (shouldRet) {
-        return tmpret;
-    }
-    if (SetURLDatumInfo(url, scheme, viaRequest, rest) != 0) {
-        return nullptr;
-    }
-    return url;
-}
-
-int ParseAuthority(const std::string &authority, UserInfo **user, std::string &host)
-{
-    size_t i = authority.find("@");
-    if (i == std::string::npos) {
-        if (ParseHost(authority, host) != 0) {
-            *user = nullptr;
-            host = "";
-            return -1;
-        }
-    } else {
-        if (ParseHost(authority.substr(i + 1, authority.size()), host) != 0) {
-            *user = nullptr;
-            host = "";
-            return -1;
-        }
-    }
-    if (i == std::string::npos) {
-        *user = nullptr;
-        return 0;
-    }
-
-    std::string userinfo = authority.substr(0, i);
-    if (!ValidUserinfo(userinfo)) {
-        *user = nullptr;
-        host = "";
-        ERROR("net/url: invalid userinfo");
-        return -1;
-    }
-    if (userinfo.find(":") == std::string::npos) {
-        userinfo = Unescape(userinfo, EncodeMode::ENCODE_USER_PASSWORD);
-        if (userinfo.empty()) {
-            *user = nullptr;
-            host = "";
-            return -1;
-        }
-        *user = User(userinfo);
-    } else {
-        std::string servername, serverword;
-        Split(userinfo, ":", true, servername, serverword);
-        servername = Unescape(servername, EncodeMode::ENCODE_USER_PASSWORD);
-        serverword = Unescape(serverword, EncodeMode::ENCODE_USER_PASSWORD);
-        if (servername.empty() || serverword.empty()) {
-            *user = nullptr;
-            host = "";
-            return -1;
-        }
-        *user = UserPassword(servername, serverword);
-    }
-    return 0;
 }
 
 int ParseHost(std::string host, std::string &out)
@@ -756,20 +631,12 @@ std::string UserInfo::String() const
     std::string s;
     if (!m_username.empty()) {
         s = Escape(m_username, EncodeMode::ENCODE_USER_PASSWORD);
-        if (m_passwordSet) {
-            s += ":" + Escape(m_password, EncodeMode::ENCODE_USER_PASSWORD);
-        }
     }
     return s;
 }
 std::string UserInfo::Username() const
 {
     return m_username;
-}
-std::string UserInfo::Password(bool &set) const
-{
-    set = m_passwordSet;
-    return m_password;
 }
 
 URLDatum::~URLDatum()
@@ -858,15 +725,6 @@ std::string URLDatum::String()
 bool URLDatum::IsAbs() const
 {
     return (m_scheme != "");
-}
-
-std::unique_ptr<URLDatum> URLDatum::UrlParse(const std::string &ref)
-{
-    auto *refurl = Parse(ref);
-    if (refurl == nullptr) {
-        return nullptr;
-    }
-    return ResolveReference(refurl);
 }
 
 std::unique_ptr<URLDatum> URLDatum::ResolveReference(URLDatum *ref)
