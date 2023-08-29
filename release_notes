@@ -1,3 +1,103 @@
+2023-08-29 xuepengxu release 2.1.3
+    - !2150 CI: use old lxc for master branch
+    - !2142 improve by code check of cpp
+    - !2148 Fix null-ptr and buffer overflow issues
+    - !2147 archive fork process set pdeathsig * archive fork process set pdeathsig
+    - !2146 do clean code * do clean code
+    - !2144 [Sandbox API] Clear cni network and sandbox files on abnormal exit * Clear CNI network and sandbox files on abnormal exit
+    - !2140 [Sandbox API] Remove network ns file while removing sandbox * Remove network ns file while removing sandbox
+    - !2139 [Sandbox API] Fix error that empty network json leads to failed pod restore * Fix error that empty network json leads to failed pod restore
+    - !2138 [Sandbox API] Fix list pod sandbox filtered by partial id error * [Sandbox API]: fix pod list filtered by partial id error
+    - !2133 [improve] use return error to replace abort
+    - !2134 [Sandbox API] Fix error thar shim sanboxer cannot be removed * [Sandbox API]: fix shim controller issue
+    - !2131 [Sandbox API]Fix id-nama-manager cleanup for container creation * Fix id-nama-manager cleanup for container creation
+    - !2128 sync from stable
+    - !2120 [Sandbox API]Add shim v2 wait support for container * Add shim v2 wait support for container
+    - !2125 ensure argument of interface is not null
+    - !2121 【sandbox API】Fix issues of container management for sandbox * Fix issues of container management for sandbox
+    - !2122 fix memory leak
+    - !2114 add verify for snprintf and fix some codecheck error * add verify for snprintf and fix some codecheck error
+    - !2115 Update struct ControllerStartResponse of sandbox api * Remove status function call in Sandbox::Start
+    - !2113 Container lifecycle management support for sandbox api * Container lifecycle management support for sandbox api
+    - !2107 [Sandbox API] add init step for refactor and bugfix
+    - !2108 [Sandbox API] refactor v1 ListPodSandboxes using sandbox api * [Sandbox API] refactor v1 ListPodSandboxes using sandbox api
+    - !2109 improve coding
+    - !2110 modify the help information of health-timeout * modify the help information of health-timeout
+    - !2105 [Sandbox API] refactor v1 PodSandboxStatus using sandbox api
+    - !2104 Added restrictions on container health checks
+    - !2102 [Sandbox API] refactor v1 removePodSandbox using sandbox api * [Sandbox API] refactor v1 removePodSandbox using sandbox api
+    - !2101 link libcap for storage_layers_ut and storage_driver_ut * link libcap for storage_layers_ut and storage_driver_ut
+    - !2094 [Sandbox API] refactor stopPodSandbox
+    - !2093 [Sandbox API]add sandbox life cycle
+    - !2099 bugfix for im_search_images
+    - !2097 bugfix for implicit_digest
+    - !2096 fix loading of nsswitch based config inside chroot under glibc * fix loading of nsswitch based config inside chroot under glibc
+    - !2092 Add Sandboxer Monitor for Sandbox API
+    - !2091 [Sandbox API] add sandbox create Merge pull request !2091 from zhongtao/create
+    - !2086 [Sandbox API] refactor v1 runpodsandbox using sandbox api Merge pull request !2086 from zhangxiaoyu/master_dev
+    - !2087 [Sandbox API]  add sandbox restore
+    - !2080 apply id name manager function
+    - !2085 clean cni/native network resource * clean cni/native network resource
+    - !2082 Add sandboxer controller and controller manager * Add sandboxer controller and controller manager
+    - !2081 Fix make script for unit test * Fix PR gate issue
+    - !2065 add sandbox head file * add sandbox head file
+    - !2077 Add sandbox proto files and grpc sandboxer client * Add grpc sandboxer client and UT * Add sandbox protobuf files
+    - !2076 Add interface for sandbox controller module * Add interface for sandbox controller module
+    - !2075 [CRI] refactor stream server bugfix
+    - !2073 [debug] improve debug message for gc containers * [debug] improve debug message for gc containers
+    - !2072 fix gcc 12 compile failed * fix gcc 12 compile failed
+    - !2069 [CRI] refactor manager of stream server codes
+    - !2071 remove unused val * remove unused val
+    - !2070 recover critest test and fix bigdata_stream_runc * recover critest test and fix bigdata_stream_runc
+    - !2068 fix mcs_delete bug * fix mcs_delete bug
+    - !2064 disable critest temporary * disable critest temporary
+    - !2063 disable the exec timeout function for kata runtime * disable the exec timeout function for kata runtime
+    - !2058 [CRI] support cri v1 api and v1alpha api Merge pull request !2058 from haozi007/refactor
+    - !2061 fix CI fail * fix CI fail
+    - !2060 fix some doc error * fix some doc error
+    - !2059 ignore the return value of critest * ignore the return value of critest and save critest result
+    - !2057 critest do not use valgrind * critest do not use valgrind
+    - !2056 add critest test * add critest test
+    - !2055 adapt lcr code refactor * adapt lcr code refactor
+    - !2053 optimize scripts * optimize scripts
+    - !2051 fix some codecheck Merge pull request !2051 from zhongtao/codecheck
+    - !2027 refactor rt_isula_exec and shim log Merge pull request !2027 from zhongtao/refactor
+    - !2045 return non-zero if copy invalid Merge pull request !2045 from zhangxiaoyu/master
+    - !1912 增加system prune一键清理命令和功能 * Proposal to add isula system prune command.
+    - !2043 fix CI of ipc ns * fix CI of ipc ns
+    - !2041 fix lose ipc shm mount point Merge pull request !2041 from haozi007/fixbug
+    - !2028 [CRI] move cni init into cri server Merge pull request !2028 from haozi007/fixbug
+    - !2039 [RO] refactor remote ro code * [RO] refactor remote ro code
+    - !2040 fix image_digest.sh * fix image_digest.sh
+    - !2038 fix inspect image by digest Merge pull request !2038 from zhongtao/digest
+    - !2036 archive reader close if copy to container failed Merge pull request !2036 from zhangxiaoyu/master
+    - !2032 fix some code check error and sync code Merge pull request !2032 from zhongtao/codecheck
+    - !2035 archive reader close if copy to container failed * archive reader close if copy to container failed
+    - !2033 fix layer imcomplete cause isulad core Merge pull request !2033 from zhangxiaoyu/master
+    - !2031 fix layer imcomplete cause isulad core * add load layer testcase * fix layer imcomplete cause isulad core
+    - !2030 fix fd leak for shim_create Merge pull request !2030 from zhongtao/fix_exit
+    - !2024 don't cleanup when remote ro is enabled Merge pull request !2024 from DriedYellowPeach/fix_cleanup
+    - !1896 add time usage check for cni caller * add time usage check for cni caller
+    - !2025 Revert the changes in util_smart_calloc_s Merge pull request !2025 from xuxuepeng/fix_hugetbls
+    - !2020 ensure define in local and use correctly type Merge pull request !2020 from haozi007/new
+    - !2023 fix forget to set return value Merge pull request !2023 from DriedYellowPeach/new_master
+    - !2022 fix hugetlbs malloc length Merge pull request !2022 from zhangxiaoyu/master
+    - !2016 distinguishing exit codes between shim and container processes Merge pull request !2016 from zhongtao/shim_return_write
+    - !2019 fix top layer memory leak and not unlock on image_store and rename a function
+    - !2017 fix memory leak and array access out of range Merge pull request !2017 from DriedYellowPeach/fix_leak
+    - !2015 reinforce omit health_check.sh Merge pull request !2015 from zhongtao/strem_fix
+    - !2014 reinforce cri_stream.sh and health_check.sh Merge pull request !2014 from zhongtao/strem_fix
+    - !2012 restore execSync return value Merge pull request !2012 from zhongtao/fix_exec
+    - !2010 recheck delete command exit status Merge pull request !2010 from zhongtao/retry
+    - !2008 ensure isulad_io not NULL before close fd Merge pull request !2008 from zhongtao/fix_shim
+    - !2007 fix health_check.sh Merge pull request !2007 from zhongtao/fix_ci
+    - !2004 restore ping head Merge pull request !2004 from zhongtao/fix_registry
+    - !2001 convert files from CRLF to LF Merge pull request !2001 from zhangxiaoyu/master
+
+    dev stats:
+      - 344 files changed, 21640 insertions(+), 2940 deletions(-)
+      - contributors: zhongtao, haozi007, zhangxiaoyu, xuxuepeng, jake, Neil.wrz, sailorvii
+
 2023-05-11 root release 2.1.2
     - !1996 add some ci for runc Merge pull request !1996 from zhongtao/runc_ci
     - !1995 add try_generate_exec_id func for health check Merge pull request !1995 from zhongtao/fix

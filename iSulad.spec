@@ -1,7 +1,8 @@
-%global _version 2.1.2
+%global _version 2.1.3
 %global _release 1
 %global is_systemd 1
-%global enable_shimv2 0
+%global enable_criv1 1
+%global enable_shimv2 1
 %global enable_embedded 1
 
 Name:      iSulad
@@ -68,6 +69,10 @@ cd build
     -DDEBUG=ON \
     -DLIB_INSTALL_DIR=%{_libdir} \
     -DCMAKE_INSTALL_PREFIX=/usr \
+%if 0%{?enable_criv1}
+    -DENABLE_CRI_API_V1=ON \
+    -DENABLE_SANDBOXER=ON \
+%endif
 %if 0%{?enable_shimv2}
     -DENABLE_SHIM_V2=ON \
 %endif
