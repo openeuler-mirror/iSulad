@@ -20,8 +20,6 @@
 #include <sys/types.h>
 #include <time.h>
 
-struct tm;
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -16,7 +16,6 @@
 #define UTILS_CPPUTILS_STOPPABLE_THREAD_H
 
 #include <iostream>
-#include <chrono>
 #include <future>
 #include <mutex>
 #include <utility>

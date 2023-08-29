@@ -19,13 +19,13 @@
 namespace CXXUtils {
 std::vector<std::string> Split(const std::string &str, char delimiter)
 {
-    std::vector<std::string> ret_vec;
-    std::string tmpstr;
+    std::vector<std::string> retVec;
+    std::string tmpStr;
     std::istringstream istream(str);
-    while (std::getline(istream, tmpstr, delimiter)) {
-        ret_vec.push_back(tmpstr);
+    while (std::getline(istream, tmpStr, delimiter)) {
+        retVec.push_back(tmpStr);
     }
-    return ret_vec;
+    return retVec;
 }
 
 // Join concatenates the elements of a to create a single string. The separator string
