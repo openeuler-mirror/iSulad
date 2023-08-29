@@ -49,17 +49,13 @@ private:
 
 class UserInfo {
 public:
-    UserInfo(const std::string &u, const std::string &p, bool b) : m_username(u), m_password(p),
-        m_passwordSet(b) {}
+    UserInfo(const std::string &u) : m_username(u) {}
     ~UserInfo() = default;
     std::string String() const;
     std::string Username() const;
-    std::string Password(bool &set) const;
 
 private:
     std::string m_username;
-    std::string m_password;
-    bool m_passwordSet;
 };
 
 class URLDatum {
@@ -69,7 +65,6 @@ public:
     std::string EscapedPath();
     std::string String();
     bool IsAbs() const;
-    std::unique_ptr<URLDatum> UrlParse(const std::string &ref);
     std::unique_ptr<URLDatum> ResolveReference(URLDatum *ref);
     auto Query()->std::map<std::string, std::vector<std::string>>;
     std::string RequestURI();
@@ -88,7 +83,7 @@ public:
     {
         m_opaque = value;
     }
-    std::string  GetOpaque() const
+    std::string GetOpaque() const
     {
         return m_opaque;
     }
@@ -96,7 +91,7 @@ public:
     {
         m_user = value;
     }
-    UserInfo   *GetUser() const
+    UserInfo *GetUser() const
     {
         return m_user;
     }
@@ -128,7 +123,7 @@ public:
     {
         m_rawQuery = value;
     }
-    std::string  GetRawQuery() const
+    std::string GetRawQuery() const
     {
         return m_rawQuery;
     }
@@ -136,7 +131,7 @@ public:
     {
         m_fragment = value;
     }
-    std::string  GetFragment() const
+    std::string GetFragment() const
     {
         return m_fragment;
     }
@@ -163,13 +158,9 @@ std::string QueryUnescape(const std::string &s);
 std::string Unescape(std::string s, const EncodeMode &mode);
 std::string QueryEscape(const std::string &s);
 std::string Escape(const std::string &s, const EncodeMode &mode);
-UserInfo *UserPassword(const std::string &username, const std::string &password) noexcept;
 UserInfo *User(const std::string &username) noexcept;
 int Getscheme(const std::string &rawurl, std::string &scheme, std::string &path);
 void Split(const std::string &s, const std::string &c, bool cutc, std::string &t, std::string &u);
-URLDatum *Parse(const std::string &rawurl);
-URLDatum *Parse(const std::string &rawurl, bool viaRequest);
-int ParseAuthority(const std::string &authority, UserInfo **user, std::string &host);
 int ParseHost(std::string host, std::string &out);
 bool ValidEncodedPath(const std::string &s);
 bool ValidOptionalPort(const std::string &port);
