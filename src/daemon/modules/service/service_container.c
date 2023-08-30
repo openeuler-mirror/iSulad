@@ -798,12 +798,14 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         open_stdin = cont->common_config->config->open_stdin;
     }
 
+#ifdef ENABLE_PLUGIN
     if (plugin_event_container_pre_start(cont)) {
         ERROR("Plugin event pre start failed ");
         plugin_event_container_post_stop(cont); /* ignore error */
         ret = -1;
         goto close_exit_fd;
     }
+#endif
 
     create_params.bundle = bundle;
     create_params.state = cont->state_path;
@@ -1257,7 +1259,9 @@ int delete_container(container_t *cont, bool force)
         }
     }
 
+#ifdef ENABLE_PLUGIN
     plugin_event_container_post_remove(cont);
+#endif
 
     ret = do_delete_container(cont);
     if (ret != 0) {

@@ -9,3 +9,6 @@ set(MODULES_API_INCS
     PARENT_SCOPE
     )
 
+if (NOT ENABLE_PLUGIN)
+    list(REMOVE_ITEM MODULES_API_INCS "${CMAKE_CURRENT_SOURCE_DIR}/plugin_api.h")
+endif()

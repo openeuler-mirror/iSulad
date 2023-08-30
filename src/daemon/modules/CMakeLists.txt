@@ -3,7 +3,6 @@
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} modules_top_srcs)
 add_subdirectory(runtime)
 add_subdirectory(image)
-add_subdirectory(plugin)
 add_subdirectory(spec)
 add_subdirectory(container)
 add_subdirectory(log)
@@ -17,7 +16,6 @@ set(local_modules_srcs
     ${modules_top_srcs}
     ${RUNTIME_SRCS}
     ${IMAGE_SRCS}
-    ${PLUGIN_SRCS}
     ${SPEC_SRCS}
     ${MANAGER_SRCS}
     ${LOG_GATHER_SRCS}
@@ -31,7 +29,6 @@ set(local_modules_incs
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${RUNTIME_INCS}
     ${IMAGE_INCS}
-    ${PLUGIN_INCS}
     ${SPEC_INCS}
     ${MANAGER_INCS}
     ${LOG_GATHER_INCS}
@@ -41,6 +38,16 @@ set(local_modules_incs
     ${MODULES_API_INCS}
     ${VOLUME_INCS}
     )
+
+if (ENABLE_PLUGIN)
+    add_subdirectory(plugin)
+    list(APPEND local_modules_srcs
+        ${PLUGIN_SRCS}
+        )
+    list(APPEND local_modules_incs
+        ${PLUGIN_INCS}
+        )
+endif()
 
 set(MODULES_SRCS
     ${local_modules_srcs}
