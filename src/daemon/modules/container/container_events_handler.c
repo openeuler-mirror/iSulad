@@ -155,7 +155,9 @@ static int container_state_changed(container_t *cont, const struct isulad_events
             } else {
                 container_state_set_stopped(cont->state, (int)events->exit_status);
                 container_wait_stop_cond_broadcast(cont);
+#ifdef ENABLE_PLUGIN
                 plugin_event_container_post_stop(cont);
+#endif 
             }
 
             auto_remove = !should_restart && cont->hostconfig != NULL && cont->hostconfig->auto_remove;

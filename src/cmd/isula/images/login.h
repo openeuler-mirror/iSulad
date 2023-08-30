@@ -24,16 +24,28 @@
 extern "C" {
 #endif
 
+#ifdef ENABLE_LOGIN_PASSWORD_OPTION
 #define LOGIN_OPTIONS(cmdargs)                                                                      \
-    { CMD_OPT_TYPE_STRING_DUP, false, "username", 'u', &(cmdargs).username, "Username", NULL },         \
-    { CMD_OPT_TYPE_STRING_DUP, false, "password", 'p', &(cmdargs).password, "Password", NULL }, \
-    { CMD_OPT_TYPE_BOOL,                                                                    \
-      false,                                                                                \
-      "password-stdin",                                                                     \
-      0,                                                                                    \
-      &(cmdargs).password_stdin,                                                            \
-      "Take the password from stdin",                                                       \
+    { CMD_OPT_TYPE_STRING_DUP, false, "username", 'u', &(cmdargs).username, "Username", NULL },     \
+    { CMD_OPT_TYPE_STRING_DUP, false, "password", 'p', &(cmdargs).password, "Password", NULL },     \
+    { CMD_OPT_TYPE_BOOL,                                                                            \
+      false,                                                                                        \
+      "password-stdin",                                                                             \
+      0,                                                                                            \
+      &(cmdargs).password_stdin,                                                                    \
+      "Take the password from stdin",                                                               \
       NULL },
+#else
+#define LOGIN_OPTIONS(cmdargs)                                                                      \
+    { CMD_OPT_TYPE_STRING_DUP, false, "username", 'u', &(cmdargs).username, "Username", NULL },     \
+    { CMD_OPT_TYPE_BOOL,                                                                            \
+      false,                                                                                        \
+      "password-stdin",                                                                             \
+      0,                                                                                            \
+      &(cmdargs).password_stdin,                                                                    \
+      "Take the password from stdin",                                                               \
+      NULL },
+#endif
 
 extern const char g_cmd_login_desc[];
 extern const char g_cmd_login_usage[];

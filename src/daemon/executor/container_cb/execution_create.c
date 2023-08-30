@@ -1499,6 +1499,7 @@ int container_create_cb(const container_create_request *request, container_creat
         goto clean_netns;
     }
 
+#ifdef ENABLE_PLUGIN
     /* modify oci_spec by plugin. */
     if (plugin_event_container_pre_create(id, oci_spec) != 0) {
         ERROR("Plugin event pre create failed");
@@ -1506,6 +1507,7 @@ int container_create_cb(const container_create_request *request, container_creat
         cc = ISULAD_ERR_EXEC;
         goto clean_netns;
     }
+#endif
 
     host_channel = dup_host_channel(host_spec->host_channel);
     if (prepare_host_channel(host_channel, host_spec->user_remap)) {

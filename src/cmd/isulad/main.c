@@ -1685,10 +1685,12 @@ int main(int argc, char **argv)
         goto failure;
     }
 
+#ifdef ENABLE_PLUGIN
     if (start_plugin_manager()) {
         ERROR("Failed to init plugin_manager");
         goto failure;
     }
+#endif 
 
     clock_gettime(CLOCK_MONOTONIC, &t_end);
     use_time = (double)(t_end.tv_sec - t_start.tv_sec) * (double)1000000000 + (double)(t_end.tv_nsec - t_start.tv_nsec);
