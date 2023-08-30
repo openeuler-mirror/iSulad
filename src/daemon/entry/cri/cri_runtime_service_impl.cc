@@ -48,13 +48,13 @@ void CRIRuntimeServiceImpl::RemoveContainer(const std::string &containerID, Erro
 }
 
 void CRIRuntimeServiceImpl::ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
-                                           std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers, Errors &error)
+                                           std::vector<std::unique_ptr<runtime::v1alpha2::Container>> &containers, Errors &error)
 {
     m_containerManager->ListContainers(filter, containers, error);
 }
 
 void CRIRuntimeServiceImpl::ListContainerStats(const runtime::v1alpha2::ContainerStatsFilter *filter,
-                                               std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
+                                               std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> &containerstats,
                                                Errors &error)
 {
     m_containerManager->ListContainerStats(filter, containerstats, error);

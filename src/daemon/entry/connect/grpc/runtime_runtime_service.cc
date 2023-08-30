@@ -31,6 +31,11 @@ using namespace CRI;
 void RuntimeRuntimeServiceImpl::Init(Network::NetworkPluginConf mConf, isulad_daemon_configs *config, Errors &err)
 {
     std::string podSandboxImage;
+    if (config == nullptr) {
+        err.SetError("Invalid input arguments");
+        ERROR("Invalid input arguments");
+        return;
+    }
     if (config->pod_sandbox_image != nullptr) {
         podSandboxImage = config->pod_sandbox_image;
     } else {
@@ -89,6 +94,11 @@ grpc::Status RuntimeRuntimeServiceImpl::Version(grpc::ServerContext *context,
                                                 runtime::v1alpha2::VersionResponse *reply)
 {
     Errors error;
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     rService->Version(request->version(), reply, error);
     if (!error.Empty()) {
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
@@ -102,6 +112,11 @@ grpc::Status RuntimeRuntimeServiceImpl::CreateContainer(grpc::ServerContext *con
                                                         runtime::v1alpha2::CreateContainerResponse *reply)
 {
     Errors error;
+
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
 
     EVENT("Event: {Object: CRI, Type: Creating Container}");
 
@@ -124,6 +139,11 @@ grpc::Status RuntimeRuntimeServiceImpl::StartContainer(grpc::ServerContext *cont
 {
     Errors error;
 
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     EVENT("Event: {Object: CRI, Type: Starting Container: %s}", request->container_id().c_str());
 
     rService->StartContainer(request->container_id(), error);
@@ -142,6 +162,11 @@ grpc::Status RuntimeRuntimeServiceImpl::StopContainer(grpc::ServerContext *conte
                                                       runtime::v1alpha2::StopContainerResponse *reply)
 {
     Errors error;
+
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
 
     EVENT("Event: {Object: CRI, Type: Stopping Container: %s}", request->container_id().c_str());
 
@@ -162,6 +187,11 @@ grpc::Status RuntimeRuntimeServiceImpl::RemoveContainer(grpc::ServerContext *con
 {
     Errors error;
 
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     EVENT("Event: {Object: CRI, Type: Removing Container: %s}", request->container_id().c_str());
 
     rService->RemoveContainer(request->container_id(), error);
@@ -181,10 +211,15 @@ grpc::Status RuntimeRuntimeServiceImpl::ListContainers(grpc::ServerContext *cont
 {
     Errors error;
 
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     INFO("Event: {Object: CRI, Type: Listing all Container}");
 
     std::vector<std::unique_ptr<runtime::v1alpha2::Container>> containers;
-    rService->ListContainers(request->has_filter() ? &request->filter() : nullptr, &containers, error);
+    rService->ListContainers(request->has_filter() ? &request->filter() : nullptr, containers, error);
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to list all containers %s", error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
@@ -210,10 +245,15 @@ grpc::Status RuntimeRuntimeServiceImpl::ListContainerStats(grpc::ServerContext *
 {
     Errors error;
 
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     INFO("Event: {Object: CRI, Type: Listing all Container stats}");
 
     std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> containers;
-    rService->ListContainerStats(request->has_filter() ? &request->filter() : nullptr, &containers, error);
+    rService->ListContainerStats(request->has_filter() ? &request->filter() : nullptr, containers, error);
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to list all containers stat %s", error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
@@ -239,6 +279,11 @@ grpc::Status RuntimeRuntimeServiceImpl::ContainerStats(grpc::ServerContext *cont
 {
     Errors error;
 
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     INFO("Event: {Object: CRI, Type: Getting Container Stats: %s}", request->container_id().c_str());
 
     std::unique_ptr<runtime::v1alpha2::ContainerStats> contStats =
@@ -259,6 +304,11 @@ grpc::Status RuntimeRuntimeServiceImpl::ContainerStatus(grpc::ServerContext *con
                                                         runtime::v1alpha2::ContainerStatusResponse *reply)
 {
     Errors error;
+
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
 
     INFO("Event: {Object: CRI, Type: Statusing Container: %s}", request->container_id().c_str());
 
@@ -281,6 +331,11 @@ grpc::Status RuntimeRuntimeServiceImpl::ExecSync(grpc::ServerContext *context,
 {
     Errors error;
 
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     WARN("Event: {Object: CRI, Type: sync execing Container: %s}", request->container_id().c_str());
 
     rService->ExecSync(request->container_id(), request->cmd(), request->timeout(), reply, error);
@@ -299,6 +354,11 @@ grpc::Status RuntimeRuntimeServiceImpl::RunPodSandbox(grpc::ServerContext *conte
                                                       runtime::v1alpha2::RunPodSandboxResponse *reply)
 {
     Errors error;
+
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
 
     EVENT("Event: {Object: CRI, Type: Running Pod}");
 
@@ -320,6 +380,11 @@ grpc::Status RuntimeRuntimeServiceImpl::StopPodSandbox(grpc::ServerContext *cont
 {
     Errors error;
 
+    if (request == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     EVENT("Event: {Object: CRI, Type: Stopping Pod: %s}", request->pod_sandbox_id().c_str());
 
     rService->StopPodSandbox(request->pod_sandbox_id(), error);
@@ -340,6 +405,11 @@ grpc::Status RuntimeRuntimeServiceImpl::RemovePodSandbox(grpc::ServerContext *co
 {
     Errors error;
 
+    if (request == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     EVENT("Event: {Object: CRI, Type: Removing Pod: %s}", request->pod_sandbox_id().c_str());
 
     rService->RemovePodSandbox(request->pod_sandbox_id(), error);
@@ -359,6 +429,11 @@ grpc::Status RuntimeRuntimeServiceImpl::PodSandboxStatus(grpc::ServerContext *co
                                                          runtime::v1alpha2::PodSandboxStatusResponse *reply)
 {
     Errors error;
+
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
 
     INFO("Event: {Object: CRI, Type: Status Pod: %s}", request->pod_sandbox_id().c_str());
 
@@ -381,6 +456,11 @@ grpc::Status RuntimeRuntimeServiceImpl::ListPodSandbox(grpc::ServerContext *cont
                                                        runtime::v1alpha2::ListPodSandboxResponse *reply)
 {
     Errors error;
+
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
 
     INFO("Event: {Object: CRI, Type: Listing all Pods}");
 
@@ -411,6 +491,11 @@ RuntimeRuntimeServiceImpl::UpdateContainerResources(grpc::ServerContext *context
 {
     Errors error;
 
+    if (request == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     WARN("Event: {Object: CRI, Type: Updating container resources: %s}", request->container_id().c_str());
 
     rService->UpdateContainerResources(request->container_id(), request->linux(), error);
@@ -431,6 +516,11 @@ grpc::Status RuntimeRuntimeServiceImpl::Exec(grpc::ServerContext *context,
 {
     Errors error;
 
+    if (request == nullptr || response == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     EVENT("Event: {Object: CRI, Type: execing Container: %s}", request->container_id().c_str());
 
     rService->Exec(*request, response, error);
@@ -450,6 +540,11 @@ grpc::Status RuntimeRuntimeServiceImpl::Attach(grpc::ServerContext *context,
                                                runtime::v1alpha2::AttachResponse *response)
 {
     Errors error;
+
+    if (request == nullptr || response == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
 
     EVENT("Event: {Object: CRI, Type: attaching Container: %s}", request->container_id().c_str());
 
@@ -472,6 +567,11 @@ RuntimeRuntimeServiceImpl::UpdateRuntimeConfig(grpc::ServerContext *context,
 {
     Errors error;
 
+    if (request == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
     EVENT("Event: {Object: CRI, Type: Updating Runtime Config}");
 
     rService->UpdateRuntimeConfig(request->runtime_config(), error);
@@ -490,6 +590,11 @@ grpc::Status RuntimeRuntimeServiceImpl::Status(grpc::ServerContext *context,
                                                runtime::v1alpha2::StatusResponse *reply)
 {
     Errors error;
+
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
 
     INFO("Event: {Object: CRI, Type: Statusing daemon}");
 

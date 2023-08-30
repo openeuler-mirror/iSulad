@@ -243,6 +243,11 @@ void ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *r
 
 Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *request, ListImagesResponse *reply)
 {
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ImageList");
 
     auto status = GrpcServerTlsAuth::auth(context, "image_list");
@@ -274,6 +279,11 @@ Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *
 
 Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageRequest *request, DeleteImageResponse *reply)
 {
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ImageDelete");
 
     auto status = GrpcServerTlsAuth::auth(context, "image_delete");
@@ -305,6 +315,11 @@ Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageReques
 
 Status ImagesServiceImpl::Tag(ServerContext *context, const TagImageRequest *request, TagImageResponse *reply)
 {
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ImageTag");
 
     auto status = GrpcServerTlsAuth::auth(context, "image_tag");
@@ -352,6 +367,11 @@ void ImagesServiceImpl::import_response_to_grpc(const image_import_response *res
 
 Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *request, ImportResponse *reply)
 {
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ImageImport");
 
     auto status = GrpcServerTlsAuth::auth(context, "image_import");
@@ -383,6 +403,11 @@ Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *re
 
 Status ImagesServiceImpl::Load(ServerContext *context, const LoadImageRequest *request, LoadImageResponse *reply)
 {
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ImageLoad");
 
     auto status = GrpcServerTlsAuth::auth(context, "image_load");
@@ -419,6 +444,11 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
     service_executor_t *cb = nullptr;
     image_inspect_request *image_req = nullptr;
     image_inspect_response *image_res = nullptr;
+
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ImageInspect");
 
@@ -494,6 +524,11 @@ int ImagesServiceImpl::image_logout_request_from_grpc(const LogoutRequest *grequ
 
 Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *request, LoginResponse *reply)
 {
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "RegistryLogin");
 
     auto status = GrpcServerTlsAuth::auth(context, "login");
@@ -527,6 +562,11 @@ Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *requ
 
 Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *request, LogoutResponse *reply)
 {
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "RegistryLogout");
 
     auto status = GrpcServerTlsAuth::auth(context, "logout");

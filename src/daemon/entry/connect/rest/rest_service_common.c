@@ -26,7 +26,7 @@
 /* get body */
 int get_body(const evhtp_request_t *req, size_t *size_out, char **record_out)
 {
-    evbuf_t *buf = req->buffer_in;
+    evbuf_t *buf = NULL;
     size_t read_count = 0;
     size_t total = 0;
     size_t content_len = 0;
@@ -34,6 +34,12 @@ int get_body(const evhtp_request_t *req, size_t *size_out, char **record_out)
     char *body_p = NULL;
     int ret = 0;
 
+    if (req == NULL || size_out == NULL || record_out == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    buf = req->buffer_in;
     content_len = (size_t)evbuffer_get_length(buf);
 
     if (content_len >= MAX_BODY_SIZE) {
@@ -81,6 +87,10 @@ empty:
 /* evhtp send repsponse */
 void evhtp_send_response(evhtp_request_t *req, const char *responsedata, int rescode)
 {
+    if (req == NULL || responsedata == NULL) {
+        ERROR("Invalid input arguments");
+        return;
+    }
     evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", "application/json", 0, 0));
     evbuffer_add(req->buffer_out, responsedata, strlen(responsedata));
     evhtp_send_reply(req, rescode);

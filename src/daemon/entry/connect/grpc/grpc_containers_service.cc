@@ -154,6 +154,11 @@ Status ContainerServiceImpl::Version(ServerContext *context, const VersionReques
     container_version_request *container_req = nullptr;
     container_version_response *container_res = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "VersionOp");
 
     auto status = GrpcServerTlsAuth::auth(context, "docker_version");
@@ -187,6 +192,11 @@ Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *req
     service_executor_t *cb = nullptr;
     host_info_request *container_req = nullptr;
     host_info_response *container_res = nullptr;
+
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "InfoOp");
 
@@ -222,6 +232,11 @@ Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest 
     container_create_response *container_res = nullptr;
     container_create_request *container_req = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContCreate");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_create");
@@ -255,6 +270,11 @@ Status ContainerServiceImpl::Start(ServerContext *context, const StartRequest *r
     service_executor_t *cb = nullptr;
     container_start_request *req = nullptr;
     container_start_response *res = nullptr;
+
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContStart");
 
@@ -414,6 +434,11 @@ Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *reque
     container_top_request *req = nullptr;
     container_top_response *res = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContTop");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_top");
@@ -447,6 +472,11 @@ Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *req
     service_executor_t *cb = nullptr;
     container_stop_request *container_req = nullptr;
     container_stop_response *container_res = nullptr;
+
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContStop");
 
@@ -483,6 +513,11 @@ Status ContainerServiceImpl::Restart(ServerContext *context, const RestartReques
     container_restart_request *container_req = nullptr;
     container_restart_response *container_res = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContRestart");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_restart");
@@ -516,6 +551,11 @@ Status ContainerServiceImpl::Kill(ServerContext *context, const KillRequest *req
     service_executor_t *cb = nullptr;
     container_kill_request *container_req = nullptr;
     container_kill_response *container_res = nullptr;
+
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContKill");
 
@@ -551,6 +591,11 @@ Status ContainerServiceImpl::Delete(ServerContext *context, const DeleteRequest 
     container_delete_request *container_req = nullptr;
     container_delete_response *container_res = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContDelete");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_delete");
@@ -584,6 +629,11 @@ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *req
     service_executor_t *cb = nullptr;
     container_exec_request *container_req = nullptr;
     container_exec_response *container_res = nullptr;
+
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContExec");
 
@@ -691,6 +741,11 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
     container_exec_request *container_req = nullptr;
     container_exec_response *container_res = nullptr;
 
+    if (context == nullptr || stream == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContRExec");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_exec_create");
@@ -767,6 +822,11 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
     container_inspect_request *container_req = nullptr;
     container_inspect_response *container_res = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContInspect");
 
     Status status = GrpcServerTlsAuth::auth(context, "container_inspect");
@@ -801,6 +861,11 @@ Status ContainerServiceImpl::List(ServerContext *context, const ListRequest *req
     service_executor_t *cb = nullptr;
     container_list_request *container_req = nullptr;
     container_list_response *container_res = nullptr;
+
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContList");
 
@@ -916,6 +981,11 @@ Status ContainerServiceImpl::Attach(ServerContext *context, ServerReaderWriter<A
     sem_t sem_stderr;
     int pipefd[2] = { -1, -1 };
 
+    if (context == nullptr || stream == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContAttach");
 
     auto status = AttachInit(context, &cb, &container_req, &container_res, &sem_stderr, pipefd);
@@ -979,6 +1049,11 @@ Status ContainerServiceImpl::Pause(ServerContext *context, const PauseRequest *r
     container_pause_request *container_req = nullptr;
     container_pause_response *container_res = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContPause");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_pause");
@@ -1012,6 +1087,11 @@ Status ContainerServiceImpl::Resume(ServerContext *context, const ResumeRequest 
     service_executor_t *cb = nullptr;
     container_resume_request *container_req = nullptr;
     container_resume_response *container_res = nullptr;
+
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContResume");
 
@@ -1047,6 +1127,11 @@ Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest 
     container_export_request *container_req = nullptr;
     container_export_response *container_res = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContExport");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_export");
@@ -1080,6 +1165,11 @@ Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest 
     service_executor_t *cb = nullptr;
     struct isulad_container_rename_request *isuladreq = nullptr;
     struct isulad_container_rename_response *isuladres = nullptr;
+
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContRename");
 
@@ -1116,6 +1206,11 @@ Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest 
     struct isulad_container_resize_request *isuladreq = nullptr;
     struct isulad_container_resize_response *isuladres = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContResize");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_resize");
@@ -1151,6 +1246,11 @@ Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest 
     container_update_request *container_req = nullptr;
     container_update_response *container_res = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContUpdate");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_update");
@@ -1184,6 +1284,11 @@ Status ContainerServiceImpl::Stats(ServerContext *context, const StatsRequest *r
     service_executor_t *cb = nullptr;
     container_stats_request *container_req = nullptr;
     container_stats_response *container_res = nullptr;
+
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContStats");
 
@@ -1219,6 +1324,11 @@ Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *req
     container_wait_request *container_req = nullptr;
     container_wait_response *container_res = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContWait");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_wait");
@@ -1252,6 +1362,11 @@ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest 
     service_executor_t *cb = nullptr;
     isulad_events_request *isuladreq = nullptr;
     stream_func_wrapper stream = { 0 };
+
+    if (context == nullptr || request == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContEvents");
 
@@ -1290,6 +1405,11 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
     int tret;
     service_executor_t *cb = nullptr;
     isulad_copy_from_container_request *isuladreq = nullptr;
+
+    if (context == nullptr || request == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContCopyFrom");
 
@@ -1334,6 +1454,11 @@ ContainerServiceImpl::CopyToContainer(ServerContext *context,
     int ret;
     service_executor_t *cb = nullptr;
     container_copy_to_request *isuladreq = nullptr;
+
+    if (context == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContCopyTo");
 
@@ -1443,6 +1568,11 @@ Status ContainerServiceImpl::Logs(ServerContext *context, const LogsRequest *req
     struct isulad_logs_request *isulad_request = nullptr;
     struct isulad_logs_response *isulad_response = nullptr;
     stream_func_wrapper stream = { 0 };
+
+    if (context == nullptr || request == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContLogs");
 

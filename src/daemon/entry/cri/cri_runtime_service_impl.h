@@ -52,10 +52,10 @@ public:
     void RemoveContainer(const std::string &containerID, Errors &error) override;
 
     void ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
-                        std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers, Errors &error) override;
+                        std::vector<std::unique_ptr<runtime::v1alpha2::Container>> &containers, Errors &error) override;
 
     void ListContainerStats(const runtime::v1alpha2::ContainerStatsFilter *filter,
-                            std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
+                            std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> &containerstats,
                             Errors &error) override;
 
     auto ContainerStats(const std::string &containerID,

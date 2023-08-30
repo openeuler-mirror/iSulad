@@ -27,6 +27,10 @@ namespace GrpcServerTlsAuth {
 Status auth(ServerContext *context, const std::string &action)
 {
 #ifdef ENABLE_GRPC_REMOTE_CONNECT
+    if (context == nullptr) {
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     const std::multimap<grpc::string_ref, grpc::string_ref> &init_metadata = context->client_metadata();
     auto tls_mode_kv = init_metadata.find("tls_mode");
     if (tls_mode_kv == init_metadata.end()) {

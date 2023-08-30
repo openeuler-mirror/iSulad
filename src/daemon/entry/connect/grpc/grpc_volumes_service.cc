@@ -118,6 +118,11 @@ int VolumeServiceImpl::volume_prune_response_to_grpc(volume_prune_volume_respons
 
 Status VolumeServiceImpl::List(ServerContext *context, const ListVolumeRequest *request, ListVolumeResponse *reply)
 {
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     auto status = GrpcServerTlsAuth::auth(context, "volume_list");
     if (!status.ok()) {
         return status;
@@ -152,6 +157,11 @@ Status VolumeServiceImpl::List(ServerContext *context, const ListVolumeRequest *
 Status VolumeServiceImpl::Remove(ServerContext *context, const RemoveVolumeRequest *request,
                                  RemoveVolumeResponse *reply)
 {
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     auto status = GrpcServerTlsAuth::auth(context, "volume_remove");
     if (!status.ok()) {
         return status;
@@ -185,6 +195,11 @@ Status VolumeServiceImpl::Remove(ServerContext *context, const RemoveVolumeReque
 
 Status VolumeServiceImpl::Prune(ServerContext *context, const PruneVolumeRequest *request, PruneVolumeResponse *reply)
 {
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     auto status = GrpcServerTlsAuth::auth(context, "volume_prune");
     if (!status.ok()) {
         return status;

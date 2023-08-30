@@ -43,10 +43,10 @@ public:
     virtual void RemoveContainer(const std::string &containerID, Errors &error) = 0;
 
     virtual void ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
-                                std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers, Errors &error) = 0;
+                                std::vector<std::unique_ptr<runtime::v1alpha2::Container>> &containers, Errors &error) = 0;
 
     virtual void ListContainerStats(const runtime::v1alpha2::ContainerStatsFilter *filter,
-                                    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
+                                    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> &containerstats,
                                     Errors &error) = 0;
 
     virtual auto ContainerStats(const std::string &containerID,

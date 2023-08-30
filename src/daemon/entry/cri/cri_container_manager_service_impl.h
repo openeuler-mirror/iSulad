@@ -49,11 +49,11 @@ public:
     void RemoveContainer(const std::string &containerID, Errors &error) override;
 
     void ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
-                        std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers,
+                        std::vector<std::unique_ptr<runtime::v1alpha2::Container>> &containers,
                         Errors &error) override;
 
     void ListContainerStats(const runtime::v1alpha2::ContainerStatsFilter *filter,
-                            std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
+                            std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> &containerstats,
                             Errors &error) override;
 
     auto ContainerStats(const std::string &containerID,
@@ -102,11 +102,11 @@ private:
     void ListContainersFromGRPC(const runtime::v1alpha2::ContainerFilter *filter, container_list_request **request,
                                 Errors &error);
     void ListContainersToGRPC(container_list_response *response,
-                              std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *pods, Errors &error);
+                              std::vector<std::unique_ptr<runtime::v1alpha2::Container>> &pods, Errors &error);
     auto PackContainerStatsFilter(const runtime::v1alpha2::ContainerStatsFilter *filter,
                                   container_stats_request *request, Errors &error) -> int;
     void ContainerStatsToGRPC(container_stats_response *response,
-                              std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
+                              std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> &containerstats,
                               Errors &error);
     void PackContainerStatsAttributes(const char *id, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container,
                                       Errors &error);
