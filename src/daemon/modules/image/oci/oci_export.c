@@ -23,6 +23,7 @@
 #include "util_archive.h"
 #include "path.h"
 #include "utils_file.h"
+#include "isulad_config.h"
 
 int oci_do_export(char *id, char *file)
 {
@@ -30,6 +31,7 @@ int oci_do_export(char *id, char *file)
     int ret2 = 0;
     char *mount_point = NULL;
     char *errmsg = NULL;
+    char *root_dir = NULL;
     char cleanpath[PATH_MAX] = { 0 };
 
     if (id == NULL || file == NULL) {
@@ -56,7 +58,15 @@ int oci_do_export(char *id, char *file)
         return -1;
     }
 
-    ret = archive_chroot_tar(mount_point, cleanpath, &errmsg);
+    root_dir = conf_get_isulad_rootdir();
+    if (root_dir == NULL) {
+        ERROR("Failed to get isulad rootdir");
+        isulad_set_error_message("Failed to get isulad rootdir");
+        ret = -1;
+        goto out;
+    }
+
+    ret = archive_chroot_tar(mount_point, cleanpath, root_dir, &errmsg);
     if (ret != 0) {
         ERROR("failed to export container %s to file %s: %s", id, cleanpath, errmsg);
         isulad_set_error_message("Failed to export rootfs with error: %s", errmsg);
@@ -68,6 +78,7 @@ out:
     mount_point = NULL;
     free(errmsg);
     errmsg = NULL;
+    free(root_dir);
 
     ret2 = storage_rootfs_umount(id, false);
     if (ret2 != 0) {

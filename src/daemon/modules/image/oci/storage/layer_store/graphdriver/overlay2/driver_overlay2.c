@@ -45,6 +45,7 @@
 #include "utils_timestamp.h"
 #include "selinux_label.h"
 #include "err_msg.h"
+#include "isulad_config.h"
 #ifdef ENABLE_REMOTE_LAYER_STORE
 #include "ro_symlink_maintain.h"
 #endif
@@ -1886,6 +1887,7 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
     char *layer_diff = NULL;
     struct archive_options options = { 0 };
     char *err = NULL;
+    char *root_dir = NULL;
 
     if (id == NULL || driver == NULL || content == NULL) {
         ERROR("invalid argument");
@@ -1919,7 +1921,14 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
     }
 #endif
 
-    ret = archive_unpack(content, layer_diff, &options, &err);
+    root_dir = conf_get_isulad_rootdir();
+    if (root_dir == NULL) {
+        ERROR("Failed to get isulad rootdir");
+        ret = -1;
+        goto out;
+    }
+
+    ret = archive_unpack(content, layer_diff, &options, root_dir ,&err);
     if (ret != 0) {
         ERROR("Failed to unpack to %s: %s", layer_diff, err);
         ret = -1;
@@ -1928,6 +1937,7 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
 
 out:
     free(err);
+    free(root_dir);
     free(layer_dir);
     free(layer_diff);
 #ifdef ENABLE_USERNS_REMAP

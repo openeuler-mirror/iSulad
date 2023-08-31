@@ -385,7 +385,7 @@ cleanup:
 }
 
 int archive_copy_to(const struct io_read_wrapper *content, const struct archive_copy_info *srcinfo,
-                    const char *dstpath, char **err)
+                    const char *dstpath, const char *root_dir, char **err)
 {
     int ret = -1;
     struct archive_copy_info *dstinfo = NULL;
@@ -393,7 +393,7 @@ int archive_copy_to(const struct io_read_wrapper *content, const struct archive_
     char *src_base = NULL;
     char *dst_base = NULL;
 
-    if (err == NULL || dstpath == NULL || srcinfo == NULL || content == NULL) {
+    if (err == NULL || dstpath == NULL || srcinfo == NULL || content == NULL || root_dir == NULL) {
         return -1;
     }
 
@@ -409,7 +409,7 @@ int archive_copy_to(const struct io_read_wrapper *content, const struct archive_
         goto cleanup;
     }
 
-    ret = archive_chroot_untar_stream(content, dstdir, ".", src_base, dst_base, err);
+    ret = archive_chroot_untar_stream(content, dstdir, ".", src_base, dst_base, root_dir, err);
 
 cleanup:
     free_archive_copy_info(dstinfo);
@@ -419,7 +419,7 @@ cleanup:
     return ret;
 }
 
-static int tar_resource_rebase(const char *path, const char *rebase, struct io_read_wrapper *archive_reader, char **err)
+static int tar_resource_rebase(const char *path, const char *rebase, const char *root_dir, struct io_read_wrapper *archive_reader, char **err)
 {
     int ret = -1;
     int nret;
@@ -438,7 +438,7 @@ static int tar_resource_rebase(const char *path, const char *rebase, struct io_r
     }
 
     DEBUG("chroot tar stream srcdir(%s) srcbase(%s) rebase(%s)", srcdir, srcbase, rebase);
-    nret = archive_chroot_tar_stream(srcdir, srcbase, srcbase, rebase, archive_reader);
+    nret = archive_chroot_tar_stream(srcdir, srcbase, srcbase, rebase, root_dir, archive_reader);
     if (nret < 0) {
         ERROR("Can not archive path: %s", path);
         goto cleanup;
@@ -450,11 +450,11 @@ cleanup:
     return ret;
 }
 
-int tar_resource(const struct archive_copy_info *info, struct io_read_wrapper *archive_reader, char **err)
+int tar_resource(const struct archive_copy_info *info, const char *root_dir, struct io_read_wrapper *archive_reader, char **err)
 {
-    if (info == NULL || archive_reader == NULL || err == NULL) {
+    if (info == NULL || root_dir == NULL || archive_reader == NULL || err == NULL) {
         return -1;
     }
 
-    return tar_resource_rebase(info->path, info->rebase_name, archive_reader, err);
+    return tar_resource_rebase(info->path, info->rebase_name, root_dir, archive_reader, err);
 }

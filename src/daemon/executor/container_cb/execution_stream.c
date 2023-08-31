@@ -62,6 +62,7 @@
 #include "utils.h"
 #include "utils_file.h"
 #include "utils_verify.h"
+#include "isulad_config.h"
 
 #if defined (__ANDROID__) || defined(__MUSL__)
 #define SIG_CANCEL_SIGNAL     SIGUSR1
@@ -442,6 +443,7 @@ static int archive_and_send_copy_data(const stream_func_wrapper *stream,
     char *absbase = NULL;
     char *err = NULL;
     char *buf = NULL;
+    char *root_dir = NULL;
     char cleaned[PATH_MAX + 2] = { 0 };
     struct io_read_wrapper reader = { 0 };
     char *tar_path = NULL;
@@ -474,9 +476,15 @@ static int archive_and_send_copy_data(const stream_func_wrapper *stream,
         goto cleanup;
     }
 
+    root_dir = conf_get_isulad_rootdir();
+    if (root_dir == NULL) {
+        ERROR("Failed to get isulad rootdir");
+        goto cleanup;
+    }
+
     DEBUG("archive chroot tar stream container_fs(%s) srcdir(%s) relative(%s) srcbase(%s) absbase(%s)",
           container_fs, srcdir, tar_path, srcbase, absbase);
-    nret = archive_chroot_tar_stream(container_fs, tar_path, srcbase, absbase, &reader);
+    nret = archive_chroot_tar_stream(container_fs, tar_path, srcbase, absbase, root_dir, &reader);
     if (nret != 0) {
         ERROR("Archive %s failed", resolvedpath);
         goto cleanup;
@@ -504,6 +512,7 @@ cleanup:
     free(srcdir);
     free(srcbase);
     free(absbase);
+    free(root_dir);
     if (reader.close != NULL) {
         int cret = reader.close(reader.context, &err);
         if (err != NULL) {
@@ -776,15 +785,25 @@ static int read_and_extract_archive(stream_func_wrapper *stream, const char *con
 {
     int ret = -1;
     char *err = NULL;
+    char *root_dir = NULL;
     struct io_read_wrapper content = { 0 };
     content.context = stream;
     content.read = extract_stream_to_io_read;
-    ret = archive_chroot_untar_stream(&content, container_fs, dstdir_in_container, src_rebase, dst_rebase, &err);
+
+    root_dir = conf_get_isulad_rootdir();
+    if (root_dir == NULL) {
+        ERROR("Failed to get isulad rootdir");
+        isulad_set_error_message("Failed to get isulad rootdir");
+        return -1;
+    }
+
+    ret = archive_chroot_untar_stream(&content, container_fs, dstdir_in_container, src_rebase, dst_rebase, root_dir, &err);
     if (ret != 0) {
         ERROR("Can not untar to container: %s", (err != NULL) ? err : "unknown");
         isulad_set_error_message("Can not untar to container: %s", (err != NULL) ? err : "unknown");
     }
     free(err);
+    free(root_dir);
     return ret;
 }
 

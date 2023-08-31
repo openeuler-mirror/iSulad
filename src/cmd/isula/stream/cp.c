@@ -73,6 +73,44 @@ static void print_copy_from_container_error(const char *ops_err, const char *arc
     }
 }
 
+static int client_get_root_dir(const isula_connect_ops *ops, const client_connect_config_t *config, char **root_dir)
+{
+    int ret = 0;
+    struct isula_info_request request = { 0 };
+    struct isula_info_response *response = NULL;
+
+    response = util_common_calloc_s(sizeof(struct isula_info_response));
+    if (response == NULL) {
+        COMMAND_ERROR("Info: Out of memory");
+        return -1;
+    }
+
+    if (!ops->container.info) {
+        COMMAND_ERROR("Unimplemented info op");
+        ret = -1;
+        goto out;
+    }
+
+    ret = ops->container.info(&request, response, (void *)config);
+    if (ret != 0) {
+        client_print_error(response->cc, response->server_errono, response->errmsg);
+        ret = -1;
+        goto out;
+    }
+
+    if (response->isulad_root_dir == NULL) {
+        COMMAND_ERROR("None root dir");
+        ret = -1;
+        goto out;
+    }
+
+    *root_dir = util_strdup_s(response->isulad_root_dir);
+
+out:
+    isula_info_response_free(response);
+    return ret;
+}
+
 static int client_copy_from_container(const struct client_arguments *args, const char *id, const char *srcpath,
                                       const char *destpath)
 {
@@ -84,6 +122,7 @@ static int client_copy_from_container(const struct client_arguments *args, const
     char *archive_err = NULL;
     char *ops_err = NULL;
     char *resolved = NULL;
+    char *root_dir = NULL;
     struct archive_copy_info *srcinfo = NULL;
     client_connect_config_t config;
 
@@ -92,18 +131,24 @@ static int client_copy_from_container(const struct client_arguments *args, const
         COMMAND_ERROR("Unimplemented copy from container operation");
         return -1;
     }
+    config = get_connect_config(args);
+
+    ret = client_get_root_dir(ops, &config, &root_dir);
+    if (ret != 0) {
+        return -1;
+    }
 
     response = util_common_calloc_s(sizeof(struct isula_copy_from_container_response));
     if (response == NULL) {
         ERROR("Event: Out of memory");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     request.id = (char *)id;
     request.runtime = args->runtime;
     request.srcpath = (char *)srcpath;
 
-    config = get_connect_config(args);
     ret = ops->container.copy_from_container(&request, response, &config);
     if (ret) {
         ops_err = (response->errmsg != NULL) ? util_strdup_s(response->errmsg) : NULL;
@@ -125,7 +170,7 @@ static int client_copy_from_container(const struct client_arguments *args, const
     srcinfo->path = util_strdup_s(srcpath);
     srcinfo->isdir = S_ISDIR(response->stat->mode);
 
-    nret = archive_copy_to(&response->reader, srcinfo, resolved, &archive_err);
+    nret = archive_copy_to(&response->reader, srcinfo, resolved, root_dir, &archive_err);
     if (nret != 0) {
         ret = nret;
     }
@@ -137,6 +182,7 @@ static int client_copy_from_container(const struct client_arguments *args, const
 
 out:
     print_copy_from_container_error(ops_err, archive_err, ret, args);
+    free(root_dir);
     free(resolved);
     free(archive_err);
     free(ops_err);
@@ -167,6 +213,7 @@ static int client_copy_to_container(const struct client_arguments *args, const c
     int nret = 0;
     char *archive_err = NULL;
     char *resolved = NULL;
+    char *root_dir = NULL;
     struct archive_copy_info *srcinfo = NULL;
     struct io_read_wrapper archive_reader = { 0 };
     client_connect_config_t config = { 0 };
@@ -176,11 +223,18 @@ static int client_copy_to_container(const struct client_arguments *args, const c
         COMMAND_ERROR("Unimplemented copy to container operation");
         return -1;
     }
+    config = get_connect_config(args);
+
+    ret = client_get_root_dir(ops, &config, &root_dir);
+    if (ret != 0) {
+        return -1;
+    }
 
     response = util_common_calloc_s(sizeof(struct isula_copy_to_container_response));
     if (response == NULL) {
         ERROR("Event: Out of memory");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     request.id = (char *)id;
@@ -199,7 +253,7 @@ static int client_copy_to_container(const struct client_arguments *args, const c
         goto out;
     }
 
-    nret = tar_resource(srcinfo, &archive_reader, &archive_err);
+    nret = tar_resource(srcinfo, root_dir, &archive_reader, &archive_err);
     if (nret != 0) {
         ret = -1;
         goto out;
@@ -212,7 +266,6 @@ static int client_copy_to_container(const struct client_arguments *args, const c
     request.reader.read = archive_reader.read;
     request.reader.close = archive_reader.close;
 
-    config = get_connect_config(args);
     ret = ops->container.copy_to_container(&request, response, &config);
 
     // archive reader close if copy to container failed
@@ -223,6 +276,7 @@ static int client_copy_to_container(const struct client_arguments *args, const c
 
 out:
     print_copy_to_container_error(response, archive_err, ret, args);
+    free(root_dir);
     free(resolved);
     free(archive_err);
     free_archive_copy_info(srcinfo);

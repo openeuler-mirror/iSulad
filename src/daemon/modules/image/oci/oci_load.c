@@ -41,6 +41,7 @@
 #include "utils_file.h"
 #include "utils_verify.h"
 #include "oci_image.h"
+#include "isulad_config.h"
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define OCI_SCHEMA_VERSION 2
@@ -1068,6 +1069,7 @@ int oci_do_load(const im_load_request *request)
     char *digest = NULL;
     char *dstdir = NULL;
     char *err = NULL;
+    char *root_dir = NULL;
 
     if (request == NULL || request->file == NULL) {
         ERROR("Invalid input arguments, cannot load image");
@@ -1088,8 +1090,16 @@ int oci_do_load(const im_load_request *request)
         goto out;
     }
 
+    root_dir = conf_get_isulad_rootdir();
+    if (root_dir == NULL) {
+        ERROR("Failed to get isulad rootdir");
+        isulad_try_set_error_message("Failed to get isulad rootdir");
+        ret = -1;
+        goto out;
+    }
+
     options.whiteout_format = NONE_WHITEOUT_FORMATE;
-    if (archive_unpack(&reader, dstdir, &options, &err) != 0) {
+    if (archive_unpack(&reader, dstdir, &options, root_dir, &err) != 0) {
         ERROR("Failed to unpack to %s: %s", dstdir, err);
         isulad_try_set_error_message("Failed to unpack to %s: %s", dstdir, err);
         ret = -1;
@@ -1175,5 +1185,6 @@ out:
     }
     free(dstdir);
     free(err);
+    free(root_dir);
     return ret;
 }

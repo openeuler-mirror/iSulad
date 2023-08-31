@@ -68,6 +68,8 @@ extern "C" {
 
 #define DEFAULT_HIGHEST_DIRECTORY_MODE 0755
 
+#define MOUNT_FLOCK_FILE_MODE 0660
+
 #define ISULAD_CONFIG SYSCONFDIR_PREFIX"/etc/isulad"
 
 #define ISULAD_DAEMON_CONTAINER_CONTEXTS ISULAD_CONFIG "/container_contexts"
@@ -118,6 +120,8 @@ extern "C" {
 #ifndef OCI_VERSION
 #define OCI_VERSION "1.0.1"
 #endif
+
+#define MOUNT_FLOCK_FILE_PATH "isulad-chroot-mount.flock"
 
 #define OCI_IMAGE_GRAPH_ROOTPATH_NAME "storage"
 
