@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/capability.h>
+#include <sys/file.h>
 #include <archive.h>
 #include <archive_entry.h>
 #include <errno.h>
@@ -78,6 +79,31 @@ static ssize_t read_content(struct archive *a, void *client_data, const void **b
     return mydata->content->read(mydata->content->context, mydata->buff, sizeof(mydata->buff));
 }
 
+static char *generate_flock_path(const char *root_dir)
+{
+    int nret = 0;
+    char path[PATH_MAX] = { 0 };
+    char cleanpath[PATH_MAX] = { 0 };
+
+    nret = snprintf(path, PATH_MAX, "%s/%s", root_dir, MOUNT_FLOCK_FILE_PATH);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Failed to snprintf");
+        return NULL;
+    }
+
+    if (util_clean_path(path, cleanpath, sizeof(cleanpath)) == NULL) {
+        ERROR("clean path for %s failed", path);
+        return NULL;
+    }
+
+    if (!util_file_exists(cleanpath)) {
+        ERROR("flock file %s doesn't exist", cleanpath);
+        return NULL;
+    }
+
+    return util_strdup_s(cleanpath);
+}
+
 static void do_disable_unneccessary_caps()
 {
     cap_t caps;
@@ -99,7 +125,61 @@ static void do_disable_unneccessary_caps()
     cap_free(caps);
 }
 
-static int make_safedir_is_noexec(const char *dstdir, char **safe_dir)
+// Add flock when bind mount and make it private.
+// Because bind mount usually makes safedir shared mount point,
+// and sometimes it will cause "mount point explosion".
+// E.g. concurrently execute isula cp /tmp/<XXX-File> <CONTAINER-ID>:<CONTAINER-PAT>
+static int bind_mount_with_flock(const char *flock_path, const char *dstdir, const char *tmp_dir)
+{
+    int fd = -1;
+    int ret = -1;
+
+    fd = open(flock_path, O_RDWR | O_CLOEXEC);
+    if (fd < 0) {
+        SYSERROR("Failed to open file %s", flock_path);
+        return -1;
+    }
+
+    if (flock(fd, LOCK_EX) != 0) {
+        SYSERROR("Failed to lock file %s", flock_path);
+        goto out;
+    }
+
+    if (mount(dstdir, tmp_dir, "none", MS_BIND, NULL) != 0) {
+        SYSERROR("Mount safe dir failed");
+        goto unlock_out;
+    }
+
+    if (mount(tmp_dir, tmp_dir, "none", MS_BIND | MS_REMOUNT | MS_NOEXEC, NULL) != 0) {
+        SYSERROR("Mount safe dir failed");
+        if (umount(tmp_dir) != 0) {
+            SYSERROR("Failed to umount target %s", tmp_dir);
+        }
+        goto unlock_out;
+    }
+
+    // Change the propagation type.
+    if (mount("", tmp_dir, "", MS_PRIVATE, "") != 0) {
+        SYSERROR("Failed to change the propagation type");
+        if (umount(tmp_dir) != 0) {
+            SYSERROR("Failed to umount target %s", tmp_dir);
+        }
+        goto unlock_out;
+    }
+
+    ret = 0;
+
+unlock_out:
+    if (flock(fd, LOCK_UN) != 0) {
+        SYSERROR("Failed to unlock file %s", flock_path);
+    }
+
+out:
+    close(fd);
+    return ret;
+}
+
+static int make_safedir_is_noexec(const char *flock_path, const char *dstdir, char **safe_dir)
 {
     struct stat buf;
     char *isulad_tmpdir_env = NULL;
@@ -151,19 +231,8 @@ static int make_safedir_is_noexec(const char *dstdir, char **safe_dir)
         return -1;
     }
 
-    if (mount(dstdir, tmp_dir, "none", MS_BIND, NULL) != 0) {
-        SYSERROR("Mount safe dir failed");
-        if (util_path_remove(tmp_dir) != 0) {
-            ERROR("Failed to remove path %s", tmp_dir);
-        }
-        return -1;
-    }
-
-    if (mount(tmp_dir, tmp_dir, "none", MS_BIND | MS_REMOUNT | MS_NOEXEC, NULL) != 0) {
-        SYSERROR("Mount safe dir failed");
-        if (umount(tmp_dir) != 0) {
-            ERROR("Failed to umount target %s", tmp_dir);
-        }
+    if (bind_mount_with_flock(flock_path, dstdir, tmp_dir) != 0) {
+        ERROR("Failed to bind mount from %s to %s with flock", dstdir, tmp_dir);
         if (util_path_remove(tmp_dir) != 0) {
             ERROR("Failed to remove path %s", tmp_dir);
         }
@@ -718,7 +787,7 @@ static void set_child_process_pdeathsig(void)
 }
 
 int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, const struct archive_options *options,
-                   char **errmsg)
+                   const char *root_dir, char **errmsg)
 {
     int ret = 0;
     pid_t pid = -1;
@@ -726,10 +795,22 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
     int pipe_stderr[2] = { -1, -1 };
     char errbuf[BUFSIZ + 1] = { 0 };
     char *safe_dir = NULL;
+    char *flock_path = NULL;
 
-    if (make_safedir_is_noexec(dstdir, &safe_dir) != 0) {
-        ERROR("Prepare safe dir failed");
+    if (content == NULL || dstdir == NULL || options == NULL || root_dir == NULL) {
         return -1;
+    }
+
+    flock_path = generate_flock_path(root_dir);
+    if (flock_path == NULL) {
+        ERROR("Failed to generate flock path");
+        return -1;
+    }
+
+    if (make_safedir_is_noexec(flock_path, dstdir, &safe_dir) != 0) {
+        ERROR("Prepare safe dir failed");
+        ret = -1;
+        goto cleanup;
     }
 
     if (pipe2(pipe_stderr, O_CLOEXEC) != 0) {
@@ -811,6 +892,7 @@ cleanup:
         ERROR("Failed to remove path %s", safe_dir);
     }
     free(safe_dir);
+    free(flock_path);
     return ret;
 }
 
@@ -1121,7 +1203,7 @@ static ssize_t fd_write(void *context, const void *data, size_t len)
     return util_write_nointr(*(int *)context, data, len);
 }
 
-int archive_chroot_tar(char *path, char *file, char **errmsg)
+int archive_chroot_tar(const char *path, const char *file, const char *root_dir, char **errmsg)
 {
     struct io_write_wrapper pipe_context = { 0 };
     int ret = 0;
@@ -1131,10 +1213,22 @@ int archive_chroot_tar(char *path, char *file, char **errmsg)
     char errbuf[BUFSIZ + 1] = { 0 };
     int fd = 0;
     char *safe_dir = NULL;
+    char *flock_path = NULL;
 
-    if (make_safedir_is_noexec(path, &safe_dir) != 0) {
-        ERROR("Prepare safe dir failed");
+    if (path == NULL || file == NULL || root_dir == NULL) {
         return -1;
+    }
+
+    flock_path = generate_flock_path(root_dir);
+    if (flock_path == NULL) {
+        ERROR("Failed to generate flock path");
+        return -1;
+    }
+
+    if (make_safedir_is_noexec(flock_path, path, &safe_dir) != 0) {
+        ERROR("Prepare safe dir failed");
+        ret = -1;
+        goto cleanup;
     }
 
     if (pipe2(pipe_for_read, O_CLOEXEC) != 0) {
@@ -1227,6 +1321,7 @@ cleanup:
         ERROR("Failed to remove path %s", safe_dir);
     }
     free(safe_dir);
+    free(flock_path);
     return ret;
 }
 
@@ -1347,7 +1442,7 @@ static int archive_context_close(void *context, char **err)
 }
 
 int archive_chroot_untar_stream(const struct io_read_wrapper *context, const char *chroot_dir, const char *untar_dir,
-                                const char *src_base, const char *dst_base, char **errmsg)
+                                const char *src_base, const char *dst_base, const char *root_dir, char **errmsg)
 {
     struct io_read_wrapper pipe_context = { 0 };
     int pipe_stream[2] = { -1, -1 };
@@ -1365,10 +1460,17 @@ int archive_chroot_untar_stream(const struct io_read_wrapper *context, const cha
                .dst_base = dst_base
     };
     char *safe_dir = NULL;
+    char *flock_path = NULL;
 
-    if (make_safedir_is_noexec(chroot_dir, &safe_dir) != 0) {
-        ERROR("Prepare safe dir failed");
+    flock_path = generate_flock_path(root_dir);
+    if (flock_path == NULL) {
+        ERROR("Failed to generate flock path");
         return -1;
+    }
+
+    if (make_safedir_is_noexec(flock_path, chroot_dir, &safe_dir) != 0) {
+        ERROR("Prepare safe dir failed");
+        goto cleanup;
     }
 
     if (pipe(pipe_stderr) != 0) {
@@ -1478,12 +1580,13 @@ cleanup:
         ERROR("Failed to remove path %s", safe_dir);
     }
     free(safe_dir);
+    free(flock_path);
 
     return ret;
 }
 
 int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, const char *src_base, const char *dst_base,
-                              struct io_read_wrapper *reader)
+                              const char *root_dir, struct io_read_wrapper *reader)
 {
     struct io_write_wrapper pipe_context = { 0 };
     int keepfds[] = { -1, -1, -1 };
@@ -1493,10 +1596,17 @@ int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, cons
     pid_t pid;
     struct archive_context *ctx = NULL;
     char *safe_dir = NULL;
+    char *flock_path = NULL;
 
-    if (make_safedir_is_noexec(chroot_dir, &safe_dir) != 0) {
-        ERROR("Prepare safe dir failed");
+    flock_path = generate_flock_path(root_dir);
+    if (flock_path == NULL) {
+        ERROR("Failed to generate flock path");
         return -1;
+    }
+
+    if (make_safedir_is_noexec(flock_path, chroot_dir, &safe_dir) != 0) {
+        ERROR("Prepare safe dir failed");
+        goto free_out;
     }
 
     if (pipe(pipe_stderr) != 0) {
@@ -1602,6 +1712,7 @@ free_out:
     close_archive_pipes_fd(pipe_stderr, 2);
     close_archive_pipes_fd(pipe_stream, 2);
     free(ctx);
+    free(flock_path);
     if (safe_dir != NULL) {
         if (umount(safe_dir) != 0) {
             ERROR("Failed to umount target %s", safe_dir);

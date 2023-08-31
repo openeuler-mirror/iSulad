@@ -72,6 +72,7 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "path.h"
 #include "volume_api.h"
 #ifndef DISABLE_CLEANUP
 #include "leftover_cleanup_api.h"
@@ -1374,6 +1375,50 @@ out:
     return ret;
 }
 
+static int create_mount_flock_file(const struct service_arguments *args)
+{
+    int nret = 0;
+    int fd = -1;
+    char path[PATH_MAX] = { 0 };
+    char cleanpath[PATH_MAX] = { 0 };
+
+    nret = snprintf(path, PATH_MAX, "%s/%s", args->json_confs->graph, MOUNT_FLOCK_FILE_PATH);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Failed to snprintf");
+        return -1;
+    }
+
+    if (util_clean_path(path, cleanpath, sizeof(cleanpath)) == NULL) {
+        ERROR("clean path for %s failed", path);
+        return -1;
+    }
+
+    if (util_fileself_exists(cleanpath)) {
+        int err = 0;
+        // recreate mount flock file
+        // and make file uid/gid and permission correct
+        if (!util_force_remove_file(cleanpath, &err)) {
+            ERROR("Failed to delete %s, error: %s. Please delete %s manually.", path, strerror(err), path);
+            return -1;
+        }
+    }
+
+    fd = util_open(cleanpath, O_RDWR | O_CREAT, MOUNT_FLOCK_FILE_MODE);
+    if (fd < 0) {
+        ERROR("Failed to create file %s", cleanpath);
+        return -1;
+    }
+    close(fd);
+
+    nret = util_set_file_group(cleanpath, args->json_confs->group);
+    if (nret < 0) {
+        ERROR("set group of the path %s failed", cleanpath);
+        return -1;
+    }
+
+    return 0;
+}
+
 static int isulad_server_init_service()
 {
     int ret = -1;
@@ -1401,6 +1446,12 @@ static int isulad_server_init_service()
     ret = load_listener(args);
     if (ret != 0) {
         ERROR("Failed to load listener");
+        goto unlock_out;
+    }
+
+    ret = create_mount_flock_file(args);
+    if (ret != 0) {
+        ERROR("Failed to create mount flock file");
         goto unlock_out;
     }
 

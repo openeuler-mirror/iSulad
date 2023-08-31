@@ -49,17 +49,17 @@ struct archive_options {
 };
 
 int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, const struct archive_options *options,
-                   char **errmsg);
+                   const char *root_dir, char **errmsg);
 
 bool valid_archive_format(const char *file);
 
-int archive_chroot_tar(char *path, char *file, char **errmsg);
+int archive_chroot_tar(const char *path, const char *file, const char *root_dir, char **errmsg);
 
 int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, const char *src_base,
-                              const char *dst_base, struct io_read_wrapper *content);
+                              const char *dst_base, const char *root_dir, struct io_read_wrapper *content);
 int archive_chroot_untar_stream(const struct io_read_wrapper *content, const char *chroot_dir,
                                 const char *untar_dir, const char *src_base, const char *dst_base,
-                                char **errmsg);
+                                const char *root_dir, char **errmsg);
 
 #ifdef __cplusplus
 }

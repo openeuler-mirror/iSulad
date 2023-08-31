@@ -33,6 +33,7 @@
 #include "utils_file.h"
 #include "utils_fs.h"
 #include "utils_string.h"
+#include "isulad_config.h"
 
 struct io_read_wrapper;
 
@@ -347,6 +348,7 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
     int ret = 0;
     struct archive_options options = { 0 };
     char *err = NULL;
+    char *root_dir = NULL;
 
     if (!util_valid_str(id) || driver == NULL || content == NULL) {
         ERROR("invalid argument to apply diff with id(%s)", id);
@@ -367,8 +369,15 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
         goto out;
     }
 
+    root_dir = conf_get_isulad_rootdir();
+    if (root_dir == NULL) {
+        ERROR("Failed to get isulad rootdir");
+        ret = -1;
+        goto umount_out;
+    }
+
     options.whiteout_format = REMOVE_WHITEOUT_FORMATE;
-    if (archive_unpack(content, layer_fs, &options, &err) != 0) {
+    if (archive_unpack(content, layer_fs, &options, root_dir, &err) != 0) {
         ERROR("devmapper: failed to unpack to %s: %s", layer_fs, err);
         ret = -1;
         goto umount_out;
@@ -385,6 +394,7 @@ out:
     free_driver_mount_opts(mount_opts);
     free(layer_fs);
     free(err);
+    free(root_dir);
     return ret;
 }
 
