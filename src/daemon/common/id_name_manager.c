@@ -383,3 +383,22 @@ bool id_name_manager_remove_entry(const char *id, const char *name)
 
     return ret;
 }
+
+bool id_name_manager_rename(const char *new_name, const char *old_name)
+{
+    if (old_name == NULL || new_name == NULL) {
+        ERROR("Failed to rename empty name");
+        return false;
+    }
+
+    if (!try_add_name(new_name)) {
+        ERROR("Failed to add %s to name map", new_name);
+        return false;
+    }
+
+    if (!try_remove_name(old_name)) {
+        WARN("Failed to remove %s from name map", old_name);
+    }
+
+    return true;
+}

@@ -210,11 +210,13 @@ bool SandboxManager::IDNameManagerRemoveEntry(const std::string &id, const std::
 // Save the id and name of the sandbox to the map of the id_name_manager module
 bool SandboxManager::IDNameManagerNewEntry(std::string &id, const std::string &name)
 {
-    __isula_auto_free char *tmpId = NULL;
     bool ret = false;
     if (id.empty()) {
+        __isula_auto_free char *tmpId = NULL;
         ret = id_name_manager_add_entry_with_new_id(name.c_str(), &tmpId);
-        id = tmpId;
+        if (tmpId != NULL) {
+            id = tmpId;
+        }
     } else {
         ret = id_name_manager_add_entry_with_existing_id(id.c_str(), name.c_str());
     }

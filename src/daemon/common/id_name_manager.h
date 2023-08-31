@@ -27,6 +27,7 @@ bool id_name_manager_add_entry_with_existing_id(const char *id, const char *name
 bool id_name_manager_add_entry_with_new_id(const char *name, char **id);
 bool id_name_manager_add_entry_with_new_id_and_name(char **id, char **name);
 bool id_name_manager_remove_entry(const char *id, const char *name);
+bool id_name_manager_rename(const char *new_name, const char *old_name);
 
 #ifdef __cplusplus
 }

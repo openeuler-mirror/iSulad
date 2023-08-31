@@ -60,6 +60,7 @@
 #include "utils_convert.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "id_name_manager.h"
 
 static int container_version_cb(const container_version_request *request, container_version_response **response)
 {
@@ -1075,11 +1076,22 @@ static int container_rename(container_t *cont, const char *new_name)
         goto out;
     }
 
+    if (!id_name_manager_rename(new_name, old_name)) {
+        ERROR("Failed to rename %s to %s in id-name manager", old_name, new_name);
+        isulad_set_error_message("Failed to rename %s to %s in id-name manager", old_name, new_name);
+        ret = -1;
+        goto out;
+    }
+
     if (!container_name_index_rename(new_name, old_name, id)) {
         ERROR("Name %s is in use", new_name);
         isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
                                  "You have to remove (or rename) that container to be able to reuse that name.",
                                  new_name, new_name);
+        // restore name in id-name manager
+        if (!id_name_manager_rename(old_name, new_name)) {
+            ERROR("Failed to restore name from \"%s\" to \"%s\" in id-name manager", new_name, old_name);
+        }
         ret = -1;
         goto out;
     }
