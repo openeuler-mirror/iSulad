@@ -1227,6 +1227,101 @@ out:
     return ret;
 }
 
+static int isulad_tmpdir_security_check(const char *tmp_dir)
+{
+    struct stat st = { 0 };
+
+    if (lstat(tmp_dir, &st) != 0) {
+        SYSERROR("Failed to lstat %s", tmp_dir);
+        return -1;
+    }
+
+    if (!S_ISDIR(st.st_mode)) {
+        return -1;
+    }
+
+    if ((st.st_mode & 0777) != ISULAD_TEMP_DIRECTORY_MODE) {
+        return -1;
+    }
+
+    if (st.st_uid != 0) {
+        return -1;
+    }
+
+    if (S_ISLNK(st.st_mode)) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int recreate_tmpdir(const char *tmp_dir)
+{
+    if (util_recursive_rmdir(tmp_dir, 0) != 0) {
+        ERROR("Failed to remove directory %s", tmp_dir);
+        return -1;
+    }
+
+    if (util_mkdir_p(tmp_dir, ISULAD_TEMP_DIRECTORY_MODE) != 0) {
+        ERROR("Failed to create directory %s", tmp_dir);
+        return -1;
+    }
+
+    return 0;
+}
+
+static int do_ensure_isulad_tmpdir_security(const char *isulad_tmp_dir)
+{
+    int nret;
+    char tmp_dir[PATH_MAX] = { 0 };
+    char cleanpath[PATH_MAX] = { 0 };
+
+    nret = snprintf(tmp_dir, PATH_MAX, "%s/isulad_tmpdir", isulad_tmp_dir);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Failed to snprintf");
+        return -1;
+    }
+
+    if (util_clean_path(tmp_dir, cleanpath, sizeof(cleanpath)) == NULL) {
+        ERROR("Failed to clean path for %s", tmp_dir);
+        return -1;
+    }
+
+    if (isulad_tmpdir_security_check(cleanpath) == 0) {
+        return 0;
+    }
+
+    INFO("iSulad tmpdir: %s does not meet security requirements, recreate it", isulad_tmp_dir);
+    return recreate_tmpdir(cleanpath);
+}
+
+static int ensure_isulad_tmpdir_security()
+{
+    char *isulad_tmp_dir = NULL;
+
+    isulad_tmp_dir = getenv("ISULAD_TMPDIR");
+    if (!util_valid_str(isulad_tmp_dir)) {
+        isulad_tmp_dir = "/tmp";
+    }
+
+    if (do_ensure_isulad_tmpdir_security(isulad_tmp_dir) != 0) {
+        ERROR("Failed to ensure the %s directory is a safe directory", isulad_tmp_dir);
+        return -1;
+    }
+
+    if (strcmp(isulad_tmp_dir, "/tmp") == 0) {
+        return 0;
+    }
+
+    // No matter whether ISULAD_TMPDIR is set or not,
+    // ensure the "/tmp" directory is a safe directory
+    if (do_ensure_isulad_tmpdir_security("/tmp") != 0) {
+        WARN("Failed to ensure the /tmp directory is a safe directory");
+    }
+    
+    return 0;
+}
+
 static int isulad_server_init_common()
 {
     int ret = -1;
@@ -1258,6 +1353,12 @@ static int isulad_server_init_common()
     // clean tmpdir before image module init
     // because tmpdir will remove failed if chroot mount point exist under tmpdir
     isulad_tmpdir_cleaner();
+
+    // preventing the use of insecure isulad tmpdir directory
+    if (ensure_isulad_tmpdir_security() != 0) {
+        ERROR("Failed to ensure isulad tmpdir security");
+        goto out;
+    }
 
     if (volume_init(args->json_confs->graph) != 0) {
         ERROR("Failed to init volume");

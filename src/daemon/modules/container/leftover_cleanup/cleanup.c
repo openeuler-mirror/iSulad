@@ -13,8 +13,6 @@
  * Description: provide cleanup functions
  *********************************************************************************/
 #include <sys/mount.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include "utils.h"
 #include "utils_fs.h"
@@ -171,67 +169,6 @@ static bool walk_isulad_tmpdir_cb(const char *path_name, const struct dirent *su
     return true;
 }
 
-static int isulad_tmpdir_security_check(const char *tmpdir)
-{
-    struct stat st = { 0 };
-
-    if (lstat(tmpdir, &st) != 0) {
-        SYSERROR("Failed to lstat %s", tmpdir);
-        return -1;
-    }
-
-    if (!S_ISDIR(st.st_mode)) {
-        return -1;
-    }
-
-    if ((st.st_mode & 0777) != ISULAD_TEMP_DIRECTORY_MODE) {
-        return -1;
-    }
-
-    if (st.st_uid != 0) {
-        return -1;
-    }
-
-    if (S_ISLNK(st.st_mode)) {
-        return -1;
-    }
-
-    return 0;
-}
-
-static int recreate_tmpdir(const char *tmpdir)
-{
-    int ret;
-    struct stat st = { 0 };
-
-    if (util_recursive_rmdir(tmpdir, 0)) {
-        ERROR("Failed to remove directory %s", tmpdir);
-        return -1;
-    }
-
-    if (util_mkdir_p(tmpdir, ISULAD_TEMP_DIRECTORY_MODE)) {
-        ERROR("Failed to create directory %s", tmpdir);
-        return -1;
-    }
-
-    if (lstat(tmpdir, &st) != 0) {
-        SYSERROR("Failed to lstat %s", tmpdir);
-        return -1;
-    }
-
-    return ret;
-}
-
-static int ensure_isulad_tmpdir_security(const char *tmpdir)
-{
-    if (isulad_tmpdir_security_check(tmpdir) == 0) {
-        return 0;
-    }
-
-    INFO("iSulad tmpdir does not meet security requirements, recreate it");
-    return recreate_tmpdir(tmpdir);
-}
-
 static void cleanup_path(char *dir)
 {
     int nret;
@@ -249,8 +186,7 @@ static void cleanup_path(char *dir)
         return;
     }
 
-    // preventing the use of insecure isulad tmpdir directory
-    if (ensure_isulad_tmpdir_security(cleanpath) != 0) {
+    if (!util_dir_exists(cleanpath)) {
         return;
     }
 
