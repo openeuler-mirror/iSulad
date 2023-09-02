@@ -630,6 +630,16 @@ int makesure_isulad_tmpdir_perm_right(const char *root_dir)
         goto out;
     }
 
+    if ((st.st_mode & 0777) != TEMP_DIRECTORY_MODE) {
+        ret = -1;
+        goto out;
+    }
+
+    if (S_ISLNK(st.st_mode)) {
+        ret = -1;
+        goto out;
+    }
+
     // chown to root
     ret = lchown(isulad_tmpdir, 0, 0);
     if (ret == 0 || (ret == EPERM && st.st_uid == 0 && st.st_gid == 0)) {
