@@ -984,12 +984,12 @@ static int do_close(int sock)
         if (close(sock) == 0) {
             return 0;
         }
-        WARN("close socket failed: %s, wait to retry: %zu\n", strerror(errno), i);
+        SYSWARN("close socket failed, wait to retry: %zu\n", i);
         // wait 100us to retry
         usleep(10000);
     }
 
-    ERROR("close socket failed: %s", strerror(errno));
+    SYSERROR("close socket failed");
     return -1;
 }
 
@@ -1006,12 +1006,12 @@ bool util_check_port_free(int port)
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
-        ERROR("get socket failed: %s", strerror(errno));
+        SYSERROR("get socket failed");
         return false;
     }
 
     if (bind(sock, (struct sockaddr *)&s_addr, sizeof(struct sockaddr_in)) < 0) {
-        ERROR("bind port failed: %s\n", strerror(errno));
+        SYSERROR("bind port failed");
         ret = false;
     }
 
@@ -1036,19 +1036,19 @@ int util_get_random_port()
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
-        ERROR("get socket failed: %s", strerror(errno));
+        SYSERROR("get socket failed");
         return -1;
     }
 
     if (bind(sock, (struct sockaddr *)&s_addr, sizeof(struct sockaddr_in)) < 0) {
-        ERROR("bind port failed: %s\n", strerror(errno));
+        SYSERROR("bind port failed");
         ret = -1;
         goto out;
     }
 
     s_len = sizeof(struct sockaddr_in);
     if (getsockname(sock, (struct sockaddr *)&s_addr, &s_len) == -1) {
-        ERROR("getsockname failed: %s\n", strerror(errno));
+        SYSERROR("getsockname failed");
         ret = -1;
         goto out;
     }

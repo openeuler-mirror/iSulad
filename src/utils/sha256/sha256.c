@@ -124,7 +124,7 @@ char *sha256_digest_file(const char *filename, bool isgzip)
         stream = (void *)fopen(filename, "r");
     }
     if (stream == NULL) {
-        ERROR("open file %s failed: %s", filename, strerror(errno));
+        SYSERROR("open file %s failed", filename);
         return NULL;
     }
 
@@ -259,13 +259,13 @@ static char *cal_file_digest(const char *filename)
 
     fp = util_fopen(filename, "r");
     if (fp == NULL) {
-        ERROR("failed to open file %s: %s", filename, strerror(errno));
+        SYSERROR("failed to open file %s.", filename);
         return NULL;
     }
 
     digest = sha256_digest_file(filename, false);
     if (digest == NULL) {
-        ERROR("calc digest for file %s failed: %s", filename, strerror(errno));
+        SYSERROR("calc digest for file %s failed", filename);
         goto err_out;
     }
 
@@ -299,7 +299,7 @@ static char *cal_gzip_digest(const char *filename)
 
     digest = sha256_digest_file(filename, true);
     if (digest == NULL) {
-        ERROR("calc digest for file %s failed: %s", filename, strerror(errno));
+        SYSERROR("calc digest for file %s failed", filename);
         goto err_out;
     }
 

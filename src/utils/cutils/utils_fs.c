@@ -449,7 +449,7 @@ static int do_real_mount(const char *src, const char *dst, const char *mtype, un
     if (!is_remount(src, mntflags) || (mntdata != NULL && strcmp(mntdata, "") != 0)) {
         ret = mount(src, dst, mtype, oflags, mntdata);
         if (ret < 0) {
-            ERROR("Failed to mount from %s to %s:%s", src, dst, strerror(errno));
+            SYSERROR("Failed to mount from %s to %s", src, dst);
             goto out;
         }
     }
@@ -458,7 +458,7 @@ static int do_real_mount(const char *src, const char *dst, const char *mtype, un
         // Change the propagation type.
         ret = mount("", dst, "", mntflags & PROPAGATION_FLAGS, "");
         if (ret < 0) {
-            ERROR("Failed to change the propagation type of dst %s:%s", dst, strerror(errno));
+            SYSERROR("Failed to change the propagation type of dst %s.", dst);
             goto out;
         }
     }
@@ -467,7 +467,7 @@ static int do_real_mount(const char *src, const char *dst, const char *mtype, un
         // Remount the bind to apply read only.
         ret = mount("", dst, "", oflags | MS_REMOUNT, "");
         if (ret < 0) {
-            ERROR("Failed to remount the bind to apply read only of dst %s:%s", dst, strerror(errno));
+            SYSERROR("Failed to remount the bind to apply read only of dst %s.", dst);
             goto out;
         }
     }
@@ -576,7 +576,7 @@ static int util_mount_from_handler(const char *src, const char *dst, const char 
 
     ret = mount(src, dst, mtype, mntflags, mntdata);
     if (ret < 0) {
-        ERROR("Failed to mount from %s to %s:%s", src, dst, strerror(errno));
+        SYSERROR("Failed to mount from %s to %s.", src, dst);
         goto out;
     }
 out:
@@ -596,7 +596,7 @@ int util_mount_from(const char *base, const char *src, const char *dst, const ch
 
     pid = fork();
     if (pid == (pid_t) -1) {
-        ERROR("Failed to fork: %s", strerror(errno));
+        SYSERROR("Failed to fork");
         goto cleanup;
     }
 
@@ -652,7 +652,7 @@ bool util_check_readonly_fs(const char *path)
             continue;
         }
 
-        ERROR("Stat fs failed: %s", strerror(errno));
+        SYSERROR("Stat fs failed");
         return false;
     }
 

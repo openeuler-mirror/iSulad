@@ -560,7 +560,7 @@ static int makesure_path_is_dir(char *path)
         if (errno == ENOENT) {
             return util_mkdir_p(path, TEMP_DIRECTORY_MODE);
         }
-        ERROR("lstat %s failed: %s", path, strerror(errno));
+        SYSERROR("lstat %s failed.", path);
         return -1;
     }
 
@@ -620,7 +620,7 @@ int makesure_isulad_tmpdir_perm_right(const char *root_dir)
     }
 
     if (lstat(isulad_tmpdir, &st) != 0) {
-        ERROR("lstat %s failed: %s", isulad_tmpdir, strerror(errno));
+        SYSERROR("lstat %s failed.", isulad_tmpdir);
         ret = -1;
         goto out;
     }
@@ -631,7 +631,7 @@ int makesure_isulad_tmpdir_perm_right(const char *root_dir)
         ret = 0;
         goto out;
     } else {
-        ERROR("lchown %s failed: %s", isulad_tmpdir, strerror(errno));
+        SYSERROR("lchown %s failed", isulad_tmpdir);
     }
 
 out:

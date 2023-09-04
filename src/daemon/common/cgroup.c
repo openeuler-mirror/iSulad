@@ -596,7 +596,7 @@ int common_get_cgroup_version(void)
     struct statfs fs = { 0 };
 
     if (statfs(CGROUP_MOUNTPOINT, &fs) != 0) {
-        ERROR("failed to statfs %s: %s", CGROUP_MOUNTPOINT, strerror(errno));
+        SYSERROR("failed to statfs %s", CGROUP_MOUNTPOINT);
         return -1;
     }
 
@@ -649,7 +649,7 @@ static int cgroup2_enable_all()
     ret = util_write_file(CGROUP2_SUBTREE_CONTROLLER_PATH, enable_controllers, strlen(enable_controllers),
                           DEFAULT_CGROUP_FILE_MODE);
     if (ret != 0) {
-        ERROR("write %s to %s failed: %s", enable_controllers, CGROUP2_SUBTREE_CONTROLLER_PATH, strerror(errno));
+        SYSERROR("write %s to %s failed", enable_controllers, CGROUP2_SUBTREE_CONTROLLER_PATH);
         goto out;
     }
 

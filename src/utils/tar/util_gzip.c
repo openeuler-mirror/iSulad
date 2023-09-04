@@ -42,13 +42,13 @@ int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode)
 
     srcfd = util_open(srcfile, O_RDONLY, SECURE_CONFIG_FILE_MODE);
     if (srcfd < 0) {
-        ERROR("Open src file: %s, failed: %s", srcfile, strerror(errno));
+        SYSERROR("Open src file: %s, failed", srcfile);
         return -1;
     }
 
     stream = gzopen(dstfile, "w");
     if (stream == NULL) {
-        ERROR("gzopen %s error: %s", dstfile, strerror(errno));
+        SYSERROR("gzopen %s failed", dstfile);
         close(srcfd);
         return -1;
     }
@@ -64,7 +64,7 @@ int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode)
         int n;
         size = util_read_nointr(srcfd, buffer, BLKSIZE);
         if (size < 0) {
-            ERROR("read file %s failed: %s", srcfile, strerror(errno));
+            SYSERROR("read file %s failed", srcfile);
             ret = -1;
             break;
         } else if (size == 0) {
@@ -92,7 +92,7 @@ out:
     free(buffer);
     if (ret != 0) {
         if (util_path_remove(dstfile) != 0) {
-            ERROR("Remove file %s failed: %s", dstfile, strerror(errno));
+            SYSERROR("Remove file %s failed", dstfile);
         }
     }
 
@@ -115,7 +115,7 @@ int util_gzip_d(const char *srcfile, const FILE *dstfp)
 
     stream = gzopen(srcfile, "r");
     if (stream == NULL) {
-        ERROR("gzopen %s failed: %s", srcfile, strerror(errno));
+        SYSERROR("gzopen %s failed", srcfile);
         return -1;
     }
 
@@ -142,7 +142,7 @@ int util_gzip_d(const char *srcfile, const FILE *dstfp)
             size = fwrite(buffer, 1, n, (FILE *)dstfp);
             if (size != n) {
                 ret = -1;
-                ERROR("Write file failed: %s", strerror(errno));
+                SYSERROR("Write file failed");
                 break;
             }
         }

@@ -104,7 +104,7 @@ char *container_exit_fifo_create(const char *cont_state_path)
 
     ret = mknod(fifo_path, S_IFIFO | S_IRUSR | S_IWUSR, (dev_t)0);
     if (ret < 0 && errno != EEXIST) {
-        ERROR("Failed to mknod exit monitor fifo %s: %s.", fifo_path, strerror(errno));
+        SYSERROR("Failed to mknod exit monitor fifo %s.", fifo_path);
         return NULL;
     }
 
@@ -128,7 +128,7 @@ int container_exit_fifo_open(const char *cont_exit_fifo)
 
     ret = util_open(cont_exit_fifo, O_RDONLY | O_NONBLOCK, 0);
     if (ret < 0) {
-        ERROR("Failed to open exit monitor FIFO %s: %s.", cont_exit_fifo, strerror(errno));
+        SYSERROR("Failed to open exit monitor FIFO %s.", cont_exit_fifo);
         ret = -1;
         goto out;
     }
@@ -324,7 +324,7 @@ restart:
     if (ret == 0) {
         goto restart;
     }
-    ERROR("Mainloop returned an error: %s", strerror(errno));
+    SYSERROR("Mainloop returned an error");
 
     epoll_loop_close(&g_supervisor_descr);
 

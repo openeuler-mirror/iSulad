@@ -52,7 +52,7 @@ static void isulad_monitor_fifo_send(const struct monitord_msg *msg)
             goto out;
         }
 
-        ERROR("Failed to open fifo to send message: %s.", strerror(errno));
+        SYSERROR("Failed to open fifo to send message.");
         goto out;
     }
 

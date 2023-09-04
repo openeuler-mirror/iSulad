@@ -833,7 +833,7 @@ auto Sandbox::SaveNetworkSetting(Errors &error) -> bool
     nret = util_atomic_write_file(path.c_str(), m_networkSettings.c_str(), m_networkSettings.length(), CONFIG_FILE_MODE,
                                   false);
     if (nret != 0) {
-        ERROR("Failed to write file %s: %s", path.c_str(), strerror(errno));
+        SYSERROR("Failed to write file %s", path.c_str());
         error.Errorf("Failed to write file %s: %s", path.c_str(), strerror(errno));
         return false;
     }

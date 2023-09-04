@@ -114,7 +114,7 @@ private:
 
         exit_fifo_fd = util_open(exit_fifo.c_str(), O_WRONLY | O_NONBLOCK, 0);
         if (exit_fifo_fd < 0) {
-            ERROR("Failed to open exit FIFO %s: %s.", exit_fifo.c_str(), strerror(errno));
+            SYSERROR("Failed to open exit FIFO %s.", exit_fifo.c_str());
             return -1;
         }
 

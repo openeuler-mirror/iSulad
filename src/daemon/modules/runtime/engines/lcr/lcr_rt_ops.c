@@ -88,7 +88,7 @@ static int parse_container_pid(const char *S, pid_ppid_info_t *pid_info)
 
     num = sscanf(S, "%d %Lu %d %Lu", &pid_info->pid, &pid_info->start_time, &pid_info->ppid, &pid_info->pstart_time);
     if (num != 4) { // args num to read is 4
-        ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
+        SYSERROR("Call sscanf failed.");
         return -1;
     }
 
@@ -210,7 +210,7 @@ static int remove_container_rootpath(const char *id, const char *root_path)
     ret = util_recursive_rmdir(cont_root_path, 0);
     if (ret != 0) {
         const char *tmp_err = (errno != 0) ? strerror(errno) : "error";
-        ERROR("Failed to delete container's root directory %s: %s", cont_root_path, tmp_err);
+        SYSERROR("Failed to delete container's root directory %s.", cont_root_path);
         isulad_set_error_message("Failed to delete container's root directory %s: %s", cont_root_path, tmp_err);
         ret = -1;
         goto out;
@@ -750,7 +750,7 @@ int rt_lcr_kill(const char *id, const char *runtime, const rt_kill_params_t *par
     } else {
         int ret = kill(params->pid, (int)params->signal);
         if (ret < 0) {
-            ERROR("Can not kill process (pid=%d) with signal %u: %s", params->pid, params->signal, strerror(errno));
+            SYSERROR("Can not kill process (pid=%d) with signal %u.", params->pid, params->signal);
             return -1;
         }
     }

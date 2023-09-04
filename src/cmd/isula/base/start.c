@@ -200,7 +200,7 @@ void client_wait_fifo_exit(const struct client_arguments *args)
 void client_restore_console(bool reset_tty, const struct termios *oldtios, struct command_fifo_config *console_fifos)
 {
     if (reset_tty && tcsetattr(0, TCSAFLUSH, oldtios) < 0) {
-        WARN("Failed to reset terminal properties: %s.", strerror(errno));
+        SYSWARN("Failed to reset terminal properties.");
     }
     free_command_fifo_config(console_fifos);
     sem_destroy(&g_console_waitopen_sem);

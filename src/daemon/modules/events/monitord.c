@@ -113,18 +113,18 @@ static void *monitored(void *arg)
     mhandler.fifo_path = fifo_file_path;
 
     if (mknod(fifo_file_path, S_IFIFO | S_IRUSR | S_IWUSR, (dev_t)0) && errno != EEXIST) {
-        ERROR("Create monitored fifo file failed: %s", strerror(errno));
+        SYSERROR("Create monitored fifo file failed");
         goto err;
     }
 
     mhandler.fifo_fd = util_open(fifo_file_path, O_RDWR | O_NONBLOCK | O_CLOEXEC, 0);
     if (mhandler.fifo_fd == -1) {
-        ERROR("Open monitored fifo file failed: %s", strerror(errno));
+        SYSERROR("Open monitored fifo file failed");
         goto err;
     }
 
     if (fcntl(mhandler.fifo_fd, F_SETPIPE_SZ, EVENTS_FIFO_SIZE) == -1) {
-        ERROR("Set events fifo buffer size failed: %s\n", strerror(errno));
+        SYSERROR("Set events fifo buffer size failed");
         goto err;
     }
 
@@ -150,7 +150,7 @@ static void *monitored(void *arg)
         ret = epoll_loop(&descr, -1);
     } while (ret == 0);
 
-    ERROR("Mainloop returned an error: %s", strerror(errno));
+    SYSERROR("Mainloop returned an error");
     goto err2;
 
 err:

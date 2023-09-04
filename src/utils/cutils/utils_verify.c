@@ -474,7 +474,7 @@ bool util_valid_file(const char *path, uint32_t fmod)
 
     nret = stat(path, &s);
     if (nret < 0) {
-        ERROR("stat failed, error: %s", strerror(errno));
+        SYSERROR("stat failed");
         return false;
     }
 

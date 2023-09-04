@@ -698,7 +698,7 @@ static char *find_realpath(const char *path)
 
         ret = (int)readlink(iter_path, target, PATH_MAX - 1);
         if (ret < 0) {
-            ERROR("Failed to read link of %s: %s", iter_path, strerror(errno));
+            SYSERROR("Failed to read link of %s.", iter_path);
             goto out;
         }
         // is not absolutely path
@@ -745,7 +745,7 @@ int util_realpath_in_scope(const char *rootfs, const char *path, char **real_pat
 
     int nret = snprintf(full_path, sizeof(full_path), "%s%s", rootfs, path);
     if (nret < 0 || (size_t)nret >= sizeof(full_path)) {
-        ERROR("sprintf error: %s", strerror(errno));
+        SYSERROR("sprintf failed");
         ret = -1;
         goto out;
     }

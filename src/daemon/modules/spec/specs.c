@@ -2405,7 +2405,7 @@ int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec
 
     if (util_atomic_write_file(file_path, json_container, strlen(json_container), DEFAULT_SECURE_FILE_MODE, false) !=
         0) {
-        ERROR("write json container failed: %s", strerror(errno));
+        SYSERROR("write json container failed");
         ret = -1;
         goto out_free;
     }

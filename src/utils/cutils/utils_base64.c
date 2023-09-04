@@ -47,7 +47,7 @@ int util_base64_encode(unsigned char *bytes, size_t len, char **out)
     }
 
     if (EVP_EncodeBlock((uint8_t *)(*out), (const uint8_t *)bytes, len) == 0) {
-        ERROR("Encode base64 failed: %s", strerror(errno));
+        SYSERROR("Encode base64 failed");
         free(encoded);
         return -1;
     }
@@ -78,7 +78,7 @@ int util_base64_decode(const char *input, size_t len, unsigned char **out, size_
     }
 
     if (EVP_DecodeBase64((uint8_t *)decoded, &decoded_size, decoded_size, (const uint8_t *)input, len) == 0) {
-        ERROR("Decode base64 failed: %s", strerror(errno));
+        SYSERROR("Decode base64 failed");
         free(decoded);
         return -1;
     }

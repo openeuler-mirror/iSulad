@@ -1430,7 +1430,7 @@ static int copy_data_to_volume(char *base_fs, defs_mount *mnt)
         if (errno == ENOENT) {
             goto out;
         }
-        ERROR("stat for copy data to volume failed: %s", strerror(errno));
+        SYSERROR("stat for copy data to volume failed");
         ret = -1;
         goto out;
     }

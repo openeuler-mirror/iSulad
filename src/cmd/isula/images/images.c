@@ -65,7 +65,7 @@ static char *trans_time(int64_t created)
     time_t created_time = (time_t)created;
 
     if (!localtime_r(&created_time, &t)) {
-        ERROR("translate time for created failed: %s", strerror(errno));
+        SYSERROR("translate time for created failed.");
         return NULL;
     }
 
