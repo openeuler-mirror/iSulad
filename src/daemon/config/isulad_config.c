@@ -1253,6 +1253,7 @@ out:
     return result;
 }
 
+#ifdef ENABLE_PLUGIN
 char *conf_get_enable_plugins(void)
 {
     struct service_arguments *conf = NULL;
@@ -1274,6 +1275,7 @@ out:
     (void)isulad_server_conf_unlock();
     return plugins;
 }
+#endif
 
 #ifdef ENABLE_USERNS_REMAP
 char *conf_get_isulad_userns_remap(void)
@@ -1739,7 +1741,9 @@ int merge_json_confs_into_global(struct service_arguments *args)
     override_string_value(&args->json_confs->pidfile, &tmp_json_confs->pidfile);
     // iSulad runtime execution options
     override_string_value(&args->json_confs->hook_spec, &tmp_json_confs->hook_spec);
+#ifdef ENABLE_PLUGIN
     override_string_value(&args->json_confs->enable_plugins, &tmp_json_confs->enable_plugins);
+#endif
 #ifdef ENABLE_USERNS_REMAP
     override_string_value(&args->json_confs->userns_remap, &tmp_json_confs->userns_remap);
 #endif
