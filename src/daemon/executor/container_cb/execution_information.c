@@ -181,24 +181,83 @@ out:
 static int get_proxy_env(char **proxy, const char *type)
 {
     int ret = 0;
-    char *tmp = NULL;
+    int nret;
+    char *tmp_proxy = NULL;
+    char *col_pos = NULL;
+    char *at_pos = NULL;
+    size_t proxy_len;
+    const char *mask_str = "//xxxx:xxxx";
 
-    *proxy = getenv(type);
-    if (*proxy == NULL) {
-        tmp = util_strings_to_upper(type);
+    tmp_proxy = getenv(type);
+    if (tmp_proxy == NULL) {
+        char *tmp = util_strings_to_upper(type);
         if (tmp == NULL) {
             ERROR("Failed to upper string!");
-            ret = -1;
-            goto out;
+            return -1;
         }
-        *proxy = getenv(tmp);
-        if (*proxy == NULL) {
-            *proxy = "";
-        }
+        tmp_proxy = getenv(tmp);
+        free(tmp);
     }
 
+    if (tmp_proxy == NULL) {
+        return 0;
+    }
+
+    if (strlen(tmp_proxy) >= PATH_MAX) {
+        ERROR("Too long proxy string.");
+        return -1;
+    }
+    tmp_proxy = util_strdup_s(tmp_proxy);
+
+    if (strcmp(NO_PROXY, type) == 0) {
+        *proxy = tmp_proxy;
+        return 0;
+    }
+
+    // mask username and password of proxy
+    col_pos = strchr(tmp_proxy, ':');
+    if (col_pos == NULL) {
+        ERROR("Invalid proxy.");
+        ret = -1;
+        goto out;
+    }
+    at_pos = strrchr(tmp_proxy, '@');
+    if (at_pos == NULL) {
+        // no '@', represent no user information in proxy,
+        // just return original proxy
+        *proxy = tmp_proxy;
+        return 0;
+    }
+
+    // first colon position must before than at position
+    if ((at_pos - col_pos) < 0) {
+        ret = -1;
+        goto out;
+    }
+
+    // proxy with userinfo format like: 'http://xxx:xxx@xxxx.com'
+    // so masked proxy length = len(proxy) - (pos(@) - pos(:) + 1) + len(mask-str) + '\0'
+    proxy_len = strlen(tmp_proxy);
+    proxy_len -= (at_pos - tmp_proxy);
+    proxy_len += (col_pos - tmp_proxy) + 1;
+    proxy_len += strlen(mask_str) + 1;
+    *proxy = util_common_calloc_s(proxy_len);
+    if (*proxy == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    *col_pos = '\0';
+    nret = snprintf(*proxy, proxy_len, "%s:%s%s", tmp_proxy, mask_str, at_pos);
+    if (nret < 0 || nret >= proxy_len) {
+        ret = -1;
+        free(*proxy);
+        *proxy = NULL;
+        goto out;
+    }
+    
 out:
-    free(tmp);
+    util_free_sensitive_string(tmp_proxy);
     return ret;
 }
 
@@ -345,6 +404,9 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
 #endif
 
 pack_response:
+    free(http_proxy);
+    free(https_proxy);
+    free(no_proxy);
     if (*response != NULL) {
         (*response)->cc = cc;
     }
