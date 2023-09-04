@@ -134,9 +134,11 @@ extern "C" {
 
 #define AUTH_PLUGIN "authz-broker"
 
+#ifdef ENABLE_PLUGIN
 #define ISULAD_ENABLE_PLUGINS "ISULAD_ENABLE_PLUGINS"
 #define ISULAD_ENABLE_PLUGINS_SEPERATOR ","
 #define ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR ','
+#endif
 
 #ifdef ENABLE_SHIM_V2
 #define SHIM_V2_LOG "/log"

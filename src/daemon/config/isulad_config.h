@@ -55,7 +55,9 @@ int conf_get_container_log_opts(isulad_daemon_configs_container_log **opts);
 
 char *conf_get_isulad_log_file(void);
 char *conf_get_engine_log_file(void);
+#ifdef ENABLE_PLUGIN
 char *conf_get_enable_plugins(void);
+#endif
 #ifdef ENABLE_USERNS_REMAP
 char *conf_get_isulad_userns_remap(void);
 #endif

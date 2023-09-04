@@ -65,6 +65,16 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
 #define USERNS_REMAP_OPT(cmdargs)
 #endif
 
+#ifdef ENABLE_PLUGIN
+#define PLUGINS_OPT(cmdargs)                                                                                \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                              \
+      false, "enable-plugins", 0, &(cmdargs)->json_confs->enable_plugins,                                   \
+      "Enable plugins for all containers", NULL                                                             \
+    }, 
+#else
+#define PLUGINS_OPT(cmdargs)
+#endif
+
 #ifdef ENABLE_GRPC_REMOTE_CONNECT
 #define ISULAD_TLS_OPTIONS(cmdargs)                                                                               \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
@@ -314,10 +324,7 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       false, "cpu-rt-runtime", 0, &(cmdargs)->json_confs->cpu_rt_runtime,                                         \
       "Limit CPU real-time runtime in microseconds for all containers", command_convert_llong                     \
     },                                                                                                            \
-    { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
-      false, "enable-plugins", 0, &(cmdargs)->json_confs->enable_plugins,                                         \
-      "Enable plugins for all containers", NULL                                                                   \
-    },                                                                                                            \
+    PLUGINS_OPT(cmdargs)                                                                                          \
     { CMD_OPT_TYPE_CALLBACK,                                                                                      \
       false, "cri-runtime", 0, (cmdargs),                                                                         \
       "CRI runtime class transform", server_callback_cri_runtime                                                  \
