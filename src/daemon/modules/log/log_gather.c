@@ -66,7 +66,7 @@ static int file_rotate_gz(const char *file_name, int i)
     }
 
     if (rename(from_path, to_path) < 0 && errno != ENOENT) {
-        WARN("Rename file: %s error: %s", from_path, strerror(errno));
+        SYSWARN("Rename file: %s failed", from_path);
         return -1;
     }
 
@@ -85,7 +85,7 @@ static int file_rotate_me(const char *file_name)
     }
 
     if (rename(file_name, tmp_path) < 0 && errno != ENOENT) {
-        WARN("Rename file: %s error: %s", file_name, strerror(errno));
+        SYSWARN("Rename file: %s failed", file_name);
         return -1;
     }
 

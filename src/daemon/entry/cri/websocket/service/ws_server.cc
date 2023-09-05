@@ -255,7 +255,7 @@ int WebsocketServer::CreateContext()
     newLimit.rlim_max = WS_ULIMIT_FDS;
     int limited = prlimit(0, RLIMIT_NOFILE, &newLimit, &oldLimit);
     if (limited != 0) {
-        WARN("Can not set ulimit of RLIMIT_NOFILE: %s", strerror(errno));
+        SYSWARN("Can not set ulimit of RLIMIT_NOFILE");
     }
     m_context = lws_create_context(&info);
     if (m_context == nullptr) {
@@ -264,7 +264,7 @@ int WebsocketServer::CreateContext()
     }
     if (limited == 0) {
         if (setrlimit(static_cast<int>(RLIMIT_NOFILE), &oldLimit) != 0) {
-            WARN("Can not set ulimit of RLIMIT_NOFILE: %s", strerror(errno));
+            SYSWARN("Can not set ulimit of RLIMIT_NOFILE");
         }
     }
 
@@ -563,7 +563,7 @@ void WebsocketServer::Receive(int socketID, void *in, size_t len, bool complete)
         DEBUG("Receive remaning stdin data with length %zu", len);
         // Too much data may cause error 'resource temporarily unavaliable' by using 'write'
         if (util_write_nointr_in_total(m_wsis[socketID]->pipes.at(1), static_cast<char *>(in), len) < 0) {
-            ERROR("Sub write over! err msg: %s", strerror(errno));
+            SYSERROR("Sub write over!");
         }
         goto out;
     }
@@ -580,7 +580,7 @@ void WebsocketServer::Receive(int socketID, void *in, size_t len, bool complete)
 
     if (*static_cast<char *>(in) == WebsocketChannel::STDINCHANNEL) {
         if (util_write_nointr_in_total(m_wsis[socketID]->pipes.at(1), static_cast<char *>(in) + 1, len - 1) < 0) {
-            ERROR("Sub write over! err msg: %s", strerror(errno));
+            SYSERROR("Sub write over!");
         }
         goto out;
     }

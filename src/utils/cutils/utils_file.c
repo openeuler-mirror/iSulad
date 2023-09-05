@@ -227,7 +227,7 @@ int util_mkdir_p_userns_remap(const char *dir, mode_t mode, const char *userns_r
         if (*cur_dir) {
             ret = mkdir(cur_dir, mode);
             if (ret != 0 && (errno != EEXIST || !util_dir_exists(cur_dir))) {
-                ERROR("failed to create directory '%s': %s", cur_dir, strerror(errno));
+                SYSERROR("failed to create directory '%s'", cur_dir);
                 goto err_out;
             }
             if (ret == 0 && userns_remap != NULL && chown(cur_dir, host_uid, host_gid) != 0) {
@@ -314,14 +314,14 @@ bool util_force_remove_file(const char *fname, int *saved_errno)
     if (saved_errno != NULL && *saved_errno == 0) {
         *saved_errno = errno;
     }
-    WARN("Failed to delete %s: %s", fname, strerror(errno));
+    SYSWARN("Failed to delete %s", fname);
 
     if (mark_file_mutable(fname) != 0) {
         WARN("Failed to mark file mutable");
     }
 
     if (unlink(fname) != 0) {
-        ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
+        SYSERROR("Failed to delete \"%s\"", fname);
         return false;
     }
 
@@ -337,7 +337,7 @@ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int 
         }
     } else {
         if (unlink(fname) < 0) {
-            ERROR("Failed to delete %s: %s", fname, strerror(errno));
+            SYSERROR("Failed to delete %s", fname);
             if (*saved_errno == 0) {
                 *saved_errno = errno;
             }
@@ -347,7 +347,7 @@ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int 
             }
 
             if (unlink(fname) < 0) {
-                ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
+                SYSERROR("Failed to delete \"%s\"", fname);
                 failure = 1;
             }
         }
@@ -721,7 +721,7 @@ int util_gzip_compressed(const char *filename, bool *gzip)
 
     f = fopen(filename, "rb");
     if (f == NULL) {
-        ERROR("Failed to open file %s: %s", filename, strerror(errno));
+        SYSERROR("Failed to open file %s", filename);
         return -1;
     }
 
@@ -897,7 +897,7 @@ char *util_read_text_file(const char *path)
 
     readlen = fread(buf, 1, (size_t)len, filp);
     if (((readlen < (size_t)len) && (!feof(filp))) || (readlen > (size_t)len)) {
-        ERROR("Failed to read file %s, error: %s\n", path, strerror(errno));
+        SYSERROR("Failed to read file %s.", path);
         UTIL_FREE_AND_SET_NULL(buf);
         goto err_out;
     }
@@ -923,7 +923,7 @@ int64_t util_file_size(const char *filename)
     }
 
     if (stat(filename, &st)) {
-        WARN("stat file %s failed: %s", filename, strerror(errno));
+        SYSWARN("stat file %s failed", filename);
         return -1;
     }
 
@@ -942,7 +942,7 @@ int util_scan_subdirs(const char *directory, subdir_callback_t cb, void *context
 
     dir = opendir(directory);
     if (dir == NULL) {
-        ERROR("Failed to open directory: %s error:%s", directory, strerror(errno));
+        SYSERROR("Failed to open directory: %s", directory);
         return -1;
     }
 
@@ -977,7 +977,7 @@ int util_list_all_subdir(const char *directory, char ***out)
 
     dir = opendir(directory);
     if (dir == NULL) {
-        ERROR("Failed to open directory: %s error:%s", directory, strerror(errno));
+        SYSERROR("Failed to open directory: %s", directory);
         return -1;
     }
     direntp = readdir(dir);
@@ -1125,14 +1125,14 @@ int util_write_file(const char *fname, const char *content, size_t content_len, 
     }
     dst_fd = util_open(fname, O_WRONLY | O_CREAT | O_TRUNC, mode);
     if (dst_fd < 0) {
-        ERROR("Creat file: %s, failed: %s", fname, strerror(errno));
+        SYSERROR("Creat file: %s, failed", fname);
         ret = -1;
         goto free_out;
     }
     len = util_write_nointr(dst_fd, content, content_len);
     if (len < 0 || ((size_t)len) != content_len) {
         ret = -1;
-        ERROR("Write file failed: %s", strerror(errno));
+        SYSERROR("Write file failed");
         goto free_out;
     }
 free_out:
@@ -1151,7 +1151,7 @@ char *verify_file_and_get_real_path(const char *file)
         return NULL;
     }
     if (realpath(file, resolved_path) == NULL) {
-        ERROR("Failed to get realpath: %s , %s", resolved_path, strerror(errno));
+        SYSERROR("Failed to get realpath: %s.", resolved_path);
         return NULL;
     }
 
@@ -1181,33 +1181,33 @@ int util_copy_file(const char *src_file, const char *dst_file, mode_t mode)
     }
     nret = realpath(src_file, real_src_file);
     if (nret == NULL) {
-        ERROR("real path: %s, return: %s", src_file, strerror(errno));
+        SYSERROR("real path: %s failed.", src_file);
         ret = -1;
         return ret;
     }
     src_fd = util_open(real_src_file, O_RDONLY, CONFIG_FILE_MODE);
     if (src_fd < 0) {
-        ERROR("Open src file: %s, failed: %s", real_src_file, strerror(errno));
+        SYSERROR("Open src file: %s, failed", real_src_file);
         ret = -1;
         goto free_out;
     }
     dst_fd = util_open(dst_file, O_WRONLY | O_CREAT | O_TRUNC, mode);
     if (dst_fd < 0) {
-        ERROR("Creat file: %s, failed: %s", dst_file, strerror(errno));
+        SYSERROR("Creat file: %s, failed", dst_file);
         ret = -1;
         goto free_out;
     }
     while (true) {
         ssize_t len = util_read_nointr(src_fd, buf, BUFSIZE);
         if (len < 0) {
-            ERROR("Read src file failed: %s", strerror(errno));
+            SYSERROR("Read src file failed");
             ret = -1;
             goto free_out;
         } else if (len == 0) {
             break;
         }
         if (util_write_nointr(dst_fd, buf, (size_t)len) != len) {
-            ERROR("Write file failed: %s", strerror(errno));
+            SYSERROR("Write file failed");
             ret = -1;
             goto free_out;
         }
@@ -1499,7 +1499,7 @@ static int do_atomic_write_file(const char *fname, const char *content, size_t c
 
     dst_fd = util_open(fname, O_WRONLY | O_CREAT | O_TRUNC, mode);
     if (dst_fd < 0) {
-        ERROR("Creat file: %s, failed: %s", fname, strerror(errno));
+        SYSERROR("Creat file: %s, failed", fname);
         ret = -1;
         goto free_out;
     }
@@ -1507,7 +1507,7 @@ static int do_atomic_write_file(const char *fname, const char *content, size_t c
     len = util_write_nointr(dst_fd, content, content_len);
     if (len < 0 || ((size_t)len) != content_len) {
         ret = -1;
-        ERROR("Write file failed: %s", strerror(errno));
+        SYSERROR("Write file failed");
         goto free_out;
     }
 
@@ -1683,7 +1683,7 @@ int util_proc_file_line_by_line(FILE *fp, read_line_callback_t cb, void *context
             // end of file
             if (errno != 0) {
                 ret = -1;
-                ERROR("read line failed: %s", strerror(errno));
+                SYSERROR("read line failed");
             }
             goto out;
         }
@@ -1771,7 +1771,7 @@ static int copy_own(char *copy_dst, struct stat *src_stat)
     struct stat dst_stat = { 0 };
 
     if (lstat(copy_dst, &dst_stat) != 0) {
-        ERROR("lstat %s failed: %s", copy_dst, strerror(errno));
+        SYSERROR("lstat %s failed", copy_dst);
         return -1;
     }
 
@@ -1780,7 +1780,7 @@ static int copy_own(char *copy_dst, struct stat *src_stat)
         return 0;
     }
 
-    ERROR("lchown %s failed: %s", copy_dst, strerror(errno));
+    SYSERROR("lchown %s failed", copy_dst);
 
     return ret;
 }
@@ -1792,7 +1792,7 @@ static int copy_mode(char *copy_dst, struct stat *src_stat)
     }
 
     if (chmod(copy_dst, src_stat->st_mode) != 0) {
-        ERROR("chmod %s failed: %s", copy_dst, strerror(errno));
+        SYSERROR("chmod %s failed", copy_dst);
         return -1;
     }
 
@@ -1805,7 +1805,7 @@ static int copy_time(char *copy_dst, struct stat *src_stat)
 
     // copy_dst is absolute path, so first argment is ignored.
     if (utimensat(0, copy_dst, tm, AT_SYMLINK_NOFOLLOW) != 0) {
-        ERROR("failed to set time of %s: %s", copy_dst, strerror(errno));
+        SYSERROR("failed to set time of %s", copy_dst);
         return -1;
     }
 
@@ -1816,10 +1816,10 @@ static int set_one_xattr(char *copy_dst, char *key, char *value, ssize_t size)
 {
     if (lsetxattr(copy_dst, key, value, size, 0) != 0) {
         if (errno == ENOTSUP) {
-            DEBUG("ignore copy xattr %s of %s: %s", key, copy_dst, strerror(errno));
+            SYSDEBUG("ignore copy xattr %s of %s", key, copy_dst);
             return 0;
         }
-        ERROR("failed to set xattr %s of %s: %s", key, copy_dst, strerror(errno));
+        SYSERROR("failed to set xattr %s of %s", key, copy_dst);
         return -1;
     }
 
@@ -1841,10 +1841,10 @@ static int do_copy_xattrs(char *copy_dst, char *copy_src, char *xattrs, ssize_t 
         size = lgetxattr(copy_src, key, NULL, 0);
         if (size < 0) {
             if (errno == ENOTSUP) {
-                DEBUG("ignore copy xattr %s of %s: %s", key, copy_src, strerror(errno));
+                SYSDEBUG("ignore copy xattr %s of %s", key, copy_src);
                 continue;
             }
-            ERROR("failed to get xattr %s of %s: %s", key, copy_src, strerror(errno));
+            SYSERROR("failed to get xattr %s of %s", key, copy_src);
             ret = -1;
             goto out;
         }
@@ -1865,10 +1865,10 @@ static int do_copy_xattrs(char *copy_dst, char *copy_src, char *xattrs, ssize_t 
 
         if (lgetxattr(copy_src, key, value, size) < 0) {
             if (errno == ENOTSUP) {
-                DEBUG("ignore copy xattr %s of %s: %s", key, copy_src, strerror(errno));
+                SYSDEBUG("ignore copy xattr %s of %s", key, copy_src);
                 continue;
             }
-            ERROR("failed to get xattr %s of %s: %s", key, copy_src, strerror(errno));
+            SYSERROR("failed to get xattr %s of %s", key, copy_src);
             ret = -1;
             goto out;
         }
@@ -1894,10 +1894,10 @@ static int copy_xattrs(char *copy_dst, char *copy_src)
     xattrs_len = llistxattr(copy_src, NULL, 0);
     if (xattrs_len < 0) {
         if (errno == ENOTSUP) {
-            DEBUG("ignore copy xattrs of %s: %s", copy_src, strerror(errno));
+            SYSDEBUG("ignore copy xattrs of %s", copy_src);
             return 0;
         }
-        ERROR("failed to get xattrs length of %s: %s", copy_src, strerror(errno));
+        SYSERROR("failed to get xattrs length of %s", copy_src);
         return -1;
     }
 
@@ -1914,10 +1914,10 @@ static int copy_xattrs(char *copy_dst, char *copy_src)
 
     if (llistxattr(copy_src, xattrs, xattrs_len) < 0) {
         if (errno == ENOTSUP) {
-            DEBUG("ignore copy xattrs of %s: %s", copy_src, strerror(errno));
+            SYSDEBUG("ignore copy xattrs of %s", copy_src);
             goto out;
         }
-        ERROR("failed to list xattrs of %s: %s", copy_src, strerror(errno));
+        SYSERROR("failed to list xattrs of %s", copy_src);
         ret = -1;
         goto out;
     }
@@ -1963,7 +1963,7 @@ static int copy_folder(char *copy_dst, char *copy_src)
     struct stat dst_stat = { 0 };
 
     if (lstat(copy_src, &src_stat) != 0) {
-        ERROR("stat %s failed: %s", copy_src, strerror(errno));
+        SYSERROR("stat %s failed", copy_src);
         return -1;
     }
     if (!S_ISDIR(src_stat.st_mode)) {
@@ -1973,7 +1973,7 @@ static int copy_folder(char *copy_dst, char *copy_src)
 
     if (lstat(copy_dst, &dst_stat) != 0) {
         if (mkdir(copy_dst, src_stat.st_mode) != 0) {
-            ERROR("failed to mkdir %s: %s", copy_dst, strerror(errno));
+            SYSERROR("failed to mkdir %s", copy_dst);
             return -1;
         }
     } else if (!S_ISDIR(dst_stat.st_mode)) {
@@ -1981,7 +1981,7 @@ static int copy_folder(char *copy_dst, char *copy_src)
         return -1;
     } else {
         if (chmod(copy_dst, src_stat.st_mode) != 0) {
-            ERROR("failed to chmod %s: %s", copy_dst, strerror(errno));
+            SYSERROR("failed to chmod %s.", copy_dst);
             return -1;
         }
     }
@@ -1998,7 +1998,7 @@ static int copy_regular(char *copy_dst, char *copy_src, struct stat *src_stat, m
         target = map_search(inodes, (void *)(&(src_stat->st_ino)));
         if (target != NULL) {
             if (link(target, copy_dst) != 0) {
-                ERROR("failed to link %s to %s: %s", target, copy_dst, strerror(errno));
+                SYSERROR("failed to link %s to %s", target, copy_dst);
                 return -1;
             }
             return 0;
@@ -2018,12 +2018,12 @@ static int copy_symbolic(char *copy_dst, char *copy_src)
     char link[PATH_MAX] = { 0 };
 
     if (readlink(copy_src, link, sizeof(link)) < 0) {
-        ERROR("readlink of %s failed: %s", copy_src, strerror(errno));
+        SYSERROR("readlink of %s failed", copy_src);
         return -1;
     }
 
     if (symlink(link, copy_dst) != 0) {
-        ERROR("create symbolic %s failed: %s", copy_dst, strerror(errno));
+        SYSERROR("create symbolic %s failed", copy_dst);
         return -1;
     }
 
@@ -2033,7 +2033,7 @@ static int copy_symbolic(char *copy_dst, char *copy_src)
 static int copy_device(char *copy_dst, char *copy_src, struct stat *src_stat)
 {
     if (mknod(copy_dst, src_stat->st_mode, src_stat->st_dev) != 0) {
-        ERROR("mknod %s failed: %s", copy_dst, strerror(errno));
+        SYSERROR("mknod %s failed", copy_dst);
         return -1;
     }
     return 0;

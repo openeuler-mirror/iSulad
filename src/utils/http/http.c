@@ -323,7 +323,7 @@ static int ensure_path_file(char **rpath, void *output, bool resume, FILE **page
     if (resume) {
         mode = "a";
         if (stat(*rpath, &st) < 0) {
-            ERROR("stat %s failed: %s", *rpath, strerror(errno));
+            SYSERROR("stat %s failed", *rpath);
             return -1;
         }
         *fsize = (size_t)st.st_size;

@@ -330,7 +330,7 @@ static ssize_t write_to_fifo(void *context, const void *data, size_t len)
     fd = *(int *)context;
     ret = util_write_nointr_in_total(fd, data, len);
     if ((ret <= 0) || (ret != (ssize_t)len)) {
-        ERROR("Failed to write %d: %s", fd, strerror(errno));
+        SYSERROR("Failed to write %d", fd);
         return -1;
     }
     return ret;
@@ -341,7 +341,7 @@ static ssize_t write_to_fd(void *context, const void *data, size_t len)
     ssize_t ret;
     ret = util_write_nointr(*(int *)context, data, len);
     if (ret < 0 || (size_t)ret != len) {
-        ERROR("Failed to write: %s", strerror(errno));
+        SYSERROR("Failed to write");
         return -1;
     }
     return ret;

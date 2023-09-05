@@ -83,14 +83,14 @@ static int save_gc_config(const char *json_gc_config)
 
     fd = util_open(filename, O_CREAT | O_TRUNC | O_CLOEXEC | O_WRONLY, CONFIG_FILE_MODE);
     if (fd == -1) {
-        ERROR("Create file %s failed: %s", filename, strerror(errno));
+        SYSERROR("Create file %s failed.", filename);
         ret = -1;
         goto out;
     }
 
     nret = util_write_nointr(fd, json_gc_config, strlen(json_gc_config));
     if (nret < 0 || (size_t)nret != strlen(json_gc_config)) {
-        ERROR("write %s failed: %s", filename, strerror(errno));
+        SYSERROR("write %s failed.", filename);
         ret = -1;
     }
     close(fd);

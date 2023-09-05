@@ -388,7 +388,7 @@ static bool shim_alive(const char *workdir)
 
     ret = kill(pid, 0);
     if (ret != 0) {
-        INFO("kill 0 shim-pid with error: %s", strerror(errno));
+        SYSINFO("kill 0 shim-pid with error.");
     }
     return ret == 0;
 }
@@ -775,7 +775,7 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
 
     pid = fork();
     if (pid < 0) {
-        ERROR("Failed fork for shim parent %s", strerror(errno));
+        SYSERROR("Failed fork for shim parent");
         close(shim_stderr_pipe[0]);
         close(shim_stderr_pipe[1]);
         close(shim_stdout_pipe[0]);
@@ -851,7 +851,7 @@ realexec:
 
     status = util_wait_for_pid_status(pid);
     if (status < 0) {
-        ERROR("Failed wait shim-parent %d exit %s", pid, strerror(errno));
+        SYSERROR("Failed wait shim-parent %d exit", pid);
         ret = -1;
         goto out;
     }
@@ -1683,7 +1683,7 @@ int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resi
     }
 
     if (kill(pid, SIGWINCH) < 0) {
-        ERROR("can't kill process (pid=%d) with signal %u: %s", pid, SIGWINCH, strerror(errno));
+        SYSERROR("can't kill process (pid=%d) with signal %u", pid, SIGWINCH);
         ret = -1;
         goto out;
     }
@@ -1711,7 +1711,7 @@ int rt_isula_kill(const char *id, const char *runtime, const rt_kill_params_t *p
     } else {
         int ret = kill(params->pid, (int)params->signal);
         if (ret < 0) {
-            ERROR("Can not kill process (pid=%d) with signal %u: %s", params->pid, params->signal, strerror(errno));
+            SYSERROR("Can not kill process (pid=%d) with signal %u", params->pid, params->signal);
             return -1;
         }
     }

@@ -114,7 +114,7 @@ static int resolve_host_source_path(const char *path, bool follow_link, char **r
 
     if (follow_link) {
         if (realpath(path, real_path) == NULL) {
-            ERROR("Can not get real path of %s: %s", real_path, strerror(errno));
+            SYSERROR("Can not get real path of %s.", real_path);
             format_errorf(err, "Can not get real path of %s: %s", real_path, strerror(errno));
             return -1;
         }
@@ -131,7 +131,7 @@ static int resolve_host_source_path(const char *path, bool follow_link, char **r
             goto cleanup;
         }
         if (realpath(dirpath, real_path) == NULL) {
-            ERROR("Can not get real path of %s: %s", dirpath, strerror(errno));
+            SYSERROR("Can not get real path of %s.", dirpath);
             format_errorf(err, "Can not get real path of %s: %s", dirpath, strerror(errno));
             goto cleanup;
         }
@@ -192,7 +192,7 @@ struct archive_copy_info *copy_info_source_path(const char *path, bool follow_li
 
     nret = lstat(resolved_path, &st);
     if (nret < 0) {
-        ERROR("lstat %s: %s", resolved_path, strerror(errno));
+        SYSERROR("lstat %s failed", resolved_path);
         format_errorf(err, "lstat %s: %s", resolved_path, strerror(errno));
         goto cleanup;
     }
@@ -226,7 +226,7 @@ static int copy_info_destination_path_ret(struct archive_copy_info *info, struct
 
         ret = (int)readlink(iter_path, target, PATH_MAX);
         if (ret < 0) {
-            ERROR("Failed to read link of %s: %s", iter_path, strerror(errno));
+            SYSERROR("Failed to read link of %s", iter_path);
             format_errorf(err, "Failed to read link of %s: %s", iter_path, strerror(errno));
             goto cleanup;
         }
@@ -259,7 +259,7 @@ static int copy_info_destination_path_ret(struct archive_copy_info *info, struct
     if (ret != 0) {
         char *dst_parent = NULL;
         if (errno != ENOENT) {
-            ERROR("Can not stat %s: %s", iter_path, strerror(errno));
+            SYSERROR("Can not stat %s", iter_path);
             format_errorf(err, "Can not stat %s: %s", iter_path, strerror(errno));
             goto cleanup;
         }
@@ -429,7 +429,7 @@ static int tar_resource_rebase(const char *path, const char *rebase, const char 
     char *srcbase = NULL;
 
     if (lstat(path, &st) < 0) {
-        ERROR("lstat %s: %s", path, strerror(errno));
+        SYSERROR("lstat %s failed", path);
         format_errorf(err, "lstat %s: %s", path, strerror(errno));
         return -1;
     }

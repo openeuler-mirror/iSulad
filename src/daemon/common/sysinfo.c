@@ -644,7 +644,7 @@ uint64_t get_default_total_mem_size(void)
 
     fp = util_fopen("/proc/meminfo", "r");
     if (fp == NULL) {
-        ERROR("Failed to open /proc/meminfo: %s", strerror(errno));
+        SYSERROR("Failed to open /proc/meminfo.");
         return sysmem_limit;
     }
 
@@ -684,10 +684,10 @@ char *get_operating_system(void)
 
     fp = fopen(etcOsRelease, "r");
     if (fp == NULL) {
-        INFO("Failed to open %s :%s", etcOsRelease, strerror(errno));
+        SYSINFO("Failed to open %s.", etcOsRelease);
         fp = fopen(altOsRelease, "r");
         if (fp == NULL) {
-            ERROR("Failed to open %s :%s", altOsRelease, strerror(errno));
+            SYSERROR("Failed to open %s.", altOsRelease);
             goto out;
         }
     }
@@ -1021,7 +1021,7 @@ static int get_cgroup_version()
     struct statfs fs = { 0 };
 
     if (statfs(CGROUP_MOUNTPOINT, &fs) != 0) {
-        ERROR("failed to statfs %s: %s", CGROUP_MOUNTPOINT, strerror(errno));
+        SYSERROR("failed to statfs %s.", CGROUP_MOUNTPOINT);
         return -1;
     }
 
@@ -1299,7 +1299,7 @@ static int cgroup2_enable_all()
     ret = util_write_file(CGROUP2_SUBTREE_CONTROLLER_PATH, enable_controllers, strlen(enable_controllers),
                           DEFAULT_CGROUP_FILE_MODE);
     if (ret != 0) {
-        ERROR("write %s to %s failed: %s", enable_controllers, CGROUP2_SUBTREE_CONTROLLER_PATH, strerror(errno));
+        SYSERROR("write %s to %s failed.", enable_controllers, CGROUP2_SUBTREE_CONTROLLER_PATH);
         goto out;
     }
 

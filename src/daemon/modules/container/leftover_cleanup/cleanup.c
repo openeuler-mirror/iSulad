@@ -158,7 +158,7 @@ static bool walk_isulad_tmpdir_cb(const char *path_name, const struct dirent *su
 
     if (util_detect_mounted(tmpdir)) {
         if (umount(tmpdir) != 0) {
-            ERROR("Failed to umount target %s, error: %s", tmpdir, strerror(errno));
+            SYSERROR("Failed to umount target %s", tmpdir);
         }
     }
 

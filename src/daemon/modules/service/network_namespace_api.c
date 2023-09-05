@@ -50,7 +50,7 @@ int remove_network_namespace(const char *netns_path)
     }
 
     if (umount2(netns_path, MNT_DETACH) != 0 && errno != EINVAL) {
-        ERROR("Failed to umount directory %s:%s", netns_path, strerror(errno));
+        SYSERROR("Failed to umount directory %s", netns_path);
         return -1;
     }
 

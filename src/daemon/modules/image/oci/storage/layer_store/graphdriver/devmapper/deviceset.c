@@ -782,7 +782,7 @@ static int device_file_walk(struct device_set *devset)
         }
 
         if (stat(fname, &st) != 0) {
-            ERROR("devmapper: get %s stat error:%s", fname, strerror(errno));
+            SYSERROR("devmapper: get %s stat failed", fname);
             ret = -1;
             goto out;
         }
@@ -2204,7 +2204,7 @@ static int grow_fs(struct device_set *devset, image_devmapper_device_info *info)
 
 clean_mount:
     if (umount2(FS_MOUNT_POINT, MNT_DETACH) < 0 && errno != EINVAL) {
-        WARN("Failed to umount directory %s:%s", FS_MOUNT_POINT, strerror(errno));
+        SYSWARN("Failed to umount directory %s", FS_MOUNT_POINT);
     }
 
 out:
@@ -3148,7 +3148,7 @@ int unmount_device(const char *hash, const char *mount_path, struct device_set *
     }
 
     if (umount2(mount_path, MNT_DETACH) < 0 && errno != EINVAL) {
-        ERROR("Failed to umount directory %s:%s", mount_path, strerror(errno));
+        SYSERROR("Failed to umount directory %s", mount_path);
         ret = -1;
         goto free_out;
     }
@@ -3405,7 +3405,7 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
         }
 
         if (stat(fname, &st) != 0) {
-            ERROR("devmapper: get %s stat error:%s", fname, strerror(errno));
+            SYSERROR("devmapper: get %s stat failed", fname);
             continue;
         }
 
@@ -3415,7 +3415,7 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
         }
 
         if (umount2(fname, MNT_DETACH) < 0 && errno != EINVAL) {
-            ERROR("Failed to umount directory %s:%s", fname, strerror(errno));
+            SYSERROR("Failed to umount directory %s", fname);
         }
 
         device_info = lookup_device(devset, entry->d_name);

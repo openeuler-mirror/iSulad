@@ -439,7 +439,7 @@ static int read_user_file(const char *basefs, const char *user_path, FILE **stre
 
     *stream = util_fopen(real_path, "r");
     if (*stream == NULL) {
-        WARN("Failed to open %s: %s", real_path, strerror(errno));
+        SYSWARN("Failed to open %s.", real_path);
         ret = 0;
         goto out;
     }
@@ -460,7 +460,7 @@ static int resolve_basefs(const char *basefs, char **resolved_basefs)
     }
 
     if (stat(real_path, &s) < 0) {
-        ERROR("stat failed, error: %s", strerror(errno));
+        SYSERROR("stat failed.");
         return -1;
     }
 

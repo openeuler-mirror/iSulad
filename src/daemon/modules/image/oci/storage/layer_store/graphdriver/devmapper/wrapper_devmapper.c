@@ -450,7 +450,7 @@ void dev_udev_wait(uint32_t cookie)
     }
 
     if (pthread_create(&tid, NULL, udev_wait_process, uwait) != 0) {
-        ERROR("devmapper: create udev wait process thread error:%s", strerror(errno));
+        SYSERROR("devmapper: create udev wait process thread error");
         free_udev_wait_pth_t(uwait);
         return;
     }
@@ -1195,7 +1195,7 @@ void dev_check_sem_set_stat(int *semusz, int *semmni)
     }
 
     if (semctl(0, 0, SEM_INFO, &sinfo) != 0) {
-        WARN("Get devmapper library version err:%s", strerror(errno));
+        SYSWARN("Get devmapper library version err");
         return;
     }
 

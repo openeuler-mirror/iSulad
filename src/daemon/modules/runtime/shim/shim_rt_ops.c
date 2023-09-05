@@ -145,7 +145,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
 
     pid = fork();
     if (pid < 0) {
-        ERROR("Failed to fork for shim parent %s", strerror(errno));
+        SYSERROR("Failed to fork for shim parent");
         ret = -1;
         goto out;
     }
@@ -199,7 +199,7 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
 
     status = util_wait_for_pid_status(pid);
     if (status < 0) {
-        ERROR("failed to wait shim-parent %d exit %s", pid, strerror(errno));
+        SYSERROR("failed to wait shim-parent %d exit", pid);
         ret = -1;
         goto out;
     }

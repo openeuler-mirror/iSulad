@@ -98,7 +98,7 @@ int rest_server_init(const char *socket)
     }
 
     if (unlink(g_socketpath + strlen(UNIX_SOCKET_PREFIX)) < 0 && errno != ENOENT) {
-        ERROR("Failed to remove '%s':%s, abort", strerror(errno), g_socketpath);
+        SYSERROR("Failed to remove '%s', abort", g_socketpath);
         goto error_out;
     }
 
@@ -139,7 +139,7 @@ void rest_server_shutdown(void)
 
     if (g_socketpath != NULL) {
         if (unlink(g_socketpath + strlen(UNIX_SOCKET_PREFIX)) < 0 && errno != ENOENT) {
-            ERROR("Failed to remove '%s':%s", g_socketpath, strerror(errno));
+            SYSERROR("Failed to remove '%s'.", g_socketpath);
         }
     }
 }

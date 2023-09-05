@@ -474,7 +474,7 @@ proc_t *util_stat2proc(const char *s, size_t len)
     num = sscanf(s, "%d (%15c", &p->pid, p->cmd);
 #endif
     if (num != 2) {
-        ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
+        SYSERROR("Call sscanf error");
         free(p);
         return NULL;
     }
@@ -489,7 +489,7 @@ proc_t *util_stat2proc(const char *s, size_t len)
                  &p->maj_flt, &p->cmaj_flt, &p->utime, &p->stime, &p->cutime, &p->cstime, &p->priority, &p->nice,
                  &p->timeout, &p->it_real_value, &p->start_time);
     if (num != 20) { // max arg to read
-        ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
+        SYSERROR("Call sscanf error");
         free(p);
         return NULL;
     }
@@ -1137,7 +1137,7 @@ static int set_echo_back(bool echo_back)
     struct termios old, new;
 
     if (tcgetattr(STDIN_FILENO, &old)) {
-        ERROR("get tc attribute failed: %s\n", strerror(errno));
+        SYSERROR("get tc attribute failed");
         return -1;
     }
 
@@ -1150,7 +1150,7 @@ static int set_echo_back(bool echo_back)
     }
 
     if (tcsetattr(STDIN_FILENO, TCSANOW, &new)) {
-        ERROR("set tc attribute failed: %s\n", strerror(errno));
+        SYSERROR("set tc attribute failed");
         return -1;
     }
 
@@ -1413,7 +1413,7 @@ int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_v
     }
 
     if (uname(&uts) < 0) {
-        ERROR("Failed to read host arch and os: %s", strerror(errno));
+        SYSERROR("Failed to read host arch and os");
         ret = -1;
         goto out;
     }

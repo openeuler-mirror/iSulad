@@ -824,7 +824,7 @@ auto PodSandboxManagerServiceImpl::ClearCniNetwork(const std::string &realSandbo
     // umount netns when cni removed network successfully
     if (inspect_data != nullptr && namespace_is_file(inspect_data->host_config->network_mode) &&
         util_umount_namespace(netnsPath) != 0) {
-        ERROR("Failed to umount directory %s:%s", netnsPath, strerror(errno));
+        SYSERROR("Failed to umount directory %s.", netnsPath);
     }
 
 out:

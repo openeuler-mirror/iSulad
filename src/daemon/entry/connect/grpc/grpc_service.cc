@@ -106,7 +106,7 @@ public:
         for (const auto &address : m_socketPath) {
             if (address.find(UNIX_SOCKET_PREFIX) == 0) {
                 if (unlink(address.c_str() + strlen(UNIX_SOCKET_PREFIX)) < 0 && errno != ENOENT) {
-                    WARN("Failed to remove '%s':%s", address.c_str(), strerror(errno));
+                    SYSWARN("Failed to remove '%s'.", address.c_str());
                 }
             }
         }

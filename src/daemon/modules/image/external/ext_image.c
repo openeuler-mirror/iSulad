@@ -65,7 +65,7 @@ int ext_prepare_rf(const im_prepare_request *request, char **real_rootfs)
                 return -1;
             }
             if (realpath(request->rootfs, real_path) == NULL) {
-                ERROR("Failed to clean rootfs path '%s': %s", request->rootfs, strerror(errno));
+                SYSERROR("Failed to clean rootfs path '%s'", request->rootfs);
                 isulad_set_error_message("Failed to clean rootfs path '%s': %s", request->rootfs, strerror(errno));
                 return -1;
             }

@@ -340,7 +340,7 @@ static int copy_data(struct archive *ar, struct archive *aw)
         }
         r = archive_write_data_block(aw, buff, size, offset);
         if (r < ARCHIVE_OK) {
-            ERROR("tar extraction error: %s, %s", archive_error_string(aw), strerror(archive_errno(aw)));
+            ERROR("tar extraction error: %s", archive_error_string(aw));
             return r;
         }
     }
@@ -669,7 +669,7 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const struct a
     ret = archive_read_open(a, mydata, NULL, read_content, NULL);
     if (ret != 0) {
         ERROR("Failed to open archive: %s", archive_error_string(a));
-        fprintf(stderr, "Failed to open archive: %s", strerror(errno));
+        fprintf(stderr, "Failed to open archive: %s", archive_error_string(a));
         ret = -1;
         goto out;
     }
@@ -685,9 +685,8 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const struct a
         }
 
         if (ret != ARCHIVE_OK) {
-            ERROR("Warning reading tar header: %s, %s", archive_error_string(a), strerror(archive_errno(a)));
-            (void)fprintf(stderr, "Warning reading tar header: %s, %s", archive_error_string(a),
-                          strerror(archive_errno(a)));
+            ERROR("Warning reading tar header: %s", archive_error_string(a));
+            (void)fprintf(stderr, "Warning reading tar header: %s", archive_error_string(a));
             ret = -1;
             goto out;
         }
@@ -721,26 +720,23 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const struct a
 
         ret = archive_write_header(ext, entry);
         if (ret != ARCHIVE_OK) {
-            ERROR("Fail to handle tar header: %s, %s", archive_error_string(ext), strerror(archive_errno(ext)));
-            (void)fprintf(stderr, "Fail to handle tar header: %s, %s", archive_error_string(ext),
-                          strerror(archive_errno(ext)));
+            ERROR("Fail to handle tar header: %s", archive_error_string(ext));
+            (void)fprintf(stderr, "Fail to handle tar header: %s", archive_error_string(ext));
             ret = -1;
             goto out;
         } else if (archive_entry_size(entry) > 0) {
             ret = copy_data(a, ext);
             if (ret != ARCHIVE_OK) {
-                ERROR("Failed to do copy tar data: %s, %s", archive_error_string(ext), strerror(archive_errno(ext)));
-                (void)fprintf(stderr, "Failed to do copy tar data: %s, %s", archive_error_string(ext),
-                              strerror(archive_errno(ext)));
+                ERROR("Failed to do copy tar data: %s", archive_error_string(ext));
+                (void)fprintf(stderr, "Failed to do copy tar data: %s", archive_error_string(ext));
                 ret = -1;
                 goto out;
             }
         }
         ret = archive_write_finish_entry(ext);
         if (ret != ARCHIVE_OK) {
-            ERROR("Failed to freeing archive entry: %s, %s", archive_error_string(ext), strerror(archive_errno(ext)));
-            (void)fprintf(stderr, "Failed to freeing archive entry: %s, %s", archive_error_string(ext),
-                          strerror(archive_errno(ext)));
+            ERROR("Failed to freeing archive entry: %s", archive_error_string(ext));
+            (void)fprintf(stderr, "Failed to freeing archive entry: %s", archive_error_string(ext));
             ret = -1;
             goto out;
         }
@@ -821,7 +817,7 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
 
     pid = fork();
     if (pid == (pid_t) -1) {
-        ERROR("Failed to fork: %s", strerror(errno));
+        SYSERROR("Failed to fork");
         goto cleanup;
     }
 
@@ -841,7 +837,7 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
 
         // child process, dup2 pipe_for_read[1] to stderr,
         if (dup2(pipe_stderr[1], 2) < 0) {
-            ERROR("Dup fd error: %s", strerror(errno));
+            SYSERROR("Dup fd error");
             ret = -1;
             goto child_out;
         }
@@ -873,7 +869,7 @@ child_out:
 
     ret = util_wait_for_pid(pid);
     if (ret != 0) {
-        ERROR("Wait archive_untar_handler failed with error:%s", strerror(errno));
+        SYSERROR("Wait archive_untar_handler failed");
         fcntl(pipe_stderr[0], F_SETFL, O_NONBLOCK);
         if (util_read_nointr(pipe_stderr[0], errbuf, BUFSIZ) < 0) {
             ERROR("read error message from child failed");
@@ -915,22 +911,21 @@ bool valid_archive_format(const char *file)
 
     ret = archive_read_support_filter_all(read_archive);
     if (ret != ARCHIVE_OK) {
-        ERROR("Failed to set archive read support filter all, result is %d, errmsg: %s, %s", ret,
-              archive_error_string(read_archive), strerror(archive_errno(read_archive)));
+        ERROR("Failed to set archive read support filter all, result is %d, errmsg: %s", ret,
+              archive_error_string(read_archive));
         goto out;
     }
 
     ret = archive_read_support_format_all(read_archive);
     if (ret != ARCHIVE_OK) {
-        ERROR("Failed to set archive read support format all, result is %d, errmsg: %s, %s", ret,
-              archive_error_string(read_archive), strerror(archive_errno(read_archive)));
+        ERROR("Failed to set archive read support format all, result is %d, errmsg: %s", ret,
+              archive_error_string(read_archive));
         goto out;
     }
 
     ret = archive_read_open_filename(read_archive, file, ARCHIVE_READ_BUFFER_SIZE);
     if (ret != ARCHIVE_OK) {
-        ERROR("Failed to open archive %s: %s, %s", file, archive_error_string(read_archive),
-              strerror(archive_errno(read_archive)));
+        ERROR("Failed to open archive %s: %s", file, archive_error_string(read_archive));
         goto out;
     }
 
@@ -941,15 +936,13 @@ bool valid_archive_format(const char *file)
         goto out;
     }
     if (ret != ARCHIVE_OK) {
-        ERROR("Failed to read next header for file %s: %s, %s", file, archive_error_string(read_archive),
-              strerror(archive_errno(read_archive)));
+        ERROR("Failed to read next header for file %s: %s", file, archive_error_string(read_archive));
         goto out;
     }
 
 out:
     if (archive_read_free(read_archive) != ARCHIVE_OK) {
-        ERROR("Failed to free archive %s: %s, %s", file, archive_error_string(read_archive),
-              strerror(archive_errno(read_archive)));
+        ERROR("Failed to free archive %s: %s", file, archive_error_string(read_archive));
     }
     read_archive = NULL;
 
@@ -976,19 +969,15 @@ static int copy_data_between_archives(struct archive *ar, struct archive *aw)
             goto out;
         }
         if (size < 0) {
-            ERROR("tar archive read result %d, error: %s, %s", ret, archive_error_string(ar),
-                  strerror(archive_errno(ar)));
-            (void)fprintf(stderr, "tar archive read result %d, error: %s, %s", ret, archive_error_string(ar),
-                          strerror(archive_errno(ar)));
+            ERROR("tar archive read result %d, error: %s", ret, archive_error_string(ar));
+            (void)fprintf(stderr, "tar archive read result %d, error: %s", ret, archive_error_string(ar));
             ret = ARCHIVE_FAILED;
             goto out;
         }
         ret = archive_write_data(aw, buff, size);
         if (ret < ARCHIVE_OK) {
-            ERROR("tar archive write result %d, error: %s, %s", ret, archive_error_string(aw),
-                  strerror(archive_errno(aw)));
-            (void)fprintf(stderr, "tar archive write result %d, error: %s, %s", ret, archive_error_string(aw),
-                          strerror(archive_errno(aw)));
+            ERROR("tar archive write result %d, error: %s", ret, archive_error_string(aw));
+            (void)fprintf(stderr, "tar archive write result %d, error: %s", ret, archive_error_string(aw));
             goto out;
         }
     }
@@ -1061,8 +1050,8 @@ int tar_handler(struct archive *r, struct archive *w, const char *src_base, cons
         }
 
         if (ret != ARCHIVE_OK) {
-            ERROR("read from disk failed: %s, %s", archive_error_string(r), strerror(archive_errno(r)));
-            (void)fprintf(stderr, "read from disk failed: %s, %s", archive_error_string(r), strerror(archive_errno(r)));
+            ERROR("read from disk failed: %s", archive_error_string(r));
+            (void)fprintf(stderr, "read from disk failed: %s", archive_error_string(r));
             break;
         }
 
@@ -1080,37 +1069,34 @@ int tar_handler(struct archive *r, struct archive *w, const char *src_base, cons
         }
         ret = archive_write_header(w, entry);
         if (ret != ARCHIVE_OK) {
-            ERROR("Fail to write tar header: %s, %s\nlink:%s target:%s", archive_error_string(w),
-                  strerror(archive_errno(w)), archive_entry_pathname(entry), archive_entry_hardlink(entry));
-            (void)fprintf(stderr, "Fail to write tar header: %s, %s\nlink:%s target:%s\n", archive_error_string(w),
-                          strerror(archive_errno(w)), archive_entry_pathname(entry), archive_entry_hardlink(entry));
+            ERROR("Fail to write tar header: %s.\nlink:%s target:%s", archive_error_string(w),
+                  archive_entry_pathname(entry), archive_entry_hardlink(entry));
+            (void)fprintf(stderr, "Fail to write tar header: %s.\nlink:%s target:%s\n", archive_error_string(w),
+                          archive_entry_pathname(entry), archive_entry_hardlink(entry));
             break;
         }
 
         if (archive_entry_size(entry) > 0) {
             ret = copy_data_between_archives(r, w);
             if (ret != ARCHIVE_OK) {
-                ERROR("Failed to do copy data: %s, %s", archive_error_string(w), strerror(archive_errno(w)));
-                (void)fprintf(stderr, "Failed to do copy data: %s, %s\n", archive_error_string(w),
-                              strerror(archive_errno(w)));
+                ERROR("Failed to do copy data: %s", archive_error_string(w));
+                (void)fprintf(stderr, "Failed to do copy data: %s\n", archive_error_string(w));
                 break;
             }
         }
 
         ret = archive_write_finish_entry(w);
         if (ret != ARCHIVE_OK) {
-            ERROR("Failed to freeing archive entry: %s, %s", archive_error_string(w), strerror(archive_errno(w)));
-            (void)fprintf(stderr, "Failed to freeing archive entry: %s, %s\n", archive_error_string(w),
-                          strerror(archive_errno(w)));
+            ERROR("Failed to freeing archive entry: %s", archive_error_string(w));
+            (void)fprintf(stderr, "Failed to freeing archive entry: %s\n", archive_error_string(w));
             break;
         }
 
         if (archive_entry_filetype(entry) == AE_IFDIR) {
             ret = archive_read_disk_descend(r);
             if (ret != ARCHIVE_OK) {
-                ERROR("read disk descend failed: %s, %s", archive_error_string(w), strerror(archive_errno(w)));
-                (void)fprintf(stderr, "read disk descend failed: %s, %s\n", archive_error_string(w),
-                              strerror(archive_errno(w)));
+                ERROR("read disk descend failed: %s", archive_error_string(w));
+                (void)fprintf(stderr, "read disk descend failed: %s\n", archive_error_string(w));
                 break;
             }
         }
@@ -1166,9 +1152,8 @@ static int tar_all(const struct io_write_wrapper *writer, const char *tar_dir, c
     archive_read_disk_set_behavior(r, ARCHIVE_READDISK_NO_TRAVERSE_MOUNTS);
     ret = archive_read_disk_open(r, tar_dir);
     if (ret != ARCHIVE_OK) {
-        ERROR("open archive read failed: %s, %s", archive_error_string(r), strerror(archive_errno(r)));
-        (void)fprintf(stderr, "open archive read failed: %s, %s\n", archive_error_string(r),
-                      strerror(archive_errno(r)));
+        ERROR("open archive read failed: %s", archive_error_string(r));
+        (void)fprintf(stderr, "open archive read failed: %s\n", archive_error_string(r));
         goto out;
     }
 
@@ -1183,9 +1168,8 @@ static int tar_all(const struct io_write_wrapper *writer, const char *tar_dir, c
     archive_write_set_options(w, "xattrheader=SCHILY");
     ret = archive_write_open(w, (void *)writer, NULL, stream_write_data, NULL);
     if (ret != ARCHIVE_OK) {
-        ERROR("open archive write failed: %s, %s", archive_error_string(w), strerror(archive_errno(w)));
-        (void)fprintf(stderr, "open archive write failed: %s, %s\n", archive_error_string(w),
-                      strerror(archive_errno(w)));
+        ERROR("open archive write failed: %s", archive_error_string(w));
+        (void)fprintf(stderr, "open archive write failed: %s\n", archive_error_string(w));
         goto out;
     }
 
@@ -1258,14 +1242,14 @@ int archive_chroot_tar(const char *path, const char *file, const char *root_dir,
 
         // child process, dup2 pipe_for_read[1] to stderr,
         if (dup2(pipe_for_read[1], 2) < 0) {
-            ERROR("Dup fd error: %s", strerror(errno));
+            SYSERROR("Dup fd failed");
             ret = -1;
             goto child_out;
         }
 
         fd = open(file, TAR_DEFAULT_FLAG, TAR_DEFAULT_MODE);
         if (fd < 0) {
-            ERROR("Failed to open file %s for export: %s", file, strerror(errno));
+            SYSERROR("Failed to open file %s for export", file);
             fprintf(stderr, "Failed to open file %s for export: %s\n", file, strerror(errno));
             ret = -1;
             goto child_out;
@@ -1474,17 +1458,17 @@ int archive_chroot_untar_stream(const struct io_read_wrapper *context, const cha
     }
 
     if (pipe(pipe_stderr) != 0) {
-        ERROR("Failed to create pipe: %s", strerror(errno));
+        SYSERROR("Failed to create pipe");
         goto cleanup;
     }
     if (pipe(pipe_stream) != 0) {
-        ERROR("Failed to create pipe: %s", strerror(errno));
+        SYSERROR("Failed to create pipe");
         goto cleanup;
     }
 
     pid = fork();
     if (pid == (pid_t) -1) {
-        ERROR("Failed to fork: %s", strerror(errno));
+        SYSERROR("Failed to fork");
         goto cleanup;
     }
 
@@ -1503,7 +1487,7 @@ int archive_chroot_untar_stream(const struct io_read_wrapper *context, const cha
 
         // child process, dup2 pipe_stderr[1] to stderr,
         if (dup2(pipe_stderr[1], 2) < 0) {
-            ERROR("Dup fd error: %s", strerror(errno));
+            SYSERROR("Dup fd error");
             ret = -1;
             goto child_out;
         }
@@ -1559,7 +1543,7 @@ child_out:
     while (read_len > 0) {
         ssize_t writed_len = archive_context_write(ctx, buf, (size_t)read_len);
         if (writed_len < 0) {
-            DEBUG("Tar may exited: %s", strerror(errno));
+            SYSDEBUG("Tar may exited");
             break;
         }
         read_len = context->read(context->context, buf, buf_len);
@@ -1610,17 +1594,17 @@ int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, cons
     }
 
     if (pipe(pipe_stderr) != 0) {
-        ERROR("Failed to create pipe: %s", strerror(errno));
+        SYSERROR("Failed to create pipe");
         goto free_out;
     }
     if (pipe(pipe_stream) != 0) {
-        ERROR("Failed to create pipe: %s", strerror(errno));
+        SYSERROR("Failed to create pipe");
         goto free_out;
     }
 
     pid = fork();
     if (pid == (pid_t) -1) {
-        ERROR("Failed to fork: %s", strerror(errno));
+        SYSERROR("Failed to fork");
         goto free_out;
     }
 
@@ -1642,7 +1626,7 @@ int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, cons
 
         // child process, dup2 pipe_stderr[1] to stderr,
         if (dup2(pipe_stderr[1], 2) < 0) {
-            ERROR("Dup fd error: %s", strerror(errno));
+            SYSERROR("Dup fd error");
             ret = -1;
             goto child_out;
         }

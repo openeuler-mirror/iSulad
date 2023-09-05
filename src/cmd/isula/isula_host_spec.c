@@ -753,7 +753,7 @@ uint64_t get_proc_mem_size(const char *item)
 
     fp = util_fopen("/proc/meminfo", "r");
     if (fp == NULL) {
-        ERROR("Failed to open /proc/meminfo: %s", strerror(errno));
+        SYSERROR("Failed to open /proc/meminfo");
         return sysmem_limit;
     }
 

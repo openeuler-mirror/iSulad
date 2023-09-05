@@ -1430,7 +1430,7 @@ static int copy_data_to_volume(char *base_fs, defs_mount *mnt)
         if (errno == ENOENT) {
             goto out;
         }
-        ERROR("stat for copy data to volume failed: %s", strerror(errno));
+        SYSERROR("stat for copy data to volume failed");
         ret = -1;
         goto out;
     }
@@ -2727,7 +2727,7 @@ static int create_shm_path(const char *spath, const int64_t shm_size)
 
     nret = mount("shm", spath, "tmpfs", MS_NOEXEC | MS_NODEV | MS_NOSUID, shmproperty);
     if (nret < 0) {
-        ERROR("Mount %s failed: %s", spath, strerror(errno));
+        SYSERROR("Mount %s failed", spath);
         return -1;
     }
 

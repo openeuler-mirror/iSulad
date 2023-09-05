@@ -479,7 +479,7 @@ static int save_json_config_file(const char *id, const char *rootpath, const cha
 
     nret = util_atomic_write_file(filename, json_data, strlen(json_data), CONFIG_FILE_MODE, false);
     if (nret != 0) {
-        ERROR("Write file %s failed: %s", filename, strerror(errno));
+        SYSERROR("Write file %s failed.", filename);
         isulad_set_error_message("Write file '%s' failed: %s", filename, strerror(errno));
         ret = -1;
     }
