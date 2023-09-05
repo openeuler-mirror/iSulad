@@ -706,7 +706,7 @@ out:
     free(runtime_root);
     free(runtime_stat);
     if (ret != 0) {
-        /* fail, do not use the input v2 spec, host spec and network settings, the memeory will be free by caller*/
+        /* fail, do not use the input v2 spec, host spec and network settings, the memeory will be free by caller */
         if (cont != NULL) {
             cont->common_config = NULL;
             cont->hostconfig = NULL;

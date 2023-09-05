@@ -912,8 +912,8 @@ static int container_kill_cb(const container_kill_request *request, container_ki
     }
 
     if (!util_valid_signal((int)signal)) {
-        isulad_set_error_message("Not supported signal %d", signal);
-        ERROR("Not supported signal %d", signal);
+        isulad_set_error_message("Not supported signal %u", signal);
+        ERROR("Not supported signal %u", signal);
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }

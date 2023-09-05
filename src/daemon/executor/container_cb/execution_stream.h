@@ -1,6 +1,3 @@
-#ifndef DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_STREAM_H
-#define DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_STREAM_H
-
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
@@ -15,6 +12,9 @@
  * Create: 2017-11-22
  * Description: provide container list callback function definition
  *********************************************************************************/
+
+#ifndef DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_STREAM_H
+#define DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_STREAM_H
 
 #include "callback.h"
 

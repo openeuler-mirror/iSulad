@@ -83,7 +83,11 @@ struct isulad_events_format *dup_event(const struct isulad_events_format *event)
         return NULL;
     }
 
-    event_copy(event, out);
+    if (event_copy(event, out) != 0) {
+        ERROR("Failed to copy event");
+        isulad_events_format_free(out);
+        return NULL;
+    }
 
     return out;
 }
