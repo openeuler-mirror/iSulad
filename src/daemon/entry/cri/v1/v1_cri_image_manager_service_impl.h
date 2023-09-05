@@ -30,7 +30,7 @@ public:
     virtual ~ImageManagerServiceImpl() = default;
 
     void ListImages(const runtime::v1::ImageFilter &filter,
-                    std::vector<std::unique_ptr<runtime::v1::Image>> *images, Errors &error) override;
+                    std::vector<std::unique_ptr<runtime::v1::Image>> &images, Errors &error) override;
 
     std::unique_ptr<runtime::v1::Image> ImageStatus(const runtime::v1::ImageSpec &image,
                                                           Errors &error) override;
@@ -40,7 +40,7 @@ public:
 
     void RemoveImage(const runtime::v1::ImageSpec &image, Errors &error) override;
 
-    void ImageFsInfo(std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> *usages, Errors &error) override;
+    void ImageFsInfo(std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> &usages, Errors &error) override;
 
 private:
     int pull_request_from_grpc(const runtime::v1::ImageSpec *image, const runtime::v1::AuthConfig *auth,
@@ -48,7 +48,7 @@ private:
 
     int list_request_from_grpc(const runtime::v1::ImageFilter *filter, im_list_request **request, Errors &error);
 
-    void list_images_to_grpc(im_list_response *response, std::vector<std::unique_ptr<runtime::v1::Image>> *images,
+    void list_images_to_grpc(im_list_response *response, std::vector<std::unique_ptr<runtime::v1::Image>> &images,
                              Errors &error);
 
     int status_request_from_grpc(const runtime::v1::ImageSpec *image, im_summary_request **request,
@@ -57,7 +57,7 @@ private:
     std::unique_ptr<runtime::v1::Image> status_image_to_grpc(im_summary_response *response, Errors &error);
 
     void fs_info_to_grpc(im_fs_info_response *response,
-                         std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> *fs_infos, Errors &error);
+                         std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> &fs_infos, Errors &error);
 
     int remove_request_from_grpc(const runtime::v1::ImageSpec *image, im_rmi_request **request, Errors &error);
 };

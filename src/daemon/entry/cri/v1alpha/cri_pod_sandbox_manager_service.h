@@ -57,7 +57,7 @@ public:
     -> std::unique_ptr<runtime::v1alpha2::PodSandboxStatus>;
 
     void ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
-                        std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods, Errors &error);
+                        std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> &pods, Errors &error);
 
     auto PodSandboxStats(const std::string &podSandboxID,
                          const std::unique_ptr<ContainerManagerService> &containerManager,
@@ -65,7 +65,7 @@ public:
 
     void ListPodSandboxStats(const runtime::v1alpha2::PodSandboxStatsFilter *filter,
                              const std::unique_ptr<ContainerManagerService> &containerManager,
-                             std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> *podsStats,
+                             std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> &podsStats,
                              Errors &error);
 
     void PortForward(const runtime::v1alpha2::PortForwardRequest &req, runtime::v1alpha2::PortForwardResponse *resp,
@@ -130,7 +130,7 @@ private:
     void ListPodSandboxFromGRPC(const runtime::v1alpha2::PodSandboxFilter *filter, container_list_request **request,
                                 bool *filterOutReadySandboxes, Errors &error);
     void ListPodSandboxToGRPC(container_list_response *response,
-                              std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
+                              std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> &pods,
                               bool filterOutReadySandboxes, Errors &error);
     void UpdatePodSandboxNetworkSettings(const std::string &id, const std::string &json, Errors &error);
     auto GetNsenterPath(Errors &error) -> std::string;

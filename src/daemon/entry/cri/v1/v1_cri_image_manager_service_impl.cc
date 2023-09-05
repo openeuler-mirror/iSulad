@@ -133,7 +133,7 @@ auto ImageManagerServiceImpl::list_request_from_grpc(const runtime::v1::ImageFil
 }
 
 void ImageManagerServiceImpl::list_images_to_grpc(im_list_response *response,
-                                                  std::vector<std::unique_ptr<runtime::v1::Image>> *images,
+                                                  std::vector<std::unique_ptr<runtime::v1::Image>> &images,
                                                   Errors &error)
 {
     imagetool_images_list *list_images = response->images;
@@ -150,12 +150,12 @@ void ImageManagerServiceImpl::list_images_to_grpc(im_list_response *response,
 
         imagetool_image_summary *element = list_images->images[i];
         conv_image_to_grpc(element, image);
-        images->push_back(move(image));
+        images.push_back(move(image));
     }
 }
 
 void ImageManagerServiceImpl::ListImages(const runtime::v1::ImageFilter &filter,
-                                         std::vector<std::unique_ptr<runtime::v1::Image>> *images, Errors &error)
+                                         std::vector<std::unique_ptr<runtime::v1::Image>> &images, Errors &error)
 {
     im_list_request *request { nullptr };
     im_list_response *response { nullptr };
@@ -331,7 +331,7 @@ cleanup:
 }
 
 void ImageManagerServiceImpl::fs_info_to_grpc(im_fs_info_response *response,
-                                              std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> *fs_infos,
+                                              std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> &fs_infos,
                                               Errors & /*error*/)
 {
     imagetool_fs_info *got_fs_info = response->fs_info;
@@ -381,11 +381,11 @@ void ImageManagerServiceImpl::fs_info_to_grpc(im_fs_info_response *response,
             fs_info->set_allocated_inodes_used(inodes_used);
         }
 
-        fs_infos->push_back(std::move(fs_info));
+        fs_infos.push_back(std::move(fs_info));
     }
 }
 
-void ImageManagerServiceImpl::ImageFsInfo(std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> *usages,
+void ImageManagerServiceImpl::ImageFsInfo(std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> &usages,
                                           Errors &error)
 {
     im_fs_info_response *response { nullptr };

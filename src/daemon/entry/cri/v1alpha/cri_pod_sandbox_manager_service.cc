@@ -1246,7 +1246,7 @@ void PodSandboxManagerService::ListPodSandboxFromGRPC(const runtime::v1alpha2::P
 }
 
 void PodSandboxManagerService::ListPodSandboxToGRPC(container_list_response *response,
-                                                    std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
+                                                    std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> &pods,
                                                     bool filterOutReadySandboxes, Errors &error)
 {
     for (size_t i = 0; i < response->containers_len; i++) {
@@ -1272,12 +1272,12 @@ void PodSandboxManagerService::ListPodSandboxToGRPC(container_list_response *res
             continue;
         }
 
-        pods->push_back(std::move(pod));
+        pods.push_back(std::move(pod));
     }
 }
 
 void PodSandboxManagerService::ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
-                                              std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
+                                              std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> &pods,
                                               Errors &error)
 {
     int ret = 0;
@@ -1464,7 +1464,7 @@ void PodSandboxManagerService::PackagePodSandboxContainerStats(
     runtime::v1alpha2::ContainerStatsFilter filter;
 
     filter.set_pod_sandbox_id(id);
-    containerManager->ListContainerStats(&filter, &containerStats, error);
+    containerManager->ListContainerStats(&filter, containerStats, error);
     if (error.NotEmpty()) {
         error.Errorf("Failed to list container stats: %s", error.GetCMessage());
         return;
@@ -1689,7 +1689,7 @@ cleanup:
 
 void PodSandboxManagerService::ListPodSandboxStats(const runtime::v1alpha2::PodSandboxStatsFilter *filter,
                                                    const std::unique_ptr<ContainerManagerService> &containerManager,
-                                                   std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> *podsStats,
+                                                   std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> &podsStats,
                                                    Errors &error)
 {
     std::vector<std::string> podSandboxIDs;
@@ -1714,7 +1714,7 @@ void PodSandboxManagerService::ListPodSandboxStats(const runtime::v1alpha2::PodS
             continue;
         }
 
-        podsStats->push_back(move(podStats));
+        podsStats.push_back(move(podStats));
     }
 }
 

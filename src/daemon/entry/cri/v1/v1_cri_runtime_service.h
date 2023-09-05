@@ -43,10 +43,10 @@ public:
     virtual void RemoveContainer(const std::string &containerID, Errors &error) = 0;
 
     virtual void ListContainers(const runtime::v1::ContainerFilter *filter,
-                                std::vector<std::unique_ptr<runtime::v1::Container>> *containers, Errors &error) = 0;
+                                std::vector<std::unique_ptr<runtime::v1::Container>> &containers, Errors &error) = 0;
 
     virtual void ListContainerStats(const runtime::v1::ContainerStatsFilter *filter,
-                                    std::vector<std::unique_ptr<runtime::v1::ContainerStats>> *containerstats,
+                                    std::vector<std::unique_ptr<runtime::v1::ContainerStats>> &containerstats,
                                     Errors &error) = 0;
 
     virtual auto ContainerStats(const std::string &containerID,
@@ -80,7 +80,7 @@ public:
                                  Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStats> = 0;
 
     virtual void ListPodSandboxStats(const runtime::v1::PodSandboxStatsFilter *filter,
-                                     std::vector<std::unique_ptr<runtime::v1::PodSandboxStats>> *podsStats,
+                                     std::vector<std::unique_ptr<runtime::v1::PodSandboxStats>> &podsStats,
                                      Errors &error) = 0;
 
     virtual void UpdateContainerResources(const std::string &containerID,

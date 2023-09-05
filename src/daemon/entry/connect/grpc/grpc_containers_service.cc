@@ -430,6 +430,11 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
     container_exec_request *container_req = nullptr;
     container_exec_response *container_res = nullptr;
 
+    if (context == nullptr || stream == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContRExec");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_exec_create");
@@ -599,6 +604,11 @@ Status ContainerServiceImpl::Attach(ServerContext *context, ServerReaderWriter<A
     sem_t sem_stderr;
     int pipefd[2] = { -1, -1 };
 
+    if (context == nullptr || stream == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContAttach");
 
     auto status = AttachInit(context, &cb, &container_req, &container_res, &sem_stderr, pipefd);
@@ -704,6 +714,11 @@ Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *req
     container_wait_request *container_req = nullptr;
     container_wait_response *container_res = nullptr;
 
+    if (context == nullptr || request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     prctl(PR_SET_NAME, "ContWait");
 
     auto status = GrpcServerTlsAuth::auth(context, "container_wait");
@@ -737,6 +752,11 @@ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest 
     service_executor_t *cb = nullptr;
     isulad_events_request *isuladreq = nullptr;
     stream_func_wrapper stream = { 0 };
+
+    if (context == nullptr || request == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContEvents");
 
@@ -775,6 +795,11 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
     int tret;
     service_executor_t *cb = nullptr;
     isulad_copy_from_container_request *isuladreq = nullptr;
+
+    if (context == nullptr || request == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContCopyFrom");
 
@@ -819,6 +844,11 @@ ContainerServiceImpl::CopyToContainer(ServerContext *context,
     int ret;
     service_executor_t *cb = nullptr;
     container_copy_to_request *isuladreq = nullptr;
+
+    if (context == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContCopyTo");
 
@@ -928,6 +958,11 @@ Status ContainerServiceImpl::Logs(ServerContext *context, const LogsRequest *req
     struct isulad_logs_request *isulad_request = nullptr;
     struct isulad_logs_response *isulad_response = nullptr;
     stream_func_wrapper stream = { 0 };
+
+    if (context == nullptr || request == nullptr) {
+        ERROR("Invalid arguments");
+        return Status(StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     prctl(PR_SET_NAME, "ContLogs");
 

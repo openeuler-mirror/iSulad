@@ -33,6 +33,11 @@ grpc::Status RuntimeV1ImageServiceImpl::PullImage(grpc::ServerContext *context,
 {
     Errors error;
 
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     EVENT("Event: {Object: CRI, Type: Pulling image %s}", request->image().image().c_str());
 
     std::string imageRef = rService->PullImage(request->image(), request->auth(), error);
@@ -54,9 +59,14 @@ grpc::Status RuntimeV1ImageServiceImpl::ListImages(grpc::ServerContext *context,
     std::vector<std::unique_ptr<runtime::v1::Image>> images;
     Errors error;
 
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     INFO("Event: {Object: CRI, Type: Listing all images}");
 
-    rService->ListImages(request->filter(), &images, error);
+    rService->ListImages(request->filter(), images, error);
     if (!error.Empty()) {
         ERROR("{Object: CRI, Type: Failed to list all images: %s}", error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
@@ -81,6 +91,11 @@ grpc::Status RuntimeV1ImageServiceImpl::ImageStatus(grpc::ServerContext *context
 {
     std::unique_ptr<runtime::v1::Image> image_info = nullptr;
     Errors error;
+
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     INFO("Event: {Object: CRI, Type: Statusing image %s}", request->image().image().c_str());
 
@@ -108,9 +123,14 @@ grpc::Status RuntimeV1ImageServiceImpl::ImageFsInfo(grpc::ServerContext *context
     std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> usages;
     Errors error;
 
+    if (request == nullptr || reply == nullptr) {
+        ERROR("Invalid arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
+
     INFO("Event: {Object: CRI, Type: Statusing image fs info}");
 
-    rService->ImageFsInfo(&usages, error);
+    rService->ImageFsInfo(usages, error);
     if (!error.Empty()) {
         ERROR("{Object: CRI, Type: Failed to status image fs info: %s}", error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
@@ -134,6 +154,11 @@ grpc::Status RuntimeV1ImageServiceImpl::RemoveImage(grpc::ServerContext *context
                                                   runtime::v1::RemoveImageResponse *reply)
 {
     Errors error;
+
+    if (request == nullptr) {
+        ERROR("Invalid arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid arguments");
+    }
 
     EVENT("Event: {Object: CRI, Type: Removing image %s}", request->image().image().c_str());
 

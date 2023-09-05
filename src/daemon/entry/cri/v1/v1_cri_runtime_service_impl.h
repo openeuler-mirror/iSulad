@@ -45,10 +45,10 @@ public:
     void RemoveContainer(const std::string &containerID, Errors &error) override;
 
     void ListContainers(const runtime::v1::ContainerFilter *filter,
-                        std::vector<std::unique_ptr<runtime::v1::Container>> *containers, Errors &error) override;
+                        std::vector<std::unique_ptr<runtime::v1::Container>> &containers, Errors &error) override;
 
     void ListContainerStats(const runtime::v1::ContainerStatsFilter *filter,
-                            std::vector<std::unique_ptr<runtime::v1::ContainerStats>> *containerstats,
+                            std::vector<std::unique_ptr<runtime::v1::ContainerStats>> &containerstats,
                             Errors &error) override;
 
     auto ContainerStats(const std::string &containerID, Errors &error)
@@ -82,7 +82,7 @@ public:
                          Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStats> override;
 
     void ListPodSandboxStats(const runtime::v1::PodSandboxStatsFilter *filter,
-                             std::vector<std::unique_ptr<runtime::v1::PodSandboxStats>> *podsStats,
+                             std::vector<std::unique_ptr<runtime::v1::PodSandboxStats>> &podsStats,
                              Errors &error) override;
 
     void UpdateContainerResources(const std::string &containerID,

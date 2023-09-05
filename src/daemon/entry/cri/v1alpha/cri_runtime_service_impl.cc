@@ -57,7 +57,7 @@ void CRIRuntimeServiceImpl::RemoveContainer(const std::string &containerID, Erro
 }
 
 void CRIRuntimeServiceImpl::ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
-                                           std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers,
+                                           std::vector<std::unique_ptr<runtime::v1alpha2::Container>> &containers,
                                            Errors &error)
 {
     m_containerManager->ListContainers(filter, containers, error);
@@ -65,7 +65,7 @@ void CRIRuntimeServiceImpl::ListContainers(const runtime::v1alpha2::ContainerFil
 
 void CRIRuntimeServiceImpl::ListContainerStats(
     const runtime::v1alpha2::ContainerStatsFilter *filter,
-    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
+    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> &containerstats, Errors &error)
 {
     m_containerManager->ListContainerStats(filter, containerstats, error);
 }
@@ -131,7 +131,7 @@ auto CRIRuntimeServiceImpl::PodSandboxStatus(const std::string &podSandboxID, Er
 }
 
 void CRIRuntimeServiceImpl::ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
-                                           std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
+                                           std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> &pods,
                                            Errors &error)
 {
     m_podSandboxManager->ListPodSandbox(filter, pods, error);
@@ -145,7 +145,7 @@ auto CRIRuntimeServiceImpl::PodSandboxStats(const std::string &podSandboxID, Err
 
 void
 CRIRuntimeServiceImpl::ListPodSandboxStats(const runtime::v1alpha2::PodSandboxStatsFilter *filter,
-                                           std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> *podsStats,
+                                           std::vector<std::unique_ptr<runtime::v1alpha2::PodSandboxStats>> &podsStats,
                                            Errors &error)
 {
     m_podSandboxManager->ListPodSandboxStats(filter, m_containerManager, podsStats, error);

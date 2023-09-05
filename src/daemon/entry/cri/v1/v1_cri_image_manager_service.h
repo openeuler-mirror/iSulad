@@ -28,7 +28,7 @@ public:
     virtual ~ImageManagerService() = default;
 
     virtual void ListImages(const runtime::v1::ImageFilter &filter,
-                            std::vector<std::unique_ptr<runtime::v1::Image>> *images, Errors &error) = 0;
+                            std::vector<std::unique_ptr<runtime::v1::Image>> &images, Errors &error) = 0;
 
     virtual auto ImageStatus(const runtime::v1::ImageSpec &image,
                              Errors &error) -> std::unique_ptr<runtime::v1::Image> = 0;
@@ -38,7 +38,7 @@ public:
 
     virtual void RemoveImage(const runtime::v1::ImageSpec &image, Errors &error) = 0;
 
-    virtual void ImageFsInfo(std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> *usages,
+    virtual void ImageFsInfo(std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> &usages,
                              Errors &error) = 0;
 };
 } // namespace CRIV1

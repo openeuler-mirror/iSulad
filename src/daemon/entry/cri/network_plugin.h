@@ -30,11 +30,11 @@ const std::string POD_DISABLE_DEFAULT_NET_ANNOTATION_KEY = "network.alpha.kubern
 class NetworkPluginConf {
 public:
     /* settings for net plugin */
-    NetworkPluginConf(const std::string &dockershimRootDirectory = "/var/lib/isulad/shim",
-                      const std::string &pluginConfDir = "/etc/cni/net.d/",
-                      const std::string &pluginBinDir = "/opt/cni/bin", const std::string &pluginName = "",
-                      const std::string &hairpinMode = "hairpin-veth", const std::string &nonMasqueradeCIDR = "",
-                      int32_t mtu = 1460)
+    explicit NetworkPluginConf(const std::string &dockershimRootDirectory = "/var/lib/isulad/shim",
+                               const std::string &pluginConfDir = "/etc/cni/net.d/",
+                               const std::string &pluginBinDir = "/opt/cni/bin", const std::string &pluginName = "",
+                               const std::string &hairpinMode = "hairpin-veth", const std::string &nonMasqueradeCIDR = "",
+                               int32_t mtu = 1460)
         : m_dockershimRootDirectory(dockershimRootDirectory),
           m_pluginConfDir(pluginConfDir),
           m_pluginBinDir(pluginBinDir),

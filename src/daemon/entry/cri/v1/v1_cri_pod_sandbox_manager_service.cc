@@ -915,7 +915,7 @@ void PodSandboxManagerService::PackagePodSandboxContainerStats(
     runtime::v1::ContainerStatsFilter filter;
 
     filter.set_pod_sandbox_id(id);
-    containerManager->ListContainerStats(&filter, &containerStats, error);
+    containerManager->ListContainerStats(&filter, containerStats, error);
     if (error.NotEmpty()) {
         error.Errorf("Failed to list container stats: %s", error.GetCMessage());
         return;
@@ -1140,7 +1140,7 @@ cleanup:
 
 void PodSandboxManagerService::ListPodSandboxStats(const runtime::v1::PodSandboxStatsFilter *filter,
                                                    const std::unique_ptr<ContainerManagerService> &containerManager,
-                                                   std::vector<std::unique_ptr<runtime::v1::PodSandboxStats>> *podsStats,
+                                                   std::vector<std::unique_ptr<runtime::v1::PodSandboxStats>> &podsStats,
                                                    Errors &error)
 {
     std::vector<std::string> podSandboxIDs;
@@ -1165,7 +1165,7 @@ void PodSandboxManagerService::ListPodSandboxStats(const runtime::v1::PodSandbox
             continue;
         }
 
-        podsStats->push_back(move(podStats));
+        podsStats.push_back(move(podStats));
     }
 }
 

@@ -66,7 +66,7 @@ public:
 
     void ListPodSandboxStats(const runtime::v1::PodSandboxStatsFilter *filter,
                              const std::unique_ptr<ContainerManagerService> &containerManager,
-                             std::vector<std::unique_ptr<runtime::v1::PodSandboxStats>> *podsStats,
+                             std::vector<std::unique_ptr<runtime::v1::PodSandboxStats>> &podsStats,
                              Errors &error);
 
     void PortForward(const runtime::v1::PortForwardRequest &req, runtime::v1::PortForwardResponse *resp,

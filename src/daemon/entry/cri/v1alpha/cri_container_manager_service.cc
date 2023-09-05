@@ -671,7 +671,7 @@ void ContainerManagerService::ListContainersFromGRPC(const runtime::v1alpha2::Co
 }
 
 void ContainerManagerService::ListContainersToGRPC(container_list_response *response,
-                                                   std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *pods,
+                                                   std::vector<std::unique_ptr<runtime::v1alpha2::Container>> &pods,
                                                    Errors &error)
 {
     for (size_t i {}; i < response->containers_len; i++) {
@@ -718,12 +718,12 @@ void ContainerManagerService::ListContainersToGRPC(container_list_response *resp
             CRIHelpersV1Alpha::ContainerStatusToRuntime(Container_Status(response->containers[i]->status));
         container->set_state(state);
 
-        pods->push_back(move(container));
+        pods.push_back(move(container));
     }
 }
 
 void ContainerManagerService::ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
-                                             std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers,
+                                             std::vector<std::unique_ptr<runtime::v1alpha2::Container>> &containers,
                                              Errors &error)
 {
     if (m_cb == nullptr || m_cb->container.list == nullptr) {
@@ -874,7 +874,7 @@ void ContainerManagerService::PackContainerStatsFilesystemUsage(
 
 void ContainerManagerService::ContainerStatsToGRPC(
     container_stats_response *response,
-    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
+    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> &containerstats, Errors &error)
 {
     if (response == nullptr) {
         return;
@@ -924,20 +924,16 @@ void ContainerManagerService::ContainerStatsToGRPC(
         if (response->container_stats[i]->major_page_faults != 0u) {
             container->mutable_memory()->mutable_major_page_faults()->set_value(response->container_stats[i]->major_page_faults);
         }
-        containerstats->push_back(std::move(container));
+        containerstats.push_back(std::move(container));
     }
 }
 
 void ContainerManagerService::ListContainerStats(
     const runtime::v1alpha2::ContainerStatsFilter *filter,
-    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
+    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> &containerstats, Errors &error)
 {
     if (m_cb == nullptr || m_cb->container.stats == nullptr) {
         error.SetError("Unimplemented callback");
-        return;
-    }
-    if (containerstats == nullptr) {
-        error.SetError("Invalid arguments");
         return;
     }
 
@@ -1016,7 +1012,7 @@ auto ContainerManagerService::ContainerStats(const std::string &containerID, Err
         goto cleanup;
     }
 
-    ContainerStatsToGRPC(response, &contStatsVec, error);
+    ContainerStatsToGRPC(response, contStatsVec, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
