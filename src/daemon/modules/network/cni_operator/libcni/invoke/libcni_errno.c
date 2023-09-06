@@ -30,14 +30,6 @@ const char * const g_INVOKE_ERR_MSGS[] = {
     "Success"
 };
 
-const char *get_invoke_err_msg(int errcode)
-{
-    if (errcode > (int)INK_ERR_MIN && errcode <= (int)INK_ERR_SUCCESS) {
-        return g_INVOKE_ERR_MSGS[errcode - (int)INK_ERR_MIN];
-    }
-    return strerror(errcode);
-}
-
 const char * const g_CNI_WELL_KNOWN_ERR_MSGS[] = {
     /* 0 */
     "Success",

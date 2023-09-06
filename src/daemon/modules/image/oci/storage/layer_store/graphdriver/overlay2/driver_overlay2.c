@@ -134,7 +134,8 @@ static int overlay2_parse_options(struct graphdriver *driver, const char **optio
             int64_t converted = 0;
             ret = util_parse_byte_size_string(val, &converted);
             if (ret != 0) {
-                ERROR("Invalid size: '%s': %s", val, strerror(-ret));
+                errno = -ret;
+                SYSERROR("Invalid size: '%s'", val);
                 ret = -1;
                 goto out;
             }
@@ -143,7 +144,8 @@ static int overlay2_parse_options(struct graphdriver *driver, const char **optio
             int64_t converted = 0;
             ret = util_parse_byte_size_string(val, &converted);
             if (ret != 0) {
-                ERROR("Invalid size: '%s': %s", val, strerror(-ret));
+                errno = -ret;
+                SYSERROR("Invalid size: '%s'", val);
                 ret = -1;
                 goto out;
             }
@@ -152,7 +154,8 @@ static int overlay2_parse_options(struct graphdriver *driver, const char **optio
             bool converted_bool = 0;
             ret = util_str_to_bool(val, &converted_bool);
             if (ret != 0) {
-                ERROR("Invalid bool: '%s': %s", val, strerror(-ret));
+                errno = -ret;
+                SYSERROR("Invalid bool: '%s'", val);
                 ret = -1;
                 goto out;
             }
@@ -161,7 +164,8 @@ static int overlay2_parse_options(struct graphdriver *driver, const char **optio
             bool converted_bool = 0;
             ret = util_str_to_bool(val, &converted_bool);
             if (ret != 0) {
-                ERROR("Invalid bool: '%s': %s", val, strerror(-ret));
+                errno = -ret;
+                SYSERROR("Invalid bool: '%s'", val);
                 ret = -1;
                 goto out;
             }
@@ -830,8 +834,9 @@ static int set_layer_quota(const char *dir, const json_map_string_string *opts, 
             int64_t converted = 0;
             ret = util_parse_byte_size_string(opts->values[i], &converted);
             if (ret != 0) {
-                ERROR("Invalid size: '%s': %s", opts->values[i], strerror(-ret));
-                isulad_set_error_message("Invalid quota size: '%s': %s", opts->values[i], strerror(-ret));
+                errno = -ret;
+                SYSERROR("Invalid size: '%s'", opts->values[i]);
+                isulad_set_error_message("Invalid quota size: '%s'", opts->values[i]);
                 ret = -1;
                 goto out;
             }

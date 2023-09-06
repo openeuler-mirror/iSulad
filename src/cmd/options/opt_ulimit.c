@@ -63,7 +63,8 @@ static int parse_soft_hard_ulimit(const char *val, char **limitvals, size_t limi
     // parse soft
     ret = util_safe_llong(limitvals[0], &converted);
     if (ret < 0) {
-        COMMAND_ERROR("Invalid ulimit soft value: \"%s\", parse int64 failed: %s", val, strerror(-ret));
+        errno = -ret;
+        CMD_SYSERROR("Invalid ulimit soft value: \"%s\", parse int64 failed", val);
         ret = -1;
         goto out;
     }
@@ -74,7 +75,8 @@ static int parse_soft_hard_ulimit(const char *val, char **limitvals, size_t limi
         converted = 0;
         ret = util_safe_llong(limitvals[1], &converted);
         if (ret < 0) {
-            COMMAND_ERROR("Invalid ulimit hard value: \"%s\", parse int64 failed: %s", val, strerror(-ret));
+            errno = -ret;
+            CMD_SYSERROR("Invalid ulimit hard value: \"%s\", parse int64 failed", val);
             ret = -1;
             goto out;
         }

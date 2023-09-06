@@ -2032,7 +2032,8 @@ static int create_check_hugetlbs(const struct client_arguments *args)
         }
         ret = util_parse_byte_size_string(limit, &limitvalue);
         if (ret != 0) {
-            COMMAND_ERROR("Invalid hugetlb limit:%s:%s", limit, strerror(-ret));
+            errno = -ret;
+            CMD_SYSERROR("Invalid hugetlb limit:%s", limit);
             free(dup);
             ret = -1;
             goto out;

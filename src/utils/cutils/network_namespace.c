@@ -231,7 +231,8 @@ int remove_network_namespace_file(const char *netns_path)
     }
 
     if (!util_force_remove_file(netns_path, &get_err)) {
-        ERROR("Failed to remove file %s, error: %s", netns_path, strerror(get_err));
+        errno = get_err;
+        SYSERROR("Failed to remove file %s", netns_path);
         return -1;
     }
 

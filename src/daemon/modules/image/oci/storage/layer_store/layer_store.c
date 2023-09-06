@@ -98,7 +98,8 @@ static inline bool layer_store_lock(bool writable)
         nret = pthread_rwlock_rdlock(&g_metadata.rwlock);
     }
     if (nret != 0) {
-        ERROR("Lock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock memory store failed");
         return false;
     }
 
@@ -111,7 +112,8 @@ static inline void layer_store_unlock()
 
     nret = pthread_rwlock_unlock(&g_metadata.rwlock);
     if (nret != 0) {
-        FATAL("Unlock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock memory store failed");
     }
 }
 

@@ -429,7 +429,8 @@ void PodSandboxManagerService::ClearCniNetwork(const std::shared_ptr<sandbox::Sa
 
     // umount netns when cni removed network successfully
     if (remove_network_namespace(sandboxKey.c_str()) != 0) {
-        error.Errorf("Failed to umount directory %s:%s", sandboxKey.c_str(), strerror(errno));
+        SYSERROR("Failed to umount directory %s", sandboxKey.c_str());
+        error.Errorf("Failed to umount directory %s", sandboxKey.c_str());
     }
 }
 

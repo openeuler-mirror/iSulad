@@ -86,7 +86,8 @@ static inline bool driver_rd_lock()
 
     nret = pthread_rwlock_rdlock(&g_graphdriver->rwlock);
     if (nret != 0) {
-        ERROR("Lock driver memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock driver memory store failed");
         return false;
     }
 
@@ -99,7 +100,8 @@ static inline bool driver_wr_lock()
 
     nret = pthread_rwlock_wrlock(&g_graphdriver->rwlock);
     if (nret != 0) {
-        ERROR("Lock driver memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock driver memory store failed");
         return false;
     }
 
@@ -112,7 +114,8 @@ static inline void driver_unlock()
 
     nret = pthread_rwlock_unlock(&g_graphdriver->rwlock);
     if (nret != 0) {
-        FATAL("Unlock driver memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock driver memory store failed");
     }
 }
 

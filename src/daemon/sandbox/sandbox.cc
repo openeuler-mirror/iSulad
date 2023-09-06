@@ -817,7 +817,8 @@ auto Sandbox::SaveState(Errors &error) -> bool
 
     nret = util_atomic_write_file(path.c_str(), stateJson.c_str(), stateJson.length(), CONFIG_FILE_MODE, false);
     if (nret != 0) {
-        error.Errorf("Failed to write file %s: %s", path.c_str(), strerror(errno));
+        SYSERROR("Failed to write file %s");
+        error.Errorf("Failed to write file %s", path.c_str());
         return false;
     }
 
@@ -834,7 +835,7 @@ auto Sandbox::SaveNetworkSetting(Errors &error) -> bool
                                   false);
     if (nret != 0) {
         SYSERROR("Failed to write file %s", path.c_str());
-        error.Errorf("Failed to write file %s: %s", path.c_str(), strerror(errno));
+        error.Errorf("Failed to write file %s", path.c_str());
         return false;
     }
 
@@ -877,7 +878,8 @@ auto Sandbox::SaveMetadata(Errors &error) -> bool
 
     nret = util_atomic_write_file(path.c_str(), metadataJson.c_str(), metadataJson.length(), CONFIG_FILE_MODE, false);
     if (nret != 0) {
-        error.Errorf("Failed to write file %s: %s", path.c_str(), strerror(errno));
+        SYSERROR("Failed to write file %s", path.c_str());
+        error.Errorf("Failed to write file %s", path.c_str());
         return false;
     }
     return true;

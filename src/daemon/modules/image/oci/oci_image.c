@@ -59,7 +59,8 @@ static inline bool oci_remote_lock(pthread_rwlock_t *remote_lock, bool writable)
         nret = pthread_rwlock_rdlock(remote_lock);
     }
     if (nret != 0) {
-        ERROR("Lock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock memory store failed");
         return false;
     }
 
@@ -72,7 +73,8 @@ static inline void oci_remote_unlock(pthread_rwlock_t *remote_lock)
 
     nret = pthread_rwlock_unlock(remote_lock);
     if (nret != 0) {
-        FATAL("Unlock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock memory store failed");
     }
 }
 #endif
