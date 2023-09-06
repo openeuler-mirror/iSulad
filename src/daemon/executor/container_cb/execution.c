@@ -339,13 +339,13 @@ static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const
     fd = util_open(fpath, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0700);
     if (fd < 0) {
         SYSERROR("Failed to open file: %s.", fpath);
-        isulad_set_error_message("Failed to open file: %s: %s", fpath, strerror(errno));
+        isulad_set_error_message("Failed to open file: %s.", fpath);
         return -1;
     }
     nwrite = util_write_nointr(fd, buf, strlen(buf));
     if (nwrite < 0 || (size_t)nwrite != strlen(buf)) {
         SYSERROR("Failed to write %s to %s.", buf, fpath);
-        isulad_set_error_message("Failed to write '%s' to '%s': %s", buf, fpath, strerror(errno));
+        isulad_set_error_message("Failed to write '%s' to '%s'.", buf, fpath);
         close(fd);
         return -1;
     }

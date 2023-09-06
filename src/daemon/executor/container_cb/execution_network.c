@@ -67,8 +67,8 @@ static int write_hostname_to_file(const char *rootfs, const char *hostname)
 
     ret = util_write_file(file_path, hostname, strlen(hostname), NETWORK_MOUNT_FILE_MODE);
     if (ret) {
-        SYSERROR("Failed to write %s", file_path);
-        isulad_set_error_message("Failed to write %s: %s", file_path, strerror(errno));
+        SYSERROR("Failed to write %s.", file_path);
+        isulad_set_error_message("Failed to write %s.", file_path);
         goto out;
     }
 
@@ -96,8 +96,8 @@ static int fopen_network(FILE **fp, char **file_path, const char *rootfs, const 
 
     *fp = util_fopen(*file_path, "a+");
     if (*fp == NULL) {
-        SYSERROR("Failed to open %s", *file_path);
-        isulad_set_error_message("Failed to open %s: %s", *file_path, strerror(errno));
+        SYSERROR("Failed to open %s.", *file_path);
+        isulad_set_error_message("Failed to open %s.", *file_path);
         return -1;
     }
     return 0;
@@ -168,8 +168,8 @@ static int write_content_to_file(const char *file_path, const char *content)
     if (content != NULL) {
         ret = util_write_file(file_path, content, strlen(content), NETWORK_MOUNT_FILE_MODE);
         if (ret != 0) {
-            SYSERROR("Failed to write file %s", file_path);
-            isulad_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
+            SYSERROR("Failed to write file %s.", file_path);
+            isulad_set_error_message("Failed to write file %s.", file_path);
             return ret;
         }
     }
@@ -701,9 +701,8 @@ static int chown_network(const char *user_remap, const char *rootfs, const char 
         goto out;
     }
     if (chown(file_path, host_uid, host_gid) != 0) {
-        SYSERROR("Failed to chown network file '%s' to %u:%u", filename, host_uid, host_gid);
-        isulad_set_error_message("Failed to chown network file '%s' to %u:%u: %s", filename, host_uid, host_gid,
-                                 strerror(errno));
+        SYSERROR("Failed to chown network file '%s' to %u:%u.", filename, host_uid, host_gid);
+        isulad_set_error_message("Failed to chown network file '%s' to %u:%u.", filename, host_uid, host_gid);
         ret = -1;
         goto out;
     }

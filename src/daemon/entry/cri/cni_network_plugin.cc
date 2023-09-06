@@ -1003,7 +1003,8 @@ void CniNetworkPlugin::RLockNetworkMap(Errors &error)
     int ret = pthread_rwlock_rdlock(&m_netsLock);
     if (ret != 0) {
         error.Errorf("Failed to get read lock");
-        ERROR("Get read lock failed: %s", strerror(ret));
+        errno = ret;
+        SYSERROR("Get read lock failed");
     }
 }
 
@@ -1012,7 +1013,8 @@ void CniNetworkPlugin::WLockNetworkMap(Errors &error)
     int ret = pthread_rwlock_wrlock(&m_netsLock);
     if (ret != 0) {
         error.Errorf("Failed to get write lock");
-        ERROR("Get write lock failed: %s", strerror(ret));
+        errno = ret;
+        SYSERROR("Get write lock failed");
     }
 }
 
@@ -1021,7 +1023,8 @@ void CniNetworkPlugin::UnlockNetworkMap(Errors &error)
     int ret = pthread_rwlock_unlock(&m_netsLock);
     if (ret != 0) {
         error.Errorf("Failed to unlock");
-        ERROR("Unlock failed: %s", strerror(ret));
+        errno = ret;
+        SYSERROR("Unlock failed");
     }
 }
 

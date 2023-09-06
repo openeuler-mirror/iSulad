@@ -376,7 +376,7 @@ static int client_attach(struct client_arguments *args, uint32_t *exit_code)
         if (errno == ETIMEDOUT) {
             COMMAND_ERROR("Wait container status timeout.");
         } else {
-            COMMAND_ERROR("Failed to wait sem: %s", strerror(errno));
+            CMD_SYSERROR("Failed to wait sem");
         }
         ret = ECOMMON;
         goto out;

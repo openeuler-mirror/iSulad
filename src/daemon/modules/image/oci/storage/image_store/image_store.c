@@ -95,7 +95,8 @@ static inline bool image_store_lock(enum lock_type type)
         nret = pthread_rwlock_wrlock(&g_image_store->rwlock);
     }
     if (nret != 0) {
-        ERROR("Lock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock memory store failed");
         return false;
     }
 
@@ -108,7 +109,8 @@ static inline void image_store_unlock()
 
     nret = pthread_rwlock_unlock(&g_image_store->rwlock);
     if (nret != 0) {
-        FATAL("Unlock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock memory store failed");
     }
 }
 

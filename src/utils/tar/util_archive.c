@@ -254,8 +254,8 @@ static int do_safe_chroot(const char *dstdir)
     prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
 
     if (chroot(dstdir) != 0) {
-        SYSERROR("Failed to chroot to %s", dstdir);
-        fprintf(stderr, "Failed to chroot to %s: %s", dstdir, strerror(errno));
+        SYSERROR("Failed to chroot to %s.", dstdir);
+        fprintf(stderr, "Failed to chroot to %s.", dstdir);
         return -1;
     }
 
@@ -843,15 +843,15 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
         }
 
         if (do_safe_chroot(safe_dir) != 0) {
-            SYSERROR("Failed to chroot to %s", safe_dir);
-            fprintf(stderr, "Failed to chroot to %s: %s", safe_dir, strerror(errno));
+            SYSERROR("Failed to chroot to %s.", safe_dir);
+            fprintf(stderr, "Failed to chroot to %s.", safe_dir);
             ret = -1;
             goto child_out;
         }
 
         if (chdir("/") != 0) {
             SYSERROR("Failed to chroot to /");
-            fprintf(stderr, "Failed to chroot to /: %s", strerror(errno));
+            fprintf(stderr, "Failed to chroot to /");
             ret = -1;
             goto child_out;
         }
@@ -1250,7 +1250,7 @@ int archive_chroot_tar(const char *path, const char *file, const char *root_dir,
         fd = open(file, TAR_DEFAULT_FLAG, TAR_DEFAULT_MODE);
         if (fd < 0) {
             SYSERROR("Failed to open file %s for export", file);
-            fprintf(stderr, "Failed to open file %s for export: %s\n", file, strerror(errno));
+            fprintf(stderr, "Failed to open file %s for export\n", file);
             ret = -1;
             goto child_out;
         }

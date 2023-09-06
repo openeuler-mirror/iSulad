@@ -546,7 +546,8 @@ int command_convert_u16(command_option_t *option, const char *arg)
     }
     ret = util_safe_u16(arg, option->data);
     if (ret != 0) {
-        COMMAND_ERROR("Invalid value \"%s\" for flag --%s: %s", arg, option->large, strerror(-ret));
+        errno = -ret;
+        CMD_SYSERROR("Invalid value \"%s\" for flag --%s", arg, option->large);
         return EINVALIDARGS;
     }
     return 0;
@@ -561,7 +562,8 @@ int command_convert_llong(command_option_t *opt, const char *arg)
     }
     ret = util_safe_llong(arg, opt->data);
     if (ret != 0) {
-        COMMAND_ERROR("Invalid value \"%s\" for flag --%s: %s", arg, opt->large, strerror(-ret));
+        errno = -ret;
+        CMD_SYSERROR("Invalid value \"%s\" for flag --%s", arg, opt->large);
         return EINVALIDARGS;
     }
     return 0;
@@ -575,7 +577,8 @@ int command_convert_uint(command_option_t *opt, const char *arg)
     }
     ret = util_safe_uint(arg, opt->data);
     if (ret != 0) {
-        COMMAND_ERROR("Invalid value \"%s\" for flag --%s: %s", arg, opt->large, strerror(-ret));
+        errno = -ret;
+        CMD_SYSERROR("Invalid value \"%s\" for flag --%s", arg, opt->large);
         return EINVALIDARGS;
     }
     return 0;
@@ -590,7 +593,8 @@ int command_convert_int(command_option_t *option, const char *arg)
     }
     ret = util_safe_int(arg, option->data);
     if (ret != 0) {
-        COMMAND_ERROR("Invalid value \"%s\" for flag --%s: %s", arg, option->large, strerror(-ret));
+        errno = -ret;
+        CMD_SYSERROR("Invalid value \"%s\" for flag --%s", arg, option->large);
         return EINVALIDARGS;
     }
     return 0;

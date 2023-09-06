@@ -107,8 +107,9 @@ static int handle_dm_min_free_space(char *val, struct device_set *devset)
     long converted = 0;
     int ret = util_parse_percent_string(val, &converted);
     if (ret != 0 || converted >= 100) {
-        ERROR("Invalid min free space: '%s': %s", val, strerror(-ret));
-        isulad_set_error_message("Invalid min free space: '%s': %s", val, strerror(-ret));
+        errno = -ret;
+        SYSERROR("Invalid min free space: '%s'", val);
+        isulad_set_error_message("Invalid min free space: '%s'", val);
         return -1;
     }
     devset->min_free_space_percent = (uint32_t)converted;
@@ -122,8 +123,9 @@ static int handle_dm_basesize(char *val, struct device_set *devset)
     int ret = util_parse_byte_size_string(val, &converted);
 
     if (ret != 0) {
-        ERROR("Invalid size: '%s': %s", val, strerror(-ret));
-        isulad_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
+        errno = -ret;
+        SYSERROR("Invalid size: '%s'", val);
+        isulad_set_error_message("Invalid size: '%s'", val);
         return -1;
     }
     if (converted <= 0) {
@@ -2722,7 +2724,8 @@ static int determine_driver_capabilities(const char *version, struct device_set 
 
     ret = util_parse_byte_size_string(tmp_str[0], &major);
     if (ret != 0) {
-        ERROR("devmapper: invalid size: '%s': %s", tmp_str[0], strerror(-ret));
+        errno = -ret;
+        SYSERROR("devmapper: invalid size: '%s'", tmp_str[0]);
         ret = -1;
         goto out;
     }
@@ -2742,7 +2745,8 @@ static int determine_driver_capabilities(const char *version, struct device_set 
 
     ret = util_parse_byte_size_string(tmp_str[1], &minor);
     if (ret != 0) {
-        ERROR("devmapper: invalid size: '%s': %s", tmp_str[1], strerror(-ret));
+        errno = -ret;
+        SYSERROR("devmapper: invalid size: '%s'", tmp_str[1]);
         ret = -1;
         goto out;
     }
@@ -2915,7 +2919,8 @@ static int parse_storage_opt(const json_map_string_string *opts, uint64_t *size)
 
             ret = util_parse_byte_size_string(opts->values[i], &converted);
             if (ret != 0) {
-                ERROR("Invalid size: '%s': %s", opts->values[i], strerror(-ret));
+                errno = -ret;
+                SYSERROR("Invalid size: '%s'", opts->values[i]);
                 ret = -1;
                 goto out;
             }

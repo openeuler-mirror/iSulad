@@ -409,7 +409,8 @@ static void pm_rdlock(void)
 
     errcode = pthread_rwlock_rdlock(&g_plugin_manager->pm_rwlock);
     if (errcode != 0) {
-        ERROR("Read lock failed: %s", strerror(errcode));
+        errno = errcode;
+        SYSERROR("Read lock failed");
     }
 }
 
@@ -419,7 +420,8 @@ static void pm_wrlock(void)
 
     errcode = pthread_rwlock_wrlock(&g_plugin_manager->pm_rwlock);
     if (errcode != 0) {
-        ERROR("Write lock failed: %s", strerror(errcode));
+        errno = errcode;
+        SYSERROR("Write lock failed");
     }
 }
 
@@ -429,7 +431,8 @@ static void pm_unlock(void)
 
     errcode = pthread_rwlock_unlock(&g_plugin_manager->pm_rwlock);
     if (errcode != 0) {
-        ERROR("Unlock failed: %s", strerror(errcode));
+        errno = errcode;
+        SYSERROR("Unlock failed");
     }
 }
 
@@ -659,7 +662,8 @@ static void *plugin_manager_routine(void *arg)
 
     errcode = pthread_detach(pthread_self());
     if (errcode != 0) {
-        ERROR("Detach thread failed: %s", strerror(errcode));
+        errno = errcode;
+        SYSERROR("Detach thread failed");
         return NULL;
     }
     if (pm_init() < 0) {
@@ -716,7 +720,8 @@ static void plugin_rdlock(plugin_t *plugin)
 
     errcode = pthread_rwlock_rdlock(&plugin->lock);
     if (errcode != 0) {
-        ERROR("Plugin read lock failed: %s", strerror(errcode));
+        errno = errcode;
+        SYSERROR("Plugin read lock failed");
     }
 }
 
@@ -726,7 +731,8 @@ static void plugin_wrlock(plugin_t *plugin)
 
     errcode = pthread_rwlock_wrlock(&plugin->lock);
     if (errcode != 0) {
-        ERROR("Plugin write lock failed: %s", strerror(errcode));
+        errno = errcode;
+        SYSERROR("Plugin write lock failed");
     }
 }
 
@@ -736,7 +742,8 @@ static void plugin_unlock(plugin_t *plugin)
 
     errcode = pthread_rwlock_unlock(&plugin->lock);
     if (errcode != 0) {
-        ERROR("Plugin unlock failed: %s", strerror(errcode));
+        errno = errcode;
+        SYSERROR("Plugin unlock failed");
     }
 }
 
@@ -758,7 +765,8 @@ plugin_t *plugin_new(const char *name, const char *addr)
 
     errcode = pthread_rwlock_init(&plugin->lock, NULL);
     if (errcode != 0) {
-        ERROR("Plugin init lock failed: %s", strerror(errcode));
+        errno = errcode;
+        SYSERROR("Plugin init lock failed");
         goto bad;
     }
     plugin->name = util_strdup_s(name);

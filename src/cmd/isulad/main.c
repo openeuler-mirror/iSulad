@@ -627,8 +627,9 @@ static int parse_time_duration(const char *value, unsigned int *seconds)
     *(num_str + len - 1) = '\0';
     ret = util_safe_uint(num_str, &tmp);
     if (ret < 0) {
-        ERROR("Illegal unsigned integer: %s", num_str);
-        COMMAND_ERROR("Illegal unsigned integer:%s:%s", num_str, strerror(-ret));
+        errno = -ret;
+        SYSERROR("Illegal unsigned integer: %s", num_str);
+        COMMAND_ERROR("Illegal unsigned integer:%s", num_str);
         ret = -1;
         goto out;
     }
@@ -1499,7 +1500,8 @@ static int create_mount_flock_file(const struct service_arguments *args)
         // recreate mount flock file
         // and make file uid/gid and permission correct
         if (!util_force_remove_file(cleanpath, &err)) {
-            ERROR("Failed to delete %s, error: %s. Please delete %s manually.", path, strerror(err), path);
+            errno = err;
+            SYSERROR("Failed to delete %s. Please delete %s manually.", path, path);
             return -1;
         }
     }
@@ -1712,7 +1714,7 @@ static int set_locale()
 
     /* Change from the standard (C) to en_US.UTF-8 locale, so libarchive can handle filename conversions.*/
     if (setlocale(LC_CTYPE, "en_US.UTF-8") == NULL) {
-        COMMAND_ERROR("Could not set locale to en_US.UTF-8:%s", strerror(errno));
+        CMD_SYSERROR("Could not set locale to en_US.UTF-8");
         ret = -1;
         goto out;
     }

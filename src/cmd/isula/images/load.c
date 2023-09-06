@@ -150,7 +150,7 @@ int cmd_load_main(int argc, const char **argv)
         int len;
 
         if (!getcwd(cwd, sizeof(cwd))) {
-            COMMAND_ERROR("get cwd failed:%s", strerror(errno));
+            CMD_SYSERROR("get cwd failed.");
             exit(exit_code);
         }
 

@@ -1758,7 +1758,7 @@ static int check_hook_spec_file(const char *hook_spec)
         return -1;
     }
     if (stat(hook_spec, &hookstat)) {
-        COMMAND_ERROR("Stat hook spec file failed: %s", strerror(errno));
+        CMD_SYSERROR("Stat hook spec file failed");
         return -1;
     }
     if ((hookstat.st_mode & S_IFMT) != S_IFREG) {
@@ -1800,7 +1800,7 @@ static int create_check_rootfs(struct client_arguments *args)
     if (args->create_rootfs != NULL) {
         char real_path[PATH_MAX] = { 0 };
         if (realpath(args->create_rootfs, real_path) == NULL) {
-            COMMAND_ERROR("Failed to get rootfs '%s': %s", args->create_rootfs, strerror(errno));
+            CMD_SYSERROR("Failed to get rootfs '%s'.", args->create_rootfs);
             ret = -1;
             goto out;
         }
@@ -1845,7 +1845,8 @@ static int create_check_hugetlbs(const struct client_arguments *args)
         }
         ret = util_parse_byte_size_string(limit, &limitvalue);
         if (ret != 0) {
-            COMMAND_ERROR("Invalid hugetlb limit:%s:%s", limit, strerror(-ret));
+            errno = -ret;
+            CMD_SYSERROR("Invalid hugetlb limit:%s", limit);
             free(dup);
             ret = -1;
             goto out;

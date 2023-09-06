@@ -142,7 +142,7 @@ static int create_fifo()
 
     ret = mknod(g_fifo_path, S_IFIFO | S_IRUSR | S_IWUSR, (dev_t)0);
     if (ret != 0 && errno != EEXIST) {
-        COMMAND_ERROR("mknod failed: %s", strerror(errno));
+        CMD_SYSERROR("mknod failed.");
     } else {
         ret = 0;
     }
@@ -157,12 +157,12 @@ static int open_log(bool change_size)
 
     fd = util_open(g_fifo_path, O_RDWR | O_CLOEXEC, 0);
     if (fd == -1) {
-        COMMAND_ERROR("open fifo %s failed: %s", g_fifo_path, strerror(errno));
+        CMD_SYSERROR("open fifo %s failed", g_fifo_path);
         return fd;
     }
 
     if (change_size && fcntl(fd, F_SETPIPE_SZ, LOG_FIFO_SIZE) == -1) {
-        COMMAND_ERROR("set fifo buffer size failed: %s", strerror(errno));
+        CMD_SYSERROR("set fifo buffer size failed");
         close(fd);
         return -1;
     }
@@ -262,7 +262,7 @@ void main_loop()
         int len = (int)util_read_nointr(g_fifo_fd, rev_buf, REV_BUF_SIZE);
         if (len < 0) {
             if (ecount < 2) {
-                COMMAND_ERROR("%d: Read message failed: %s", ecount++, strerror(errno));
+                CMD_SYSERROR("%d: Read message failed", ecount++);
             }
             continue;
         }
@@ -270,7 +270,7 @@ void main_loop()
 
         rev_buf[len] = '\0';
         if (g_save_log_op(rev_buf, (size_t)len) < 0) {
-            COMMAND_ERROR("write message failed: %s", strerror(errno));
+            CMD_SYSERROR("write message failed");
         }
     }
 }
@@ -289,14 +289,14 @@ static int log_file_open()
     }
     fd = util_open(g_log_file, O_CREAT | O_WRONLY | O_APPEND, g_log_mode);
     if (fd == -1) {
-        COMMAND_ERROR("Open %s failed: %s", g_log_file, strerror(errno));
+        CMD_SYSERROR("Open %s failed", g_log_file);
         ret = -1;
         goto out;
     }
 
     /* change log file mode to config, if log file exist and with different mode */
     if (fchmod(fd, g_log_mode) != 0) {
-        COMMAND_ERROR("Change mode of log file: %s failed: %s", g_log_file, strerror(errno));
+        CMD_SYSERROR("Change mode of log file: %s failed", g_log_file);
         close(fd);
         ret = -1;
         goto out;
