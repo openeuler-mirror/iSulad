@@ -46,7 +46,8 @@ static int parseName(const std::string &name, std::vector<std::string> &items, u
     }
 
     if (util_safe_uint(items[5].c_str(), &attempt)) {
-        err.Errorf("failed to parse the sandbox name %s: %s", name.c_str(), strerror(errno));
+        SYSERROR("failed to parse the sandbox name %s.", name.c_str());
+        err.Errorf("failed to parse the sandbox name %s.", name.c_str());
         return -1;
     }
 

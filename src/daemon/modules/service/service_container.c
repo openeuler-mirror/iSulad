@@ -586,7 +586,7 @@ static int valid_mount_point(container_config_v2_common_config_mount_points_elem
 
     if (lstat(mp->source, &st) != 0) {
         SYSERROR("lstat %s failed", mp->source);
-        isulad_set_error_message("lstat %s: %s", mp->source, strerror(errno));
+        isulad_set_error_message("lstat %s failed", mp->source);
         return -1;
     }
 

@@ -556,15 +556,15 @@ static int remove_volume_dir(char *path)
     // remain untouched if we remove the data directory failed.
     ret = util_recursive_rmdir(path, 0);
     if (ret != 0) {
-        SYSERROR("failed to remove volume data dir %s", path);
-        isulad_try_set_error_message("failed to remove volume data dir %s: %s", path, strerror(errno));
+        SYSERROR("failed to remove volume data dir %s.", path);
+        isulad_try_set_error_message("failed to remove volume data dir %s.", path);
         goto out;
     }
 
     ret = util_recursive_rmdir(vol_dir, 0);
     if (ret != 0) {
-        SYSERROR("failed to remove volume dir %s", vol_dir);
-        isulad_try_set_error_message("failed to remove volume dir %s: %s", vol_dir, strerror(errno));
+        SYSERROR("failed to remove volume dir %s.", vol_dir);
+        isulad_try_set_error_message("failed to remove volume dir %s.", vol_dir);
         goto out;
     }
 

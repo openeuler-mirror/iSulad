@@ -1510,7 +1510,7 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
         if (!util_file_exists(iter->source) && util_mkdir_p(iter->source, mode)) {
 #endif
             SYSERROR("Failed to create directory '%s'", iter->source);
-            isulad_try_set_error_message("Failed to create directory '%s': %s", iter->source, strerror(errno));
+            isulad_try_set_error_message("Failed to create directory '%s'", iter->source);
             ret = -1;
             goto out;
         }
