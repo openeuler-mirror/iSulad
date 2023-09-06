@@ -126,7 +126,7 @@ int cmd_import_main(int argc, const char **argv)
         int len = 0;
 
         if (!getcwd(cwd, sizeof(cwd))) {
-            COMMAND_ERROR("get cwd failed:%s", strerror(errno));
+            CMD_SYSERROR("get cwd failed.");
             exit(exit_code);
         }
 

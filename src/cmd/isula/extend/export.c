@@ -114,7 +114,7 @@ int cmd_export_main(int argc, const char **argv)
         int sret;
         char cwd[PATH_MAX] = { 0 };
         if (!getcwd(cwd, sizeof(cwd))) {
-            COMMAND_ERROR("get cwd failed:%s", strerror(errno));
+            CMD_SYSERROR("get cwd failed.");
             exit(ECOMMON);
         }
         sret = snprintf(file, sizeof(file), "%s/%s", cwd, g_cmd_export_args.file);

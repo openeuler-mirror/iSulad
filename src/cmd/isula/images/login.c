@@ -99,7 +99,7 @@ static int get_password_from_notty(struct client_arguments *args)
             return -1;
         }
         if (n < 0) {
-            COMMAND_ERROR("Get password from notty stdin failed: %s", strerror(errno));
+            CMD_SYSERROR("Get password from notty stdin failed");
             return -1;
         }
         args->password = util_strdup_s(password);
@@ -126,7 +126,7 @@ static int get_auth_from_terminal(struct client_arguments *args)
                 COMMAND_ERROR("Error: Cannot perform an interactive login from a non TTY device");
                 return -1;
             }
-            COMMAND_ERROR("Get username failed: %s", strerror(errno));
+            CMD_SYSERROR("Get username failed");
             return -1;
         }
         args->username = util_strdup_s(username);
@@ -145,7 +145,7 @@ static int get_auth_from_terminal(struct client_arguments *args)
                 COMMAND_ERROR("Error: Cannot perform an interactive login from a non TTY device");
                 return -1;
             }
-            COMMAND_ERROR("Get password failed: %s", strerror(errno));
+            CMD_SYSERROR("Get password failed");
             return -1;
         }
         args->password = util_strdup_s(password);

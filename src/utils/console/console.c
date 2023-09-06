@@ -187,7 +187,7 @@ int console_fifo_name(const char *rundir, const char *subpath, const char *stdfl
     if (do_mkdirp) {
         ret = util_mkdir_p(fifo_path, CONSOLE_FIFO_DIRECTORY_MODE);
         if (ret < 0) {
-            COMMAND_ERROR("Unable to create console fifo directory %s: %s.", fifo_path, strerror(errno));
+            CMD_SYSERROR("Unable to create console fifo directory %s.", fifo_path);
             goto out;
         }
     }

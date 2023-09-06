@@ -1712,7 +1712,7 @@ static int set_locale()
 
     /* Change from the standard (C) to en_US.UTF-8 locale, so libarchive can handle filename conversions.*/
     if (setlocale(LC_CTYPE, "en_US.UTF-8") == NULL) {
-        COMMAND_ERROR("Could not set locale to en_US.UTF-8:%s", strerror(errno));
+        CMD_SYSERROR("Could not set locale to en_US.UTF-8");
         ret = -1;
         goto out;
     }
