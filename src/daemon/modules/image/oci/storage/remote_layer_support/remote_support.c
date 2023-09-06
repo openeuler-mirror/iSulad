@@ -39,7 +39,8 @@ static inline bool remote_refresh_lock(pthread_rwlock_t *remote_lock, bool writa
         nret = pthread_rwlock_rdlock(remote_lock);
     }
     if (nret != 0) {
-        ERROR("Lock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock memory store failed");
         return false;
     }
 
@@ -52,7 +53,8 @@ static inline void remote_refresh_unlock(pthread_rwlock_t *remote_lock)
 
     nret = pthread_rwlock_unlock(remote_lock);
     if (nret != 0) {
-        FATAL("Unlock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock memory store failed");
     }
 }
 

@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include <isula_libutils/log.h>
+
 #include "utils.h"
 
 int get_sysctl(const char *sysctl, char **err)
@@ -41,14 +43,16 @@ int get_sysctl(const char *sysctl, char **err)
     ret = -1;
     fd = util_open(fullpath, O_RDONLY, 0);
     if (fd < 0) {
-        if (asprintf(err, "Open %s failed: %s", sysctl, strerror(errno)) < 0) {
+        SYSWARN("Open %s failed", sysctl);
+        if (asprintf(err, "Open %s failed", sysctl) < 0) {
             *err = util_strdup_s("Out of memory");
         }
         goto free_out;
     }
     rsize = util_read_nointr(fd, buff, sizeof(buff) - 1);
     if (rsize <= 0) {
-        if (asprintf(err, "Read file failed: %s", strerror(errno)) < 0) {
+        SYSWARN("Read file: %s failed", sysctl);
+        if (asprintf(err, "Read file: %s failed", sysctl) < 0) {
             *err = util_strdup_s("Out of memory");
         }
         goto free_out;
@@ -93,14 +97,16 @@ int set_sysctl(const char *sysctl, int new_value, char **err)
     ret = -1;
     fd = util_open(fullpath, O_WRONLY, 0);
     if (fd < 0) {
-        if (asprintf(err, "Open %s failed: %s", sysctl, strerror(errno)) < 0) {
+        SYSWARN("Open %s failed", sysctl);
+        if (asprintf(err, "Open %s failed", sysctl) < 0) {
             *err = util_strdup_s("Out of memory");
         }
         goto free_out;
     }
     rsize = util_write_nointr(fd, buff, strlen(buff));
     if (rsize < 0 || (size_t)rsize != strlen(buff)) {
-        if (asprintf(err, "Write new value failed: %s", strerror(errno)) < 0) {
+        SYSWARN("Write new value to %s failed", sysctl);
+        if (asprintf(err, "Write new value to %s failed", sysctl) < 0) {
             *err = util_strdup_s("Out of memory");
         }
         goto free_out;

@@ -71,7 +71,8 @@ static inline bool rootfs_store_lock(enum lock_type type)
     }
 
     if (nret != 0) {
-        ERROR("Lock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock memory store failed");
         return false;
     }
 
@@ -84,7 +85,8 @@ static inline void rootfs_store_unlock()
 
     nret = pthread_rwlock_unlock(&g_rootfs_store->rwlock);
     if (nret != 0) {
-        FATAL("Unlock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock memory store failed");
     }
 }
 

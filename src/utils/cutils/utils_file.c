@@ -1071,7 +1071,9 @@ char *look_path(const char *file, char **err)
         if (en == 0) {
             return util_strdup_s(file);
         }
-        if (asprintf(err, "find exec %s : %s", file, strerror(en)) < 0) {
+        errno = en;
+        SYSERROR("find exec %s failed", file);
+        if (asprintf(err, "find exec %s failed", file) < 0) {
             *err = util_strdup_s("Out of memory");
         }
         return NULL;
