@@ -536,7 +536,7 @@ static container_path_stat *do_container_stat_path(const char *rootpath, const c
     nret = lstat(resolvedpath, &st);
     if (nret < 0) {
         SYSERROR("lstat %s failed.", resolvedpath);
-        isulad_set_error_message("lstat %s: %s", resolvedpath, strerror(errno));
+        isulad_set_error_message("lstat %s failed.", resolvedpath);
         goto cleanup;
     }
 
@@ -922,7 +922,7 @@ static int copy_to_container_check_path_valid(const container_t *cont, const cha
     nret = lstat(resolvedpath, &st);
     if (nret < 0) {
         SYSERROR("lstat %s failed", resolvedpath);
-        isulad_set_error_message("lstat %s: %s", resolvedpath, strerror(errno));
+        isulad_set_error_message("lstat %s failed", resolvedpath);
         goto cleanup;
     }
 

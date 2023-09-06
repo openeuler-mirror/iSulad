@@ -209,9 +209,8 @@ static int remove_container_rootpath(const char *id, const char *root_path)
     }
     ret = util_recursive_rmdir(cont_root_path, 0);
     if (ret != 0) {
-        const char *tmp_err = (errno != 0) ? strerror(errno) : "error";
         SYSERROR("Failed to delete container's root directory %s.", cont_root_path);
-        isulad_set_error_message("Failed to delete container's root directory %s: %s", cont_root_path, tmp_err);
+        isulad_set_error_message("Failed to delete container's root directory %s.", cont_root_path);
         ret = -1;
         goto out;
     }
