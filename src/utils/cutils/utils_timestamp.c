@@ -652,9 +652,9 @@ int64_t util_time_seconds_since(const char *in)
     int32_t nanos = 0;
     int64_t result = 0;
     struct tm tm = { 0 };
-    struct tm *currentm = NULL;
     struct types_timezone tz = { 0 };
     time_t currentime;
+    struct tm result_time = { 0 };
 
     if (in == NULL || !strcmp(in, defaultContainerTime) || !strcmp(in, "-")) {
         return 0;
@@ -666,13 +666,12 @@ int64_t util_time_seconds_since(const char *in)
     }
 
     time(&currentime);
-    currentm = gmtime(&currentime);
-    if (currentm == NULL) {
+    if (gmtime_r(&currentime, &result_time) == NULL) {
         ERROR("Get time error");
         return 0;
     }
 
-    result = get_minmus_time(currentm, &tm);
+    result = get_minmus_time(&result_time, &tm);
     result = result + (int64_t)tz.hour * 3600 + (int64_t)tz.min * 60;
 
     if (result > 0) {
@@ -871,9 +870,9 @@ int util_time_format_duration(const char *in, char *out, size_t len)
     int32_t nanos = 0;
     int64_t result = 0;
     struct tm tm = { 0 };
-    struct tm *currentm = NULL;
     struct types_timezone tz = { 0 };
     time_t currentime = { 0 };
+    struct tm result_time = { 0 };
 
     if (out == NULL) {
         return -1;
@@ -888,13 +887,12 @@ int util_time_format_duration(const char *in, char *out, size_t len)
     }
 
     time(&currentime);
-    currentm = gmtime(&currentime);
-    if (currentm == NULL) {
+    if (gmtime_r(&currentime, &result_time) == NULL) {
         ERROR("Get time error");
         return -1;
     }
 
-    result = get_minmus_time(currentm, &tm);
+    result = get_minmus_time(&result_time, &tm);
     result = result + (int64_t)tz.hour * 3600 + (int64_t)tz.min * 60;
 
     if (result < 0 || !time_human_duration(result, out, len)) {
