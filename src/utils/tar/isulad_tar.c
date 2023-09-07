@@ -193,7 +193,7 @@ struct archive_copy_info *copy_info_source_path(const char *path, bool follow_li
     nret = lstat(resolved_path, &st);
     if (nret < 0) {
         SYSERROR("lstat %s failed", resolved_path);
-        format_errorf(err, "lstat %s failed", resolved_path);
+        format_errorf(err, "Check %s failed, get more information from log.", resolved_path);
         goto cleanup;
     }
 
@@ -430,7 +430,7 @@ static int tar_resource_rebase(const char *path, const char *rebase, const char 
 
     if (lstat(path, &st) < 0) {
         SYSERROR("lstat %s failed", path);
-        format_errorf(err, "lstat %s failed", path);
+        format_errorf(err, "Check %s failed, get more information from log.", path);
         return -1;
     }
     if (util_split_path_dir_entry(path, &srcdir, &srcbase) < 0) {
