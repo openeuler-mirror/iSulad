@@ -117,6 +117,8 @@ public:
     auto UpdateStatsInfo(const StatsInfo &info) -> StatsInfo;
     void SetNetworkReady(bool ready);
     void SetNetworkMode(const std::string &networkMode);
+    auto FindAvailableVsockPort(uint32_t &port) -> bool;
+    void ReleaseVsockPort(uint32_t port);
     auto CleanupSandboxFiles(Errors &error) -> bool;
 
     // Save to file
@@ -205,6 +207,10 @@ private:
 
     // it should select accroding to the config
     std::shared_ptr<Controller> m_controller { nullptr };
+
+    // vsock ports
+    std::mutex m_vsockPortsMutex;
+    std::set<uint32_t> m_vsockPorts;
 };
 
 } // namespace sandbox

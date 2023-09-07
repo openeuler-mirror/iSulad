@@ -71,6 +71,7 @@
 #include "id_name_manager.h"
 #ifdef ENABLE_CRI_API_V1
 #include "sandbox_ops.h"
+#include "vsock_io_handler.h"
 #endif
 
 #define KATA_RUNTIME "kata-runtime"
@@ -2054,9 +2055,41 @@ out:
     return ret;
 }
 
-static int exec_prepare_console(const container_t *cont, const container_exec_request *request, int stdinfd,
-                                struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
-                                char **fifos, char **fifopath, int *sync_fd, pthread_t *thread_id)
+#ifdef ENABLE_CRI_API_V1
+static int exec_prepare_vsock(const container_t *cont, const container_exec_request *request, int stdinfd,
+                              struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
+                              char **vsockpaths, int *sync_fd, pthread_t *thread_id)
+{
+    uint32_t cid;
+    const char *task_address = cont->common_config->sandbox_info->task_address;
+    if (!parse_vsock_path(task_address, &cid, NULL)) {
+        ERROR("Failed to parse vsock path %s", task_address);
+        return -1;
+    }
+
+    if (!request->attach_stdin && !request->attach_stdout && !request->attach_stderr) {
+        return 0;
+    }
+
+    if (create_daemon_vsockpaths(cont->common_config->sandbox_info->id, cid, request->attach_stdin, request->attach_stdout,
+                                 request->attach_stderr, vsockpaths) != 0) {
+        return -1;
+    }
+
+    *sync_fd = eventfd(0, EFD_CLOEXEC);
+    if (*sync_fd < 0) {
+        SYSERROR("Failed to create eventfd");
+        return -1;
+    }
+
+    return start_vsock_io_copy(request->suffix, *sync_fd, false, request->stdin, request->stdout, request->stderr, stdinfd,
+                               stdout_handler, stderr_handler, (const char **)vsockpaths, thread_id);
+}
+#endif
+
+static int exec_prepare_fifo(const container_t *cont, const container_exec_request *request, int stdinfd,
+                             struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
+                             char **fifos, char **fifopath, int *sync_fd, pthread_t *thread_id)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
@@ -2070,7 +2103,7 @@ static int exec_prepare_console(const container_t *cont, const container_exec_re
 
         *sync_fd = eventfd(0, EFD_CLOEXEC);
         if (*sync_fd < 0) {
-            ERROR("Failed to create eventfd: %s", strerror(errno));
+            SYSERROR("Failed to create eventfd");
             ret = -1;
             goto out;
         }
@@ -2082,6 +2115,26 @@ static int exec_prepare_console(const container_t *cont, const container_exec_re
     }
 out:
     return ret;
+}
+
+#ifdef ENABLE_CRI_API_V1
+static bool is_vsock_supported(const container_t *cont)
+{
+    return cont->common_config->sandbox_info != NULL &&
+           is_vsock_path(cont->common_config->sandbox_info->task_address);
+}
+#endif
+
+static int exec_prepare_console(const container_t *cont, const container_exec_request *request, int stdinfd,
+                                struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
+                                char **io_addresses, char **iopath, int *sync_fd, pthread_t *thread_id)
+{
+#ifdef ENABLE_CRI_API_V1
+    if (is_vsock_supported(cont)) {
+        return exec_prepare_vsock(cont, request, stdinfd, stdout_handler, stderr_handler, io_addresses, sync_fd, thread_id);
+    }
+#endif
+    return exec_prepare_fifo(cont, request, stdinfd, stdout_handler, stderr_handler, io_addresses, iopath, sync_fd, thread_id);
 }
 
 static void exec_container_end(container_exec_response *response, const container_t *cont,
@@ -2115,6 +2168,17 @@ static void exec_container_end(container_exec_response *response, const containe
     if (sync_fd >= 0) {
         close(sync_fd);
     }
+}
+
+static void cleanup_exec_console_io(const container_t *cont, const char *fifopath, const char *io_addresses[])
+{
+#ifdef ENABLE_CRI_API_V1
+    if (is_vsock_supported(cont)) {
+        delete_daemon_vsockpaths(cont->common_config->sandbox_info->id, io_addresses);
+        return;
+    }
+#endif
+    delete_daemon_fifos(fifopath, (const char **)io_addresses);
 }
 
 static int get_exec_user_info(const container_t *cont, const char *username, defs_process_user **puser)
@@ -2178,8 +2242,8 @@ int exec_container(const container_t *cont, const container_exec_request *reques
     int sync_fd = -1;
     uint32_t cc = ISULAD_SUCCESS;
     char *id = NULL;
-    char *fifos[3] = { NULL, NULL, NULL };
-    char *fifopath = NULL;
+    char *io_addresses[3] = { NULL, NULL, NULL };
+    char *iopath = NULL;
     pthread_t thread_id = 0;
     defs_process_user *puser = NULL;
     char exec_command[EVENT_ARGS_MAX] = { 0x00 };
@@ -2237,13 +2301,13 @@ int exec_container(const container_t *cont, const container_exec_request *reques
         }
     }
 
-    if (exec_prepare_console(cont, request, stdinfd, stdout_handler, stderr_handler, fifos, &fifopath, &sync_fd,
+    if (exec_prepare_console(cont, request, stdinfd, stdout_handler, stderr_handler, io_addresses, &iopath, &sync_fd,
                              &thread_id)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
     (void)isulad_monitor_send_container_event(id, EXEC_START, -1, 0, exec_command, NULL);
-    if (do_exec_container(cont, cont->runtime, (char * const *)fifos, puser, request, &exit_code)) {
+    if (do_exec_container(cont, cont->runtime, (char * const *)io_addresses, puser, request, &exit_code)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
@@ -2253,11 +2317,11 @@ int exec_container(const container_t *cont, const container_exec_request *reques
 
 pack_response:
     exec_container_end(response, cont, request->suffix, cc, exit_code, sync_fd, thread_id);
-    delete_daemon_fifos(fifopath, (const char **)fifos);
-    free(fifos[0]);
-    free(fifos[1]);
-    free(fifos[2]);
-    free(fifopath);
+    cleanup_exec_console_io(cont, iopath, (const char **)io_addresses);
+    free(io_addresses[0]);
+    free(io_addresses[1]);
+    free(io_addresses[2]);
+    free(iopath);
     free_defs_process_user(puser);
 
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
