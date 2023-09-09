@@ -27,8 +27,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <linux/limits.h>
 
 #include "utils.h"
+#include "path.h"
 #include "isula_libutils/log.h"
 #include "util_archive.h"
 #include "storage.h"
@@ -703,6 +705,9 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
     }
 
     for (; i < conf->rootfs->diff_ids_len; i++) {
+        char *fpath = NULL;
+        char cleanpath[PATH_MAX] = { 0 };
+
         im->layers[i] = util_common_calloc_s(sizeof(load_layer_blob_t));
         if (im->layers[i] == NULL) {
             ERROR("Out of memory");
@@ -710,12 +715,31 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
             goto out;
         }
 
-        im->layers[i]->fpath = util_path_join(dstdir, manifest->layers[i]);
-        if (im->layers[i]->fpath == NULL) {
-            ERROR("Path join failed");
+        fpath = util_path_join(dstdir, manifest->layers[i]);
+        if (fpath == NULL) {
+            ERROR("Failed to join path");
             ret = -1;
             goto out;
         }
+
+        if (util_clean_path(fpath, cleanpath, sizeof(cleanpath)) == NULL) {
+            ERROR("Failed to clean path for %s", fpath);
+            free(fpath);
+            ret = -1;
+            goto out;
+        }
+
+        free(fpath);
+
+        // verify whether the prefix of the path is dstdir to prevent illegal directories
+        if (strncmp(cleanpath, dstdir, strlen(dstdir)) != 0) {
+            ERROR("Illegal directory: %s", cleanpath);
+            ret = -1;
+            goto out;
+        }
+
+        im->layers[i]->fpath = util_strdup_s(cleanpath);
+
         // The format is sha256:xxx
         im->layers[i]->chain_id = oci_load_calc_chain_id(parent_chain_id_sha256, conf->rootfs->diff_ids[i]);
         if (im->layers[i]->chain_id == NULL) {

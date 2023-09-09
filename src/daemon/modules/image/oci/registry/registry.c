@@ -594,7 +594,7 @@ static int register_layer(pull_descriptor *desc, size_t i)
         return 0;
     }
 
-    id = util_without_sha256_prefix(desc->layers[i].chain_id);
+    id = oci_image_id_from_digest(desc->layers[i].chain_id);
     if (id == NULL) {
         ERROR("layer %zu have NULL digest for image %s", i, desc->image_name);
         return -1;
