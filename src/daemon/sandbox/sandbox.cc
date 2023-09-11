@@ -43,6 +43,8 @@
 namespace sandbox {
 
 const std::string SHM_MOUNT_POINT = "/dev/shm";
+const uint32_t VSOCK_START_PORT = 2000;
+const uint32_t VSOCK_END_PORT = 65535;
 
 static int WriteDefaultSandboxHosts(const std::string &path, const std::string &hostname)
 {
@@ -1012,6 +1014,25 @@ void Sandbox::SetNetworkSettings(const std::string &settings, Errors &error)
     if (!SaveNetworkSetting(error)) {
         ERROR("Failed to save networkSettings for %s", m_id.c_str());
     }
+}
+
+auto Sandbox::FindAvailableVsockPort(uint32_t &port) -> bool
+{
+    std::unique_lock<std::mutex> lock(m_vsockPortsMutex);
+    for (uint32_t i = VSOCK_START_PORT; i < VSOCK_END_PORT; i++) {
+        if (m_vsockPorts.find(i) == m_vsockPorts.end()) {
+            m_vsockPorts.insert(i);
+            port = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+void Sandbox::ReleaseVsockPort(uint32_t port)
+{
+    std::unique_lock<std::mutex> lock(m_vsockPortsMutex);
+    m_vsockPorts.erase(port);
 }
 
 auto Sandbox::GetTaskAddress() const -> const std::string &
