@@ -131,6 +131,7 @@ auto Sandbox::GetRuntimeHandle() const -> const std::string &
 
 auto Sandbox::GetContainers() -> std::vector<std::string>
 {
+    ReadGuard<RWMutex> lock(m_containersMutex);
     return m_containers;
 }
 
@@ -394,16 +395,19 @@ void Sandbox::RemoveLabels(const std::string &key)
 
 void Sandbox::AddContainer(const std::string &id)
 {
+    WriteGuard<RWMutex> lock(m_containersMutex);
     m_containers.push_back(id);
 }
 
 void Sandbox::SetConatiners(const std::vector<std::string> &cons)
 {
+    WriteGuard<RWMutex> lock(m_containersMutex);
     m_containers = cons;
 }
 
 void Sandbox::RemoveContainer(const std::string &id)
 {
+    WriteGuard<RWMutex> lock(m_containersMutex);
     auto it = std::find(m_containers.begin(), m_containers.end(), id);
     if (it != m_containers.end()) {
         m_containers.erase(it);

@@ -200,6 +200,7 @@ private:
     std::string m_networkSettings;
     // container id lists
     std::vector<std::string> m_containers;
+    RWMutex m_containersMutex;
     // TOOD: m_sandboxConfig is a protobuf message, it can be converted to json string directly
     //       if save json string directly for sandbox recover, we need to consider hot
     //       upgrade between different CRI versions
