@@ -34,7 +34,7 @@ MESSAGE(STATUS "GCLANG_PP_BINARY is set to ${GCLANG_PP_BINARY}")
 SET(CMAKE_C_COMPILER "${GCLANG_BINARY}")
 SET(CMAKE_CXX_COMPILER "${GCLANG_PP_BINARY}")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 --coverage -fsanitize=fuzzer,address -fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage -std=c++11 -fsanitize=fuzzer,address -fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage -std=c++17 -fsanitize=fuzzer,address -fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 SET(EXE0 test_volume_mount_spec_fuzz)

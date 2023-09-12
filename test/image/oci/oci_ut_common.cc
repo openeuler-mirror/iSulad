@@ -22,7 +22,7 @@
 
 int execvp_success(const char *file, char * const argv[])
 {
-    execlp("echo", "echo");
+    execlp("echo", "echo", NULL);
     return -1;
 }
 
