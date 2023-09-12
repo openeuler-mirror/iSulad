@@ -33,6 +33,7 @@
 #include "utils_file.h"
 #include "utils_timestamp.h"
 #include "util_archive.h"
+#include "utils_images.h"
 
 #define IMPORT_COMMENT "Imported from tarball"
 #define ROOTFS_TYPE "layers"
