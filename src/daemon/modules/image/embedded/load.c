@@ -36,7 +36,7 @@ static char *replace_suffix_to_sgn(const char *file)
         ERROR("invalid NULL param");
         return NULL;
     }
-    if (sizeof(".sgn") > SIZE_MAX - strlen(file)) {
+    if (strlen(file) > SIZE_MAX - sizeof(".sgn")) {
         return NULL;
     }
     len = strlen(file) + sizeof(".sgn");

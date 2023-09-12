@@ -24,10 +24,6 @@
 #include "storage.h"
 #include "rootfs.h"
 
-struct rootfs_list;
-struct storage_module_init_options;
-struct storage_rootfs_options;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,7 +44,7 @@ char *rootfs_store_lookup(const char *id);
 int rootfs_store_delete(const char *id);
 
 // Remove records of all containers
-int rootfs_store_wipe();
+int rootfs_store_wipe(void);
 
 // Updates the metadata associated with the item with the specified ID.
 int rootfs_store_set_metadata(const char *id, const char *metadata);
@@ -66,10 +62,10 @@ storage_rootfs *rootfs_store_get_rootfs(const char *id);
 int rootfs_store_get_all_rootfs(struct rootfs_list *all_rootfs);
 
 // Return rootfs store data dir
-char *rootfs_store_get_data_dir();
+char *rootfs_store_get_data_dir(void);
 
 // Free memory of container store, but will not delete the persisted files
-void rootfs_store_free();
+void rootfs_store_free(void);
 
 #ifdef __cplusplus
 }

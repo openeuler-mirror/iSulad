@@ -247,7 +247,7 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
     return 0;
 }
 
-char *get_hostname_to_strip()
+char *get_hostname_to_strip(void)
 {
     char *name = NULL;
 
@@ -319,6 +319,11 @@ char *make_big_data_base_name(const char *key)
     char *b64_encode_name = NULL;
     char *base_name = NULL;
     size_t name_size;
+
+    if (key == NULL) {
+        ERROR("Empty key");
+        return NULL;
+    }
 
     if (should_use_origin_name(key)) {
         return util_strdup_s(key);
@@ -450,7 +455,7 @@ static char *convert_created_by(image_manifest_v1_compatibility *config)
 int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
                            docker_image_config_v2 *config)
 {
-    int i = 0;
+    size_t i = 0;
     int ret = 0;
     size_t history_index = 0;
     parser_error err = NULL;
@@ -511,7 +516,7 @@ int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const re
 
         ret = util_array_append(&config->rootfs->diff_ids, layers[i].diff_id);
         if (ret != 0) {
-            ERROR("append diff id of layer %u to rootfs failed, diff id is %s", i, layers[i].diff_id);
+            ERROR("append diff id of layer %zu to rootfs failed, diff id is %s", i, layers[i].diff_id);
             ret = -1;
             goto out;
         }
@@ -621,6 +626,16 @@ int makesure_isulad_tmpdir_perm_right(const char *root_dir)
 
     if (lstat(isulad_tmpdir, &st) != 0) {
         SYSERROR("lstat %s failed.", isulad_tmpdir);
+        ret = -1;
+        goto out;
+    }
+
+    if ((st.st_mode & 0777) != TEMP_DIRECTORY_MODE) {
+        ret = -1;
+        goto out;
+    }
+
+    if (S_ISLNK(st.st_mode)) {
         ret = -1;
         goto out;
     }

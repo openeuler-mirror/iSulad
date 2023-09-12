@@ -24,8 +24,6 @@
 
 #include "driver.h"
 
-struct dm_task;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -96,11 +94,11 @@ int set_dev_dir(const char *dir);
 
 struct dm_task* task_create_named(int type, const char *name);
 
-void log_with_errno_init();
+void log_with_errno_init(void);
 
-char *dev_get_driver_version();
+char *dev_get_driver_version(void);
 
-char *dev_get_library_version();
+char *dev_get_library_version(void);
 
 int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name);
 
@@ -112,7 +110,7 @@ int dev_remove_device_deferred(const char *name);
 
 int dev_get_device_list(char ***list, size_t *length);
 
-bool udev_sync_supported();
+bool udev_sync_supported(void);
 
 bool udev_set_sync_support(bool enable);
 

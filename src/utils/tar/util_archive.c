@@ -220,7 +220,7 @@ static int make_safedir_is_noexec(const char *flock_path, const char *dstdir, ch
     }
 
     // ensure parent dir is exist
-    if (util_mkdir_p(cleanpath, buf.st_mode) != 0) {
+    if (util_mkdir_p(cleanpath, ISULAD_TEMP_DIRECTORY_MODE) != 0) {
         return -1;
     }
 

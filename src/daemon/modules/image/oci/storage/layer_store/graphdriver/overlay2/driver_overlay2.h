@@ -22,20 +22,14 @@
 #include <stdint.h>
 
 #include "driver.h"
-
-struct driver_create_opts;
-struct driver_mount_opts;
-struct graphdriver;
-struct graphdriver_status;
-struct io_read_wrapper;
+#include "image_api.h"
+#include "io_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 int overlay2_init(struct graphdriver *driver, const char *driver_home, const char **options, size_t len);
-
-bool overlay2_is_quota_options(struct graphdriver *driver, const char *option);
 
 int overlay2_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
                        struct driver_create_opts *create_opts);

@@ -119,7 +119,7 @@ typedef struct storage_layer_create_opts {
 
 int storage_module_init(struct storage_module_init_options *opts);
 
-void storage_module_exit();
+void storage_module_exit(void);
 
 void free_storage_module_init_options(struct storage_module_init_options *opts);
 
@@ -153,7 +153,7 @@ int storage_img_set_image_size(const char *image_id);
 
 char *storage_get_img_top_layer(const char *id);
 
-size_t storage_get_img_count();
+size_t storage_get_img_count(void);
 
 char *storage_img_get_image_id(const char *img_name);
 
@@ -191,7 +191,7 @@ char *storage_rootfs_mount(const char *container_id);
 
 int storage_rootfs_umount(const char *container_id, bool force);
 
-char *storage_rootfs_get_dir();
+char *storage_rootfs_get_dir(void);
 
 container_inspect_graph_driver *storage_get_metadata_by_container_id(const char *id);
 

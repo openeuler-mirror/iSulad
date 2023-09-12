@@ -374,8 +374,8 @@ int im_resolv_image_name(const char *image_type, const char *image_name, char **
     int ret = -1;
     const struct bim_type *q = NULL;
 
-    if (image_type == NULL) {
-        ERROR("Image type is required");
+    if (image_type == NULL || image_name == NULL || resolved_name == NULL) {
+        ERROR("Image type image_name and resolved_name is required");
         goto out;
     }
     q = get_bim_by_type(image_type);
@@ -402,8 +402,8 @@ int im_get_filesystem_info(const char *image_type, im_fs_info_response **respons
     int ret = -1;
     const struct bim_type *q = NULL;
 
-    if (image_type == NULL) {
-        ERROR("Image type is required");
+    if (image_type == NULL || response == NULL) {
+        ERROR("Image type and response is required");
         goto out;
     }
 
@@ -419,7 +419,7 @@ int im_get_filesystem_info(const char *image_type, im_fs_info_response **respons
     INFO("Event: {Object: get image filesystem info, Type: inspecting}");
     ret = q->ops->get_filesystem_info(response);
     if (ret != 0) {
-        if (response != NULL && *response != NULL) {
+        if (*response != NULL && (*response)->errmsg != NULL) {
             ERROR("Get filesystem info failed: %s", (*response)->errmsg);
         } else {
             ERROR("Get filesystem info failed");
@@ -439,7 +439,7 @@ int im_get_container_filesystem_usage(const char *image_type, const char *id, im
     const struct bim_type *q = NULL;
     im_container_fs_usage_request *request = NULL;
 
-    if (image_type == NULL || id == NULL) {
+    if (image_type == NULL || id == NULL || fs_usage == NULL) {
         ERROR("Invalid input arguments");
         ret = -1;
         goto out;
@@ -763,6 +763,12 @@ bool im_config_image_exist(const char *image_name)
 {
     const struct bim_type *bim_type = NULL;
 
+    if (image_name == NULL) {
+        ERROR("Invalid input arguments");
+        isulad_set_error_message("Invalid input arguments");
+        return false;
+    }
+
     bim_type = bim_query(image_name);
     if (bim_type == NULL) {
         ERROR("Config image %s not exist", image_name);
@@ -778,6 +784,8 @@ int im_merge_image_config(const char *image_type, const char *image_name, contai
     int ret = 0;
     struct bim *bim = NULL;
 
+    // there is no need to judge the image name as empty, 
+    // because the image name of external type allows it to be empty.
     if (container_spec == NULL || image_type == NULL) {
         ERROR("Invalid input arguments");
         ret = -1;
@@ -905,7 +913,7 @@ int im_list_images(const im_list_request *ctx, im_list_response **response)
     size_t i;
     imagetool_images_list *images_tmp = NULL;
 
-    if (response == NULL) {
+    if (ctx == NULL || response == NULL) {
         ERROR("Empty arguments");
         return -1;
     }
@@ -980,6 +988,12 @@ static bool check_im_pull_args(const im_pull_request *req, im_pull_response * co
     if (req->image == NULL) {
         ERROR("Empty image required");
         isulad_set_error_message("Empty image required");
+        return false;
+    }
+
+    if (req->type == NULL) {
+        ERROR("Empty type required");
+        isulad_set_error_message("Empty type required");
         return false;
     }
     return true;
@@ -1079,7 +1093,7 @@ int im_import_image(const im_import_request *request, char **id)
         return -1;
     }
 
-    if (request->file == NULL) {
+    if (request->file == NULL || request->tag == NULL) {
         ERROR("Import image requires image tarball file path");
         isulad_set_error_message("Import image requires image tarball file path");
         goto pack_response;
@@ -1185,7 +1199,8 @@ int im_load_image(const im_load_request *request, im_load_response **response)
 
     ret = bim->ops->load_image(request);
     if (ret != 0) {
-        ERROR("Failed to load image from %s with tag %s and type %s", request->file, request->tag, request->type);
+        // request->tag may be empty
+        ERROR("Failed to load image from %s with type %s", request->file, request->type);
         ret = -1;
         goto pack_response;
     }
@@ -1368,8 +1383,13 @@ int im_logout(const im_logout_request *request, im_logout_response **response)
     int ret = -1;
     struct bim *bim = NULL;
 
-    if (response == NULL) {
+    if (request == NULL || response == NULL) {
         ERROR("Empty response");
+        return -1;
+    }
+
+    if (request->type == NULL || request->server == NULL) {
+        ERROR("Empty type or server");
         return -1;
     }
 
@@ -1842,13 +1862,12 @@ char *im_get_rootfs_dir(const im_get_rf_dir_request *request)
     char *dir = NULL;
     struct bim *bim = NULL;
 
-    if (request->type == NULL) {
+    if (request == NULL || request->type == NULL) {
         ERROR("Missing image type");
         return NULL;
     }
 
     bim = bim_get(request->type, NULL, NULL, NULL);
-
     if (bim == NULL) {
         ERROR("Failed to init bim, image type:%s", request->type);
         return NULL;
@@ -1916,7 +1935,7 @@ int image_module_init(const isulad_daemon_configs *args)
     return bims_init(args);
 }
 
-void image_module_exit()
+void image_module_exit(void)
 {
     size_t i;
 
@@ -2085,7 +2104,7 @@ int im_prepare_container_rootfs(const im_prepare_request *request, char **real_r
     int nret = 0;
     struct bim *bim = NULL;
 
-    if (request == NULL) {
+    if (request == NULL || real_rootfs == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }

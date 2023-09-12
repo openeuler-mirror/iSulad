@@ -405,12 +405,6 @@ out:
     return ret;
 }
 
-bool overlay2_is_quota_options(struct graphdriver *driver, const char *option)
-{
-    return strncmp(option, QUOTA_SIZE_OPTION, strlen(QUOTA_SIZE_OPTION)) == 0 ||
-           strncmp(option, QUOTA_BASESIZE_OPTIONS, strlen(QUOTA_BASESIZE_OPTIONS)) == 0;
-}
-
 static int check_parent_valid(const char *parent, const struct graphdriver *driver)
 {
     int ret = 0;
@@ -654,7 +648,6 @@ const static int check_lower_depth(const char *lowers_str)
 
     lowers_arr = util_string_split(lowers_str, ':');
     lowers_size = util_array_len((const char **)lowers_arr);
-
     if (lowers_size > OVERLAY_LAYER_MAX_DEPTH) {
         ERROR("Max depth exceeded %s", lowers_str);
         ret = -1;
@@ -1158,7 +1151,7 @@ int overlay2_rm_layer(const char *id, const struct graphdriver *driver)
     struct stat stat_buf;
 #endif
 
-    if (id == NULL || driver == NULL) {
+    if (id == NULL || driver == NULL || driver->home == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }
@@ -1280,7 +1273,6 @@ static int append_rel_empty_path(const char *id, char ***rel_lowers)
     char *rel_path = NULL;
 
     rel_path = util_string_append("/empty", id);
-
     if (util_array_append(rel_lowers, rel_path) != 0) {
         SYSERROR("Can't append relative layer:%s", rel_path);
         ret = -1;
@@ -1844,6 +1836,11 @@ bool overlay2_layer_exists(const char *id, const struct graphdriver *driver)
     char *layer_dir = NULL;
     char *link_id = NULL;
 
+    if (id == NULL || driver == NULL || driver->home == NULL) {
+        ERROR("Failed to verify overlay2 layer exists for empty id or driver");
+        return false;
+    }
+
     layer_dir = util_path_join(driver->home, id);
     if (layer_dir == NULL) {
         ERROR("Failed to join layer dir:%s", id);
@@ -2075,7 +2072,7 @@ int overlay2_get_driver_status(const struct graphdriver *driver, struct graphdri
     int nret = 0;
     char tmp[MAX_INFO_LENGTH] = { 0 };
 
-    if (driver == NULL || status == NULL) {
+    if (driver == NULL || status == NULL || driver->backing_fs == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }
@@ -2117,7 +2114,7 @@ int overlay2_clean_up(struct graphdriver *driver)
 {
     int ret = 0;
 
-    if (driver == NULL) {
+    if (driver == NULL || driver->home == NULL) {
         ERROR("Invalid input arguments");
         ret = -1;
         goto out;
@@ -2182,7 +2179,6 @@ int overlay2_repair_lowers(const char *id, const char *parent, const struct grap
     lowers_str = read_layer_lower_file(layer_dir);
     lowers_arr = util_string_split(lowers_str, ':');
     lowers_size = util_array_len((const char **)lowers_arr);
-
     if (lowers_size != 0) {
         if (check_lower_valid(driver->home, lowers_arr[0]) == 0) {
             DEBUG("Try to repair layer %s, success check", id);

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -31,6 +31,11 @@ static map_t *image_byid_new = NULL;
 
 struct remote_image_data *remote_image_create(const char *remote_home, const char *remote_ro)
 {
+    if (remote_home == NULL) {
+        ERROR("Empty remote home");
+        return NULL;
+    }
+
     struct remote_image_data *data = util_common_calloc_s(sizeof(struct remote_image_data));
     if (data == NULL) {
         ERROR("Out of memory");
@@ -204,6 +209,11 @@ static int remote_image_add(void *data)
 
 void remote_image_refresh(struct remote_image_data *data)
 {
+    if (data == NULL) {
+        ERROR("Skip refresh remote image for empty data");
+        return;
+    }
+
     if (remote_dir_scan(data) != 0) {
         ERROR("remote overlay failed to scan dir, skip refresh");
         return;

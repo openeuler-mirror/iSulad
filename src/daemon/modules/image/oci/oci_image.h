@@ -41,7 +41,7 @@ struct oci_image_module_data {
 struct oci_image_module_data *get_oci_image_data(void);
 
 int oci_init(const isulad_daemon_configs *args);
-void oci_exit();
+void oci_exit(void);
 
 int oci_pull_rf(const im_pull_request *request, im_pull_response *response);
 int oci_rmi(const im_rmi_request *request);

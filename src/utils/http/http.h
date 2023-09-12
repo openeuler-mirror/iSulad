@@ -107,6 +107,8 @@ struct http_get_options {
 #define AUTHZ_UNIX_SOCK             "/run/isulad/plugins/authz-broker.sock"
 #define AUTHZ_REQUEST_URL           "http://localhost/isulad.auth"
 
+#define BODY_FILE_MODE 0600
+
 /* http response code */
 enum http_response_code {
     StatusContinue                      = 100, // RFC 7231, 6.2.1

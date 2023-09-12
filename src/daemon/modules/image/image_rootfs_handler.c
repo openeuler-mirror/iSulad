@@ -85,6 +85,7 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
     char buf[BUFSIZ] = { 0 };
     struct passwd pw;
     struct passwd *pwbufp = NULL;
+    int ret = -1;
 
     if (f_passwd != NULL) {
 #if defined (__ANDROID__) || defined(__MUSL__)
@@ -116,7 +117,7 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
     if (errval != 0 && errval != ENOENT) {
         ERROR("Failed to parse passwd file: Insufficient buffer space supplied");
         isulad_set_error_message("Failed to parse passwd file: Insufficient buffer space supplied");
-        return -1;
+        goto out;
     }
     if (!userfound && user != NULL) {
         int uret = util_safe_llong(user, &n_user);
@@ -124,16 +125,20 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
         if (uret != 0) {
             ERROR("Unable to find user '%s'", user);
             isulad_set_error_message("Unable to find user '%s': no matching entries in passwd file", user);
-            return -1;
+            goto out;
         }
         if (n_user < MINUID || n_user > MAXUID) {
             uids_gids_range_err_log();
-            return -1;
+            goto out;
         }
         puser->uid = (uid_t)n_user;
     }
+    ret = 0;
 
-    return 0;
+out:
+    memset(buf, 0, sizeof(buf));
+    memset(&pw, 0, sizeof(struct passwd));
+    return ret;
 }
 
 static int append_additional_gids(gid_t gid, gid_t **additional_gids, size_t *len)

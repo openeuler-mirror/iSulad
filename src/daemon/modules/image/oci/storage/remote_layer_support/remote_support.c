@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -86,6 +86,11 @@ int remote_start_refresh_thread(pthread_rwlock_t *remote_lock)
     int res = 0;
     pthread_t a_thread;
     maintain_context ctx = get_maintain_context();
+
+    if (remote_lock == NULL) {
+        ERROR("Invalid remote lock");
+        return -1;
+    }
 
     supporters.image_data = remote_image_create(ctx.image_home, NULL);
     if (supporters.image_data == NULL) {

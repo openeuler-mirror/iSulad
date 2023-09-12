@@ -27,8 +27,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <linux/limits.h>
 
 #include "utils.h"
+#include "path.h"
 #include "isula_libutils/log.h"
 #include "util_archive.h"
 #include "storage.h"
@@ -164,7 +166,7 @@ static void oci_load_free_layer(load_layer_blob_t *l)
 
 static void oci_load_free_image(load_image_t *im)
 {
-    int i = 0;
+    size_t i = 0;
 
     if (im == NULL) {
         return;
@@ -406,7 +408,7 @@ out:
 
 static int check_time_valid(oci_image_spec *conf)
 {
-    int i = 0;
+    size_t i = 0;
 
     if (!oci_valid_time(conf->created)) {
         ERROR("Invalid created time %s", conf->created);
@@ -717,6 +719,9 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
     }
 
     for (; i < conf->rootfs->diff_ids_len; i++) {
+        char *fpath = NULL;
+        char cleanpath[PATH_MAX] = { 0 };
+
         im->layers[i] = util_common_calloc_s(sizeof(load_layer_blob_t));
         if (im->layers[i] == NULL) {
             ERROR("Out of memory");
@@ -724,12 +729,31 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
             goto out;
         }
 
-        im->layers[i]->fpath = util_path_join(dstdir, manifest->layers[i]);
-        if (im->layers[i]->fpath == NULL) {
-            ERROR("Path join failed");
+        fpath = util_path_join(dstdir, manifest->layers[i]);
+        if (fpath == NULL) {
+            ERROR("Failed to join path");
             ret = -1;
             goto out;
         }
+
+        if (util_clean_path(fpath, cleanpath, sizeof(cleanpath)) == NULL) {
+            ERROR("Failed to clean path for %s", fpath);
+            free(fpath);
+            ret = -1;
+            goto out;
+        }
+
+        free(fpath);
+
+        // verify whether the prefix of the path is dstdir to prevent illegal directories
+        if (strncmp(cleanpath, dstdir, strlen(dstdir)) != 0) {
+            ERROR("Illegal directory: %s", cleanpath);
+            ret = -1;
+            goto out;
+        }
+
+        im->layers[i]->fpath = util_strdup_s(cleanpath);
+
         // The format is sha256:xxx
         im->layers[i]->chain_id = oci_load_calc_chain_id(parent_chain_id_sha256, conf->rootfs->diff_ids[i]);
         if (im->layers[i]->chain_id == NULL) {
@@ -851,20 +875,17 @@ static int64_t get_layer_size_from_storage(char *chain_id_pre)
     id = oci_load_without_sha256_prefix(chain_id_pre);
     if (id == NULL) {
         ERROR("Get chain id failed from value:%s", chain_id_pre);
-        size = -1;
-        goto out;
+        return -1;
     }
 
     l = storage_layer_get(id);
     if (l == NULL) {
         ERROR("Layer with chain id:%s is not exist in store", id);
-        size = -1;
-        goto out;
+        return -1;
     }
 
     size = l->compress_size;
 
-out:
     free_layer(l);
     return size;
 }
@@ -883,8 +904,7 @@ static int oci_load_set_manifest_info(load_image_t *im)
     im->manifest = util_common_calloc_s(sizeof(oci_image_manifest));
     if (im->manifest == NULL) {
         ERROR("Out of memory");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     im->manifest->schema_version = OCI_SCHEMA_VERSION;

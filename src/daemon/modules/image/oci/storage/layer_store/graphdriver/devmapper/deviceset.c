@@ -105,7 +105,6 @@ static int handle_dm_min_free_space(char *val, struct device_set *devset)
 {
     long converted = 0;
     int ret = util_parse_percent_string(val, &converted);
-
     if (ret != 0 || converted >= 100) {
         errno = -ret;
         SYSERROR("Invalid min free space: '%s'", val);
@@ -293,7 +292,8 @@ static char *deviceset_meta_file(const struct device_set *devset)
     return file;
 }
 
-// get_dm_name return value format:container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
+// get_dm_name return value format:
+// container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
 static char *get_dm_name(const struct device_set *devset, const char *hash)
 {
     int nret = 0;
@@ -312,7 +312,8 @@ static char *get_dm_name(const struct device_set *devset, const char *hash)
     return util_strdup_s(buff);
 }
 
-// get_dev_name return value fromat:/dev/mapper/container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
+// get_dev_name return value fromat:
+// /dev/mapper/container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
 static char *get_dev_name(const char *name)
 {
     return util_string_append(name, DEVMAPPER_DECICE_DIRECTORY);
@@ -499,14 +500,14 @@ bool has_metadata(const char *hash, struct device_set *devset)
     bool ret = true;
     int nret = 0;
 
-    if (hash == NULL) {
+    if (hash == NULL || devset == NULL) {
         return true;
     }
 
     metadata_path = metadata_dir(devset);
     if (metadata_path == NULL) {
         ERROR("Failed to get meta data directory");
-        goto out;
+        return false;
     }
 
     nret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, util_valid_str(hash) ? hash : "base");
@@ -541,7 +542,7 @@ static image_devmapper_device_info *load_metadata(const struct device_set *devse
     metadata_path = metadata_dir(devset);
     if (metadata_path == NULL) {
         ERROR("Failed to get meta data directory");
-        goto out;
+        return NULL;
     }
 
     nret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, util_valid_str(hash) ? hash : "base");
@@ -2351,7 +2352,6 @@ static int setup_base_image(struct device_set *devset)
     devmapper_device_info_t *device_info = NULL;
 
     device_info = lookup_device(devset, "base");
-
     // base image already exists. If it is initialized properly, do UUID
     // verification and return. Otherwise remove image and set it up
     // fresh.
@@ -2503,7 +2503,6 @@ static void cleanup_deleted_devices(struct graphdriver *driver)
         ERROR("Lock to deviceset failed");
         goto unlock_driver;
     }
-
 
     if (driver->devset->nr_deleted_devices == 0) {
         DEBUG("devmapper: no devices to delete");
@@ -3076,7 +3075,7 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
     char *dev_fname = NULL;
     char *options = NULL;
 
-    if (hash == NULL || path == NULL) {
+    if (hash == NULL || path == NULL || devset == NULL) {
         ERROR("devmapper: invalid input params to mount device");
         return -1;
     }
@@ -3236,7 +3235,7 @@ int export_device_metadata(struct device_metadata *dev_metadata, const char *has
     char *dm_name = NULL;
     devmapper_device_info_t *device_info = NULL;
 
-    if (hash == NULL || dev_metadata == NULL) {
+    if (hash == NULL || dev_metadata == NULL || devset == NULL) {
         ERROR("Invalid input params");
         return -1;
     }

@@ -320,7 +320,6 @@ static int write_env_content(const char *env_path, const char **env, size_t env_
     int fd = -1;
     size_t i = 0;
     ssize_t nret = 0;
-    int env_max = 4096;
 
     ret = create_env_path_dir(env_path);
     if (ret < 0) {
@@ -335,6 +334,7 @@ static int write_env_content(const char *env_path, const char **env, size_t env_
     }
     if (env != NULL) {
         for (i = 0; i < env_len; i++) {
+            size_t env_max = 4096;
             if (strlen(env[i]) > env_max) {
                 ERROR("Env is too long");
                 ret = -1;
@@ -807,12 +807,14 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         open_stdin = cont->common_config->config->open_stdin;
     }
 
+#ifdef ENABLE_PLUGIN
     if (plugin_event_container_pre_start(cont)) {
         ERROR("Plugin event pre start failed ");
         plugin_event_container_post_stop(cont); /* ignore error */
         ret = -1;
         goto close_exit_fd;
     }
+#endif
 
 #ifdef ENABLE_CRI_API_V1
     if (cont->common_config->sandbox_info != NULL &&
@@ -1370,7 +1372,9 @@ int delete_container(container_t *cont, bool force)
         }
     }
 
+#ifdef ENABLE_PLUGIN
     plugin_event_container_post_remove(cont);
+#endif
 
     ret = do_delete_container(cont);
     if (ret != 0) {

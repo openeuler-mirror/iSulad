@@ -270,11 +270,3 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_try_repair_lowers)
     std::string id { "1be74353c3d0fd55fb5638a52953e6f1bc441e5b1710921db9ec2aa202725569" };
     ASSERT_EQ(graphdriver_try_repair_lowers(id.c_str(), nullptr), 0);
 }
-
-TEST(StorageOverlay2QuotaOptionsTest, test_overlay2_is_quota_options)
-{
-    std::vector<std::string> options { "overlay2.size", "overlay2.basesize" };
-    for (auto option : options) {
-        ASSERT_TRUE(overlay2_is_quota_options(nullptr, option.c_str()));
-    }
-}
