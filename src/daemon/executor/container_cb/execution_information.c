@@ -522,7 +522,7 @@ void execute_ps_command(char **args, const char *pid_args, size_t args_len)
 
     execvp("ps", params);
 
-    COMMAND_ERROR("Cannot get ps info with '%s':%s", pid_args, strerror(errno));
+    CMD_SYSERROR("Cannot get ps info with '%s'.", pid_args);
 
 out:
     exit(EXIT_FAILURE);

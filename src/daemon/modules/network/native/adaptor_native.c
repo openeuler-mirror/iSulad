@@ -86,7 +86,8 @@ static inline bool native_store_lock(enum lock_type type)
         nret = pthread_rwlock_wrlock(&g_store.rwlock);
     }
     if (nret != 0) {
-        ERROR("Lock network list failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock network list failed");
         return false;
     }
 
@@ -99,7 +100,8 @@ static inline void native_store_unlock()
 
     nret = pthread_rwlock_unlock(&g_store.rwlock);
     if (nret != 0) {
-        FATAL("Unlock network list failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock network list failed");
     }
 }
 
@@ -113,7 +115,8 @@ static inline void native_network_lock(enum lock_type type, native_network *netw
         nret = pthread_rwlock_wrlock(&network->rwlock);
     }
     if (nret != 0) {
-        ERROR("Lock network list failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock network list failed");
     }
 }
 
@@ -123,7 +126,8 @@ static inline void native_network_unlock(native_network *network)
 
     nret = pthread_rwlock_unlock(&network->rwlock);
     if (nret != 0) {
-        FATAL("Unlock network list failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock network list failed");
     }
 }
 
@@ -1944,8 +1948,9 @@ int native_config_remove(const char *name, char **res_name)
         WARN("Failed to get %s file path", network->conflist->list->name);
         isulad_append_error_message("Failed to get %s file path. ", network->conflist->list->name);
     } else if (!util_force_remove_file(path, &get_err)) {
-        WARN("Failed to delete %s, error: %s", path, strerror(get_err));
-        isulad_append_error_message("Failed to delete %s, error: %s. ", path, strerror(get_err));
+        errno = get_err;
+        SYSWARN("Failed to delete %s.", path);
+        isulad_append_error_message("Failed to delete %s.", path);
     }
 
     if (!map_remove(g_store.name_to_network, (void *)network->conflist->list->name)) {

@@ -248,7 +248,7 @@ static bool check_kernel_version_ge4()
 
     ret = uname(&uts);
     if (ret < 0) {
-        WARN("Can not get kernel version: %s", strerror(errno));
+        SYSWARN("Can not get kernel version");
     } else {
         /* greater or equal than 4.0.0, check first part is enough */
         return atoi(uts.release) >= 4;
@@ -1332,7 +1332,7 @@ static int get_source_mount(const char *src, char **srcpath, char **optional)
     char *dname = NULL;
 
     if (realpath(src, real_path) == NULL) {
-        ERROR("Failed to get real path for %s : %s", src, strerror(errno));
+        SYSERROR("Failed to get real path for %s", src);
         return -1;
     }
 
@@ -1535,8 +1535,8 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
 #else
         if (!util_file_exists(iter->source) && util_mkdir_p(iter->source, mode)) {
 #endif
-            ERROR("Failed to create directory '%s': %s", iter->source, strerror(errno));
-            isulad_try_set_error_message("Failed to create directory '%s': %s", iter->source, strerror(errno));
+            SYSERROR("Failed to create directory '%s'", iter->source);
+            isulad_try_set_error_message("Failed to create directory '%s'", iter->source);
             ret = -1;
             goto out;
         }

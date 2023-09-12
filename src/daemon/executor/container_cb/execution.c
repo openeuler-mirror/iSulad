@@ -277,7 +277,7 @@ static int prepare_start_io(container_t *cont, const container_start_request *re
 
         *sync_fd = eventfd(0, EFD_CLOEXEC);
         if (*sync_fd < 0) {
-            ERROR("Failed to create eventfd: %s", strerror(errno));
+            SYSERROR("Failed to create eventfd.");
             ret = -1;
             goto out;
         }
@@ -344,14 +344,14 @@ static int maybe_create_cpu_realtime_file(int64_t value, const char *file, const
 
     fd = util_open(fpath, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0700);
     if (fd < 0) {
-        ERROR("Failed to open file: %s: %s", fpath, strerror(errno));
-        isulad_set_error_message("Failed to open file: %s: %s", fpath, strerror(errno));
+        SYSERROR("Failed to open file: %s.", fpath);
+        isulad_set_error_message("Failed to open file: %s.", fpath);
         return -1;
     }
     nwrite = util_write_nointr(fd, buf, strlen(buf));
     if (nwrite < 0 || (size_t)nwrite != strlen(buf)) {
-        ERROR("Failed to write %s to %s: %s", buf, fpath, strerror(errno));
-        isulad_set_error_message("Failed to write '%s' to '%s': %s", buf, fpath, strerror(errno));
+        SYSERROR("Failed to write %s to %s.", buf, fpath);
+        isulad_set_error_message("Failed to write '%s' to '%s'.", buf, fpath);
         return -1;
     }
 
@@ -485,7 +485,7 @@ static void handle_start_io_thread_by_cc(uint32_t cc, int sync_fd, pthread_t thr
     } else {
         if (sync_fd >= 0) {
             if (eventfd_write(sync_fd, 1) < 0) {
-                ERROR("Failed to write eventfd: %s", strerror(errno));
+                SYSERROR("Failed to write eventfd.");
             }
         }
         if (thread_id > 0) {

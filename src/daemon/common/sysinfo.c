@@ -108,7 +108,7 @@ uint64_t get_default_total_mem_size(void)
 
     fp = util_fopen("/proc/meminfo", "r");
     if (fp == NULL) {
-        ERROR("Failed to open /proc/meminfo: %s", strerror(errno));
+        SYSERROR("Failed to open /proc/meminfo.");
         return sysmem_limit;
     }
 
@@ -148,10 +148,10 @@ char *get_operating_system(void)
 
     fp = fopen(etcOsRelease, "r");
     if (fp == NULL) {
-        INFO("Failed to open %s :%s", etcOsRelease, strerror(errno));
+        SYSINFO("Failed to open %s.", etcOsRelease);
         fp = fopen(altOsRelease, "r");
         if (fp == NULL) {
-            ERROR("Failed to open %s :%s", altOsRelease, strerror(errno));
+            SYSERROR("Failed to open %s.", altOsRelease);
             goto out;
         }
     }

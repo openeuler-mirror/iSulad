@@ -66,7 +66,8 @@ static bool parse_restart_policy(const char *policy, host_config_restart_policy 
         }
         nret = util_safe_int(dotpos, &(*rp)->maximum_retry_count);
         if (nret != 0) {
-            COMMAND_ERROR("Maximum retry count must be an integer: %s", strerror(-nret));
+            errno = -nret;
+            CMD_SYSERROR("Maximum retry count must be an integer");
             goto cleanup;
         }
     }
@@ -724,7 +725,8 @@ static host_config_hugetlbs_element *pase_hugetlb_limit(const char *input)
 
     ret = util_parse_byte_size_string(limit_value, &tconverted);
     if (ret != 0 || tconverted < 0) {
-        COMMAND_ERROR("Parse limit value: %s failed:%s", limit_value, strerror(-ret));
+        errno = -ret;
+        CMD_SYSERROR("Parse limit value: %s failed", limit_value);
         goto free_out;
     }
     limit = (uint64_t)tconverted;
@@ -733,7 +735,8 @@ static host_config_hugetlbs_element *pase_hugetlb_limit(const char *input)
         tconverted = 0;
         ret = util_parse_byte_size_string(pagesize, &tconverted);
         if (ret != 0 || tconverted < 0) {
-            COMMAND_ERROR("Parse pagesize error.Invalid hugepage size: %s: %s", pagesize, strerror(-ret));
+            errno = -ret;
+            CMD_SYSERROR("Parse pagesize error.Invalid hugepage size: %s", pagesize);
             goto free_out;
         }
         page = (uint64_t)tconverted;
@@ -771,7 +774,7 @@ uint64_t get_proc_mem_size(const char *item)
 
     fp = util_fopen("/proc/meminfo", "r");
     if (fp == NULL) {
-        ERROR("Failed to open /proc/meminfo: %s", strerror(errno));
+        SYSERROR("Failed to open /proc/meminfo");
         return sysmem_limit;
     }
 

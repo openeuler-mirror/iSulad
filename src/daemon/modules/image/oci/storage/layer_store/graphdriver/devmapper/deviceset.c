@@ -107,8 +107,9 @@ static int handle_dm_min_free_space(char *val, struct device_set *devset)
     int ret = util_parse_percent_string(val, &converted);
 
     if (ret != 0 || converted >= 100) {
-        ERROR("Invalid min free space: '%s': %s", val, strerror(-ret));
-        isulad_set_error_message("Invalid min free space: '%s': %s", val, strerror(-ret));
+        errno = -ret;
+        SYSERROR("Invalid min free space: '%s'", val);
+        isulad_set_error_message("Invalid min free space: '%s'", val);
         return -1;
     }
     devset->min_free_space_percent = (uint32_t)converted;
@@ -122,8 +123,9 @@ static int handle_dm_basesize(char *val, struct device_set *devset)
     int ret = util_parse_byte_size_string(val, &converted);
 
     if (ret != 0) {
-        ERROR("Invalid size: '%s': %s", val, strerror(-ret));
-        isulad_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
+        errno = -ret;
+        SYSERROR("Invalid size: '%s'", val);
+        isulad_set_error_message("Invalid size: '%s'", val);
         return -1;
     }
     if (converted <= 0) {
@@ -780,7 +782,7 @@ static int device_file_walk(struct device_set *devset)
         }
 
         if (stat(fname, &st) != 0) {
-            ERROR("devmapper: get %s stat error:%s", fname, strerror(errno));
+            SYSERROR("devmapper: get %s stat failed", fname);
             ret = -1;
             goto out;
         }
@@ -2202,7 +2204,7 @@ static int grow_fs(struct device_set *devset, image_devmapper_device_info *info)
 
 clean_mount:
     if (umount2(FS_MOUNT_POINT, MNT_DETACH) < 0 && errno != EINVAL) {
-        WARN("Failed to umount directory %s:%s", FS_MOUNT_POINT, strerror(errno));
+        SYSWARN("Failed to umount directory %s", FS_MOUNT_POINT);
     }
 
 out:
@@ -2722,7 +2724,8 @@ static int determine_driver_capabilities(const char *version, struct device_set 
 
     ret = util_parse_byte_size_string(tmp_str[0], &major);
     if (ret != 0) {
-        ERROR("devmapper: invalid size: '%s': %s", tmp_str[0], strerror(-ret));
+        errno = -ret;
+        SYSERROR("devmapper: invalid size: '%s'", tmp_str[0]);
         ret = -1;
         goto out;
     }
@@ -2742,7 +2745,8 @@ static int determine_driver_capabilities(const char *version, struct device_set 
 
     ret = util_parse_byte_size_string(tmp_str[1], &minor);
     if (ret != 0) {
-        ERROR("devmapper: invalid size: '%s': %s", tmp_str[1], strerror(-ret));
+        errno = -ret;
+        SYSERROR("devmapper: invalid size: '%s'", tmp_str[1]);
         ret = -1;
         goto out;
     }
@@ -2915,7 +2919,8 @@ static int parse_storage_opt(const json_map_string_string *opts, uint64_t *size)
 
             ret = util_parse_byte_size_string(opts->values[i], &converted);
             if (ret != 0) {
-                ERROR("Invalid size: '%s': %s", opts->values[i], strerror(-ret));
+                errno = -ret;
+                SYSERROR("Invalid size: '%s'", opts->values[i]);
                 ret = -1;
                 goto out;
             }
@@ -3148,7 +3153,7 @@ int unmount_device(const char *hash, const char *mount_path, struct device_set *
     }
 
     if (umount2(mount_path, MNT_DETACH) < 0 && errno != EINVAL) {
-        ERROR("Failed to umount directory %s:%s", mount_path, strerror(errno));
+        SYSERROR("Failed to umount directory %s", mount_path);
         ret = -1;
         goto free_out;
     }
@@ -3405,7 +3410,7 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
         }
 
         if (stat(fname, &st) != 0) {
-            ERROR("devmapper: get %s stat error:%s", fname, strerror(errno));
+            SYSERROR("devmapper: get %s stat failed", fname);
             continue;
         }
 
@@ -3415,7 +3420,7 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
         }
 
         if (umount2(fname, MNT_DETACH) < 0 && errno != EINVAL) {
-            ERROR("Failed to umount directory %s:%s", fname, strerror(errno));
+            SYSERROR("Failed to umount directory %s", fname);
         }
 
         device_info = lookup_device(devset, entry->d_name);

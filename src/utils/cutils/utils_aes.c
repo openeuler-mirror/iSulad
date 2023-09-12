@@ -72,13 +72,13 @@ int util_aes_key(const char *key_file, bool create, unsigned char *aeskey)
     } else {
         fd = open(key_file, O_RDONLY);
         if (fd < 0) {
-            ERROR("open key file %s failed: %s", key_file, strerror(errno));
+            SYSERROR("open key file %s failed", key_file);
             ret = -1;
             goto out;
         }
 
         if (util_read_nointr(fd, aeskey, AES_256_CFB_KEY_LEN) != AES_256_CFB_KEY_LEN) {
-            ERROR("read key file %s failed: %s", key_file, strerror(errno));
+            SYSERROR("read key file %s failed", key_file);
             ret = -1;
             goto out;
         }
@@ -163,14 +163,14 @@ int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     evp_ret = EVP_EncryptInit(ctx, cipher, aeskey, iv);
 #endif
     if (evp_ret != 1) {
-        ERROR("init evp decrypt failed, result %d: %s", evp_ret, strerror(errno));
+        SYSERROR("init evp decrypt failed, result %d", evp_ret);
         ret = -1;
         goto out;
     }
 
     evp_ret = EVP_EncryptUpdate(ctx, (*out) + AES_256_CFB_IV_LEN, &tmp_out_len, bytes, len);
     if (evp_ret != 1) {
-        ERROR("evp encrypt update failed, result %d: %s", evp_ret, strerror(errno));
+        SYSERROR("evp encrypt update failed, result %d", evp_ret);
         ret = -1;
         goto out;
     }
@@ -182,7 +182,7 @@ int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     evp_ret = EVP_EncryptFinal(ctx, (*out) + AES_256_CFB_IV_LEN + tmp_out_len, &tmp_out_len);
 #endif
     if (evp_ret != 1) {
-        ERROR("evp encrypt final failed, result %d: %s", evp_ret, strerror(errno));
+        SYSERROR("evp encrypt final failed, result %d", evp_ret);
         ret = -1;
         goto out;
     }
@@ -256,7 +256,7 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     evp_ret = EVP_DecryptInit(ctx, cipher, aeskey, iv);
 #endif
     if (evp_ret != 1) {
-        ERROR("init evp decrypt failed, result %d: %s", evp_ret, strerror(errno));
+        SYSERROR("init evp decrypt failed, result %d", evp_ret);
         ret = -1;
         goto out;
     }
@@ -264,7 +264,7 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     expected_size = len - AES_256_CFB_IV_LEN;
     evp_ret = EVP_DecryptUpdate(ctx, *out, &tmp_out_len, bytes + AES_256_CFB_IV_LEN, expected_size);
     if (evp_ret != 1) {
-        ERROR("evp decrypt update failed, result %d: %s", evp_ret, strerror(errno));
+        SYSERROR("evp decrypt update failed, result %d", evp_ret);
         ret = -1;
         goto out;
     }
@@ -276,7 +276,7 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     evp_ret = EVP_DecryptFinal(ctx, (*out) + tmp_out_len, &tmp_out_len);
 #endif
     if (evp_ret != 1) {
-        ERROR("evp decrypt final failed, result %d: %s", evp_ret, strerror(errno));
+        SYSERROR("evp decrypt final failed, result %d", evp_ret);
         ret = -1;
         goto out;
     }

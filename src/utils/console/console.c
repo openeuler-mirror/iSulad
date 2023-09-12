@@ -36,7 +36,7 @@ static ssize_t fd_write_function(void *context, const void *data, size_t len)
 
     ret = util_write_nointr_in_total(*(int *)context, data, len);
     if ((ret <= 0) || (ret != (ssize_t)len)) {
-        ERROR("Failed to write: %s", strerror(errno));
+        SYSERROR("Failed to write");
         return -1;
     }
     return ret;
@@ -100,7 +100,7 @@ static int console_writer_write_data(const struct io_write_wrapper *writer, cons
     }
     ret = writer->write_func(writer->context, buf, (size_t)len);
     if (ret <= 0 || ret != len) {
-        ERROR("Failed to write, type: %d, expect: %zd, wrote: %zd, error: %s!", writer->io_type, len, ret, strerror(errno));
+        SYSERROR("Failed to write, type: %d, expect: %zd, wrote: %zd!", writer->io_type, len, ret);
         return -1;
     }
     return 0;
@@ -187,7 +187,7 @@ int console_fifo_name(const char *rundir, const char *subpath, const char *stdfl
     if (do_mkdirp) {
         ret = util_mkdir_p(fifo_path, CONSOLE_FIFO_DIRECTORY_MODE);
         if (ret < 0) {
-            COMMAND_ERROR("Unable to create console fifo directory %s: %s.", fifo_path, strerror(errno));
+            CMD_SYSERROR("Unable to create console fifo directory %s.", fifo_path);
             goto out;
         }
     }
@@ -215,7 +215,7 @@ int console_fifo_create(const char *fifo_path)
 
     ret = mknod(fifo_path, S_IFIFO | S_IRUSR | S_IWUSR, (dev_t)0);
     if (ret < 0 && errno != EEXIST) {
-        ERROR("Failed to mknod monitor fifo %s: %s.", fifo_path, strerror(errno));
+        SYSERROR("Failed to mknod monitor fifo %s.", fifo_path);
         return -1;
     }
 
@@ -265,7 +265,7 @@ int console_fifo_open(const char *fifo_path, int *fdout, int flags)
 
     fd = util_open(fifo_path, flags, (mode_t)0);
     if (fd < 0) {
-        ERROR("Failed to open fifo %s to send message: %s.", fifo_path, strerror(errno));
+        SYSERROR("Failed to open fifo %s to send message.", fifo_path);
         return -1;
     }
 
@@ -281,7 +281,7 @@ int console_fifo_open_withlock(const char *fifo_path, int *fdout, int flags)
 
     fd = util_open(fifo_path, flags, 0);
     if (fd < 0) {
-        WARN("Failed to open fifo %s to send message: %s.", fifo_path, strerror(errno));
+        SYSWARN("Failed to open fifo %s to send message.", fifo_path);
         return -1;
     }
 
@@ -411,12 +411,12 @@ int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoin
         if (tty) {
             ret = epoll_loop_add_handler(&descr, ts.stdin_reader, console_cb_tty_stdin_with_escape, &ts);
             if (ret) {
-                INFO("Add handler for stdinfd faied. with error %s", strerror(errno));
+                SYSINFO("Add handler for stdinfd faied.");
             }
         } else {
             ret = epoll_loop_add_handler(&descr, ts.stdin_reader, console_cb_stdio_copy, &ts);
             if (ret) {
-                INFO("Add handler for stdinfd faied. with error %s", strerror(errno));
+                SYSINFO("Add handler for stdinfd faied.");
             }
         }
     }

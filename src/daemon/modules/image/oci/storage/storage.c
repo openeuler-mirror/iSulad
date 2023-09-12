@@ -61,7 +61,8 @@ static inline bool storage_lock(pthread_rwlock_t *store_lock, bool writable)
         nret = pthread_rwlock_rdlock(store_lock);
     }
     if (nret != 0) {
-        ERROR("Lock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock memory store failed");
         return false;
     }
 
@@ -74,7 +75,8 @@ static inline void storage_unlock(pthread_rwlock_t *store_lock)
 
     nret = pthread_rwlock_unlock(store_lock);
     if (nret != 0) {
-        FATAL("Unlock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock memory store failed");
     }
 }
 
@@ -1444,7 +1446,7 @@ static int do_add_checked_layer(const char *lid, int fd, map_t *checked_layers)
     // save checked layer ids into file
     nret = util_write_nointr(fd, buf, strlen(lid) + 1);
     if (nret < 0 || (size_t)nret != strlen(lid) + 1) {
-        ERROR("Write checked layer data failed: %s", strerror(errno));
+        SYSERROR("Write checked layer data failed");
         ret = -1;
         goto out;
     }

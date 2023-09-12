@@ -575,7 +575,7 @@ static int umount_dev_tmpfs_for_system_container(const container_t *cont)
             return -1;
         }
         if (umount(rootfs_dev_path) < 0 && errno != ENOENT) {
-            WARN("Failed to umount dev tmpfs: %s, error: %s", rootfs_dev_path, strerror(errno));
+            SYSWARN("Failed to umount dev tmpfs: %s", rootfs_dev_path);
         }
     }
     return 0;
@@ -595,8 +595,8 @@ static int valid_mount_point(container_config_v2_common_config_mount_points_elem
     }
 
     if (lstat(mp->source, &st) != 0) {
-        ERROR("lstat %s: %s", mp->source, strerror(errno));
-        isulad_set_error_message("lstat %s: %s", mp->source, strerror(errno));
+        SYSERROR("lstat %s failed", mp->source);
+        isulad_set_error_message("Check %s failed, get more information from log.", mp->source);
         return -1;
     }
 
@@ -679,8 +679,7 @@ static void wait_exit_fifo(const char *id, const int exit_fifo_fd)
     descr.timeout_cbdata = container_id;
     nret = epoll_loop(&descr, WAIT_TIMEOUT);
     if (nret != 0) {
-        ERROR("Wait container %s 's monitor on fd %d error: %s", id, exit_fifo_fd,
-              errno ? strerror(errno) : "");
+        SYSERROR("Wait container %s 's monitor on fd %d failed", id, exit_fifo_fd);
         goto out;
     }
 
@@ -1266,7 +1265,7 @@ static int do_delete_container(container_t *cont)
     }
     ret = util_recursive_rmdir(container_state, 0);
     if (ret != 0) {
-        ERROR("Failed to delete container's state directory %s: %s", container_state, strerror(errno));
+        SYSERROR("Failed to delete container's state directory %s", container_state);
         ret = -1;
         goto out;
     }
@@ -1399,7 +1398,7 @@ static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint
     } else {
         int ret = kill(pid, (int)signal);
         if (ret < 0) {
-            ERROR("Can not kill process (pid=%d) with signal %u: %s", pid, signal, strerror(errno));
+            SYSERROR("Can not kill process (pid=%d) with signal %u", pid, signal);
             return -1;
         }
     }
@@ -2157,7 +2156,7 @@ static void exec_container_end(container_exec_response *response, const containe
     }
     if (sync_fd >= 0 && cc != ISULAD_SUCCESS) {
         if (eventfd_write(sync_fd, 1) < 0) {
-            ERROR("Failed to write eventfd: %s", strerror(errno));
+            SYSERROR("Failed to write eventfd");
         }
     }
     if (thread_id > 0) {

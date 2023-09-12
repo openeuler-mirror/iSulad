@@ -961,8 +961,8 @@ static int do_update_internal_file(const char *id, const char *file_path,
         WARN("failed to write file %s in readonly file system", file_path);
         ret = 0;
     } else {
-        ERROR("Failed to write file %s: %s", file_path, strerror(errno));
-        isulad_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
+        SYSERROR("Failed to write file %s", file_path);
+        isulad_set_error_message("Failed to write file %s", file_path);
         ret = -1;
     }
 
@@ -1179,8 +1179,8 @@ static int do_drop_internal_file(const char *id, const char *file_path, const de
             WARN("failed to open file %s in readonly file system", file_path);
             goto out;
         } else {
-            ERROR("Failed to open %s: %s", file_path, strerror(errno));
-            isulad_set_error_message("Failed to open %s: %s", file_path, strerror(errno));
+            SYSERROR("Failed to open %s", file_path);
+            isulad_set_error_message("Failed to open %s", file_path);
             ret = -1;
             goto out;
         }
@@ -1212,8 +1212,8 @@ static int do_drop_internal_file(const char *id, const char *file_path, const de
 
     ret = util_write_file(file_path, str, strlen(str), NETWORK_MOUNT_FILE_MODE);
     if (ret != 0) {
-        ERROR("Failed to write file %s: %s", file_path, strerror(errno));
-        isulad_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
+        SYSERROR("Failed to write file %s", file_path);
+        isulad_set_error_message("Failed to write file %s", file_path);
         goto out;
     }
 

@@ -175,7 +175,7 @@ int remove_network_namespace(const char *netns_path)
     }
 
     if (umount_network_namespace(netns_path) != 0) {
-        ERROR("Failed to umount directory %s:%s", netns_path, strerror(errno));
+        SYSERROR("Failed to umount directory %s", netns_path);
         return -1;
     }
 
@@ -231,7 +231,8 @@ int remove_network_namespace_file(const char *netns_path)
     }
 
     if (!util_force_remove_file(netns_path, &get_err)) {
-        ERROR("Failed to remove file %s, error: %s", netns_path, strerror(get_err));
+        errno = get_err;
+        SYSERROR("Failed to remove file %s", netns_path);
         return -1;
     }
 

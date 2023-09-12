@@ -265,7 +265,7 @@ static int attach_prepare_console(const container_t *cont, const container_attac
 
         *sync_fd = eventfd(0, EFD_CLOEXEC);
         if (*sync_fd < 0) {
-            ERROR("Failed to create eventfd: %s", strerror(errno));
+            SYSERROR("Failed to create eventfd.");
             ret = -1;
             goto out;
         }
@@ -295,7 +295,7 @@ static void handle_attach_io_thread_by_cc(uint32_t cc, int sync_fd, pthread_t th
     } else {
         if (sync_fd >= 0) {
             if (eventfd_write(sync_fd, 1) < 0) {
-                ERROR("Failed to write eventfd: %s", strerror(errno));
+                SYSERROR("Failed to write eventfd.");
             }
         }
         if (thread_id > 0) {
@@ -535,8 +535,8 @@ static container_path_stat *do_container_stat_path(const char *rootpath, const c
 
     nret = lstat(resolvedpath, &st);
     if (nret < 0) {
-        ERROR("lstat %s: %s", resolvedpath, strerror(errno));
-        isulad_set_error_message("lstat %s: %s", resolvedpath, strerror(errno));
+        SYSERROR("lstat %s failed.", resolvedpath);
+        isulad_set_error_message("Check %s failed, get more information from log.", resolvedpath);
         goto cleanup;
     }
 
@@ -921,8 +921,8 @@ static int copy_to_container_check_path_valid(const container_t *cont, const cha
 
     nret = lstat(resolvedpath, &st);
     if (nret < 0) {
-        ERROR("lstat %s: %s", resolvedpath, strerror(errno));
-        isulad_set_error_message("lstat %s: %s", resolvedpath, strerror(errno));
+        SYSERROR("lstat %s failed", resolvedpath);
+        isulad_set_error_message("Check %s failed, get more information from log.", resolvedpath);
         goto cleanup;
     }
 
@@ -1092,11 +1092,11 @@ static int64_t do_read_log_file(const char *path, int64_t require_line, long pos
         util_usleep_nointerupt(1000);
     }
     if (fp == NULL) {
-        ERROR("open file: %s failed: %s", path, strerror(errno));
+        SYSERROR("open file: %s failed.", path);
         return -1;
     }
     if (pos > 0 && fseek(fp, pos, SEEK_SET) != 0) {
-        ERROR("fseek to %ld failed: %s", pos, strerror(errno));
+        SYSERROR("fseek to %ld failed.", pos);
         read_lines = -1;
         goto out;
     }
@@ -1211,12 +1211,12 @@ static int do_tail_find(FILE *fp, int64_t require_line, int64_t *get_line, long 
     int ret = -1;
 
     if (fseek(fp, 0L, SEEK_END) != 0) {
-        ERROR("Fseek failed: %s", strerror(errno));
+        SYSERROR("Fseek failed");
         goto out;
     }
     len = ftell(fp);
     if (len < 0) {
-        ERROR("Ftell failed: %s", strerror(errno));
+        SYSERROR("Ftell failed");
         goto out;
     }
     if (len < SECTION_SIZE) {
@@ -1228,7 +1228,7 @@ static int do_tail_find(FILE *fp, int64_t require_line, int64_t *get_line, long 
     }
     while (true) {
         if (fseek(fp, pos, SEEK_SET) != 0) {
-            ERROR("Fseek failed: %s", strerror(errno));
+            SYSERROR("Fseek failed");
             goto out;
         }
         read_size = fread(buffer, sizeof(char), (size_t)step_size, fp);
@@ -1275,7 +1275,7 @@ static int util_find_tail_position(const char *file_name, int64_t require_line, 
 
     fp = util_fopen(file_name, "rb");
     if (fp == NULL) {
-        ERROR("open file: %s failed: %s", file_name, strerror(errno));
+        SYSERROR("open file: %s failed.", file_name);
         return -1;
     }
 

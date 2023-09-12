@@ -179,7 +179,7 @@ static int mount_rootfs_mnt_dir(const char *mountdir)
     if (info == NULL) {
         ret = mount(rootfsdir, rootfsdir, "bind", MS_BIND | MS_REC, NULL);
         if (ret < 0) {
-            ERROR("Failed to mount parent directory %s:%s", rootfsdir, strerror(errno));
+            SYSERROR("Failed to mount parent directory %s.", rootfsdir);
             goto out;
         }
     }
@@ -212,7 +212,7 @@ static int umount_rootfs_mnt_dir(const char *mntdir)
 
     ret = umount(dir);
     if (ret < 0 && errno != EINVAL) {
-        WARN("Failed to umount parent directory %s:%s", dir, strerror(errno));
+        SYSWARN("Failed to umount parent directory %s.", dir);
         goto out;
     }
 
@@ -252,7 +252,7 @@ static void clean_residual_files()
     if (checked_flag == NULL) {
         ERROR("Failed to get image checked flag file path");
     } else if (unlink_ignore_enoent(checked_flag)) {
-        ERROR("Unlink file: %s error: %s", checked_flag, strerror(errno));
+        SYSERROR("Unlink file: %s.", checked_flag);
     }
     free(checked_flag);
 
@@ -261,7 +261,7 @@ static void clean_residual_files()
     if (fname == NULL) {
         ERROR("Failed to get isulad pid file path");
     } else if (unlink(fname) && errno != ENOENT) {
-        WARN("Unlink file: %s error: %s", fname, strerror(errno));
+        SYSWARN("Unlink file: %s.", fname);
     }
     free(fname);
 }
@@ -472,7 +472,7 @@ int check_and_save_pid(const char *fn)
 
     ret = ftruncate(fd, 0);
     if (ret != 0) {
-        ERROR("Failed to truncate pid file:%s to 0: %s", fn, strerror(errno));
+        SYSERROR("Failed to truncate pid file:%s to 0.", fn);
         ret = -1;
         goto out;
     }
@@ -486,7 +486,7 @@ int check_and_save_pid(const char *fn)
 
     len = util_write_nointr(fd, pidbuf, strlen(pidbuf));
     if (len < 0 || (size_t)len != strlen(pidbuf)) {
-        ERROR("Failed to write pid to file:%s: %s", fn, strerror(errno));
+        SYSERROR("Failed to write pid to file:%s.", fn);
         ret = -1;
     }
 out:
@@ -527,7 +527,7 @@ static int check_hook_spec_file(const char *hook_spec)
         return -1;
     }
     if (stat(hook_spec, &hookstat)) {
-        ERROR("Stat hook spec file failed: %s", strerror(errno));
+        SYSERROR("Stat hook spec file failed.");
         return -1;
     }
     if ((hookstat.st_mode & S_IFMT) != S_IFREG) {
@@ -589,7 +589,7 @@ static void update_isulad_rlimits()
     limit.rlim_cur = RLIM_INFINITY;
     limit.rlim_max = RLIM_INFINITY;
     if (setrlimit(RLIMIT_CORE, &limit)) {
-        SYSWARN("Can not set ulimit of RLIMIT_CORE");
+        SYSWARN("Can not set ulimit of RLIMIT_CORE.");
     }
 }
 
@@ -632,8 +632,9 @@ static int parse_time_duration(const char *value, unsigned int *seconds)
     *(num_str + len - 1) = '\0';
     ret = util_safe_uint(num_str, &tmp);
     if (ret < 0) {
-        ERROR("Illegal unsigned integer: %s", num_str);
-        COMMAND_ERROR("Illegal unsigned integer:%s:%s", num_str, strerror(-ret));
+        errno = -ret;
+        SYSERROR("Illegal unsigned integer: %s", num_str);
+        COMMAND_ERROR("Illegal unsigned integer:%s", num_str);
         ret = -1;
         goto out;
     }
@@ -813,7 +814,7 @@ static int overlay_supports_selinux(bool *supported)
     *supported = false;
     fp = fopen("/proc/kallsyms", "re");
     if (fp == NULL) {
-        ERROR("Failed to open /proc/kallsyms: %s", strerror(errno));
+        SYSERROR("Failed to open /proc/kallsyms.");
         return -1;
     }
     __fsetlocking(fp, FSETLOCKING_BYCALLER);
@@ -1407,7 +1408,8 @@ static int create_mount_flock_file(const struct service_arguments *args)
         // recreate mount flock file
         // and make file uid/gid and permission correct
         if (!util_force_remove_file(cleanpath, &err)) {
-            ERROR("Failed to delete %s, error: %s. Please delete %s manually.", path, strerror(err), path);
+            errno = err;
+            SYSERROR("Failed to delete %s. Please delete %s manually.", path, path);
             return -1;
         }
     }

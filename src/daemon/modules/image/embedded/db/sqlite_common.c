@@ -49,7 +49,7 @@ int db_sqlite_init(const char *dbpath)
         goto cleanup;
     }
     if (chmod(dbpath, DEFAULT_SECURE_FILE_MODE) != 0) {
-        ERROR("Change mode of db file failed: %s", strerror(errno));
+        SYSERROR("Change mode of db file failed.");
         goto cleanup;
     }
     return 0;

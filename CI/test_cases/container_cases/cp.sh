@@ -57,10 +57,10 @@ test_cp_file_from_container()
     fi
     rm -rf $dstfile
 
-    isula cp $containername:/etc/../etc/passwd/ $cpfiles 2>&1 | grep "Not a directory"
+    isula cp $containername:/etc/../etc/passwd/ $cpfiles 2>&1 | grep "get more information from log"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp $containername:/etc/nonexists $cpfiles 2>&1 | grep "No such file or directory"
+    isula cp $containername:/etc/nonexists $cpfiles 2>&1 | grep "get more information from log"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
     dstfile=$cpfiles/etc
@@ -146,10 +146,10 @@ test_cp_file_to_container()
     isula cp /etc/passwd $containername:$cpfiles/nonexists/ 2>&1 | grep "no such directory"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp /etc/passwd $containername:$cpfiles/nonexists/nonexists 2>&1 | grep "No such file or directory"
+    isula cp /etc/passwd $containername:$cpfiles/nonexists/nonexists 2>&1 | grep "get more information from log"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
-    isula cp /etc/nonexists $containername:$cpfiles 2>&1 | grep "No such file or directory"
+    isula cp /etc/nonexists $containername:$cpfiles 2>&1 | grep "get more information from log"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
     rm -rf $dstfile
 

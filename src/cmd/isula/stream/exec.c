@@ -356,7 +356,7 @@ static int remote_cmd_exec(const struct client_arguments *args, uint32_t *exit_c
 
 out:
     if (reset_tty && tcsetattr(0, TCSAFLUSH, &oldtios) < 0) {
-        WARN("Failed to reset terminal properties: %s.", strerror(errno));
+        SYSWARN("Failed to reset terminal properties.");
     }
     if (response->exit_code != 0) {
         *exit_code = response->exit_code;
@@ -387,7 +387,7 @@ out:
     sem_destroy(&g_command_waitopen_sem);
     sem_destroy(&g_command_waitexit_sem);
     if (reset_tty && tcsetattr(0, TCSAFLUSH, &oldtios) < 0) {
-        WARN("Failed to reset terminal properties: %s.", strerror(errno));
+        SYSWARN("Failed to reset terminal properties.");
     }
     return ret;
 }

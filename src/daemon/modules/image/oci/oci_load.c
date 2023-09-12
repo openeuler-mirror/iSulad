@@ -1045,8 +1045,8 @@ static char *oci_load_path_create()
     }
 
     if (mkdtemp(tmp_dir) == NULL) {
-        ERROR("make temporary dir failed: %s", strerror(errno));
-        isulad_try_set_error_message("make temporary dir failed: %s", strerror(errno));
+        SYSERROR("make temporary dir failed");
+        isulad_try_set_error_message("make temporary dir failed");
         ret = -1;
         goto out;
     }

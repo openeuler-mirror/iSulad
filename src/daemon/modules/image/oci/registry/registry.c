@@ -445,7 +445,7 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
             }
 
             if (link(src_file, file) != 0) {
-                ERROR("link %s to %s failed: %s", src_file, file, strerror(errno));
+                SYSERROR("link %s to %s failed", src_file, file);
                 ret = -1;
                 goto out;
             }
@@ -1147,7 +1147,7 @@ static void set_cached_layers_info(char *blob_digest, char *diffid, int result, 
             continue;
         }
         if (link(src_file, elem->file) != 0) {
-            ERROR("link %s to %s failed: %s", src_file, elem->file, strerror(errno));
+            SYSERROR("link %s to %s failed", src_file, elem->file);
             info->desc->cancel = true;
             continue;
         }
@@ -1429,8 +1429,7 @@ static void *register_layers_in_thread(void *arg)
                 // here we can't just break and cleanup resources because threads are running.
                 // desc is freed if we break and then isulad crash. sleep some time
                 // instead to avoid cpu full running and then retry.
-                ERROR("condition wait for layer %zu to complete failed, ret %d, error: %s", i, cond_ret,
-                      strerror(errno));
+                SYSERROR("condition wait for layer %zu to complete failed, ret %d", i, cond_ret);
                 sleep(10);
                 continue;
             }
@@ -1615,7 +1614,7 @@ static int fetch_all(pull_descriptor *desc)
             // here we can't just break and cleanup resources because threads are running.
             // desc is freed if we break and then isulad crash. sleep some time
             // instead to avoid cpu full running and then retry.
-            ERROR("condition wait for all layers to complete failed, ret %d, error: %s", cond_ret, strerror(errno));
+            SYSERROR("condition wait for all layers to complete failed, ret %d", cond_ret);
             sleep(10);
             continue;
         }
@@ -1909,7 +1908,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     }
 
     if (mkdtemp(blobpath) == NULL) {
-        ERROR("make temporary direcory failed: %s", strerror(errno));
+        SYSERROR("make temporary direcory failed");
         ret = -1;
         goto out;
     }

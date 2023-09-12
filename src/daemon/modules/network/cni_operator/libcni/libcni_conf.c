@@ -90,7 +90,7 @@ static char *do_get_cni_net_confs_json(const char *filename)
 
     content = util_read_text_file(filename);
     if (content == NULL) {
-        ERROR("Read file %s failed: %s", filename, strerror(errno));
+        SYSERROR("Read file %s failed", filename);
     }
 
     return content;

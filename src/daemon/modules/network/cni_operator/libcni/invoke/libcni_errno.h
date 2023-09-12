@@ -43,8 +43,6 @@ enum CNI_CUSTOM_ERROR {
     CUSTOM_ERR_MAX, // max flag
 };
 
-const char *get_invoke_err_msg(int errcode);
-
 enum CNI_WELL_KNOW_ERROR {
     CNI_ERR_UNKNOW = 0,
     CNI_ERR_INCOMPATIBLE_CNI_VERSION,

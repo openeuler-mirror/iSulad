@@ -165,7 +165,7 @@ static int init_volume_root_dir(struct volumes_info *vols_info, const char *root
 
     ret = util_mkdir_p(root_dir, LOCAL_VOLUME_ROOT_DIR_MODE);
     if (ret != 0) {
-        ERROR("create volume directory %s failed: %s", root_dir, strerror(errno));
+        SYSERROR("create volume directory %s failed", root_dir);
         goto out;
     }
 
@@ -229,7 +229,7 @@ static char *build_and_valid_data_dir(const char *root_dir, const char *name)
     }
 
     if (lstat(tmp_dir, &st) != 0) {
-        ERROR("lstat %s: %s", tmp_dir, strerror(errno));
+        SYSERROR("lstat %s failed", tmp_dir);
         ret = -1;
         goto out;
     }
@@ -388,7 +388,7 @@ static struct volume *volume_create_nolock(char *name)
 
     ret = util_mkdir_p(v->path, LOCAL_VOLUME_DIR_MODE);
     if (ret != 0) {
-        ERROR("failed to create %s for volume %s: %s", v->path, v->name, strerror(errno));
+        SYSERROR("failed to create %s for volume %s", v->path, v->name);
         goto out;
     }
 
@@ -556,15 +556,15 @@ static int remove_volume_dir(char *path)
     // remain untouched if we remove the data directory failed.
     ret = util_recursive_rmdir(path, 0);
     if (ret != 0) {
-        ERROR("failed to remove volume data dir %s: %s", path, strerror(errno));
-        isulad_try_set_error_message("failed to remove volume data dir %s: %s", path, strerror(errno));
+        SYSERROR("failed to remove volume data dir %s.", path);
+        isulad_try_set_error_message("failed to remove volume data dir %s.", path);
         goto out;
     }
 
     ret = util_recursive_rmdir(vol_dir, 0);
     if (ret != 0) {
-        ERROR("failed to remove volume dir %s: %s", vol_dir, strerror(errno));
-        isulad_try_set_error_message("failed to remove volume dir %s: %s", vol_dir, strerror(errno));
+        SYSERROR("failed to remove volume dir %s.", vol_dir);
+        isulad_try_set_error_message("failed to remove volume dir %s.", vol_dir);
         goto out;
     }
 
@@ -586,7 +586,7 @@ static int volume_remove_nolock(char *name)
     }
 
     if (remove_volume_dir(v->path) != 0) {
-        ERROR("failed to remove volume dir %s: %s", v->path, strerror(errno));
+        SYSERROR("failed to remove volume dir %s", v->path);
         return -1;
     }
 

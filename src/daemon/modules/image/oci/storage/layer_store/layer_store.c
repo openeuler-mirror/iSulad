@@ -98,7 +98,8 @@ static inline bool layer_store_lock(bool writable)
         nret = pthread_rwlock_rdlock(&g_metadata.rwlock);
     }
     if (nret != 0) {
-        ERROR("Lock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock memory store failed");
         return false;
     }
 
@@ -111,7 +112,8 @@ static inline void layer_store_unlock()
 
     nret = pthread_rwlock_unlock(&g_metadata.rwlock);
     if (nret != 0) {
-        FATAL("Unlock memory store failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock memory store failed");
     }
 }
 
@@ -1844,7 +1846,7 @@ static int file_crc64(char *file, uint64_t *crc, uint64_t policy)
 
     fd = util_open(file, O_RDONLY, 0);
     if (fd < 0) {
-        ERROR("Open file: %s, failed: %s", file, strerror(errno));
+        SYSERROR("Open file: %s, failed", file);
         return -1;
     }
 
@@ -1866,7 +1868,7 @@ static int file_crc64(char *file, uint64_t *crc, uint64_t policy)
     while (true) {
         size = util_read_nointr(fd, buffer, BLKSIZE);
         if (size < 0) {
-            ERROR("read file %s failed: %s", file, strerror(errno));
+            SYSERROR("read file %s failed", file);
             ret = -1;
             break;
         } else if (size == 0) {
@@ -1914,7 +1916,7 @@ static int valid_crc64(storage_entry *entry, char *rootfs)
         if (fname != NULL && util_has_prefix(fname, ".wh.")) {
             goto out;
         }
-        ERROR("stat file or dir: %s, failed: %s", file, strerror(errno));
+        SYSERROR("stat file or dir: %s, failed", file);
         ret = -1;
     } else {
         if (strlen(entry->payload) != PAYLOAD_CRC_LEN) {
@@ -1981,7 +1983,7 @@ static tar_split *new_tar_split(layer_t *l, const char *tspath)
 
     ts->tmp_file = fopen(path, "w+");
     if (ts->tmp_file == NULL) {
-        ERROR("create tmpfile failed: %s", strerror(errno));
+        SYSERROR("create tmpfile failed");
         ret = -1;
         goto out;
     }
@@ -2019,7 +2021,7 @@ static int next_tar_split_entry(tar_split *ts, storage_entry **entry)
         if (errno == 0) {
             *entry = NULL;
         } else {
-            ERROR("error read line from tar split: %s", strerror(errno));
+            SYSERROR("error read line from tar split");
             ret = -1;
         }
         goto out;

@@ -43,7 +43,8 @@ static inline bool network_conflist_lock(enum lock_type type)
         nret = pthread_rwlock_wrlock(&g_network_rwlock);
     }
     if (nret != 0) {
-        ERROR("Lock network list failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Lock network list failed");
         return false;
     }
 
@@ -56,7 +57,8 @@ static inline void network_conflist_unlock()
 
     nret = pthread_rwlock_unlock(&g_network_rwlock);
     if (nret != 0) {
-        FATAL("Unlock network list failed: %s", strerror(nret));
+        errno = nret;
+        SYSERROR("Unlock network list failed");
     }
 }
 
