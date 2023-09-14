@@ -203,7 +203,7 @@ struct io_read_wrapper {
      dr-xr-x---   2 root root     26 Mar 13 12:13 root
      ```
 
-3. 解压数据应当chroot到对应目录下，防止软连接攻击
+3. 解压数据应当chroot到对应目录下，防止软链接攻击
 
 ## 3.9 获取层meta数据
 
