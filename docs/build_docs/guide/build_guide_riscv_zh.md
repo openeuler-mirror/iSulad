@@ -61,7 +61,7 @@ qemu-system-riscv64 \
 1. 在终端直接输入shell文件中的内容
 2. 如果创建了shell文件，只需要在终端里输入 `sh run_oe1_rv64.sh`
 
-默认的登陆用户名/密码是：root/openEuler12#$
+默认的登录用户名/密码是：root/openEuler12#$
 
 ## 源码编译及安装
 
