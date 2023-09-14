@@ -295,7 +295,13 @@ make_sure_cgroup
 
 make_base_image
 if [ $? -ne 0 ];then
-    exit 0
+    exit 1
+fi
+
+# build iSulad on many linux distros
+./build_on_linux_distros.sh
+if [ $? -ne 0 ];then
+    exit 1
 fi
 
 #if you want to debug and disable cleanup all resources, create directory by 'mkdir -p $KEEP_CONTAINERS_ALIVE_DIR'
