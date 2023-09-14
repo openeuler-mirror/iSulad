@@ -122,9 +122,9 @@ target_include_directories(isulad-shim PUBLIC
     ${SHARED_INCS}
     ${ISULA_LIBUTILS_INCLUDE_DIR}
     )
-target_link_libraries(isulad-shim ${ISULA_LIBUTILS_LIBRARY})
+target_link_libraries(isulad-shim ${ISULAD_SHIM_LIBUTILS_LIBRARY} ${LIBYAJL_LIBRARY})
 if (ANDROID OR MUSL)
-    target_link_libraries(isulad-shim ${LIBSSL_LIBRARY} ${LIBYAJL_LIBRARY})
+    target_link_libraries(isulad-shim ${LIBSSL_LIBRARY})
 else()
     target_link_libraries(isulad-shim -lpthread)
 endif()
