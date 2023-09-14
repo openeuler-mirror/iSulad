@@ -21,16 +21,12 @@
 #		-t YOUR_IMAGE_NAME -f ./Dockerfile .
 
 
-FROM	ubuntu:20.04
+FROM	ubuntu:lunar
 MAINTAINER WuJing <wujing50@huawei.com>
 
 ENV TZ=Asia/Shanghai
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
-    echo "nameserver 8.8.4.4" >> /etc/resolv.conf && \
-    echo "search localdomain" >> /etc/resolv.conf
 
 # Install dependency package
 RUN apt update -y && apt upgrade -y && \
@@ -38,8 +34,6 @@ RUN apt update -y && apt upgrade -y && \
 			autoconf \
 			libtool \
 			make \
-			gdb \
-			strace \
 			libcap-dev \
 			libxslt-dev  \
 			graphviz \
@@ -72,13 +66,7 @@ RUN apt update -y && apt upgrade -y && \
 			libgpgme-dev \
 			expect \
 			libsystemd-dev \
-			golang \
 			bc \
-			valgrind \
-			e2fsprogs \
-			lcov \
-			libasan6 \
-			lvm2 \
 			locales \
 			language-pack-en \
 			curl \
@@ -93,6 +81,7 @@ RUN apt update -y && apt upgrade -y && \
 			libgmock-dev \
 			libgtest-dev \
 			libarchive-dev \
+			patch \
 			tcpdump
 
 RUN apt autoremove -y
@@ -107,12 +96,12 @@ RUN echo "export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> /
 RUN git config --global http.sslverify false
 
 # install rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+# RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # configure rust
-RUN echo "[source.crates-io]" >> ${HOME}/.cargo/config && \
-    echo "[source.local-registry]" >> ${HOME}/.cargo/config && \
-    echo "directory = \"vendor\"" >> ${HOME}/.cargo/config
+# RUN echo "[source.crates-io]" >> ${HOME}/.cargo/config && \
+#    echo "[source.local-registry]" >> ${HOME}/.cargo/config && \
+#    echo "directory = \"vendor\"" >> ${HOME}/.cargo/config
 
 # install libevhtp
 RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
@@ -133,5 +122,5 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
         make install && \
         ldconfig
 
-VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/bin/bash"]
+WORKDIR /root
