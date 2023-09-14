@@ -59,7 +59,7 @@ static inline void format_errorf(char **err, const char *format, ...)
     char errbuf[BUFSIZ + 1] = { 0 };
     va_list argp;
 
-    if (err == NULL) {
+    if (err == NULL || format == NULL) {
         return;
     }
 
