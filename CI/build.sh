@@ -299,7 +299,7 @@ if [ $? -ne 0 ];then
 fi
 
 # build iSulad on many linux distros
-./build_on_linux_distros.sh
+${basepath}/build_on_linux_distros.sh
 if [ $? -ne 0 ];then
     exit 1
 fi
