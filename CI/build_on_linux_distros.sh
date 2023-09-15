@@ -17,21 +17,23 @@
 set +e
 set -x
 
+basepath=$(cd `dirname $0`; pwd)
+
 ubuntu_image_name="isulad_on_ubunut:2023"
 fedora_image_name="isulad_on_fedora:2023"
 
 ret=0
 
 # prepare docker images, current support fedora and ubuntu
-docker build -t ${fedora_image_name} -f ./dockerfiles/Dockerfile-fedora .
-docker run --rm -ti -v $(pwd):/test ${fedora_image_name} /test/only_build_isulad.sh
+docker build -t ${fedora_image_name} -f ${basepath}/dockerfiles/Dockerfile-fedora .
+docker run --rm -ti -v ${basepath}:/test ${fedora_image_name} /test/only_build_isulad.sh
 if [ $? -ne 0 ]; then
     echo ">>>>>>>>>>>>>>>>build iSulad on fedora failed>>>>>>>>>>>>>>>>>"
     ret=1
 fi
 
-docker build -t ${ubuntu_image_name} -f ./dockerfiles/Dockerfile-ubuntu .
-docker run --rm -ti -v $(pwd):/test ${ubuntu_image_name} /test/only_build_isulad.sh
+docker build -t ${ubuntu_image_name} -f ${basepath}/dockerfiles/Dockerfile-ubuntu .
+docker run --rm -ti -v ${basepath}:/test ${ubuntu_image_name} /test/only_build_isulad.sh
 if [ $? -ne 0 ]; then
     echo ">>>>>>>>>>>>>>>>build iSulad on ubuntu failed>>>>>>>>>>>>>>>>>"
     ret=1
