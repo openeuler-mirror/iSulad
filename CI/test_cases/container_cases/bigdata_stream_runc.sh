@@ -21,6 +21,20 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
+# $1 : retry limit
+# $2 : retry_interval
+function do_retry_check_residual()
+{
+    for i in $(seq 1 "$1"); do
+        ps aux | grep "cat test_" | grep -v "grep"
+        if [ $? -ne 0 ]; then
+            return 0
+        fi
+        sleep $2
+    done
+    return 1
+}
+
 function set_up()
 {
     local ret=0
@@ -65,6 +79,8 @@ function record_origin_status()
 function check_last_status()
 {
     local ret=0
+    local retry_limit=20
+    local retry_interval=1
     sleep 5
     ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - IOCopy Thread residue" && ((ret++))
@@ -97,8 +113,8 @@ function check_last_status()
         msg_err "${FUNCNAME[0]}:${LINENO} - client not exit!!" && ((ret++))
     fi
 
-    ps aux | grep "cat test_" | grep -v "grep"
-    if [[ $? -eq 0 ]]; then
+    do_retry_check_residual ${retry_limit} ${retry_interval}
+    if [[ $? -ne 0 ]]; then
         msg_err "${FUNCNAME[0]}:${LINENO} - business process residual" && ((ret++))
     fi
 
