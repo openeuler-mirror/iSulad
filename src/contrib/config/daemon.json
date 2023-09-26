@@ -35,5 +35,6 @@
     "insecure-skip-verify-enforce": false,
     "cri-runtimes": {
         "kata": "io.containerd.kata.v2"
-    }
+    },
+    "enable-cri-v1": false
 }

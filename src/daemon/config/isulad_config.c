@@ -1760,6 +1760,7 @@ int merge_json_confs_into_global(struct service_arguments *args)
 #ifdef ENABLE_CRI_API_V1
     args->json_confs->cri_sandboxers = tmp_json_confs->cri_sandboxers;
     tmp_json_confs->cri_sandboxers = NULL;
+    args->json_confs->enable_cri_v1 = tmp_json_confs->enable_cri_v1;
 #endif
 
     if (merge_cri_runtimes_into_global(args, tmp_json_confs)) {
