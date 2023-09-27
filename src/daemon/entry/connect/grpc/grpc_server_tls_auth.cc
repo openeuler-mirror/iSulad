@@ -34,7 +34,8 @@ Status auth(ServerContext *context, const std::string &action)
     const std::multimap<grpc::string_ref, grpc::string_ref> &init_metadata = context->client_metadata();
     auto tls_mode_kv = init_metadata.find("tls_mode");
     if (tls_mode_kv == init_metadata.end()) {
-        return Status(StatusCode::UNKNOWN, "unknown error");
+        // Allow tls_mode not set in context, which means tls_mode is default to 0
+        return Status::OK;
     }
     std::string tls_mode = std::string(tls_mode_kv->second.data(), tls_mode_kv->second.length());
     if (tls_mode == "0") {
