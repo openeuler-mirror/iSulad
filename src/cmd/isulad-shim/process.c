@@ -876,6 +876,12 @@ process_t *new_process(char *id, char *bundle, char *runtime)
         goto failure;
     }
 
+    p->state_path = getcwd(NULL, 0);
+    if (p->state_path == NULL) {
+        write_message(ERR_MSG, "get cwd failed when do create process");
+        goto failure;
+    }
+
     return p;
 
 failure:
@@ -898,20 +904,40 @@ int process_io_start(process_t *p, pthread_t *tid_epoll)
     return SHIM_OK;
 }
 
+static void set_common_params(process_t *p, const char *params[], int *index, const char* log_path)
+{
+    int j, nret;
+    char root_path[PATH_MAX] = { 0 };
+
+    params[(*index)++]  = p->runtime;
+    for (j = 0; j < p->state->runtime_args_len; j++) {
+        params[(*index)++]  = p->state->runtime_args[j];
+    }
+
+    if (log_path != NULL) {
+        params[(*index)++] = "--log";
+        params[(*index)++] = log_path;
+        params[(*index)++] = "--log-format";
+        params[(*index)++] = "json";
+    }
+
+    // In addition to kata, other commonly used oci runtimes (runc, crun, youki, gvisor)
+    // need to set the --root option
+    if (strcasecmp(p->runtime, "kata-runtime") != 0) {
+        nret = snprintf(root_path, PATH_MAX, "%s/%s", p->state_path, p->runtime);
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
+            return;
+        }
+        params[(*index)++] = "--root";
+        params[(*index)++] = root_path;
+    }
+}
+
 static void get_runtime_cmd(process_t *p, const char *log_path, const char *pid_path, const char *process_desc,
                             const char *params[])
 {
     int i = 0;
-    int j;
-    params[i++] = p->runtime;
-    for (j = 0; j < p->state->runtime_args_len; j++) {
-        params[i++] = p->state->runtime_args[j];
-    }
-    params[i++] = "--log";
-
-    params[i++] = log_path;
-    params[i++] = "--log-format";
-    params[i++] = "json";
+    set_common_params(p, params, &i, log_path);
     if (p->state->exec && process_desc != NULL) {
         params[i++] = "exec";
 #ifdef ENABLE_GVISOR
@@ -969,12 +995,9 @@ static void process_kill_all(process_t *p)
     char output[BUFSIZ] = { 0 };
     int output_len = BUFSIZ;
     int i = 0;
-    int j;
 
-    params[i++] = p->runtime;
-    for (j = 0; j < p->state->runtime_args_len; j++) {
-        params[i++] = p->state->runtime_args[j];
-    }
+    set_common_params(p, params, &i, NULL);
+
     params[i++] = "kill";
     params[i++] = "--all";
     params[i++] = p->id;
@@ -995,36 +1018,20 @@ static void process_delete(process_t *p)
     char output[BUFSIZ] = { 0 };
     int output_len = BUFSIZ;
     int i = 0;
-    int j;
     char log_path[PATH_MAX] = { 0 };
-    char *cwd = NULL;
 
-    cwd = getcwd(NULL, 0);
-    if (cwd == NULL) {
-        write_message(ERR_MSG, "get cwd failed when do process delete");
-        return;
-    }
-    int nret = snprintf(log_path, PATH_MAX, "%s/log.json", cwd);
+    int nret = snprintf(log_path, PATH_MAX, "%s/log.json", p->state_path);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
-        free(cwd);
         return;
     }
 
-    params[i++] = p->runtime;
-    for (j = 0; j < p->state->runtime_args_len; j++) {
-        params[i++] = p->state->runtime_args[j];
-    }
-    params[i++] = "--log";
-    params[i++] = log_path;
-    params[i++] = "--log-format";
-    params[i++] = "json";
+    set_common_params(p, params, &i, log_path);
 
     params[i++] = "delete";
     params[i++] = "--force";
     params[i++] = p->id;
 
     (void)cmd_combined_output(p->runtime, params, output, &output_len);
-    free(cwd);
 
     return;
 }
@@ -1061,11 +1068,11 @@ static void exec_runtime_process(process_t *p, int exec_fd)
         _exit(EXIT_FAILURE);
     }
 
-    int nret = snprintf(log_path, PATH_MAX, "%s/log.json", cwd);
+    int nret = snprintf(log_path, PATH_MAX, "%s/log.json", p->state_path);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         _exit(EXIT_FAILURE);
     }
-    nret = snprintf(pid_path, PATH_MAX, "%s/pid", cwd);
+    nret = snprintf(pid_path, PATH_MAX, "%s/pid", p->state_path);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         _exit(EXIT_FAILURE);
     }
@@ -1077,7 +1084,7 @@ static void exec_runtime_process(process_t *p, int exec_fd)
             (void)dprintf(exec_fd, "memory error: %s", strerror(errno));
             _exit(EXIT_FAILURE);
         }
-        nret = snprintf(process_desc, PATH_MAX, "%s/process.json", cwd);
+        nret = snprintf(process_desc, PATH_MAX, "%s/process.json", p->state_path);
         if (nret < 0 || (size_t)nret >= PATH_MAX) {
             _exit(EXIT_FAILURE);
         }
