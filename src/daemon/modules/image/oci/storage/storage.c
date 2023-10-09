@@ -23,6 +23,7 @@
 #include <isula_libutils/imagetool_fs_info.h>
 #include <isula_libutils/imagetool_images_list.h>
 #include <isula_libutils/storage_rootfs.h>
+#include <isula_libutils/auto_cleanup.h>
 #include <pthread.h>
 
 #include "io_wrapper.h"
@@ -384,33 +385,28 @@ int storage_layer_try_repair_lowers(const char *layer_id, const char *last_layer
 int storage_img_create(const char *id, const char *parent_id, const char *metadata,
                        struct storage_img_create_options *opts)
 {
-    int ret = 0;
-    char *image_id = NULL;
+    __isula_auto_free char *image_id = NULL;
+    __isula_auto_prw_unlock pthread_rwlock_t *local_rwlock = NULL;
 
     if (id == NULL || opts == NULL) {
         ERROR("Invalid arguments for image create");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (!storage_lock(&g_storage_rwlock, true)) {
         ERROR("Failed to lock storage, not allowed to create new images");
-        ret = -1;
-        goto out;
+        return -1;
     }
+
+    local_rwlock = &g_storage_rwlock;
 
     image_id = image_store_create(id, NULL, 0, parent_id, metadata, opts->create_time, opts->digest);
     if (image_id == NULL) {
         ERROR("Failed to create img");
-        ret = -1;
-        goto unlock_out;
+        return -1;
     }
 
-unlock_out:
-    storage_unlock(&g_storage_rwlock);
-out:
-    free(image_id);
-    return ret;
+    return 0;
 }
 
 imagetool_image *storage_img_get(const char *img_id)
