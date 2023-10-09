@@ -53,6 +53,7 @@ auto SandboxerClientMonitor::Monitor(SandboxerAsyncWaitCall *call) -> bool
     }
     // The call will be enqueued into completion queue, and the callback
     // will be invoked when the response is ready
+    std::unique_lock<std::mutex> lock(m_callsMutex);
     m_calls.push_back(call);
     INFO("Start to monitor sandboxer wait call, sandbox id: %s",
          call->GetSandboxId().c_str());
@@ -203,17 +204,29 @@ void SandboxerClientMonitor::CheckCompletedFutures()
     }
 }
 
+void SandboxerClientMonitor::ClearDeferredCalls()
+{
+    std::unique_lock<std::mutex> lock(m_deferredCallsMutex);
+    m_deferredCalls.clear();
+}
+
+void SandboxerClientMonitor::ClearAllCalls()
+{
+    std::unique_lock<std::mutex> lock(m_callsMutex);
+    for (auto &call : m_calls) {
+        delete call;
+    }
+    m_calls.clear();
+}
+
 void SandboxerClientMonitor::Cleanup()
 {
     for (auto &future : m_futures) {
         future.wait();
     }
     m_futures.clear();
-    m_deferredCalls.clear();
-    for (auto &call : m_calls) {
-        delete call;
-    }
-    m_calls.clear();
+    ClearDeferredCalls();
+    ClearAllCalls();
 }
 
 /**
@@ -261,6 +274,7 @@ void SandboxerClientMonitor::AsyncCompleteRpcThread()
  */
 void SandboxerClientMonitor::DeleteRemovedCalls()
 {
+    std::unique_lock<std::mutex> lock(m_callsMutex);
     for (auto it = m_calls.begin(); it != m_calls.end();) {
         auto &call = (*it);
         if (call->ToRemove()) {

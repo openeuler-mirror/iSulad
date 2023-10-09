@@ -54,6 +54,8 @@ private:
     void MonitorThread();
     void CheckCompletedFutures();
     void DeleteRemovedCalls();
+    void ClearDeferredCalls();
+    void ClearAllCalls();
     void Cleanup();
 
     std::thread m_cqThread;
@@ -65,6 +67,7 @@ private:
     grpc::CompletionQueue m_cq;
     // Vector for holding all the calls for monitoring
     std::vector<SandboxerAsyncWaitCall *> m_calls;
+    std::mutex m_callsMutex;
     // Use to indicate whether 
     bool m_teardown;
     // Vector for holding all the retry calls
