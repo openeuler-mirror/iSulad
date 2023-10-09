@@ -29,6 +29,8 @@
 #include <limits.h>
 #include <time.h>
 
+#include <isula_libutils/utils_memory.h>
+
 int g_log_fd = -1;
 
 int init_shim_log(void)
@@ -397,25 +399,6 @@ void util_usleep_nointerupt(unsigned long usec)
     } while (ret == -1 && errno == EINTR);
 }
 
-void *util_smart_calloc_s(size_t unit_size, size_t count)
-{
-    if (unit_size == 0) {
-        return NULL;
-    }
-
-    if (count > (MAX_MEMORY_SIZE / unit_size)) {
-        return NULL;
-    }
-
-    // If count or size is 0,
-    // then calloc() returns either NULL,
-    // or a unique pointer value that can later be successfully passed to free()
-    // In current linux implementation, if the size for memory allocation is 0,
-    // then a unique pointer value is returned. If the return value is Null pointer,
-    // it means out of memory.
-    return calloc(count, unit_size);
-}
-
 size_t util_array_len(const char **array)
 {
     const char **pos;
@@ -457,7 +440,7 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size, size
         add_capacity += increment;
     }
     if (add_capacity != *orig_capacity) {
-        add_array = util_smart_calloc_s(sizeof(void *), add_capacity);
+        add_array = isula_smart_calloc_s(sizeof(void *), add_capacity);
         if (add_array == NULL) {
             return -1;
         }
@@ -473,22 +456,6 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size, size
     return 0;
 }
 
-char *util_strdup_s(const char *src)
-{
-    char *dst = NULL;
-
-    if (src == NULL) {
-        return NULL;
-    }
-
-    dst = strdup(src);
-    if (dst == NULL) {
-        abort();
-    }
-
-    return dst;
-}
-
 static char **make_empty_array()
 {
     char **res_array = NULL;
@@ -497,7 +464,7 @@ static char **make_empty_array()
     if (res_array == NULL) {
         return NULL;
     }
-    res_array[0] = util_strdup_s("");
+    res_array[0] = isula_strdup_s("");
     return res_array;
 }
 
@@ -509,7 +476,7 @@ static char **util_shrink_array(char **orig_array, size_t new_size)
     if (new_size == 0) {
         return orig_array;
     }
-    new_array = util_smart_calloc_s(sizeof(char *), new_size);
+    new_array = isula_smart_calloc_s(sizeof(char *), new_size);
     if (new_array == NULL) {
         return orig_array;
     }
@@ -540,7 +507,7 @@ char **util_string_split_multi(const char *src_str, char delim)
         return make_empty_array();
     }
 
-    tmpstr = util_strdup_s(src_str);
+    tmpstr = isula_strdup_s(src_str);
     cur = tmpstr;
     token = strsep(&cur, deli);
     while (token != NULL) {
@@ -548,7 +515,7 @@ char **util_string_split_multi(const char *src_str, char delim)
         if (ret < 0) {
             goto err_out;
         }
-        res_array[count] = util_strdup_s(token);
+        res_array[count] = isula_strdup_s(token);
         count++;
         token = strsep(&cur, deli);
     }
@@ -561,13 +528,4 @@ err_out:
     util_free_array(res_array);
     errno = tmp_errno;
     return NULL;
-}
-
-void *util_common_calloc_s(size_t size)
-{
-    if (size == 0 || size > MAX_MEMORY_SIZE) {
-        return NULL;
-    }
-
-    return calloc((size_t)1, size);
 }

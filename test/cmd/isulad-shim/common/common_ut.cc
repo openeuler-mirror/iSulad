@@ -21,6 +21,8 @@
 #include <gmock/gmock.h>
 #include "mock.h"
 
+#include <isula_libutils/utils_memory.h>
+
 #include "mainloop.h"
 #include "process.h"
 #include "common.h"
@@ -143,11 +145,11 @@ TEST_F(CommonUnitTest, test_util_free_array)
 {
     char **array = nullptr;
 
-    array = (char **)util_common_calloc_s(4 * sizeof(char *));
+    array = (char **)isula_common_calloc_s(4 * sizeof(char *));
     ASSERT_NE(array, nullptr);
-    array[0] = util_strdup_s("test1");
-    array[1] = util_strdup_s("test2");
-    array[2] = util_strdup_s("test3");
+    array[0] = isula_strdup_s("test1");
+    array[1] = isula_strdup_s("test2");
+    array[2] = isula_strdup_s("test3");
     array[3] = nullptr;
 
     util_free_array(nullptr);
@@ -161,7 +163,7 @@ TEST(utils_array, test_util_grow_array)
     int ret;
 
     capacity = 1;
-    array = (char **)util_common_calloc_s(sizeof(char *));
+    array = (char **)isula_common_calloc_s(sizeof(char *));
     ASSERT_NE(array, nullptr);
     ret = util_grow_array(&array, &capacity, 1, 1);
     ASSERT_EQ(ret, 0);
@@ -174,7 +176,7 @@ TEST(utils_array, test_util_grow_array)
     capacity = 0;
 
     capacity = 1;
-    array = (char **)util_common_calloc_s(capacity * sizeof(char *));
+    array = (char **)isula_common_calloc_s(capacity * sizeof(char *));
     ASSERT_NE(array, nullptr);
     ret = util_grow_array(&array, &capacity, 1, 2);
     ASSERT_EQ(ret, 0);
@@ -188,7 +190,7 @@ TEST(utils_array, test_util_grow_array)
     capacity = 0;
 
     capacity = 1;
-    array = (char **)util_common_calloc_s(capacity * sizeof(char *));
+    array = (char **)isula_common_calloc_s(capacity * sizeof(char *));
     ASSERT_NE(array, nullptr);
     ret = util_grow_array(&array, &capacity, 1, 4);
     ASSERT_EQ(ret, 0);
@@ -204,7 +206,7 @@ TEST(utils_array, test_util_grow_array)
     capacity = 0;
 
     capacity = 1;
-    array = (char **)util_common_calloc_s(capacity * sizeof(char *));
+    array = (char **)isula_common_calloc_s(capacity * sizeof(char *));
     ASSERT_NE(array, nullptr);
     ret = util_grow_array(&array, &capacity, 1, 0);
     ASSERT_NE(ret, 0);
@@ -213,7 +215,7 @@ TEST(utils_array, test_util_grow_array)
     capacity = 0;
 
     capacity = 1;
-    array = (char **)util_common_calloc_s(capacity * sizeof(char *));
+    array = (char **)isula_common_calloc_s(capacity * sizeof(char *));
     ASSERT_NE(array, nullptr);
     ret = util_grow_array(&array, &capacity, 4, 1);
     ASSERT_EQ(ret, 0);
@@ -229,7 +231,7 @@ TEST(utils_array, test_util_grow_array)
     capacity = 0;
 
     capacity = 1;
-    array = (char **)util_common_calloc_s(capacity * sizeof(char *));
+    array = (char **)isula_common_calloc_s(capacity * sizeof(char *));
     ASSERT_NE(array, nullptr);
     ret = util_grow_array(&array, &capacity, 0, 1);
     ASSERT_EQ(ret, 0);
@@ -241,7 +243,7 @@ TEST(utils_array, test_util_grow_array)
     capacity = 0;
 
     capacity = 1;
-    array = (char **)util_common_calloc_s(capacity * sizeof(char *));
+    array = (char **)isula_common_calloc_s(capacity * sizeof(char *));
     ASSERT_NE(array, nullptr);
     ret = util_grow_array(&array, nullptr, 1, 1);
     ASSERT_NE(ret, 0);
@@ -250,7 +252,7 @@ TEST(utils_array, test_util_grow_array)
     capacity = 0;
 
     capacity = 1;
-    array = (char **)util_common_calloc_s(capacity * sizeof(char *));
+    array = (char **)isula_common_calloc_s(capacity * sizeof(char *));
     ASSERT_NE(array, nullptr);
     ret = util_grow_array(nullptr, &capacity, 1, 1);
     ASSERT_NE(ret, 0);

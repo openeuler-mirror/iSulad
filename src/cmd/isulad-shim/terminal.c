@@ -19,8 +19,6 @@
 #include <sys/stat.h>
 #include <limits.h>
 #include <termios.h> // IWYU pragma: keep
-#include <isula_libutils/json_common.h>
-#include <isula_libutils/logger_json_file.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +26,10 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/logger_json_file.h>
+#include <isula_libutils/utils_memory.h>
 
 #include "common.h"
 #include "process.h"
@@ -85,7 +87,7 @@ static int shim_dump_log_file(log_terminal *terminal)
         return SHIM_ERR;
     }
 
-    file_newname = util_smart_calloc_s(1, len_path);
+    file_newname = isula_smart_calloc_s(1, len_path);
     if (file_newname == NULL) {
         return SHIM_ERR;
     }

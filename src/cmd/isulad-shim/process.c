@@ -31,10 +31,12 @@
 #include <sys/eventfd.h>
 #include <termios.h> // IWYU pragma: keep
 #include <sys/resource.h> // IWYU pragma: keep
-#include <isula_libutils/json_common.h>
-#include <isula_libutils/shim_client_process_state.h>
 #include <stdint.h>
 #include <stdio.h>
+
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/shim_client_process_state.h>
+#include <isula_libutils/utils_memory.h>
 
 #include "common.h"
 #include "terminal.h"
@@ -78,7 +80,7 @@ static int receive_fd(int sock)
     u_char *pfd = NULL;
     int fd = -1;
     int cmsgsize = CMSG_LEN(sizeof(int));
-    struct cmsghdr *cmptr = (struct cmsghdr *)util_common_calloc_s(cmsgsize);
+    struct cmsghdr *cmptr = (struct cmsghdr *)isula_common_calloc_s(cmsgsize);
     if (cmptr == NULL) {
         return -1;
     }
@@ -405,8 +407,8 @@ static stdio_t *initialize_io(process_t *p)
 {
     int stdio_fd[4][2] = { { -1, -1 }, { -1, -1 }, { -1, -1 }, { -1, -1 } };
 
-    stdio_t *stdio = (stdio_t *)util_common_calloc_s(sizeof(stdio_t));
-    p->stdio = (stdio_t *)util_common_calloc_s(sizeof(stdio_t));
+    stdio_t *stdio = (stdio_t *)isula_common_calloc_s(sizeof(stdio_t));
+    p->stdio = (stdio_t *)isula_common_calloc_s(sizeof(stdio_t));
     if (p->stdio == NULL || stdio == NULL) {
         goto failure;
     }
@@ -457,7 +459,7 @@ static int new_temp_console_path(process_t *p)
     if (ret != SHIM_OK) {
         return SHIM_ERR;
     }
-    p->console_sock_path = (char *)util_common_calloc_s(MAX_CONSOLE_SOCK_LEN + 1);
+    p->console_sock_path = (char *)isula_common_calloc_s(MAX_CONSOLE_SOCK_LEN + 1);
     if (p->console_sock_path == NULL) {
         return SHIM_ERR;
     }
@@ -692,7 +694,7 @@ static int terminal_init(log_terminal **terminal, shim_client_process_state *p_s
 {
     log_terminal *log_term = NULL;
 
-    log_term = util_common_calloc_s(sizeof(log_terminal));
+    log_term = isula_common_calloc_s(sizeof(log_terminal));
     if (log_term == NULL) {
         write_message(ERR_MSG, "Failed to calloc log_terminal");
         goto clean_out;
@@ -763,7 +765,7 @@ static int open_isulad_fd(int std_id, const char *isulad_stdio, int *fd)
 static int init_isulad_stdio(process_t *p)
 {
     int ret = SHIM_OK;
-    p->isulad_io = (stdio_t *)util_common_calloc_s(sizeof(stdio_t));
+    p->isulad_io = (stdio_t *)isula_common_calloc_s(sizeof(stdio_t));
     if (p->isulad_io == NULL) {
         return SHIM_ERR;
     }
@@ -828,7 +830,7 @@ process_t *new_process(char *id, char *bundle, char *runtime)
         return NULL;
     }
 
-    p = (process_t *)util_common_calloc_s(sizeof(process_t));
+    p = (process_t *)isula_common_calloc_s(sizeof(process_t));
     if (p == NULL) {
         return NULL;
     }
@@ -869,7 +871,7 @@ process_t *new_process(char *id, char *bundle, char *runtime)
         goto failure;
     }
 
-    p->buf = util_common_calloc_s(DEFAULT_IO_COPY_BUF + 1);
+    p->buf = isula_common_calloc_s(DEFAULT_IO_COPY_BUF + 1);
     if (p->buf == NULL) {
         goto failure;
     }
@@ -1052,8 +1054,8 @@ static void exec_runtime_process(process_t *p, int exec_fd)
     }
 
     char *cwd = getcwd(NULL, 0);
-    char *log_path = (char *)util_common_calloc_s(PATH_MAX);
-    char *pid_path = (char *)util_common_calloc_s(PATH_MAX);
+    char *log_path = (char *)isula_common_calloc_s(PATH_MAX);
+    char *pid_path = (char *)isula_common_calloc_s(PATH_MAX);
     if (cwd == NULL || log_path == NULL || pid_path == NULL) {
         (void)dprintf(exec_fd, "memory error: %s", strerror(errno));
         _exit(EXIT_FAILURE);

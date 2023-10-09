@@ -19,6 +19,8 @@
 #include <errno.h>
 #include <sys/epoll.h>
 
+#include <isula_libutils/utils_memory.h>
+
 #include "common.h"
 
 struct epoll_loop_handler {
@@ -82,7 +84,7 @@ int epoll_loop_add_handler(struct epoll_descr *descr, int fd, epoll_loop_callbac
         return 0;
     }
 
-    epoll_handler = util_common_calloc_s(sizeof(*epoll_handler));
+    epoll_handler = isula_common_calloc_s(sizeof(*epoll_handler));
     if (epoll_handler == NULL) {
         goto fail_out;
     }
@@ -98,7 +100,7 @@ int epoll_loop_add_handler(struct epoll_descr *descr, int fd, epoll_loop_callbac
         goto fail_out;
     }
 
-    node = util_common_calloc_s(sizeof(struct linked_list));
+    node = isula_common_calloc_s(sizeof(struct linked_list));
     if (node == NULL) {
         goto fail_out;
     }

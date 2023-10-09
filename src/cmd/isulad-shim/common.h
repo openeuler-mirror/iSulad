@@ -90,14 +90,6 @@ void util_usleep_nointerupt(unsigned long usec);
         }                         \
     } while (0)
 
-#if __WORDSIZE == 64
-// current max user memory for 64-machine is 2^47 B
-#define MAX_MEMORY_SIZE ((size_t)1 << 47)
-#else
-// current max user memory for 32-machine is 2^31 B
-#define MAX_MEMORY_SIZE ((size_t)1 << 31)
-#endif
-
 ssize_t read_nointr(int fd, void *buf, size_t count);
 ssize_t write_nointr(int fd, const void *buf, size_t count);
 
@@ -119,19 +111,13 @@ int open_no_inherit(const char *path, int flag, mode_t mode);
 
 int shim_util_safe_uint64(const char *numstr, uint64_t *converted);
 
-void *util_smart_calloc_s(size_t unit_size, size_t count);
-
 size_t util_array_len(const char **array);
 
 void util_free_array(char **array);
 
 int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size, size_t increment);
 
-char *util_strdup_s(const char *src);
-
 char **util_string_split_multi(const char *src_str, char delim);
-
-void *util_common_calloc_s(size_t size);
 
 #ifdef __cplusplus
 }
