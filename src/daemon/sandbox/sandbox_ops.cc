@@ -24,7 +24,7 @@
 static inline bool validate_sandbox_info(const container_sandbox_info *sandbox)
 {
     return (sandbox != NULL && sandbox->sandboxer != NULL &&
-            sandbox->id != NULL && sandbox->task_address != NULL);
+            sandbox->id != NULL);
 }
 
 static int generate_ctrl_rootfs(sandbox::ControllerPrepareParams &params,

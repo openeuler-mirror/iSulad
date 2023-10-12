@@ -28,6 +28,32 @@ std::vector<std::string> Split(const std::string &str, char delimiter)
     return retVec;
 }
 
+// Split str into n parts based on delimiter(might return less than n parts if str is shorter than n parts)
+std::vector<std::string> SplitN(const std::string &str, char delimiter, size_t n)
+{
+    std::vector<std::string> retVec;
+    std::string tmpStr;
+    std::istringstream istream(str);
+    if (n == 0) {
+        return retVec;
+    }
+
+    while (!istream.eof()) {
+        // the last one as a whole part
+        if (n == 1) {
+            std::getline(istream, tmpStr);
+            retVec.push_back(tmpStr);
+            break;
+        }
+        if (!std::getline(istream, tmpStr, delimiter)) {
+            break;
+        }
+        retVec.push_back(tmpStr);
+        n--;
+    }
+    return retVec;
+}
+
 // more than one contiguous delimiter is considered as a single delimiter
 std::vector<std::string> SplitDropEmpty(const std::string &str, char delimiter)
 {

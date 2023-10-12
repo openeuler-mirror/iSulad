@@ -16,6 +16,9 @@
 #define UTILS_CPPUTILS_CSTRUCTWRAPPER_H
 
 #include <iostream>
+#include <memory>
+#include <isula_libutils/utils_memory.h>
+
 template<typename T>
 class CStructWrapper {
 public:
@@ -33,8 +36,35 @@ public:
         return m_ptr;
     }
 
+    T* move()
+    {
+        T* ptr = m_ptr;
+        m_ptr = nullptr;
+        return ptr;
+    }
 private:
     T* m_ptr;
     void (*m_deleter)(T*);
 };
+
+template<typename T>
+std::unique_ptr<CStructWrapper<T>> makeUniquePtrCStructWrapper(void (*deleter)(T*))
+{
+    T* ptr = static_cast<T*>(isula_common_calloc_s(sizeof(T)));
+    if (ptr == nullptr) {
+        return nullptr;
+    }
+
+    return std::unique_ptr<CStructWrapper<T>>(new CStructWrapper<T>(ptr, deleter));
+}
+
+template<typename T>
+std::unique_ptr<CStructWrapper<T>> makeUniquePtrCStructWrapper(T* ptr, void (*deleter)(T*))
+{
+    if (ptr == nullptr) {
+        return nullptr;
+    }
+    return std::unique_ptr<CStructWrapper<T>>(new CStructWrapper<T>(ptr, deleter));
+}
+
 #endif // UTILS_CPPUTILS_CSTRUCTWRAPPER_H

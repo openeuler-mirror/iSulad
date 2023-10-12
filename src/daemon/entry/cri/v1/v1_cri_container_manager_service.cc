@@ -120,6 +120,24 @@ auto ContainerManagerService::PackCreateContainerHostConfigSecurityContext(
     return 0;
 }
 
+void ContainerManagerService::DoUsePodLevelSELinuxConfig(const runtime::v1::ContainerConfig &containerConfig,
+                                                         host_config *hostconfig, sandbox::Sandbox &sandbox, Errors &error)
+{
+    auto &config = sandbox.GetSandboxConfig();
+    if (!config.has_linux() || !config.linux().has_security_context()) {
+        return;
+    }
+
+    const runtime::v1::LinuxSandboxSecurityContext &context = config.linux().security_context();
+    CRIHelpersV1::ApplySandboxSecurityContextToHostConfig(context, hostconfig, error);
+}
+
+auto ContainerManagerService::IsSELinuxLabelEmpty(const ::runtime::v1::SELinuxOption &selinuxOption) -> bool
+{
+    return selinuxOption.user().length() == 0 && selinuxOption.role().length() == 0 &&
+            selinuxOption.type().length() == 0 && selinuxOption.level().length() == 0;
+}
+
 auto ContainerManagerService::GenerateCreateContainerHostConfig(
     sandbox::Sandbox &sandbox,
     const runtime::v1::ContainerConfig &containerConfig,
@@ -155,7 +173,17 @@ auto ContainerManagerService::GenerateCreateContainerHostConfig(
         goto cleanup;
     }
 
-    // TODO: Add support for selinux
+    // If selinux label is not specified in container config, use pod level SELinux config
+    if (!containerConfig.linux().has_security_context() ||
+        !containerConfig.linux().security_context().has_selinux_options() ||
+        IsSELinuxLabelEmpty(containerConfig.linux().security_context().selinux_options())) {
+        DoUsePodLevelSELinuxConfig(containerConfig, hostconfig, sandbox, error);
+        if (error.NotEmpty()) {
+            ERROR("Failed to add pod: %s security context to host config for container: %s",
+                   sandbox.GetName().c_str(), containerConfig.metadata().name().c_str());
+            goto cleanup;
+        }
+    }
 
     return hostconfig;
 
@@ -351,6 +379,7 @@ auto ContainerManagerService::GenerateSandboxInfo(
     sandbox_info->hosts_path = util_strdup_s(sandbox.GetHostsPath().c_str());
     sandbox_info->resolv_conf_path = util_strdup_s(sandbox.GetResolvPath().c_str());
     sandbox_info->shm_path = util_strdup_s(sandbox.GetShmPath().c_str());
+    sandbox_info->is_sandbox_container = false;
 
     return sandbox_info;
 }
@@ -739,6 +768,13 @@ cleanup:
 auto ContainerManagerService::PackContainerStatsFilter(const runtime::v1::ContainerStatsFilter *filter,
                                                        container_stats_request *request, Errors &error) -> int
 {
+    // Labels that identify a container that is not a pod must be added
+    if (CRIHelpers::FiltersAddLabel(request->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
+                                    CRIHelpers::Constants::CONTAINER_TYPE_LABEL_CONTAINER) != 0) {
+        error.SetError("Failed to add filter");
+        return -1;
+    }
+
     if (filter == nullptr) {
         return 0;
     }
@@ -757,12 +793,6 @@ auto ContainerManagerService::PackContainerStatsFilter(const runtime::v1::Contai
         }
     }
 
-    // Add some label
-    if (CRIHelpers::FiltersAddLabel(request->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
-                                    CRIHelpers::Constants::CONTAINER_TYPE_LABEL_CONTAINER) != 0) {
-        error.SetError("Failed to add filter");
-        return -1;
-    }
     for (auto &iter : filter->label_selector()) {
         if (CRIHelpers::FiltersAddLabel(request->filters, iter.first, iter.second) != 0) {
             error.SetError("Failed to add filter");
@@ -888,6 +918,7 @@ void ContainerManagerService::ContainerStatsToGRPC(
         }
 
         // Memory
+        container->mutable_memory()->set_timestamp(timestamp);
         if (response->container_stats[i]->mem_used != 0u) {
             container->mutable_memory()->mutable_usage_bytes()->set_value(response->container_stats[i]->mem_used);
         }

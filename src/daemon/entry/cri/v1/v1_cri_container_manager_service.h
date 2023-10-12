@@ -92,6 +92,8 @@ private:
                                               host_config *hostconfig, Errors &error) -> int;
     auto PackCreateContainerHostConfigSecurityContext(const runtime::v1::ContainerConfig &containerConfig,
                                                       host_config *hostconfig, Errors &error) -> int;
+    void DoUsePodLevelSELinuxConfig(const runtime::v1::ContainerConfig &containerConfig,
+                                    host_config *hostconfig, sandbox::Sandbox &sandbox, Errors &error);
     void MakeContainerConfig(const runtime::v1::ContainerConfig &config, container_config *cConfig,
                              Errors &error);
     void CreateContainerLogSymlink(const std::string &containerID, Errors &error);

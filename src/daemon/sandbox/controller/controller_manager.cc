@@ -64,7 +64,9 @@ auto ControllerManager::RegisterShimController(Errors &error) -> bool
     if (m_controllers.find(SHIM_CONTROLLER_NAME) != m_controllers.end()) {
         return true;
     }
+
     std::shared_ptr<Controller> shimController = std::make_shared<ShimController>(SHIM_CONTROLLER_NAME);
+
     if (!shimController->Init(error)) {
         return false;
     }

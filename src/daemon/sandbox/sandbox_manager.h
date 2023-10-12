@@ -37,7 +37,7 @@ public:
 
     // Create meanningful sandbox instance
     auto CreateSandbox(const std::string &name, RuntimeInfo &info, std::string &netNsPath, std::string &netMode,
-                       const runtime::v1::PodSandboxConfig &sandboxConfig, Errors &error) -> std::shared_ptr<Sandbox>;
+                       const runtime::v1::PodSandboxConfig &sandboxConfig, const std::string &image, Errors &error) -> std::shared_ptr<Sandbox>;
 
     auto GetSandbox(const std::string &idOrName) -> std::shared_ptr<Sandbox>;
     auto DeleteSandbox(const std::string &idOrName, Errors &error) -> bool;

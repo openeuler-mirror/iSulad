@@ -448,11 +448,16 @@ static void scan_dir_to_add_store(const char *runtime, const char *rootpath, con
         bool aret = false;
         bool index_flag = false;
         bool nret = false;
+        bool skip_id_name_manage = false;
         cont = container_load(runtime, rootpath, statepath, subdir[i]);
         if (cont == NULL) {
             ERROR("Failed to load subdir:%s", subdir[i]);
             goto error_load;
         }
+
+#ifdef ENABLE_CRI_API_V1
+        skip_id_name_manage = is_sandbox_container(cont->common_config->sandbox_info);
+#endif
 
         if (check_container_image_exist(cont) != 0) {
             ERROR("Failed to restore container:%s due to image not exist", subdir[i]);
@@ -461,10 +466,12 @@ static void scan_dir_to_add_store(const char *runtime, const char *rootpath, con
 
         restore_state(cont);
 
-        nret = id_name_manager_add_entry_with_existing_id(cont->common_config->id, cont->common_config->name);
-        if (!nret) {
-            ERROR("Failed to add entry to id name manager");
-            goto error_load;
+        if (!skip_id_name_manage) {
+            nret = id_name_manager_add_entry_with_existing_id(cont->common_config->id, cont->common_config->name);
+            if (!nret) {
+                ERROR("Failed to add entry to id name manager");
+                goto error_load;
+            }
         }
 
         index_flag = container_name_index_add(cont->common_config->name, cont->common_config->id);
@@ -491,7 +498,7 @@ error_load:
             ERROR("Failed to delete subdir:%s", subdir[i]);
         }
 
-        if (nret) {
+        if (nret && !skip_id_name_manage) {
             id_name_manager_remove_entry(cont->common_config->id, cont->common_config->name);
         }
 

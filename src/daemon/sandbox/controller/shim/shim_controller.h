@@ -20,6 +20,16 @@
 
 #include "controller.h"
 
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/container_create_request.h>
+#include <isula_libutils/container_inspect.h>
+#include <isula_libutils/container_sandbox_info.h>
+#include <isula_libutils/host_config.h>
+#include <memory>
+
+#include "callback.h"
+#include "cstruct_wrapper.h"
+
 namespace sandbox {
 
 const std::string SHIM_CONTROLLER_NAME = "shim";
@@ -48,9 +58,40 @@ public:
     std::unique_ptr<ControllerSandboxStatus> Status(const std::string &sandboxId, bool verbose, Errors &error) override;
     bool Shutdown(const std::string &sandboxId, Errors &error) override;
     bool UpdateNetworkSettings(const std::string &sandboxId, const std::string &networkSettings, Errors &error) override;
+
+private:
+    void ApplySandboxLinuxOptions(const runtime::v1::LinuxPodSandboxConfig &lc, host_config *hc,
+                                  container_config *custom_config, Errors &error);
+
+    void MakeSandboxIsuladConfig(const runtime::v1::PodSandboxConfig &config,
+                                 host_config *hostconfig, container_config *custom_config,
+                                 const std::string &networkMode, Errors &error);
+
+    auto GenerateSandboxInfo(const std::string &sandboxId, const ControllerCreateParams &params,
+                             Errors &err) -> container_sandbox_info *;
+
+    auto PackCreateContainerRequest(const std::string &sandboxId,
+                                    const ControllerCreateParams &params,
+                                    host_config *hostconfig, container_config *custom_config,
+                                    Errors &error) -> std::unique_ptr<CStructWrapper<container_create_request>>;
+
+    auto GenerateSandboxCreateContainerRequest(const std::string &sandboxId,
+                                               const ControllerCreateParams &params,
+                                               Errors &error) -> std::unique_ptr<CStructWrapper<container_create_request>>;
+
+    void InspectResponseToSandboxStatus(container_inspect *inspect,
+                                        ControllerSandboxStatus &sandboxStatus,
+                                        Errors &error);
+
+    auto InspectContainer(const std::string &Id, Errors &err, bool with_host_config) -> container_inspect *;
+
+    void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
+                                int64_t *finishedAt, Errors &err);
+
 private:
     std::string m_sandboxer;
     std::string m_podSandboxImage;
+    service_executor_t *m_cb;
 };
 
 } // namespace

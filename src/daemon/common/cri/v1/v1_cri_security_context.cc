@@ -13,7 +13,6 @@
  * Description: provide cri security context functions
  *********************************************************************************/
 #include "v1_cri_security_context.h"
-#include "v1_cri_runtime_service.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "cri_constants.h"
@@ -150,6 +149,70 @@ static void ModifyContainerNamespaceOptions(const runtime::v1::NamespaceOption &
     hostConfig->ipc_mode = util_strdup_s(sandboxNSMode.c_str());
     free(hostConfig->uts_mode);
     hostConfig->uts_mode = util_strdup_s(sandboxNSMode.c_str());
+}
+
+static void ModifyCommonNamespaceOptions(const runtime::v1::NamespaceOption &nsOpts, host_config *hostConfig)
+{
+    if (nsOpts.pid() == runtime::v1::NamespaceMode::NODE) {
+        free(hostConfig->pid_mode);
+        hostConfig->pid_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
+    }
+}
+
+static void ModifyHostNetworkOptionForSandbox(const runtime::v1::NamespaceOption &nsOpts, host_config *hostConfig)
+{
+    if (nsOpts.ipc() == runtime::v1::NamespaceMode::NODE) {
+        free(hostConfig->ipc_mode);
+        hostConfig->ipc_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
+    }
+
+    if (nsOpts.network() == runtime::v1::NamespaceMode::NODE) {
+        free(hostConfig->network_mode);
+        hostConfig->network_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
+        free(hostConfig->uts_mode);
+        hostConfig->uts_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
+    }
+    // Note: default networkMode is CNI
+}
+static void ModifySandboxNamespaceOptions(const runtime::v1::NamespaceOption &nsOpts, host_config *hostConfig)
+{
+    /* set common Namespace options */
+    ModifyCommonNamespaceOptions(nsOpts, hostConfig);
+    /* modify host network option for container */
+    ModifyHostNetworkOptionForSandbox(nsOpts, hostConfig);
+}
+
+void ApplySandboxSecurityContext(const runtime::v1::LinuxPodSandboxConfig &lc, container_config *config,
+                                 host_config *hc, Errors &error)
+{
+    std::unique_ptr<runtime::v1::LinuxContainerSecurityContext> sc(
+        new (std::nothrow) runtime::v1::LinuxContainerSecurityContext);
+    if (sc == nullptr) {
+        ERROR("Out of memory");
+        error.SetError("Out of memory");
+        return;
+    }
+    if (lc.has_security_context()) {
+        const runtime::v1::LinuxSandboxSecurityContext &old = lc.security_context();
+        sc->set_privileged(old.privileged());
+        if (old.has_run_as_user()) {
+            *sc->mutable_run_as_user() = old.run_as_user();
+        }
+        if (old.has_namespace_options()) {
+            *sc->mutable_namespace_options() = old.namespace_options();
+        }
+        if (old.has_selinux_options()) {
+            *sc->mutable_selinux_options() = old.selinux_options();
+        }
+        *sc->mutable_supplemental_groups() = old.supplemental_groups();
+        sc->set_readonly_rootfs(old.readonly_rootfs());
+    }
+    ModifyContainerConfig(*sc, config);
+    ModifyHostConfig(*sc, hc, error);
+    if (error.NotEmpty()) {
+        return;
+    }
+    ModifySandboxNamespaceOptions(sc->namespace_options(), hc);
 }
 
 void ApplyContainerSecurityContext(const runtime::v1::LinuxContainerConfig &lc, const std::string &podSandboxID,

@@ -77,6 +77,8 @@ void GetContainerSandboxID(const std::string &containerID, std::string &realCont
 
 std::string CRISandboxerConvert(const std::string &runtime);
 
+void ApplySandboxSecurityContextToHostConfig(const runtime::v1::LinuxSandboxSecurityContext &context, host_config *hc, Errors &error);
+
 }; // namespace CRIHelpers
 
 #endif // DAEMON_ENTRY_CRI_V1ALPHA_CRI_HELPERS_H
