@@ -30,6 +30,7 @@
 #include <time.h>
 
 #include <isula_libutils/utils_memory.h>
+#include <isula_libutils/utils_file.h>
 
 int g_log_fd = -1;
 
@@ -71,86 +72,6 @@ int set_fd_no_inherited(int fd)
     return SHIM_OK;
 }
 
-ssize_t read_nointr(int fd, void *buf, size_t count)
-{
-    ssize_t nret;
-
-    if (buf == NULL) {
-        return -1;
-    }
-
-    for (;;) {
-        nret = read(fd, buf, count);
-        if (nret < 0 && (errno == EINTR || errno == EAGAIN)) {
-            continue;
-        } else {
-            break;
-        }
-    }
-
-    return nret;
-}
-
-ssize_t write_nointr(int fd, const void *buf, size_t count)
-{
-    ssize_t nret;
-
-    if (buf == NULL) {
-        return -1;
-    }
-
-    for (;;) {
-        nret = write(fd, buf, count);
-        if (nret < 0 && (errno == EINTR || errno == EAGAIN)) {
-            continue;
-        } else {
-            break;
-        }
-    }
-    return nret;
-}
-
-ssize_t write_nointr_in_total(int fd, const char *buf, size_t count)
-{
-    ssize_t nret = 0;
-    ssize_t nwritten;
-
-    if (buf == NULL) {
-        return -1;
-    }
-
-    for (nwritten = 0; nwritten < count;) {
-        nret = write(fd, buf + nwritten, count - nwritten);
-        if (nret < 0) {
-            if (errno == EINTR || errno == EAGAIN) {
-                continue;
-            } else {
-                return nret;
-            }
-        } else {
-            nwritten += nret;
-        }
-    }
-
-    return nwritten;
-}
-
-bool file_exists(const char *f)
-{
-    struct stat buf;
-    int nret;
-
-    if (f == NULL) {
-        return false;
-    }
-
-    nret = stat(f, &buf);
-    if (nret < 0) {
-        return false;
-    }
-    return true;
-}
-
 int cmd_combined_output(const char *binary, const char *params[], void *output, int *output_len)
 {
     int ret = SHIM_ERR;
@@ -188,12 +109,12 @@ int cmd_combined_output(const char *binary, const char *params[], void *output, 
     // parent
     close(exec_fd[1]);
     close(stdio[1]);
-    nread = read_nointr(exec_fd[0], exec_buff, BUFSIZ - 1);
+    nread = isula_file_read_nointr(exec_fd[0], exec_buff, BUFSIZ - 1);
     if (nread > 0) {
         ret = SHIM_ERR;
         goto out;
     }
-    *output_len = read_nointr(stdio[0], output, BUFSIZ - 1);
+    *output_len = isula_file_read_nointr(stdio[0], output, BUFSIZ - 1);
 
     close(stdio[0]);
     close(exec_fd[0]);
@@ -223,7 +144,7 @@ int generate_random_str(char *id, size_t len)
     for (i = 0; i < len; i++) {
         int nret;
         size_t tmp_len;
-        if (read_nointr(fd, &num, sizeof(int)) < 0) {
+        if (isula_file_read_nointr(fd, &num, sizeof(int)) < 0) {
             close(fd);
             return SHIM_ERR;
         }
@@ -267,7 +188,7 @@ void write_message(const char *level, const char *fmt, ...)
         return;
     }
 
-    nwrite = write_nointr_in_total(g_log_fd, msg, strlen(msg));
+    nwrite = isula_file_total_write_nointr(g_log_fd, msg, strlen(msg));
     if (nwrite < 0 || (size_t)nwrite != strlen(msg)) {
         return;
     }
@@ -350,182 +271,4 @@ int open_no_inherit(const char *path, int flag, mode_t mode)
     }
 
     return fd;
-}
-
-static bool is_invalid_error_str(const char *err_str, const char *numstr)
-{
-    return err_str == NULL || err_str == numstr || *err_str != '\0';
-}
-
-int shim_util_safe_uint64(const char *numstr, uint64_t *converted)
-{
-    char *err_str = NULL;
-    uint64_t ull;
-
-    if (numstr == NULL || converted == NULL) {
-        return -EINVAL;
-    }
-
-    errno = 0;
-    ull = strtoull(numstr, &err_str, 0);
-    if (errno > 0) {
-        return -errno;
-    }
-
-    if (is_invalid_error_str(err_str, numstr)) {
-        return -EINVAL;
-    }
-
-    *converted = (uint64_t)ull;
-    return 0;
-}
-
-void util_usleep_nointerupt(unsigned long usec)
-{
-#define SECOND_TO_USECOND_MUTIPLE 1000000
-    int ret = 0;
-    struct timespec request = { 0 };
-    struct timespec remain = { 0 };
-    if (usec == 0) {
-        return;
-    }
-
-    request.tv_sec = (time_t)(usec / SECOND_TO_USECOND_MUTIPLE);
-    request.tv_nsec = (long)((usec % SECOND_TO_USECOND_MUTIPLE) * 1000);
-
-    do {
-        ret = nanosleep(&request, &remain);
-        request = remain;
-    } while (ret == -1 && errno == EINTR);
-}
-
-size_t util_array_len(const char **array)
-{
-    const char **pos;
-    size_t len = 0;
-
-    for (pos = array; pos != NULL && *pos != NULL; pos++) {
-        len++;
-    }
-
-    return len;
-}
-
-void util_free_array(char **array)
-{
-    char **p;
-
-    for (p = array; p != NULL && *p != NULL; p++) {
-        UTIL_FREE_AND_SET_NULL(*p);
-    }
-    free(array);
-}
-
-int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size, size_t increment)
-{
-    size_t add_capacity;
-    char **add_array = NULL;
-
-    if (orig_array == NULL || orig_capacity == NULL || increment == 0) {
-        return -1;
-    }
-
-    if (((*orig_array) == NULL) || ((*orig_capacity) == 0)) {
-        UTIL_FREE_AND_SET_NULL(*orig_array);
-        *orig_capacity = 0;
-    }
-
-    add_capacity = *orig_capacity;
-    while (size + 1 > add_capacity) {
-        add_capacity += increment;
-    }
-    if (add_capacity != *orig_capacity) {
-        add_array = isula_smart_calloc_s(sizeof(void *), add_capacity);
-        if (add_array == NULL) {
-            return -1;
-        }
-        if (*orig_array != NULL) {
-            (void)memcpy(add_array, *orig_array, *orig_capacity * sizeof(void *));
-            UTIL_FREE_AND_SET_NULL(*orig_array);
-        }
-
-        *orig_array = add_array;
-        *orig_capacity = add_capacity;
-    }
-
-    return 0;
-}
-
-static char **make_empty_array()
-{
-    char **res_array = NULL;
-
-    res_array = calloc(2, sizeof(char *));
-    if (res_array == NULL) {
-        return NULL;
-    }
-    res_array[0] = isula_strdup_s("");
-    return res_array;
-}
-
-static char **util_shrink_array(char **orig_array, size_t new_size)
-{
-    char **new_array = NULL;
-    size_t i = 0;
-
-    if (new_size == 0) {
-        return orig_array;
-    }
-    new_array = isula_smart_calloc_s(sizeof(char *), new_size);
-    if (new_array == NULL) {
-        return orig_array;
-    }
-
-    for (i = 0; i < new_size; i++) {
-        new_array[i] = orig_array[i];
-    }
-    free(orig_array);
-    return new_array;
-}
-
-char **util_string_split_multi(const char *src_str, char delim)
-{
-    int ret, tmp_errno;
-    char *token = NULL;
-    char *cur = NULL;
-    char **res_array = NULL;
-    char deli[2] = { delim, '\0' };
-    size_t count = 0;
-    size_t capacity = 0;
-    char *tmpstr = NULL;
-
-    if (src_str == NULL) {
-        return NULL;
-    }
-
-    if (src_str[0] == '\0') {
-        return make_empty_array();
-    }
-
-    tmpstr = isula_strdup_s(src_str);
-    cur = tmpstr;
-    token = strsep(&cur, deli);
-    while (token != NULL) {
-        ret = util_grow_array(&res_array, &capacity, count + 1, 16);
-        if (ret < 0) {
-            goto err_out;
-        }
-        res_array[count] = isula_strdup_s(token);
-        count++;
-        token = strsep(&cur, deli);
-    }
-    free(tmpstr);
-    return util_shrink_array(res_array, count + 1);
-
-err_out:
-    tmp_errno = errno;
-    free(tmpstr);
-    util_free_array(res_array);
-    errno = tmp_errno;
-    return NULL;
 }

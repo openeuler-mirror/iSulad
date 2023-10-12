@@ -20,6 +20,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <stdint.h>
+#include <isula_libutils/utils.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,7 +63,6 @@ int init_shim_log(void);
 
 void signal_routine(int sig);
 
-void util_usleep_nointerupt(unsigned long usec);
 /**
  * retry_cnt: max count of call cb;
  * interval_us: how many us to sleep, after call cb;
@@ -78,7 +78,7 @@ void util_usleep_nointerupt(unsigned long usec);
             if (ret == 0) {                                         \
                 break;                                              \
             }                                                       \
-            util_usleep_nointerupt(interval_us);                    \
+            isula_usleep_nointerupt(interval_us);                    \
         }                                                           \
     } while(0)
 
@@ -90,14 +90,7 @@ void util_usleep_nointerupt(unsigned long usec);
         }                         \
     } while (0)
 
-ssize_t read_nointr(int fd, void *buf, size_t count);
-ssize_t write_nointr(int fd, const void *buf, size_t count);
-
-ssize_t write_nointr_in_total(int fd, const char *buf, size_t count);
-
 char *read_text_file(const char *path);
-
-bool file_exists(const char *f);
 
 int cmd_combined_output(const char *binary, const char *params[], void *output, int *output_len);
 
@@ -108,16 +101,6 @@ int generate_random_str(char *id, size_t len);
 void close_fd(int *pfd);
 
 int open_no_inherit(const char *path, int flag, mode_t mode);
-
-int shim_util_safe_uint64(const char *numstr, uint64_t *converted);
-
-size_t util_array_len(const char **array);
-
-void util_free_array(char **array);
-
-int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size, size_t increment);
-
-char **util_string_split_multi(const char *src_str, char delim);
 
 #ifdef __cplusplus
 }

@@ -4,7 +4,6 @@ SET(EXE process_ut)
 
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/mainloop_mock.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cmd/isulad-shim/mainloop.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cmd/isulad-shim/common.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cmd/isulad-shim/process.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cmd/isulad-shim/terminal.c

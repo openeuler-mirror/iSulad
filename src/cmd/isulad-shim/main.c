@@ -20,8 +20,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/prctl.h>
-#include <isula_libutils/shim_client_process_state.h>
 #include <stdlib.h>
+#include <isula_libutils/shim_client_process_state.h>
+#include <isula_libutils/utils_convert.h>
 
 #include "common.h"
 #include "process.h"
@@ -71,7 +72,7 @@ static int parse_args(int argc, char **argv, char **cid, char **bundle, char **r
     }
 
     if (argc > 5) {
-        if (shim_util_safe_uint64(strdup(argv[5]), timeout) != 0) {
+        if (isula_safe_strto_uint64(strdup(argv[5]), timeout) != 0) {
             return SHIM_ERR;
         }
     }

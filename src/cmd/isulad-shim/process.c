@@ -37,10 +37,12 @@
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/shim_client_process_state.h>
 #include <isula_libutils/utils_memory.h>
+#include <isula_libutils/utils_string.h>
+#include <isula_libutils/utils_file.h>
+#include <isula_libutils/utils_mainloop.h>
 
 #include "common.h"
 #include "terminal.h"
-#include "mainloop.h"
 
 #define MAX_EVENTS 100
 #define DEFAULT_IO_COPY_BUF (16 * 1024)
@@ -132,42 +134,39 @@ static bool check_fd(int fd)
 
 static int get_exec_winsize(const char *buf, struct winsize *wsize)
 {
-    char **array = NULL;
+    isula_string_array *array = NULL;
     int width = 0;
     int height = 0;
-    int ret = 0;
 
-    array = util_string_split_multi(buf, ' ');
+    array = isula_string_split_to_multi(buf, ' ');
     if (array == NULL) {
         return -1;
     }
 
-    if (util_array_len((const char **)array) != 2) {
-        ret = -1;
-        goto out;
+    if (array->len != 2) {
+        isula_string_array_free(array);
+        return -1;
     }
 
-    width = atoi(array[0]);
-    height = atoi(array[1]);
+    width = atoi(array->items[0]);
+    height = atoi(array->items[1]);
+    isula_string_array_free(array);
 
     if (width < 0 || width > USHRT_MAX || height < 0 || height > USHRT_MAX) {
-        ret = -1;
-        goto out;
+        return -1;
     }
     wsize->ws_row = (unsigned short)height;
     wsize->ws_col = (unsigned short)width;
 
-out:
-    util_free_array(array);
-    return ret;
+    return 0;
 }
 
-static int sync_exit_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+static int sync_exit_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
 {
     return EPOLL_LOOP_HANDLE_CLOSE;
 }
 
-static int stdin_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+static int stdin_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
 {
     process_t *p = (process_t *)cbdata;
     int r_count = 0;
@@ -184,7 +183,7 @@ static int stdin_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *d
 
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
 
-    r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
     if (r_count <= 0) {
         return EPOLL_LOOP_HANDLE_CLOSE;
     }
@@ -198,7 +197,7 @@ static int stdin_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *d
     if (fd_to == NULL || *fd_to == -1) {
         return EPOLL_LOOP_HANDLE_CONTINUE;
     }
-    w_count = write_nointr_in_total(*fd_to, p->buf, r_count);
+    w_count = isula_file_total_write_nointr(*fd_to, p->buf, r_count);
     if (w_count < 0) {
         /* When any error occurs, set the write fd -1  */
         write_message(WARN_MSG, "write in_fd %d error:%d", *fd_to, SHIM_SYS_ERR(errno));
@@ -209,7 +208,7 @@ static int stdin_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *d
     return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
-static int stdout_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+static int stdout_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
 {
     process_t *p = (process_t *)cbdata;
     int r_count = 0;
@@ -226,7 +225,7 @@ static int stdout_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
 
     if (p->block_read) {
-        r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+        r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
     } else {
         r_count = read(fd, p->buf, DEFAULT_IO_COPY_BUF);
     }
@@ -240,7 +239,7 @@ static int stdout_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
         return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
-    w_count = write_nointr_in_total(p->isulad_io->out, p->buf, r_count);
+    w_count = isula_file_total_write_nointr(p->isulad_io->out, p->buf, r_count);
     if (w_count < 0) {
         /* When any error occurs, set the write fd -1  */
         write_message(WARN_MSG, "write out_fd %d error:%d", p->isulad_io->out, SHIM_SYS_ERR(errno));
@@ -251,7 +250,7 @@ static int stdout_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
-static int stderr_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+static int stderr_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
 {
     process_t *p = (process_t *)cbdata;
     int r_count = 0;
@@ -268,7 +267,7 @@ static int stderr_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
 
     if (p->block_read) {
-        r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+        r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
     } else {
         r_count = read(fd, p->buf, DEFAULT_IO_COPY_BUF);
     }
@@ -282,7 +281,7 @@ static int stderr_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
         return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
-    w_count = write_nointr_in_total(p->isulad_io->err, p->buf, r_count);
+    w_count = isula_file_total_write_nointr(p->isulad_io->err, p->buf, r_count);
     if (w_count < 0) {
         /* When any error occurs, set the write fd -1  */
         write_message(WARN_MSG, "write err_fd %d error:%d", p->isulad_io->err, SHIM_SYS_ERR(errno));
@@ -293,7 +292,7 @@ static int stderr_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
-static int resize_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+static int resize_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
 {
     process_t *p = (process_t *)cbdata;
     int r_count = 0;
@@ -308,7 +307,7 @@ static int resize_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     }
 
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
-    r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
     if (r_count <= 0) {
         return EPOLL_LOOP_HANDLE_CLOSE;
     }
@@ -325,7 +324,7 @@ static int resize_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
-static int task_console_accept(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+static int task_console_accept(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
 {
     process_t *p = (process_t *)cbdata;
     int conn_fd = -1;
@@ -346,19 +345,19 @@ static int task_console_accept(int fd, uint32_t events, void *cbdata, struct epo
     /* do console io copy */
 
     // p->isulad_io->in ----> p->recv_fd
-    ret = epoll_loop_add_handler(descr, p->isulad_io->in, stdin_cb, p);
+    ret = isula_epoll_add_handler(descr, p->isulad_io->in, stdin_cb, p);
     if (ret != SHIM_OK) {
         write_message(ERR_MSG, "add in fd %d to epoll loop failed:%d", p->isulad_io->in, SHIM_SYS_ERR(errno));
         goto out;
     }
     // p->recv_fd ----> p->isulad_io->out
-    ret = epoll_loop_add_handler(descr, p->recv_fd, stdout_cb, p);
+    ret = isula_epoll_add_handler(descr, p->recv_fd, stdout_cb, p);
     if (ret != SHIM_OK) {
         write_message(ERR_MSG, "add recv_fd fd %d to epoll loop failed:%d", p->recv_fd, SHIM_SYS_ERR(errno));
         goto out;
     }
     // p->isulad_io->resize ----> p->recv_fd
-    ret = epoll_loop_add_handler(descr, p->isulad_io->resize, resize_cb, p);
+    ret = isula_epoll_add_handler(descr, p->isulad_io->resize, resize_cb, p);
     if (ret != SHIM_OK) {
         write_message(ERR_MSG, "add resize fd %d to epoll loop failed:%d", p->isulad_io->resize, SHIM_SYS_ERR(errno));
         goto out;
@@ -473,7 +472,7 @@ static int new_temp_console_path(process_t *p)
     return SHIM_OK;
 }
 
-static int console_init(process_t *p, struct epoll_descr *descr)
+static int console_init(process_t *p, isula_epoll_descr_t *descr)
 {
     int ret = SHIM_ERR;
     int fd = -1;
@@ -503,7 +502,7 @@ static int console_init(process_t *p, struct epoll_descr *descr)
 
     p->listen_fd = fd;
 
-    ret = epoll_loop_add_handler(descr, p->listen_fd, task_console_accept, p);
+    ret = isula_epoll_add_handler(descr, p->listen_fd, task_console_accept, p);
     if (ret != SHIM_OK) {
         write_message(ERR_MSG, "add listen_fd fd %d to epoll loop failed:%d",  p->listen_fd, SHIM_SYS_ERR(errno));
         goto failure;
@@ -517,7 +516,7 @@ failure:
     return SHIM_ERR;
 }
 
-static int open_terminal_io(process_t *p, struct epoll_descr *descr)
+static int open_terminal_io(process_t *p, isula_epoll_descr_t *descr)
 {
     int ret = SHIM_ERR;
 
@@ -531,7 +530,7 @@ static int open_terminal_io(process_t *p, struct epoll_descr *descr)
     return console_init(p, descr);
 }
 
-static int open_generic_io(process_t *p, struct epoll_descr *descr)
+static int open_generic_io(process_t *p, isula_epoll_descr_t *descr)
 {
     int ret = SHIM_ERR;
 
@@ -543,19 +542,19 @@ static int open_generic_io(process_t *p, struct epoll_descr *descr)
     p->shim_io = io;
 
     // p->isulad_io->in ----> p->shim_io->in
-    ret = epoll_loop_add_handler(descr, p->isulad_io->in, stdin_cb, p);
+    ret = isula_epoll_add_handler(descr, p->isulad_io->in, stdin_cb, p);
     if (ret != SHIM_OK) {
         write_message(ERR_MSG, "add in fd %d to epoll loop failed:%d", p->isulad_io->in, SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
     // p->shim_io->out ----> p->isulad_io->out
-    ret = epoll_loop_add_handler(descr, p->shim_io->out, stdout_cb, p);
+    ret = isula_epoll_add_handler(descr, p->shim_io->out, stdout_cb, p);
     if (ret != SHIM_OK) {
         write_message(ERR_MSG, "add  out fd %d to epoll loop failed:%d", p->shim_io->out, SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
     // p->shim_io->err ----> p->isulad_io->err
-    ret = epoll_loop_add_handler(descr, p->shim_io->err, stderr_cb, p);
+    ret = isula_epoll_add_handler(descr, p->shim_io->err, stderr_cb, p);
     if (ret != SHIM_OK) {
         write_message(ERR_MSG, "add err fd %d to epoll loop failed:%d", p->shim_io->err, SHIM_SYS_ERR(errno));
         return SHIM_ERR;
@@ -604,16 +603,16 @@ static void *io_epoll_loop(void *data)
     int fd_out = -1;
     int fd_err = -1;
     process_t *p = (process_t *)data;
-    struct epoll_descr descr;
+    isula_epoll_descr_t descr;
 
-    ret = epoll_loop_open(&descr);
+    ret = isula_epoll_open(&descr);
     if (ret != 0) {
         write_message(ERR_MSG, "epoll loop open failed:%d", SHIM_SYS_ERR(errno));
         exit(EXIT_FAILURE);
     }
 
     // sync fd: epoll loop will exit when recive sync fd event.
-    ret = epoll_loop_add_handler(&descr, p->sync_fd, sync_exit_cb, p);
+    ret = isula_epoll_add_handler(&descr, p->sync_fd, sync_exit_cb, p);
     if (ret != 0) {
         write_message(ERR_MSG, "add sync_fd %d to epoll loop failed:%d", p->sync_fd, SHIM_SYS_ERR(errno));
         exit(EXIT_FAILURE);
@@ -631,7 +630,7 @@ static void *io_epoll_loop(void *data)
 
     (void)sem_post(&p->sem_mainloop);
 
-    ret = epoll_loop(&descr, -1);
+    ret = isula_epoll_loop(&descr, -1);
     if (ret != 0) {
         write_message(ERR_MSG, "epoll loop failed");
         exit(EXIT_FAILURE);
@@ -682,7 +681,7 @@ static void *io_epoll_loop(void *data)
 static void adapt_for_isulad_stdin(process_t *p)
 {
     /* iSulad: close stdin pipe if we do not want open_stdin with container stdin just like lxc */
-    if (!p->state->open_stdin && !file_exists(p->state->isulad_stdin)) {
+    if (!p->state->open_stdin && !isula_file_exists(p->state->isulad_stdin)) {
         if (p->shim_io != NULL && p->shim_io->in != -1) {
             close(p->shim_io->in);
             p->shim_io->in = -1;
@@ -747,7 +746,7 @@ static int open_isulad_fd(int std_id, const char *isulad_stdio, int *fd)
         mode = O_RDONLY;
     }
 
-    if (isulad_stdio != NULL && file_exists(isulad_stdio)) {
+    if (isulad_stdio != NULL && isula_file_exists(isulad_stdio)) {
         *(fd) = open_fifo_noblock(isulad_stdio, mode);
         if (*(fd) < 0) {
             return -1;
@@ -1130,7 +1129,7 @@ int create_process(process_t *p)
         close_fd(&p->stdio->err);
         close_fd(&p->stdio->resize);
     }
-    nread = read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
+    nread = isula_file_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
     if (nread > 0) {
         write_message(ERR_MSG, "runtime error");
         ret = SHIM_ERR;
@@ -1287,7 +1286,7 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const
 
     process_delete(p);
     if (p->exit_fd > 0) {
-        (void)write_nointr(p->exit_fd, &status, sizeof(int));
+        (void)isula_file_write_nointr(p->exit_fd, &status, sizeof(int));
     }
 
     if (p->sync_fd > 0) {
@@ -1315,6 +1314,6 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const
     }
 
     // write container process exit_code in stdout
-    (void)write_nointr(STDOUT_FILENO, &status, sizeof(int));
+    (void)isula_file_write_nointr(STDOUT_FILENO, &status, sizeof(int));
     return SHIM_OK;
 }

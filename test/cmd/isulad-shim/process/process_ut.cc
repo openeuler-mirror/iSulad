@@ -20,7 +20,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include "mainloop.h"
+#include <isula_libutils/utils_mainloop.h>
 #include "process.h"
 #include "common.h"
 

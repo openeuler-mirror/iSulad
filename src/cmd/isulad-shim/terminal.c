@@ -30,6 +30,7 @@
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/logger_json_file.h>
 #include <isula_libutils/utils_memory.h>
+#include <isula_libutils/utils_file.h>
 
 #include "common.h"
 #include "process.h"
@@ -146,7 +147,7 @@ static int shim_json_data_write(log_terminal *terminal, const char *buf, int rea
 
     available_space = terminal->log_maxsize - file_size;
     if (read_count <= available_space) {
-        ret = write_nointr_in_total(terminal->fd, buf, read_count);
+        ret = isula_file_total_write_nointr(terminal->fd, buf, read_count);
         goto out;
     }
 
@@ -160,7 +161,7 @@ static int shim_json_data_write(log_terminal *terminal, const char *buf, int rea
      * We have set the log file min size 16k, so the scenario of log_maxsize < read_count
      * shouldn't happen, otherwise, discard some last bytes.
      */
-    nret = write_nointr_in_total(terminal->fd, buf,
+    nret = isula_file_total_write_nointr(terminal->fd, buf,
                                  terminal->log_maxsize < read_count ? terminal->log_maxsize : read_count);
     if (nret < 0) {
         ret = -1;
