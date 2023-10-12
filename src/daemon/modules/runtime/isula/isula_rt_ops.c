@@ -409,6 +409,29 @@ typedef struct {
     size_t params_num;
 } runtime_exec_info;
 
+static void set_common_params(runtime_exec_info *rei, const char **params,  int *index)
+{
+    int j;
+    int nret;
+    char root_path[PATH_MAX] = { 0 };
+
+    params[(*index)++] = rei->cmd;
+    for (j = 0; j < rei->args_len; j++) {
+        params[(*index)++] = *(rei->args + j);
+    }
+
+    // In addition to kata, other commonly used oci runtimes (runc, crun, youki, gvisor)
+    // need to set the --root option
+    if (rei->workdir != NULL && strcasecmp(rei->runtime, "kata-runtime") != 0) {
+        nret = snprintf(root_path, PATH_MAX, "%s/%s", rei->workdir, rei->runtime);
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
+            DEBUG("Failed to sprintf root_path");
+        }
+        params[(*index)++] = "--root";
+        params[(*index)++] = root_path;
+    }
+}
+
 static void runtime_exec_param_dump(const char **params)
 {
     char *full = NULL;
@@ -427,24 +450,21 @@ static void runtime_exec_param_dump(const char **params)
 static void runtime_exec_param_init(runtime_exec_info *rei)
 {
     const char **params = (const char **)rei->params;
+    int index = 0;
     size_t j = 0;
 
-    *params++ = rei->cmd;
+    set_common_params(rei, params, &index);
 
-    for (j = 0; j < rei->args_len; j++) {
-        *params++ = *(rei->args + j);
-    }
-
-    *params++ = rei->subcmd;
+    params[index++] = rei->subcmd;
     for (j = 0; j < rei->opts_len; j++) {
-        *params++ = *(rei->opts + j);
+        params[index++] = *(rei->opts + j);
     }
 
     if (rei->id) {
-        *params++ = rei->id;
+        params[index++] = rei->id;
     }
     if (strcmp(rei->subcmd, "kill") == 0) {
-        *params++ = "9";
+        params[index++] = "9";
     }
 }
 
