@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <isula_libutils/shim_client_process_state.h>
 #include <isula_libutils/utils_convert.h>
+#include <isula_libutils/utils_memory.h>
 
 #include "common.h"
 #include "process.h"
@@ -57,15 +58,15 @@ static int parse_args(int argc, char **argv, char **cid, char **bundle, char **r
         return SHIM_ERR;
     }
 
-    *cid = strdup(argv[1]);
-    *bundle = strdup(argv[2]);
-    *rt_name = strdup(argv[3]);
+    *cid = isula_strdup_s(argv[1]);
+    *bundle = isula_strdup_s(argv[2]);
+    *rt_name = isula_strdup_s(argv[3]);
     if (*cid == NULL || *bundle == NULL || *rt_name == NULL) {
         return SHIM_ERR;
     }
 
     if (argc > 4) {
-        *log_level = strdup(argv[4]);
+        *log_level = isula_strdup_s(argv[4]);
         if (*log_level == NULL) {
             return SHIM_ERR;
         }

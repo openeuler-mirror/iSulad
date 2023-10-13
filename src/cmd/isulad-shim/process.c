@@ -40,6 +40,8 @@
 #include <isula_libutils/utils_string.h>
 #include <isula_libutils/utils_file.h>
 #include <isula_libutils/utils_mainloop.h>
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/utils_buffer.h>
 
 #include "common.h"
 #include "terminal.h"
@@ -818,6 +820,51 @@ failure:
     return SHIM_ERR;
 }
 
+static int init_root_path(process_t *p)
+{
+    __isula_auto_free char *state_path = NULL;
+
+    state_path = isula_strdup_s(p->workdir);
+
+    if (p->state != NULL && p->state->exec) {
+        // get the grandfather directory of workdir
+        // workdir: /run/isulad/runc/{container_id}/exec/{exec_id}
+        // state_path: /run/isulad/runc/{container_id}
+        char *tmp_dir = strrchr(state_path, '/');
+        if (tmp_dir == NULL) {
+            write_message(ERR_MSG, "Invalid exec workdir");
+            return SHIM_ERR;
+        }
+        *tmp_dir = '\0';
+        tmp_dir = strrchr(state_path, '/');
+        if (tmp_dir == NULL) {
+            write_message(ERR_MSG, "Invalid exec workdir");
+            return SHIM_ERR;
+        }
+        *tmp_dir = '\0';
+    }
+
+    isula_buffer *buffer = isula_buffer_alloc(PATH_MAX);
+    if (buffer == NULL) {
+        write_message(ERR_MSG, "Failed to malloc buffer\n");
+        return SHIM_ERR;
+    }
+
+    if (buffer->nappend(buffer, PATH_MAX, "%s/%s", state_path, p->runtime) < 0) {
+        write_message(ERR_MSG, "Failed to append state_path\n");
+        isula_buffer_free(buffer);
+        return SHIM_ERR;
+    }
+
+    p->root_path = buffer->to_str(buffer);
+    isula_buffer_free(buffer);
+    if (strlen(p->root_path) > PATH_MAX) {
+        write_message(ERR_MSG, "Root_path is too long\n");
+        return SHIM_ERR;
+    }
+    return SHIM_OK;
+}
+
 process_t *new_process(char *id, char *bundle, char *runtime)
 {
     shim_client_process_state *p_state;
@@ -875,9 +922,15 @@ process_t *new_process(char *id, char *bundle, char *runtime)
         goto failure;
     }
 
-    p->state_path = getcwd(NULL, 0);
-    if (p->state_path == NULL) {
+    // during the execution of isulad-shim, the current working directory will not change.
+    p->workdir = getcwd(NULL, 0);
+    if (p->workdir == NULL) {
         write_message(ERR_MSG, "get cwd failed when do create process");
+        goto failure;
+    }
+
+    ret = init_root_path(p);
+    if (ret != SHIM_OK) {
         goto failure;
     }
 
@@ -905,8 +958,7 @@ int process_io_start(process_t *p, pthread_t *tid_epoll)
 
 static void set_common_params(process_t *p, const char *params[], int *index, const char* log_path)
 {
-    int j, nret;
-    char root_path[PATH_MAX] = { 0 };
+    int j;
 
     params[(*index)++]  = p->runtime;
     for (j = 0; j < p->state->runtime_args_len; j++) {
@@ -923,12 +975,8 @@ static void set_common_params(process_t *p, const char *params[], int *index, co
     // In addition to kata, other commonly used oci runtimes (runc, crun, youki, gvisor)
     // need to set the --root option
     if (strcasecmp(p->runtime, "kata-runtime") != 0) {
-        nret = snprintf(root_path, PATH_MAX, "%s/%s", p->state_path, p->runtime);
-        if (nret < 0 || (size_t)nret >= PATH_MAX) {
-            return;
-        }
         params[(*index)++] = "--root";
-        params[(*index)++] = root_path;
+        params[(*index)++] = p->root_path;
     }
 }
 
@@ -1019,7 +1067,7 @@ static void process_delete(process_t *p)
     int i = 0;
     char log_path[PATH_MAX] = { 0 };
 
-    int nret = snprintf(log_path, PATH_MAX, "%s/log.json", p->state_path);
+    int nret = snprintf(log_path, PATH_MAX, "%s/log.json", p->workdir);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         return;
     }
@@ -1067,23 +1115,23 @@ static void exec_runtime_process(process_t *p, int exec_fd)
         _exit(EXIT_FAILURE);
     }
 
-    int nret = snprintf(log_path, PATH_MAX, "%s/log.json", p->state_path);
+    int nret = snprintf(log_path, PATH_MAX, "%s/log.json", p->workdir);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         _exit(EXIT_FAILURE);
     }
-    nret = snprintf(pid_path, PATH_MAX, "%s/pid", p->state_path);
+    nret = snprintf(pid_path, PATH_MAX, "%s/pid", p->workdir);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         _exit(EXIT_FAILURE);
     }
 
     char *process_desc = NULL;
     if (p->state->exec) {
-        process_desc = (char *)calloc(1, PATH_MAX);
+        process_desc = (char *)isula_common_calloc_s(PATH_MAX);
         if (process_desc == NULL) {
             (void)dprintf(exec_fd, "memory error: %s", strerror(errno));
             _exit(EXIT_FAILURE);
         }
-        nret = snprintf(process_desc, PATH_MAX, "%s/process.json", p->state_path);
+        nret = snprintf(process_desc, PATH_MAX, "%s/process.json", p->workdir);
         if (nret < 0 || (size_t)nret >= PATH_MAX) {
             _exit(EXIT_FAILURE);
         }

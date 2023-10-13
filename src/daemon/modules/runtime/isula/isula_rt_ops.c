@@ -400,6 +400,7 @@ typedef struct {
     const char *runtime;
     const char *cmd;
     const char **args;
+    const char *root_path;
     size_t args_len;
     const char *subcmd;
     const char **opts;
@@ -412,8 +413,6 @@ typedef struct {
 static void set_common_params(runtime_exec_info *rei, const char **params,  int *index)
 {
     int j;
-    int nret;
-    char root_path[PATH_MAX] = { 0 };
 
     params[(*index)++] = rei->cmd;
     for (j = 0; j < rei->args_len; j++) {
@@ -422,13 +421,9 @@ static void set_common_params(runtime_exec_info *rei, const char **params,  int 
 
     // In addition to kata, other commonly used oci runtimes (runc, crun, youki, gvisor)
     // need to set the --root option
-    if (rei->workdir != NULL && strcasecmp(rei->runtime, "kata-runtime") != 0) {
-        nret = snprintf(root_path, PATH_MAX, "%s/%s", rei->workdir, rei->runtime);
-        if (nret < 0 || (size_t)nret >= PATH_MAX) {
-            DEBUG("Failed to sprintf root_path");
-        }
+    if (rei->root_path != NULL && strcasecmp(rei->runtime, "kata-runtime") != 0) {
         params[(*index)++] = "--root";
-        params[(*index)++] = root_path;
+        params[(*index)++] = rei->root_path;
     }
 }
 
@@ -468,7 +463,7 @@ static void runtime_exec_param_init(runtime_exec_info *rei)
     }
 }
 
-static int runtime_exec_info_init(runtime_exec_info *rei, const char *workdir, const char *runtime, const char *subcmd,
+static int runtime_exec_info_init(runtime_exec_info *rei, const char *workdir, const char *root_path, const char *runtime, const char *subcmd,
                                    const char **opts, size_t opts_len, const char *id, char **params, size_t params_num)
 {
     int ret = 0;
@@ -485,6 +480,7 @@ static int runtime_exec_info_init(runtime_exec_info *rei, const char *workdir, c
     rei->id = id;
     rei->params = params;
     rei->params_num = params_num;
+    rei->root_path = root_path;
 
     runtime_exec_param_init(rei);
     runtime_exec_param_dump((const char **)rei->params);
@@ -540,9 +536,18 @@ static int runtime_call_status(const char *workdir, const char *runtime, const c
     parser_error perr = NULL;
     runtime_exec_info rei = { 0 };
     int ret = 0;
+    int nret = 0;
     char *params[PARAM_NUM] = { 0 };
+    char root_path[PATH_MAX] = { 0 };
 
-    ret = runtime_exec_info_init(&rei, workdir, runtime, "state", NULL, 0, id, params, PARAM_NUM);
+    nret = snprintf(root_path, PATH_MAX, "%s/%s", workdir, runtime);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Failed to sprintf root_path");
+        ret = -1;
+        goto out;
+    }
+
+    ret = runtime_exec_info_init(&rei, workdir, root_path, runtime, "state", NULL, 0, id, params, PARAM_NUM);
     if (ret != 0) {
         ERROR("Failed to init runtime exec info");
         ret = -1;
@@ -594,10 +599,19 @@ static int runtime_call_stats(const char *workdir, const char *runtime, const ch
     parser_error perr = NULL;
     runtime_exec_info rei = { 0 };
     int ret = 0;
+    int nret = 0;
     char *params[PARAM_NUM] = { 0 };
     const char *opts[1] = { "--stats" };
+    char root_path[PATH_MAX] = { 0 };
 
-    ret = runtime_exec_info_init(&rei, workdir, runtime, "events", opts, 1, id, params, PARAM_NUM);
+    nret = snprintf(root_path, PATH_MAX, "%s/%s", workdir, runtime);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Failed to sprintf root_path");
+        ret = -1;
+        goto out;
+    }
+
+    ret = runtime_exec_info_init(&rei, workdir, root_path, runtime, "events", opts, 1, id, params, PARAM_NUM);
     if (ret != 0) {
         ERROR("Failed to init runtime exec info");
         ret = -1;
@@ -656,9 +670,17 @@ static int runtime_call_simple(const char *workdir, const char *runtime, const c
     char *stdout_msg = NULL;
     char *stderr_msg = NULL;
     int ret = 0;
+    int nret = 0;
     char *params[PARAM_NUM] = { 0 };
+    char root_path[PATH_MAX] = { 0 };
 
-    ret = runtime_exec_info_init(&rei, workdir, runtime, subcmd, opts, opts_len, id, params, PARAM_NUM);
+    nret = snprintf(root_path, PATH_MAX, "%s/%s", workdir, runtime);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Failed to sprintf root_path");
+        return -1;
+    }
+
+    ret = runtime_exec_info_init(&rei, workdir, root_path, runtime, subcmd, opts, opts_len, id, params, PARAM_NUM);
     if (ret != 0) {
         ERROR("Failed to init runtime exec info");
         return -1;
@@ -1522,6 +1544,7 @@ static int show_stderr(const char *err)
 int rt_isula_update(const char *id, const char *runtime, const rt_update_params_t *params)
 {
     int ret = 0;
+    int get_err = 0;
     char workdir[PATH_MAX] = { 0 };
     char resources_fname[PATH_MAX] = { 0 };
     const char *opts[2] = { 0 };
@@ -1532,16 +1555,10 @@ int rt_isula_update(const char *id, const char *runtime, const rt_update_params_
         return -1;
     }
 
-    ret = snprintf(workdir, sizeof(workdir), "%s/%s/update", params->state, id);
+    ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
     if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
         ERROR("Failed join update full path");
         return -1;
-    }
-
-    ret = util_mkdir_p(workdir, DEFAULT_SECURE_DIRECTORY_MODE);
-    if (ret < 0) {
-        ERROR("Failed mkdir update workdir %s", workdir);
-        return ret;
     }
 
     cr = util_common_calloc_s(sizeof(shim_client_cgroup_resources));
@@ -1571,8 +1588,9 @@ int rt_isula_update(const char *id, const char *runtime, const rt_update_params_
     }
 
 del_out:
-    if (util_recursive_rmdir(workdir, 0)) {
-        ERROR("Rmdir %s failed", workdir);
+    if (!util_force_remove_file(resources_fname, &get_err)) {
+        errno = get_err;
+        SYSERROR("Failed to remove resources file :%s", resources_fname);
     }
     free_shim_client_cgroup_resources(cr);
     return ret;

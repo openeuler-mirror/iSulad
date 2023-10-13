@@ -45,7 +45,8 @@ typedef struct process {
     char *bundle;
     char *runtime;
     char *console_sock_path; // pty socket path
-    char *state_path;
+    char *workdir;
+    char *root_path;
     int io_loop_fd;
     int exit_fd;
     int ctr_pid;
