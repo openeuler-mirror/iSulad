@@ -195,6 +195,25 @@ static int inject_cni_ip_ranges(const struct runtime_conf *rt, cni_net_conf_runt
     return 0;
 }
 
+static int inject_cni_aliases(const struct runtime_conf *rt, cni_net_conf_runtime_config *rt_config)
+{
+    if (rt->aliases == NULL || rt->aliases_len == 0) {
+        return 0;
+    }
+
+    rt_config->aliases = util_smart_calloc_s(sizeof(char *), rt->aliases_len);
+    if (rt_config->aliases == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (size_t i = 0; i < rt->aliases_len; i++) {
+        rt_config->aliases[i]= util_strdup_s(rt->aliases[i]);
+    }
+    rt_config->aliases_len = rt->aliases_len;
+    return 0;
+}
+
 static struct cap_inject_item g_cap_inject_items[] = {
     {
         .name = SUPPORT_CAPABILITY_PORTMAPPINGS,
@@ -207,6 +226,10 @@ static struct cap_inject_item g_cap_inject_items[] = {
     {
         .name = SUPPORT_CAPABILITY_IPRANGES,
         .cb = inject_cni_ip_ranges
+    },
+    {
+        .name = SUPPORT_CAPABILITY_ALIASES,
+        .cb = inject_cni_aliases
     }
 };
 
@@ -431,6 +454,9 @@ static inline bool check_find_in_path_args(const char *plugin, const char * cons
     return (plugin == NULL || strlen(plugin) == 0 || paths == NULL || len == 0 || find_path == NULL);
 }
 
+/* operating system path separator */
+#define PATH_SEPARATOR '/'
+
 static int find_plugin_in_path(const char *plugin, const char * const *paths, size_t len, char **find_path)
 {
     int ret = -1;
@@ -440,6 +466,12 @@ static int find_plugin_in_path(const char *plugin, const char * const *paths, si
         ERROR("Invalid arguments");
         return -1;
     }
+
+    if (strchr(plugin, PATH_SEPARATOR) != NULL) {
+        ERROR("Invalid plugin name: %s", plugin);
+        return -1;
+    }
+    
     for (i = 0; i < len; i++) {
         if (do_check_file(plugin, paths[i], find_path) == 0) {
             ret = 0;
@@ -656,12 +688,13 @@ int cni_add_network_list(const struct cni_network_list_conf *list, const struct 
         }
     }
 
-    if (*pret != NULL && version_greater_than_or_equal_to((*pret)->cniversion, CURRENT_VERSION, &greated) != 0) {
-        WARN("result version: %s is too old, do not save this cache", (*pret)->cniversion);
+    if (*pret != NULL && version_greater_than_or_equal_to((*pret)->cniversion, SUPPORT_CACHE_AND_CHECK_VERSION, &greated) != 0) {
         return 0;
     }
 
+    // CACHE was added in CNI spec version 0.4.0 and higher
     if (!greated) {
+        WARN("result version: %s is too old, do not save this cache", (*pret)->cniversion);
         return 0;
     }
 
@@ -706,10 +739,11 @@ int cni_del_network_list(const struct cni_network_list_conf *list, const struct 
         return -1;
     }
 
-    if (version_greater_than_or_equal_to(list->list->cni_version, CURRENT_VERSION, &greated) != 0) {
+    if (version_greater_than_or_equal_to(list->list->cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greated) != 0) {
         return -1;
     }
 
+    // CACHE was added in CNI spec version 0.4.0 and higher
     if (greated) {
         ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, &prev_result);
         if (ret != 0) {
@@ -771,7 +805,7 @@ int cni_check_network_list(const struct cni_network_list_conf *list, const struc
         return -1;
     }
 
-    if (version_greater_than_or_equal_to(list->list->cni_version, CURRENT_VERSION, &greated) != 0) {
+    if (version_greater_than_or_equal_to(list->list->cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greated) != 0) {
         return -1;
     }
 
@@ -934,6 +968,12 @@ void free_runtime_conf(struct runtime_conf *rc)
 
     free_cni_ip_ranges_array_container(rc->ip_ranges);
     rc->ip_ranges = NULL;
+
+    for (i = 0; i < rc->aliases_len; i++) {
+        free(rc->aliases[i]);
+    }
+    free(rc->aliases);
+    rc->aliases = NULL;
 
     free(rc);
 }

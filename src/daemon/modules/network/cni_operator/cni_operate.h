@@ -26,6 +26,7 @@ extern "C" {
 #define CNI_ARGS_BANDWIDTH_KEY "bandwidth"
 #define CNI_ARGS_PORTMAPPING_KEY "portMappings"
 #define CNI_ARGS_IPRANGES_KEY "ipRanges"
+#define CNI_ARGS_ALIASES_KEY "aliases"
 
 typedef bool (*cni_conf_filter_t)(const char *filename);
 

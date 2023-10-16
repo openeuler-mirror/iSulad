@@ -719,8 +719,8 @@ static bool check_raw(const char *version, const char **supports)
  * isula will never support old versions: 0.1.0 and 0.2.0;
  * but we would like to support future versions.
  * */
-#define CURR_SUPPORT_VERSION_LEN 4
-const char *g_curr_support_versions[CURR_SUPPORT_VERSION_LEN] = { "0.3.0", "0.3.1", CURRENT_VERSION, NULL };
+#define CURR_SUPPORT_VERSION_LEN 5
+const char *g_curr_support_versions[CURR_SUPPORT_VERSION_LEN] = { "0.3.0", "0.3.1", "0.4.0", CURRENT_VERSION, NULL };
 
 struct cni_opt_result_factories g_factories[1] = { {
         .supported_versions = g_curr_support_versions,
