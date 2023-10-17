@@ -222,3 +222,19 @@ TEST_F(IsulaRtOpsUnitTest, test_rt_isula_kill)
     ASSERT_EQ(rt_isula_kill("123", "runtime", nullptr), -1);
     ASSERT_EQ(rt_isula_kill("123", "runtime", &kill_params), -1);
 }
+
+TEST_F(IsulaRtOpsUnitTest, test_rt_isula_listpids)
+{
+    rt_listpids_params_t params = {};
+    rt_listpids_out_t out = {};
+
+    ASSERT_EQ(rt_isula_listpids(nullptr, nullptr, nullptr, nullptr), -1);
+
+    ASSERT_EQ(rt_isula_listpids("123", "runc", &params, nullptr), -1);
+
+    ASSERT_EQ(rt_isula_listpids(nullptr, "runc", &params, &out), -1);
+
+    ASSERT_EQ(rt_isula_listpids("123", nullptr, &params, &out), -1);
+
+    ASSERT_EQ(rt_isula_listpids("123", "runc", &params, &out), -1);
+}
