@@ -1372,6 +1372,11 @@ static int isulad_server_init_common()
         goto out;
     }
 
+    if (spec_module_init() != 0) {
+        ERROR("Failed to init spec module");
+        goto out;
+    }
+
     if (containers_store_init()) {
         ERROR("Failed to init containers store");
         goto out;

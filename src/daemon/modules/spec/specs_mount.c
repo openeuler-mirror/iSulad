@@ -53,6 +53,7 @@
 #include "image_api.h"
 #include "volume_api.h"
 #include "parse_volume.h"
+#include "specs_api.h"
 
 enum update_rw {
     update_rw_untouch,
@@ -2212,7 +2213,24 @@ out:
     return ret;
 }
 
-int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec)
+int merge_conf_devices(oci_runtime_spec *oci_spec, host_config *host_spec)
+{
+    /* devices which will be populated into container */
+    if (merge_conf_populate_device(oci_spec, host_spec)) {
+        ERROR("Merge user define devices failed");
+        return -1;
+    }
+
+    /* device cgroup rules which will be added into container */
+    if (merge_conf_device_cgroup_rule(oci_spec, host_spec)) {
+        ERROR("Merge user define device cgroup rules failed");
+        return -1;
+    }
+
+    return 0;
+}
+
+int merge_conf_blkio_device(oci_runtime_spec *oci_spec, host_config *host_spec)
 {
     int ret = 0;
 
@@ -2268,18 +2286,6 @@ int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec)
             ERROR("Failed to merge blkio write iops devices");
             goto out;
         }
-    }
-
-    /* devices which will be populated into container */
-    if (merge_conf_populate_device(oci_spec, host_spec)) {
-        ret = -1;
-        goto out;
-    }
-
-    /* device cgroup rules which will be added into container */
-    if (merge_conf_device_cgroup_rule(oci_spec, host_spec)) {
-        ret = -1;
-        goto out;
     }
 
 out:
@@ -3486,5 +3492,93 @@ int add_rootfs_mount(const container_config *container_spec)
 
 out:
     free(mntparent);
+    return ret;
+}
+
+int update_devcies_for_oci_spec(oci_runtime_spec *oci_spec, host_config *hostconfig)
+{
+    const oci_runtime_spec *readonly_spec = NULL;
+    size_t i;
+    int ret;
+
+    // Step1: get default oci spec config
+    readonly_spec = get_readonly_default_oci_spec(hostconfig->system_container);
+
+    // Step2: clear oci_spec devices items
+    for (i = 0; i < oci_spec->linux->devices_len; i++) {
+        free_defs_device(oci_spec->linux->devices[i]);
+        oci_spec->linux->devices[i] = NULL;
+    }
+    // Step3: if default devices length more than old spec, just realloc memory
+    if (readonly_spec->linux->devices_len > oci_spec->linux->devices_len) {
+        free(oci_spec->linux->devices);
+        oci_spec->linux->devices = util_smart_calloc_s(sizeof(defs_device *), readonly_spec->linux->devices_len);
+        if (oci_spec->linux->devices == NULL) {
+            oci_spec->linux->devices_len = 0;
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+    oci_spec->linux->devices_len = 0;
+    // Step4: copy default devices to oci spec
+    for (i = 0; i < readonly_spec->linux->devices_len; i++) {
+        defs_device *tmp_dev = util_common_calloc_s(sizeof(defs_device));
+        if (tmp_dev == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        tmp_dev->type = util_strdup_s(readonly_spec->linux->devices[i]->type);
+        tmp_dev->path = util_strdup_s(readonly_spec->linux->devices[i]->path);
+        tmp_dev->file_mode = readonly_spec->linux->devices[i]->file_mode;
+        tmp_dev->major = readonly_spec->linux->devices[i]->major;
+        tmp_dev->minor = readonly_spec->linux->devices[i]->minor;
+        tmp_dev->uid = readonly_spec->linux->devices[i]->uid;
+        tmp_dev->gid = readonly_spec->linux->devices[i]->gid;
+        oci_spec->linux->devices[i] = tmp_dev;
+        oci_spec->linux->devices_len += 1;
+    }
+
+    // Step5: clear oci_spec device cgroup rules
+    for (i = 0; i < oci_spec->linux->resources->devices_len; i++) {
+        free_defs_device_cgroup(oci_spec->linux->resources->devices[i]);
+        oci_spec->linux->resources->devices[i] = NULL;
+    }
+    // Step6: if default devices lenght more than old spec, just realloc memory
+    if (readonly_spec->linux->resources->devices_len > oci_spec->linux->resources->devices_len) {
+        free(oci_spec->linux->resources->devices);
+        oci_spec->linux->resources->devices = util_smart_calloc_s(sizeof(defs_device_cgroup *),
+                                                                  readonly_spec->linux->resources->devices_len);
+        if (oci_spec->linux->resources->devices == NULL) {
+            oci_spec->linux->resources->devices_len = 0;
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+    oci_spec->linux->resources->devices_len = 0;
+    // Step7: copy default device cgroup rules to oci spec
+    for (i = 0; i < readonly_spec->linux->resources->devices_len; i++) {
+        defs_device_cgroup *tmp_dev_cg = util_common_calloc_s(sizeof(defs_device_cgroup));
+        if (tmp_dev_cg == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        tmp_dev_cg->allow = readonly_spec->linux->resources->devices[i]->allow;
+        tmp_dev_cg->major = readonly_spec->linux->resources->devices[i]->major;
+        tmp_dev_cg->minor = readonly_spec->linux->resources->devices[i]->minor;
+        tmp_dev_cg->type = util_strdup_s(readonly_spec->linux->resources->devices[i]->type);
+        tmp_dev_cg->access = util_strdup_s(readonly_spec->linux->resources->devices[i]->access);
+        oci_spec->linux->resources->devices[i] = tmp_dev_cg;
+        oci_spec->linux->resources->devices_len += 1;
+    }
+
+    // Step8: do update devices and cgroup device rules at here
+    if (hostconfig->privileged) {
+        // Step8.1: for priviledged container, we should merge all devices under /dev
+        ret = merge_all_devices_and_all_permission(oci_spec);
+    } else {
+        // Step8.2: for common container, we should merge devices defined by user in hostconfig
+        ret = merge_conf_devices(oci_spec, hostconfig);
+    }
+
     return ret;
 }
