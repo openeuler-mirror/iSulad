@@ -173,6 +173,7 @@ typedef struct _rt_update_params_t {
 } rt_update_params_t;
 
 typedef struct _rt_listpids_params_t {
+    const char *state;
     const char *rootpath;
 } rt_listpids_params_t;
 
