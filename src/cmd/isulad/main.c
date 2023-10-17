@@ -1319,7 +1319,7 @@ static int ensure_isulad_tmpdir_security()
     if (do_ensure_isulad_tmpdir_security("/tmp") != 0) {
         WARN("Failed to ensure the /tmp directory is a safe directory");
     }
-    
+
     return 0;
 }
 
@@ -1371,12 +1371,17 @@ static int isulad_server_init_common()
         goto out;
     }
 
-    if (containers_store_init()) {
+    if (spec_module_init() != 0) {
+        ERROR("Failed to init spec module");
+        goto out;
+    }
+
+    if (containers_store_init() != 0) {
         ERROR("Failed to init containers store");
         goto out;
     }
 
-    if (container_name_index_init()) {
+    if (container_name_index_init() != 0) {
         ERROR("Failed to init name index");
         goto out;
     }
@@ -1782,7 +1787,7 @@ int main(int argc, char **argv)
         msg = "Failed to init plugin_manager";
         goto failure;
     }
-#endif 
+#endif
 
     clock_gettime(CLOCK_MONOTONIC, &t_end);
     use_time = (double)(t_end.tv_sec - t_start.tv_sec) * (double)1000000000 + (double)(t_end.tv_nsec - t_start.tv_nsec);
