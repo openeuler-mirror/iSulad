@@ -1688,6 +1688,8 @@ int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resi
         goto out;
     }
 
+    ret = 0;
+
 out:
     close(fd);
     return ret;
