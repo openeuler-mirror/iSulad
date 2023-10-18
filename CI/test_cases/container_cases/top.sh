@@ -26,7 +26,8 @@ function test_top_spec()
 {
     local ret=0
     local image="busybox"
-    local test="container top test => (${FUNCNAME[@]})"
+    local runtime=$1
+    local test="container top test with (${runtime}) => (${FUNCNAME[@]})"
 
     msg_info "${test} starting..."
 
@@ -36,7 +37,7 @@ function test_top_spec()
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    CONT=`isula run -itd $image /bin/sh`
+    CONT=`isula run -itd --runtime $runtime $image /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula top $CONT -ef
@@ -51,6 +52,9 @@ function test_top_spec()
 
 declare -i ans=0
 
-test_top_spec || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    test_top_spec $element || ((ans++))
+done
 
 show_result ${ans} "${curr_path}/${0}"

@@ -634,7 +634,7 @@ out:
     return pid_arg;
 }
 
-static int get_pids(const char *name, const char *runtime, const char *rootpath, pid_t **pids, size_t *pids_len,
+static int get_pids(const char *name, const char *runtime, const char *rootpath, const char *statepath, pid_t **pids, size_t *pids_len,
                     char **pid_args)
 {
     int ret = 0;
@@ -650,6 +650,7 @@ static int get_pids(const char *name, const char *runtime, const char *rootpath,
     }
 
     params.rootpath = rootpath;
+    params.state = statepath;
 
     if (runtime_listpids(name, runtime, &params, out) != 0) {
         ERROR("runtime failed to list pids");
@@ -813,6 +814,7 @@ static int container_top_cb(container_top_request *request, container_top_respon
     uint32_t cc = ISULAD_SUCCESS;
     char *id = NULL;
     char *rootpath = NULL;
+    char *statepath = NULL;
     char *runtime = NULL;
     char *pid_args = NULL;
     char *stdout_buffer = NULL;
@@ -842,10 +844,11 @@ static int container_top_cb(container_top_request *request, container_top_respon
 
     id = cont->common_config->id;
     rootpath = cont->root_path;
+    statepath = cont->state_path;
     runtime = cont->runtime;
     isula_libutils_set_log_prefix(id);
 
-    if (get_pids(id, runtime, rootpath, &pids, &pids_len, &pid_args) != 0) {
+    if (get_pids(id, runtime, rootpath, statepath, &pids, &pids_len, &pid_args) != 0) {
         ERROR("failed to get all pids");
         cc = ISULAD_ERR_EXEC;
         goto pack_response;

@@ -39,7 +39,7 @@ int rt_isula_attach(const char *id, const char *runtime, const rt_attach_params_
 int rt_isula_update(const char *id, const char *runtime, const rt_update_params_t *params);
 int rt_isula_pause(const char *id, const char *runtime, const rt_pause_params_t *params);
 int rt_isula_resume(const char *id, const char *runtime, const rt_resume_params_t *params);
-int rt_isula_listpids(const char *name, const char *runtime, const rt_listpids_params_t *params,
+int rt_isula_listpids(const char *id, const char *runtime, const rt_listpids_params_t *params,
                       rt_listpids_out_t *out);
 int rt_isula_resources_stats(const char *name, const char *runtime, const rt_stats_params_t *params,
                              struct runtime_container_resources_stats_info *rs_stats);

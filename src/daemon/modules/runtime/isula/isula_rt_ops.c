@@ -663,6 +663,7 @@ out:
     return ret;
 }
 
+// Used to call runtime commands that do not need to handle the return value
 static int runtime_call_simple(const char *workdir, const char *runtime, const char *subcmd, const char **opts,
                                size_t opts_len, const char *id, handle_output_callback_t cb)
 {
@@ -1634,11 +1635,107 @@ int rt_isula_resume(const char *id, const char *runtime, const rt_resume_params_
     return runtime_call_simple(workdir, runtime, "resume", NULL, 0, id, NULL);
 }
 
-int rt_isula_listpids(const char *name, const char *runtime, const rt_listpids_params_t *params, rt_listpids_out_t *out)
+// stdout_msg example:"[294955,297948]\n"
+static int parse_ps_data(char *stdout_msg, rt_listpids_out_t *out)
 {
-    ERROR("isula top/listpids not support on isulad-shim");
-    isulad_set_error_message("isula top/listpids not support on isulad-shim");
-    return -1;
+    char *pids_str = NULL;
+    char *saveptr = NULL;
+    int len, ret;
+
+    len = util_strings_count(stdout_msg, ',') + 1;
+    out->pids = util_smart_calloc_s(sizeof(pid_t), len);
+    if (out->pids == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    pids_str = strtok_r(stdout_msg, "[,]\n", &saveptr);
+
+    while (pids_str != NULL) {
+        if (out->pids_len >= len) {
+            ERROR("Invalid out->pids_len: greater or equal to len");
+            return -1;
+        }
+        ret = util_safe_int(pids_str, &out->pids[out->pids_len]);
+        if (ret < 0) {
+            ERROR("Failed to convert %s to int", pids_str);
+            return -1;
+        }
+        out->pids_len++;
+
+        pids_str = strtok_r(NULL, "[,]\n", &saveptr);
+    }
+
+    if (out->pids_len != len) {
+        ERROR("Invalid stdout_msg");
+        return -1;
+    }
+    return 0;
+}
+
+static int runtime_call_ps(const char *workdir, const char *runtime, const char *id,
+                               rt_listpids_out_t *out)
+{
+    __isula_auto_free char *stdout_msg = NULL;
+    __isula_auto_free char *stderr_msg = NULL;
+    runtime_exec_info rei = { 0 };
+    int ret = 0;
+    int nret = 0;
+    char *params[PARAM_NUM] = { 0 };
+    const char *opts[2] = { "--format" , "json" };
+    char root_path[PATH_MAX] = { 0 };
+
+    nret = snprintf(root_path, PATH_MAX, "%s/%s", workdir, runtime);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Failed to sprintf root_path");
+        return -1;
+    }
+
+    ret = runtime_exec_info_init(&rei, workdir, root_path, runtime, "ps", opts, 2, id, params, PARAM_NUM);
+    if (ret != 0) {
+        ERROR("Failed to init runtime exec info");
+        return -1;
+    }
+
+    if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout_msg, &stderr_msg)) {
+        ERROR("Failed to call runtime ps : %s", stderr_msg);
+        return -1;
+    }
+
+    if (stdout_msg == NULL) {
+        ERROR("Empty stdout_msg is returned after calling ps");
+        return -1;
+    }
+
+    if (parse_ps_data(stdout_msg, out) < 0) {
+        ERROR("Failed to parse ps data");
+        return -1;
+    }
+
+    return ret;
+}
+
+int rt_isula_listpids(const char *id, const char *runtime, const rt_listpids_params_t *params, rt_listpids_out_t *out)
+{
+    char workdir[PATH_MAX] = { 0 };
+    int ret;
+
+    if (id == NULL || runtime == NULL || params == NULL || params->state == NULL || out == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
+    ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
+        ERROR("Failed join full workdir %s/%s", params->state, id);
+        return -1;
+    }
+
+    if (!shim_alive(workdir)) {
+        ERROR("Shim dead %s", workdir);
+        return -1;
+    }
+
+    return runtime_call_ps(workdir, runtime, id, out);
 }
 
 int rt_isula_resources_stats(const char *id, const char *runtime, const rt_stats_params_t *params,
