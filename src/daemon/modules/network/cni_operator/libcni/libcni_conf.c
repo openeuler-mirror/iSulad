@@ -28,6 +28,8 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <isula_libutils/auto_cleanup.h>
+
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "isula_libutils/cni_net_conf.h"
@@ -36,26 +38,22 @@
 
 static int do_conf_from_bytes(const char *conf_str, struct cni_network_conf *config)
 {
-    int ret = 0;
-    parser_error jerr = NULL;
+    __isula_auto_free parser_error jerr = NULL;
     struct parser_context ctx = { OPT_PARSE_FULLKEY | OPT_GEN_SIMPLIFY, 0 };
 
     config->network = cni_net_conf_parse_data(conf_str, &ctx, &jerr);
     if (config->network == NULL) {
         ERROR("Error parsing configuration: %s", jerr);
-        ret = -1;
-        goto out;
+        return -1;
     }
     if (config->network->type == NULL || strlen(config->network->type) == 0) {
         ERROR("error parsing configuration: missing 'type'");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     config->bytes = util_strdup_s(conf_str);
-out:
-    free(jerr);
-    return ret;
+
+    return 0;
 }
 
 struct cni_network_conf *conf_from_bytes(const char *conf_str)
@@ -98,7 +96,7 @@ static char *do_get_cni_net_confs_json(const char *filename)
 
 struct cni_network_conf *cni_conf_from_file(const char *filename)
 {
-    char *content = NULL;
+    __isula_auto_free char *content = NULL;
     struct cni_network_conf *config = NULL;
 
     if (filename == NULL) {
@@ -109,12 +107,11 @@ struct cni_network_conf *cni_conf_from_file(const char *filename)
     content = do_get_cni_net_confs_json(filename);
     if (content == NULL) {
         ERROR("Parse net conf file: %s failed", filename);
-        goto out;
+        return NULL;
     }
 
     config = conf_from_bytes(content);
-out:
-    free(content);
+
     return config;
 }
 
@@ -152,7 +149,7 @@ static int check_cni_net_conf_list(const cni_net_conf_list *tmp_list)
 struct cni_network_list_conf *cni_conflist_from_bytes(const char *json_str)
 {
     int ret = -1;
-    parser_error jerr = NULL;
+    __isula_auto_free parser_error jerr = NULL;
     cni_net_conf_list *tmp_list = NULL;
     struct cni_network_list_conf *result = NULL;
     struct parser_context ctx = { OPT_PARSE_FULLKEY | OPT_GEN_SIMPLIFY, 0 };
@@ -187,7 +184,6 @@ struct cni_network_list_conf *cni_conflist_from_bytes(const char *json_str)
     ret = 0;
 
 free_out:
-    free(jerr);
     if (ret != 0) {
         free_cni_net_conf_list(tmp_list);
         free_cni_network_list_conf(result);
@@ -248,20 +244,18 @@ static int get_ext(const char *fname)
  * */
 static int check_conf_dir(const char *dir)
 {
-    DIR *directory = NULL;
+    __isula_auto_dir DIR *directory = NULL;
     int ret = 1;
 
     directory = opendir(dir);
     if (directory == NULL) {
         if (errno == ENOENT) {
-            ret = 0;
-            goto out;
+            return 0;
         }
         SYSERROR("Open dir failed");
         ret = -1;
     }
-out:
-    closedir(directory);
+
     return ret;
 }
 
@@ -385,14 +379,13 @@ free_out:
 static int generate_new_conflist(const cni_net_conf_list *list, struct cni_network_list_conf *conf_list)
 {
     struct parser_context ctx = { OPT_PARSE_FULLKEY | OPT_GEN_SIMPLIFY, 0 };
-    parser_error jerr = NULL;
+    __isula_auto_free parser_error jerr = NULL;
     char *cni_net_conf_json_str = NULL;
-    int ret = -1;
 
     cni_net_conf_json_str = cni_net_conf_list_generate_json(list, &ctx, &jerr);
     if (cni_net_conf_json_str == NULL) {
         ERROR("Generate conf list json failed: %s", jerr);
-        goto free_out;
+        return -1;
     }
     conf_list->bytes = cni_net_conf_json_str;
 
@@ -401,12 +394,10 @@ static int generate_new_conflist(const cni_net_conf_list *list, struct cni_netwo
     conf_list->list = cni_net_conf_list_parse_data(cni_net_conf_json_str, &ctx, &jerr);
     if (conf_list->list == NULL) {
         ERROR("Parse conf list from json failed: %s", jerr);
-        goto free_out;
+        return -1;
     }
-    ret = 0;
-free_out:
-    free(jerr);
-    return ret;
+
+    return 0;
 }
 
 static inline bool check_conflist_from_conf_args(const struct cni_network_conf *conf)

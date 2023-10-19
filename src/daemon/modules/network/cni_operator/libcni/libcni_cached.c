@@ -28,6 +28,7 @@
 
 #include <isula_libutils/log.h>
 #include <isula_libutils/cni_cached_info.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "utils.h"
 #include "libcni_result_parse.h"
@@ -134,23 +135,16 @@ static bool parse_portmapping_for_cache(const struct runtime_conf *rc, cni_cache
 static int do_save_cache(const char *fname, const cni_cached_info *p_info)
 {
     struct parser_context ctx = { OPT_PARSE_STRICT, stderr };
-    char *data = NULL;
-    parser_error jerr = NULL;
-    int ret = 0;
+    __isula_auto_free char *data = NULL;
+    __isula_auto_free parser_error jerr = NULL;
 
     data = cni_cached_info_generate_json(p_info, &ctx, &jerr);
     if (data == NULL) {
         ERROR("generate cache data failed: %s", jerr);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-    ret = util_atomic_write_file(fname, data, strlen(data), SECURE_CONFIG_FILE_MODE, true);
-
-out:
-    free(data);
-    free(jerr);
-    return ret;
+    return util_atomic_write_file(fname, data, strlen(data), SECURE_CONFIG_FILE_MODE, true);
 }
 
 static int do_cache_insert_cni_args(const struct runtime_conf *rc, cni_cached_info *p_info)
@@ -200,7 +194,7 @@ int cni_cache_add(const char *cache_dir, const struct cni_opt_result *res, const
                   const struct runtime_conf *rc)
 {
     int ret = 0;
-    char *file_path = NULL;
+    __isula_auto_free char *file_path = NULL;
     cni_cached_info *p_info = NULL;
 
     if (rc == NULL || res == NULL || net_name == NULL) {
@@ -254,7 +248,6 @@ int cni_cache_add(const char *cache_dir, const struct cni_opt_result *res, const
     ret = do_save_cache(file_path, p_info);
 
 free_out:
-    free(file_path);
     free_cni_cached_info(p_info);
     return ret;
 }

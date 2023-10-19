@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <isula_libutils/log.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "utils.h"
 #include "utils_network.h"
@@ -27,7 +28,7 @@
 static cni_result_curr *new_curr_result_helper(const char *json_data)
 {
     cni_result_curr *result = NULL;
-    parser_error errmsg = NULL;
+    __isula_auto_free parser_error errmsg = NULL;
 
     if (json_data == NULL) {
         ERROR("Json data is NULL");
@@ -36,13 +37,9 @@ static cni_result_curr *new_curr_result_helper(const char *json_data)
     result = cni_result_curr_parse_data(json_data, NULL, &errmsg);
     if (result == NULL) {
         ERROR("Parse failed: %s", errmsg);
-        goto free_out;
+        return NULL;
     }
     return result;
-
-free_out:
-    free(errmsg);
-    return NULL;
 }
 
 struct cni_opt_result *new_curr_result(const char *json_data)

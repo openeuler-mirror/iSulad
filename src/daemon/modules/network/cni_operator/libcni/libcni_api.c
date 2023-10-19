@@ -25,6 +25,7 @@
 #include <unistd.h>
 
 #include <isula_libutils/log.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "utils.h"
 #include "utils_network.h"
@@ -248,48 +249,38 @@ free_out:
 static int do_generate_cni_net_conf_json(const struct cni_network_conf *orig, char **result)
 {
     struct parser_context ctx = { OPT_PARSE_FULLKEY | OPT_GEN_SIMPLIFY, 0 };
-    parser_error jerr = NULL;
-    int ret = 0;
+    __isula_auto_free parser_error jerr = NULL;
 
     /* generate new json str for injected config */
     *result = cni_net_conf_generate_json(orig->network, &ctx, &jerr);
     if (*result == NULL) {
         ERROR("Generate cni net conf error: %s", jerr);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-out:
-    free(jerr);
-    return ret;
+    return 0;
 }
 
 static int copy_cni_net_conf(const cni_net_conf *orig, cni_net_conf **copied)
 {
     struct parser_context ctx = { OPT_PARSE_FULLKEY | OPT_GEN_SIMPLIFY, 0 };
-    parser_error jerr = NULL;
-    char *tmp_json = NULL;
-    int ret = 0;
+    __isula_auto_free parser_error jerr = NULL;
+    __isula_auto_free char *tmp_json = NULL;
 
     /* generate new json str for injected config */
     tmp_json = cni_net_conf_generate_json(orig, &ctx, &jerr);
     if (tmp_json == NULL) {
         ERROR("Generate cni net conf error: %s", jerr);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     *copied = cni_net_conf_parse_data(tmp_json, &ctx, &jerr);
     if (*copied == NULL) {
         ERROR("parse cni net conf error: %s", jerr);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-out:
-    free(jerr);
-    free(tmp_json);
-    return ret;
+    return 0;
 }
 
 static inline bool check_inject_runtime_config_args(const struct cni_network_conf *orig, const struct runtime_conf *rt,
@@ -398,8 +389,7 @@ free_out:
 static int do_check_generate_cni_net_conf_json(char **full_conf_bytes, struct cni_network_conf *pnet)
 {
     struct parser_context ctx = { OPT_PARSE_FULLKEY | OPT_GEN_SIMPLIFY, 0 };
-    parser_error serr = NULL;
-    int ret = 0;
+    __isula_auto_free parser_error serr = NULL;
 
     if (*full_conf_bytes != NULL) {
         pnet->bytes = *full_conf_bytes;
@@ -408,14 +398,11 @@ static int do_check_generate_cni_net_conf_json(char **full_conf_bytes, struct cn
         pnet->bytes = cni_net_conf_generate_json(pnet->network, &ctx, &serr);
         if (pnet->bytes == NULL) {
             ERROR("Generate cni net conf error: %s", serr);
-            ret = -1;
-            goto out;
+            return -1;
         }
     }
 
-out:
-    free(serr);
-    return ret;
+    return 0;
 }
 
 static int do_check_file(const char *plugin, const char *path, char **find_path)
@@ -472,8 +459,8 @@ static int run_cni_plugin(const cni_net_conf *p_net, const char *name, const cha
 {
     int ret = -1;
     struct cni_network_conf net = { 0 };
-    char *plugin_path = NULL;
-    struct cni_args *cargs = NULL;
+    __isula_auto_free char *plugin_path = NULL;
+    __isula_auto_free struct cni_args *cargs = NULL;
     char *full_conf_bytes = NULL;
     struct cni_opt_result *tmp_result = NULL;
     cni_net_conf *used_net = NULL;
@@ -518,8 +505,6 @@ static int run_cni_plugin(const cni_net_conf *p_net, const char *name, const cha
         CALL_CHECK_TIMEOUT(90, ret = exec_plugin_without_result(plugin_path, net.bytes, cargs));
     }
 free_out:
-    free_cni_args(cargs);
-    free(plugin_path);
     free_cni_net_conf(used_net);
     free(net.bytes);
     return ret;

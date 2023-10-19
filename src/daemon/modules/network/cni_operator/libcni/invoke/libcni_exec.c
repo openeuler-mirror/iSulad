@@ -31,6 +31,7 @@
 #include <isula_libutils/cni_version.h>
 #include <isula_libutils/log.h>
 #include <isula_libutils/cni_exec_error.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "utils.h"
 #include "libcni_errno.h"
@@ -136,8 +137,7 @@ static void make_err_message(const char *plugin_path, char **stdout_str, const c
 static int raw_exec(const char *plugin_path, const char *stdin_data, char **environs, char **stdout_str,
                     cni_exec_error **err)
 {
-    int ret = -1;
-    char *stderr_msg = NULL;
+    __isula_auto_free char *stderr_msg = NULL;
     bool nret = false;
     plugin_exec_args_t p_args = {
         .path = plugin_path,
@@ -151,8 +151,7 @@ static int raw_exec(const char *plugin_path, const char *stdin_data, char **envi
 
     nret = util_raw_exec_cmd(child_fun, (void *)&p_args, deal_with_plugin_errcode, &cmd_args);
     if (nret) {
-        ret = 0;
-        goto out;
+        return 0;
     }
 
     make_err_message(plugin_path, stdout_str, stderr_msg, err);
@@ -161,9 +160,7 @@ static int raw_exec(const char *plugin_path, const char *stdin_data, char **envi
         *stdout_str = NULL;
     }
 
-out:
-    free(stderr_msg);
-    return ret;
+    return -1;
 }
 
 static char *str_cni_exec_error(const cni_exec_error *e_err)
@@ -185,7 +182,7 @@ static char *str_cni_exec_error(const cni_exec_error *e_err)
 
 static char *cniversion_decode(const char *jsonstr)
 {
-    parser_error err = NULL;
+    __isula_auto_free parser_error err = NULL;
     cni_version *conf = NULL;
     char *result = NULL;
 
@@ -201,7 +198,6 @@ static char *cniversion_decode(const char *jsonstr)
 
     result = util_strdup_s(conf->cni_version);
 out:
-    free(err);
     free_cni_version(conf);
     return result;
 }
@@ -209,38 +205,31 @@ out:
 static int do_parse_exec_stdout_str(int exec_ret, const char *cni_net_conf_json, const cni_exec_error *e_err,
                                     const char *stdout_str, struct cni_opt_result **result)
 {
-    int ret = 0;
-    char *version = NULL;
-    char *err_msg = NULL;
+    __isula_auto_free char *version = NULL;
+    __isula_auto_free char *err_msg = NULL;
 
     if (exec_ret != 0) {
         err_msg = str_cni_exec_error(e_err);
         ERROR("raw exec failed: %s", err_msg);
         isulad_append_error_message("raw exec failed: %s. ", err_msg);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     version = cniversion_decode(cni_net_conf_json);
     if (version == NULL) {
-        ret = -1;
-        goto out;
+        return -1;
     }
     if (stdout_str == NULL || strlen(stdout_str) == 0) {
         ERROR("Get empty stdout message");
-        ret = -1;
-        goto out;
+        return -1;
     }
     free_cni_opt_result(*result);
     *result = new_result(version, stdout_str);
     if (*result == NULL) {
-        ret = -1;
+        return -1;
     }
 
-out:
-    free(version);
-    free(err_msg);
-    return ret;
+    return 0;
 }
 
 static inline bool check_exec_plugin_with_result_args(const char *cni_net_conf_json,
@@ -297,7 +286,7 @@ free_out:
 
 static int add_cni_envs(const struct cni_args *cniargs, size_t *pos, char **result)
 {
-    char *plugin_args_str = NULL;
+    __isula_auto_free char *plugin_args_str = NULL;
     char *buffer = NULL;
     size_t i = *pos;
     int nret = 0;
@@ -353,7 +342,6 @@ static int add_cni_envs(const struct cni_args *cniargs, size_t *pos, char **resu
 
     ret = 0;
 free_out:
-    free(plugin_args_str);
     *pos = i;
     return ret;
 }
@@ -418,7 +406,7 @@ int exec_plugin_with_result(const char *plugin_path, const char *cni_net_conf_js
                             struct cni_opt_result **result)
 {
     char **envs = NULL;
-    char *stdout_str = NULL;
+    __isula_auto_free char *stdout_str = NULL;
     cni_exec_error *e_err = NULL;
     int ret = 0;
 
@@ -440,7 +428,6 @@ int exec_plugin_with_result(const char *plugin_path, const char *cni_net_conf_js
     DEBUG("Raw exec stdout: %s", stdout_str);
     ret = do_parse_exec_stdout_str(ret, cni_net_conf_json, e_err, stdout_str, result);
 out:
-    free(stdout_str);
     util_free_array(envs);
     free_cni_exec_error(e_err);
     return ret;
@@ -448,9 +435,9 @@ out:
 
 int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs)
 {
-    char *err_msg = NULL;
+    __isula_auto_free char *err_msg = NULL;
     char **envs = NULL;
-    char *stdout_str = NULL;
+    __isula_auto_free char *stdout_str = NULL;
     cni_exec_error *e_err = NULL;
     int ret = 0;
 
@@ -474,10 +461,8 @@ int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf
     DEBUG("Raw exec \"%s\" result: %d", plugin_path, ret);
     DEBUG("Raw exec stdout: %s", stdout_str);
 out:
-    free(stdout_str);
     util_free_array(envs);
     free_cni_exec_error(e_err);
-    free(err_msg);
     return ret;
 }
 
