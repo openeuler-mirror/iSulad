@@ -1407,7 +1407,7 @@ int rt_isula_status(const char *id, const char *runtime, const rt_status_params_
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
     if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
-        ERROR("failed join full workdir %s/%s", params->rootpath, id);
+        ERROR("Failed join full workdir %s/%s", params->state, id);
         goto out;
     }
 
@@ -1751,7 +1751,7 @@ int rt_isula_resources_stats(const char *id, const char *runtime, const rt_stats
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
     if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
-        ERROR("failed join full workdir %s/%s", params->rootpath, id);
+        ERROR("Failed join full workdir %s/%s", params->state, id);
         goto out;
     }
 
@@ -1779,69 +1779,63 @@ int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resi
     char resize_fifo_path[PATH_MAX] = { 0 };
     char data[RESIZE_DATA_SIZE] = { 0 };
     ssize_t count;
-    int fd = -1;
+    __isula_auto_close int fd = -1;
     pid_t pid = -1;
     int ret = 0;
 
     if (id == NULL || runtime == NULL || params == NULL) {
-        ERROR("nullptr arguments not allowed");
+        ERROR("Nullptr arguments not allowed");
         return -1;
     }
 
     /* crictl not suport exec auto resize */
     if (params->suffix == NULL) {
-        WARN("exec resize not support when isula not being used");
+        WARN("Exec resize not support when isula not being used");
         return 0;
     }
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s/exec/%s", params->state, id, params->suffix);
     if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
-        ERROR("failed join full workdir %s/%s", params->rootpath, id);
-        goto out;
+        ERROR("Failed to join exec resize workdir path");
+        return -1;
     }
 
     ret = snprintf(resize_fifo_path, sizeof(resize_fifo_path), "%s/%s", workdir, RESIZE_FIFO_NAME);
     if (ret < 0 || (size_t)ret >= sizeof(resize_fifo_path)) {
-        ERROR("failed to join exec fifo path");
+        ERROR("Failed to join resize fifo path");
         return -1;
     }
 
     ret = snprintf(data, sizeof(data), "%u %u", params->width, params->height);
     if (ret < 0 || (size_t)ret >= sizeof(data)) {
-        ERROR("failed to write resize data");
+        ERROR("Failed to write resize data");
         return -1;
     }
 
     fd = util_open(resize_fifo_path, O_WRONLY | O_NONBLOCK, 0);
     if (fd == -1) {
         ERROR("open exec resize fifo error");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     count = util_write_nointr(fd, data, strlen(data));
     if (count < 0 || (size_t)count != strlen(data)) {
-        ERROR("write exec resize data error");
-        ret = -1;
-        goto out;
+        ERROR("Write exec resize data error");
+        return -1;
     }
 
     pid = get_container_process_pid(workdir);
     if (pid < 0) {
         ERROR("%s: failed wait init pid", id);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (kill(pid, SIGWINCH) < 0) {
-        SYSERROR("can't kill process (pid=%d) with signal %u", pid, SIGWINCH);
-        ret = -1;
-        goto out;
+        SYSERROR("Can't kill process (pid=%d) with signal %u", pid, SIGWINCH);
+        return -1;
     }
 
-out:
-    close(fd);
-    return ret;
+    return 0;
 }
 
 int rt_isula_kill(const char *id, const char *runtime, const rt_kill_params_t *params)
