@@ -26,7 +26,8 @@ static const std::string defaultName = "test";
 runtime::v1::PodSandboxConfig defaultConfig;
 
 Sandbox::Sandbox(const std::string id, const std::string &rootdir, const std::string &statedir, const std::string name,
-                 const RuntimeInfo info, std::string netMode, std::string netNsPath, const runtime::v1::PodSandboxConfig sandboxConfig)
+                 const RuntimeInfo info, std::string netMode, std::string netNsPath, const runtime::v1::PodSandboxConfig sandboxConfig,
+                 std::string image)
 {
     m_name = defaultName;
 }
