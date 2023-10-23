@@ -13,20 +13,9 @@
  * Description: provide container supervisor functions
  ******************************************************************************/
 #define _GNU_SOURCE
-#include <sys/stat.h>
 #include <unistd.h>
-#include <sys/mount.h>
-#include <sys/eventfd.h>
-#include <sys/epoll.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <isula_libutils/container_config.h>
-#include <isula_libutils/container_config_v2.h>
-#include <isula_libutils/container_exec_request.h>
-#include <isula_libutils/container_exec_response.h>
-#include <isula_libutils/defs.h>
-#include <isula_libutils/host_config.h>
-#include <isula_libutils/oci_runtime_spec.h>
 #include <limits.h>
 #include <pthread.h>
 #include <signal.h>
@@ -36,15 +25,29 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/stat.h>
+#include <sys/mount.h>
+#include <sys/eventfd.h>
+#include <sys/epoll.h>
+
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/container_exec_request.h>
+#include <isula_libutils/container_exec_response.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/oci_runtime_spec.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "service_container_api.h"
-#include "isula_libutils/log.h"
 #include "utils.h"
 #include "err_msg.h"
 #include "events_sender_api.h"
 #include "image_api.h"
 #include "specs_api.h"
 #include "specs_mount.h"
+#include "specs_extend.h"
 #include "isulad_config.h"
 #include "verify.h"
 #include "plugin_api.h"
@@ -688,6 +691,42 @@ out:
     epoll_loop_close(&descr);
 }
 
+static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, host_config *hostconfig)
+{
+    __isula_auto_free char *cgroup_parent = NULL;
+    int ret;
+
+    // If isulad daemon cgroup parent updated, we should update this config into oci spec
+    cgroup_parent = merge_container_cgroups_path(id, hostconfig);
+    if (cgroup_parent == NULL) {
+        return -1;
+    }
+    if (oci_spec->linux->cgroups_path != NULL && strcmp(oci_spec->linux->cgroups_path, cgroup_parent) != 0) {
+        free(oci_spec->linux->cgroups_path);
+        oci_spec->linux->cgroups_path = cgroup_parent;
+        cgroup_parent = NULL;
+    }
+
+    // For Linux.Resources, isula update will save changes into oci spec;
+    // so we just skip it;
+
+    // Remove old devices and update all devices
+    ret = update_devcies_for_oci_spec(oci_spec, hostconfig);
+    if (ret != 0) {
+        ERROR("Failed to do update devices for oci spec");
+        return -1;
+    }
+
+    // If isulad daemon ulimit updated, we should update this config into oci spec.
+    if (merge_global_ulimit(oci_spec) != 0) {
+        return -1;
+    }
+
+    // renew_oci_config() will update process->user and share namespace after.
+
+    return 0;
+}
+
 static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm, pid_ppid_info_t *pid_info)
 {
     int ret = 0;
@@ -758,6 +797,14 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     nret = im_mount_container_rootfs(cont->common_config->image_type, cont->common_config->image, id);
     if (nret != 0) {
         ERROR("Failed to mount rootfs for container %s", id);
+        ret = -1;
+        goto close_exit_fd;
+    }
+
+    // Update possible changes
+    nret = do_oci_spec_update(id, oci_spec, cont->hostconfig);
+    if (nret != 0) {
+        ERROR("Failed to update possible changes for oci spec");
         ret = -1;
         goto close_exit_fd;
     }
