@@ -460,7 +460,7 @@ static int run_cni_plugin(const cni_net_conf *p_net, const char *name, const cha
     int ret = -1;
     struct cni_network_conf net = { 0 };
     __isula_auto_free char *plugin_path = NULL;
-    __isula_auto_free struct cni_args *cargs = NULL;
+    struct cni_args *cargs = NULL;
     char *full_conf_bytes = NULL;
     struct cni_opt_result *tmp_result = NULL;
     cni_net_conf *used_net = NULL;
@@ -505,6 +505,7 @@ static int run_cni_plugin(const cni_net_conf *p_net, const char *name, const cha
         CALL_CHECK_TIMEOUT(90, ret = exec_plugin_without_result(plugin_path, net.bytes, cargs));
     }
 free_out:
+    free_cni_args(cargs);
     free_cni_net_conf(used_net);
     free(net.bytes);
     return ret;
