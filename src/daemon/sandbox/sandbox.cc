@@ -135,12 +135,6 @@ auto Sandbox::GetRuntimeHandle() const -> const std::string &
     return m_runtimeInfo.runtimeHandler;
 }
 
-auto Sandbox::GetContainers() -> std::vector<std::string>
-{
-    ReadGuard<RWMutex> lock(m_containersMutex);
-    return m_containers;
-}
-
 auto Sandbox::GetSandboxConfig() const -> const runtime::v1::PodSandboxConfig &
 {
     return *m_sandboxConfig;
@@ -407,27 +401,6 @@ void Sandbox::AddLabels(const std::string &key, const std::string &value)
 void Sandbox::RemoveLabels(const std::string &key)
 {
     m_sandboxConfig->mutable_labels()->erase(key);
-}
-
-void Sandbox::AddContainer(const std::string &id)
-{
-    WriteGuard<RWMutex> lock(m_containersMutex);
-    m_containers.push_back(id);
-}
-
-void Sandbox::SetConatiners(const std::vector<std::string> &cons)
-{
-    WriteGuard<RWMutex> lock(m_containersMutex);
-    m_containers = cons;
-}
-
-void Sandbox::RemoveContainer(const std::string &id)
-{
-    WriteGuard<RWMutex> lock(m_containersMutex);
-    auto it = std::find(m_containers.begin(), m_containers.end(), id);
-    if (it != m_containers.end()) {
-        m_containers.erase(it);
-    }
 }
 
 void Sandbox::UpdateNetworkSettings(const std::string &settingsJson, Errors &error)
@@ -1009,8 +982,6 @@ auto Sandbox::LoadMetadata(Errors &error) -> bool
     m_networkReady = metadata->get()->network_ready;
     m_taskAddress = std::string(metadata->get()->task_address);
     m_netNsPath = std::string(metadata->get()->net_ns_path);
-    Transform::CharArrayToStringVector((const char **)metadata->get()->containers,
-                                       util_array_len((const char **)metadata->get()->containers), m_containers);
 
     ret = google::protobuf::util::JsonStringToMessage(metadata->get()->sandbox_config_json, &config).ok();
     if (!ret) {
@@ -1119,8 +1090,6 @@ void Sandbox::FillSandboxMetadata(sandbox_metadata* metadata, Errors &error)
     metadata->network_ready = m_networkReady;
     metadata->task_address = util_strdup_s(m_taskAddress.c_str());
     metadata->net_ns_path = util_strdup_s(m_netNsPath.c_str());
-
-    metadata->containers = Transform::StringVectorToCharArray(m_containers);
 
     google::protobuf::util::MessageToJsonString(*m_sandboxConfig.get(), &jsonStr);
     if (jsonStr.length() == 0) {

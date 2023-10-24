@@ -32,6 +32,7 @@
 #include "cgroup.h"
 #include "sandbox.h"
 #include "v1_cri_container_manager_service.h"
+#include "cstruct_wrapper.h"
 
 namespace CRIV1 {
 class PodSandboxManagerService {
@@ -89,9 +90,11 @@ private:
                              Errors &error);
     void ClearCniNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, Errors &error);
     void StopContainerHelper(const std::string &containerID, Errors &error);
-    auto StopAllContainersInSandbox(const std::vector<std::string> &containers, Errors &error) -> bool;
+    auto GetContainerListResponse(const std::string &readSandboxID,
+                                  std::vector<std::string> &errors) -> std::unique_ptr<CStructWrapper<container_list_response>>;
+    auto StopAllContainersInSandbox(const std::string &readSandboxID, Errors &error) -> int;
     auto GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool;
-    void RemoveAllContainersInSandbox(const std::vector<std::string> &containers, std::vector<std::string> &errors);
+    void RemoveAllContainersInSandbox(const std::string &readSandboxID, std::vector<std::string> &errors);
     void ClearNetworkReady(const std::string &podSandboxID);
     auto SharesHostNetwork(const container_inspect *inspect) -> runtime::v1::NamespaceMode;
     auto SharesHostPid(const container_inspect *inspect) -> runtime::v1::NamespaceMode;
