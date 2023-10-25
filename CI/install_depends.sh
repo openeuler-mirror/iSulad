@@ -105,17 +105,10 @@ check_make_status make_cni_dnsname ${build_log_cni_dnsname} &
 cd ~
 git clone https://gitee.com/src-openeuler/lxc.git
 cd lxc
-git checkout origin/openEuler-22.03-LTS-SP1
-tar xf lxc-4.0.3.tar.gz
-cd lxc-4.0.3
-mv ../*.patch .
-for var in $(ls 0*.patch | sort -n)
-do
-    patch -p1 < ${var}
-done
+./apply-patches
+cd lxc-5.0.2
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/lxc/start.c
-./autogen.sh
-./configure --prefix=${builddir} enable_werror=no
+meson setup -Disulad=true -Dtests=false -Dprefix=${builddir} build
 make -j $(nproc)
 make install
 ldconfig
