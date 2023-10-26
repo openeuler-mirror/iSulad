@@ -118,6 +118,13 @@ auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, s
 
     sandbox->SetController(controller);
 
+    // If failed after this in this function, CleanupSandboxDirs() should be called
+    sandbox->PrepareSandboxDirs(error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to prepare sandbox dirs: %s", error.GetCMessage());
+        goto out;
+    }
+
     SaveSandboxToStore(id, sandbox);
 
     return sandbox;
@@ -299,10 +306,8 @@ auto SandboxManager::DeleteSandbox(const std::string &idOrName, Errors &error) -
         return false;
     }
 
-    if (!sandbox->Remove(error)) {
-        ERROR("Failed to do delete sandbox %s", idOrName.c_str());
-        return false;
-    }
+    // TODO: Might fail here. Consider unified cleaning of residual resources in the future.
+    sandbox->CleanupSandboxDirs();
 
     auto id = sandbox->GetId();
     auto name = sandbox->GetName();

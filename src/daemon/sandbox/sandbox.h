@@ -120,6 +120,8 @@ public:
     auto FindAvailableVsockPort(uint32_t &port) -> bool;
     void ReleaseVsockPort(uint32_t port);
     auto CleanupSandboxFiles(Errors &error) -> bool;
+    void PrepareSandboxDirs(Errors &error);
+    void CleanupSandboxDirs();
 
     // Save to file
     auto Save(Errors &error) -> bool;
@@ -173,8 +175,6 @@ private:
     auto IsRemovalInProcess() -> bool;
     auto IsStopped() -> bool;
     auto isValidMetadata(std::unique_ptr<CStructWrapper<sandbox_metadata>> &metadata) -> bool;
-
-    void CleanupSandboxDirs();
 
 private:
     // Since the cri module will operate concurrently on the sandbox instance,

@@ -241,12 +241,6 @@ TEST_F(SandboxManagerTest, TestDeleteSandbox)
     ASSERT_FALSE(result);
     error.Clear();
 
-    EXPECT_CALL(*m_sandbox, Remove).Times(1).WillOnce(testing::Return(false));
-    result = SandboxManager::GetInstance()->DeleteSandbox(testId, error);
-    ASSERT_FALSE(result);
-    error.Clear();
-
-    EXPECT_CALL(*m_sandbox, Remove).Times(1).WillOnce(testing::Return(true));
     EXPECT_CALL(*m_sandbox, GetName).Times(1).WillOnce(testing::ReturnRef(testNmae));
     EXPECT_CALL(*m_sandbox, GetId).Times(1).WillOnce(testing::ReturnRef(testId));
     result = SandboxManager::GetInstance()->DeleteSandbox(testId, error);

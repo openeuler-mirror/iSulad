@@ -98,7 +98,7 @@ auto SandboxerClient::Create(const std::string &sandboxId, const ControllerCreat
         error.SetError("Failed to init create request for sandboxer create request, sandbox id: " + sandboxId);
         return false;
     }
-    
+
     status = m_stub->Create(&context, request, &response);
     if (!status.ok()) {
         error.SetError(status.error_message());

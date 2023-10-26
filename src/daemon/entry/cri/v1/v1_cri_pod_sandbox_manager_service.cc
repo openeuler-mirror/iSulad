@@ -357,9 +357,10 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
     }
 
     // Step 7: Setup networking for the sandbox.
+    // Setup sandbox network before create sandbox since the remote create might fail for sandbox
     SetupSandboxNetwork(sandbox, network_setting_json, error);
     if (error.NotEmpty()) {
-        return response_id;
+        goto cleanup_sandbox;
     }
 
     // Step 8: Call sandbox create.
@@ -369,13 +370,8 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
         goto cleanup_network;
     }
 
-    // Step 9: Call sandbox start.
-    sandbox->Start(error);
-    if (error.NotEmpty()) {
-        goto cleanup_network;
-    }
-
-    // Step 10: Save network settings json to disk
+    // Step 9: Save network settings json to disk
+    // Update network settings before start sandbox since sandbox container will use the sandbox key
     if (namespace_is_cni(networkMode.c_str())) {
         Errors tmpErr;
         sandbox->UpdateNetworkSettings(network_setting_json, tmpErr);
@@ -384,6 +380,15 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
             WARN("%s", tmpErr.GetCMessage());
         }
     }
+
+    // Step 10: Call sandbox start.
+    sandbox->Start(error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to start sandbox: %s", sandboxName.c_str());
+        // If start failed, sandbox should be NotReady, we cleanup network and delete sandbox in remove
+        return response_id;
+    }
+
     return sandbox->GetId();
 
 cleanup_network:
@@ -392,8 +397,16 @@ cleanup_network:
         ClearCniNetwork(sandbox, clearErr);
         if (clearErr.NotEmpty()) {
             ERROR("Failed to clean cni network: %s", clearErr.GetCMessage());
+            return response_id;
         }
     }
+
+cleanup_sandbox:
+    sandbox::SandboxManager::GetInstance()->DeleteSandbox(sandbox->GetId(), error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to delete sandbox: %s", sandbox->GetId().c_str());
+    }
+
     return response_id;
 }
 
@@ -594,6 +607,11 @@ void PodSandboxManagerService::RemovePodSandbox(const std::string &podSandboxID,
     RemoveAllContainersInSandbox(sandbox->GetContainers(), errors);
     if (errors.size() != 0) {
         error.SetAggregate(errors);
+        return;
+    }
+
+    if (!sandbox->Remove(error)) {
+        ERROR("Failed to remove sandbox %s: %s", podSandboxID.c_str(), error.GetCMessage());
         return;
     }
 

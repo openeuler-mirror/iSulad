@@ -36,6 +36,7 @@
 #include "transform.h"
 #include "cxxutils.h"
 #include "controller_manager.h"
+#include "utils_timestamp.h"
 
 #define SANDBOX_READY_STATE_STR "SANDBOX_READY"
 #define SANDBOX_NOTREADY_STATE_STR "SANDBOX_NOTREADY"
@@ -96,6 +97,9 @@ Sandbox::Sandbox(const std::string id, const std::string &rootdir, const std::st
     m_netMode = netMode;
     m_sandboxConfig = std::make_shared<runtime::v1::PodSandboxConfig>(sandboxConfig);
     m_statsInfo = {0, 0};
+    // CRI won't allow createdAt of zero, we initially set it to 1 and update it in start
+    const uint64_t defaultCreatedAt { 1 };
+    m_state.createdAt = defaultCreatedAt;
 }
 
 auto Sandbox::IsReady() -> bool
@@ -576,11 +580,10 @@ void Sandbox::CleanupSandboxDirs()
     }
 }
 
-auto Sandbox::Create(Errors &error) -> bool
+void Sandbox::PrepareSandboxDirs(Errors &error)
 {
     int nret = -1;
     mode_t mask = umask(S_IWOTH);
-    struct ControllerCreateParams params;
 #ifdef ENABLE_USERNS_REMAP
     __isula_auto_free char *userns_remap = conf_get_isulad_userns_remap();
 #endif
@@ -589,7 +592,7 @@ auto Sandbox::Create(Errors &error) -> bool
     if (nret != 0 && errno != EEXIST) {
         error.Errorf("Failed to create sandbox path %s", m_rootdir.c_str());
         SYSERROR("Failed to create sandbox path %s", m_rootdir.c_str());
-        return false;
+        return;
     }
 #ifdef ENABLE_USERNS_REMAP
     if (set_file_owner_for_userns_remap(m_rootdir.c_str(), userns_remap) != 0) {
@@ -612,9 +615,23 @@ auto Sandbox::Create(Errors &error) -> bool
     }
 
     if (!Save(error)) {
+        error.Errorf("Failed to save sandbox, %s", m_id.c_str());
         ERROR("Failed to save sandbox, %s", m_id.c_str());
         goto out;
     }
+
+    umask(mask);
+    return;
+
+out:
+    umask(mask);
+    CleanupSandboxDirs();
+    return;
+}
+
+auto Sandbox::Create(Errors &error) -> bool
+{
+    struct ControllerCreateParams params;
 
     // currently, params.mounts is unused.
     params.config = m_sandboxConfig;
@@ -622,15 +639,10 @@ auto Sandbox::Create(Errors &error) -> bool
 
     if (!m_controller->Create(m_id, params, error)) {
         ERROR("Failed to create sandbox by controller, %s", m_id.c_str());
-        goto out;
+        return false;
     }
-    umask(mask);
-    return true;
 
-out:
-    umask(mask);
-    CleanupSandboxDirs();
-    return false;
+    return true;
 }
 
 auto Sandbox::IsRemovalInProcess() -> bool
@@ -757,7 +769,6 @@ auto Sandbox::Remove(Errors &error) -> bool
         goto error_out;
     }
 
-    CleanupSandboxDirs();
     return true;
 error_out:
     m_state.status = before;

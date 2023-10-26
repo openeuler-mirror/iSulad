@@ -157,6 +157,8 @@ void Sandbox::AddContainer(const std::string &id) {}
 void Sandbox::SetConatiners(const std::vector<std::string> &cons) {}
 void Sandbox::RemoveContainer(const std::string &id) {}
 void Sandbox::UpdateNetworkSettings(const std::string &settingsJson, Errors &error) {}
+void Sandbox::PrepareSandboxDirs(Errors &error) {}
+void Sandbox::CleanupSandboxDirs() {}
 
 StatsInfo Sandbox::UpdateStatsInfo(const StatsInfo &info)
 {
