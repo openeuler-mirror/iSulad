@@ -88,6 +88,7 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			lvm2 \
 			tcpdump \
 			sysvinit-tools
+RUN pip3 install meson ninja
 
 RUN yum clean all && \
     (cd /lib/systemd/system/sysinit.target.wants/; for i in *; \

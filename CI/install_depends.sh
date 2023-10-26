@@ -107,10 +107,10 @@ git clone https://gitee.com/src-openeuler/lxc.git
 cd lxc
 ./apply-patches
 cd lxc-5.0.2
+mkdir -p build
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/lxc/start.c
-meson setup -Disulad=true -Dtests=false -Dprefix=${builddir} build
-make -j $(nproc)
-make install
+meson setup -Disulad=true -Dprefix=${builddir} build
+meson install -C build
 ldconfig
 
 # install lcr

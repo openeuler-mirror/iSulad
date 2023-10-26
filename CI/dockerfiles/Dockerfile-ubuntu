@@ -85,6 +85,7 @@ RUN apt update -y && apt upgrade -y && \
 			tcpdump
 
 RUN apt autoremove -y
+RUN pip3 install meson ninja
 
 RUN echo "export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> /etc/bashrc && \
     echo "export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH" >> /etc/bashrc && \

@@ -86,6 +86,7 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			CUnit-devel \
 			valgrind \
 			e2fsprogs
+RUN pip3 install meson ninja
 
 RUN yum clean all && \
     (cd /lib/systemd/system/sysinit.target.wants/; for i in *; \

@@ -94,6 +94,7 @@ RUN dnf update -y && dnf install -y automake \
 			iputils
 
 RUN dnf clean all
+RUN pip3 install meson ninja
 
 # disalbe sslverify
 RUN git config --global http.sslverify false
