@@ -117,6 +117,25 @@ static bool map_store_add(map_store *map_store, const char *item)
     return true;
 }
 
+static bool map_store_search(map_store *map_store, const char *item)
+{
+    __isula_auto_pm_unlock pthread_mutex_t *local_mutex = NULL;
+
+    if (map_store == NULL) {
+        ERROR("Invalid map_store");
+        return false;
+    }
+
+    if (pthread_mutex_lock(&map_store->lock)) {
+        ERROR("Failed to lock map_store");
+        return false;
+    }
+
+    local_mutex = &map_store->lock;
+
+    return map_search(map_store->map, (void *)item);
+}
+
 static bool map_store_remove(map_store *map_store, const char *item)
 {
     __isula_auto_pm_unlock pthread_mutex_t *local_mutex = NULL;
@@ -401,4 +420,14 @@ bool id_name_manager_rename(const char *new_name, const char *old_name)
     }
 
     return true;
+}
+
+bool id_name_manager_has_id_and_name(const char *id, const char *name)
+{
+    if (id == NULL || name == NULL) {
+        ERROR("Failed to check empty id or name");
+        return false;
+    }
+
+    return map_store_search(g_id_store, id) && map_store_search(g_name_store, name);
 }

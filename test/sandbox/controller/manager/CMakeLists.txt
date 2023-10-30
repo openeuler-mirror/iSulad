@@ -9,11 +9,11 @@ add_executable(${EXE}
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/gogo.pb.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cpputils/errors.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/sandboxer/sandboxer_controller.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/shim/shim_controller.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/controller_manager.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/grpc_sandboxer_client_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/controller_stub_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/isulad_config_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/shim_controller_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/sandbox/controller/controller_common.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/controller_manager_ut.cc)
 
@@ -21,8 +21,10 @@ target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/sandbox/controller
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/entry/cri
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/executor
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/sandboxer
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/sandboxer/client

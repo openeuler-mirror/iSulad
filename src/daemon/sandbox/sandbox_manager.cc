@@ -60,8 +60,8 @@ auto SandboxManager::Init(Errors &error) -> bool
     return true;
 }
 
-auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, std::string &netNsPath,
-                                   std::string &netMode, const runtime::v1::PodSandboxConfig &sandboxConfig, Errors &error) -> std::shared_ptr<Sandbox>
+auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, std::string &netNsPath, std::string &netMode,
+                                   const runtime::v1::PodSandboxConfig &sandboxConfig, const std::string &image, Errors &error) -> std::shared_ptr<Sandbox>
 {
     std::shared_ptr<Sandbox> sandbox;
     std::string id;
@@ -109,7 +109,7 @@ auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, s
     }
 
     sandbox = std::shared_ptr<Sandbox>(new Sandbox(id, m_rootdir, m_statedir, name, info, netMode, netNsPath,
-                                                   sandboxConfig));
+                                                   sandboxConfig, image));
     if (sandbox == nullptr) {
         ERROR("Failed to malloc for sandbox: %s", name.c_str());
         error.Errorf("Failed to malloc for sandbox: %s", name.c_str());

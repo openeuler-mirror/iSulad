@@ -20,12 +20,17 @@
 #include <map>
 #include <unistd.h>
 
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/utils_memory.h>
+
 #include "utils_network.h"
 #include "utils.h"
 #include "cxxutils.h"
-#include "isula_libutils/log.h"
 #include "sysctl_tools.h"
+#include "cri_helpers.h"
 #include "cri_runtime_service.h"
+#include "cstruct_wrapper.h"
 
 namespace Network {
 static void run_modprobe(void * /*args*/)
@@ -532,7 +537,45 @@ void NoopNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name,
                                  const std::map<std::string, std::string> &options, std::string &network_settings_json,
                                  Errors &error)
 {
-    return;
+    __isula_auto_free parser_error jerr { nullptr };
+    __isula_auto_free char *setting_json { nullptr };
+
+    // Even if cni plugin is not configured, noop network plugin will generate network_settings_json for executor to update
+    // Since in CRI_API_V1, sandbox key is generated in sandbox, excutor will not be able to get it if network_setting is no updated.
+    if (error.NotEmpty()) {
+        return;
+    }
+
+    auto iter = annotations.find(CRIHelpers::Constants::POD_SANDBOX_KEY);
+    if (iter == annotations.end()) {
+        ERROR("Failed to find sandbox key from annotations");
+        return;
+    }
+    const std::string netnsPath = iter->second;
+    if (netnsPath.length() == 0) {
+        ERROR("Failed to get network namespace path");
+        return;
+    }
+
+    container_network_settings *network_settings = static_cast<container_network_settings *>
+                                                        (util_common_calloc_s(sizeof(container_network_settings)));
+    if (network_settings == nullptr) {
+        ERROR("Out of memory");
+        error.SetError("Out of memory");
+        return;
+    }
+    auto settingsWarpper = std::unique_ptr<CStructWrapper<container_network_settings>>(new
+                                CStructWrapper<container_network_settings>(network_settings, free_container_network_settings));
+
+    network_settings->sandbox_key = util_strdup_s(netnsPath.c_str());
+
+    setting_json = container_network_settings_generate_json(network_settings, nullptr, &jerr);
+    if (setting_json == nullptr) {
+        error.Errorf("Get network settings json err:%s", jerr);
+        return;
+    }
+
+    network_settings_json = std::string(setting_json);
 }
 
 void NoopNetworkPlugin::TearDownPod(const std::string &ns, const std::string &name, const std::string &interfaceName,

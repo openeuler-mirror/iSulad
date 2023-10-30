@@ -123,6 +123,8 @@ private:
                                Errors &error);
     void GetFilterPodSandbox(const runtime::v1::PodSandboxStatsFilter *filter,
                              std::vector<std::string> &podSandboxIDs, Errors &error);
+    void ApplySandboxLinuxOptions(const runtime::v1::LinuxPodSandboxConfig &lc, host_config *hc,
+                                  container_config *custom_config, Errors &error);
 
 private:
     std::string m_podSandboxImage;

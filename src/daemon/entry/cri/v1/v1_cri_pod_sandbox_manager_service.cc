@@ -58,12 +58,6 @@ void PodSandboxManagerService::PrepareSandboxData(const runtime::v1::PodSandboxC
         error.Errorf("Failed to convert runtimehandler: %s to sandboxer", runtimeHandler.c_str());
         return;
     }
-    // TODO: Shim controller to be supported
-    if (runtimeInfo.sandboxer == DEFAULT_SANDBOXER_NAME) {
-        ERROR("Shim controller not supported yet");
-        error.Errorf("Shim controller not supported yet");
-        return;
-    }
 
     // Prepare network mode
     networkMode = CRI::Constants::namespaceModeCNI;
@@ -348,7 +342,7 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
 
     // Step 6: Create sandbox instance
     auto sandbox = sandbox::SandboxManager::GetInstance()->CreateSandbox(sandboxName, runtimeInfo, sandboxKey,
-                                                                         networkMode, copyConfig, error);
+                                                                         networkMode, copyConfig, image, error);
     if (error.NotEmpty()) {
         if (namespace_is_cni(networkMode.c_str())) {
             (void)remove_network_namespace_file(sandboxKey.c_str());

@@ -1233,6 +1233,15 @@ static void do_delete_network(container_t *cont)
         return;
     }
 
+#ifdef ENABLE_CRI_API_V1
+    // Under cri_api_v1, only that sandbox is not nil and is shim and network mode is cni
+    // Indicates this is a pause container under cni network mode from sandbox.
+    // Sandbox will maintain sandboxkey, so we will not delete sandboxkey here.
+    if (is_sandbox_container(cont->common_config->sandbox_info)) {
+        return;
+    }
+#endif
+
     if (remove_network_namespace(cont->network_settings->sandbox_key) != 0) {
         WARN("Failed to remove network ns when deleting container %s, maybe it has been cleaned up",
              cont->common_config->id);
@@ -1277,6 +1286,7 @@ static int do_delete_container(container_t *cont)
     const char *rootpath = NULL;
     container_t *cont_tmp = NULL;
     bool rm_anonymous_volumes = false;
+    bool skip_id_name_manage = false;
 
     container_lock(cont);
 
@@ -1286,6 +1296,9 @@ static int do_delete_container(container_t *cont)
     runtime = cont->runtime;
     rootpath = cont->root_path;
     rm_anonymous_volumes = cont->rm_anonymous_volumes || ((cont->hostconfig != NULL) && cont->hostconfig->auto_remove);
+#ifdef ENABLE_CRI_API_V1
+    skip_id_name_manage = is_sandbox_container(cont->common_config->sandbox_info);
+#endif
 
     /* check if container was deregistered by previous rm already */
     cont_tmp = containers_store_get(id);
@@ -1357,7 +1370,7 @@ static int do_delete_container(container_t *cont)
         ret = -1;
     }
 
-    if (!id_name_manager_remove_entry(id, name)) {
+    if (!skip_id_name_manage && !id_name_manager_remove_entry(id, name)) {
         ERROR("Failed to remove %s and %s from id name manager", id, name);
         ret = -1;
     }

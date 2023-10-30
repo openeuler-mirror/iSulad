@@ -77,7 +77,8 @@ class Sandbox : public SandboxStatusCallback, public std::enable_shared_from_thi
 public:
     Sandbox(const std::string id, const std::string &rootdir, const std::string &statedir, const std::string name = "",
             const RuntimeInfo info = {"", "", ""}, std::string netMode = DEFAULT_NETMODE, std::string netNsPath = "",
-            const runtime::v1::PodSandboxConfig sandboxConfig = runtime::v1::PodSandboxConfig::default_instance());
+            const runtime::v1::PodSandboxConfig sandboxConfig = runtime::v1::PodSandboxConfig::default_instance(),
+            const std::string image = "");
     virtual ~Sandbox() = default;
 
     auto IsReady() -> bool;
@@ -104,6 +105,7 @@ public:
     auto GetPid() -> uint32_t;
     auto GetTaskAddress() const -> const std::string &;
     auto GetContainers() -> std::vector<std::string>;
+    auto GetImage() -> const std::string &;
     void SetNetMode(const std::string &mode);
     void SetController(std::shared_ptr<Controller> controller);
     void AddAnnotations(const std::string &key, const std::string &value);
@@ -176,6 +178,8 @@ private:
     auto IsStopped() -> bool;
     auto isValidMetadata(std::unique_ptr<CStructWrapper<sandbox_metadata>> &metadata) -> bool;
 
+    void updateSelinuxLabels(std::string &selinuxLabels);
+
 private:
     // Since the cri module will operate concurrently on the sandbox instance,
     // use m_mutex to ensure the correctness of the sandbox instance
@@ -198,6 +202,7 @@ private:
     std::string m_networkMode;
     bool m_networkReady;
     std::string m_networkSettings;
+    std::string m_image;
     // container id lists
     std::vector<std::string> m_containers;
     RWMutex m_containersMutex;

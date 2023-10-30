@@ -23,7 +23,6 @@
 #include <isula_libutils/log.h>
 #include <isula_libutils/parse_common.h>
 
-#include "v1_cri_runtime_service.h"
 #include "v1_cri_security_context.h"
 #include "cri_helpers.h"
 #include "cri_constants.h"
@@ -525,6 +524,38 @@ std::string CRISandboxerConvert(const std::string &runtime)
 out:
     (void)isulad_server_conf_unlock();
     return sandboxer;
+}
+
+void ApplySandboxSecurityContextToHostConfig(const runtime::v1::LinuxSandboxSecurityContext &context, host_config *hc, Errors &error)
+{
+    if (hc == nullptr) {
+        ERROR("Invalid input arguments: empty hostconfig");
+        error.Errorf("Invalid input arguments: empty hostconfig");
+        return;
+    }
+
+    const char securityOptSep = '=';
+
+    commonSecurityContext commonContext = {
+        .hasSeccomp = context.has_seccomp(),
+        .hasSELinuxOption = context.has_selinux_options(),
+        .seccomp = context.seccomp(),
+        .selinuxOption = context.selinux_options(),
+        .seccompProfile = context.seccomp_profile_path(),
+    };
+
+    std::vector<std::string> securityOpts = GetSecurityOpts(commonContext, securityOptSep, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to generate security options: %s", error.GetMessage().c_str());
+        error.Errorf("Failed to generate security options: %s", error.GetMessage().c_str());
+        return;
+    }
+    AddSecurityOptsToHostConfig(securityOpts, hc, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to add securityOpts to hostconfig: %s", error.GetMessage().c_str());
+        error.Errorf("Failed to add securityOpts to hostconfig: %s", error.GetMessage().c_str());
+        return;
+    }
 }
 
 } // v1 namespace CRIHelpers

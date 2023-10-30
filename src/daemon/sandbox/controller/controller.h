@@ -39,6 +39,16 @@ struct ControllerCreateParams {
     std::shared_ptr<runtime::v1::PodSandboxConfig> config;
     std::vector<std::unique_ptr<ControllerMountInfo>> mounts;
     std::string netNSPath;
+    std::string netMode;
+    std::string sandboxName;
+    std::string image;
+    std::string sandboxer;
+    std::string runtime;
+    std::string hostname;
+    std::string hostnamePath;
+    std::string hostsPath;
+    std::string resolvConfPath;
+    std::string shmPath;
 };
 
 struct ControllerPlatformInfo {

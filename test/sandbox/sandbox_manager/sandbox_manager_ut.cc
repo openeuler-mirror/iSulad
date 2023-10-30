@@ -131,6 +131,7 @@ TEST_F(SandboxManagerTest, TestCreateSandbox)
     std::string netMode = "cni";
     std::string testId = "123456";
     std::string emptyStr;
+    std::string image = "testImage";
     RuntimeInfo info = {"runc", "shim", "kuasar"};
     auto sandboxConfig = runtime::v1::PodSandboxConfig::default_instance();
 
@@ -162,24 +163,24 @@ TEST_F(SandboxManagerTest, TestCreateSandbox)
     EXPECT_CALL(*isuladConfMock, ConfGetSandboxStatePath()).Times(1).WillOnce(testing::Return(const_cast<char*>(statedir)));
     EXPECT_TRUE(SandboxManager::GetInstance()->Init(error));
 
-    auto result = SandboxManager::GetInstance()->CreateSandbox(name, info, emptyStr, netMode, sandboxConfig, error);
+    auto result = SandboxManager::GetInstance()->CreateSandbox(name, info, emptyStr, netMode, sandboxConfig, image, error);
     ASSERT_EQ(result, nullptr);
     error.Clear();
 
-    result = SandboxManager::GetInstance()->CreateSandbox(name, info, netNspath, emptyStr, sandboxConfig, error);
+    result = SandboxManager::GetInstance()->CreateSandbox(name, info, netNspath, emptyStr, sandboxConfig, image, error);
     ASSERT_EQ(result, nullptr);
     error.Clear();
 
     // testcase for sandbox create success
     // create sandbox(id: randomly generated; name: "test2")
     EXPECT_CALL(*m_sandbox, GetName).Times(1).WillOnce(testing::ReturnRef(name));
-    result = SandboxManager::GetInstance()->CreateSandbox(name, info, netNspath, netMode, sandboxConfig, error);
+    result = SandboxManager::GetInstance()->CreateSandbox(name, info, netNspath, netMode, sandboxConfig, image, error);
     ASSERT_NE(result, nullptr);
     ASSERT_NE(SandboxManager::GetInstance()->GetSandbox(name), nullptr);
 
     // testcase for sandbox create repeat
     EXPECT_CALL(*m_sandbox, GetId).Times(2).WillRepeatedly(testing::ReturnRef(testId));
-    result = SandboxManager::GetInstance()->CreateSandbox(name, info, netNspath, netMode, sandboxConfig, error);
+    result = SandboxManager::GetInstance()->CreateSandbox(name, info, netNspath, netMode, sandboxConfig, image, error);
     ASSERT_EQ(result, nullptr);
 }
 

@@ -758,6 +758,13 @@ cleanup:
 auto ContainerManagerService::PackContainerStatsFilter(const runtime::v1alpha2::ContainerStatsFilter *filter,
                                                        container_stats_request *request, Errors &error) -> int
 {
+    // Labels that identify a container that is not a pod must be added
+    if (CRIHelpers::FiltersAddLabel(request->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
+                                    CRIHelpers::Constants::CONTAINER_TYPE_LABEL_CONTAINER) != 0) {
+        error.SetError("Failed to add filter");
+        return -1;
+    }
+
     if (filter == nullptr) {
         return 0;
     }
@@ -776,12 +783,6 @@ auto ContainerManagerService::PackContainerStatsFilter(const runtime::v1alpha2::
         }
     }
 
-    // Add some label
-    if (CRIHelpers::FiltersAddLabel(request->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
-                                    CRIHelpers::Constants::CONTAINER_TYPE_LABEL_CONTAINER) != 0) {
-        error.SetError("Failed to add filter");
-        return -1;
-    }
     for (auto &iter : filter->label_selector()) {
         if (CRIHelpers::FiltersAddLabel(request->filters, iter.first, iter.second) != 0) {
             error.SetError("Failed to add filter");
@@ -907,6 +908,7 @@ void ContainerManagerService::ContainerStatsToGRPC(
         }
 
         // Memory
+        container->mutable_memory()->set_timestamp(timestamp);
         if (response->container_stats[i]->mem_used != 0u) {
             container->mutable_memory()->mutable_usage_bytes()->set_value(response->container_stats[i]->mem_used);
         }

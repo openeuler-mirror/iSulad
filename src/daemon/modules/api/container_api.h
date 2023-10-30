@@ -283,6 +283,12 @@ bool container_is_in_gc_progress(const char *id);
 
 int container_module_init();
 
+#ifdef ENABLE_CRI_API_V1
+static inline bool is_sandbox_container(container_sandbox_info *sandbox) {
+    return sandbox != NULL && sandbox->is_sandbox_container;
+}
+#endif
+
 #if defined(__cplusplus) || defined(c_plusplus)
 }
 #endif

@@ -6,3 +6,4 @@ list(APPEND grpc_sandbox_type_srcs ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri
 list(APPEND grpc_sandbox_type_srcs ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/gogo.pb.cc)
 add_subdirectory(sandboxer)
 add_subdirectory(manager)
+add_subdirectory(shim)

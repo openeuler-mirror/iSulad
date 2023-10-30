@@ -80,7 +80,8 @@ static int WriteDefaultSandboxResolve(const std::string &path)
 }
 
 Sandbox::Sandbox(const std::string id, const std::string &rootdir, const std::string &statedir, const std::string name,
-                 const RuntimeInfo info, std::string netMode, std::string netNsPath, const runtime::v1::PodSandboxConfig sandboxConfig)
+                 const RuntimeInfo info, std::string netMode, std::string netNsPath, const runtime::v1::PodSandboxConfig sandboxConfig,
+                 const std::string image)
 {
     m_id = id;
     m_name = name;
@@ -100,6 +101,7 @@ Sandbox::Sandbox(const std::string id, const std::string &rootdir, const std::st
     // CRI won't allow createdAt of zero, we initially set it to 1 and update it in start
     const uint64_t defaultCreatedAt { 1 };
     m_state.createdAt = defaultCreatedAt;
+    m_image = image;
 }
 
 auto Sandbox::IsReady() -> bool
@@ -209,6 +211,11 @@ auto Sandbox::GetPid() -> uint32_t
 {
     ReadGuard<RWMutex> lock(m_stateMutex);
     return m_state.pid;
+}
+
+auto Sandbox::GetImage() -> const std::string &
+{
+    return m_image;
 }
 
 void Sandbox::DoUpdateExitedStatus(const ControllerExitInfo &exitInfo)
@@ -636,6 +643,16 @@ auto Sandbox::Create(Errors &error) -> bool
     // currently, params.mounts is unused.
     params.config = m_sandboxConfig;
     params.netNSPath = m_netNsPath;
+    params.sandboxName = m_name;
+    params.image = m_image;
+    params.netMode = m_netMode;
+    params.runtime = GetRuntime();
+    params.sandboxer = GetSandboxer();
+    params.hostname = m_sandboxConfig->hostname();
+    params.hostnamePath = GetHostnamePath();
+    params.hostsPath = GetHostsPath();
+    params.resolvConfPath = GetResolvPath();
+    params.shmPath = GetShmPath();
 
     if (!m_controller->Create(m_id, params, error)) {
         ERROR("Failed to create sandbox by controller, %s", m_id.c_str());
@@ -673,12 +690,15 @@ auto Sandbox::Start(Errors &error) -> bool
         return false;
     }
 
-    std::vector<std::string> seLabels = CXXUtils::Split(info->labels[std::string("selinux_label")], ':');
-    if (seLabels.size() == 4) {
+    // selinux_label has the format of user:role:type[:level], level might be omitted? has the format of s0:c1,c2
+    std::vector<std::string> seLabels = CXXUtils::SplitN(info->labels[std::string("selinux_label")], ':', 4);
+    if (seLabels.size() >= 3) {
         m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_selinux_options()->set_user(seLabels[0]);
         m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_selinux_options()->set_role(seLabels[1]);
         m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_selinux_options()->set_type(seLabels[2]);
-        m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_selinux_options()->set_level(seLabels[3]);
+        if (seLabels.size() == 4) {
+            m_sandboxConfig->mutable_linux()->mutable_security_context()->mutable_selinux_options()->set_level(seLabels[3]);
+        }
     }
 
     m_state.pid = info->pid;

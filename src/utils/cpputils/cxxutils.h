@@ -22,6 +22,7 @@
 
 namespace CXXUtils {
 std::vector<std::string> Split(const std::string &str, char delimiter);
+std::vector<std::string> SplitN(const std::string &str, char delimiter, size_t n);
 std::vector<std::string> SplitDropEmpty(const std::string &str, char delimiter);
 std::string StringsJoin(const std::vector<std::string> &vec, const std::string &sep);
 std::string StringTrim(const std::string &str);

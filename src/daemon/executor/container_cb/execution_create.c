@@ -67,9 +67,8 @@
 static bool validate_sandbox_info(const container_sandbox_info *sandbox)
 {
     bool valid = (sandbox->sandboxer != NULL && sandbox->id != NULL &&
-                  sandbox->task_address != NULL && sandbox->hostname != NULL &&
-                  sandbox->hostname_path != NULL && sandbox->hosts_path != NULL &&
-                  sandbox->resolv_conf_path != NULL);
+                  sandbox->hostname != NULL && sandbox->hostname_path != NULL &&
+                  sandbox->hosts_path != NULL && sandbox->resolv_conf_path != NULL);
     return valid;
 }
 #endif
@@ -678,7 +677,8 @@ static int register_new_container(const char *id, const char *image_id, const ch
     }
 
 #ifdef ENABLE_NETWORK
-    if (container_fill_network_settings(cont, network_settings) != 0) {
+    // Allow network settings to be NULL for a temporary period, update it later
+    if (network_settings != NULL && container_fill_network_settings(cont, network_settings) != 0) {
         ERROR("Failed to fill network settings");
         goto out;
     }
@@ -723,16 +723,29 @@ static int maintain_container_id(const container_create_request *request, char *
     char *id = NULL;
     char *name = NULL;
     bool nret = false;
+    bool skip_id_name_manage = false;
 
     if (request->id != NULL) {
         name = util_strdup_s(request->id);
     }
 
-    if (name == NULL) {
-        nret = id_name_manager_add_entry_with_new_id_and_name(&id, &name);
+#ifdef ENABLE_CRI_API_V1
+    // Under CRI API V1, that sandbox not nil and for pause indicates a pause pod
+    // We maintain id and name manager in sandbox from upper level
+    skip_id_name_manage = is_sandbox_container(request->sandbox);
+    if (skip_id_name_manage) {
+        id = util_strdup_s(request->sandbox->id);
+        nret = id_name_manager_has_id_and_name(id, name);
     } else {
-        nret = id_name_manager_add_entry_with_new_id(name, &id);
+#endif
+        if (name == NULL) {
+            nret = id_name_manager_add_entry_with_new_id_and_name(&id, &name);
+        } else {
+            nret = id_name_manager_add_entry_with_new_id(name, &id);
+        }
+#ifdef ENABLE_CRI_API_V1
     }
+#endif
 
     if (!nret) {
         ERROR("Failed to add entry to id name manager with new id and name");
@@ -758,7 +771,7 @@ static int maintain_container_id(const container_create_request *request, char *
     free(used_id);
     used_id = NULL;
     ret = -1;
-    if (!id_name_manager_remove_entry(id, name)) {
+    if (!skip_id_name_manage && !id_name_manager_remove_entry(id, name)) {
         WARN("Failed to remove %s and %s from id name manager", id, name);
     }
 
@@ -1378,6 +1391,8 @@ int container_create_cb(const container_create_request *request, container_creat
     host_config_host_channel *host_channel = NULL;
     container_network_settings *network_settings = NULL;
     int ret = 0;
+    bool skip_id_name_manage = false;
+    bool skip_sandbox_key_manage = false;
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -1421,6 +1436,13 @@ int container_create_cb(const container_create_request *request, container_creat
         cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;
     }
+
+    // Under cri_api_v1, that sandbox is not nil and is_pause indicates that
+    // this is a pause container itself, sandbox will manage id and name, so we skip here.
+    // For pause container under cni network mode, networksettings will also be
+    // maintained by sandbox, so we skip here and allow networksettings to be nil for a temporary period.
+    skip_id_name_manage = is_sandbox_container(request->sandbox);
+    skip_sandbox_key_manage = (is_sandbox_container(request->sandbox) && namespace_is_cni(host_spec->network_mode));
 #endif
 
     if (save_container_config_before_create(id, runtime_root, host_spec, v2_spec) != 0) {
@@ -1479,11 +1501,13 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_shm;
     }
 
-    network_settings = generate_network_settings(host_spec);
-    if (network_settings == NULL) {
-        ERROR("Failed to generate network settings");
-        cc = ISULAD_ERR_EXEC;
-        goto umount_shm;
+    if (!skip_sandbox_key_manage) {
+        network_settings = generate_network_settings(host_spec);
+        if (network_settings == NULL) {
+            ERROR("Failed to generate network settings");
+            cc = ISULAD_ERR_EXEC;
+            goto umount_shm;
+        }
     }
 
     if (merge_config_for_syscontainer(request, host_spec, v2_spec->config, oci_spec) != 0) {
@@ -1572,7 +1596,9 @@ clean_container_root_dir:
 
 clean_nameindex:
     container_name_index_remove(name);
-    id_name_manager_remove_entry(id, name);
+    if (!skip_id_name_manage) {
+        id_name_manager_remove_entry(id, name);
+    }
 
 pack_response:
     pack_create_response(*response, id, cc);
