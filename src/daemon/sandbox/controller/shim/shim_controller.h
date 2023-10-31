@@ -83,8 +83,6 @@ private:
                                         ControllerSandboxStatus &sandboxStatus,
                                         Errors &error);
 
-    auto InspectContainer(const std::string &Id, Errors &err, bool with_host_config) -> container_inspect *;
-
     void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
                                 int64_t *finishedAt, Errors &err);
 

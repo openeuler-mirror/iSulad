@@ -498,18 +498,6 @@ void ShimController::InspectResponseToSandboxStatus(container_inspect *inspect,
     }
 }
 
-auto ShimController::InspectContainer(const std::string &Id, Errors &err, bool with_host_config) -> container_inspect *
-{
-    container_inspect *inspect_data { nullptr };
-    inspect_data = inspect_container((const char *)Id.c_str(), INSPECT_TIMEOUT_SEC, with_host_config);
-    if (inspect_data == nullptr) {
-        ERROR("Failed to call inspect service %s", Id.c_str());
-        err.Errorf("Failed to call inspect service %s", Id.c_str());
-    }
-
-    return inspect_data;
-}
-
 std::unique_ptr<ControllerSandboxStatus> ShimController::Status(const std::string &sandboxId, bool verbose,
                                                                 Errors &error)
 {
@@ -521,7 +509,7 @@ std::unique_ptr<ControllerSandboxStatus> ShimController::Status(const std::strin
         return nullptr;
     }
 
-    auto inspect = InspectContainer(sandboxId, error, true);
+    auto inspect = CRIHelpers::InspectContainer(sandboxId, error, true);
     if (error.NotEmpty()) {
         ERROR("Inspect pod failed: %s", error.GetCMessage());
         return nullptr;

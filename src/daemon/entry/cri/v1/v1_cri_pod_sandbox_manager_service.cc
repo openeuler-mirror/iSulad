@@ -775,19 +775,13 @@ void PodSandboxManagerService::ListPodSandbox(const runtime::v1::PodSandboxFilte
     }
 }
 
-void PodSandboxManagerService::GetPodSandboxCgroupMetrics(const container_inspect *inspectData,
+void PodSandboxManagerService::GetPodSandboxCgroupMetrics(const std::string &cgroupParent,
                                                           cgroup_metrics_t &cgroupMetrics, Errors &error)
 {
     int nret { 0 };
 
-    if (inspectData == nullptr || inspectData->host_config == nullptr) {
-        error.SetError("Failed to retrieve inspect data");
-        return;
-    }
-
-    auto cgroupParent = inspectData->host_config->cgroup_parent;
-    if (cgroupParent == nullptr || strlen(cgroupParent) == 0) {
-        error.Errorf("None cgroup parent");
+    if (cgroupParent.empty()) {
+        error.SetError("Invalid cgroup parent");
         return;
     }
 
@@ -798,7 +792,7 @@ void PodSandboxManagerService::GetPodSandboxCgroupMetrics(const container_inspec
     }
 
     if (cgroupVersion == CGROUP_VERSION_1) {
-        nret = common_get_cgroup_v1_metrics(cgroupParent, &cgroupMetrics);
+        nret = common_get_cgroup_v1_metrics(cgroupParent.c_str(), &cgroupMetrics);
     } else {
         // todo: get cgroup v2 metrics
     }
@@ -824,7 +818,7 @@ auto PodSandboxManagerService::GetNsenterPath(Errors &error) -> std::string
     return path;
 }
 
-void PodSandboxManagerService::GetPodSandboxNetworkMetrics(const container_inspect *inspectData,
+void PodSandboxManagerService::GetPodSandboxNetworkMetrics(const std::string &netnsPath,
                                                            std::map<std::string, std::string> &annotations,
                                                            std::vector<Network::NetworkInterfaceStats> &netMetrics,
                                                            Errors &error)
@@ -834,12 +828,6 @@ void PodSandboxManagerService::GetPodSandboxNetworkMetrics(const container_inspe
     auto nsenterPath = GetNsenterPath(tmpErr);
     if (tmpErr.NotEmpty()) {
         error.Errorf("Failed to get nsenter: %s", tmpErr.GetCMessage());
-        return;
-    }
-
-    std::string netnsPath = GetSandboxKey(inspectData);
-    if (netnsPath.size() == 0) {
-        error.SetError("Failed to get network namespace path");
         return;
     }
 
@@ -1027,62 +1015,47 @@ auto PodSandboxManagerService::PodSandboxStats(const std::string &podSandboxID,
                                                Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStats>
 {
     Errors tmpErr;
-    container_inspect *inspectData { nullptr };
     cgroup_metrics_t cgroupMetrics { 0 };
     std::vector<Network::NetworkInterfaceStats> netMetrics;
     std::map<std::string, std::string> annotations;
     std::unique_ptr<runtime::v1::PodSandboxStats> podStats { nullptr };
 
-    // get sandbox id
-    if (podSandboxID.empty()) {
-        ERROR("Empty pod sandbox id");
-        error.SetError("Empty pod sandbox id");
-        return nullptr;
-    }
-    std::string realSandboxID = CRIHelpers::GetRealContainerOrSandboxID(m_cb, podSandboxID, true, tmpErr);
-    if (tmpErr.NotEmpty()) {
-        ERROR("Failed to find sandbox id %s: %s", podSandboxID.c_str(), tmpErr.GetCMessage());
+    auto sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID);
+    if (sandbox == nullptr) {
+        ERROR("Failed to find sandbox id %s", podSandboxID.c_str());
         error.Errorf("Failed to find sandbox id %s", podSandboxID.c_str());
         return nullptr;
     }
+    auto &config = sandbox->GetSandboxConfig();
 
-    inspectData = CRIHelpers::InspectContainer(realSandboxID, tmpErr, true);
-    if (tmpErr.NotEmpty()) {
-        ERROR("Failed to inspect container %s: %s", realSandboxID.c_str(), tmpErr.GetCMessage());
-        error.Errorf("Failed to inspect container %s", realSandboxID.c_str());
+    auto status = PodSandboxStatus(sandbox->GetId(), tmpErr);
+    if (error.NotEmpty()) {
+        ERROR("Failed to get podsandbox %s status: %s", sandbox->GetId().c_str(), tmpErr.GetCMessage());
+        error.Errorf("Failed to get podsandbox %s status", sandbox->GetId().c_str());
         return nullptr;
-    }
-
-    auto status = PodSandboxStatus(realSandboxID, tmpErr);
-    if (tmpErr.NotEmpty()) {
-        ERROR("Failed to get podsandbox %s status: %s", realSandboxID.c_str(), tmpErr.GetCMessage());
-        error.Errorf("Failed to get podsandbox %s status", realSandboxID.c_str());
-        goto out;
     }
     CRIHelpers::ProtobufAnnoMapToStd(status->annotations(), annotations);
 
-    GetPodSandboxCgroupMetrics(inspectData, cgroupMetrics, tmpErr);
+    GetPodSandboxCgroupMetrics(config.linux().cgroup_parent(), cgroupMetrics, tmpErr);
     if (tmpErr.NotEmpty()) {
         ERROR("Failed to get cgroup metrics of sandbox id %s: %s", podSandboxID.c_str(), tmpErr.GetCMessage());
         error.Errorf("Failed to get cgroup metrics of sandbox id %s", podSandboxID.c_str());
-        goto out;
+        return nullptr;
     }
 
-    GetPodSandboxNetworkMetrics(inspectData, annotations, netMetrics, tmpErr);
+    GetPodSandboxNetworkMetrics(sandbox->GetNetNsPath(), annotations, netMetrics, tmpErr);
     if (tmpErr.NotEmpty()) {
         WARN("Failed to get network metrics of sandbox id %s: %s", podSandboxID.c_str(), tmpErr.GetCMessage());
         tmpErr.Clear();
     }
 
-    PodSandboxStatsToGRPC(realSandboxID, cgroupMetrics, netMetrics, containerManager, podStats, tmpErr);
+    PodSandboxStatsToGRPC(sandbox->GetId(), cgroupMetrics, netMetrics, containerManager, podStats, tmpErr);
     if (tmpErr.NotEmpty()) {
         ERROR("Failed to set PodSandboxStats: %s", tmpErr.GetCMessage());
         error.Errorf("Failed to set PodSandboxStats");
-        goto out;
+        return nullptr;
     }
 
-out:
-    free_container_inspect(inspectData);
     return podStats;
 }
 

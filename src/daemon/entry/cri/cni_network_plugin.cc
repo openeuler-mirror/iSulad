@@ -526,33 +526,6 @@ err_out:
     free_network_api_conf(config);
 }
 
-auto CniNetworkPlugin::GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string
-{
-    int ret = 0;
-    char fullpath[PATH_MAX] { 0 };
-    std::string result;
-    const std::string NetNSFmt { "/proc/%d/ns/net" };
-
-    container_inspect *inspect_data = CRIHelpers::InspectContainer(podSandboxID, err, false);
-    if (inspect_data == nullptr) {
-        return result;
-    }
-    if (inspect_data->state->pid == 0) {
-        err.Errorf("cannot find network namespace for the terminated container %s", podSandboxID.c_str());
-        goto cleanup;
-    }
-    ret = snprintf(fullpath, sizeof(fullpath), NetNSFmt.c_str(), inspect_data->state->pid);
-    if ((size_t)ret >= sizeof(fullpath) || ret < 0) {
-        err.SetError("Sprint nspath failed");
-        goto cleanup;
-    }
-    result = fullpath;
-
-cleanup:
-    free_container_inspect(inspect_data);
-    return result;
-}
-
 auto CniNetworkPlugin::GetNetworkSettingsJson(const std::string &podSandboxID, const std::string &netnsPath,
                                               network_api_result_list *result, Errors &err) -> std::string
 {

@@ -65,7 +65,6 @@ public:
     void Status(Errors &error) override;
 
 private:
-    auto GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string;
     auto GetNetworkSettingsJson(const std::string &podSandboxID, const std::string &netnsPath,
                                 network_api_result_list *result, Errors &err) -> std::string;
 

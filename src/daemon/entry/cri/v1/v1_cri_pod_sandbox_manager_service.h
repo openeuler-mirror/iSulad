@@ -103,10 +103,10 @@ private:
     -> container_update_network_settings_request *;
     auto GetNsenterPath(Errors &error) -> std::string;
     auto GetAvailableBytes(const uint64_t &memoryLimit, const uint64_t &workingSetBytes) -> uint64_t;
-    void GetPodSandboxCgroupMetrics(const container_inspect *inspectData, cgroup_metrics_t &cgroupMetrics,
+    void GetPodSandboxCgroupMetrics(const std::string &cgroupParent, cgroup_metrics_t &cgroupMetrics,
                                     Errors &error);
     auto GetSandboxKey(const container_inspect *inspect_data) -> std::string;
-    void GetPodSandboxNetworkMetrics(const container_inspect *inspectData,
+    void GetPodSandboxNetworkMetrics(const std::string &netnsPath,
                                      std::map<std::string, std::string> &annotations,
                                      std::vector<Network::NetworkInterfaceStats> &netMetrics, Errors &error);
     void PackagePodSandboxStatsAttributes(const std::string &id,
