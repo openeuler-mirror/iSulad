@@ -32,8 +32,8 @@ mkdir -p $restbuilddir/include
 mkdir -p $restbuilddir/lib
 mkdir -p $restbuilddir/systemd
 
-export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${builddir}/lib/pkgconfig:$PKG_CONFIG_PATH
-export LD_LIBRARY_PATH=/usr/local/lib:${builddir}/lib:$LD_LIBRARY_PATH
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${builddir}/lib64/pkgconfig:${builddir}/lib/pkgconfig:$PKG_CONFIG_PATH
+export LD_LIBRARY_PATH=/usr/local/lib:${builddir}/lib64:${builddir}/lib:$LD_LIBRARY_PATH
 export C_INCLUDE_PATH=/usr/local/include:${builddir}/include:$C_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=/usr/local/include:${builddir}/include:$CPLUS_INCLUDE_PATH
 export PATH=${builddir}/bin:$PATH

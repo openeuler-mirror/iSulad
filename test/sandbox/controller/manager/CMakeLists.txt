@@ -39,7 +39,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/sandbox
 )
 
-target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lgrpc -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
 if(ABSL_SYNC_LIB)
     target_link_libraries(${EXE} -Wl,--no-as-needed ${ABSL_SYNC_LIB})
 endif()
