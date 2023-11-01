@@ -14,6 +14,10 @@
 
 - 查看 restore 模块的设计文档： [restore_design](./detailed/Container/restore_design_zh.md) 。
 
+- 查看 健康检查 模块的设计文档： [health_check_design](./detailed/Container/health_check_design.md)。
+
+- 查看 restart 模块的设计文档： [restart_manager_design](./detailed/Container/restart_manager_design.md)。
+
 ## CRI
 
 - 查看 CRI的启动程序的重构文档： [cri_cni_refactor](./detailed/CRI/cri_cni_refactor_zh.md) 。
@@ -58,3 +62,9 @@
 ## Volume
 
 - 查看 local volume 模块的设计文档： [local_volume_design](./detailed/Volume/local_volume_design_zh.md).
+
+## CRI V1 Sandbox
+
+- 查看 Sandbox 模块的设计文档： [sandbox_design_zh](./detailed/Sandbox/sandbox_design_zh.md) 。
+- 查看 Controller 模块的设计文档： [controller_design_zh](./detailed/Sandbox/controller_design_zh.md) 。
+- 查看 CRI V1 模块的设计文档： [podsandbox_cri_interface_design](./detailed/Sandbox/podsandbox_cri_interface_design.md) 。
