@@ -998,7 +998,7 @@ static defs_hook *hooks_elem_dup(const defs_hook *src)
     dest = (defs_hook *)util_common_calloc_s(sizeof(defs_hook));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return NULL;        
+        return NULL;
     }
 
     dest->path = util_strdup_s(src->path);
@@ -1046,7 +1046,7 @@ static int hooks_array_dup(const defs_hook **src, const size_t src_len, defs_hoo
         return -1;
     }
 
-    for(i = 0; i < src_len; i++) {
+    for (i = 0; i < src_len; i++) {
         tmp_dst[i] = hooks_elem_dup(src[i]);
         if (tmp_dst[i] == NULL) {
             ERROR("Failed to duplicate hooks element");
@@ -1060,7 +1060,7 @@ static int hooks_array_dup(const defs_hook **src, const size_t src_len, defs_hoo
     return 0;
 
 err_out:
-    for(i = 0; i < tmp_len; i++) {
+    for (i = 0; i < tmp_len; i++) {
         free_defs_hook(tmp_dst[i]);
     }
     free(tmp_dst);
