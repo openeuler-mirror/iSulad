@@ -10,8 +10,6 @@ Controller根据类型可以分为两类，Sandboxer Controller 和Shim Controll
 
 Controller模块提供两种接口，一种是Create, Start等生命周期管理的同步接口，该类接口调用即返回结果。另一类是用于沙箱生命周期监控的异步接口，主要就是Wait接口。Sandbox对Wait的调用将开始对该沙箱的生命周期监控，如遇沙箱状态变化，Controller将通过Callback的形式异步通知Sandbox模块。
 
-在CRI V1版本中，当前版本暂不支持Shim Controller。
-
 以下为Controller模块整体类图:
 
 ![controller_class](../../../images/controller_class.svg)
@@ -130,3 +128,13 @@ MonitorThread主要负责分发m_deferredCalls队列中的Calls，同时清理�
 以下活动图展示了线程与队列之间的关系。
 
 ![ControllerMonitorThread](../../../images/controller_sandboxer_monitor_activity.svg)
+
+## 4.2 Shim Controller详细设计
+
+### 4.2.1 同步Controller API调用
+
+与Sandboxer Controller类似，Shim Controller的API中，只有Wait是通过异步的方式调用的，其余的接口包括Create, Start, Platform, Prepare, Purge, UpdateResources, Stop, Status以及Shutdown都是同步调用的。它们通过调用iSulad底层executor模块中的相应接口，管理基于Pause容器的沙箱，等待底层executor执行完毕，再返回。
+
+### 4.2.2 异步Wait API调用
+
+在executor中实现了wait机制，可以通过阻塞的方式直到容器状态发生变化后返回。因此在Shim Controller中，wait的实现直接通过新建线程调用executor的wait接口，该线程阻塞等待executor返回的结果，直至容器状态发生变化返回后进一步更新Sandbox实例的状态。
