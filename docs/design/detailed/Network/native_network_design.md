@@ -250,8 +250,8 @@ void network_module_exit();
 // 12. Set the portmapping settings of annotations;
 int network_module_insert_portmapping(const char *val, network_api_conf *conf);
 
-// 13. Set the bandwith setting of annotations;
-int network_module_insert_bandwith(const char *val, network_api_conf *conf);
+// 13. Set the bandwidth setting of annotations;
+int network_module_insert_bandwidth(const char *val, network_api_conf *conf);
 
 // 14. Set the iprange setting of annotations;
 int network_module_insert_iprange(const char *val, network_api_conf *conf);

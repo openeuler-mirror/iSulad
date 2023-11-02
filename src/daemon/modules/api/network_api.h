@@ -104,7 +104,7 @@ void network_module_exit();
 
 int network_module_insert_portmapping(const char *val, network_api_conf *conf);
 
-int network_module_insert_bandwith(const char *val, network_api_conf *conf);
+int network_module_insert_bandwidth(const char *val, network_api_conf *conf);
 
 int network_module_insert_iprange(const char *val, network_api_conf *conf);
 

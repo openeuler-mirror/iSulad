@@ -385,7 +385,7 @@ static void InsertBandWidthIntoAdaptorAnnotations(const std::map<std::string, st
         goto out;
     }
 
-    if (network_module_insert_bandwith(bandwidth_str, config) != 0) {
+    if (network_module_insert_bandwidth(bandwidth_str, config) != 0) {
         err.SetError("set bandwidth for network config failed");
         goto out;
     }
@@ -503,7 +503,7 @@ void BuildAdaptorCNIConfig(const std::string &ns, const std::string &defaultInte
     }
 
     // fill annotations for cni runtime config
-    // 1. parse annotations configs(portmapping and bandwith etc..) into config;
+    // 1. parse annotations configs(portmapping and bandwidth etc..) into config;
     PrepareAdaptorAnnotations(annotations, config, err);
     // 2. parse other configs into config;
     InsertIPRangesIntoAdaptorAnnotations(podCidr, config, err);

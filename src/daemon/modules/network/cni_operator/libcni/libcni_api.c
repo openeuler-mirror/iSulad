@@ -673,7 +673,7 @@ int cni_add_network_list(const struct cni_network_list_conf *list, const struct 
 {
     int ret = 0;
     size_t i = 0;
-    bool greated = false;
+    bool greater = false;
 
     if (check_add_network_list_args(list, rc, pret)) {
         ERROR("Empty arguments");
@@ -688,12 +688,12 @@ int cni_add_network_list(const struct cni_network_list_conf *list, const struct 
         }
     }
 
-    if (*pret != NULL && version_greater_than_or_equal_to((*pret)->cniversion, SUPPORT_CACHE_AND_CHECK_VERSION, &greated) != 0) {
+    if (*pret != NULL && version_greater_than_or_equal_to((*pret)->cniversion, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
         return 0;
     }
 
     // CACHE was added in CNI spec version 0.4.0 and higher
-    if (!greated) {
+    if (!greater) {
         WARN("result version: %s is too old, do not save this cache", (*pret)->cniversion);
         return 0;
     }
@@ -731,7 +731,7 @@ int cni_del_network_list(const struct cni_network_list_conf *list, const struct 
 {
     int i = 0;
     int ret = 0;
-    bool greated = false;
+    bool greater = false;
     struct cni_opt_result *prev_result = NULL;
 
     if (check_del_network_list_args(list, rc)) {
@@ -739,12 +739,12 @@ int cni_del_network_list(const struct cni_network_list_conf *list, const struct 
         return -1;
     }
 
-    if (version_greater_than_or_equal_to(list->list->cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greated) != 0) {
+    if (version_greater_than_or_equal_to(list->list->cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
         return -1;
     }
 
     // CACHE was added in CNI spec version 0.4.0 and higher
-    if (greated) {
+    if (greater) {
         ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, &prev_result);
         if (ret != 0) {
             ret = -1;
@@ -761,7 +761,7 @@ int cni_del_network_list(const struct cni_network_list_conf *list, const struct 
         }
     }
 
-    if (greated && cni_cache_delete(g_module_conf.cache_dir, list->list->name, rc) != 0) {
+    if (greater && cni_cache_delete(g_module_conf.cache_dir, list->list->name, rc) != 0) {
         WARN("failed to delete network: %s cached result", list->list->name);
     }
 
@@ -797,7 +797,7 @@ int cni_check_network_list(const struct cni_network_list_conf *list, const struc
 {
     int i = 0;
     int ret = 0;
-    bool greated = false;
+    bool greater = false;
     struct cni_opt_result *tmp_result = NULL;
 
     if (do_check_network_list_args(list, rc, p_result)) {
@@ -805,12 +805,12 @@ int cni_check_network_list(const struct cni_network_list_conf *list, const struc
         return -1;
     }
 
-    if (version_greater_than_or_equal_to(list->list->cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greated) != 0) {
+    if (version_greater_than_or_equal_to(list->list->cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
         return -1;
     }
 
     // CHECK was added in CNI spec version 0.4.0 and higher
-    if (!greated) {
+    if (!greater) {
         ERROR("configuration version %s does not support CHECK", list->list->cni_version);
         return -1;
     }

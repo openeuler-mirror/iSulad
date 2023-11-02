@@ -249,8 +249,8 @@ void network_module_exit();
 // 12. 设置annotations的portmapping设置；
 int network_module_insert_portmapping(const char *val, network_api_conf *conf);
 
-// 13. 设置annotations的bandwith设置；
-int network_module_insert_bandwith(const char *val, network_api_conf *conf);
+// 13. 设置annotations的bandwidth设置；
+int network_module_insert_bandwidth(const char *val, network_api_conf *conf);
 
 // 14. 设置annotations的iprange设置；
 int network_module_insert_iprange(const char *val, network_api_conf *conf);

@@ -25,7 +25,7 @@
 #include "err_msg.h"
 #include "linked_list.h"
 #include "isulad_config.h"
-#include "isula_libutils/log.h"
+#include <isula_libutils/log.h>
 #include "utils_network.h"
 #include "network_tools.h"
 #include "cni_operate.h"
@@ -2031,7 +2031,7 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
         // use conf interface
         manager.ifname = conf->extral_nets[i]->interface;
 
-        // external configurations(portmappings, iprange, bandwith and so on) for mult-networks
+        // external configurations(portmappings, iprange, bandwidth and so on) for mult-networks
         // should work for only one:
         // for first network is a good choice.
         if (!use_annotations) {

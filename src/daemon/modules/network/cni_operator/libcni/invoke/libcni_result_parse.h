@@ -16,7 +16,7 @@
 #define CLIBCNI_TYPES_CURRENT_H
 
 #include "libcni_result_type.h"
-#include "isula_libutils/cni_result_curr.h"
+#include <isula_libutils/cni_result_curr.h>
 
 #ifdef __cplusplus
 extern "C" {

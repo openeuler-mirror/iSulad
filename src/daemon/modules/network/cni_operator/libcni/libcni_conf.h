@@ -16,7 +16,7 @@
 #ifndef CLIBCNI_CONF_H
 #define CLIBCNI_CONF_H
 
-#include "isula_libutils/cni_net_conf_list.h"
+#include <isula_libutils/cni_net_conf_list.h>
 
 #ifdef __cplusplus
 extern "C" {
