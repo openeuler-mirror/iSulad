@@ -1,0 +1,11 @@
+{
+  "cniVersion": "1.0.0",
+  "name": "c-v1",
+  "type": "bridge",
+  "bridge": "cni-v1",
+  "isGateway": true,
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.4.0.0/16"
+  }
+}

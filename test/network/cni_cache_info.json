@@ -1,0 +1,54 @@
+{
+    "kind": "cniCacheV1",
+    "containerId": "e33fd8fb175096fac7b8802cabe2b22a2b12b3d0aff52e096fd3c6b3ed8b367c",
+    "config": "{\n    \"cniVersion\": \"1.0.0\",\n    \"name\": \"mynet1\",\n    \"plugins\": [\n        {\n            \"type\": \"bridge\",\n            \"bridge\": \"isula-br2\",\n            \"isGateway\": true,\n            \"ipMasq\": true,\n            \"hairpinMode\": true,\n            \"ipam\": {\n                \"type\": \"host-local\",\n                \"routes\": [\n                    {\n                        \"dst\": \"0.0.0.0/0\"\n                    }\n                ],\n                \"ranges\": [\n                    [\n                        {\n                            \"subnet\": \"192.168.2.0/24\",\n                            \"gateway\": \"192.168.2.1\"\n                        }\n                    ]\n                ]\n            }\n        },\n        {\n            \"type\": \"portmap\",\n            \"capabilities\": {\n                \"portMappings\": true\n            }\n        },\n        {\n            \"type\": \"firewall\"\n        },\n        {\n            \"type\": \"dnsname\",\n            \"domainName\": \"dns.isulad\",\n            \"capabilities\": {\n                \"aliases\": true\n            }\n        }\n    ]\n}\n",
+    "ifName": "eth0",
+    "networkName": "mynet1",
+    "cni_args": {
+        "IgnoreUnknown": "1",
+        "K8S_POD_NAMESPACE": "test-busy",
+        "K8S_POD_NAME": "test-busy",
+        "K8S_POD_INFRA_CONTAINER_ID": "e33fd8fb175096fac7b8802cabe2b22a2b12b3d0aff52e096fd3c6b3ed8b367c"
+    },
+    "result": {
+        "cniVersion": "1.0.0",
+        "interfaces": [
+            {
+                "name": "isula-br2",
+                "mac": "3e:37:00:d2:b6:b0"
+            },
+            {
+                "name": "veth381f55e5",
+                "mac": "22:fe:db:cd:23:cf"
+            },
+            {
+                "name": "eth0",
+                "mac": "86:39:8d:b2:bd:1c",
+                "sandbox": "/var/run/netns/isulacni-3ffc867cb91788d3"
+            }
+        ],
+        "ips": [
+            {
+                "interface": 2,
+                "address": "192.168.2.4/24",
+                "gateway": "192.168.2.1"
+            }
+        ],
+        "routes": [
+            {
+                "dst": "0.0.0.0/0"
+            }
+        ],
+        "dns": {
+            "nameservers": [
+                "192.168.2.1"
+            ],
+            "search": [
+                "dns.isulad"
+            ]
+        }
+    },
+    "aliases": [
+        "testaliases0.com", "testaliases1.com"
+    ]
+}

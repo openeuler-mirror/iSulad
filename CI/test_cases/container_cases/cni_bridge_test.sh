@@ -40,7 +40,7 @@ function do_pre()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Failed to init cni config" && ((ret++))
 
     rm -rf /etc/cni/net.d/*
-    cp ${data_path}/bridge.json /etc/cni/net.d/
+    cp ${data_path}/${1} /etc/cni/net.d/
     sync;sync;
     tail $ISUALD_LOG
     # wait cni updated
@@ -113,7 +113,7 @@ function do_test_help()
 
     ip2=`crictl inspectp $sid2 | grep -w ip | awk '{print $2}' | sed 's/\"//g'`
     nsenter --net=/proc/$pod_pid1/ns/net ping -w $timeout_count_down -c $ping_count_down $ip2 &
-    timeout $timeout_count_down tcpdump -c $ping_count_down -i cni0
+    timeout $timeout_count_down tcpdump -c $ping_count_down -i $5
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping another pod failed" && ((ret++))
 
     wait$!
@@ -128,15 +128,40 @@ function do_test_help()
     return ${ret}
 }
 
+function do_test_version_040()
+{
+    ans=0
+
+    do_pre "bridge.json" || ((ans++))
+
+    for element in ${RUNTIME_LIST[@]};
+    do
+        do_test_help "sandbox-config.json" "sandbox-config2.json" "10\.2\." $element "cni0" || ((ans++))
+    done
+
+    do_post
+
+    show_result ${ans} "${curr_path}/${0}:${FUNCNAME[0]}"
+}
+
+function do_test_version_100()
+{
+    ans=0
+
+    do_pre "bridge-v1.json" || ((ans++))
+
+    for element in ${RUNTIME_LIST[@]};
+    do
+        do_test_help "sandbox-config.json" "sandbox-config2.json" "10\.4\." $element "cni-v1" || ((ans++))
+    done
+
+    do_post
+
+    show_result ${ans} "${curr_path}/${0}:${FUNCNAME[0]}"
+}
+
 declare -i ans=0
 
-do_pre || ((ans++))
+do_test_version_040
 
-for element in ${RUNTIME_LIST[@]};
-do
-    do_test_help "sandbox-config.json" "sandbox-config2.json" "10\.2\." $element || ((ans++))
-done
-
-do_post
-
-show_result ${ans} "${curr_path}/${0}"
+do_test_version_100

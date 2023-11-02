@@ -190,6 +190,29 @@ free_out:
     return ret;
 }
 
+static int do_cache_insert_aliases(const struct runtime_conf *rc, cni_cached_info *p_info)
+{
+    char **tmp_aliases = NULL;
+
+    if (rc->aliases == NULL) {
+        return 0;
+    }
+
+    tmp_aliases = util_smart_calloc_s(sizeof(char *), rc->aliases_len);
+    if (tmp_aliases == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (size_t i = 0; i < rc->aliases_len; i++){
+        tmp_aliases[i] = util_strdup_s(rc->aliases[i]);
+    }
+
+    p_info->aliases = tmp_aliases;
+    p_info->aliases_len = rc->aliases_len;
+    return 0;
+}
+
 int cni_cache_add(const char *cache_dir, const struct cni_opt_result *res, const char *config, const char *net_name,
                   const struct runtime_conf *rc)
 {
@@ -235,6 +258,12 @@ int cni_cache_add(const char *cache_dir, const struct cni_opt_result *res, const
 
     // 3. add cni args
     if (do_cache_insert_cni_args(rc, p_info) != 0) {
+        ret = -1;
+        goto free_out;
+    }
+
+    // 4. add aliases
+    if (do_cache_insert_aliases(rc, p_info) != 0) {
         ret = -1;
         goto free_out;
     }

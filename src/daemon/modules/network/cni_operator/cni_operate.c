@@ -17,10 +17,13 @@
 #include <pthread.h>
 #include <sys/types.h>
 
-#include "isula_libutils/log.h"
-#include "isula_libutils/cni_net_conf.h"
-#include "isula_libutils/cni_net_conf_list.h"
-#include "isula_libutils/cni_anno_port_mappings.h"
+#include <isula_libutils/log.h>
+#include <isula_libutils/cni_net_conf.h>
+#include <isula_libutils/cni_net_conf_list.h>
+#include <isula_libutils/cni_anno_port_mappings.h>
+#include <isula_libutils/cni_array_of_strings.h>
+#include <isula_libutils/auto_cleanup.h>
+
 #include "utils.h"
 #include "utils_network.h"
 
@@ -207,10 +210,42 @@ out:
     return ret;
 }
 
+static int aliases_inject(const char *value, struct runtime_conf *rt)
+{
+    __isula_auto_free parser_error err = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    cni_array_of_strings_container *aliases_array = NULL;
+
+    if (value == NULL || rt == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    aliases_array = cni_array_of_strings_container_parse_data(value, &ctx, &err);
+    if (err != NULL) {
+        ERROR("Failed to parse aliases data from value:%s, err:%s", value, err);
+        return -1;
+    }
+
+    if (aliases_array == NULL) {
+        DEBUG("Empty aliases: %s", value);
+        return 0;
+    }
+
+    rt->aliases = aliases_array->items;
+    rt->aliases_len = aliases_array->len;
+    aliases_array->items = NULL;
+    aliases_array->len = 0;
+
+    free_cni_array_of_strings_container(aliases_array);
+    return 0;
+}
+
 static struct anno_registry_conf_rt g_registrant_rt[] = {
     { .name = CNI_ARGS_BANDWIDTH_KEY, .ops = bandwidth_inject },
     { .name = CNI_ARGS_PORTMAPPING_KEY, .ops = port_mappings_inject },
     { .name = CNI_ARGS_IPRANGES_KEY, .ops = ip_ranges_inject },
+    { .name = CNI_ARGS_ALIASES_KEY, .ops = aliases_inject },
 };
 
 static struct anno_registry_conf_json g_registrant_json[] = {
@@ -743,6 +778,16 @@ static int get_configs_from_cached(const char *network, struct runtime_conf *rc,
         tmp_ip_ranges->subitem_lens = info->ip_ranges_item_lens;
         info->ip_ranges_item_lens = NULL;
     }
+
+    // step 2.4: update aliases
+    for (size_t i = 0; i < rc->aliases_len; i++) {
+        free(rc->aliases[i]);
+    }
+    free(rc->aliases);
+    rc->aliases = info->aliases;
+    rc->aliases_len = info->aliases_len;
+    info->aliases = NULL;
+    info->aliases_len = 0;
 
     // step 3: return config list string
     if (conf_list != NULL) {
