@@ -168,7 +168,12 @@ auto Sandbox::GetResolvPath() const -> std::string
 
 auto Sandbox::GetShmPath() const -> std::string
 {
-    return m_rootdir + std::string("/mounts/shm");
+    if (m_sandboxConfig->linux().has_security_context() &&
+        m_sandboxConfig->linux().security_context().namespace_options().ipc() == runtime::v1::NamespaceMode::NODE) {
+        return SHM_MOUNT_POINT;
+    } else {
+        return m_rootdir + std::string("/mounts/shm");
+    }
 }
 
 auto Sandbox::GetStatsInfo() -> StatsInfo

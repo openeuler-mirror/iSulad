@@ -24,6 +24,7 @@
 #include <sys/sysinfo.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <isula_libutils/auto_cleanup.h>
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/defs.h>
 #include <isula_libutils/host_config.h>
@@ -2129,6 +2130,7 @@ static int relabel_mounts_if_needed(defs_mount **mounts, size_t len, const char 
     for (i = 0; i < len; ++i) {
         bool need_relabel = false;
         bool is_shared = false;
+        __isula_auto_free char *resolved_path = NULL;
         iter = *(mounts + i);
         if (iter == NULL) {
             continue;
@@ -2144,14 +2146,24 @@ static int relabel_mounts_if_needed(defs_mount **mounts, size_t len, const char 
             }
         }
 
-        if (need_relabel && relabel(iter->source, mount_label, is_shared) != 0) {
+        if (!need_relabel) {
+            continue;
+        }
+
+        resolved_path = verify_file_and_get_real_path(iter->source);
+        if (resolved_path == NULL) {
+            ERROR("Error getting real path for source '%s'", iter->source);
+            ret = -1;
+            break;
+        }
+
+        if (relabel(resolved_path, mount_label, is_shared) != 0) {
             ERROR("Error setting label on mount source '%s'", iter->source);
             ret = -1;
-            goto out;
+            break;
         }
     }
 
-out:
     return ret;
 }
 #endif

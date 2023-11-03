@@ -126,31 +126,40 @@ static void ModifyHostConfig(const runtime::v1alpha2::LinuxContainerSecurityCont
     ModifyHostConfigscSupplementalGroups(sc, hostConfig, error);
 }
 
-static void ModifyCommonNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts, host_config *hostConfig)
+static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts,
+                                            const std::string &podSandboxID, host_config *hostConfig)
+{
+    std::string sandboxNSMode = "container:" + podSandboxID;
+
+    if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::POD) {
+        free(hostConfig->pid_mode);
+        hostConfig->pid_mode = util_strdup_s(sandboxNSMode.c_str());
+    } else if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::TARGET) {
+        std::string targetPidNsMode = "container:" + nsOpts.target_id();
+        free(hostConfig->pid_mode);
+        hostConfig->pid_mode = util_strdup_s(targetPidNsMode.c_str());
+    } else if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::NODE) {
+        free(hostConfig->pid_mode);
+        hostConfig->pid_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
+    }
+
+    free(hostConfig->ipc_mode);
+    hostConfig->ipc_mode = util_strdup_s(sandboxNSMode.c_str());
+
+    /* modify host network option for container */
+    free(hostConfig->network_mode);
+    hostConfig->network_mode = util_strdup_s(sandboxNSMode.c_str());
+    free(hostConfig->uts_mode);
+    hostConfig->uts_mode = util_strdup_s(sandboxNSMode.c_str());
+}
+
+static void ModifySandboxNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts, host_config *hostConfig)
 {
     if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::NODE) {
         free(hostConfig->pid_mode);
         hostConfig->pid_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
     }
-}
 
-static void ModifyHostNetworkOptionForContainer(const runtime::v1alpha2::NamespaceMode &hostNetwork,
-                                                const std::string &podSandboxID, host_config *hostConfig)
-{
-    std::string sandboxNSMode = "container:" + podSandboxID;
-
-    free(hostConfig->network_mode);
-    hostConfig->network_mode = util_strdup_s(sandboxNSMode.c_str());
-    free(hostConfig->ipc_mode);
-    hostConfig->ipc_mode = util_strdup_s(sandboxNSMode.c_str());
-    if (hostNetwork == runtime::v1alpha2::NamespaceMode::NODE) {
-        free(hostConfig->uts_mode);
-        hostConfig->uts_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
-    }
-}
-
-static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::NamespaceOption &nsOpts, host_config *hostConfig)
-{
     if (nsOpts.ipc() == runtime::v1alpha2::NamespaceMode::NODE) {
         free(hostConfig->ipc_mode);
         hostConfig->ipc_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
@@ -162,39 +171,6 @@ static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::Namespace
         free(hostConfig->uts_mode);
         hostConfig->uts_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
     }
-    // Note: default networkMode is CNI
-}
-
-static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts,
-                                            const std::string &podSandboxID, host_config *hostConfig)
-{
-    std::string sandboxNSMode = "container:" + podSandboxID;
-    if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::POD) {
-        free(hostConfig->pid_mode);
-        hostConfig->pid_mode = util_strdup_s(sandboxNSMode.c_str());
-    }
-
-    if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::TARGET) {
-        std::string targetPidNsMode = "container:" + nsOpts.target_id();
-        free(hostConfig->pid_mode);
-        hostConfig->pid_mode = util_strdup_s(targetPidNsMode.c_str());
-    }
-
-    /* set common Namespace options */
-    ModifyCommonNamespaceOptions(nsOpts, hostConfig);
-    /* modify host network option for container */
-    ModifyHostNetworkOptionForContainer(nsOpts.network(), podSandboxID, hostConfig);
-
-    free(hostConfig->uts_mode);
-    hostConfig->uts_mode = util_strdup_s(sandboxNSMode.c_str());
-}
-
-static void ModifySandboxNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts, host_config *hostConfig)
-{
-    /* set common Namespace options */
-    ModifyCommonNamespaceOptions(nsOpts, hostConfig);
-    /* modify host network option for container */
-    ModifyHostNetworkOptionForSandbox(nsOpts, hostConfig);
 }
 
 void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, container_config *config,
