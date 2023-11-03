@@ -77,14 +77,6 @@ const std::string &Sandbox::GetRuntimeHandle() const
     return defaultStr;
 }
 
-std::vector<std::string> Sandbox::GetContainers()
-{
-    if (g_sandbox_mock != nullptr) {
-        return g_sandbox_mock->GetContainers();
-    }
-    return defaultVec;
-}
-
 const runtime::v1::PodSandboxConfig & Sandbox::GetSandboxConfig() const
 {
     if (g_sandbox_mock != nullptr) {
@@ -154,9 +146,6 @@ void Sandbox::AddAnnotations(const std::string &key, const std::string &value) {
 void Sandbox::RemoveAnnotations(const std::string &key) {}
 void Sandbox::AddLabels(const std::string &key, const std::string &value) {}
 void Sandbox::RemoveLabels(const std::string &key) {}
-void Sandbox::AddContainer(const std::string &id) {}
-void Sandbox::SetConatiners(const std::vector<std::string> &cons) {}
-void Sandbox::RemoveContainer(const std::string &id) {}
 void Sandbox::UpdateNetworkSettings(const std::string &settingsJson, Errors &error) {}
 void Sandbox::PrepareSandboxDirs(Errors &error) {}
 void Sandbox::CleanupSandboxDirs() {}

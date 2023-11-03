@@ -99,7 +99,6 @@ auto GetNetworkSettings() -> const std::string &;
 auto GetCreatedAt() -> uint64_t;
 auto GetPid() -> uint32_t;
 auto GetTaskAddress() const -> const std::string &;
-auto GetContainers() -> std::vector<std::string>;
 
 // 设置和更新sandbox的变量值
 void SetNetMode(const std::string &mode);
@@ -108,9 +107,6 @@ void AddAnnotations(const std::string &key, const std::string &value);
 void RemoveAnnotations(const std::string &key);
 void AddLabels(const std::string &key, const std::string &value);
 void RemoveLabels(const std::string &key);
-void AddContainer(const std::string &id);
-void SetConatiners(const std::vector<std::string> &cons);
-void RemoveContainer(const std::string &id);
 void UpdateNetworkSettings(const std::string &settingsJson, Errors &error);
 auto UpdateStatsInfo(const StatsInfo &info) -> StatsInfo;
 void SetNetworkReady(bool ready);
@@ -252,16 +248,12 @@ public:
     auto GetCreatedAt() -> uint64_t;
     auto GetPid() -> uint32_t;
     auto GetTaskAddress() const -> const std::string &;
-    auto GetContainers() -> std::vector<std::string>;
     void SetNetMode(const std::string &mode);
     void SetController(std::shared_ptr<Controller> controller);
     void AddAnnotations(const std::string &key, const std::string &value);
     void RemoveAnnotations(const std::string &key);
     void AddLabels(const std::string &key, const std::string &value);
     void RemoveLabels(const std::string &key);
-    void AddContainer(const std::string &id);
-    void SetConatiners(const std::vector<std::string> &cons);
-    void RemoveContainer(const std::string &id);
     void UpdateNetworkSettings(const std::string &settingsJson, Errors &error);
     auto UpdateStatsInfo(const StatsInfo &info) -> StatsInfo;
     void SetNetworkReady(bool ready);
@@ -347,9 +339,6 @@ private:
     std::string m_networkMode;
     bool m_networkReady;
     std::string m_networkSettings;
-    // container id lists
-    std::vector<std::string> m_containers;
-    RWMutex m_containersMutex;
     // TOOD: m_sandboxConfig is a protobuf message, it can be converted to json string directly
     //       if save json string directly for sandbox recover, we need to consider hot
     //       upgrade between different CRI versions
@@ -410,9 +399,7 @@ std::string m_netNsPath;
 std::string m_networkMode;
 bool m_networkReady;
 std::string m_networkSettings;
-// container id lists
-std::vector<std::string> m_containers;
-RWMutex m_containersMutex;
+
 // TOOD: m_sandboxConfig is a protobuf message, it can be converted to json string directly
 //       if save json string directly for sandbox recover, we need to consider hot
 //       upgrade between different CRI versions
@@ -430,7 +417,6 @@ std::set<uint32_t> m_vsockPorts;
 
 1. m_mutex: 保障并发sandbox的生命周期操作（start, stop, remove）
 2. m_stateMutex:保障并发对m_state，m_statsInfo，m_networkSettings的修改与读取
-3. m_containersMutex：保障对m_containers的并发操作
 
 ## 4.2 sandbox manage 模块
 

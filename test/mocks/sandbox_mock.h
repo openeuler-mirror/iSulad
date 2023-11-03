@@ -31,7 +31,6 @@ public:
     MOCK_METHOD0(GetName, const std::string & ());
     MOCK_METHOD0(GetSandboxer, const std::string & ());
     MOCK_METHOD0(GetRuntimeHandle, const std::string & ());
-    MOCK_METHOD0(GetContainers, std::vector<std::string>());
     MOCK_METHOD0(GetSandboxConfig, const runtime::v1::PodSandboxConfig &());
     MOCK_METHOD0(GetMutableSandboxConfig, std::shared_ptr<runtime::v1::PodSandboxConfig>());
     MOCK_METHOD0(GetRootDir, const std::string & ());
@@ -46,9 +45,6 @@ public:
     MOCK_METHOD1(RemoveAnnotations, void(const std::string &key));
     MOCK_METHOD2(AddLabels, void(const std::string &key, const std::string &value));
     MOCK_METHOD1(RemoveLabels, void(const std::string &key));
-    MOCK_METHOD1(AddContainer, void(const std::string &id));
-    MOCK_METHOD1(SetConatiners, void(const std::vector<std::string> &cons));
-    MOCK_METHOD1(RemoveContainer, void(const std::string &id));
     MOCK_METHOD2(UpdateNetworkSettings, void(const std::string &settingsJson, Errors &error));
     MOCK_METHOD1(UpdateStatsInfo, StatsInfo(const StatsInfo &info));
     MOCK_METHOD1(SetNetworkReady, void(bool ready));
