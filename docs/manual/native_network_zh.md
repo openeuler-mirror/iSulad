@@ -32,13 +32,22 @@ $ make install
 
 ## 网络插件
 
-native网络需要安装cni二进制插件，开源仓库地址为`https://github.com/containernetworking/plugins`，经过测试建议安装`v0.9.0`及以上版本的cni插件，这里以文档发布时最新的v1.0.1版本为例。
+native网络需要安装cni二进制插件，开源仓库地址为`https://github.com/containernetworking/plugins`，经过测试建议安装`v0.9.0`及以上版本的cni插件，这里以最新的v1.3.0版本为例。
 
 ```bash
-$ wget https://github.com/containernetworking/plugins/releases/download/v1.0.1/cni-plugins-linux-amd64-v1.0.1.tgz
+$ wget https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz
 $ mkdir -p /opt/cni/bin/
-$ tar -zxvf cni-plugins-linux-amd64-v1.0.1.tgz -C /opt/cni/bin/
+$ tar -zxvf cni-plugins-linux-amd64-v1.3.0.tgz -C /opt/cni/bin/
 ```
+
+## 版本说明
+
+iSulad版本及其自身所支持的CNI规范和推荐的网络插件版本如下表所示：
+
+iSulad version|CNI spec version|cni-plugins version
+---|---|---
+v2.1.3 and earlier|spec-v0.4.0|v0.9.1
+v2.1.4|spec-v1.0.0|v1.3.0
 
 ## 启动iSulad
 
@@ -69,12 +78,12 @@ cni0
 
 $ isula network ls
 NAME                 VERSION         PLUGIN
-cni0                 0.4.0           bridge,portmap,firewall
+cni0                 1.0.0           bridge,portmap,firewall
 
 $ isula network inspect cni0
 [
     {
-        "cniVersion": 0.4.0,
+        "cniVersion": 1.0.0,
         "name": cni0,
         "plugins": [
             {

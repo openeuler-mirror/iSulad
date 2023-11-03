@@ -31,13 +31,22 @@ $ make install
 
 ## Network Plugin
 
-The natvie netwrok needs to install CNI plugin binary. The open source repository address is `https://github.com/containernetworking/plugins`. It is recommended to install the CNI plugin `v0.9.0` version and above. Here is an example of the latest v1.0.1 version when the manual was released.
+The natvie netwrok needs to install CNI plugin binary. The open source repository address is `https://github.com/containernetworking/plugins`. It is recommended to install the CNI plugin `v0.9.0` version and above. Here is an example of the latest v1.3.0 version when the manual was released.
 
 ```bash
-$ wget https://github.com/containernetworking/plugins/releases/download/v1.0.1/cni-plugins-linux-amd64-v1.0.1.tgz
+$ wget https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz
 $ mkdir -p /opt/cni/bin/
-$ tar -zxvf cni-plugins-linux-amd64-v1.0.1.tgz -C /opt/cni/bin/
+$ tar -zxvf cni-plugins-linux-amd64-v1.3.0.tgz -C /opt/cni/bin/
 ```
+
+## Version Description
+
+The following table lists the iSulad version, supported CNI specification, and recommended network plugin version:
+
+iSulad version|CNI spec version|cni-plugins version
+---|---|---
+v2.1.3 and earlier|spec-v0.4.0|v0.9.1
+v2.1.4|spec-v1.0.0|v1.3.0
 
 ## Start iSulad
 
@@ -68,12 +77,12 @@ cni0
 
 $ isula network ls
 NAME                 VERSION         PLUGIN
-cni0                 0.4.0           bridge,portmap,firewall
+cni0                 1.0.0           bridge,portmap,firewall
 
 $ isula network inspect cni0
 [
     {
-        "cniVersion": 0.4.0,
+        "cniVersion": 1.0.0,
         "name": cni0,
         "plugins": [
             {
