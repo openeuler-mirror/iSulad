@@ -193,6 +193,7 @@ free_out:
 static int do_cache_insert_aliases(const struct runtime_conf *rc, cni_cached_info *p_info)
 {
     char **tmp_aliases = NULL;
+    size_t i;
 
     if (rc->aliases == NULL) {
         return 0;
@@ -204,7 +205,7 @@ static int do_cache_insert_aliases(const struct runtime_conf *rc, cni_cached_inf
         return -1;
     }
 
-    for (size_t i = 0; i < rc->aliases_len; i++){
+    for (i = 0; i < rc->aliases_len; i++){
         tmp_aliases[i] = util_strdup_s(rc->aliases[i]);
     }
 

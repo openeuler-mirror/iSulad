@@ -197,6 +197,7 @@ static int inject_cni_ip_ranges(const struct runtime_conf *rt, cni_net_conf_runt
 
 static int inject_cni_aliases(const struct runtime_conf *rt, cni_net_conf_runtime_config *rt_config)
 {
+    size_t i;
     if (rt->aliases == NULL || rt->aliases_len == 0) {
         return 0;
     }
@@ -207,7 +208,7 @@ static int inject_cni_aliases(const struct runtime_conf *rt, cni_net_conf_runtim
         return -1;
     }
 
-    for (size_t i = 0; i < rt->aliases_len; i++) {
+    for (i = 0; i < rt->aliases_len; i++) {
         rt_config->aliases[i]= util_strdup_s(rt->aliases[i]);
     }
     rt_config->aliases_len = rt->aliases_len;

@@ -734,6 +734,7 @@ static int update_runtime_conf_cni_args_by_cached(cni_cached_info *info, struct 
 static int get_configs_from_cached(const char *network, struct runtime_conf *rc, char **conf_list)
 {
     int ret = 0;
+    size_t i;
     cni_cached_info *info = NULL;
 
     info = cni_get_network_list_cached_info(network, rc);
@@ -780,7 +781,7 @@ static int get_configs_from_cached(const char *network, struct runtime_conf *rc,
     }
 
     // step 2.4: update aliases
-    for (size_t i = 0; i < rc->aliases_len; i++) {
+    for (i = 0; i < rc->aliases_len; i++) {
         free(rc->aliases[i]);
     }
     free(rc->aliases);
