@@ -128,8 +128,22 @@ void ContainerManagerService::DoUsePodLevelSELinuxConfig(const runtime::v1::Cont
         return;
     }
 
+    const char securityOptSep = '=';
+
     const runtime::v1::LinuxSandboxSecurityContext &context = config.linux().security_context();
-    CRIHelpersV1::ApplySandboxSecurityContextToHostConfig(context, hostconfig, error);
+    std::vector<std::string> selinuxOpts = CRIHelpersV1::GetSELinuxLabelOpts(context.has_selinux_options(),
+                                                                             context.selinux_options(), securityOptSep, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to generate SELinuxLabel options for container %s", error.GetMessage().c_str());
+        error.Errorf("Failed to generate SELinuxLabel options for container %s", error.GetMessage().c_str());
+        return;
+    }
+    CRIHelpersV1::AddSecurityOptsToHostConfig(selinuxOpts, hostconfig, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to add securityOpts to hostconfig: %s", error.GetMessage().c_str());
+        error.Errorf("Failed to add securityOpts to hostconfig: %s", error.GetMessage().c_str());
+        return;
+    }
 }
 
 auto ContainerManagerService::IsSELinuxLabelEmpty(const ::runtime::v1::SELinuxOption &selinuxOption) -> bool

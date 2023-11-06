@@ -136,28 +136,21 @@ static int make_linux_uid_gid_mappings(oci_runtime_spec *container, unsigned int
                                        unsigned int size)
 {
     int ret = 0;
-
-    ret = make_sure_oci_spec_linux(container);
-    if (ret < 0) {
-        goto out;
-    }
-
     if (container->linux->uid_mappings == NULL) {
         ret = make_one_id_mapping(&(container->linux->uid_mappings), host_uid, size);
         if (ret < 0) {
-            goto out;
+            return ret;
         }
         container->linux->uid_mappings_len++;
     }
     if (container->linux->gid_mappings == NULL) {
         ret = make_one_id_mapping(&(container->linux->gid_mappings), host_gid, size);
         if (ret < 0) {
-            goto out;
+            return ret;
         }
         container->linux->gid_mappings_len++;
     }
 
-out:
     return ret;
 }
 
@@ -180,6 +173,12 @@ int make_userns_remap(oci_runtime_spec *container, const char *user_remap)
     if (host_uid == 0 && host_gid == 0) {
         return 0;
     }
+
+    if (make_sure_oci_spec_linux(container) != 0) {
+        ERROR("Failed to make oci spce linux");
+        return -1;
+    }
+
     ret = make_linux_uid_gid_mappings(container, host_uid, host_gid, size);
     if (ret) {
         ERROR("Make linux uid and gid mappings failed");

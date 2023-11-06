@@ -879,13 +879,6 @@ int merge_caps(oci_runtime_spec *oci_spec, const char **adds, size_t adds_len, c
 
 static int make_sure_oci_spec_linux_sysctl(oci_runtime_spec *oci_spec)
 {
-    int ret = 0;
-
-    ret = make_sure_oci_spec_linux(oci_spec);
-    if (ret < 0) {
-        return -1;
-    }
-
     if (oci_spec->linux->sysctl == NULL) {
         oci_spec->linux->sysctl = util_common_calloc_s(sizeof(json_map_string_string));
         if (oci_spec->linux->sysctl == NULL) {
@@ -902,6 +895,11 @@ int merge_sysctls(oci_runtime_spec *oci_spec, const json_map_string_string *sysc
 
     if (sysctls == NULL || sysctls->len == 0) {
         return 0;
+    }
+
+    ret = make_sure_oci_spec_linux(oci_spec);
+    if (ret < 0) {
+        return -1;
     }
 
     ret = make_sure_oci_spec_linux_sysctl(oci_spec);
@@ -1004,13 +1002,6 @@ static void free_adds_cap_for_system_container(char **adds, size_t adds_len)
 
 static int make_sure_oci_spec_linux_seccomp(oci_runtime_spec *oci_spec)
 {
-    int ret = 0;
-
-    ret = make_sure_oci_spec_linux(oci_spec);
-    if (ret < 0) {
-        return -1;
-    }
-
     if (oci_spec->linux->seccomp == NULL) {
         oci_spec->linux->seccomp = util_common_calloc_s(sizeof(oci_runtime_config_linux_seccomp));
         if (oci_spec->linux->seccomp == NULL) {
