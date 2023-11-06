@@ -76,7 +76,6 @@ function make_cni_dnsname()
     cd ~
     git clone https://gitee.com/zh_xiaoyu/dnsname.git
     cd dnsname
-    git checkout v1.3.1
     make
     mkdir -p ${builddir}/cni/bin/
     cp bin/* ${builddir}/cni/bin/
