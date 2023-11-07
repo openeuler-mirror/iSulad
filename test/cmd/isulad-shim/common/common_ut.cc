@@ -87,3 +87,45 @@ TEST_F(CommonUnitTest, test_combined_output)
     params[0] = non_cmd.c_str();
     EXPECT_EQ(cmd_combined_output(non_cmd.c_str(), params, output, &output_len), -1);
 }
+
+TEST_F(CommonUnitTest, test_get_attach_fifo_item)
+{
+    struct isula_linked_list *attach_fifos = NULL;
+    attach_fifos = (struct isula_linked_list *)isula_common_calloc_s(sizeof(struct isula_linked_list));
+    ASSERT_TRUE(attach_fifos != nullptr);
+
+    isula_linked_list_init(attach_fifos);
+
+    EXPECT_EQ(get_attach_fifo_item(4, attach_fifos), nullptr);
+    EXPECT_EQ(get_attach_fifo_item(-1, attach_fifos), nullptr);
+    EXPECT_EQ(get_attach_fifo_item(4, NULL), nullptr);
+
+    struct shim_fifos_fd fifos1 = {
+        .in_fd = 1,
+        .out_fd = 2,
+        .err_fd = 3,
+    };
+    struct shim_fifos_fd fifos2 = {
+        .in_fd = 4,
+        .out_fd = 5,
+        .err_fd = 6,
+    };
+    struct isula_linked_list *node1 = NULL;
+    struct isula_linked_list *node2 = NULL;
+    node1 = (struct isula_linked_list *)isula_common_calloc_s(sizeof(struct isula_linked_list));
+    ASSERT_TRUE(node1 != nullptr);
+    node1->elem = &fifos1;
+    isula_linked_list_add(attach_fifos, node1);
+
+    node2 = (struct isula_linked_list *)isula_common_calloc_s(sizeof(struct isula_linked_list));
+    ASSERT_TRUE(node2 != nullptr);
+    node2->elem = &fifos2;
+    isula_linked_list_add(attach_fifos, node2);
+
+    EXPECT_EQ(get_attach_fifo_item(1, attach_fifos), node1);
+    EXPECT_EQ(get_attach_fifo_item(4, attach_fifos), node2);
+
+    free(node1);
+    free(node2);
+    free(attach_fifos);
+}
