@@ -36,6 +36,9 @@ function do_pre()
 
   isula load -i ${pause_img_path}/pause.tar
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to load pause" && return ${FAILURE}
+
+  isula pull busybox
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull busybox" && return ${FAILURE}
 }
 
 function do_post()

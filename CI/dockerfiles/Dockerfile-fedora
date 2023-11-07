@@ -34,6 +34,8 @@ RUN dnf update -y && dnf install -y automake \
 			autoconf \
 			libtool \
 			make \
+			go \
+			valgrind \
 			systemd \
 			cmake \
 			grpc-devel \
@@ -91,6 +93,7 @@ RUN dnf update -y && dnf install -y automake \
 			langpacks-en \
 			lvm2 \
 			patch \
+			tcpdump \
 			iputils
 
 RUN dnf clean all
@@ -99,17 +102,18 @@ RUN pip3 install meson ninja
 # disalbe sslverify
 RUN git config --global http.sslverify false
 
-RUN echo "export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> /etc/bashrc && \
-    echo "export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH" >> /etc/bashrc && \
+RUN echo "export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> /etc/bashrc && \
+    echo "export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH" >> /etc/bashrc && \
     echo "/usr/lib" >> /etc/ld.so.conf && \
+    echo "/usr/local/lib64" >> /etc/ld.so.conf && \
     echo "/usr/local/lib" >> /etc/ld.so.conf
 
-#RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # configure rust
-#RUN echo "[source.crates-io]" >> ${HOME}/.cargo/config && \
-#    echo "[source.local-registry]" >> ${HOME}/.cargo/config && \
-#    echo "directory = \"vendor\"" >> ${HOME}/.cargo/config
+RUN echo "[source.crates-io]" >> ${HOME}/.cargo/config && \
+   echo "[source.local-registry]" >> ${HOME}/.cargo/config && \
+   echo "directory = \"vendor\"" >> ${HOME}/.cargo/config
 
 # install libevhtp
 RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
@@ -133,4 +137,5 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
         make install && \
         ldconfig
 
+VOLUME [ "/sys/fs/cgroup" ]
 WORKDIR /root

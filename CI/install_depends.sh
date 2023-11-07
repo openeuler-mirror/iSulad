@@ -103,6 +103,7 @@ check_make_status make_cni_dnsname ${build_log_cni_dnsname} &
 # install lxc
 cd ~
 git clone https://gitee.com/src-openeuler/lxc.git
+git config --global --add safe.directory ~/lxc/lxc-5.0.2
 cd lxc
 git checkout origin/openEuler-22.03-LTS-SP1
 tar xf lxc-4.0.3.tar.gz

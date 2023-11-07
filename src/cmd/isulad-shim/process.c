@@ -414,9 +414,12 @@ static stdio_t *initialize_io(process_t *p)
         goto failure;
     }
 
-    /* don't open resize pipe */
-    if ((pipe2(stdio_fd[0], O_CLOEXEC | O_NONBLOCK) != 0) || (pipe2(stdio_fd[1], O_CLOEXEC | O_NONBLOCK) != 0) ||
-        (pipe2(stdio_fd[2], O_CLOEXEC | O_NONBLOCK) != 0)) {
+    /*
+     * don't open resize pipe;
+     * stdio pipes must not set to non-block, because 'cat big-file' will failed;
+     */
+    if ((pipe2(stdio_fd[0], O_CLOEXEC) != 0) || (pipe2(stdio_fd[1], O_CLOEXEC) != 0) ||
+        (pipe2(stdio_fd[2], O_CLOEXEC) != 0)) {
         write_message(ERR_MSG, "open pipe failed when init io:%d", SHIM_SYS_ERR(errno));
         goto failure;
     }

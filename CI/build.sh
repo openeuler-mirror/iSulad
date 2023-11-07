@@ -50,7 +50,7 @@ rm -rf ${TESTCASE_ASSIGN}_*
 
 declare -a modules
 declare -g container_nums=0
-declare -g distros=centos
+declare -g distros=fedora
 
 function usage() {
     echo "Usage: $0 [options]"
@@ -266,7 +266,7 @@ function echo_error()
     echo -e "\033[1;31m"$@"\033[0m"
 }
 
-DockerFile="./CI/Dockerfile-${distros}"
+DockerFile="./CI/dockerfiles/Dockerfile-${distros}"
 ProcsFile=/sys/fs/cgroup/cpuset/docker/cgroup.clone_children
 function make_sure_cgroup()
 {
@@ -420,6 +420,7 @@ do
         docker cp ${cptemp}/usr/bin ${container}:/usr
         docker cp ${cptemp}/include ${container}:/usr
         docker cp ${cptemp}/lib ${container}:/usr
+        docker cp ${cptemp}/lib64 ${container}:/usr/
         docker cp ${cptemp}/systemd ${container}:/lib
         # Docker cannot cp file to tmpfs /tmp in container
         docker exec ${container} sh -c "umask 0022 && cp -r ${testcase_data}/ci_testcase_data/embedded /tmp"
