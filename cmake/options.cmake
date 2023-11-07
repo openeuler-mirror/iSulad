@@ -152,7 +152,7 @@ if (ENABLE_LOGIN_PASSWORD_OPTION STREQUAL "ON")
     message("${Green}--  Enable login password option${ColourReset}")
 endif()
 
-option(EANBLE_IMAGE_LIBARAY "create libisulad_image.so" ON)
+option(EANBLE_IMAGE_LIBARAY "create libisulad_image.so" OFF)
 if (EANBLE_IMAGE_LIBARAY STREQUAL "ON")
     add_definitions(-DEANBLE_IMAGE_LIBARAY)
     set(EANBLE_IMAGE_LIBARAY 1)
