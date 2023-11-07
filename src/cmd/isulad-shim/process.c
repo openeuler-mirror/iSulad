@@ -19,20 +19,22 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/ioctl.h>
+#include <sys/eventfd.h>
+#include <sys/resource.h> // IWYU pragma: keep
+#include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
-#include <sys/wait.h>
 #include <semaphore.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/ioctl.h>
-#include <sys/eventfd.h>
 #include <termios.h> // IWYU pragma: keep
-#include <sys/resource.h> // IWYU pragma: keep
 #include <stdint.h>
 #include <stdio.h>
+#include <stddef.h>
 
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/shim_client_process_state.h>
@@ -42,6 +44,8 @@
 #include <isula_libutils/utils_mainloop.h>
 #include <isula_libutils/auto_cleanup.h>
 #include <isula_libutils/utils_buffer.h>
+#include <isula_libutils/utils_linked_list.h>
+#include <isula_libutils/utils_array.h>
 
 #include "common.h"
 #include "terminal.h"
@@ -57,7 +61,7 @@ static shim_client_process_state *load_process()
 
     p_state = shim_client_process_state_parse_file("process.json", NULL, &err);
     if (p_state == NULL) {
-        write_message(ERR_MSG, "parse process state failed");
+        write_message(ERR_MSG, "parse process state failed: %s", err);
     }
     /* "err" will definitely be allocated memory in the function above */
     free(err);
@@ -168,6 +172,99 @@ static int sync_exit_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr
     return EPOLL_LOOP_HANDLE_CLOSE;
 }
 
+static bool fifo_exists(const char *path)
+{
+    struct stat sb;
+    int ret;
+
+    ret = stat(path, &sb);
+    if (ret < 0) {
+        // could be something other than exist, just return false
+        return false;
+    }
+
+    return S_ISFIFO(sb.st_mode);
+}
+
+static int add_attach_terminal_fifos(const char *in, const char *out, const char *err, int *input_fd, process_t *p)
+{
+    __isula_auto_close int fifofd_in = -1;
+    __isula_auto_close int fifofd_out = -1;
+    __isula_auto_close int fifofd_err = -1;
+    struct shim_fifos_fd *fifos = NULL;
+    struct isula_linked_list *node = NULL;
+
+    bool invalid = (in != NULL && !fifo_exists(in)) || (out != NULL && !fifo_exists(out)) || (err != NULL &&
+                                                                                             !fifo_exists(err));
+    if (invalid) {
+        write_attach_message(ERR_MSG, "File %s or %s or %s does not refer to a FIFO", in, out, err);
+        return -1;
+    }
+
+    if (in != NULL) {
+        fifofd_in = isula_file_open(in, O_RDONLY | O_NONBLOCK | O_CLOEXEC, 0);
+        if (fifofd_in < 0) {
+            write_attach_message(ERR_MSG, "Failed to open FIFO: %s", in);
+            return -1;
+        }
+    }
+
+    if (out != NULL) {
+        fifofd_out = isula_file_open(out, O_WRONLY | O_NONBLOCK | O_CLOEXEC, 0);
+        if (fifofd_out < 0) {
+            write_attach_message(ERR_MSG, "Failed to open FIFO: %s", out);
+            return -1;
+        }
+    }
+
+    if (err != NULL) {
+        fifofd_err = isula_file_open(err, O_WRONLY | O_NONBLOCK | O_CLOEXEC, 0);
+        if (fifofd_err < 0) {
+            write_attach_message(ERR_MSG, "Failed to open FIFO: %s", err);
+            return -1;
+        }
+    }
+
+    fifos = isula_common_calloc_s(sizeof(*fifos));
+    if (fifos == NULL) {
+        write_attach_message(ERR_MSG, "Out of memory");
+        goto err_out;
+    }
+
+    fifos->in_fifo = isula_strdup_s(in);
+    fifos->out_fifo = isula_strdup_s(out);
+    fifos->err_fifo = isula_strdup_s(err);
+
+    fifos->in_fd = isula_transfer_fd(fifofd_in);
+    fifos->out_fd = isula_transfer_fd(fifofd_out);
+    fifos->err_fd = isula_transfer_fd(fifofd_err);
+    node = isula_common_calloc_s(sizeof(struct isula_linked_list));
+    if (node == NULL) {
+        write_attach_message(ERR_MSG, "Out of memory");
+        goto err_out;
+    }
+
+    node->elem = fifos;
+    isula_linked_list_add(p->attach_fifos, node);
+
+    if (input_fd != NULL) {
+        *input_fd = fifos->in_fd;
+    }
+
+    return 0;
+err_out:
+    free_shim_fifos_fd(fifos);
+    return -1;
+}
+
+static void remove_attach_terminal_fifos(isula_epoll_descr_t *descr, struct isula_linked_list *item)
+{
+    struct shim_fifos_fd *elem = (struct shim_fifos_fd *)item->elem;
+    isula_epoll_remove_handler(descr, elem->in_fd);
+    isula_linked_list_del(item);
+    free_shim_fifos_fd(elem);
+}
+
 static int stdin_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
 {
     process_t *p = (process_t *)cbdata;
@@ -210,6 +307,57 @@ static int stdin_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *
     return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
+static int attach_stdin_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
+{
+    process_t *p = (process_t *)cbdata;
+    int r_count = 0;
+    int w_count = 0;
+    int *fd_to = NULL;
+    struct isula_linked_list *item;
+
+    if (events & EPOLLHUP) {
+        write_message(ERR_MSG, "attach stdin %d received the EPOLLHUP event", fd);
+        goto err_out;
+    }
+
+    if (!(events & EPOLLIN)) {
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+
+    (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
+
+    r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    if (r_count <= 0) {
+        write_message(ERR_MSG, "failed to read from attach stdin %d, error:%d", fd, SHIM_SYS_ERR(errno));
+        goto err_out;
+    }
+
+    if (p->state->terminal) {
+        fd_to = &(p->recv_fd);
+    } else {
+        fd_to = &(p->shim_io->in);
+    }
+
+    if (fd_to == NULL || *fd_to == -1) {
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+    w_count = isula_file_total_write_nointr(*fd_to, p->buf, r_count);
+    if (w_count < 0) {
+        /* When any error occurs, set the write fd -1  */
+        write_message(WARN_MSG, "write in_fd %d error:%d", *fd_to, SHIM_SYS_ERR(errno));
+        close(*fd_to);
+        *fd_to = -1;
+    }
+
+    return EPOLL_LOOP_HANDLE_CONTINUE;
+err_out:
+    item = get_attach_fifo_item(fd, p->attach_fifos);
+    if (item != NULL && item->elem != NULL) {
+        remove_attach_terminal_fifos(descr, item);
+    }
+    return EPOLL_LOOP_HANDLE_CONTINUE;
+}
+
 static int stdout_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
 {
     process_t *p = (process_t *)cbdata;
@@ -237,16 +385,29 @@ static int stdout_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
 
     shim_write_container_log_file(p->terminal, STDID_OUT, p->buf, r_count);
 
-    if (p->isulad_io->out == -1) {
+    if (p->isulad_io->out != -1) {
+        w_count = isula_file_total_write_nointr(p->isulad_io->out, p->buf, r_count);
+        if (w_count < 0) {
+            /* When any error occurs, set the write fd -1  */
+            write_message(WARN_MSG, "write out_fd %d error:%d", p->isulad_io->out, SHIM_SYS_ERR(errno));
+            close(p->isulad_io->out);
+            p->isulad_io->out = -1;
+        }
+    }
+
+    if (isula_linked_list_empty(p->attach_fifos)) {
         return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
-    w_count = isula_file_total_write_nointr(p->isulad_io->out, p->buf, r_count);
-    if (w_count < 0) {
-        /* When any error occurs, set the write fd -1  */
-        write_message(WARN_MSG, "write out_fd %d error:%d", p->isulad_io->out, SHIM_SYS_ERR(errno));
-        close(p->isulad_io->out);
-        p->isulad_io->out = -1;
+    struct isula_linked_list *it = NULL;
+    struct isula_linked_list *next = NULL;
+
+    isula_linked_list_for_each_safe(it, p->attach_fifos, next) {
+        struct shim_fifos_fd *elem = (struct shim_fifos_fd *)it->elem;
+        w_count = isula_file_total_write_nointr(elem->out_fd, p->buf, r_count);
+        if (w_count < 0) {
+            remove_attach_terminal_fifos(descr, it);
+        }
     }
 
     return EPOLL_LOOP_HANDLE_CONTINUE;
@@ -279,16 +440,29 @@ static int stderr_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
 
     shim_write_container_log_file(p->terminal, STDID_ERR, p->buf, r_count);
 
-    if (p->isulad_io->err == -1) {
+    if (p->isulad_io->err != -1) {
+        w_count = isula_file_total_write_nointr(p->isulad_io->err, p->buf, r_count);
+        if (w_count < 0) {
+            /* When any error occurs, set the write fd -1  */
+            write_message(WARN_MSG, "write err_fd %d error:%d", p->isulad_io->err, SHIM_SYS_ERR(errno));
+            close(p->isulad_io->err);
+            p->isulad_io->err = -1;
+        }
+    }
+
+    if (isula_linked_list_empty(p->attach_fifos)) {
         return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
-    w_count = isula_file_total_write_nointr(p->isulad_io->err, p->buf, r_count);
-    if (w_count < 0) {
-        /* When any error occurs, set the write fd -1  */
-        write_message(WARN_MSG, "write err_fd %d error:%d", p->isulad_io->err, SHIM_SYS_ERR(errno));
-        close(p->isulad_io->err);
-        p->isulad_io->err = -1;
+    struct isula_linked_list *it = NULL;
+    struct isula_linked_list *next = NULL;
+
+    isula_linked_list_for_each_safe(it, p->attach_fifos, next) {
+        struct shim_fifos_fd *elem = (struct shim_fifos_fd *)it->elem;
+        w_count = isula_file_total_write_nointr(elem->out_fd, p->buf, r_count);
+        if (w_count < 0) {
+            remove_attach_terminal_fifos(descr, it);
+        }
     }
 
     return EPOLL_LOOP_HANDLE_CONTINUE;
@@ -323,6 +497,159 @@ static int resize_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
         return EPOLL_LOOP_HANDLE_CLOSE;
     }
 
+    return EPOLL_LOOP_HANDLE_CONTINUE;
+}
+
+static bool attach_fifopath_security_check(process_t *p, const char *fifopath)
+{
+    struct stat st = { 0 };
+    char real_path[PATH_MAX] = { 0 };
+
+    if (isula_validate_absolute_path(fifopath) != 0) {
+        write_attach_message(ERR_MSG, "attach fifo path \"%s\" must be an valid absolute path", fifopath);
+        return false;
+    }
+
+    if (realpath(fifopath, real_path) == NULL) {
+        write_attach_message(ERR_MSG, "Failed to get realpath for '%s': %s.", real_path, SHIM_SYS_ERR(errno));
+        return false;
+    }
+
+    if (!isula_has_prefix(real_path, p->workdir)) {
+        write_attach_message(ERR_MSG, "attach fifo path \"%s\" must be under the state path", real_path, p->workdir);
+        return false;
+    }
+
+    if (lstat(real_path, &st) != 0) {
+        write_attach_message(ERR_MSG, "Failed to lstat %s : %s", real_path, SHIM_SYS_ERR(errno));
+        return false;
+    }
+
+    if (!S_ISFIFO(st.st_mode)) {
+        write_attach_message(ERR_MSG, "attach fifo path \"%s\" must be an FIFO", real_path);
+        return false;
+    }
+
+    if ((st.st_mode & 0777) != ATTACH_FIFOPATH_MODE) {
+        write_attach_message(ERR_MSG, "attach fifo path \"%s\" permission invalid", real_path);
+        return false;
+    }
+
+    if (st.st_uid != 0) {
+        write_attach_message(ERR_MSG, "attach fifo path \"%s\" uid invalid", real_path);
+        return false;
+    }
+
+    return true;
+}
+
+// attach_cb needs to read the content from communication fd and parse it.
+// at the same time, it also needs to establish a connection between the attach fd and the container fd.
+// 1. if it fails, it needs to write an error message to attach log file,
+// and write -1 to connection fd to let isulad know that it has failed.
+// 2. if it succeeds, write 0 to let isulad know that it is ready.
+// attach_cb returns EPOLL_LOOP_HANDLE_CONTINUE regardless of success or failure,
+// because whether the attach operation is successful or not does not affect the first process of the container.
+static int attach_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
+{
+    process_t *p = (process_t *)cbdata;
+    int r_count = 0;
+    char tmp_buf[BUFSIZ + 1] = { 0 };
+    char *in = NULL, *out = NULL, *err = NULL;
+    int fifofd_in = -1;
+    isula_string_array *tmp_str_array = NULL;
+    int ret = 0;
+    // attach execution return value
+    int status = -1;
+    bool valid = true;
+
+    // after receiving the event that isulad closes the connection,
+    // close the communication fd and remove it from epoll.
+    if (events & EPOLLHUP) {
+        close(fd);
+        isula_epoll_remove_handler(descr, fd);
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+
+    if (!(events & EPOLLIN)) {
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+
+    r_count = isula_file_read_nointr(fd, tmp_buf, sizeof(tmp_buf) - 1);
+    if (r_count <= 0) {
+        write_attach_message(ERR_MSG, "Failed to read msg from attach conn fd");
+        goto out;
+    }
+
+    // limit the number of attach connections to MAX_ATTACH_NUM
+    if (isula_linked_list_len(p->attach_fifos) >= MAX_ATTACH_NUM) {
+        write_attach_message(ERR_MSG, "The number of attach connections exceeds the limit:%d, and this connection is rejected.",
+                             MAX_ATTACH_NUM);
+        goto out;
+    }
+
+    tmp_str_array = isula_string_split_to_multi(tmp_buf, ' ');
+    if (tmp_str_array->len != 3) {
+        write_attach_message(ERR_MSG, "Invalid attach msg from isulad");
+        goto out;
+    }
+
+    for (int i = 0; i < tmp_str_array->len; i++) {
+        valid = valid && attach_fifopath_security_check(p, tmp_str_array->items[i]);
+    }
+
+    if (!valid) {
+        write_attach_message(ERR_MSG, "Invalid attach fifo path from isulad");
+        goto out;
+    }
+
+    in = tmp_str_array->items[0];
+    out = tmp_str_array->items[1];
+    err = tmp_str_array->items[2];
+
+    if (add_attach_terminal_fifos(in, out, err, &fifofd_in, p) < 0) {
+        write_attach_message(ERR_MSG, "Failed to add attach terminal fifos");
+        goto out;
+    }
+
+    // attach stdin --> container stdin
+    ret = isula_epoll_add_handler(descr, fifofd_in, attach_stdin_cb, p);
+    if (ret != SHIM_OK) {
+        write_attach_message(ERR_MSG, "add fifofd_in fd %d to epoll loop failed:%d", fifofd_in, SHIM_SYS_ERR(errno));
+        struct isula_linked_list *item = get_attach_fifo_item(fd, p->attach_fifos);
+        if (item != NULL && item->elem != NULL) {
+            remove_attach_terminal_fifos(descr, item);
+        }
+        goto out;
+    }
+
+    status = 0;
+out:
+    isula_string_array_free(tmp_str_array);
+    (void)isula_file_write_nointr(fd, &status, sizeof(int));
+    return EPOLL_LOOP_HANDLE_CONTINUE;
+}
+
+// do_attach_socket_accept returns EPOLL_LOOP_HANDLE_CONTINUE regardless of success or failure,
+// because whether the attach operation is successful or not does not affect the first process of the container.
+static int do_attach_socket_accept(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
+{
+    process_t *p = (process_t *)cbdata;
+    int conn_fd = -1;
+    int ret = SHIM_ERR;
+
+    conn_fd = accept(p->attach_socket_fd, NULL, NULL);
+    if (conn_fd < 0) {
+        write_attach_message(ERR_MSG, "accept from fd %d failed:%d", p->attach_socket_fd, SHIM_SYS_ERR(errno));
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
+
+    ret = isula_epoll_add_handler(descr, conn_fd, attach_cb, p);
+    if (ret != SHIM_OK) {
+        write_attach_message(ERR_MSG, "add recv_fd %d to epoll loop failed:%d", conn_fd, SHIM_SYS_ERR(errno));
+        close(conn_fd);
+        return EPOLL_LOOP_HANDLE_CONTINUE;
+    }
     return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
@@ -399,6 +726,7 @@ static void stdio_release(int (*stdio_fd)[2])
         for (j = 0; j < 2; j++) {
             if (stdio_fd[i][j] > 0) {
                 close(stdio_fd[i][j]);
+                stdio_fd[i][j] = -1;
             }
         }
     }
@@ -568,24 +896,6 @@ static int open_generic_io(process_t *p, isula_epoll_descr_t *descr)
     return SHIM_OK;
 }
 
-static int set_non_block(int fd)
-{
-    int flag = -1;
-    int ret = SHIM_ERR;
-
-    flag = fcntl(fd, F_GETFL, 0);
-    if (flag < 0) {
-        return SHIM_ERR;
-    }
-
-    ret = fcntl(fd, F_SETFL, flag | O_NONBLOCK);
-    if (ret != 0) {
-        return SHIM_ERR;
-    }
-
-    return SHIM_OK;
-}
-
 /*
     std_id: channel type
     isulad_stdio: one side of the isulad fifo file
@@ -623,6 +933,14 @@ static void *io_epoll_loop(void *data)
         exit(EXIT_FAILURE);
     }
 
+    if (p->state->attach_socket != NULL) {
+        ret = isula_epoll_add_handler(&descr, p->attach_socket_fd, do_attach_socket_accept, p);
+        if (ret != SHIM_OK) {
+            write_message(ERR_MSG, "add attach_socket_fd %d to epoll loop failed:%d", p->attach_socket_fd, SHIM_SYS_ERR(errno));
+            exit(EXIT_FAILURE);
+        }
+    }
+
     if (p->state->terminal) {
         ret = open_terminal_io(p, &descr);
     } else {
@@ -651,7 +969,7 @@ static void *io_epoll_loop(void *data)
     }
 
     if (fd_out > 0) {
-        ret = set_non_block(fd_out);
+        ret = isula_set_non_block(fd_out);
         if (ret != SHIM_OK) {
             write_message(ERR_MSG, "set fd %d non_block failed:%d", fd_out, SHIM_SYS_ERR(errno));
             exit(EXIT_FAILURE);
@@ -666,7 +984,7 @@ static void *io_epoll_loop(void *data)
     }
 
     if (fd_err > 0) {
-        ret = set_non_block(fd_err);
+        ret = isula_set_non_block(fd_err);
         if (ret != SHIM_OK) {
             write_message(ERR_MSG, "set fd %d non_block failed:%d", fd_err, SHIM_SYS_ERR(errno));
             exit(EXIT_FAILURE);
@@ -807,15 +1125,19 @@ failure:
     if (p->isulad_io != NULL) {
         if (p->isulad_io->in > 0) {
             close(p->isulad_io->in);
+            p->isulad_io->in = -1;
         }
         if (p->isulad_io->out > 0) {
             close(p->isulad_io->out);
+            p->isulad_io->out = -1;
         }
         if (p->isulad_io->err > 0) {
             close(p->isulad_io->err);
+            p->isulad_io->err = -1;
         }
         if (p->isulad_io->resize > 0) {
             close(p->isulad_io->resize);
+            p->isulad_io->resize = -1;
         }
         free(p->isulad_io);
         p->isulad_io = NULL;
@@ -936,6 +1258,13 @@ process_t *new_process(char *id, char *bundle, char *runtime)
     if (ret != SHIM_OK) {
         goto failure;
     }
+
+    p->attach_fifos = isula_common_calloc_s(sizeof(struct isula_linked_list));
+    if (p->attach_fifos == NULL) {
+        goto failure;
+    }
+
+    isula_linked_list_init(p->attach_fifos);
 
     return p;
 
@@ -1366,5 +1695,51 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const
 
     // write container process exit_code in stdout
     (void)isula_file_write_nointr(STDOUT_FILENO, &status, sizeof(int));
+    return SHIM_OK;
+}
+
+int prepare_attach_socket(process_t *p)
+{
+    struct sockaddr_un addr;
+    int ret = -1;
+
+    if (strlen(p->state->attach_socket) >= sizeof(addr.sun_path)) {
+        write_message(ERR_MSG, "Invalid attach socket path: %s", p->state->attach_socket);
+        return SHIM_ERR;
+    }
+
+    p->attach_socket_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (p->attach_socket_fd < 0) {
+        write_message(ERR_MSG, "Failed to create socket:%d", SHIM_SYS_ERR(errno));
+        return SHIM_ERR;
+    }
+
+    (void)memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    (void)strncpy(addr.sun_path, p->state->attach_socket, sizeof(addr.sun_path) - 1);
+
+    ret = bind(p->attach_socket_fd, (struct sockaddr *)&addr, sizeof(addr));
+    if (ret < 0) {
+        write_message(ERR_MSG, "bind console fd failed:%d", SHIM_SYS_ERR(errno));
+        return SHIM_ERR;
+    }
+
+    ret = chmod(p->state->attach_socket, SOCKET_DIRECTORY_MODE);
+    if (ret != 0) {
+        write_message(ERR_MSG, "Failed to chmod for socket: %s", p->state->attach_socket);
+        return SHIM_ERR;
+    }
+
+    //If the backlog argument is greater than the value in
+    // /proc/sys/net/core/somaxconn, then it is silently capped to that
+    // value.  Since Linux 5.4, the default in this file is 4096; in
+    // earlier kernels, the default value is 128.  Before Linux 2.4.25,
+    // this limit was a hard coded value, SOMAXCONN, with the value 128.
+    // The maximum number of attach we allow here is MAX_ATTACH_NUM, so just use it directly
+    ret = listen(p->attach_socket_fd, MAX_ATTACH_NUM);
+    if (ret < 0) {
+        write_message(ERR_MSG, "listen console fd failed:%d", SHIM_SYS_ERR(errno));
+        return SHIM_ERR;
+    }
     return SHIM_OK;
 }

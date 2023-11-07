@@ -44,8 +44,10 @@ extern "C" {
     /* err in runtime module */                                                              \
     XX(ERR_RUNTIME, DEF_ERR_RUNTIME_STR)                                                     \
     \
+    /* info for detach */                                                                    \
+    XX(INFO_DETACH, "Attach detach")                                                         \
     /* err max */                                                                            \
-    XX(ERR_UNKNOWN, "Unknown error")
+    XX(ERR_UNKNOWN, "Unknown error")                                                         
 
 #define ISULAD_ERRNO_GEN(n, s) ISULAD_##n,
 typedef enum { ISULAD_ERRNO_MAP(ISULAD_ERRNO_GEN) } isulad_errno_t;

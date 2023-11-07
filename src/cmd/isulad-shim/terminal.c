@@ -162,7 +162,7 @@ static int shim_json_data_write(log_terminal *terminal, const char *buf, int rea
      * shouldn't happen, otherwise, discard some last bytes.
      */
     nret = isula_file_total_write_nointr(terminal->fd, buf,
-                                 terminal->log_maxsize < read_count ? terminal->log_maxsize : read_count);
+                                         terminal->log_maxsize < read_count ? terminal->log_maxsize : read_count);
     if (nret < 0) {
         ret = -1;
         goto out;

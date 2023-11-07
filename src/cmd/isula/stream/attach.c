@@ -37,6 +37,7 @@
 #include "connect.h"
 #include "constants.h"
 #include "client_helpers.h"
+#include "error.h"
 #ifndef GRPC_CONNECTOR
 #include "client_console.h"
 #endif
@@ -70,8 +71,10 @@ static int check_tty(bool tty, struct termios *oldtios, bool *reset_tty)
         }
         *reset_tty = true;
     } else {
-        INFO("the input device is not a TTY");
-        return 0;
+        // if it is trying to attach to a container TTY
+        // from a non-TTY client input stream, returns -1.
+        COMMAND_ERROR("the input device is not a TTY");
+        return -1;
     }
 
     return 0;
@@ -353,6 +356,7 @@ static int client_attach(struct client_arguments *args, uint32_t *exit_code)
 #endif
 
     config = get_connect_config(args);
+    // Obtain the container's real exit code by waiting for the container to stop.
     container_wait_thread(args, exit_code, &sem_exited);
     ret = ops->container.attach(&request, response, &config);
     if (ret != 0) {
@@ -374,7 +378,9 @@ static int client_attach(struct client_arguments *args, uint32_t *exit_code)
 
     if (sem_timedwait(&sem_exited, &ts) != 0) {
         if (errno == ETIMEDOUT) {
-            COMMAND_ERROR("Wait container status timeout.");
+            if (response->server_errono != ISULAD_INFO_DETACH) {
+                INFO("Wait container stopped status timeout.");
+            }
         } else {
             CMD_SYSERROR("Failed to wait sem");
         }

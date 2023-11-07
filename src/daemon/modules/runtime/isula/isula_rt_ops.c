@@ -18,6 +18,10 @@
 #include "isula_rt_ops.h"
 #include <unistd.h>
 #include <sys/wait.h>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/types.h>
 #include <limits.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -26,6 +30,7 @@
 #include <isula_libutils/isulad_daemon_configs.h>
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/oci_runtime_spec.h>
+#include <isula_libutils/utils_file.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -52,9 +57,11 @@
 
 #define SHIM_BINARY "isulad-shim"
 #define RESIZE_FIFO_NAME "resize_fifo"
+#define ATTACH_SOCKET "attach_socket.sock"
 #define SHIM_LOG_SIZE ((BUFSIZ - 100) / 2)
 #define RESIZE_DATA_SIZE 100
 #define PID_WAIT_TIME 120
+#define ATTACH_WAIT_TIME 120
 #define SHIM_EXIT_TIMEOUT 2
 
 // file name formats of cgroup resources json
@@ -221,6 +228,19 @@ static void show_shim_runtime_errlog(const char *workdir)
     ERROR("runtime-log: %s", buf2);
     (void)snprintf(buf, sizeof(buf), "shim-log error: %s\nruntime-log error: %s\n", buf1, buf2);
     isulad_set_error_message(buf);
+}
+
+static void show_shim_attach_errlog(const char *workdir)
+{
+    char buf[SHIM_LOG_SIZE] = { 0 };
+
+    if (g_isulad_errmsg != NULL) {
+        return;
+    }
+
+    get_err_message(buf, sizeof(buf), workdir, "attach-log.json");
+    ERROR("shim-log: %s", buf);
+    isulad_set_error_message("shim-log error:\n%s\n", buf);
 }
 
 bool rt_isula_detect(const char *runtime)
@@ -463,8 +483,9 @@ static void runtime_exec_param_init(runtime_exec_info *rei)
     }
 }
 
-static int runtime_exec_info_init(runtime_exec_info *rei, const char *workdir, const char *root_path, const char *runtime, const char *subcmd,
-                                   const char **opts, size_t opts_len, const char *id, char **params, size_t params_num)
+static int runtime_exec_info_init(runtime_exec_info *rei, const char *workdir, const char *root_path,
+                                  const char *runtime, const char *subcmd, const char **opts, size_t opts_len, const char *id, char **params,
+                                  size_t params_num)
 {
     int ret = 0;
     rei->workdir = workdir;
@@ -1012,6 +1033,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     size_t runtime_args_len = 0;
     int ret = 0;
     char workdir[PATH_MAX] = { 0 };
+    char attach_socket[PATH_MAX] = { 0 };
     shim_client_process_state p = { 0 };
     int shim_exit_code = 0;
     int nret = 0;
@@ -1034,6 +1056,13 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
         goto out;
     }
 
+    nret = snprintf(attach_socket, sizeof(attach_socket), "%s/%s", workdir, ATTACH_SOCKET);
+    if (nret < 0 || (size_t)nret >= sizeof(attach_socket)) {
+        INFO("Failed to get full attach socket path");
+        ret = -1;
+        goto out;
+    }
+
     p.exit_fifo = (char *)params->exit_fifo;
     p.open_tty = params->tty;
     p.open_stdin = params->open_stdin;
@@ -1042,6 +1071,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     p.isulad_stderr = (char *)params->stderr;
     p.runtime_args = (char **)runtime_args;
     p.runtime_args_len = runtime_args_len;
+    p.attach_socket = attach_socket;
     copy_process(&p, config->process);
     copy_annotations(&p, config->annotations);
 
@@ -1224,7 +1254,7 @@ static bool fg_exec(const rt_exec_params_t *params)
     return false;
 }
 
-static char *try_generate_exec_id()
+static char *try_generate_random_id()
 {
     char *id = NULL;
 
@@ -1324,7 +1354,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     if (params->suffix != NULL) {
         exec_id = util_strdup_s(params->suffix);
     } else {
-        exec_id = try_generate_exec_id();
+        exec_id = try_generate_random_id();
     }
     if (exec_id == NULL) {
         ERROR("Out of memory or generate exec id failed");
@@ -1423,11 +1453,131 @@ out:
     return ret;
 }
 
+static int get_container_attach_statuscode(const char *workdir, int attach_shim_fd)
+{
+    int status_code = 0;
+    int ret = -1;
+    struct timespec beg = { 0 };
+    struct timespec end = { 0 };
+
+    if (clock_gettime(CLOCK_MONOTONIC, &beg) != 0) {
+        ERROR("Failed get time");
+        return -1;
+    }
+
+    while (true) {
+        if (clock_gettime(CLOCK_MONOTONIC, &end) != 0) {
+            ERROR("Failed get time");
+            return -1;
+        }
+        if (end.tv_sec - beg.tv_sec > ATTACH_WAIT_TIME) {
+            ERROR("Wait container attach exitcode timeout");
+            return -1;
+        }
+        ret = util_read_nointr(attach_shim_fd, &status_code, sizeof(int));
+        if (ret <= 0) {
+            if (shim_alive(workdir)) {
+                // wait 100 millisecond to read exit code
+                util_usleep_nointerupt(100000);
+                continue;
+            }
+            ERROR("Failed read pid from dead shim %s", workdir);
+            return -1;
+        }
+        return status_code; /* success */
+    }
+    return -1;
+}
+
+static int get_attach_socketfd(const char *attach_socket, int *socket_fd)
+{
+    struct sockaddr_un addr = { 0 };
+    __isula_auto_close int tmp_socket = -1;
+
+    if (strlen(attach_socket) >= sizeof(addr.sun_path)) {
+        SYSERROR("Invalid attach socket path: %s", attach_socket);
+        return -1; 
+    }
+
+    tmp_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (tmp_socket < 0) {
+        SYSERROR("Failed to create attach socket");
+        return -1;
+    }
+
+    if (isula_set_non_block(tmp_socket) < 0) {
+        SYSERROR("Failed to set socket non block");
+        return -1;
+    }
+
+    (void)memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    (void)strcpy(addr.sun_path, attach_socket);
+
+    if (connect(tmp_socket, (void *)&addr, sizeof(addr)) < 0) {
+        SYSERROR("Failed to connect attach socket: %s", attach_socket);
+        return -1;
+    }
+    *socket_fd = isula_transfer_fd(tmp_socket);
+    return 0;
+}
+
 int rt_isula_attach(const char *id, const char *runtime, const rt_attach_params_t *params)
 {
-    ERROR("isula attach not support on isulad-shim");
-    isulad_set_error_message("isula attach not support on isulad-shim");
-    return -1;
+    int ret = 0;
+    int len = 0;
+    int status_code = 0;
+    __isula_auto_close int socket_fd = -1;
+    char buf[BUFSIZ] = { 0 };
+    char workdir[PATH_MAX] = { 0 };
+    char attach_socket[PATH_MAX] = { 0 };
+
+    if (id == NULL || runtime == NULL || params == NULL) {
+        ERROR("Null argument");
+        return -1;
+    }
+
+    ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
+    if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
+        ERROR("Failed join exec full path");
+        return -1;
+    }
+
+    // the communication format between isulad and isulad-shim attach is:
+    // stdin-path stdout-path stderr-path
+    len = snprintf(buf, sizeof(buf), "%s %s %s", params->stdin, params->stdout, params->stderr);
+    if (len < 0 || (size_t)len >= sizeof(buf)) {
+        ERROR("Failed to snprintf string");
+        return -1;
+    }
+
+    ret = snprintf(attach_socket, sizeof(attach_socket), "%s/%s", workdir, ATTACH_SOCKET);
+    if (ret < 0 || (size_t)ret >= sizeof(attach_socket)) {
+        ERROR("Failed to get full attach socket path");
+        return -1;
+    }
+
+    ret = get_attach_socketfd(attach_socket, &socket_fd);
+    if (ret < 0) {
+        ERROR("Failed to get attach socketfd");
+        return -1;
+    }
+
+    DEBUG("write %s to attach fd", buf);
+
+    ret = isula_file_write_nointr(socket_fd, buf, len);
+    if (ret < 0) {
+        SYSERROR("Failed to write attach isulad fd");
+        return -1;
+    }
+
+    status_code = get_container_attach_statuscode(workdir, socket_fd);
+    if (status_code < 0) {
+        show_shim_attach_errlog(workdir);
+        return -1;
+    }
+
+    return 0;
 }
 
 static int to_engine_resources_unified(const host_config *hostconfig, shim_client_cgroup_resources *cr)
@@ -1673,7 +1823,7 @@ static int parse_ps_data(char *stdout_msg, rt_listpids_out_t *out)
 }
 
 static int runtime_call_ps(const char *workdir, const char *runtime, const char *id,
-                               rt_listpids_out_t *out)
+                           rt_listpids_out_t *out)
 {
     __isula_auto_free char *stdout_msg = NULL;
     __isula_auto_free char *stderr_msg = NULL;
@@ -1681,7 +1831,7 @@ static int runtime_call_ps(const char *workdir, const char *runtime, const char 
     int ret = 0;
     int nret = 0;
     char *params[PARAM_NUM] = { 0 };
-    const char *opts[2] = { "--format" , "json" };
+    const char *opts[2] = { "--format", "json" };
     char root_path[PATH_MAX] = { 0 };
 
     nret = snprintf(root_path, PATH_MAX, "%s/%s", workdir, runtime);

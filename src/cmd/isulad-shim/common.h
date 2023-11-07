@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <isula_libutils/utils.h>
+#include <isula_libutils/utils_linked_list.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,7 +60,21 @@ extern "C" {
 #define CONTAINER_ACTION_REBOOT 129
 #define CONTAINER_ACTION_SHUTDOWN 130
 
+#define ATTACH_SOCKET "attach_socket.sock"
+#define ATTACH_LOG_NAME "attach-log.json"
+#define ATTACH_DETACH_MSG "read escape sequence"
+#define MAX_ATTACH_NUM 16
+
+#define CTRL_Q 0x11  // ASCII code control character ctrl + Q
+
+#define LOG_FILE_MODE 0600
+
+#define SOCKET_DIRECTORY_MODE 0600
+#define ATTACH_FIFOPATH_MODE 0600
+
 int init_shim_log(void);
+
+int init_attach_log(void);
 
 void signal_routine(int sig);
 
@@ -90,17 +105,32 @@ void signal_routine(int sig);
         }                         \
     } while (0)
 
+struct shim_fifos_fd {
+    char *in_fifo;
+    char *out_fifo;
+    char *err_fifo;
+    int in_fd;
+    int out_fd;
+    int err_fd;
+};
+
 char *read_text_file(const char *path);
 
 int cmd_combined_output(const char *binary, const char *params[], void *output, int *output_len);
 
 void write_message(const char *level, const char *fmt, ...);
 
+void write_attach_message(const char *level, const char *fmt, ...);
+
 int generate_random_str(char *id, size_t len);
 
 void close_fd(int *pfd);
 
 int open_no_inherit(const char *path, int flag, mode_t mode);
+
+struct isula_linked_list *get_attach_fifo_item(int fd, struct isula_linked_list *list);
+
+void free_shim_fifos_fd(struct shim_fifos_fd *item);
 
 #ifdef __cplusplus
 }
