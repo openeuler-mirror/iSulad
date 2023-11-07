@@ -6,7 +6,6 @@ After=network.target
 Type=notify
 EnvironmentFile=-/etc/sysconfig/iSulad
 ExecStart=/usr/bin/isulad $OPTIONS
-ExecReload=/bin/kill -s HUP $MAINPID
 LimitNOFILE=1048576
 LimitNPROC=infinity
 LimitCORE=infinity
