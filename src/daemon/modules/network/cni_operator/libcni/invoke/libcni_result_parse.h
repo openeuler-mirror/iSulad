@@ -37,6 +37,12 @@ cni_result_curr *cni_result_curr_to_json_result(const struct cni_opt_result *src
 
 struct cni_opt_result *copy_result_from_current(const cni_result_curr *curr_result);
 
+size_t get_curr_support_version_len(void);
+
+int get_support_version_pos(const char *version);
+
+const char *get_support_version_by_pos(size_t pos);
+
 #ifdef __cplusplus
 }
 #endif

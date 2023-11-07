@@ -129,3 +129,21 @@ void free_cni_opt_result(struct cni_opt_result *val)
     val->my_dns = NULL;
     free(val);
 }
+
+void free_cni_version_info_list(struct cni_version_info_list *val)
+{
+    size_t i = 0;
+
+    if (val == NULL) {
+        return;
+    }
+    
+    for (i = 0; i < val->result_versions_len; i++) {
+        free_cni_version_info(val->result_versions[i]);
+        val->result_versions[i] = NULL;
+    }
+    free(val->result_versions);
+    val->result_versions = NULL;
+
+    free(val);
+}

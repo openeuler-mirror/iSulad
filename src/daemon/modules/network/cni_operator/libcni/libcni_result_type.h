@@ -19,9 +19,14 @@
 #include <sys/types.h>
 #include <stdbool.h>
 
+#include <isula_libutils/cni_version_info.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define CURRENT_VERSION "1.0.0"
+#define SUPPORT_CACHE_AND_CHECK_VERSION "0.4.0"
 
 /* define types for version */
 struct cni_opt_result_interface {
@@ -73,6 +78,11 @@ struct cni_opt_result {
     struct cni_opt_result_dns *my_dns;
 };
 
+struct cni_version_info_list {
+    cni_version_info **result_versions;
+    size_t result_versions_len;
+};
+
 void free_cni_opt_result_ipconfig(struct cni_opt_result_ipconfig *ipc);
 
 void free_cni_opt_result_route(struct cni_opt_result_route *val);
@@ -82,6 +92,8 @@ void free_cni_opt_result_interface(struct cni_opt_result_interface *val);
 void free_cni_opt_result_dns(struct cni_opt_result_dns *val);
 
 void free_cni_opt_result(struct cni_opt_result *val);
+
+void free_cni_version_info_list(struct cni_version_info_list *val);
 
 #ifdef __cplusplus
 }

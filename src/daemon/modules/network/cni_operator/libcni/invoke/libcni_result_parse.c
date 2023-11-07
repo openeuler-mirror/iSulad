@@ -741,3 +741,32 @@ struct cni_opt_result *new_result(const char *version, const char *jsonstr)
     ERROR("unsupported CNI result version \"%s\"", version);
     return NULL;
 }
+
+size_t get_curr_support_version_len(void)
+{
+    return CURR_SUPPORT_VERSION_LEN;
+}
+
+int get_support_version_pos(const char *version)
+{
+    int i = 0;
+    if (version == NULL) {
+        return -1;
+    }
+
+    for (i = CURR_SUPPORT_VERSION_LEN - 1; i >= 0; i--) {
+        if ((g_curr_support_versions[i] != NULL) && (strcmp(version, g_curr_support_versions[i]) == 0)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+const char *get_support_version_by_pos(size_t pos)
+{
+    if (pos >= CURR_SUPPORT_VERSION_LEN) {
+        return NULL;
+    }
+    return g_curr_support_versions[pos];
+}

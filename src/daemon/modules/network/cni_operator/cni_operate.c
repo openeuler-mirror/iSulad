@@ -926,6 +926,22 @@ out:
     return ret;
 }
 
+int version_network_plane(const struct cni_network_list_conf *list,
+                          struct cni_version_info_list **result_version_list)
+{
+    if (list == NULL || list->list == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    if (cni_version_network_list(list, result_version_list) != 0) {
+        ERROR("Version CNI network failed");
+        return -1;
+    }
+
+    return 0;
+}
+
 int detach_loopback(const char *id, const char *netns)
 {
     int ret = 0;

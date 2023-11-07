@@ -26,6 +26,7 @@
 #include "linked_list.h"
 #include "isulad_config.h"
 #include <isula_libutils/log.h>
+#include <isula_libutils/auto_cleanup.h>
 #include "utils_network.h"
 #include "network_tools.h"
 #include "cni_operate.h"
@@ -1301,7 +1302,7 @@ static cni_net_conf_list *conf_bridge(const network_create_request *request, str
         list->plugins_len++;
     }
 
-    list->cni_version = util_strdup_s(CURRENT_VERSION);
+    list->cni_version = cni_get_plugins_supported_version(list);
     if (request->name != NULL) {
         list->name = util_strdup_s(request->name);
     } else {
