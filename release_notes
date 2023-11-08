@@ -1,3 +1,67 @@
+2023-11-07 xuepengxu release 2.1.4
+    - !2238 modify the default value of EANBLE_IMAGE_LIBARAY to off * modify the default value of EANBLE_IMAGE_LIBARAY to off
+    - !2237 delete the disabled reload configuration in isulad.service
+    - !2235 [CI] change base ci test image to fedora
+    - !2234 network:update dnsname verison * network:update dnsname verison
+    - !2229 Fix critest fail for symlink volume * Fix critest fail for symlink
+    - !2227 doc:update the cni plugins version * doc:update the cni plugins version
+    - !2228 bugfix:'for' loop initial declarations are only allowed in C99 mode * bugfix:'for' loop initial declarations are only allowed in C99 mode
+    - !2225 bugfix:fix typos and header file reference * bugfix:fix typos and header file reference
+    - !2208 network:libcni upgrades v1.0.0
+    - !2224 still use lxc 4.0.3 in CI tests * still use lxc 4.0.3 in CI tests
+    - !2223 [Sandbox API]: update doc of shim controller design * [Sandbox API]: update doc of controller design
+    - !2221 add create gpu container manual * add create gpu container manual
+    - !2222 [Sandbox API]: update pod stats in cri_api_v1 * [Sandbox API]: Update pod stats in cri_api_v1
+    - !2206 [Sandbox API]: add shim controller for cri-api-v1
+    - !2217 [Sandbox API]: Fix sandbox dir not existed issue in SetupSandboxNetwork * [Sandbox API]: Fix sandbox dir not existed issue
+    - !2218 install meson in CI * install meson in CI
+    - !2216 use lxc master branch * use lxc master branch
+    - !2210 document optimization:libcni upgrades v1.0.0 * document optimization:libcni upgrades v1.0.0
+    - !2207 [refactor] update possible changed resources for oci spec
+    - !2215 network:bugfix memory leak * network:bugfix memory leak
+    - !2211 network:auto free for libcni * network:auto free for libcni
+    - !2212 bugfix for rt_isula_exec_resize * bugfix for rt_isula_exec_resize
+    - !2209 add runc listpid implement
+    - !2205 bugfix for add --root option Merge pull request !2205 from zhongtao/fix
+    - !2204 [refactor] eliminate duplicate code * [refactor] use common utils from libisula to eliminate duplicate code
+    - !2203 add --root option when calling runc
+    - !2067 add podsanbox cri interface design doc * add podsanbox cri interface design doc
+    - !2200 remove same code and replace to isula-libutils
+    - !2202 use __isula_auto_prw_unlock to improve code * use __isula_auto_prw_unlock to improve code
+    - !2201 Add m_calls mutex in controller monitor * Add m_calls mutex in controller monitor
+    - !2066 add sandbox module design doc * add sandbox module design doc
+    - !2199 Add retry function for bigdata_stream_runc * !2195 Add retry function for bigdata_stream_runc
+    - !2198 allow tls_mode not set * Allow tls_mode not set in grpc context from client
+    - !2197 add config for enable cri v1
+    - !2196 find libisulad_shim_libutils.a from libisula.pc * find libisulad_shim_libutils.a from libisula.pc
+    - !2194 [CI] do not use tty to run docker run
+    - !2193 [CI] fix relative path of file
+    - !2192 【CI】new docker container do not need change resolv
+    - !2191 [CI] support build isulad on many linux distros
+    - !2190 [refactor] adapt new library for libisulad-shim utils
+    - !2189 Limit the response size of ExecSync * !2129 Limit the response size of ExecSync
+    - !2187 update docs/design/detailed/Image/remote_ro_design.md. * update docs/design/detailed/Image/remote_ro_design.md.
+    - !2186 update docs/design/detailed/Image/image_storage_driver_design_zh.md. * update docs/design/detailed/Image/image_storage_driver_design_zh.md.
+    - !2184 update docs/build_docs/guide/build_guide_riscv_zh.md. * update docs/build_docs/guide/build_guide_riscv_zh.md.
+    - !2188 Support both C++11 and C++17 * Support both C++11 and C++17
+    - !2185 sync from stable branch Merge pull request !2185 from haozi007/fixbug
+    - !2183 Fix code inspection and add macro isolation
+    - !2180 fix execlp not enough args * fix execlp not enough args
+    - !2182 Add mutex for container list in sandbox * Add mutex for container list in sandbox
+    - !2173 remove unneccessary strerror
+    - !2176 [Sandbox API]Add vsock support for exec
+    - !2171 Fix nullptr in src/daemon/entry * !2160 Fix nullptr in src/daemon/entry
+    - !2168 fix code bug * fix code bug
+    - !2163 add bind mount file lock * add bind mount file lock
+    - !2162 Fix rename issue for id manager Merge pull request !2162 from xuxuepeng/master
+    - !2158 Use crictl v1.22.0 for ci * Use crictl v1.22.0 for ci
+    - !2156 Fix sandbox error logging * Fix sandbox error logging
+    - !2155 Use reference in loop in listpodsandbox * Use reference in loop in listpodsandbox
+
+    dev stats:
+      - 325 files changed, 7714 insertions(+), 3264 deletions(-)
+      - contributors: haozi007, zhongtao, liuxu, xuxuepeng, zhangxiaoyu, jake, wangyu, jikai
+
 2023-08-29 xuepengxu release 2.1.3
     - !2150 CI: use old lxc for master branch
     - !2142 improve by code check of cpp
