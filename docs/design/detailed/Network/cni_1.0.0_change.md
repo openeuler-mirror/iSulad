@@ -33,7 +33,29 @@ cni_net_conf_runtime_config;
 ## 2. Execution Protocol
 ### VERSION
 
-VERSION操作用于检查插件支持的CNI规范的版本，在spec-v1.0.0中，它增加了输入参数cniVersion，iSulad未使用VERSION功能，因此不涉及。
+VERSION操作用于检查插件支持的CNI规范的版本，在spec-v1.0.0中，它增加了输入参数cniVersion。
+
+整体时序：
+```mermaid
+sequenceDiagram
+	participant conf_bridge
+	participant cni_get_plugins_supported_version
+	participant cni_version_network_list
+	participant version_network
+	participant get_version_info
+    conf_bridge ->> cni_get_plugins_supported_version:post cni_net_conf_list
+    cni_get_plugins_supported_version ->> cni_version_network_list:post cni_net_conf_list
+    loop for each plugin
+        cni_version_network_list ->> version_network:post each cni_net_conf
+        version_network ->> get_version_info:post each cni_net_conf plugin path e.g.
+        get_version_info -->> version_network:get version_result
+        version_network -->> cni_version_network_list:get version_result
+    end
+    cni_version_network_list ->> cni_version_network_list:comb cni_version_info_list
+    cni_version_network_list -->> cni_get_plugins_supported_version:get cni_version_info_list
+    cni_get_plugins_supported_version ->> cni_get_plugins_supported_version:find the latest CNI version supported by all plugins
+    cni_get_plugins_supported_version -->> conf_bridge:get version
+```
 
 ## 3. Execution of Network Configurations
 

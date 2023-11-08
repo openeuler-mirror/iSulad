@@ -73,6 +73,14 @@ int detach_network_plane(const struct cni_manager *manager, const struct cni_net
 * Return value: return 0 on success, non-zero on failure
 */
 int check_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list, struct cni_opt_result **result);
+
+/*
+* Description: get the CNI version information supported by the plugins required for the single network plane of the container;
+* list: network configuration;
+* result_version_list: record the CNI version supported by the plugins;
+* Return value: return 0 on success, non-zero on failure
+*/
+int version_network_plane(const struct cni_network_list_conf *list, struct cni_result_version_list **result_version_list);
 ````
 
 # 4. Detailed Design

@@ -73,6 +73,14 @@ int detach_network_plane(const struct cni_manager *manager, const struct cni_net
 * 返回值：成功返回0，失败返回非0
 */
 int check_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list, struct cni_opt_result **result);
+
+/*
+* 说明：获取容器单网络平面所需的插件支持的CNI版本信息；
+* list: 网络配置；
+* result_version_list：记录插件支持的CNI版本信息；
+* 返回值：成功返回0，失败返回非0
+*/
+int version_network_plane(const struct cni_network_list_conf *list, struct cni_result_version_list **result_version_list);
 ```
 
 # 4.详细设计
