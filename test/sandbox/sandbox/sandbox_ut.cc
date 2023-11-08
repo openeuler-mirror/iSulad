@@ -49,7 +49,6 @@ TEST_F(SandboxTest, TestDefaultGetters)
     ASSERT_STREQ(sandbox->GetRuntime().c_str(), info.runtime.c_str());
     ASSERT_STREQ(sandbox->GetSandboxer().c_str(), info.sandboxer.c_str());
     ASSERT_STREQ(sandbox->GetRuntimeHandle().c_str(), info.runtimeHandler.c_str());
-    ASSERT_EQ(sandbox->GetContainers().size(), 0);
     ASSERT_STREQ(sandbox->GetRootDir().c_str(), sandbox_rootdir.c_str());
     ASSERT_STREQ(sandbox->GetStateDir().c_str(), sandbox_statedir.c_str());
     ASSERT_STREQ(sandbox->GetResolvPath().c_str(), (sandbox_rootdir + "/resolv.conf").c_str());
@@ -84,19 +83,6 @@ TEST_F(SandboxTest, TestGettersAndSetters)
 
     sandbox->RemoveLabels("key");
     EXPECT_TRUE(sandbox->GetSandboxConfig().labels().empty());
-
-    std::string containerId = "container_id";
-    sandbox->AddContainer(containerId);
-    auto Mycontainers = sandbox->GetContainers();
-    auto it = std::find(Mycontainers.begin(), Mycontainers.end(), containerId);
-    EXPECT_NE(Mycontainers.end(), it);
-
-    sandbox->RemoveContainer(containerId);
-    EXPECT_EQ(sandbox->GetContainers().size(), 0);
-
-    std::vector<std::string> containers = {"container1", "container2"};
-    sandbox->SetConatiners(containers);
-    EXPECT_EQ(sandbox->GetContainers(), containers);
 
     StatsInfo statsInfo = {1234, 100};
     sandbox->UpdateStatsInfo(statsInfo);

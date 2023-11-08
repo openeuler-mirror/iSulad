@@ -499,7 +499,6 @@ std::string ContainerManagerService::CreateContainer(const std::string &podSandb
     }
 
     response_id = response->id;
-    sandbox->AddContainer(response_id);
 
 cleanup:
     free_container_create_request(request);
@@ -591,37 +590,8 @@ void ContainerManagerService::StopContainer(const std::string &containerID, int6
     CRIHelpers::StopContainer(m_cb, containerID, timeout, error);
 }
 
-// TODO: Consider to refactor the way we handle container list in sandbox.
-//       This function might be removed after that.
-void ContainerManagerService::RemoveContainerIDFromSandbox(const std::string &containerID)
-{
-    std::string realContainerID;
-    std::string podSandboxID;
-    Errors error;
-
-    CRIHelpersV1::GetContainerSandboxID(containerID, realContainerID, podSandboxID, error);
-    if (error.NotEmpty()) {
-        WARN("Failed to get sandbox id for container %s: %s", containerID.c_str(), error.GetCMessage());
-        return;
-    }
-
-    std::shared_ptr<sandbox::Sandbox> sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID);
-    if (sandbox == nullptr) {
-        ERROR("Failed to get sandbox instance: %s for creating container", podSandboxID.c_str());
-        error.Errorf("Failed to get sandbox instance: %s for creating container", podSandboxID.c_str());
-        return;
-    }
-
-    sandbox->RemoveContainer(realContainerID);
-}
-
 void ContainerManagerService::RemoveContainer(const std::string &containerID, Errors &error)
 {
-    // TODO: Refactor after adding the ability to use sandbox manager for sandboxid query
-    //       This will remove container id from sandbox container_list first,
-    //       if the following operation failed, it could cause inconsistency.
-    RemoveContainerIDFromSandbox(containerID);
-
     CRIHelpers::RemoveContainer(m_cb, containerID, error);
     if (error.NotEmpty()) {
         WARN("Failed to remove container %s", containerID.c_str());

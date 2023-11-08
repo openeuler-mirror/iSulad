@@ -104,7 +104,6 @@ public:
     auto GetCreatedAt() -> uint64_t;
     auto GetPid() -> uint32_t;
     auto GetTaskAddress() const -> const std::string &;
-    auto GetContainers() -> std::vector<std::string>;
     auto GetImage() -> const std::string &;
     void SetNetMode(const std::string &mode);
     void SetController(std::shared_ptr<Controller> controller);
@@ -112,9 +111,6 @@ public:
     void RemoveAnnotations(const std::string &key);
     void AddLabels(const std::string &key, const std::string &value);
     void RemoveLabels(const std::string &key);
-    void AddContainer(const std::string &id);
-    void SetConatiners(const std::vector<std::string> &cons);
-    void RemoveContainer(const std::string &id);
     void UpdateNetworkSettings(const std::string &settingsJson, Errors &error);
     auto UpdateStatsInfo(const StatsInfo &info) -> StatsInfo;
     void SetNetworkReady(bool ready);
@@ -203,9 +199,6 @@ private:
     bool m_networkReady;
     std::string m_networkSettings;
     std::string m_image;
-    // container id lists
-    std::vector<std::string> m_containers;
-    RWMutex m_containersMutex;
     // TOOD: m_sandboxConfig is a protobuf message, it can be converted to json string directly
     //       if save json string directly for sandbox recover, we need to consider hot
     //       upgrade between different CRI versions

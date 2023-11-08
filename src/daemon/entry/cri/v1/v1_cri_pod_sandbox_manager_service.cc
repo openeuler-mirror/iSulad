@@ -452,20 +452,90 @@ auto PodSandboxManagerService::GetSandboxKey(const container_inspect *inspect_da
     return std::string(inspect_data->network_settings->sandbox_key);
 }
 
-auto PodSandboxManagerService::StopAllContainersInSandbox(const std::vector<std::string> &containers,
-                                                          Errors &error) -> bool
+auto PodSandboxManagerService::GetContainerListResponse(const std::string &readSandboxID,
+                                                        std::vector<std::string> &errors) -> std::unique_ptr<CStructWrapper<container_list_response>>
 {
+    int ret = 0;
+    container_list_request *list_request { nullptr };
+    container_list_response *list_response { nullptr };
+
+    if (m_cb == nullptr || m_cb->container.list == nullptr) {
+        ERROR("Unimplemented callback");
+        errors.push_back("Unimplemented callback");
+        return nullptr;
+    }
+
+    // list all containers to stop
+    auto list_request_wrapper = makeUniquePtrCStructWrapper<container_list_request>(free_container_list_request);
+    if (list_request_wrapper == nullptr) {
+        ERROR("Out of memory");
+        errors.push_back("Out of memory");
+        return nullptr;
+    }
+    list_request = list_request_wrapper->get();
+    list_request->all = true;
+
+    list_request->filters = (defs_filters *)util_common_calloc_s(sizeof(defs_filters));
+    if (list_request->filters == nullptr) {
+        ERROR("Out of memory");
+        errors.push_back("Out of memory");
+        return nullptr;
+    }
+
+    // Add sandbox label
+    if (CRIHelpers::FiltersAddLabel(list_request->filters, CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY,
+                                    readSandboxID) != 0) {
+        std::string tmp_errmsg = "Failed to add label in sandbox" + readSandboxID;
+        ERROR(tmp_errmsg.c_str());
+        errors.push_back(tmp_errmsg);
+        return nullptr;
+    }
+
+    ret = m_cb->container.list(list_request, &list_response);
+    auto list_response_wrapper = makeUniquePtrCStructWrapper<container_list_response>(list_response, free_container_list_response);
+    if (list_response_wrapper == nullptr) {
+        ERROR("Failed to call list container callback");
+        errors.push_back("Failed to call list container callback");
+        return nullptr;
+    }
+    if (ret != 0) {
+        if (list_response != nullptr && list_response->errmsg != nullptr) {
+            ERROR(list_response->errmsg);
+            errors.push_back(list_response->errmsg);
+        } else {
+            ERROR("Failed to call list container callback");
+            errors.push_back("Failed to call list container callback");
+        }
+        return nullptr;
+    }
+
+    return list_response_wrapper;
+}                                                          
+
+auto PodSandboxManagerService::StopAllContainersInSandbox(const std::string &readSandboxID,
+                                                          Errors &error) -> int
+{
+    int ret = 0;
+    std::vector<std::string> errors;
+    auto list_response_wrapper = GetContainerListResponse(readSandboxID, errors);
+    if (list_response_wrapper == nullptr) {
+        error.SetAggregate(errors);
+        return -1;
+    }
+    auto list_response = list_response_wrapper->get();
+
     // Stop all containers in the sandbox.
-    for (const auto &con : containers) {
+    for (size_t i = 0; i < list_response->containers_len; i++) {
         Errors stopError;
-        CRIHelpers::StopContainerHelper(m_cb, con, 0, stopError);
+        CRIHelpers::StopContainerHelper(m_cb, list_response->containers[i]->id, 0, stopError);
         if (stopError.NotEmpty() && !CRIHelpers::IsContainerNotFoundError(stopError.GetMessage())) {
-            ERROR("Error stop container: %s: %s", con.c_str(), stopError.GetCMessage());
+            ERROR("Error stop container: %s: %s", list_response->containers[i]->id, stopError.GetCMessage());
             error.SetError(stopError.GetMessage());
-            return false;
+            return -1;
         }
     }
-    return true;
+
+    return ret;
 }
 
 auto PodSandboxManagerService::GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool
@@ -508,7 +578,7 @@ void PodSandboxManagerService::StopPodSandbox(const std::string &podSandboxID, E
     // Stop all containers inside the sandbox. This terminates the container forcibly,
     // and container may still be created, so production should not rely on this behavior.
     // TODO: according to the state(stopping and removal) in sandbox to avoid future container creation.
-    if (!StopAllContainersInSandbox(sandbox->GetContainers(), error)) {
+    if (StopAllContainersInSandbox(sandbox->GetId(), error) != 0) {
         return;
     }
 
@@ -524,15 +594,22 @@ void PodSandboxManagerService::StopPodSandbox(const std::string &podSandboxID, E
     sandbox->Stop(sandbox::DEFAULT_STOP_TIMEOUT, error);
 }
 
-void PodSandboxManagerService::RemoveAllContainersInSandbox(const std::vector<std::string> &containers,
+void PodSandboxManagerService::RemoveAllContainersInSandbox(const std::string &readSandboxID,
                                                             std::vector<std::string> &errors)
 {
+    auto list_response_wrapper = GetContainerListResponse(readSandboxID, errors);
+    if (list_response_wrapper == nullptr) {
+        return;
+    }
+
+    auto list_response = list_response_wrapper->get();
+
     // Remove all containers in the sandbox.
-    for (const auto &con : containers) {
+    for (size_t i = 0; i < list_response->containers_len; i++) {
         Errors rmError;
-        CRIHelpers::RemoveContainerHelper(m_cb, con, rmError);
+        CRIHelpers::RemoveContainerHelper(m_cb, list_response->containers[i]->id, rmError);
         if (rmError.NotEmpty() && !CRIHelpers::IsContainerNotFoundError(rmError.GetMessage())) {
-            ERROR("Error remove container: %s: %s", con.c_str(), rmError.GetCMessage());
+            ERROR("Error remove container: %s: %s", list_response->containers[i]->id, rmError.GetCMessage());
             errors.push_back(rmError.GetMessage());
         }
     }
@@ -598,7 +675,7 @@ void PodSandboxManagerService::RemovePodSandbox(const std::string &podSandboxID,
     // Remove all containers inside the sandbox.
     // container may still be created, so production should not rely on this behavior.
     // TODO: according to the state(stopping and removal) in sandbox to avoid future container creation.
-    RemoveAllContainersInSandbox(sandbox->GetContainers(), errors);
+    RemoveAllContainersInSandbox(sandbox->GetId(), errors);
     if (errors.size() != 0) {
         error.SetAggregate(errors);
         return;
