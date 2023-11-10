@@ -20,15 +20,29 @@
 #include <memory>
 
 namespace CRISecurity {
-static void ModifyContainerConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc, container_config *config)
+static void ModifyContainerConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc, container_config *config,
+                                  Errors &error)
 {
+    // none -> ""; username -> username; username, uid -> username; username, uid, gid -> username:gid;
+    // username, gid -> username:gid; uid -> uid; uid, gid -> uid:gid; gid -> error
+    std::string user;
     if (sc.has_run_as_user()) {
-        free(config->user);
-        config->user = util_strdup_s(std::to_string(sc.run_as_user().value()).c_str());
+        user = std::to_string(sc.run_as_user().value());
     }
     if (!sc.run_as_username().empty()) {
+        user = sc.run_as_username();
+    }
+    if (sc.has_run_as_group()) {
+        if (user.empty()) {
+            ERROR("Invalid security context: runAsGroup without runAsUser or runAsUsername");
+            error.SetError("Invalid security context: runAsGroup without runAsUser or runAsUsername");
+            return;
+        }
+        user += ":" + std::to_string(sc.run_as_group().value());
+    }
+    if (!user.empty()) {
         free(config->user);
-        config->user = util_strdup_s(sc.run_as_username().c_str());
+        config->user = util_strdup_s(user.c_str());
     }
 }
 
@@ -43,6 +57,7 @@ static void ModifyHostConfigCapabilities(const runtime::v1alpha2::LinuxContainer
     if (!capAdd.empty()) {
         hostConfig->cap_add = (char **)util_smart_calloc_s(sizeof(char *), capAdd.size());
         if (hostConfig->cap_add == nullptr) {
+            ERROR("Out of memory");
             error.SetError("Out of memory");
             return;
         }
@@ -55,6 +70,7 @@ static void ModifyHostConfigCapabilities(const runtime::v1alpha2::LinuxContainer
     if (!capDrop.empty()) {
         hostConfig->cap_drop = (char **)util_smart_calloc_s(sizeof(char *), capDrop.size());
         if (hostConfig->cap_drop == nullptr) {
+            ERROR("Out of memory");
             error.SetError("Out of memory");
             return;
         }
@@ -75,7 +91,8 @@ static void ModifyHostConfigNoNewPrivs(const runtime::v1alpha2::LinuxContainerSe
     }
 
     if (hostConfig->security_opt_len > (SIZE_MAX / sizeof(char *)) - 1) {
-        error.Errorf("Out of memory");
+        ERROR("The size of security opts exceeds the limit");
+        error.Errorf("The size of security opts exceeds the limit");
         return;
     }
 
@@ -83,6 +100,7 @@ static void ModifyHostConfigNoNewPrivs(const runtime::v1alpha2::LinuxContainerSe
     size_t newSize = oldSize + sizeof(char *);
     int ret = util_mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostConfig->security_opt, oldSize);
     if (ret != 0) {
+        ERROR("Out of memory");
         error.Errorf("Out of memory");
         return;
     }
@@ -99,12 +117,9 @@ static void ModifyHostConfigscSupplementalGroups(const runtime::v1alpha2::LinuxC
 
     const google::protobuf::RepeatedField<google::protobuf::int64> &groups = sc.supplemental_groups();
     if (!groups.empty()) {
-        if (static_cast<size_t>(groups.size()) > SIZE_MAX / sizeof(char *)) {
-            error.SetError("Invalid group size");
-            return;
-        }
-        hostConfig->group_add = (char **)util_common_calloc_s(sizeof(char *) * groups.size());
+        hostConfig->group_add = (char **)util_smart_calloc_s(sizeof(char *), groups.size());
         if (hostConfig->group_add == nullptr) {
+            ERROR("Out of memory");
             error.SetError("Out of memory");
             return;
         }
@@ -112,6 +127,64 @@ static void ModifyHostConfigscSupplementalGroups(const runtime::v1alpha2::LinuxC
             hostConfig->group_add[i] = util_strdup_s(std::to_string(groups[i]).c_str());
             hostConfig->group_add_len++;
         }
+    }
+}
+
+static void ApplyMaskedPathsToHostConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc, host_config *hostConfig,
+                                         Errors &error)
+{
+    if (sc.masked_paths_size() <= 0) {
+        return;
+    }
+
+    if (hostConfig->masked_paths_len > ((SIZE_MAX / sizeof(char *)) - sc.masked_paths_size())) {
+        ERROR("The size of masked paths exceeds the limit");
+        error.Errorf("The size of masked paths exceeds the limit");
+        return;
+    }
+
+    char **tmp_masked_paths {nullptr};
+    size_t oldSize = hostConfig->masked_paths_len * sizeof(char *);
+    size_t newSize = oldSize + sc.masked_paths_size() * sizeof(char *);
+    int ret = util_mem_realloc((void **)&tmp_masked_paths, newSize, (void *)hostConfig->masked_paths, oldSize);
+    if (ret != 0) {
+        ERROR("Out of memory");
+        error.Errorf("Out of memory");
+        return;
+    }
+
+    hostConfig->masked_paths = tmp_masked_paths;
+    for (int i = 0; i < sc.masked_paths_size(); ++i) {
+        hostConfig->masked_paths[hostConfig->masked_paths_len++] = util_strdup_s(sc.masked_paths(i).c_str());
+    }
+}
+
+static void ApplyReadonlyPathsToHostConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc, host_config *hostConfig,
+                                           Errors &error)
+{
+    if (sc.readonly_paths_size() <= 0) {
+        return;
+    }
+
+    if (hostConfig->readonly_paths_len > ((SIZE_MAX / sizeof(char *)) - sc.readonly_paths_size())) {
+        ERROR("The size of readonly paths exceeds the limit");
+        error.Errorf("The size of readonly paths exceeds the limit");
+        return;
+    }
+
+    char **tmp_readonly_paths {nullptr};
+    size_t oldSize = hostConfig->readonly_paths_len * sizeof(char *);
+    size_t newSize = oldSize + sc.readonly_paths_size() * sizeof(char *);
+    int ret = util_mem_realloc((void **)&tmp_readonly_paths, newSize, (void *)hostConfig->readonly_paths, oldSize);
+    if (ret != 0) {
+        ERROR("Out of memory");
+        error.Errorf("Out of memory");
+        return;
+    }
+
+    hostConfig->readonly_paths = tmp_readonly_paths;
+    for (int i = 0; i < sc.readonly_paths_size(); ++i) {
+        hostConfig->readonly_paths[hostConfig->readonly_paths_len++] = util_strdup_s(sc.readonly_paths(i).c_str());
     }
 }
 
@@ -124,6 +197,8 @@ static void ModifyHostConfig(const runtime::v1alpha2::LinuxContainerSecurityCont
     ModifyHostConfigCapabilities(sc, hostConfig, error);
     ModifyHostConfigNoNewPrivs(sc, hostConfig, error);
     ModifyHostConfigscSupplementalGroups(sc, hostConfig, error);
+    ApplyMaskedPathsToHostConfig(sc, hostConfig, error);
+    ApplyReadonlyPathsToHostConfig(sc, hostConfig, error);
 }
 
 static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts,
@@ -179,6 +254,7 @@ void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig 
     std::unique_ptr<runtime::v1alpha2::LinuxContainerSecurityContext> sc(
         new (std::nothrow) runtime::v1alpha2::LinuxContainerSecurityContext);
     if (sc == nullptr) {
+        ERROR("Out of memory");
         error.SetError("Out of memory");
         return;
     }
@@ -197,9 +273,14 @@ void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig 
         *sc->mutable_supplemental_groups() = old.supplemental_groups();
         sc->set_readonly_rootfs(old.readonly_rootfs());
     }
-    ModifyContainerConfig(*sc, config);
+    ModifyContainerConfig(*sc, config, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to modify container config for sandbox");
+        return;
+    }
     ModifyHostConfig(*sc, hc, error);
     if (error.NotEmpty()) {
+        ERROR("Failed to modify host config for sandbox");
         return;
     }
     ModifySandboxNamespaceOptions(sc->namespace_options(), hc);
@@ -210,9 +291,14 @@ void ApplyContainerSecurityContext(const runtime::v1alpha2::LinuxContainerConfig
 {
     if (lc.has_security_context()) {
         const runtime::v1alpha2::LinuxContainerSecurityContext &sc = lc.security_context();
-        ModifyContainerConfig(sc, config);
+        ModifyContainerConfig(sc, config, error);
+        if (error.NotEmpty()) {
+            ERROR("Failed to modify container config for container");
+            return;
+        }
         ModifyHostConfig(sc, hc, error);
         if (error.NotEmpty()) {
+            ERROR("Failed to modify host config for container");
             return;
         }
     }

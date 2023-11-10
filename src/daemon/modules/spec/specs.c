@@ -2133,6 +2133,58 @@ static int generate_security_opt(host_config *hc)
 }
 #endif
 
+static int merge_paths(char ***dest_paths, size_t *dest_paths_len, char **src_paths, size_t src_paths_len)
+{
+    if (dest_paths == NULL || dest_paths_len == NULL) {
+        ERROR("Invalid args");
+        return -1;
+    }
+
+    if (src_paths_len > SIZE_MAX / sizeof(char *) ||
+        *dest_paths_len > ((SIZE_MAX / sizeof(char *)) - src_paths_len)) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    size_t i;
+    char **tmp_paths = NULL;
+    size_t old_size = *dest_paths_len * sizeof(char *);
+    size_t new_size = old_size + src_paths_len * sizeof(char *);
+    int ret = util_mem_realloc((void **)&tmp_paths, new_size,
+                               (void *)*dest_paths, old_size);
+    if (ret != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    *dest_paths = tmp_paths;
+    for (i = 0; i < src_paths_len; i++) {
+        (*dest_paths)[(*dest_paths_len)++] = util_strdup_s(src_paths[i]);
+    }
+
+    return 0;
+}
+
+static int merge_masked_paths(oci_runtime_spec *oci_spec, char **masked_paths, size_t masked_paths_len)
+{
+    if (masked_paths == NULL || masked_paths_len == 0) {
+        return 0;
+    }
+
+    return merge_paths(&oci_spec->linux->masked_paths, &oci_spec->linux->masked_paths_len,
+                       masked_paths, masked_paths_len);
+}
+
+static int merge_readonly_paths(oci_runtime_spec *oci_spec, char **readonly_paths, size_t readonly_paths_len)
+{
+    if (readonly_paths == NULL || readonly_paths_len == 0) {
+        return 0;
+    }
+
+    return merge_paths(&oci_spec->linux->readonly_paths, &oci_spec->linux->readonly_paths_len,
+                       readonly_paths, readonly_paths_len);
+}
+
 static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spec,
                                container_config_v2_common_config *v2_spec)
 {
@@ -2180,6 +2232,18 @@ static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spe
     }
 #endif
 
+    ret = merge_masked_paths(oci_spec, host_spec->masked_paths, host_spec->masked_paths_len);
+    if (ret != 0) {
+        ERROR("Failed to merge masked paths");
+        goto out;
+    }
+
+    ret = merge_readonly_paths(oci_spec, host_spec->readonly_paths, host_spec->readonly_paths_len);
+    if (ret != 0) {
+        ERROR("Failed to merge readonly paths");
+        goto out;
+    }
+
 out:
     return ret;
 }
@@ -2205,11 +2269,6 @@ static int merge_oci_cgroups_path(const char *id, oci_runtime_spec *oci_spec, co
         return -1;
     }
 
-    if (make_sure_oci_spec_linux(oci_spec) != 0) {
-        ERROR("Failed to make oci spec linux");
-        return -1;
-    }
-
     free(oci_spec->linux->cgroups_path);
     oci_spec->linux->cgroups_path = merge_container_cgroups_path(id, host_spec);
 
@@ -2227,6 +2286,11 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_c
 #ifdef ENABLE_USERNS_REMAP
     char *userns_remap = conf_get_isulad_userns_remap();
 #endif
+
+    if (make_sure_oci_spec_linux(oci_spec) != 0) {
+        ERROR("Failed to make oci spec linux");
+        return -1;
+    }
 
     ret = merge_root(oci_spec, real_rootfs, host_spec);
     if (ret != 0) {
