@@ -61,6 +61,9 @@ int detach_network_plane(const struct cni_manager *manager, const struct cni_net
 int check_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
                         struct cni_opt_result **result);
 
+int version_network_plane(const struct cni_network_list_conf *list,
+                          struct cni_version_info_list **result_version_list);
+
 #ifdef __cplusplus
 }
 #endif

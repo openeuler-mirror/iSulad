@@ -28,9 +28,6 @@
 extern "C" {
 #endif
 
-#define CURRENT_VERSION "1.0.0"
-#define SUPPORT_CACHE_AND_CHECK_VERSION "0.4.0"
-
 #define SUPPORT_CAPABILITY_PORTMAPPINGS "portMappings"
 #define SUPPORT_CAPABILITY_BANDWIDTH "bandwidth"
 #define SUPPORT_CAPABILITY_IPRANGES "ipRanges"
@@ -87,6 +84,11 @@ int cni_del_network_list(const struct cni_network_list_conf *list, const struct 
 
 int cni_check_network_list(const struct cni_network_list_conf *list, const struct runtime_conf *rc,
                            struct cni_opt_result **p_result);
+                        
+int cni_version_network_list(const struct cni_network_list_conf *list,
+                             struct cni_version_info_list **result_version_list);
+
+char *cni_get_plugins_supported_version(cni_net_conf_list *list);
 
 void free_cni_port_mapping(struct cni_port_mapping *val);
 

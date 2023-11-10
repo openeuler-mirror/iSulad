@@ -28,7 +28,7 @@
 #include <sys/wait.h>
 
 #include <isula_libutils/cni_inner_plugin_info.h>
-#include <isula_libutils/cni_version.h>
+#include <isula_libutils/cni_version_info.h>
 #include <isula_libutils/log.h>
 #include <isula_libutils/cni_exec_error.h>
 #include <isula_libutils/auto_cleanup.h>
@@ -183,10 +183,10 @@ static char *str_cni_exec_error(const cni_exec_error *e_err)
 static char *cniversion_decode(const char *jsonstr)
 {
     __isula_auto_free parser_error err = NULL;
-    cni_version *conf = NULL;
+    cni_version_info *conf = NULL;
     char *result = NULL;
 
-    conf = cni_version_parse_data(jsonstr, NULL, &err);
+    conf = cni_version_info_parse_data(jsonstr, NULL, &err);
     if (conf == NULL) {
         ERROR("decoding config \"%s\", failed: %s", jsonstr, err);
         goto out;
@@ -198,7 +198,7 @@ static char *cniversion_decode(const char *jsonstr)
 
     result = util_strdup_s(conf->cni_version);
 out:
-    free_cni_version(conf);
+    free_cni_version_info(conf);
     return result;
 }
 
@@ -464,6 +464,84 @@ out:
     util_free_array(envs);
     free_cni_exec_error(e_err);
     return ret;
+}
+
+static char *get_default_version_stdin(void)
+{
+    char *stdin_str = NULL;
+    int ret;
+
+    ret = asprintf(&stdin_str, "{\"cniVersion\":\"%s\"}", CURRENT_VERSION);
+    if (ret < 0) {
+        ERROR("parse cni version failed");
+    }
+    return stdin_str;
+}
+
+static int do_parse_version_info_stdout_str(int exec_ret, const cni_exec_error *e_err,
+                                            const char *stdout_str, cni_version_info **result_version)
+{
+    __isula_auto_free char *err_msg = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 }; 
+    __isula_auto_free parser_error perr = NULL;
+
+    if (exec_ret != 0) {
+        err_msg = str_cni_exec_error(e_err);
+        ERROR("raw exec failed: %s", err_msg);
+        isulad_append_error_message("raw exec failed: %s. ", err_msg);
+        return -1;
+    }
+
+    if (stdout_str == NULL || strlen(stdout_str) == 0) {
+        ERROR("Get empty version result");
+        return -1;
+    }
+    free_cni_version_info(*result_version);
+    *result_version = cni_version_info_parse_data(stdout_str, &ctx, &perr);
+    if (*result_version == NULL) {
+        ERROR("parse cni result version failed: %s", perr);
+        return -1;
+    }
+
+    return 0;
+}
+
+int get_version_info(const char *plugin_path, cni_version_info **result_version)
+{
+    __isula_auto_free char *err_msg = NULL;
+    char **envs = NULL;
+    __isula_auto_free char *stdout_str = NULL;
+    __isula_auto_free char *stdin_str = NULL;
+    cni_exec_error *e_err = NULL;
+    int ret = 0;
+    const struct cni_args cniargs = {
+        .command = "VERSION",
+        .netns = "dummy",
+        .ifname = "dummy",
+        .path = "dummy",
+        .container_id = "dummy"
+    };
+
+    stdin_str = get_default_version_stdin();
+    if (stdin_str == NULL) {
+        return -1;
+    }
+
+    envs = as_env(&cniargs);
+    if (envs == NULL) {
+        ERROR("create env failed");
+        return -1;
+    }
+
+    ret = raw_exec(plugin_path, stdin_str, envs, &stdout_str, &e_err);
+    DEBUG("Raw exec \"%s\" result: %d", plugin_path, ret);
+    DEBUG("Raw exec stdout: %s", stdout_str);
+    ret = do_parse_version_info_stdout_str(ret, e_err, stdout_str, result_version);
+
+    util_free_array(envs);
+    free_cni_exec_error(e_err);
+    return ret;
+
 }
 
 void free_cni_args(struct cni_args *cargs)

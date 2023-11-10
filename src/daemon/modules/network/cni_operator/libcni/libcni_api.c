@@ -843,6 +843,112 @@ free_out:
     return ret;
 }
 
+static int version_network(const char *plugin_name, cni_version_info **result_version)
+{
+    int ret = 0;
+    __isula_auto_free char *plugin_path = NULL;
+
+    if (plugin_name == NULL) {
+        ERROR("Empty plugin name");
+        return -1;
+    }
+
+    ret = find_plugin_in_path(plugin_name, (const char * const *)g_module_conf.bin_paths,
+                              g_module_conf.bin_paths_len, &plugin_path);
+    if (ret != 0) {
+        ERROR("Failed to find plugin: \"%s\"", plugin_name);
+        isulad_append_error_message("Failed to find plugin: \"%s\". ", plugin_name);
+        return ret;
+    }
+
+    // cni plugin calls should not take longer than 90 seconds
+    CALL_CHECK_TIMEOUT(90, ret = get_version_info(plugin_path, result_version));
+    return ret;
+}
+
+int cni_version_network_list(const struct cni_network_list_conf *list,
+                            struct cni_version_info_list **result_version_list)
+{
+    int ret = 0;
+    int i;
+    cni_version_info *tmp_result_version = NULL;
+
+    if ((list == NULL) || (list->list == NULL) || (result_version_list == NULL)) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
+    *result_version_list = util_common_calloc_s(sizeof(struct cni_version_info_list));
+    if (*result_version_list == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    (*result_version_list)->result_versions = util_smart_calloc_s(sizeof(cni_version_info *), list->list->plugins_len);
+    if ((*result_version_list)->result_versions == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto free_out;
+    }
+
+    for (i = 0; i < list->list->plugins_len; i++) {
+        if (version_network(list->list->plugins[i]->type, &tmp_result_version) != 0) {
+            ret = -1;
+            ERROR("Run version plugin: %d failed", i);
+            goto free_out;
+        }
+        (*result_version_list)->result_versions[i] = tmp_result_version;
+        (*result_version_list)->result_versions_len += 1;
+        tmp_result_version = NULL;
+    }
+
+    return ret;
+
+free_out:
+    free_cni_version_info_list(*result_version_list);
+    *result_version_list = NULL;
+    return ret;
+}
+
+/* get the latest CNI version supported by all plugins */
+char *cni_get_plugins_supported_version(cni_net_conf_list *list)
+{
+    // init to default version, if no found, just return default version
+    char *cni_version = util_strdup_s(CURRENT_VERSION);
+    int i, j, version_pos;
+    struct cni_version_info_list *result_version_list = NULL;
+    struct cni_network_list_conf network_list = {
+        .list = list,
+    };
+    size_t curr_support_version_len = get_curr_support_version_len();
+    __isula_auto_free size_t *plugin_version_count = util_smart_calloc_s(sizeof(size_t), curr_support_version_len);
+    if (plugin_version_count == NULL) {
+        return cni_version;
+    }
+    if (cni_version_network_list(&network_list, &result_version_list) != 0) {
+        return cni_version;
+    }
+
+    // count plugin supported version
+    for (i = 0; i < result_version_list->result_versions_len; i++) {
+        for (j = result_version_list->result_versions[i]->supported_versions_len - 1; j >= 0 ; j--) {
+            version_pos = get_support_version_pos(result_version_list->result_versions[i]->supported_versions[j]);
+            if (version_pos < 0) {
+                break;
+            }
+            plugin_version_count[version_pos]++;
+            if (plugin_version_count[version_pos] == list->plugins_len) {
+                free(cni_version);
+                cni_version = util_strdup_s(get_support_version_by_pos(version_pos));
+                goto free_out;
+            }
+        }
+    }
+
+free_out:
+    free_cni_version_info_list(result_version_list);
+    return cni_version;
+}
+
 static int do_copy_plugin_args(const struct runtime_conf *rc, struct cni_args **cargs)
 {
     size_t i = 0;
