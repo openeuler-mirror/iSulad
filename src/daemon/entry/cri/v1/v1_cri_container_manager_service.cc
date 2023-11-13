@@ -1013,6 +1013,12 @@ auto ContainerManagerService::ContainerStats(const std::string &containerID, Err
     if (error.NotEmpty()) {
         goto cleanup;
     }
+    if (contStatsVec.size() == 0) {
+        ERROR("Failed to get container stats");
+        error.SetError("Failed to get container stats");
+        goto cleanup;
+    }
+
     contStats = std::move(contStatsVec[0]);
 
 cleanup:

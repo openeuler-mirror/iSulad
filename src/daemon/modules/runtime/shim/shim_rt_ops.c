@@ -16,13 +16,17 @@
 #define _GNU_SOURCE
 
 #include "shim_rt_ops.h"
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <limits.h>
-#include "isula_libutils/log.h"
-#include "isula_libutils/shim_client_process_state.h"
+
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/shim_client_process_state.h>
+
 #include "utils.h"
 #include "utils_string.h"
 #include "constants.h"
@@ -318,16 +322,46 @@ bool rt_shim_detect(const char *runtime)
     return false;
 }
 
+static int save_shim_v2_address(const char *bundle, const char *addr)
+{
+    int nret;
+    char filename[PATH_MAX] = { 0 };
+
+    if (bundle == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    if (addr == NULL || strlen(addr) == 0) {
+        ERROR("Invalid shim v2 addr");
+        return -1;
+    }
+
+    nret = snprintf(filename, sizeof(filename), "%s/%s", bundle, "address");
+    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
+        ERROR("Failed to print string");
+        return -1;
+    }
+
+    nret = util_atomic_write_file(filename, addr, strlen(addr), CONFIG_FILE_MODE, false);
+    if (nret != 0) {
+        ERROR("Failed to write file %s", filename);
+        return -1;
+    }
+
+    return 0;
+}
+
 int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t *params)
 {
     int ret = 0;
     int pid = 0;
     int fd = -1;
     const char *task_address = NULL;
-    char addr[PATH_MAX] = {0};
-    char *exit_fifo_path = NULL;
-    char *state_path = NULL;
-    char *log_path = NULL;
+    char response[PATH_MAX] = {0};
+    __isula_auto_free char *exit_fifo_path = NULL;
+    __isula_auto_free char *state_path = NULL;
+    __isula_auto_free char *log_path = NULL;
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("Invalid input params");
@@ -337,29 +371,25 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
     exit_fifo_path = util_path_dir(params->exit_fifo);
     if (exit_fifo_path == NULL) {
         ERROR("%s: failed to get exit fifo dir from %s", id, params->exit_fifo);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     state_path = util_path_dir(exit_fifo_path);
     if (state_path == NULL) {
         ERROR("%s:failed to get state dir from %s", id, exit_fifo_path);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     log_path = util_string_append(SHIM_V2_LOG, params->bundle);
     if (log_path == NULL) {
         ERROR("Fail to append log path");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     fd = util_open(log_path, O_RDWR | O_CREAT | O_TRUNC, DEFAULT_SECURE_FILE_MODE);
     if (fd < 0) {
         ERROR("Failed to create log file for shim v2: %s", log_path);
-        ret = -1;
-        goto out;
+        return -1;
     }
     close(fd);
 
@@ -367,13 +397,13 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
      * If task address is not set, create a new shim-v2 and get the address.
      * If task address is set, use it directly. 
      */
-    if (params->task_addr == NULL) {
-        if (shim_bin_v2_create(runtime, id, params->bundle, NULL, addr, state_path) != 0) {
+    if (params->task_addr == NULL || strlen(params->task_addr) == 0) {
+        if (shim_bin_v2_create(runtime, id, params->bundle, NULL, response, state_path) != 0) {
             ERROR("%s: failed to create v2 shim", id);
-            ret = -1;
-            goto out;
+            return -1;
         }
-        task_address = addr;
+
+        task_address = response;
     } else {
         task_address = params->task_addr;
     }
@@ -392,10 +422,20 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
         goto out;
     }
 
+    if (save_shim_v2_address(params->bundle, task_address) != 0) {
+        ERROR("%s: failed to save shim v2 address", id);
+        ret = -1;
+        goto out;
+    }
+
+    return 0;
+
 out:
-    free(log_path);
-    free(exit_fifo_path);
-    free(state_path);
+    if (ret != 0) {
+        if (shim_v2_kill(id, NULL, SIGKILL, false) != 0) {
+            ERROR("%s: kill shim v2 failed", id);
+        }
+    }
     return ret;
 }
 
@@ -614,7 +654,7 @@ int rt_shim_status(const char *id, const char *runtime, const rt_status_params_t
         return -1;
     }
 
-    if (params->task_address != NULL) {
+    if (params->task_address != NULL && strlen(params->task_address) != 0) {
         if (strlen(params->task_address) >= PATH_MAX) {
             ERROR("Invalid task address");
             return -1;
