@@ -37,6 +37,7 @@
 #include "utils_array.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "utils_cap.h"
 
 #define MAX_CAP_LEN 32
 
@@ -104,40 +105,30 @@ static int tweak_drops_capabilities(char ***new_caps, size_t *new_caps_len, char
     size_t i = 0;
     int ret = 0;
 
-    if (util_strings_in_slice((const char **)drops, drops_len, "all")) {
-        goto out;
+    if (basic_caps == NULL || basic_caps_len == 0) {
+        *new_caps = NULL;
+        *new_caps_len = 0;
+        return 0;
     }
 
-    for (i = 0; (basic_caps != NULL && i < basic_caps_len); i++) {
-        // skip `all` already handled above
-        if (!basic_caps[i] || !strcasecmp(basic_caps[i], "all")) {
-            continue;
-        }
-
-        // if we don't drop `all`, add back all the non-dropped caps
+    for (i = 0; i < basic_caps_len; i++) {
         if (!util_strings_in_slice((const char **)drops, drops_len, basic_caps[i] + strlen("CAP_"))) {
             ret = append_capability(new_caps, new_caps_len, basic_caps[i]);
             if (ret != 0) {
                 ERROR("Failed to append capabilities");
-                ret = -1;
-                goto out;
+                return -1;
             }
         }
     }
 
-out:
-    return ret;
+    return 0;
 }
 
 static int tweak_adds_capabilities(char ***new_caps, size_t *new_caps_len, const char **adds, size_t adds_len)
 {
     size_t i = 0;
-    int ret = 0;
     int nret = 0;
-    size_t all_caps_len = 0;
     char tmpcap[MAX_CAP_LEN] = { 0 };
-
-    all_caps_len = util_get_all_caps_len();
 
     for (i = 0; i < adds_len; i++) {
         // skip `all` already handled above
@@ -148,111 +139,92 @@ static int tweak_adds_capabilities(char ***new_caps, size_t *new_caps_len, const
         nret = snprintf(tmpcap, sizeof(tmpcap), "CAP_%s", adds[i]);
         if (nret < 0 || (size_t)nret >= sizeof(tmpcap)) {
             ERROR("Failed to print string");
-            ret = -1;
-            goto out;
-        }
-        if (!util_strings_in_slice(g_all_caps, all_caps_len, tmpcap)) {
-            ERROR("Unknown capability to add: '%s'", tmpcap);
-            ret = -1;
-            goto out;
+            return -1;
         }
 
         // add cap if not already in the list
         if (!util_strings_in_slice((const char **)*new_caps, *new_caps_len, tmpcap)) {
-            ret = append_capability(new_caps, new_caps_len, tmpcap);
-            if (ret != 0) {
+            nret = append_capability(new_caps, new_caps_len, tmpcap);
+            if (nret != 0) {
                 ERROR("Failed to append capabilities");
-                ret = -1;
-                goto out;
+                return -1;
             }
         }
     }
 
-out:
-    return ret;
-}
-
-static bool valid_drops_cap(const char **drops, size_t drops_len)
-{
-    int nret = 0;
-    size_t i;
-    size_t all_caps_len = 0;
-    char tmpcap[MAX_CAP_LEN] = { 0 };
-
-    all_caps_len = util_get_all_caps_len();
-    // look for invalid cap in the drop list
-    for (i = 0; i < drops_len; i++) {
-        if (strcasecmp(drops[i], "all") == 0) {
-            continue;
-        }
-
-        nret = snprintf(tmpcap, sizeof(tmpcap), "CAP_%s", drops[i]);
-        if (nret < 0 || (size_t)nret >= sizeof(tmpcap)) {
-            ERROR("Failed to print string");
-            return false;
-        }
-        if (!util_strings_in_slice(g_all_caps, all_caps_len, tmpcap)) {
-            ERROR("Unknown capability to drop: '%s'", drops[i]);
-            return false;
-        }
-    }
-
-    return true;
+    return 0;
 }
 
 // tweak_capabilities can tweak capabilities by adding or dropping capabilities
-// based on the basic capabilities.
+// based on the basic capabilities. The following are the priorities of the tweaks:
+// 1. if adds contains "all", then the basic capabilities will be ignored, and all capabilities will be added.
+// 2. if drops contains "all", all capabilities will be dropped.
+// 3. add individual capabilities in adds
+// 4. drop individual capabilities in drops.
+// The reason why we handle "all" first is that we can avoid the case that the individual capabilities are
+// not included by "all".
 static int tweak_capabilities(char ***caps, size_t *caps_len, const char **adds, size_t adds_len, const char **drops,
                               size_t drops_len)
 {
-    size_t i;
-    size_t all_caps_len = 0;
     int ret = 0;
     char **new_caps = NULL;
     char **basic_caps = NULL;
+    const char **all_caps = NULL;
     size_t new_caps_len = 0;
     size_t basic_caps_len = 0;
+    size_t all_caps_len = 0;
+    bool add_all = false;
+    bool drop_all = false;
 
-    all_caps_len = util_get_all_caps_len();
-    if (!valid_drops_cap(drops, drops_len)) {
+    all_caps = util_get_all_caps(&all_caps_len);
+    if (all_caps == NULL) {
+        ERROR("Failed to get all capabilities");
         return -1;
     }
 
-    if (util_strings_in_slice((const char **)adds, adds_len, "all")) {
-        ret = copy_capabilities(&basic_caps, &basic_caps_len, g_all_caps, all_caps_len);
-    } else {
+    add_all = util_strings_in_slice((const char **)adds, adds_len, "all");
+    drop_all = util_strings_in_slice((const char **)drops, drops_len, "all");
+
+
+    if (!add_all && !drop_all) {
+        // if neither add_all nor drop_all, we start with the default capabilities
         ret = copy_capabilities(&basic_caps, &basic_caps_len, (const char **)*caps, *caps_len);
+        if (ret != 0) {
+            ERROR("Failed to copy capabilities");
+            ret = -1;
+            goto free_out;
+        }
+    } else if (drop_all) {
+        // if drop_all, we start with an empty set
+        basic_caps = NULL;
+        basic_caps_len = 0;
+    } else {
+        // if not drop_all but add_all, we start with all capabilities
+        ret = copy_capabilities(&basic_caps, &basic_caps_len, all_caps, all_caps_len);
+        if (ret != 0) {
+            ERROR("Failed to copy all capabilities");
+            ret = -1;
+            goto free_out;
+        }
     }
+
+    // Add capabilities to the basic capabilities
+    ret = tweak_adds_capabilities(&basic_caps, &basic_caps_len, adds, adds_len);
     if (ret != 0) {
-        ERROR("Failed to copy capabilities");
         ret = -1;
         goto free_out;
     }
 
+    // Drop capabilities from the basic capabilities
     ret = tweak_drops_capabilities(&new_caps, &new_caps_len, basic_caps, basic_caps_len, drops, drops_len);
     if (ret != 0) {
         ret = -1;
         goto free_out;
     }
 
-    ret = tweak_adds_capabilities(&new_caps, &new_caps_len, adds, adds_len);
-    if (ret != 0) {
-        ret = -1;
-        goto free_out;
-    }
-
 free_out:
-    for (i = 0; i < basic_caps_len; i++) {
-        free(basic_caps[i]);
-    }
-    free(basic_caps);
-
-    // free old caps
-    for (i = 0; i < *caps_len; i++) {
-        free((*caps)[i]);
-        (*caps)[i] = NULL;
-    }
-    free(*caps);
+    util_free_array_by_len(basic_caps, basic_caps_len);
+    util_free_array_by_len(*caps, *caps_len);
 
     // set new caps
     *caps = new_caps;

@@ -14,6 +14,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_file.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_timestamp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_fs.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_cap.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map/rb_tree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/util_atomic.c

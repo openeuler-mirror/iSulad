@@ -98,20 +98,6 @@ TEST(utils_verify, test_util_valid_str)
     ASSERT_EQ(util_valid_str(nullptr), false);
 }
 
-TEST(utils_verify, test_util_get_all_caps_len)
-{
-    ASSERT_NE(util_get_all_caps_len(), 0);
-}
-
-TEST(utils_verify, test_util_valid_cap)
-{
-    ASSERT_EQ(util_valid_cap("DAC_READ_SEARCH"), true);
-
-    ASSERT_EQ(util_valid_cap(nullptr), false);
-    ASSERT_EQ(util_valid_cap(""), false);
-    ASSERT_EQ(util_valid_cap("DA_READ_SEARCH"), false);
-}
-
 TEST(utils_verify, test_util_valid_time_tz)
 {
     ASSERT_EQ(util_valid_time_tz("2022-10-04T18:22:45.289257759Z"), true);

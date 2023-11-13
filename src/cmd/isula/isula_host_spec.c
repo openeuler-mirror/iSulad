@@ -36,6 +36,7 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "utils_cap.h"
 #include "opt_ulimit.h"
 
 static bool parse_restart_policy(const char *policy, host_config_restart_policy **rp)

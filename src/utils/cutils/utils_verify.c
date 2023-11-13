@@ -22,7 +22,6 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/capability.h>
 #include <stdio.h>
 #include <strings.h>
 
@@ -31,59 +30,6 @@
 #include "utils_regex.h"
 #include "utils_array.h"
 #include "utils_string.h"
-
-const char *g_all_caps[] = {
-    "CAP_CHOWN",
-    "CAP_DAC_OVERRIDE",
-    "CAP_DAC_READ_SEARCH",
-    "CAP_FOWNER",
-    "CAP_FSETID",
-    "CAP_KILL",
-    "CAP_SETGID",
-    "CAP_SETUID",
-    "CAP_SETPCAP",
-    "CAP_LINUX_IMMUTABLE",
-    "CAP_NET_BIND_SERVICE",
-    "CAP_NET_BROADCAST",
-    "CAP_NET_ADMIN",
-    "CAP_NET_RAW",
-    "CAP_IPC_LOCK",
-    "CAP_IPC_OWNER",
-    "CAP_SYS_MODULE",
-    "CAP_SYS_RAWIO",
-    "CAP_SYS_CHROOT",
-    "CAP_SYS_PTRACE",
-    "CAP_SYS_PACCT",
-    "CAP_SYS_ADMIN",
-    "CAP_SYS_BOOT",
-    "CAP_SYS_NICE",
-    "CAP_SYS_RESOURCE",
-    "CAP_SYS_TIME",
-    "CAP_SYS_TTY_CONFIG",
-    "CAP_MKNOD",
-    "CAP_LEASE",
-#ifdef CAP_AUDIT_WRITE
-    "CAP_AUDIT_WRITE",
-#endif
-#ifdef CAP_AUDIT_CONTROL
-    "CAP_AUDIT_CONTROL",
-#endif
-    "CAP_SETFCAP",
-    "CAP_MAC_OVERRIDE",
-    "CAP_MAC_ADMIN",
-#ifdef CAP_SYSLOG
-    "CAP_SYSLOG",
-#endif
-#ifdef CAP_WAKE_ALARM
-    "CAP_WAKE_ALARM",
-#endif
-#ifdef CAP_BLOCK_SUSPEND
-    "CAP_BLOCK_SUSPEND",
-#endif
-#ifdef CAP_AUDIT_READ
-    "CAP_AUDIT_READ",
-#endif
-};
 
 bool util_valid_cmd_arg(const char *arg)
 {
@@ -213,33 +159,6 @@ bool util_valid_device_mode(const char *mode)
 bool util_valid_str(const char *str)
 {
     return (str != NULL && str[0] != '\0') ? true : false;
-}
-
-size_t util_get_all_caps_len()
-{
-    return sizeof(g_all_caps) / sizeof(char *);
-}
-
-bool util_valid_cap(const char *cap)
-{
-    int nret = 0;
-    char tmpcap[32] = { 0 };
-    size_t all_caps_len = util_get_all_caps_len();
-
-    if (cap == NULL) {
-        return false;
-    }
-
-    nret = snprintf(tmpcap, sizeof(tmpcap), "CAP_%s", cap);
-    if (nret < 0 || (size_t)nret >= sizeof(tmpcap)) {
-        ERROR("Failed to print string");
-        return false;
-    }
-    if (!util_strings_in_slice(g_all_caps, all_caps_len, tmpcap)) {
-        return false;
-    }
-
-    return true;
 }
 
 bool util_valid_container_id(const char *id)

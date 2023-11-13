@@ -38,8 +38,6 @@ extern "C" {
 
 #define VALID_VOLUME_NAME "[a-zA-Z0-9][a-zA-Z0-9_.-]{1,63}"
 
-extern const char *g_all_caps[];
-
 bool util_valid_cmd_arg(const char *arg);
 
 bool util_valid_signal(int sig);
@@ -53,10 +51,6 @@ bool util_validate_socket(const char *socket);
 bool util_valid_device_mode(const char *mode);
 
 bool util_valid_str(const char *str);
-
-size_t util_get_all_caps_len();
-
-bool util_valid_cap(const char *cap);
 
 bool util_valid_time_tz(const char *time);
 

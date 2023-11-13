@@ -20,6 +20,7 @@
 #include "isula_libutils/oci_runtime_spec.h"
 #include "specs_api.h"
 #include "specs_namespace.h"
+#include "specs_security.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
 #include "oci_ut_common.h"
@@ -27,6 +28,7 @@
 #include <gmock/gmock.h>
 #include "isulad_config_mock.h"
 #include "utils.h"
+#include "utils_cap.h"
 
 using ::testing::Args;
 using ::testing::ByRef;
@@ -343,4 +345,317 @@ TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_5)
     free(merged_cp);
 
     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
+}
+
+/********************************* UT for merge caps *******************************************/
+struct capabilities_lens {
+    size_t bounding_len;
+    size_t effective_len;
+    size_t inheritable_len;
+    size_t permitted_len;
+    size_t ambient_len;
+};
+
+void check_capabilities_len(defs_process_capabilities *cap, struct capabilities_lens *lens)
+{
+    lens->bounding_len = cap->bounding_len;
+    lens->effective_len = cap->effective_len;
+    lens->inheritable_len = cap->inheritable_len;
+    lens->permitted_len = cap->permitted_len;
+    lens->ambient_len = cap->ambient_len;
+}
+
+void validate_capabilities_len(defs_process_capabilities *cap, struct capabilities_lens *lens, ssize_t len_diff)
+{
+    ASSERT_EQ((ssize_t)cap->bounding_len, (ssize_t)lens->bounding_len + len_diff);
+    ASSERT_EQ((ssize_t)cap->effective_len, (ssize_t)lens->effective_len + len_diff);
+    ASSERT_EQ((ssize_t)cap->permitted_len, (ssize_t)lens->permitted_len + len_diff);
+    // Currently we don't support inheritable and ambient capabilities
+}
+
+TEST(merge_capability_ut, test_merge_caps_without_adds_drops)
+{
+    oci_runtime_spec *oci_spec = nullptr;
+    int ret = 0;
+    char *err = nullptr;
+    struct capabilities_lens old_lens = { 0 };
+    char *oci_config_file = nullptr;
+
+    oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
+    ASSERT_TRUE(oci_config_file != nullptr);
+
+
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
+    free(err);
+
+    check_capabilities_len(oci_spec->process->capabilities, &old_lens);
+
+    ret = merge_caps(oci_spec, nullptr, 0, nullptr, 0);
+    ASSERT_EQ(ret, 0);
+
+    validate_capabilities_len(oci_spec->process->capabilities, &old_lens, 0);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST(merge_capability_ut, test_merge_caps_adds_without_drops)
+{
+    oci_runtime_spec *oci_spec = nullptr;
+    int ret = 0;
+    char *err = nullptr;
+    struct capabilities_lens old_lens = { 0 };
+    char *oci_config_file = nullptr;
+    /* All of below capabilities are not in oci_config_file */
+    const char *adds[] = { "NET_ADMIN", "SYS_ADMIN", "SYS_TTY_CONFIG", "SYS_PTRACE" };
+    const char *drops[] = {};
+    size_t adds_len = sizeof(adds) / sizeof(adds[0]);
+    size_t drops_len = sizeof(drops) / sizeof(drops[0]);
+
+    oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
+    ASSERT_TRUE(oci_config_file != nullptr);
+
+
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
+    free(err);
+
+    check_capabilities_len(oci_spec->process->capabilities, &old_lens);
+
+    ret = merge_caps(oci_spec, adds, adds_len, drops, drops_len);
+    ASSERT_EQ(ret, 0);
+
+    /* All of capabilities in adds are added */
+    validate_capabilities_len(oci_spec->process->capabilities, &old_lens, adds_len);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST(merge_capability_ut, test_merge_caps_adds_existing_without_drops)
+{
+    oci_runtime_spec *oci_spec = nullptr;
+    int ret = 0;
+    char *err = nullptr;
+    struct capabilities_lens old_lens = { 0 };
+    char *oci_config_file = nullptr;
+    /* CHOWN already exits in oci_config_file */
+    const char *adds[] = { "CHOWN", "SYS_ADMIN", "SYS_TTY_CONFIG", "SYS_PTRACE" };
+    const char *drops[] = {};
+    size_t adds_len = sizeof(adds) / sizeof(adds[0]);
+    size_t drops_len = sizeof(drops) / sizeof(drops[0]);
+
+    oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
+    ASSERT_TRUE(oci_config_file != nullptr);
+
+
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
+    free(err);
+
+    check_capabilities_len(oci_spec->process->capabilities, &old_lens);
+
+    ret = merge_caps(oci_spec, adds, adds_len, drops, drops_len);
+    ASSERT_EQ(ret, 0);
+
+    /* CHOWN is not added, since it already exits in the default list */
+    validate_capabilities_len(oci_spec->process->capabilities, &old_lens, adds_len - 1);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST(merge_capability_ut, test_merge_caps_drops_without_adds)
+{
+    oci_runtime_spec *oci_spec = nullptr;
+    int ret = 0;
+    char *err = nullptr;
+    struct capabilities_lens old_lens = { 0 };
+    char *oci_config_file = nullptr;
+    const char *adds[] = {};
+    /* Below capabilities are not in the oci_config_file */
+    const char *drops[] = { "SYS_TTY_CONFIG", "SYS_PTRACE" };
+    size_t adds_len = sizeof(adds) / sizeof(adds[0]);
+    size_t drops_len = sizeof(drops) / sizeof(drops[0]);
+
+    oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
+    ASSERT_TRUE(oci_config_file != nullptr);
+
+
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
+    free(err);
+
+    check_capabilities_len(oci_spec->process->capabilities, &old_lens);
+
+    ret = merge_caps(oci_spec, adds, adds_len, drops, drops_len);
+    ASSERT_EQ(ret, 0);
+
+    /* Nothing dropped */
+    validate_capabilities_len(oci_spec->process->capabilities, &old_lens, 0);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST(merge_capability_ut, test_merge_caps_drops_existing_without_adds)
+{
+    oci_runtime_spec *oci_spec = nullptr;
+    int ret = 0;
+    char *err = nullptr;
+    struct capabilities_lens old_lens = { 0 };
+    char *oci_config_file = nullptr;
+    const char *adds[] = {};
+    /* Below capabilities are in the oci_config_file */
+    const char *drops[] = { "CHOWN", "MKNOD" };
+    size_t adds_len = sizeof(adds) / sizeof(adds[0]);
+    size_t drops_len = sizeof(drops) / sizeof(drops[0]);
+
+    oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
+    ASSERT_TRUE(oci_config_file != nullptr);
+
+
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
+    free(err);
+
+    check_capabilities_len(oci_spec->process->capabilities, &old_lens);
+
+    ret = merge_caps(oci_spec, adds, adds_len, drops, drops_len);
+    ASSERT_EQ(ret, 0);
+
+    /* All dropped */
+    validate_capabilities_len(oci_spec->process->capabilities, &old_lens, adds_len - drops_len);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST(merge_capability_ut, test_merge_caps_adds_drops)
+{
+    oci_runtime_spec *oci_spec = nullptr;
+    int ret = 0;
+    char *err = nullptr;
+    struct capabilities_lens old_lens = { 0 };
+    char *oci_config_file = nullptr;
+    /* All of below capabilities are not in oci_config_file */
+    const char *adds[] = { "NET_ADMIN", "SYS_ADMIN", "SYS_TTY_CONFIG", "SYS_PTRACE" };
+    const char *drops[] = { "SYS_TTY_CONFIG", "SYS_PTRACE" };
+    size_t adds_len = sizeof(adds) / sizeof(adds[0]);
+    size_t drops_len = sizeof(drops) / sizeof(drops[0]);
+
+    oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
+    ASSERT_TRUE(oci_config_file != nullptr);
+
+
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
+    free(err);
+
+    check_capabilities_len(oci_spec->process->capabilities, &old_lens);
+
+    ret = merge_caps(oci_spec, adds, adds_len, drops, drops_len);
+    ASSERT_EQ(ret, 0);
+
+    validate_capabilities_len(oci_spec->process->capabilities, &old_lens, adds_len - drops_len);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST(merge_capability_ut, test_merge_caps_adds_all_without_drops)
+{
+    oci_runtime_spec *oci_spec = nullptr;
+    int ret = 0;
+    char *err = nullptr;
+    struct capabilities_lens old_lens = { 0 };
+    char *oci_config_file = nullptr;
+    /* NET_ADMIN is in all */
+    const char *adds[] = { "ALL", "NET_ADMIN" };
+    const char *drops[] = {};
+    size_t adds_len = sizeof(adds) / sizeof(adds[0]);
+    size_t drops_len = sizeof(drops) / sizeof(drops[0]);
+    size_t all_caps_len = 0;
+    util_get_all_caps(&all_caps_len);
+
+    oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
+    ASSERT_TRUE(oci_config_file != nullptr);
+
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
+    free(err);
+
+    check_capabilities_len(oci_spec->process->capabilities, &old_lens);
+
+    ret = merge_caps(oci_spec, adds, adds_len, drops, drops_len);
+    ASSERT_EQ(ret, 0);
+
+    ASSERT_EQ(oci_spec->process->capabilities->bounding_len, all_caps_len);
+    ASSERT_EQ(oci_spec->process->capabilities->effective_len, all_caps_len);
+    ASSERT_EQ(oci_spec->process->capabilities->permitted_len, all_caps_len);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST(merge_capability_ut, test_merge_caps_adds_all_and_extra_without_drops)
+{
+    oci_runtime_spec *oci_spec = nullptr;
+    int ret = 0;
+    char *err = nullptr;
+    struct capabilities_lens old_lens = { 0 };
+    char *oci_config_file = nullptr;
+    /* ABC is not in all */
+    const char *adds[] = { "ALL", "ABC" };
+    const char *drops[] = {};
+    size_t adds_len = sizeof(adds) / sizeof(adds[0]);
+    size_t drops_len = sizeof(drops) / sizeof(drops[0]);
+    size_t all_caps_len = 0;
+    util_get_all_caps(&all_caps_len);
+
+    oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
+    ASSERT_TRUE(oci_config_file != nullptr);
+
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
+    free(err);
+
+    check_capabilities_len(oci_spec->process->capabilities, &old_lens);
+
+    ret = merge_caps(oci_spec, adds, adds_len, drops, drops_len);
+    ASSERT_EQ(ret, 0);
+
+    ASSERT_EQ(oci_spec->process->capabilities->bounding_len, all_caps_len + 1);
+    ASSERT_EQ(oci_spec->process->capabilities->effective_len, all_caps_len + 1);
+    ASSERT_EQ(oci_spec->process->capabilities->permitted_len, all_caps_len + 1);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST(merge_capability_ut, test_merge_caps_adds_all_drops_all)
+{
+    oci_runtime_spec *oci_spec = nullptr;
+    int ret = 0;
+    char *err = nullptr;
+    struct capabilities_lens old_lens = { 0 };
+    char *oci_config_file = nullptr;
+    /* ABC, EFG is not in all */
+    const char *adds[] = { "ALL", "ABC", "EFG"};
+    const char *drops[] = { "ALL", "ABC" };
+    size_t adds_len = sizeof(adds) / sizeof(adds[0]);
+    size_t drops_len = sizeof(drops) / sizeof(drops[0]);
+    size_t all_caps_len = 0;
+    util_get_all_caps(&all_caps_len);
+
+    oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
+    ASSERT_TRUE(oci_config_file != nullptr);
+
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
+    free(err);
+
+    check_capabilities_len(oci_spec->process->capabilities, &old_lens);
+
+    ret = merge_caps(oci_spec, adds, adds_len, drops, drops_len);
+    ASSERT_EQ(ret, 0);
+
+    ASSERT_EQ(oci_spec->process->capabilities->bounding_len, 1);
+    ASSERT_EQ(oci_spec->process->capabilities->effective_len, 1);
+    ASSERT_EQ(oci_spec->process->capabilities->permitted_len, 1);
+
+    free_oci_runtime_spec(oci_spec);
 }

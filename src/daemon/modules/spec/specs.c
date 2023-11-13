@@ -49,6 +49,7 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "utils_cap.h"
 
 #ifndef CLONE_NEWUTS
 #define CLONE_NEWUTS 0x04000000
@@ -814,15 +815,16 @@ static int adapt_settings_for_privileged(oci_runtime_spec *oci_spec, bool privil
 {
     int ret = 0;
     size_t all_caps_len = 0;
+    const char **all_caps = NULL;
 
     if (!privileged) {
         return 0;
     }
 
-    all_caps_len = util_get_all_caps_len();
-    if (oci_spec == NULL) {
-        ret = -1;
-        goto out;
+    all_caps = util_get_all_caps(&all_caps_len);
+    if (all_caps == NULL) {
+        ERROR("Failed to get all capabilities");
+        return -1;
     }
 
     clean_correlated_items(oci_spec);
@@ -838,7 +840,7 @@ static int adapt_settings_for_privileged(oci_runtime_spec *oci_spec, bool privil
         goto out;
     }
 
-    ret = refill_oci_process_capabilities(&oci_spec->process->capabilities, g_all_caps, all_caps_len);
+    ret = refill_oci_process_capabilities(&oci_spec->process->capabilities, all_caps, all_caps_len);
     if (ret != 0) {
         ERROR("Failed to copy all capabilities");
         ret = -1;
