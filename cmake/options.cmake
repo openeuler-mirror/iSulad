@@ -106,7 +106,7 @@ if (ENABLE_SELINUX STREQUAL "ON")
     message("${Green}--  Enable selinux${ColourReset}")
 endif()
 
-option(ENABLE_GRPC_REMOTE_CONNECT "enable gRPC remote connect" ON)
+option(ENABLE_GRPC_REMOTE_CONNECT "enable gRPC remote connect" OFF)
 if (ENABLE_GRPC_REMOTE_CONNECT STREQUAL "ON")
 	add_definitions(-DENABLE_GRPC_REMOTE_CONNECT=1)
 	set(ENABLE_GRPC_REMOTE_CONNECT 1)
