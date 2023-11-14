@@ -618,6 +618,7 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1alpha2::PodSandbox
     // Step 2: Create the sandbox container.
     response_id = CreateSandboxContainer(config, image, jsonCheckpoint, runtimeHandler, error);
     if (error.NotEmpty()) {
+        ERROR("Create sandbox failed: %s", error.GetCMessage());
         goto cleanup;
     }
 
@@ -672,7 +673,7 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1alpha2::PodSandbox
         UpdatePodSandboxNetworkSettings(response_id, network_setting_json, tmpErr);
         // If saving network settings failed, ignore error
         if (tmpErr.NotEmpty()) {
-            WARN("%s", tmpErr.GetCMessage());
+            WARN("Update sandbox network setting err: %s", tmpErr.GetCMessage());
         }
     }
     goto cleanup;
