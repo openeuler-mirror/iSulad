@@ -624,6 +624,7 @@ auto PodSandboxManagerServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSan
     // Step 2: Create the sandbox container.
     response_id = CreateSandboxContainer(config, image, jsonCheckpoint, runtimeHandler, error);
     if (error.NotEmpty()) {
+        ERROR("Create sandbox failed: %s", error.GetCMessage());
         goto cleanup;
     }
 

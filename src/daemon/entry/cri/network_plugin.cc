@@ -460,13 +460,15 @@ void PluginManager::SetUpPod(const std::string &ns, const std::string &name, con
         error.AppendError(tmpErr.GetCMessage());
         return;
     }
-    INFO("Calling network plugin %s to set up pod %s", m_plugin->Name().c_str(), fullName.c_str());
+    EVENT("Setup network plugin %s for sandbox: %s", m_plugin->Name().c_str(), fullName.c_str());
 
     m_plugin->SetUpPod(ns, name, interfaceName, podSandboxID, annotations, options, tmpErr);
     if (tmpErr.NotEmpty()) {
-        error.Errorf("NetworkPlugin %s failed to set up pod %s network: %s", m_plugin->Name().c_str(), fullName.c_str(),
+        ERROR("Setup network for sandbox: %s failed: %s", fullName.c_str(), tmpErr.GetCMessage());
+        error.Errorf("NetworkPlugin %s for sandbox %s network: %s", m_plugin->Name().c_str(), fullName.c_str(),
                      tmpErr.GetCMessage());
     }
+    EVENT("Setuped network plugin %s for sandbox: %s", m_plugin->Name().c_str(), fullName.c_str());
 
     tmpErr.Clear();
     Unlock(fullName, tmpErr);
@@ -490,12 +492,15 @@ void PluginManager::TearDownPod(const std::string &ns, const std::string &name, 
         goto unlock;
     }
 
-    INFO("Calling network plugin %s to tear down pod %s", m_plugin->Name().c_str(), fullName.c_str());
+    EVENT("Teardown network %s for sandbox: %s", m_plugin->Name().c_str(), fullName.c_str());
     m_plugin->TearDownPod(ns, name, Network::DEFAULT_NETWORK_INTERFACE_NAME, podSandboxID, annotations, tmpErr);
     if (tmpErr.NotEmpty()) {
+        ERROR("Teardown network for sandbox: %s failed: %s", fullName.c_str(), tmpErr.GetCMessage());
         error.Errorf("NetworkPlugin %s failed to teardown pod %s network: %s", m_plugin->Name().c_str(),
                      fullName.c_str(), tmpErr.GetCMessage());
     }
+    EVENT("Teardowned network %s for sandbox: %s", m_plugin->Name().c_str(), fullName.c_str());
+
 unlock:
     tmpErr.Clear();
     Unlock(fullName, tmpErr);

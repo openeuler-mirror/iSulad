@@ -118,7 +118,7 @@ grpc::Status RuntimeRuntimeServiceImpl::CreateContainer(grpc::ServerContext *con
         return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
     }
 
-    EVENT("Event: {Object: CRI, Type: Creating Container}");
+    EVENT("Event: {Object: CRI, Type: Creating Container for sandbox: %s}", request->pod_sandbox_id().c_str());
 
     std::string responseID =
         rService->CreateContainer(request->pod_sandbox_id(), request->config(), request->sandbox_config(), error);
@@ -360,7 +360,11 @@ grpc::Status RuntimeRuntimeServiceImpl::RunPodSandbox(grpc::ServerContext *conte
         return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
     }
 
-    EVENT("Event: {Object: CRI, Type: Running Pod}");
+    if (request->has_config() && request->config().has_metadata()) {
+        EVENT("Event: {Object: CRI, Type: Running Pod: %s}", request->config().metadata().name().c_str());
+    } else {
+        EVENT("Event: {Object: CRI, Type: Running Pod}");
+    }
 
     std::string responseID = rService->RunPodSandbox(request->config(), request->runtime_handler(), error);
     if (!error.Empty() || responseID.empty()) {
@@ -369,7 +373,7 @@ grpc::Status RuntimeRuntimeServiceImpl::RunPodSandbox(grpc::ServerContext *conte
     }
     reply->set_pod_sandbox_id(responseID);
 
-    EVENT("Event: {Object: CRI, Type: Run Pod success}");
+    EVENT("Event: {Object: CRI, Type: Run Pod: %s success}", responseID.c_str());
 
     return grpc::Status::OK;
 }
