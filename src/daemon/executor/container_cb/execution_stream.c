@@ -346,6 +346,7 @@ static int container_attach_cb(const container_attach_request *request, containe
     }
 
     params.rootpath = cont->root_path;
+    params.state = cont->state_path;
     params.stdin = fifos[0];
     params.stdout = fifos[1];
     params.stderr = fifos[2];

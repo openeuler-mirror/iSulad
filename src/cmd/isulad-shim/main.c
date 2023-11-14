@@ -145,6 +145,20 @@ int main(int argc, char **argv)
         }
     }
 
+    if (p->state->attach_socket != NULL) {
+        ret = prepare_attach_socket(p);
+        if (ret != SHIM_OK) {
+            write_message(ERR_MSG, "failed to prepare attach socket:%d", ret);
+            exit(EXIT_FAILURE);
+        }
+
+        ret = init_attach_log();
+        if (ret != SHIM_OK) {
+            write_message(ERR_MSG, "failed to init shim attach log");
+            exit(EXIT_FAILURE);
+        }
+    }
+
     /* start epoll for io copy */
     ret = process_io_start(p, &tid_epoll);
     if (ret != SHIM_OK) {

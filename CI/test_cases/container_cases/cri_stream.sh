@@ -187,10 +187,8 @@ function do_test_t()
     test_cri_exec_fun  || ((ret++))
     test_cri_exec_abn || ((ret++))
 
-    # runc attach not support
-    if [ $runtime == "lcr" ]; then
-        test_cri_attach || ((ret++))
-    fi
+    test_cri_attach || ((ret++))
+
     tear_down || ((ret++))
 
     msg_info "${test} finished with return ${ret}..."

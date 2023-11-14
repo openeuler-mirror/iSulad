@@ -19,7 +19,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdbool.h>
-#include "isula_libutils/shim_client_process_state.h"
+#include <isula_libutils/shim_client_process_state.h>
+#include "isula_libutils/utils_linked_list.h"
 #include "terminal.h"
 
 #ifdef __cplusplus
@@ -49,6 +50,7 @@ typedef struct process {
     char *root_path;
     int io_loop_fd;
     int exit_fd;
+    int attach_socket_fd; // the server socket fd that establishes a connection with isulad
     int ctr_pid;
     int sync_fd;
     int listen_fd;
@@ -58,6 +60,7 @@ typedef struct process {
     stdio_t *stdio; // shim to on runtime side, in:r out/err: w
     stdio_t *shim_io; // shim io on isulad side, in: w  out/err: r
     stdio_t *isulad_io; // isulad io, in:r out/err: w
+    struct isula_linked_list *attach_fifos; /* isulad: fifos used to attach teminal */
     shim_client_process_state *state;
     sem_t sem_mainloop;
     char *buf;
@@ -69,6 +72,8 @@ typedef struct {
 } process_exit_t;
 
 process_t* new_process(char *id, char *bundle, char *runtime);
+
+int prepare_attach_socket(process_t *p);
 
 int process_io_start(process_t *p, pthread_t *tid_epoll);
 int create_process(process_t *p);

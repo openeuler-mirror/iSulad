@@ -161,6 +161,7 @@ typedef struct _rt_resume_params_t {
 
 typedef struct _rt_attach_params_t {
     const char *rootpath;
+    const char *state;
     const char *stdin;
     const char *stdout;
     const char *stderr;

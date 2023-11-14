@@ -1394,6 +1394,8 @@ public:
     auto run(const struct isula_attach_request *request, struct isula_attach_response *response) -> int override
     {
         ClientContext context;
+        bool detach = false;
+        std::string attach_detach_msg = "read escape sequence";
 
         if (set_custom_header_metadata(context, request) != 0) {
             ERROR("Failed to translate request to grpc");
@@ -1415,6 +1417,9 @@ public:
                     break;
                 }
                 if (!stream_response.stdout().empty()) {
+                    if (strcmp(stream_response.stdout().c_str(), attach_detach_msg.c_str()) == 0) {
+                        detach = true;
+                    }
                     std::cout << stream_response.stdout() << std::flush;
                 }
                 if (!stream_response.stderr().empty()) {
@@ -1435,6 +1440,10 @@ public:
 
         if (response->server_errono != ISULAD_SUCCESS) {
             response->cc = ISULAD_ERR_EXEC;
+        }
+
+        if (detach) {
+            response->server_errono = ISULAD_INFO_DETACH;
         }
 
 out:

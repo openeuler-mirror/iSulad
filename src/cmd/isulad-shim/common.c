@@ -33,11 +33,21 @@
 #include <isula_libutils/utils_file.h>
 
 int g_log_fd = -1;
+int g_attach_log_fd = -1;
 
 int init_shim_log(void)
 {
-    g_log_fd = open_no_inherit(SHIM_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0640);
+    g_log_fd = open_no_inherit(SHIM_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, LOG_FILE_MODE);
     if (g_log_fd < 0) {
+        return SHIM_ERR;
+    }
+    return SHIM_OK;
+}
+
+int init_attach_log(void)
+{
+    g_attach_log_fd = open_no_inherit(ATTACH_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, LOG_FILE_MODE);
+    if (g_attach_log_fd < 0) {
         return SHIM_ERR;
     }
     return SHIM_OK;
@@ -162,11 +172,24 @@ int generate_random_str(char *id, size_t len)
     return SHIM_OK;
 }
 
-void write_message(const char *level, const char *fmt, ...)
-{
 #define MAX_MSG_JSON_TEMPLATE 32
 #define MAX_MESSAGE_CONTENT_LEN 128
 #define MAX_MESSAGE_LEN (MAX_MSG_JSON_TEMPLATE + MAX_MESSAGE_CONTENT_LEN)
+
+static void format_log_msg(const char *level, const char *buf, char *msg, int max_message_len)
+{
+    time_t current_time = time(NULL);
+    struct tm *local_time = localtime(&current_time);
+    char time_str[20];
+
+    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", local_time);
+
+    (void)snprintf(msg, max_message_len - 1, "{\"time\": \"%s\", \"level\": \"%s\", \"msg\": \"%s\"}\n", time_str, level,
+                   buf);
+}
+
+void write_message(const char *level, const char *fmt, ...)
+{
     if (g_log_fd < 0) {
         return;
     }
@@ -183,15 +206,31 @@ void write_message(const char *level, const char *fmt, ...)
         return;
     }
 
-    nwrite = snprintf(msg, MAX_MESSAGE_LEN - 1, "{\"level\": \"%s\", \"msg\": \"%s\"}\n", level, buf);
-    if (nwrite < 0 || (size_t)nwrite >= (MAX_MESSAGE_LEN - 1)) {
+    format_log_msg(level, buf, msg, MAX_MESSAGE_CONTENT_LEN);
+
+    (void)isula_file_total_write_nointr(g_log_fd, msg, strlen(msg));
+}
+
+void write_attach_message(const char *level, const char *fmt, ...)
+{
+    char buf[MAX_MESSAGE_CONTENT_LEN] = { 0 };
+    char msg[MAX_MESSAGE_LEN] = { 0 };
+    int nwrite = -1;
+
+    if (g_attach_log_fd < 0) {
+        return;
+    }
+    va_list arg_list;
+    va_start(arg_list, fmt);
+    nwrite = vsnprintf(buf, MAX_MESSAGE_CONTENT_LEN, fmt, arg_list);
+    va_end(arg_list);
+    if (nwrite < 0) {
         return;
     }
 
-    nwrite = isula_file_total_write_nointr(g_log_fd, msg, strlen(msg));
-    if (nwrite < 0 || (size_t)nwrite != strlen(msg)) {
-        return;
-    }
+    format_log_msg(level, buf, msg, MAX_MESSAGE_CONTENT_LEN);
+
+    (void)isula_file_total_write_nointr(g_attach_log_fd, msg, strlen(msg));
 }
 
 /* note: This function can only read small text file. */
@@ -271,4 +310,65 @@ int open_no_inherit(const char *path, int flag, mode_t mode)
     }
 
     return fd;
+}
+
+/* judge the fd whether is attach fifo */
+struct isula_linked_list *get_attach_fifo_item(int fd, struct isula_linked_list *list)
+{
+    struct isula_linked_list *it = NULL;
+    struct isula_linked_list *next = NULL;
+
+    if (fd <= 0 || list == NULL || isula_linked_list_empty(list)) {
+        return it;
+    }
+
+    isula_linked_list_for_each_safe(it, list, next) {
+        struct shim_fifos_fd *elem = (struct shim_fifos_fd *)it->elem;
+        if (elem == NULL) {
+            continue;
+        }
+        if (elem->in_fd == fd) {
+            return it;
+        }
+        if (elem->out_fd == fd) {
+            return it;
+        }
+        if (elem->err_fd == fd) {
+            return it;
+        }
+    }
+
+    return it;
+}
+
+void free_shim_fifos_fd(struct shim_fifos_fd *item)
+{
+    if (item == NULL) {
+        return;
+    }
+    if (item->in_fifo != NULL) {
+        free(item->in_fifo);
+        item->in_fifo = NULL;
+    }
+    if (item->out_fifo != NULL) {
+        free(item->out_fifo);
+        item->out_fifo = NULL;
+    }
+    if (item->err_fifo != NULL) {
+        free(item->err_fifo);
+        item->err_fifo = NULL;
+    }
+    if (item->in_fd >= 0) {
+        close(item->in_fd);
+        item->in_fd = -1;
+    }
+    if (item->out_fd >= 0) {
+        close(item->out_fd);
+        item->out_fd = -1;
+    }
+    if (item->err_fd >= 0) {
+        close(item->err_fd);
+        item->err_fd = -1;
+    }
+    free(item);
 }
