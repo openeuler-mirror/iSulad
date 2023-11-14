@@ -74,15 +74,6 @@ const char *g_all_caps[] = {
 #ifdef CAP_AUDIT_READ
     "CAP_AUDIT_READ",
 #endif
-#ifdef CAP_PERFMON
-    "CAP_PERFMON",
-#endif
-#ifdef CAP_BPF
-    "CAP_BPF",
-#endif
-#ifdef CAP_CHECKPOINT_RESTORE
-    "CAP_CHECKPOINT_RESTORE",
-#endif
 };
 
 static inline size_t util_get_all_caps_len()
