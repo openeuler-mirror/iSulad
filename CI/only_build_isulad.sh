@@ -67,7 +67,7 @@ popd
 git clone https://gitee.com/openeuler/iSulad.git
 pushd iSulad
 mkdir build && pushd build
-cmake -DENABLE_UT=ON ../
+cmake -DENABLE_UT=ON -DENABLE_GRPC_REMOTE_CONNECT=ON ../
 make -j2 && make install
 ctest -V
 popd
