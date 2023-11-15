@@ -1510,7 +1510,7 @@ int native_config_inspect(const char *name, char **network_json)
         return -1;
     }
 
-    EVENT("Event: {Object: network, Type: inspecting, Target: %s}", name);
+    INFO("Event: {Object: network, Type: inspecting, Target: %s}", name);
 
     if (!native_store_lock(SHARED)) {
         return -1;
@@ -1538,7 +1538,7 @@ int native_config_inspect(const char *name, char **network_json)
 
         // TODO: inspect the linked containers ip info
 
-        EVENT("Event: {Object: network, Type: inspected, Target: %s}", name);
+        INFO("Event: {Object: network, Type: inspected, Target: %s}", name);
         goto out;
     }
 
@@ -1635,7 +1635,7 @@ int native_config_list(const struct filters_args *filters, network_network_info 
         return -1;
     }
 
-    EVENT("Event: {Object: network, Type: listing}");
+    INFO("Event: {Object: network, Type: listing}");
 
     if (!native_store_lock(SHARED)) {
         return -1;
@@ -1693,7 +1693,7 @@ int native_config_list(const struct filters_args *filters, network_network_info 
     *networks_len = nets_len;
     nets_len = 0;
 
-    EVENT("Event: {Object: network, Type: listed}");
+    INFO("Event: {Object: network, Type: listed}");
 
 out:
     map_itor_free(itor);

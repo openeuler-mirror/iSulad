@@ -52,7 +52,7 @@ static int volume_list_cb(const volume_list_volume_request *request, volume_list
         goto err_out;
     }
 
-    EVENT("Volume Event: {Object: list volumes, Type: listing}");
+    INFO("Volume Event: {Object: list volumes, Type: listing}");
 
     list = volume_list();
     if (list == NULL) {
@@ -85,7 +85,7 @@ static int volume_list_cb(const volume_list_volume_request *request, volume_list
     }
 
 out:
-    EVENT("Volume Event: {Object: list volumes, Type: listed");
+    INFO("Volume Event: {Object: list volumes, Type: listed");
 
 err_out:
     if (*response != NULL) {

@@ -612,12 +612,12 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         if (g_isulad_errmsg != nullptr) {
             err.SetError(g_isulad_errmsg);
         } else {
-            err.Errorf("setup cni for container: %s failed", id.c_str());
+            err.Errorf("setup cni for sandbox: %s failed", id.c_str());
         }
         // rollback all network plane
         // if mutl-networks, one network plane failed, cause to left network can not be delete.
         if (network_module_detach(config, NETWOKR_API_TYPE_CRI) != 0) {
-            WARN("rollback all network for: %s failed", id.c_str());
+            WARN("rollback all network for sandbox: %s failed", id.c_str());
         }
     }
 
@@ -671,7 +671,7 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
     }
 
     if (network_module_detach(config, NETWOKR_API_TYPE_CRI) != 0) {
-        err.Errorf("teardown cni for container: %s failed", id.c_str());
+        err.Errorf("teardown cni for sandbox: %s failed", id.c_str());
     }
 
     UnlockNetworkMap(err);
