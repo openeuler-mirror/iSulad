@@ -230,3 +230,13 @@ $ sudo isula rm test
 - 兼容 1.0.0 版本的OCI
 - 兼容 0.3.0 版本以上的CNI
 - 兼容 2.1.x 版本以上的lcr
+
+## Kubernetes Support
+
+`iSulad`提供对Kubernetes 1.13 版本以上的支持。以下表格显示了 `iSulad` 与 Kubernetes 之间的兼容性。它给出了指定Kubernetes版本下所需要的最低 `iSulad` 版本。
+
+iSulad 版本 | Kubernetes 版本 | CRI 版本
+--- | --- | ---
+v2.0.0+ | v1.13-v1.18 | v1alpha2
+v2.0.8+ | v1.19-v1.22 | v1alpha2
+v2.1.4+ | v1.23-v1.26 | v1, v1alpha2
