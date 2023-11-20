@@ -16,21 +16,26 @@
 #include <stdio.h>
 #include <limits.h>
 #include <errno.h>
-#include <isula_libutils/defs.h>
-#include <isula_libutils/host_config.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
+#include <isula_libutils/log.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/oci_runtime_spec.h>
+
 #include "lcr_rt_ops.h"
-#include "isula_libutils/log.h"
 #include "engine.h"
 #include "error.h"
 #include "isulad_config.h"
 #include "err_msg.h"
 #include "runtime_api.h"
 #include "utils_file.h"
+
+#define LCR_CONFIG_FILE "config"
 
 bool rt_lcr_detect(const char *runtime)
 {
@@ -276,6 +281,17 @@ int rt_lcr_status(const char *name, const char *runtime, const rt_status_params_
     nret = engine_ops->engine_get_container_status_op(name, params->rootpath, status);
     if (nret != 0) {
         ret = -1;
+        const char *tmpmsg = NULL;
+        if (engine_ops->engine_get_errmsg_op != NULL) {
+            tmpmsg = engine_ops->engine_get_errmsg_op();
+        }
+        if (tmpmsg != NULL && strstr(tmpmsg, "Failed to load config") != NULL) {
+            status->error_code = INVALID_CONFIG_ERR_CODE;
+        }
+        isulad_set_error_message("Runtime state container error: %s",
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) != 0 ? tmpmsg : DEF_ERR_RUNTIME_STR);
+        ERROR("Runtime state container error: %s",
+              (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) != 0 ? tmpmsg : DEF_ERR_RUNTIME_STR);
         goto out;
     }
 
@@ -755,4 +771,81 @@ int rt_lcr_kill(const char *id, const char *runtime, const rt_kill_params_t *par
     }
 
     return 0;
+}
+
+int rt_lcr_rebuild_config(const char *name, const char *runtime, const rt_rebuild_config_params_t *params)
+{
+    int ret = -1;
+    int nret = 0;
+    char config_file[PATH_MAX] = { 0 };
+    char bak_config_file[PATH_MAX] = { 0 };
+    char oci_config_file[PATH_MAX] = { 0 };
+    struct engine_operation *engine_ops = NULL;
+    oci_runtime_spec *oci_spec = NULL;
+    __isula_auto_free char *json_container = NULL;
+    __isula_auto_free parser_error err = NULL;
+
+    engine_ops = engines_get_handler(runtime);
+    if (engine_ops == NULL || engine_ops->engine_create_op == NULL) {
+        ERROR("Failed to get engine rebuild config operations");
+        return -1;
+    }
+
+    nret = snprintf(config_file, PATH_MAX, "%s/%s/%s", params->rootpath, name, LCR_CONFIG_FILE);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Failed to snprintf config file for container %s", name);
+        return -1;
+    }
+
+    nret = snprintf(bak_config_file, PATH_MAX, "%s/%s/%s", params->rootpath, name, ".tmp_config_bak");
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Failed to snprintf bak config file for container %s", name);
+        return -1;
+    }
+
+    nret = snprintf(oci_config_file, sizeof(oci_config_file), "%s/%s/%s", params->rootpath, name, OCI_CONFIG_JSON);
+    if (nret < 0 || (size_t)nret >= sizeof(oci_config_file)) {
+        ERROR("Failed to snprintf for config json");
+        return -1;
+    }
+
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, NULL, &err);
+    if (oci_spec == NULL) {
+        ERROR("Failed to parse oci config file:%s", err);
+        return -1;
+    }
+
+    // delete the bak config file to prevent the remnants of the previous bak file
+    if (util_fileself_exists(bak_config_file) && util_path_remove(bak_config_file) != 0) {
+        ERROR("Failed to remove bak_config_file for container: %s", name);
+        goto out;
+    }
+
+    if (util_fileself_exists(config_file) && rename(config_file, bak_config_file) != 0) {
+        ERROR("Failed to backup old config for container: %s", name);
+        goto out;
+    }
+
+    nret = engine_ops->engine_create_op(name, params->rootpath, (void *)oci_spec);
+    if (nret != 0) {
+        // delete the invalid config file to prevent rename failed
+        if (util_fileself_exists(config_file) && util_path_remove(config_file) != 0) {
+            WARN("Failed to remove bak_config_file for container %s", name);
+        }
+        if (util_fileself_exists(bak_config_file) && rename(bak_config_file, config_file) != 0) {
+            WARN("Failed to rename backup old config to config for container %s", name);
+        }
+    }
+
+    ret = 0;
+
+out:
+    if (engine_ops != NULL && engine_ops->engine_clear_errmsg_op != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
+    if (util_fileself_exists(bak_config_file) && util_path_remove(bak_config_file) != 0) {
+        WARN("Failed to remove bak_config_file for %s", name);
+    }
+    free_oci_runtime_spec(oci_spec);
+    return ret;
 }

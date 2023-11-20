@@ -805,3 +805,9 @@ int rt_shim_kill(const char *id, const char *runtime, const rt_kill_params_t *pa
 
     return 0;
 }
+
+// the config file of oci runtime is config.json. If it is damaged, it cannot be rebuilt.
+int rt_shim_rebuild_config(const char *name, const char *runtime, const rt_rebuild_config_params_t *params)
+{
+    return 0;
+}

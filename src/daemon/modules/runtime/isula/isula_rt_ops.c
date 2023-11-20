@@ -2013,3 +2013,9 @@ int rt_isula_kill(const char *id, const char *runtime, const rt_kill_params_t *p
 
     return 0;
 }
+
+// the config file of oci runtime is config.json. If it is damaged, it cannot be rebuilt.
+int rt_isula_rebuild_config(const char *name, const char *runtime, const rt_rebuild_config_params_t *params)
+{
+    return 0;
+}

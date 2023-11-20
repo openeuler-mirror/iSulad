@@ -16,15 +16,18 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <limits.h>
-#include <isula_libutils/container_config_v2.h>
-#include <isula_libutils/host_config.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/auto_cleanup.h>
+
 #include "isulad_config.h"
-#include "isula_libutils/log.h"
+
 #include "container_api.h"
 #include "supervisor.h"
 #include "containers_gc.h"
@@ -276,9 +279,22 @@ static void restore_state(container_t *cont)
 #endif
     nret = runtime_status(id, runtime, &params, &real_status);
     if (nret != 0) {
-        WARN("Failed to restore container %s, make real status to STOPPED. Due to can not load container with status %d",
-             id, status);
-        real_status.status = RUNTIME_CONTAINER_STATUS_STOPPED;
+        bool rebuild_config = (real_status.error_code == INVALID_CONFIG_ERR_CODE);
+        int tempret = -1;
+        // only the lcr container with a damaged config file will rebuild the config
+        if (rebuild_config) {
+            rt_rebuild_config_params_t rebuild_params = { 0 };
+            rebuild_params.rootpath = cont->root_path;
+            nret = runtime_rebuild_config(id, runtime, &rebuild_params);
+            EVENT("Rebuild config for container: %s, result : %d", id, nret);
+            if (nret == 0) {
+                tempret = runtime_status(id, runtime, &params, &real_status);
+            }
+        }
+        if (tempret != 0) {
+            WARN("Failed to restore container %s, make real status to STOPPED. Due to cannot load container with status %d", id, status);
+            real_status.status = RUNTIME_CONTAINER_STATUS_STOPPED;
+        }
     }
 
     if (real_status.status == RUNTIME_CONTAINER_STATUS_STOPPED) {
