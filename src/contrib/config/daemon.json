@@ -1,6 +1,6 @@
 {
     "group": "isula",
-    "default-runtime": "lcr",
+    "default-runtime": "runc",
     "graph": "/var/lib/isulad",
     "state": "/var/run/isulad",
     "log-level": "ERROR",

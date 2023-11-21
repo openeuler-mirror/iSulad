@@ -41,7 +41,6 @@ struct client_arguments g_cmd_stats_args = {
     .showall = false,
     .nostream = false,
     .original = false,
-    .runtime = "lcr",
 };
 
 static struct isula_stats_response *g_oldstats = NULL;

@@ -332,7 +332,7 @@ extern "C" {
       "runtime",                                                                                                                                          \
       'R',                                                                                                                                                \
       &(cmdargs).runtime,                                                                                                                                 \
-      "Runtime to use for containers(default: lcr)",                                                                                                      \
+      "Runtime to use for containers",                                                                                                      \
       NULL },                                                                                                                                             \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
       false,                                                                                                                                              \
