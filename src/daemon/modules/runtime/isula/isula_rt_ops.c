@@ -1313,15 +1313,14 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     }
 
     ret = shim_create(fg_exec(params), id, workdir, bundle, cmd, exit_code, timeout, &shim_exit_code);
-    if (ret != 0) {
-        ERROR("%s: failed create shim process for exec %s", id, exec_id);
-        goto errlog_out;
-    }
-
     if (shim_exit_code == SHIM_EXIT_TIMEOUT) {
         ret = -1;
         isulad_set_error_message("Exec container error;exec timeout");
         ERROR("isulad-shim %d exit for execing timeout", pid);
+        goto errlog_out;
+    }
+    if (ret != 0) {
+        ERROR("%s: failed create shim process for exec %s", id, exec_id);
         goto errlog_out;
     }
 
