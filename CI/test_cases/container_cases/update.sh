@@ -138,6 +138,27 @@ function do_test_t()
     return $TC_RET_T
 }
 
+function test_autoremove_restartpolicy()
+{
+    containername=test_update2
+    containerid=`isula run -itd --runtime $1 --rm --name $containername busybox`
+    fn_check_eq "$?" "0" "run failed"
+
+    isula update --restart always $containerid
+    fn_check_ne "$?" "0" "update should fail"
+
+    isula update --restart nooooooooooo $containerid
+    fn_check_ne "$?" "0" "update should fail"
+
+    isula update --restart no $containerid
+    fn_check_eq "$?" "0" "update restart policy no failed"
+
+    isula rm -f $containername
+    fn_check_eq "$?" "0" "rm failed"
+
+    return $TC_RET_T
+}
+
 function do_test_t1()
 {
     containername=test_update1
@@ -169,6 +190,11 @@ do
     msg_info "${test} starting..."
 
     do_test_t $element
+    if [ $? -ne 0 ];then
+        let "ret=$ret + 1"
+    fi
+
+    test_autoremove_restartpolicy $element
     if [ $? -ne 0 ];then
         let "ret=$ret + 1"
     fi

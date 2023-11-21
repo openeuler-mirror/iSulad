@@ -1113,15 +1113,14 @@ static int update_host_config_check(container_t *cont, host_config *hostconfig)
 
     ret = verify_host_config_settings(hostconfig, true);
     if (ret != 0) {
-        goto out;
+        return -1;
     }
 
     if (container_is_removal_in_progress(cont->state) || container_is_dead(cont->state)) {
         ERROR("Container is marked for removal and cannot be \"update\".");
         isulad_set_error_message(
             "Cannot update container %s: Container is marked for removal and cannot be \"update\".", id);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (container_is_running(cont->state) && hostconfig->kernel_memory) {
@@ -1129,12 +1128,17 @@ static int update_host_config_check(container_t *cont, host_config *hostconfig)
         isulad_set_error_message("Cannot update container %s: Can not update kernel memory to a running container,"
                                  " please stop it first.",
                                  id);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-out:
-    return ret;
+    if (cont->hostconfig->auto_remove && hostconfig->restart_policy != NULL &&
+        hostconfig->restart_policy->name != NULL && strcmp("no", hostconfig->restart_policy->name) != 0) {
+        ERROR("Cannot update restart policy for the auto remove container %s", id);
+        isulad_set_error_message("Cannot update restart policy for the auto remove container %s", id);
+        return -1;
+    }
+
+    return 0;
 }
 
 static int do_update_resources(const container_update_request *request, container_t *cont)
