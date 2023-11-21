@@ -60,6 +60,8 @@ int rt_shim_resize(const char *id, const char *runtime, const rt_resize_params_t
 
 int rt_shim_exec_resize(const char *id, const char *runtime, const rt_exec_resize_params_t *params);
 
+int rt_shim_rebuild_config(const char *name, const char *runtime, const rt_rebuild_config_params_t *params);
+
 #ifdef __cplusplus
 }
 #endif

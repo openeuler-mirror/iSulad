@@ -41,6 +41,7 @@ typedef enum {
 struct runtime_container_status_info {
     bool has_pid;
     uint32_t pid;
+    int error_code;
     Runtime_Container_Status status;
 };
 
@@ -190,6 +191,10 @@ typedef struct _rt_exec_resize_params_t {
     unsigned int width;
 } rt_exec_resize_params_t;
 
+typedef struct _rt_runtime_rebuild_config_params_t {
+    const char *rootpath;
+} rt_rebuild_config_params_t;
+
 struct rt_ops {
     /* detect whether runtime is of this runtime type */
     bool (*detect)(const char *runtime);
@@ -226,6 +231,7 @@ struct rt_ops {
                        rt_listpids_out_t *out);
     int (*rt_resize)(const char *name, const char *runtime, const rt_resize_params_t *params);
     int (*rt_exec_resize)(const char *name, const char *runtime, const rt_exec_resize_params_t *params);
+    int (*rt_rebuild_config)(const char *name, const char *runtime, const rt_rebuild_config_params_t *params);
 };
 
 int runtime_create(const char *name, const char *runtime, const rt_create_params_t *params);
@@ -246,6 +252,7 @@ int runtime_attach(const char *name, const char *runtime, const rt_attach_params
 int runtime_update(const char *name, const char *runtime, const rt_update_params_t *params);
 
 int runtime_listpids(const char *name, const char *runtime, const rt_listpids_params_t *params, rt_listpids_out_t *out);
+int runtime_rebuild_config(const char *name, const char *runtime, const rt_rebuild_config_params_t *params);
 void free_rt_listpids_out_t(rt_listpids_out_t *out);
 int runtime_resize(const char *name, const char *runtime, const rt_resize_params_t *params);
 int runtime_exec_resize(const char *name, const char *runtime, const rt_exec_resize_params_t *params);

@@ -45,6 +45,7 @@ static const struct rt_ops g_lcr_rt_ops = {
     .rt_resize = rt_lcr_resize,
     .rt_exec_resize = rt_lcr_exec_resize,
     .rt_kill = rt_lcr_kill,
+    .rt_rebuild_config = rt_lcr_rebuild_config,
 };
 
 static const struct rt_ops g_isula_rt_ops = {
@@ -65,6 +66,7 @@ static const struct rt_ops g_isula_rt_ops = {
     .rt_resize = rt_isula_resize,
     .rt_exec_resize = rt_isula_exec_resize,
     .rt_kill = rt_isula_kill,
+    .rt_rebuild_config = rt_isula_rebuild_config,
 };
 
 #ifdef ENABLE_SHIM_V2
@@ -86,6 +88,7 @@ static const struct rt_ops g_shim_rt_ops = {
     .rt_resize = rt_shim_resize,
     .rt_exec_resize = rt_shim_exec_resize,
     .rt_kill = rt_shim_kill,
+    .rt_rebuild_config = rt_shim_rebuild_config,
 };
 #endif
 
@@ -463,6 +466,24 @@ int runtime_listpids(const char *name, const char *runtime, const rt_listpids_pa
 
 out:
     return ret;
+}
+
+int runtime_rebuild_config(const char *name, const char *runtime, const rt_rebuild_config_params_t *params)
+{
+    const struct rt_ops *ops = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Invalid arguments for runtime rebuild config");
+        return -1;
+    }
+
+    ops = rt_ops_query(runtime);
+    if (ops == NULL) {
+        ERROR("Failed to get runtime ops");
+        return -1;
+    }
+
+    return ops->rt_rebuild_config(name, runtime, params);
 }
 
 int runtime_resize(const char *name, const char *runtime, const rt_resize_params_t *params)
