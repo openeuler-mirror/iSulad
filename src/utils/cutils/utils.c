@@ -1284,7 +1284,7 @@ int util_generate_random_str(char *id, size_t len)
     }
 
     len = len / 2;
-    fd = open("/dev/random", O_RDONLY);
+    fd = open("/dev/urandom", O_RDONLY);
     if (fd == -1) {
         ERROR("Failed to open /dev/urandom");
         return -1;

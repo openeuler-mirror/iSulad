@@ -304,7 +304,7 @@ static int get_random_value(unsigned int range, unsigned int *val)
 {
     int ret = 0;
     int num = 0;
-    int fd = open("/dev/random", O_RDONLY);
+    int fd = open("/dev/urandom", O_RDONLY);
     if (fd == -1) {
         ERROR("Failed to open urandom device\n");
         return -1;
