@@ -24,7 +24,6 @@
 #include <isula_libutils/container_config_v2.h>
 #include <isula_libutils/host_config.h>
 #include <isula_libutils/log.h>
-#include <isula_libutils/auto_cleanup.h>
 
 #include "isulad_config.h"
 

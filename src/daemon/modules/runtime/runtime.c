@@ -470,7 +470,6 @@ out:
 
 int runtime_rebuild_config(const char *name, const char *runtime, const rt_rebuild_config_params_t *params)
 {
-    int ret = 0;
     const struct rt_ops *ops = NULL;
 
     if (name == NULL || runtime == NULL || params == NULL) {
@@ -484,9 +483,7 @@ int runtime_rebuild_config(const char *name, const char *runtime, const rt_rebui
         return -1;
     }
 
-    ret = ops->rt_rebuild_config(name, runtime, params);
-
-    return ret;
+    return ops->rt_rebuild_config(name, runtime, params);
 }
 
 int runtime_resize(const char *name, const char *runtime, const rt_resize_params_t *params)

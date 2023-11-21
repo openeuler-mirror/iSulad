@@ -782,7 +782,6 @@ int rt_lcr_rebuild_config(const char *name, const char *runtime, const rt_rebuil
     char oci_config_file[PATH_MAX] = { 0 };
     struct engine_operation *engine_ops = NULL;
     oci_runtime_spec *oci_spec = NULL;
-    __isula_auto_free char *json_container = NULL;
     __isula_auto_free parser_error err = NULL;
 
     engine_ops = engines_get_handler(runtime);
@@ -836,9 +835,7 @@ int rt_lcr_rebuild_config(const char *name, const char *runtime, const rt_rebuil
             WARN("Failed to rename backup old config to config for container %s", name);
         }
     }
-
-    ret = 0;
-
+    ret = nret != 0 ? -1 : 0;
 out:
     if (engine_ops != NULL && engine_ops->engine_clear_errmsg_op != NULL) {
         engine_ops->engine_clear_errmsg_op();
