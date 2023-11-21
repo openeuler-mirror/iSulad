@@ -33,24 +33,11 @@ function test_ulimit()
     local test="ulimit test with (${runtime})=> (${FUNCNAME[@]})"
     msg_info "${test} starting..."
 
-    cid=$(isula run -tid --runtime $runtime $image /bin/sh)
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check failed" && ((ret++))
-    cat ${RUNTIME_ROOT_PATH}/${runtime}/$cid/config.json | grep "RLIMIT_"
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check rlimit failed" && ((ret++))
-
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
     start_isulad_with_valgrind --default-ulimit nproc=2048:4096 --default-ulimit nproc=2048:8192 --default-ulimit nofile=1024:4096
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
-
-    # if default ulimit of isulad changed, isula start should do update ulimit of oci spec
-    isula restart -t 0 $cid
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - restart failed" && ((ret++))
-    cat ${RUNTIME_ROOT_PATH}/${runtime}/$cid/config.json | grep "RLIMIT_"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check rlimit failed after restart" && ((ret++))
-    isula rm -f $cid
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm container failed" && ((ret++))
 
     isula run --ulimit nproc= $image --runtime $runtime /bin/sh > $ulimitlog 2>&1
     cat $ulimitlog | grep "delimiter '=' can't be the first or the last character"

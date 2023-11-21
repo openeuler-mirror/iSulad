@@ -17,8 +17,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <errno.h>
-#include <limits.h>
-#include <stdint.h>
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/container_config_v2.h>
 #include <isula_libutils/defs.h>
@@ -77,13 +75,6 @@
 #ifndef CLONE_NEWCGROUP
 #define CLONE_NEWCGROUP 0x02000000
 #endif
-
-struct readonly_default_oci_spec {
-    oci_runtime_spec *cont;
-    oci_runtime_spec *system_cont;
-};
-
-static struct readonly_default_oci_spec g_rdspec;
 
 static int make_sure_oci_spec_annotations(oci_runtime_spec *oci_spec)
 {
@@ -384,6 +375,29 @@ static int make_annotations(oci_runtime_spec *oci_spec, container_config *contai
 
 out:
     return ret;
+}
+
+/* default_spec returns default oci spec used by isulad. */
+oci_runtime_spec *default_spec(bool system_container)
+{
+    const char *oci_file = OCICONFIG_PATH;
+    if (system_container) {
+        oci_file = OCI_SYSTEM_CONTAINER_CONFIG_PATH;
+    }
+    oci_runtime_spec *oci_spec = NULL;
+    parser_error err = NULL;
+
+    /* parse the input oci file */
+    oci_spec = oci_runtime_spec_parse_file(oci_file, NULL, &err);
+    if (oci_spec == NULL) {
+        ERROR("Failed to parse OCI specification file \"%s\", error message: %s", oci_file, err);
+        isulad_set_error_message("Can not read the default /etc/default/isulad/config.json file: %s", err);
+        goto out;
+    }
+
+out:
+    free(err);
+    return oci_spec;
 }
 
 static int make_sure_oci_spec_root(oci_runtime_spec *oci_spec)
@@ -1697,20 +1711,20 @@ static int merge_resources_conf(oci_runtime_spec *oci_spec, host_config *host_sp
 
     ret = merge_conf_cgroup(oci_spec, host_spec);
     if (ret != 0) {
-        return -1;
+        goto out;
     }
 
-    ret = merge_conf_blkio_device(oci_spec, host_spec);
+    ret = merge_conf_device(oci_spec, host_spec);
     if (ret != 0) {
-        return -1;
+        goto out;
     }
 
-    ret = merge_conf_devices(oci_spec, host_spec);
-    if (ret != 0) {
-        return -1;
+    ret = merge_conf_mounts(oci_spec, host_spec, v2_spec);
+    if (ret) {
+        goto out;
     }
-
-    return merge_conf_mounts(oci_spec, host_spec, v2_spec);
+out:
+    return ret;
 }
 
 static int merge_terminal(oci_runtime_spec *oci_spec, bool terminal)
@@ -2265,7 +2279,7 @@ oci_runtime_spec *load_oci_config(const char *rootpath, const char *name)
     nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, name, OCI_CONFIG_JSON);
     if (nret < 0 || (size_t)nret >= sizeof(filename)) {
         ERROR("Failed to print string");
-        return NULL;
+        goto out;
     }
 
     ociconfig = oci_runtime_spec_parse_file(filename, NULL, &err);
@@ -2274,7 +2288,6 @@ oci_runtime_spec *load_oci_config(const char *rootpath, const char *name)
         isulad_set_error_message("Parse oci config file failed:%s", err);
         goto out;
     }
-
 out:
     free(err);
     return ociconfig;
@@ -2282,80 +2295,36 @@ out:
 
 int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec *oci_spec)
 {
+    int ret = 0;
     int nret = 0;
+    char *json_container = NULL;
     char file_path[PATH_MAX] = { 0x0 };
     struct parser_context ctx = { OPT_PARSE_STRICT, stderr };
-    char *json_container = NULL;
     parser_error err = NULL;
-    int ret = 0;
 
     nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, OCI_CONFIG_JSON);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to print string");
-        return -1;
+        ret = -1;
+        goto out_free;
     }
 
     json_container = oci_runtime_spec_generate_json(oci_spec, &ctx, &err);
     if (json_container == NULL) {
         ERROR("Failed to generate json: %s", err);
         ret = -1;
-        goto out;
+        goto out_free;
     }
 
-    nret = util_atomic_write_file(file_path, json_container, strlen(json_container), DEFAULT_SECURE_FILE_MODE, false);
-    if (nret != 0) {
+    if (util_atomic_write_file(file_path, json_container, strlen(json_container), DEFAULT_SECURE_FILE_MODE, false) !=
+        0) {
         SYSERROR("write json container failed");
         ret = -1;
-        goto out;
+        goto out_free;
     }
 
-out:
+out_free:
+    free(err);
     free(json_container);
-    free(err);
     return ret;
-}
-
-/* default_spec returns default oci spec used by isulad. */
-oci_runtime_spec *default_spec(bool system_container)
-{
-    const char *oci_file = OCICONFIG_PATH;
-    if (system_container) {
-        oci_file = OCI_SYSTEM_CONTAINER_CONFIG_PATH;
-    }
-    oci_runtime_spec *oci_spec = NULL;
-    parser_error err = NULL;
-
-    /* parse the input oci file */
-    oci_spec = oci_runtime_spec_parse_file(oci_file, NULL, &err);
-    if (oci_spec == NULL) {
-        ERROR("Failed to parse OCI specification file \"%s\", error message: %s", oci_file, err);
-        isulad_set_error_message("Can not read the default %s file: %s", oci_file, err);
-        goto out;
-    }
-
-out:
-    free(err);
-    return oci_spec;
-}
-
-const oci_runtime_spec *get_readonly_default_oci_spec(bool system_container)
-{
-    if (system_container) {
-        return g_rdspec.system_cont;
-    }
-
-    return g_rdspec.cont;
-}
-
-int spec_module_init(void)
-{
-    g_rdspec.cont = default_spec(false);
-    if (g_rdspec.cont == NULL) {
-        return -1;
-    }
-    g_rdspec.system_cont = default_spec(true);
-    if (g_rdspec.system_cont == NULL) {
-        return -1;
-    }
-    return 0;
 }
