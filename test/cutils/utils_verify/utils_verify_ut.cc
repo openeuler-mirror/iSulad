@@ -70,12 +70,14 @@ TEST(utils_verify, test_util_validate_socket)
     ASSERT_EQ(util_validate_socket("unix://./isulad"), false);
     ASSERT_EQ(util_validate_socket("unix://isulad"), false);
 
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
     ASSERT_EQ(util_validate_socket("tcp://localhost:2375"), true);
     ASSERT_EQ(util_validate_socket("tcp://127.0.0.1:2375"), true);
 
     ASSERT_EQ(util_validate_socket("tcp://"), false);
     ASSERT_EQ(util_validate_socket("tcp://127.0.0.1"), false);
     ASSERT_EQ(util_validate_socket("tcp://127.0.0.1,2375"), false);
+#endif
 }
 
 TEST(utils_verify, test_util_valid_device_mode)
