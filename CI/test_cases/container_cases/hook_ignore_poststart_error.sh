@@ -28,7 +28,8 @@ function test_hook_ignore_poststart_error_spec()
 {
     local ret=0
     local image="busybox"
-    local test="container hook test => (${FUNCNAME[@]})"
+    local runtime=$1
+    local test="container hook test => (${FUNCNAME[@]}) => $runtime"
     CONT=test_hook_spec
     cp ${test_data_path}/poststart.sh /tmp/
 
@@ -40,7 +41,7 @@ function test_hook_ignore_poststart_error_spec()
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    isula run -n $CONT -itd --hook-spec ${test_data_path}/oci_hook_poststart_check.json ${image} &
+    isula run -n $CONT -itd --runtime $runtime --hook-spec ${test_data_path}/oci_hook_poststart_check.json ${image} &
 
     for a in `seq 20`
     do
@@ -74,6 +75,9 @@ function test_hook_ignore_poststart_error_spec()
 
 declare -i ans=0
 
-test_hook_ignore_poststart_error_spec || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    test_hook_ignore_poststart_error_spec $1 || ((ans++))
+done
 
 show_result ${ans} "${curr_path}/${0}"

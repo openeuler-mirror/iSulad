@@ -26,7 +26,8 @@ function test_cpu_nano_spec()
 {
     local ret=0
     local image="busybox"
-    local test="container blkio nano test => (${FUNCNAME[@]})"
+    local runtime=$1
+    local test="container blkio nano test => (${FUNCNAME[@]}) => $runtime"
 
     msg_info "${test} starting..."
 
@@ -108,6 +109,9 @@ function test_cpu_nano_spec()
 
 declare -i ans=0
 
-test_cpu_nano_spec || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    test_cpu_nano_spec $element || ((ans++))
+done
 
 show_result ${ans} "${curr_path}/${0}"

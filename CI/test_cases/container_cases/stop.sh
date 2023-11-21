@@ -25,8 +25,12 @@ source ../helpers.sh
 
 function do_test_t()
 {
+    local runtime=$1
+    local test="start_test => (${runtime})"
+    msg_info "${test} starting..."
+
     containername=test_stop
-    isula run --name $containername -td busybox
+    isula run --runtime $runtime --name $containername -td busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
@@ -61,14 +65,19 @@ function do_test_t()
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
+    msg_info "${test} finished with return ${ret}..."
+
     return $TC_RET_T
 }
 
 ret=0
 
-do_test_t
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
+for element in ${RUNTIME_LIST[@]};
+do
+    do_test_t $element
+    if [ $? -ne 0 ];then
+        let "ret=$ret + 1"
+    fi
+done
 
 show_result $ret "basic stop"

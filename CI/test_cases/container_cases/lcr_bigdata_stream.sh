@@ -40,7 +40,7 @@ function set_up()
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    CID=$(isula run -itd ${image} sh)
+    CID=$(isula run --runtime lcr  -itd ${image} sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula exec -it $CID dd if=/dev/zero of=test_500M bs=1M count=500
@@ -389,33 +389,6 @@ function test_stream_with_kill_isulad()
     return ${ret}
 }
 
-function test_stream_with_runc()
-{
-    local ret=0
-    local image="busybox"
-    local test="test_stream_with_runc => (${FUNCNAME[@]})"
-    msg_info "${test} starting..."
-
-    RUNCID=$(isula run -itd --runtime runc ${image} sh)
-    isula exec -it $RUNCID dd if=/dev/zero of=test_500M bs=1M count=500
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create bigdata" && ((ret++))
-
-    isula exec -it $RUNCID cat test_500M > /home/iocopy_stream_data_500M
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cat bigdata" && ((ret++))
-
-    sync && sync
-    total_size=$(stat -c"%s" /home/iocopy_stream_data_500M)
-    [[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
-
-    isula rm -f $RUNCID
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container" && ((ret++))
-
-    rm -rf /home/iocopy_stream_data_500M
-
-    msg_info "${test} finished with return ${ret}..."
-    return ${ret}
-}
-
 function tear_down()
 {
     local ret=0
@@ -438,7 +411,7 @@ function test_memory_leak_with_bigdata_stream()
 
     start_isulad_with_valgrind
 
-    CID=$(isula run -itd ${image} sh)
+    CID=$(isula run --runtime lcr -itd ${image} sh)
 
     isula exec -it $CID dd if=/dev/zero of=test_100M bs=1M count=100
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create bigdata" && ((ret++))
@@ -477,7 +450,6 @@ test_stream_with_stop_lxc_monitor || ((ans++))
 test_stream_with_kill_lxc_monitor || ((ans++))
 test_stream_with_stop_isulad || ((ans++))
 test_stream_with_kill_isulad || ((ans++))
-test_stream_with_runc || ((ans++))
 tear_down || ((ans++))
 
 test_memory_leak_with_bigdata_stream || ((ans++))

@@ -22,7 +22,6 @@
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/../data)
 source ../helpers.sh
-test="exec additional gids test => test_exec_additional_gids"
 test_log=$(mktemp /tmp/additional_gids_test_XXX)
 
 USERNAME="user"
@@ -37,10 +36,14 @@ file_info="Keep it secret, keep it safe"
 function additional_gids_test()
 {
     local ret=0
+    local runtime=$1
+    test="exec additional gids test => test_exec_additional_gids => $runtime"
+
+    msg_info "${test} starting..."
 
     isula rm -f `isula ps -a -q`
 
-    isula run -tid -n $cont_name ubuntu bash
+    isula run -tid --runtime $runtime -n $cont_name ubuntu bash
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container" && ((ret++))
 
     isula exec $cont_name bash -c "groupadd --gid $USER_GID $USERNAME \
@@ -52,10 +55,13 @@ function additional_gids_test()
         && chmod 606 /app/sekrit.txt"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create user and group failed" && ((ret++))
 
+    # runc is not support exec --workdir
     /usr/bin/expect <<- EOF > ${test_log} 2>&1
 set timeout 10
-spawn isula exec -it --workdir /app -u $USERNAME $cont_name bash
+spawn isula exec -it -u $USERNAME $cont_name bash
 expect "${USERNAME}*"
+send "cd /app\n"
+expect "*"
 send "newgrp ${ADDITIONAL_GROUP}\n"
 expect "*"
 send "groups\n"
@@ -75,18 +81,18 @@ EOF
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - read error message failed" && ((ret++))
 
     isula rm -f `isula ps -a -q`
+    rm -rf ${test_log}
+
+    msg_info "${test} finished with return ${ret}..."
 
     return ${ret}
 }
 
 declare -i ans=0
 
-msg_info "${test} starting..."
-
-additional_gids_test || ((ans++))
-
-rm -rf ${test_log}
-
-msg_info "${test} finished with return ${ret}..."
+for element in ${RUNTIME_LIST[@]};
+do
+    additional_gids_test $element || ((ans++))
+done
 
 show_result ${ans} "${curr_path}/${0}"

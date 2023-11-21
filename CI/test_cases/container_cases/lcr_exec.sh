@@ -30,7 +30,7 @@ function exec_workdir()
 
     isula rm -f `isula ps -a -q`
 
-    isula run -tid -n cont_workdir busybox sh
+    isula run -tid --runtime lcr -n cont_workdir busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with --workdir" && ((ret++))
 
     isula exec -ti --workdir /workdir cont_workdir pwd | grep "/workdir"
