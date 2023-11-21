@@ -214,7 +214,7 @@ int generate_random_str(char *id, size_t len)
     const int m = 256;
 
     len = len / 2;
-    fd = open("/dev/urandom", O_RDONLY);
+    fd = open("/dev/random", O_RDONLY);
     if (fd == -1) {
         return SHIM_ERR;
     }
