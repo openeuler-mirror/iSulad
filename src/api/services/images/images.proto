@@ -30,6 +30,23 @@ service ImagesService {
 	rpc Tag(TagImageRequest) returns (TagImageResponse);
 	rpc Import(ImportRequest) returns (ImportResponse);
 	rpc Search(SearchRequest) returns (SearchResponse);
+	rpc PullImage(PullImageRequest) returns (stream PullImageResponse);
+}
+
+// ImageSpec is an internal representation of an image.
+message ImageSpec {
+    // Container's Image field (e.g. imageID or imageDigest).
+    string image = 1;
+    // Unstructured key-value map holding arbitrary metadata.
+    // ImageSpec Annotations can be used to help the runtime target specific
+    // images in multi-arch images.
+    map<string, string> annotations = 2;
+}
+
+// AuthConfig contains authorization information for connecting to a registry.
+message AuthConfig {
+    string username = 1;
+    string password = 2;
 }
 
 message Descriptor {
@@ -152,4 +169,20 @@ message SearchResponse {
 	repeated SearchImage search_result = 2;
 	uint32 cc = 3;
 	string errmsg = 4;
+}
+
+message PullImageRequest {
+    // Spec of the image.
+    ImageSpec image = 1;
+    // Authentication configuration for pulling the image.
+    AuthConfig auth = 2;
+    bool is_progress_visible = 3;
+}
+
+message PullImageResponse {
+    // Reference to the image in use. For most runtimes, this should be an
+    // image ID or digest.
+    string image_ref = 1;
+    string stream = 2;
+    bytes progress_data = 3;
 }

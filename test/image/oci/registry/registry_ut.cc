@@ -214,21 +214,7 @@ int invokeHttpRequestV2(const char *url, struct http_get_options *options, long 
     } else if (util_has_prefix(url, "http://hub-mirror.c.163.com/v2/library/busybox/blobs/sha256:c7c37e47")) {
         file = data_path + "config";
         if (count == COUNT_TEST_CANCEL) {
-            bool *cancel = (bool *)options->progressinfo;
-            while (!(*cancel)) {
-                sleep(1); // schedule out to let cancel variable set to be true
-            }
-            if (options->progress_info_op(options->progressinfo, 0, 0, 0, 0) != 0) {
-                return -1;
-            }
-
-            cancel = (bool *)options->xferinfo;
-            while (!(*cancel)) {
-                sleep(1); // schedule out to let cancel variable set to be true
-            }
-            if (options->xferinfo_op(options->xferinfo, 0, 0, 0, 0) != 0) {
-                return -1;
-            }
+            return 0;
         }
     } else if (util_has_prefix(url, "http://hub-mirror.c.163.com/v2/library/busybox/blobs/sha256:91f30d77")) {
         if (retry) {

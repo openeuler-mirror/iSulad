@@ -513,7 +513,7 @@ static void rest_image_pull_cb(evhtp_request_t *req, void *arg)
         goto out;
     }
 
-    (void)cb->image.pull(crequest, &cresponse);
+    (void)cb->image.pull(crequest, NULL, &cresponse);
 
     evhtp_send_image_pull_repsponse(req, cresponse, RESTFUL_RES_OK);
 

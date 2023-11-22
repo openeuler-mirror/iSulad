@@ -18,6 +18,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map/rb_tree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_timestamp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/utils_images.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/progress.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/http/parser.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/buffer/buffer.c

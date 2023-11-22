@@ -15,27 +15,33 @@
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
 #include "http_request.h"
-#include <stdio.h>
-#include <string.h>
+#include <curl/curl.h>
 #include <isula_libutils/json_common.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/registry_token.h>
+#include <pthread.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include <time.h>
-#include <curl/curl.h>
-#include <pthread.h>
 
-#include "isula_libutils/log.h"
 #include "buffer.h"
+#include "certs.h"
+#include "err_msg.h"
 #include "http.h"
 #include "utils.h"
 #include "utils_images.h"
-#include "certs.h"
-#include "isula_libutils/registry_token.h"
-#include "err_msg.h"
+#include "progress.h"
 #include "utils_array.h"
 #include "utils_base64.h"
 #include "utils_string.h"
+
+typedef struct progress_arg {
+    char *digest;
+    progress_status_map *map_store;
+} progress_arg;
 
 #define MIN_TOKEN_EXPIRES_IN 60
 
@@ -683,28 +689,64 @@ out:
     return ret;
 }
 
-static int progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow)
+static int xfer_inner(void *p, int64_t dltotal, int64_t dlnow, int64_t ultotal, int64_t ulnow)
 {
-    bool *cancel = p;
-    if (*cancel) {
-        // return nonzero code means abort transition
+    progress_arg *arg = (progress_arg *)p;
+    progress *progress_value = NULL;
+
+    if (arg == NULL || arg->map_store == NULL) {
+        ERROR("Wrong progress arg");
         return -1;
     }
+    // When fetch_manifest_list, there's no digest. It's not a layer pulling progress and skip it.
+    if (arg->digest == NULL) {
+        return 0;
+    }
+
+    if (!progress_status_map_lock(arg->map_store)) {
+        ERROR("Cannot update progress status map for locking failed");
+        return -1;
+    }
+
+    // If the item exists, only replace the value.
+    progress_value = map_search(arg->map_store->map, arg->digest);
+    if (progress_value != NULL) {
+        progress_value->dlnow = dlnow;
+        progress_value->dltotal = dltotal;
+        progress_status_map_unlock(arg->map_store);
+
+        return 0;
+    }
+    progress_status_map_unlock(arg->map_store);
+
+    progress_value = util_common_calloc_s(sizeof(progress));
+    if (progress_value == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    progress_value->dlnow = dlnow;
+    progress_value->dltotal = dltotal;
+
+    progress_status_map_insert(arg->map_store, arg->digest, progress_value);
+
     return 0;
 }
 
+#if (LIBCURL_VERSION_NUM >= 0x072000)
 static int xfer(void *p, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
 {
-    bool *cancel = p;
-    if (*cancel) {
-        // return nonzero code means abort transition
-        return -1;
-    }
-    return 0;
+    return xfer_inner(p, (int64_t)dltotal, (int64_t)dlnow, (int64_t)ultotal, (int64_t)ulnow);
 }
+#else
+static int get_progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow)
+{
+    return xfer_inner(p, (int64_t)dltotal, (int64_t)dlnow, (int64_t)ultotal, (int64_t)ulnow);
+}
+#endif
 
 int http_request_file(pull_descriptor *desc, const char *url, const char **custom_headers, char *file,
-                      resp_data_type type, CURLcode *errcode)
+                      resp_data_type type, CURLcode *errcode, char *digest)
 {
     int ret = 0;
     struct http_get_options *options = NULL;
@@ -730,11 +772,24 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
     }
     options->outputtype = HTTP_REQUEST_FILE;
     options->output = file;
-    options->show_progress = 1;
-    options->progressinfo = &desc->cancel;
-    options->progress_info_op = progress;
-    options->xferinfo = &desc->cancel;
-    options->xferinfo_op = xfer;
+    progress_arg *arg = util_common_calloc_s(sizeof(progress_arg));
+    if (arg == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+    options->show_progress = 0;
+    if (desc->progress_status_store != NULL) {
+        arg->digest = digest;
+        arg->map_store = desc->progress_status_store;
+#if (LIBCURL_VERSION_NUM >= 0x072000)
+        options->xferinfo = arg;
+        options->xferinfo_op = xfer;
+#else
+        options->progressinfo = arg;
+        options->progress_info_op = get_progress;
+#endif
+        options->show_progress = 1;
+    }
     options->timeout = true;
 
     ret = setup_common_options(desc, options, url, custom_headers);
@@ -755,6 +810,7 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
 out:
     *errcode = options->errcode;
     free_http_get_options(options);
+    free(arg);
     options = NULL;
 
     return ret;

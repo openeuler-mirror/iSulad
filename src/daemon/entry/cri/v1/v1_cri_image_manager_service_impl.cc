@@ -265,7 +265,7 @@ auto ImageManagerServiceImpl::PullImage(const runtime::v1::ImageSpec &image,
     }
     request->type = util_strdup_s(IMAGE_TYPE_OCI);
 
-    ret = im_pull_image(request, &response);
+    ret = im_pull_image(request, nullptr, &response);
     if (ret != 0) {
         if (response != nullptr && response->errmsg != nullptr) {
             error.SetError(response->errmsg);

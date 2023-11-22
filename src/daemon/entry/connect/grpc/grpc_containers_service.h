@@ -37,6 +37,10 @@ using google::protobuf::Timestamp;
 void protobuf_timestamp_to_grpc(types_timestamp_t *timestamp, Timestamp *gtimestamp);
 void protobuf_timestamp_from_grpc(types_timestamp_t *timestamp, const Timestamp &gtimestamp);
 
+bool grpc_is_call_cancelled(void *context);
+bool grpc_add_initial_metadata(void *context, const char *header, const char *val);
+bool grpc_event_write_function(void *writer, void *data);
+
 // Implement of containers service
 class ContainerServiceImpl final : public ContainerService::Service {
 public:

@@ -285,7 +285,8 @@ typedef struct {
     int (*logout)(const image_logout_request *request, image_logout_response **response);
 
     int (*tag)(const image_tag_image_request *request, image_tag_image_response **response);
-    int (*pull)(const image_pull_image_request *request, image_pull_image_response **response);
+
+    int (*pull)(const image_pull_image_request *request, stream_func_wrapper *stream, image_pull_image_response **response);
 #ifdef ENABLE_IMAGE_SEARCH
     int (*search)(const image_search_images_request *request, image_search_images_response **response);
 #endif

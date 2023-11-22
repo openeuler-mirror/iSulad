@@ -23,12 +23,15 @@
 extern "C" {
 #endif
 
-typedef int(*progress_info_func)(void *p,
-                                 double dltotal, double dlnow,
-                                 double ultotal, double ulnow);
+#if (LIBCURL_VERSION_NUM >= 0x072000)
 typedef int(*xferinfo_func)(void *p,
                             curl_off_t dltotal, curl_off_t dlnow,
                             curl_off_t ultotal, curl_off_t ulnow);
+#else
+typedef int(*progress_info_func)(void *p,
+                                 double dltotal, double dlnow,
+                                 double ultotal, double ulnow);
+#endif
 
 struct http_get_options {
     unsigned with_head : 1, /* if set, means write output with response HEADER */
@@ -79,11 +82,13 @@ struct http_get_options {
 
     bool timeout;
 
-    void *progressinfo;
-    progress_info_func progress_info_op;
-
+#if (LIBCURL_VERSION_NUM >= 0x072000)
     void *xferinfo;
     xferinfo_func xferinfo_op;
+#else
+    void *progressinfo;
+    progress_info_func progress_info_op;
+#endif
 };
 
 #define HTTP_RES_OK                 0

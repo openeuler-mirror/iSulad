@@ -359,7 +359,7 @@ void oci_exit(void)
     free_oci_image_data();
 }
 
-int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
+int oci_pull_rf(const im_pull_request *request, stream_func_wrapper *stream, im_pull_response *response)
 {
     int ret = 0;
     if (request == NULL || request->image == NULL || response == NULL) {
@@ -381,7 +381,7 @@ int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
     }
 #endif
 
-    ret = oci_do_pull_image(request, response);
+    ret = oci_do_pull_image(request, stream, response);
 
 #ifdef ENABLE_REMOTE_LAYER_STORE
     if (g_enable_remote) {

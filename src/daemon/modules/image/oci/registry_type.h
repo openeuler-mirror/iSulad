@@ -20,6 +20,7 @@
 #include <time.h>
 #include <stdbool.h>
 
+#include "progress.h"
 #include "utils_timestamp.h"
 
 // 8 is enough for challenge, usually only one challenge is provided.
@@ -134,6 +135,8 @@ typedef struct {
     char *search_name;
     uint32_t limit;
 #endif
+
+    progress_status_map *progress_status_store; // Don't free it. It's freed at other place.
 } pull_descriptor;
 
 void free_challenge(challenge *c);

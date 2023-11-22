@@ -955,12 +955,14 @@ int pull_request_from_rest(const image_pull_image_request *request, im_pull_requ
     }
 
     (*im_req)->image = util_strdup_s(request->image_name);
+    (*im_req)->is_progress_visible = request->is_progress_visible;
 
     return 0;
 }
 
 /* image pull cb */
-static int image_pull_cb(const image_pull_image_request *request, image_pull_image_response **response)
+static int image_pull_cb(const image_pull_image_request *request, stream_func_wrapper *stream,
+                         image_pull_image_response **response)
 {
     int ret = -1;
     im_pull_request *im_req = NULL;
@@ -988,7 +990,7 @@ static int image_pull_cb(const image_pull_image_request *request, image_pull_ima
 
     // current only oci image support pull
     im_req->type = util_strdup_s(IMAGE_TYPE_OCI);
-    ret = im_pull_image(im_req, &im_rsp);
+    ret = im_pull_image(im_req, stream, &im_rsp);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         goto out;

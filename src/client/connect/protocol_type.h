@@ -479,6 +479,7 @@ struct isula_rmi_response {
 
 struct isula_pull_request {
     char *image_name;
+    bool is_progress_visible;
 };
 
 struct isula_tag_request {

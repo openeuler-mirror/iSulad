@@ -102,6 +102,10 @@ add_executable(isula
     )
 target_include_directories(isula PUBLIC ${ISULA_INCS} ${SHARED_INCS})
 target_link_libraries(isula libisula_client ${LIBYAJL_LIBRARY})
+if (GRPC_CONNECTOR)
+    target_link_libraries(isula ${NCURSES_LIBRARY})
+endif()
+
 if (ANDROID OR MUSL)
     target_link_libraries(isula ${LIBSSL_LIBRARY})
 else()

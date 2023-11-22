@@ -409,7 +409,7 @@ out:
 }
 
 static int registry_request(pull_descriptor *desc, char *path, char **custom_headers, char *file, char **output_buffer,
-                            resp_data_type type, CURLcode *errcode)
+                            resp_data_type type, CURLcode *errcode, char *digest)
 {
     int ret = 0;
     int sret = 0;
@@ -457,7 +457,7 @@ static int registry_request(pull_descriptor *desc, char *path, char **custom_hea
         }
         DEBUG("resp=%s", *output_buffer);
     } else {
-        ret = http_request_file(desc, url, (const char **)headers, file, type, errcode);
+        ret = http_request_file(desc, url, (const char **)headers, file, type, errcode, digest);
         if (ret != 0) {
             ERROR("http request file failed, url: %s", url);
             goto out;
@@ -679,7 +679,7 @@ static int fetch_manifest_list(pull_descriptor *desc, char *file, char **content
 
     while (retry_times > 0) {
         retry_times--;
-        ret = registry_request(desc, path, custom_headers, file, NULL, HEAD_BODY, &errcode);
+        ret = registry_request(desc, path, custom_headers, file, NULL, HEAD_BODY, &errcode, NULL);
         if (ret != 0) {
             if (retry_times > 0 && !desc->cancel) {
                 continue;
@@ -762,7 +762,7 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
 
     while (retry_times > 0) {
         retry_times--;
-        ret = registry_request(desc, path, custom_headers, file, NULL, type, &errcode);
+        ret = registry_request(desc, path, custom_headers, file, NULL, type, &errcode, digest);
         if (ret != 0) {
             if (errcode == CURLE_RANGE_ERROR) {
                 forbid_resume = true;
@@ -1211,7 +1211,7 @@ int login_to_registry(pull_descriptor *desc)
         goto out;
     }
 
-    ret = registry_request(desc, path, NULL, NULL, &resp_buffer, HEAD_BODY, &errcode);
+    ret = registry_request(desc, path, NULL, NULL, &resp_buffer, HEAD_BODY, &errcode, NULL);
     if (ret != 0) {
         ERROR("registry: Get %s failed, resp: %s", path, resp_buffer);
         isulad_try_set_error_message("login to registry for %s failed", desc->host);

@@ -1972,6 +1972,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         }
     }
 
+    desc->progress_status_store = options->progress_status_store;
 out:
     free(image_tmp_path);
     return ret;

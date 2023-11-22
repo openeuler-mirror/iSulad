@@ -86,7 +86,7 @@ struct bim_ops {
     int (*load_image)(const im_load_request *request);
 
     /* pull image */
-    int (*pull_image)(const im_pull_request *request, im_pull_response *response);
+    int (*pull_image)(const im_pull_request *request, stream_func_wrapper *stream, im_pull_response *response);
 
     /* login */
     int (*login)(const im_login_request *request);
@@ -999,7 +999,7 @@ static bool check_im_pull_args(const im_pull_request *req, im_pull_response * co
     return true;
 }
 
-int im_pull_image(const im_pull_request *request, im_pull_response **response)
+int im_pull_image(const im_pull_request *request, stream_func_wrapper *stream, im_pull_response **response)
 {
     int ret = -1;
     struct bim *bim = NULL;
@@ -1029,7 +1029,7 @@ int im_pull_image(const im_pull_request *request, im_pull_response **response)
     }
 
     EVENT("Event: {Object: %s, Type: Pulling}", request->image);
-    ret = bim->ops->pull_image(request, tmp_res);
+    ret = bim->ops->pull_image(request, stream, tmp_res);
     if (ret != 0) {
         ERROR("Pull image %s failed", request->image);
         ret = -1;
@@ -1044,6 +1044,7 @@ out:
     }
     DAEMON_CLEAR_ERRMSG();
     *response = tmp_res;
+
     return ret;
 }
 

@@ -13,12 +13,15 @@
  * Description: provide grpc container service functions
  ******************************************************************************/
 #include "grpc_images_client.h"
-#include "api.grpc.pb.h"
 #include "client_base.h"
 #include "images.grpc.pb.h"
+
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/image_progress.h>
+#include <string>
+#include "show.h"
 #include "utils.h"
 #include "constants.h"
-#include <string>
 
 using namespace images;
 
@@ -337,9 +340,9 @@ public:
     }
 };
 
-class ImagesPull : public ClientBase<runtime::v1alpha2::ImageService, runtime::v1alpha2::ImageService::Stub,
-    isula_pull_request, runtime::v1alpha2::PullImageRequest, isula_pull_response,
-    runtime::v1alpha2::PullImageResponse> {
+class ImagesPull : public ClientBase<ImagesService, ImagesService::Stub,
+    isula_pull_request, PullImageRequest,
+    isula_pull_response, PullImageResponse> {
 public:
     explicit ImagesPull(void *args)
         : ClientBase(args)
@@ -347,15 +350,14 @@ public:
     }
     ~ImagesPull() = default;
 
-    auto request_to_grpc(const isula_pull_request *request, runtime::v1alpha2::PullImageRequest *grequest)
+    auto request_to_grpc(const isula_pull_request *request, PullImageRequest *grequest)
     -> int override
     {
         if (request == nullptr) {
             return -1;
         }
-
         if (request->image_name != nullptr) {
-            auto *image_spec = new (std::nothrow) runtime::v1alpha2::ImageSpec;
+            auto *image_spec = new (std::nothrow) ImageSpec;
             if (image_spec == nullptr) {
                 return -1;
             }
@@ -363,10 +365,12 @@ public:
             grequest->set_allocated_image(image_spec);
         }
 
+        grequest->set_is_progress_visible(request->is_progress_visible);
+
         return 0;
     }
 
-    auto response_from_grpc(runtime::v1alpha2::PullImageResponse *gresponse, isula_pull_response *response)
+    auto response_from_grpc(PullImageResponse *gresponse, isula_pull_response *response)
     -> int override
     {
         if (!gresponse->image_ref().empty()) {
@@ -376,7 +380,7 @@ public:
         return 0;
     }
 
-    auto check_parameter(const runtime::v1alpha2::PullImageRequest &req) -> int override
+    auto check_parameter(const PullImageRequest &req) -> int override
     {
         if (req.image().image().empty()) {
             ERROR("Missing image name in the request");
@@ -386,10 +390,147 @@ public:
         return 0;
     }
 
-    auto grpc_call(ClientContext *context, const runtime::v1alpha2::PullImageRequest &req,
-                   runtime::v1alpha2::PullImageResponse *reply) -> Status override
+    auto run(const struct isula_pull_request *request, struct isula_pull_response *response) -> int override
     {
-        return stub_->PullImage(context, req, reply);
+        ClientContext context;
+        PullImageRequest grequest;
+
+#ifdef ENABLE_GRPC_REMOTE_CONNECT
+#ifdef OPENSSL_VERIFY
+        // Set common name from cert.perm
+        char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
+        int ret = get_common_name_from_tls_cert(m_certFile.c_str(), common_name_value,
+                                                ClientBaseConstants::COMMON_NAME_LEN);
+        if (ret != 0) {
+            ERROR("Failed to get common name in: %s", m_certFile.c_str());
+            return -1;
+        }
+        context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
+        context.AddMetadata("tls_mode", m_tlsMode);
+#endif
+#endif
+        if (request_to_grpc(request, &grequest) != 0) {
+            ERROR("Failed to transform pull request to grpc");
+            response->server_errono = ISULAD_ERR_INPUT;
+            return -1;
+        }
+
+        auto reader = stub_->PullImage(&context, grequest);
+
+        PullImageResponse gresponse;
+        if (grequest.is_progress_visible()) {
+            while (reader->Read(&gresponse)) {
+                output_progress(gresponse);
+            }
+        } else {
+            reader->Read(&gresponse);
+            WARN("The terminal may not support ANSI Escape code. Display is skipped");
+        }
+        Status status = reader->Finish();
+        if (!status.ok()) {
+            ERROR("Error code: %d: %s", status.error_code(), status.error_message().c_str());
+            unpackStatus(status, response);
+            return -1;
+        }
+        response->image_ref = util_strdup_s(gresponse.image_ref().c_str());
+        return 0;
+    }
+
+private:
+    void output_progress(PullImageResponse &gresponse)
+    {
+        __isula_auto_free char *err = nullptr;
+        struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+
+        image_progress *progresses = image_progress_parse_data(gresponse.progress_data().c_str(), &ctx, &err);
+        if (progresses == nullptr) {
+            ERROR("Parse image progress error %s", err);
+            return;
+        }
+        show_processes(progresses);
+    }
+
+    void get_printed_value(int64_t value, char *printed)
+    {
+        float float_value = 0.0;
+        const float GB = 1024 * 1024 * 1024;
+        const float MB = 1024 * 1024;
+        const float KB = 1024;
+
+        if ((float)value / GB > 1) {
+            float_value = (float)value / GB;
+            sprintf(printed, "%.2fGB", float_value);
+        } else if ((float)value / MB > 1) {
+            float_value = (float)value / MB;
+            sprintf(printed, "%.2fMB", float_value);
+        } else if ((float)value / KB > 1) {
+            float_value = (float)value / KB;
+            sprintf(printed, "%.2fKB", float_value);
+        } else {
+            sprintf(printed, "%ldB", value);
+        }
+    }
+
+    void display_progress_bar(image_progress_progresses_element *progress_item, int width, bool if_show_all)
+    {
+        float progress = 0.0;
+        int filled_width = 0;
+        const int FLOAT_STRING_SIZE = 64;
+        char total[FLOAT_STRING_SIZE] = {0};
+        char current[FLOAT_STRING_SIZE] = {0};
+        int empty_width = 0;
+
+        if (progress_item->total != 0) {
+            progress = (float)progress_item->current / (float)progress_item->total;
+        }
+        filled_width = (int)(progress * width);
+        empty_width = width - filled_width;
+        get_printed_value(progress_item->total, total);
+        get_printed_value(progress_item->current, current);
+
+        if (if_show_all) {
+            int i = 0;
+
+            printf("%s: [", progress_item->id);
+
+            // Print filled characters
+            for (i = 0; i < filled_width; i++) {
+                printf("=");
+            }
+            printf(">");
+            // Print empty characters
+            for (i = 0; i < empty_width; i++) {
+                printf(" ");
+            }
+
+            printf("] %s/%s", current, total);
+        } else {
+            printf("%s:  %s/%s", progress_item->id, current, total);
+        }
+        printf("\n");
+        fflush(stdout);
+    }
+
+    void show_processes(image_progress *progresses)
+    {
+        size_t i = 0;
+        static size_t len = 0;
+        const int TERMINAL_SHOW_WIDTH = 110;
+        const int width = 50;  // Width of the progress bars
+
+        if (len != 0) {
+            move_cursor_up(len);
+        }
+        clear_lines_below();
+        len = progresses->progresses_len;
+        int terminal_width = get_terminal_width();
+        bool if_show_all = true;
+        if (terminal_width < TERMINAL_SHOW_WIDTH) {
+            if_show_all = false;
+        }
+        for (i = 0; i < len; i++) {
+            display_progress_bar(progresses->progresses[i], width, if_show_all);
+        }
     }
 };
 
