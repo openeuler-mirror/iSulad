@@ -75,7 +75,8 @@ out:
     return ret;
 }
 
-static void update_option_insecure_registry(registry_pull_options *options, char **insecure_registries, const char *host)
+static void update_option_insecure_registry(registry_pull_options *options, char **insecure_registries,
+                                            const char *host)
 {
     char **registry = NULL;
 
@@ -188,83 +189,95 @@ typedef struct status_arg {
     stream_func_wrapper *stream;
 } status_arg;
 
+static int do_get_progress_from_store(progress_status_map *status_store, image_progress *result)
+{
+    int i = 0;
+    size_t progress_size = progress_status_map_size(status_store);
+
+    result->progresses = util_smart_calloc_s(sizeof(image_progress_progresses_element *), progress_size);
+    if (result->progresses == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (!progress_status_map_lock(status_store)) {
+        WARN("Cannot itorate progress status map for locking failed");
+        // ignore lock error, retry lock after delay.
+        return 0;
+    }
+
+    map_itor *itor = map_itor_new(status_store->map);
+    for (i = 0; map_itor_valid(itor) && i < progress_size; map_itor_next(itor), i++) {
+        void *id = map_itor_key(itor);
+        const progress *value = (progress *)map_itor_value(itor);
+        const int ID_LEN = 12; // The last 12 charactos of image digest.
+
+        result->progresses[i] = util_common_calloc_s(sizeof(image_progress_progresses_element));
+        if (result->progresses[i] == NULL) {
+            // ignore error, return got progress data
+            WARN("Out of memory");
+            break;
+        }
+        result->progresses[i]->id = util_strdup_s((char *)id + strlen((char *)id) - ID_LEN);
+        result->progresses[i]->total = value->dltotal;
+        result->progresses[i]->current = value->dlnow;
+        result->progresses_len++;
+    }
+    map_itor_free(itor);
+    progress_status_map_unlock(status_store);
+
+    return 0;
+}
+
 void *get_progress_status(void *arg)
 {
     status_arg *status = (status_arg *)arg;
-    const int delay = 100; // Sleep for 100 milliseconds
-    bool write_ok = false;
+
+    prctl(PR_SET_NAME, "PullProgress");
 
     if (status == NULL || status->status_store == NULL || status->stream == NULL) {
         ERROR("Get progress status condition error");
         return NULL;
     }
 
-    for (;;) {
-        int i = 0;
-        
-        usleep(delay * 1000);  // Sleep for 100 milliseconds
+    while (!status->should_terminal || status->image != NULL) {
+        bool write_ok = false;
+        image_progress *iprogresses = NULL;
 
-        if (status->should_terminal && status->image == NULL) {
+        // Step 1: delay 100ms, wait progress update
+        util_usleep_nointerupt(100 * 1000);
+
+        // Step 2: check client whether is canceled?
+        if (status->stream->is_cancelled(status->stream->context)) {
+            WARN("pull stream is cancelled");
             break;
         }
-        
-        image_progress *progresses;
-        size_t progress_size = progress_status_map_size(status->status_store);
 
-        progresses = util_common_calloc_s(sizeof(image_progress));
-        if (progresses == NULL) {
-            ERROR("Out of memory. Skip progress show.");
-            break;   
+        iprogresses = util_common_calloc_s(sizeof(image_progress));
+        if (iprogresses == NULL) {
+            ERROR("Out of memory");
+            break;
+        }
+        // Step 3: get progress of pull from progress status store
+        if (do_get_progress_from_store(status->status_store, iprogresses) != 0) {
+            free_image_progress(iprogresses);
+            break;
         }
 
-        progresses->progresses = util_smart_calloc_s(sizeof(image_progress_progresses_element *), progress_size);
-        if (progresses->progresses == NULL) {
-            ERROR("Out of memory. Skip progress show.");
-            goto roundend;
-        }
+        // Step 4: check main thread whether is finished, and setted pulled image info
         if (status->image != NULL) {
-            progresses->image = util_strdup_s(status->image_name);
+            iprogresses->image = util_strdup_s(status->image_name);
             status->image = NULL;
         }
 
-        if (!progress_status_map_lock(status->status_store)) {
-            ERROR("Cannot itorate progress status map for locking failed");
-            goto roundend;
+        // Step 5: send got progress of pull to client
+        write_ok = status->stream->write_func(status->stream->writer, iprogresses);
+        if (!write_ok) {
+            WARN("Send progress data to client failed, just ignore and retry it");
         }
-        map_itor *itor = map_itor_new(status->status_store->map); 
-        for (i = 0; map_itor_valid(itor) && i < progress_size; map_itor_next(itor), i++) {
-            void *id = map_itor_key(itor);
-            const progress *value = (progress *)map_itor_value(itor);
-            const int ID_LEN = 12; // The last 12 charactos of image digest.
-
-            progresses->progresses[i] = util_common_calloc_s(sizeof(image_progress_progresses_element));
-            if (progresses->progresses[i] == NULL) {
-                WARN("Out of memory. Skip progress show.");
-                map_itor_free(itor);
-                progress_status_map_unlock(status->status_store);
-                goto roundend;
-            }
-            progresses->progresses[i]->id = util_strdup_s((char *)id + strlen((char *)id) - ID_LEN);
-            progresses->progresses[i]->total = value->dltotal;
-            progresses->progresses[i]->current = value->dlnow;
-            progresses->progresses_len++;
-        }
-        map_itor_free(itor);
-        progress_status_map_unlock(status->status_store);
-    
-        /* send to client */
-        write_ok = status->stream->write_func(status->stream->writer, progresses);
-        if (write_ok) {
-            goto roundend;
-        } 
-        if (status->stream->is_cancelled(status->stream->context)) {
-            ERROR("pull stream is cancelled");
-            goto roundend;
-        }    
-        ERROR("Send progress data to client failed");
-roundend:
-        free_image_progress(progresses);
+        free_image_progress(iprogresses);
     }
+
     return NULL;
 }
 
@@ -286,7 +299,7 @@ int oci_do_pull_image(const im_pull_request *request, stream_func_wrapper *strea
     if (request->is_progress_visible && stream != NULL) {
         progress_status_store = progress_status_map_new();
         if (progress_status_store == NULL) {
-            ERROR("Out of memory and will not show the pull progress");
+            ERROR("Out of memory");
             isulad_set_error_message("Failed to pull image %s with error: out of memory", request->image);
             ret = -1;
             goto out;
@@ -321,21 +334,28 @@ int oci_do_pull_image(const im_pull_request *request, stream_func_wrapper *strea
     arg.image = image;
     arg.image_name = dest_image_name;
     if (!request->is_progress_visible && stream != NULL) {
-        image_progress *progresses;
+        image_progress *progresses = NULL;
+        bool nret = false;
 
         progresses = util_common_calloc_s(sizeof(image_progress));
         if (progresses == NULL) {
-            ERROR("Out of memory. Skip progress show.");
-            goto out;   
+            ERROR("Out of memory");
+            isulad_set_error_message("Failed to pull image %s with error: out of memory", request->image);
+            ret = -1;
+            goto out;
         }
         progresses->image = util_strdup_s(dest_image_name);
-        if (stream->write_func(stream->writer, progresses)) {
+        nret = stream->write_func(stream->writer, progresses);
+        free_image_progress(progresses);
+        if (!nret) {
             ERROR("Send progress data to client failed");
+            isulad_set_error_message("Failed to pull image %s with error: send progress data to client failed", request->image);
+            ret = -1;
             goto out;
         }
     }
     response->image_ref = util_strdup_s(image->id);
-    
+
 out:
     arg.should_terminal = true;
     if (tid != 0 && pthread_join(tid, NULL) != 0) {

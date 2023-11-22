@@ -157,11 +157,11 @@ static const char *isulad_event_sta2str(container_events_type_t sta)
     return g_isulad_event_strtype[sta];
 }
 
-static const char * const g_isulad_image_event_strtype[] = { "load", "remove", "pull", "login", "logout" };
+static const char * const g_isulad_image_event_strtype[] = { "load", "remove", "pull", "login", "logout", "import", "tag" };
 
 static const char *isulad_image_event_sta2str(image_events_type_t sta)
 {
-    if (sta > EVENTS_TYPE_IMAGE_LOGOUT) {
+    if (sta >= EVENTS_TYPE_IMAGE_MAX_STATE) {
         return NULL;
     }
 

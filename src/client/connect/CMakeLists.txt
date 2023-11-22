@@ -12,10 +12,7 @@ if (GRPC_CONNECTOR)
     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/containers CONNECT_API_CONTAINERS)
     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/images CONNECT_API_IMAGES)
     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/volumes CONNECT_API_VOLUMES)
-    # TODO: current isula pull use CRI pullImage API, we should remove this dependence
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/cri CONNECT_API_CRI)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1alpha CONNECT_API_CRI_ALPHAS)
-    set(CONNECT_API ${CONNECT_API_VOLUMES} ${CONNECT_API_CONTAINERS} ${CONNECT_API_IMAGES} ${CONNECT_API_CRI_ALPHAS} ${CONNECT_API_CRI})
+    set(CONNECT_API ${CONNECT_API_VOLUMES} ${CONNECT_API_CONTAINERS} ${CONNECT_API_IMAGES})
     list(APPEND local_client_connect_srcs ${CONNECT_API})
 
     list(APPEND local_client_connect_incs ${CMAKE_CURRENT_SOURCE_DIR}/grpc)
@@ -23,8 +20,6 @@ if (GRPC_CONNECTOR)
         ${CMAKE_BINARY_DIR}/grpc/src/api/services/volumes
         ${CMAKE_BINARY_DIR}/grpc/src/api/services/containers
         ${CMAKE_BINARY_DIR}/grpc/src/api/services/images
-        ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri
-        ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1alpha
         )
 
     if(ENABLE_NATIVE_NETWORK)

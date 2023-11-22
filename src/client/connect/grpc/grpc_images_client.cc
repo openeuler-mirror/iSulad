@@ -390,50 +390,20 @@ public:
         return 0;
     }
 
-    auto run(const struct isula_pull_request *request, struct isula_pull_response *response) -> int override
+    auto grpc_call(ClientContext *context, const PullImageRequest &req, PullImageResponse *reply) -> Status override
     {
-        ClientContext context;
-        PullImageRequest grequest;
+        auto reader = stub_->PullImage(context, req);
 
-#ifdef ENABLE_GRPC_REMOTE_CONNECT
-#ifdef OPENSSL_VERIFY
-        // Set common name from cert.perm
-        char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
-        int ret = get_common_name_from_tls_cert(m_certFile.c_str(), common_name_value,
-                                                ClientBaseConstants::COMMON_NAME_LEN);
-        if (ret != 0) {
-            ERROR("Failed to get common name in: %s", m_certFile.c_str());
-            return -1;
-        }
-        context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
-        context.AddMetadata("tls_mode", m_tlsMode);
-#endif
-#endif
-        if (request_to_grpc(request, &grequest) != 0) {
-            ERROR("Failed to transform pull request to grpc");
-            response->server_errono = ISULAD_ERR_INPUT;
-            return -1;
-        }
-
-        auto reader = stub_->PullImage(&context, grequest);
-
-        PullImageResponse gresponse;
-        if (grequest.is_progress_visible()) {
-            while (reader->Read(&gresponse)) {
-                output_progress(gresponse);
+        if (req.is_progress_visible()) {
+            while (reader->Read(reply)) {
+                output_progress(*reply);
             }
         } else {
-            reader->Read(&gresponse);
+            reader->Read(reply);
             WARN("The terminal may not support ANSI Escape code. Display is skipped");
         }
-        Status status = reader->Finish();
-        if (!status.ok()) {
-            ERROR("Error code: %d: %s", status.error_code(), status.error_message().c_str());
-            unpackStatus(status, response);
-            return -1;
-        }
-        response->image_ref = util_strdup_s(gresponse.image_ref().c_str());
-        return 0;
+
+        return reader->Finish();
     }
 
 private:

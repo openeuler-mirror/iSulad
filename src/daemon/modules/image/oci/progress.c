@@ -34,15 +34,16 @@ size_t progress_status_map_size(progress_status_map *progress_status_map)
     }
     ret = map_size(progress_status_map->map);
     progress_status_map_unlock(progress_status_map);
-    
+
     return ret;
 }
 
-bool progress_status_map_insert(progress_status_map *progress_status_map, char *key, progress *value)
+bool progress_status_map_udpate(progress_status_map *progress_status_map, char *key, int64_t current, int64_t total)
 {
     bool ret = false;
+    progress *pval = NULL;
 
-    if (progress_status_map == NULL || key == NULL || value == NULL) {
+    if (progress_status_map == NULL || key == NULL) {
         ERROR("Invalid parameter");
         return false;
     }
@@ -51,9 +52,26 @@ bool progress_status_map_insert(progress_status_map *progress_status_map, char *
         ERROR("Cannot replace the progress status map item for locking failed");
         return false;
     }
-    ret = map_insert(progress_status_map->map, key, value);
-    progress_status_map_unlock(progress_status_map);
 
+    // If the item exists, only replace the value.
+    pval = map_search(progress_status_map->map, key);
+    if (pval != NULL) {
+        pval->dlnow = current;
+        pval->dltotal = total;
+        progress_status_map_unlock(progress_status_map);
+        return true;
+    }
+    pval = util_common_calloc_s(sizeof(progress));
+    if (pval == NULL) {
+        ERROR("Out of memory");
+        progress_status_map_unlock(progress_status_map);
+        return false;
+    }
+    pval->dlnow = current;
+    pval->dltotal = total;
+
+    ret = map_insert(progress_status_map->map, key, pval);
+    progress_status_map_unlock(progress_status_map);
     return ret;
 }
 

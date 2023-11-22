@@ -1930,7 +1930,7 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
         goto out;
     }
 
-    ret = archive_unpack(content, layer_diff, &options, root_dir ,&err);
+    ret = archive_unpack(content, layer_diff, &options, root_dir, &err);
     if (ret != 0) {
         ERROR("Failed to unpack to %s: %s", layer_diff, err);
         ret = -1;

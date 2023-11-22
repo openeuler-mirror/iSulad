@@ -784,7 +784,7 @@ int im_merge_image_config(const char *image_type, const char *image_name, contai
     int ret = 0;
     struct bim *bim = NULL;
 
-    // there is no need to judge the image name as empty, 
+    // there is no need to judge the image name as empty,
     // because the image name of external type allows it to be empty.
     if (container_spec == NULL || image_type == NULL) {
         ERROR("Invalid input arguments");

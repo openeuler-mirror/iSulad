@@ -16,7 +16,6 @@
 
 #include <string>
 
-#include "api.grpc.pb.h"
 #include "client_base.h"
 #include "volumes.grpc.pb.h"
 #include "utils.h"

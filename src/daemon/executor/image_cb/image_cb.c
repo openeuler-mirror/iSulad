@@ -519,6 +519,7 @@ static int image_tag_cb(const image_tag_image_request *request, image_tag_image_
     }
 
     EVENT("Image Event: {Object: %s, Type: Tagged}", request->src_name);
+    (void)isulad_monitor_send_image_event(request->src_name, IM_TAG);
 
 out:
     if (*response != NULL) {
@@ -997,6 +998,7 @@ static int image_pull_cb(const image_pull_image_request *request, stream_func_wr
     }
 
     EVENT("Image Event: {Object: %s, Type: Pulled}", request->image_name);
+    (void)isulad_monitor_send_image_event(request->image_name, IM_PULL);
 
 out:
     (*response)->cc = cc;
