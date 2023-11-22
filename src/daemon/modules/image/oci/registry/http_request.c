@@ -692,43 +692,21 @@ out:
 static int xfer_inner(void *p, int64_t dltotal, int64_t dlnow, int64_t ultotal, int64_t ulnow)
 {
     progress_arg *arg = (progress_arg *)p;
-    progress *progress_value = NULL;
 
     if (arg == NULL || arg->map_store == NULL) {
         ERROR("Wrong progress arg");
         return -1;
     }
+
     // When fetch_manifest_list, there's no digest. It's not a layer pulling progress and skip it.
     if (arg->digest == NULL) {
         return 0;
     }
 
-    if (!progress_status_map_lock(arg->map_store)) {
-        ERROR("Cannot update progress status map for locking failed");
+    if (!progress_status_map_udpate(arg->map_store, arg->digest, dlnow, dltotal)) {
+        ERROR("Failed to update pull progress");
         return -1;
     }
-
-    // If the item exists, only replace the value.
-    progress_value = map_search(arg->map_store->map, arg->digest);
-    if (progress_value != NULL) {
-        progress_value->dlnow = dlnow;
-        progress_value->dltotal = dltotal;
-        progress_status_map_unlock(arg->map_store);
-
-        return 0;
-    }
-    progress_status_map_unlock(arg->map_store);
-
-    progress_value = util_common_calloc_s(sizeof(progress));
-    if (progress_value == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    progress_value->dlnow = dlnow;
-    progress_value->dltotal = dltotal;
-
-    progress_status_map_insert(arg->map_store, arg->digest, progress_value);
 
     return 0;
 }

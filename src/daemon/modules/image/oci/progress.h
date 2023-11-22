@@ -29,11 +29,11 @@ typedef struct progress_status_map {
 } progress_status_map;
 
 typedef struct progress {
-   int64_t dlnow;
-   int64_t dltotal; 
+    int64_t dlnow;
+    int64_t dltotal;
 } progress;
 
-bool progress_status_map_insert(progress_status_map *progress_status_map, char *key, progress *value);
+bool progress_status_map_udpate(progress_status_map *progress_status_map, char *key, int64_t current, int64_t total);
 
 progress_status_map *progress_status_map_new();
 

@@ -215,7 +215,7 @@ int storage_inc_hold_refs(const char *layer_id)
 int storage_dec_hold_refs(const char *layer_id)
 {
     int ret = 0;
-    
+
     if (layer_id == NULL) {
         ERROR("Empty layer id");
         return -1;
@@ -550,7 +550,8 @@ char *storage_img_get_image_id(const char *img_name)
     return image_store_lookup(img_name);
 }
 
-static bool is_top_layer_of_other_image(const char *img_id, const imagetool_images_list *all_images, const char *layer_id)
+static bool is_top_layer_of_other_image(const char *img_id, const imagetool_images_list *all_images,
+                                        const char *layer_id)
 {
     size_t i = 0;
 

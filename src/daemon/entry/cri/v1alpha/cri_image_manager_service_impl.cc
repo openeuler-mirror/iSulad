@@ -25,7 +25,6 @@
 
 #include "cri_helpers.h"
 #include "err_msg.h"
-#include "events_sender_api.h"
 #include "isula_libutils/log.h"
 #include "service_image_api.h"
 #include "utils.h"
@@ -277,7 +276,6 @@ auto ImageManagerServiceImpl::PullImage(const runtime::v1alpha2::ImageSpec &imag
     if (response->image_ref != nullptr) {
         out_str = response->image_ref;
     }
-    (void)isulad_monitor_send_image_event(request->image, IM_PULL);
 
 cleanup:
     DAEMON_CLEAR_ERRMSG();

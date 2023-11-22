@@ -54,7 +54,9 @@ typedef enum {
     MAX_STATE,
 } runtime_state_t;
 
-typedef enum { IM_LOAD, IM_REMOVE, IM_PULL, IM_LOGIN, IM_LOGOUT, IM_IMPORT } image_state_t;
+// relate to g_isulad_image_event_strtype and image_events_type_t
+// we should keep them consistent
+typedef enum { IM_LOAD, IM_REMOVE, IM_PULL, IM_LOGIN, IM_LOGOUT, IM_IMPORT, IM_TAG } image_state_t;
 
 typedef enum { CONTAINER_EVENT, IMAGE_EVENT } msg_event_type_t;
 typedef enum { MONITORD_MSG_STATE, MONITORD_MSG_PRIORITY, MONITORD_MSG_EXIT_CODE } msg_type_t;

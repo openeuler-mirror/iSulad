@@ -299,5 +299,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
         make install && \
         ldconfig
 
+RUN dnf install -y ncurses-devel && dnf clean all
+
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]
