@@ -97,7 +97,8 @@ cleanup:
     return ret;
 }
 
-static int resolve_host_source_path(const char *path, bool follow_link, char **resolved_path, char **rebase_name, char **err)
+static int resolve_host_source_path(const char *path, bool follow_link, char **resolved_path, char **rebase_name,
+                                    char **err)
 {
     int ret = -1;
     int nret = 0;
@@ -419,7 +420,8 @@ cleanup:
     return ret;
 }
 
-static int tar_resource_rebase(const char *path, const char *rebase, const char *root_dir, struct io_read_wrapper *archive_reader, char **err)
+static int tar_resource_rebase(const char *path, const char *rebase, const char *root_dir,
+                               struct io_read_wrapper *archive_reader, char **err)
 {
     int ret = -1;
     int nret;
@@ -450,7 +452,8 @@ cleanup:
     return ret;
 }
 
-int tar_resource(const struct archive_copy_info *info, const char *root_dir, struct io_read_wrapper *archive_reader, char **err)
+int tar_resource(const struct archive_copy_info *info, const char *root_dir, struct io_read_wrapper *archive_reader,
+                 char **err)
 {
     if (info == NULL || root_dir == NULL || archive_reader == NULL || err == NULL) {
         return -1;

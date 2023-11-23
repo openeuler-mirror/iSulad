@@ -28,8 +28,8 @@ RuntimeV1ImageServiceImpl::RuntimeV1ImageServiceImpl()
 }
 
 grpc::Status RuntimeV1ImageServiceImpl::PullImage(grpc::ServerContext *context,
-                                                const runtime::v1::PullImageRequest *request,
-                                                runtime::v1::PullImageResponse *reply)
+                                                  const runtime::v1::PullImageRequest *request,
+                                                  runtime::v1::PullImageResponse *reply)
 {
     Errors error;
 
@@ -53,8 +53,8 @@ grpc::Status RuntimeV1ImageServiceImpl::PullImage(grpc::ServerContext *context,
 }
 
 grpc::Status RuntimeV1ImageServiceImpl::ListImages(grpc::ServerContext *context,
-                                                 const runtime::v1::ListImagesRequest *request,
-                                                 runtime::v1::ListImagesResponse *reply)
+                                                   const runtime::v1::ListImagesRequest *request,
+                                                   runtime::v1::ListImagesResponse *reply)
 {
     std::vector<std::unique_ptr<runtime::v1::Image>> images;
     Errors error;
@@ -86,8 +86,8 @@ grpc::Status RuntimeV1ImageServiceImpl::ListImages(grpc::ServerContext *context,
 }
 
 grpc::Status RuntimeV1ImageServiceImpl::ImageStatus(grpc::ServerContext *context,
-                                                  const runtime::v1::ImageStatusRequest *request,
-                                                  runtime::v1::ImageStatusResponse *reply)
+                                                    const runtime::v1::ImageStatusRequest *request,
+                                                    runtime::v1::ImageStatusResponse *reply)
 {
     std::unique_ptr<runtime::v1::Image> image_info = nullptr;
     Errors error;
@@ -117,8 +117,8 @@ grpc::Status RuntimeV1ImageServiceImpl::ImageStatus(grpc::ServerContext *context
 }
 
 grpc::Status RuntimeV1ImageServiceImpl::ImageFsInfo(grpc::ServerContext *context,
-                                                  const runtime::v1::ImageFsInfoRequest *request,
-                                                  runtime::v1::ImageFsInfoResponse *reply)
+                                                    const runtime::v1::ImageFsInfoRequest *request,
+                                                    runtime::v1::ImageFsInfoResponse *reply)
 {
     std::vector<std::unique_ptr<runtime::v1::FilesystemUsage>> usages;
     Errors error;
@@ -150,8 +150,8 @@ grpc::Status RuntimeV1ImageServiceImpl::ImageFsInfo(grpc::ServerContext *context
 }
 
 grpc::Status RuntimeV1ImageServiceImpl::RemoveImage(grpc::ServerContext *context,
-                                                  const runtime::v1::RemoveImageRequest *request,
-                                                  runtime::v1::RemoveImageResponse *reply)
+                                                    const runtime::v1::RemoveImageRequest *request,
+                                                    runtime::v1::RemoveImageResponse *reply)
 {
     Errors error;
 

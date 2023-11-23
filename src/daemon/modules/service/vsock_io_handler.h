@@ -20,8 +20,7 @@
 #include <pthread.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 bool is_vsock_path(const char *path);
@@ -35,7 +34,8 @@ int create_daemon_vsockpaths(const char *sandbox_id, uint32_t cid, bool attach_s
 
 void delete_daemon_vsockpaths(const char *sandbox_id, const char *vsockpaths[]);
 
-int start_vsock_io_copy(const char *exec_id, int sync_fd, bool detach, const char *fifoin, const char *fifoout, const char *fifoerr,
+int start_vsock_io_copy(const char *exec_id, int sync_fd, bool detach, const char *fifoin, const char *fifoout,
+                        const char *fifoerr,
                         int stdin_fd, struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
                         const char *vsocks[], pthread_t *tid);
 

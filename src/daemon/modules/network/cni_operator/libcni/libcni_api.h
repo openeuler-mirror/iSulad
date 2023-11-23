@@ -84,7 +84,7 @@ int cni_del_network_list(const struct cni_network_list_conf *list, const struct 
 
 int cni_check_network_list(const struct cni_network_list_conf *list, const struct runtime_conf *rc,
                            struct cni_opt_result **p_result);
-                        
+
 int cni_version_network_list(const struct cni_network_list_conf *list,
                              struct cni_version_info_list **result_version_list);
 

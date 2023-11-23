@@ -49,16 +49,26 @@ public:
     void SandboxPendingCallback();
     void SandboxReadyCallback();
     auto GetSandboxId() -> const std::string &;
-    auto MarkRemove() -> void { m_remove = true; }
-    auto ToRemove() -> bool { return m_remove; }
-    auto ResetRetryTimes() -> void { m_retryTimes = 0; }
+    auto MarkRemove() -> void
+    {
+        m_remove = true;
+    }
+    auto ToRemove() -> bool
+    {
+        return m_remove;
+    }
+    auto ResetRetryTimes() -> void
+    {
+        m_retryTimes = 0;
+    }
 
 protected:
     std::shared_ptr<containerd::services::sandbox::v1::Controller::StubInterface> m_stub;
     std::shared_ptr<SandboxStatusCallback> m_cb;
     std::string m_sandboxId;
     std::string m_sandboxer;
-    std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<containerd::services::sandbox::v1::ControllerWaitResponse>> m_responseReader;
+    std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<containerd::services::sandbox::v1::ControllerWaitResponse>>
+                                                                                                                      m_responseReader;
     std::unique_ptr<grpc::ClientContext> m_context;
     containerd::services::sandbox::v1::ControllerWaitResponse m_response;
     grpc::Status m_status;

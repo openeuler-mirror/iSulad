@@ -202,7 +202,7 @@ auto ImageManagerServiceImpl::status_request_from_grpc(const runtime::v1::ImageS
 }
 
 std::unique_ptr<runtime::v1::Image> ImageManagerServiceImpl::status_image_to_grpc(im_summary_response *response,
-                                                                                        Errors & /*error*/)
+                                                                                  Errors & /*error*/)
 {
     imagetool_image_summary *image_info = response->image_summary;
     if (image_info == nullptr) {
@@ -220,8 +220,8 @@ std::unique_ptr<runtime::v1::Image> ImageManagerServiceImpl::status_image_to_grp
 }
 
 std::unique_ptr<runtime::v1::Image> ImageManagerServiceImpl::ImageStatus(const runtime::v1::ImageSpec
-                                                                               &image,
-                                                                               Errors &error)
+                                                                         &image,
+                                                                         Errors &error)
 {
     im_summary_request *request { nullptr };
     im_summary_response *response { nullptr };

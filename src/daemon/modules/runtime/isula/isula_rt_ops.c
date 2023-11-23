@@ -1495,7 +1495,7 @@ static int get_attach_socketfd(const char *attach_socket, int *socket_fd)
 
     if (strlen(attach_socket) >= sizeof(addr.sun_path)) {
         SYSERROR("Invalid attach socket path: %s", attach_socket);
-        return -1; 
+        return -1;
     }
 
     tmp_socket = socket(AF_UNIX, SOCK_STREAM, 0);

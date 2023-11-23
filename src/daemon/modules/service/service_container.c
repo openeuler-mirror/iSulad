@@ -2197,7 +2197,8 @@ static int exec_prepare_console(const container_t *cont, const container_exec_re
         return exec_prepare_vsock(cont, request, stdinfd, stdout_handler, stderr_handler, io_addresses, sync_fd, thread_id);
     }
 #endif
-    return exec_prepare_fifo(cont, request, stdinfd, stdout_handler, stderr_handler, io_addresses, iopath, sync_fd, thread_id);
+    return exec_prepare_fifo(cont, request, stdinfd, stdout_handler, stderr_handler, io_addresses, iopath, sync_fd,
+                             thread_id);
 }
 
 static void exec_container_end(container_exec_response *response, const container_t *cont,

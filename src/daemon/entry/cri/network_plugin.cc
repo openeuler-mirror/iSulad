@@ -558,14 +558,14 @@ void NoopNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name,
     }
 
     container_network_settings *network_settings = static_cast<container_network_settings *>
-                                                        (util_common_calloc_s(sizeof(container_network_settings)));
+                                                   (util_common_calloc_s(sizeof(container_network_settings)));
     if (network_settings == nullptr) {
         ERROR("Out of memory");
         error.SetError("Out of memory");
         return;
     }
     auto settingsWarpper = std::unique_ptr<CStructWrapper<container_network_settings>>(new
-                                CStructWrapper<container_network_settings>(network_settings, free_container_network_settings));
+                                                                                       CStructWrapper<container_network_settings>(network_settings, free_container_network_settings));
 
     network_settings->sandbox_key = util_strdup_s(netnsPath.c_str());
 

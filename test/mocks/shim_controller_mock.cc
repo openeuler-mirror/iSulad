@@ -117,7 +117,8 @@ bool ShimController::Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::
     return true;
 }
 
-std::unique_ptr<ControllerSandboxStatus> ShimController::Status(const std::string &sandboxId, bool verbose, Errors &error)
+std::unique_ptr<ControllerSandboxStatus> ShimController::Status(const std::string &sandboxId, bool verbose,
+                                                                Errors &error)
 {
     if (g_shim_controller_mock != nullptr) {
         return g_shim_controller_mock->Status(sandboxId, verbose, error);
@@ -133,7 +134,8 @@ bool ShimController::Shutdown(const std::string &sandboxId, Errors &error)
     return true;
 }
 
-bool ShimController::UpdateNetworkSettings(const std::string &sandboxId, const std::string &networkSettings, Errors &error)
+bool ShimController::UpdateNetworkSettings(const std::string &sandboxId, const std::string &networkSettings,
+                                           Errors &error)
 {
     if (g_shim_controller_mock != nullptr) {
         return g_shim_controller_mock->UpdateNetworkSettings(sandboxId, networkSettings, error);

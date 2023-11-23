@@ -205,7 +205,7 @@ static int do_cache_insert_aliases(const struct runtime_conf *rc, cni_cached_inf
         return -1;
     }
 
-    for (i = 0; i < rc->aliases_len; i++){
+    for (i = 0; i < rc->aliases_len; i++) {
         tmp_aliases[i] = util_strdup_s(rc->aliases[i]);
     }
 

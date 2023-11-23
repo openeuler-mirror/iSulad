@@ -19,7 +19,7 @@ static std::shared_ptr<SandboxerClientMonitorMock> g_sandboxer_client_monitor_mo
 
 
 SandboxerClientMonitor::SandboxerClientMonitor(std::shared_ptr<grpc::Channel> channel, const std::string &sandboxer):
-    m_channel(channel), m_sandboxer(sandboxer) ,m_teardown(false) {}
+    m_channel(channel), m_sandboxer(sandboxer), m_teardown(false) {}
 
 void SandboxerClientMonitor::Start()
 {

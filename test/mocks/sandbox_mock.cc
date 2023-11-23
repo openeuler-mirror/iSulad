@@ -77,7 +77,7 @@ const std::string &Sandbox::GetRuntimeHandle() const
     return defaultStr;
 }
 
-const runtime::v1::PodSandboxConfig & Sandbox::GetSandboxConfig() const
+const runtime::v1::PodSandboxConfig &Sandbox::GetSandboxConfig() const
 {
     if (g_sandbox_mock != nullptr) {
         return g_sandbox_mock->GetSandboxConfig();

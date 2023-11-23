@@ -482,7 +482,7 @@ static int do_parse_version_info_stdout_str(int exec_ret, const cni_exec_error *
                                             const char *stdout_str, cni_version_info **result_version)
 {
     __isula_auto_free char *err_msg = NULL;
-    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 }; 
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     __isula_auto_free parser_error perr = NULL;
 
     if (exec_ret != 0) {

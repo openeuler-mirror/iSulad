@@ -29,7 +29,7 @@ public:
     MOCK_METHOD2(SandboxExitCallback, void(bool statusOK, const ControllerExitInfo &exitInfo));
     MOCK_METHOD0(SandboxPendingCallback, void());
     MOCK_METHOD0(SandboxReadyCallback, void());
-    MOCK_METHOD0(GetSandboxId, const std::string &());
+    MOCK_METHOD0(GetSandboxId, const std::string & ());
 };
 
 void MockSandboxerAsyncWaitCall_SetMock(std::shared_ptr<SandboxerAsyncWaitCallMock> mock);

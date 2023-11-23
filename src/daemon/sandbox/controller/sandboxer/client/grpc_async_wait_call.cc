@@ -36,7 +36,8 @@ SandboxerAsyncWaitCall::SandboxerAsyncWaitCall(std::shared_ptr<SandboxStatusCall
     m_remove = false;
 }
 
-auto SandboxerAsyncWaitCall::Call(containerd::services::sandbox::v1::Controller::StubInterface &stub, grpc::CompletionQueue &cq) -> bool
+auto SandboxerAsyncWaitCall::Call(containerd::services::sandbox::v1::Controller::StubInterface &stub,
+                                  grpc::CompletionQueue &cq) -> bool
 {
     containerd::services::sandbox::v1::ControllerWaitRequest request;
     m_context = std::unique_ptr<grpc::ClientContext>(new grpc::ClientContext());
@@ -96,10 +97,11 @@ SandboxerAsyncWaitStatus SandboxerAsyncWaitCall::HandleResponse()
     ControllerExitInfo exitInfo;
     SandboxerAsyncWaitStatus waitStatus = SANDBOXER_ASYNC_WAIT_STATUS_ERROR;
 
-    switch(m_status.error_code()) {
+    switch (m_status.error_code()) {
         case grpc::StatusCode::UNAVAILABLE:
             // If the status is unavailable, connection failed, we should retry
-            WARN("Sandboxer controller wait rpc server unavailable, error_code: %d: %s", m_status.error_code(), m_status.error_message().c_str());
+            WARN("Sandboxer controller wait rpc server unavailable, error_code: %d: %s", m_status.error_code(),
+                 m_status.error_message().c_str());
             waitStatus = SANDBOXER_ASYNC_WAIT_STATUS_RETRY;
             m_retryTimes++;
             // If retried times is more than 10, we should retry every 300 seconds
@@ -128,7 +130,8 @@ SandboxerAsyncWaitStatus SandboxerAsyncWaitCall::HandleResponse()
             break;
         default:
             // TODO: More error code should be handled
-            ERROR("Sandboxer controller wait request failed, error_code: %d: %s", m_status.error_code(), m_status.error_message().c_str());
+            ERROR("Sandboxer controller wait request failed, error_code: %d: %s", m_status.error_code(),
+                  m_status.error_message().c_str());
             SandboxExitCallback(false, exitInfo);
             break;
     }

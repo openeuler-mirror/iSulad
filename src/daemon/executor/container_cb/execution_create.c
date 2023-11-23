@@ -766,8 +766,8 @@ static int maintain_container_id(const container_create_request *request, char *
     used_id = container_name_index_get(name);
     ERROR("Name %s is in use by container %s", name, used_id);
     isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
-                                "You have to remove (or rename) that container to be able to reuse that name.",
-                                name, used_id);
+                             "You have to remove (or rename) that container to be able to reuse that name.",
+                             name, used_id);
     free(used_id);
     used_id = NULL;
     ret = -1;
@@ -1342,7 +1342,7 @@ static int v2_spec_fill_sandbox_info(const container_sandbox_info *sandbox_info,
         return 0;
     }
 
-    if(dup_container_sandbox_info(sandbox_info, &v2_spec->sandbox_info) != 0) {
+    if (dup_container_sandbox_info(sandbox_info, &v2_spec->sandbox_info) != 0) {
         ERROR("Failed to dup sandbox info");
         return -1;
     }
@@ -1431,7 +1431,7 @@ int container_create_cb(const container_create_request *request, container_creat
     v2_spec_fill_basic_info(id, name, image_name, image_type, container_spec, v2_spec);
 
 #ifdef ENABLE_CRI_API_V1
-    if(v2_spec_fill_sandbox_info(request->sandbox, v2_spec) != 0) {
+    if (v2_spec_fill_sandbox_info(request->sandbox, v2_spec) != 0) {
         ERROR("Failed to fill sandbox info");
         cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;

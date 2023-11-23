@@ -50,7 +50,7 @@ int CRIService::Init(const isulad_daemon_configs *config)
     }
 
     Errors err;
-     /* note: get config from args, now use defaults */
+    /* note: get config from args, now use defaults */
     Network::NetworkPluginConf mConf;
 
     if (config != nullptr) {

@@ -35,17 +35,20 @@ public:
 
 class AsyncWaitCallTest : public testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         m_sandboxId = "8040f13d54889ad4cd";
         m_sandboxer = "test_sandboxer";
         m_callback = std::shared_ptr<DummyCallback>(new DummyCallback());
-        m_call = std::unique_ptr<sandbox::SandboxerAsyncWaitCall>(new sandbox::SandboxerAsyncWaitCall(m_callback, m_sandboxId, m_sandboxer));
+        m_call = std::unique_ptr<sandbox::SandboxerAsyncWaitCall>(new sandbox::SandboxerAsyncWaitCall(m_callback, m_sandboxId,
+                                                                                                      m_sandboxer));
         m_stub = std::unique_ptr<DummyControllerStub>(NewDummyControllerStub());
         m_stub_mock = std::make_shared<MockControllerStub>();
         MockControllerStub_SetMock(m_stub_mock);
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         MockControllerStub_SetMock(nullptr);
     }
 

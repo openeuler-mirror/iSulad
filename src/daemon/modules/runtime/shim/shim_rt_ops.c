@@ -395,7 +395,7 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
 
     /**
      * If task address is not set, create a new shim-v2 and get the address.
-     * If task address is set, use it directly. 
+     * If task address is set, use it directly.
      */
     if (params->task_addr == NULL || strlen(params->task_addr) == 0) {
         if (shim_bin_v2_create(runtime, id, params->bundle, NULL, response, state_path) != 0) {

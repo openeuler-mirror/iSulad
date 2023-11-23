@@ -109,7 +109,7 @@ public:
     void Shutdown(void)
     {
         m_server->Shutdown();
-        
+
         // call CRI to shutdown stream server
         m_criService.Shutdown();
 

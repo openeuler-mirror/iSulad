@@ -21,7 +21,8 @@
 
 class SandboxerControllerTest : public testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         Errors err;
         m_contoller = std::move(std::unique_ptr<SandboxerController>(new SandboxerController(m_sandboxer, m_address)));
         m_sandboxerClientMock = std::make_shared<SandboxerClientMock>();
@@ -30,7 +31,8 @@ protected:
         m_contoller->Init(err);
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         m_contoller.reset(nullptr);
     }
 
@@ -74,7 +76,8 @@ TEST_F(SandboxerControllerTest, StartTestSucceed)
     Errors err;
     std::unique_ptr<sandbox::ControllerSandboxInfo> sandboxInfo = CreateTestSandboxInfo();
     // Set response to return sandbox_id, and return OK for stub_->Start().
-    EXPECT_CALL(*m_sandboxerClientMock, Start).Times(1).WillOnce(testing::DoAll(testing::SetArgReferee<1>(*sandboxInfo), testing::Return(true)));
+    EXPECT_CALL(*m_sandboxerClientMock, Start).Times(1).WillOnce(testing::DoAll(testing::SetArgReferee<1>(*sandboxInfo),
+                                                                                testing::Return(true)));
     std::unique_ptr<sandbox::ControllerSandboxInfo> ret = m_contoller->Start(DUMMY_SANDBOX_ID, err);
     EXPECT_EQ(ret->id, DUMMY_SANDBOX_ID);
     EXPECT_EQ(ret->pid, 1234);
@@ -99,7 +102,8 @@ TEST_F(SandboxerControllerTest, PlatformTestSucceed)
     platformInfo->arch = "amd64";
     platformInfo->variant = "openEuler";
     // Set response to return sandbox_id, and return OK for stub_->Platform().
-    EXPECT_CALL(*m_sandboxerClientMock, Platform).Times(1).WillOnce(testing::DoAll(testing::SetArgReferee<1>(*platformInfo), testing::Return(true)));
+    EXPECT_CALL(*m_sandboxerClientMock, Platform).Times(1).WillOnce(testing::DoAll(testing::SetArgReferee<1>(*platformInfo),
+                                                                                   testing::Return(true)));
     std::unique_ptr<sandbox::ControllerPlatformInfo> ret = m_contoller->Platform(DUMMY_SANDBOX_ID, err);
     EXPECT_EQ(ret->os, "linux");
     EXPECT_EQ(ret->arch, "amd64");
@@ -121,7 +125,8 @@ TEST_F(SandboxerControllerTest, PrepareTestSucceed)
     Errors err;
     std::string bundle = "/tmp/bundle";
     // Set response to return sandbox_id, and return OK for stub_->Prepare().
-    EXPECT_CALL(*m_sandboxerClientMock, Prepare).Times(1).WillOnce(testing::DoAll(testing::SetArgReferee<2>(bundle), testing::Return(true)));
+    EXPECT_CALL(*m_sandboxerClientMock, Prepare).Times(1).WillOnce(testing::DoAll(testing::SetArgReferee<2>(bundle),
+                                                                                  testing::Return(true)));
     std::string ret = m_contoller->Prepare(DUMMY_SANDBOX_ID, *CreateTestPrepareParams(), err);
     EXPECT_EQ(ret, bundle);
 }
@@ -201,7 +206,8 @@ TEST_F(SandboxerControllerTest, StatusTestSucceed)
     sandboxStatus->info["test"] = "test";
     sandboxStatus->exitedAt = DUMMY_EXITED_AT;
     // Set response to return sandbox_id, and return OK for stub_->Status().
-    EXPECT_CALL(*m_sandboxerClientMock, Status).Times(1).WillOnce(testing::DoAll(testing::SetArgReferee<2>(*sandboxStatus), testing::Return(true)));
+    EXPECT_CALL(*m_sandboxerClientMock, Status).Times(1).WillOnce(testing::DoAll(testing::SetArgReferee<2>(*sandboxStatus),
+                                                                                 testing::Return(true)));
     std::unique_ptr<sandbox::ControllerSandboxStatus> ret = m_contoller->Status(DUMMY_SANDBOX_ID, false, err);
     EXPECT_EQ(ret->id, DUMMY_SANDBOX_ID);
     EXPECT_EQ(ret->state, "created");

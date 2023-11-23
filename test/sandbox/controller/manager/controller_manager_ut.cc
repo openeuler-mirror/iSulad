@@ -33,11 +33,13 @@ public:
 
 class ControllerManagerTest : public testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         MockIsuladConf_SetMock(isuladConfMock.get());
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         MockIsuladConf_SetMock(nullptr);
         static_cast<ControllerManagerWrapper*>(ControllerManagerWrapper::GetInstance())->Clear();
     }
@@ -45,7 +47,8 @@ protected:
     std::unique_ptr<MockIsuladConf> isuladConfMock = std::unique_ptr<MockIsuladConf>(new MockIsuladConf());
 };
 
-static struct service_arguments *CreateDummyServerConf(const std::string &conf) {
+static struct service_arguments *CreateDummyServerConf(const std::string &conf)
+{
     parser_error err = nullptr;
     struct service_arguments *args = (struct service_arguments *)util_common_calloc_s(sizeof(struct service_arguments));
     if (args == nullptr) {
@@ -59,7 +62,8 @@ static struct service_arguments *CreateDummyServerConf(const std::string &conf) 
     return args;
 }
 
-static void FreeDummyServerconf(struct service_arguments *args) {
+static void FreeDummyServerconf(struct service_arguments *args)
+{
     if (args != nullptr) {
         free_isulad_daemon_configs(args->json_confs);
         free(args);
@@ -70,7 +74,8 @@ static void FreeDummyServerconf(struct service_arguments *args) {
 TEST_F(ControllerManagerTest, InitTestSucceed)
 {
     Errors err;
-    const std::string daemonConfig = "{\"cri-sandboxers\": {\"kuasar\": {\"name\": \"vmm\",\"address\": \"/run/vmm-sandboxer.sock\"}}}";
+    const std::string daemonConfig =
+        "{\"cri-sandboxers\": {\"kuasar\": {\"name\": \"vmm\",\"address\": \"/run/vmm-sandboxer.sock\"}}}";
     struct service_arguments *args = CreateDummyServerConf(daemonConfig);
     ASSERT_NE(args, nullptr);
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(1).WillOnce(testing::Return(args));
@@ -130,7 +135,8 @@ TEST_F(ControllerManagerTest, InitTestSucceedWithNullConfig)
 TEST_F(ControllerManagerTest, InitTestFailedWithDupShimConfig)
 {
     Errors err;
-    const std::string daemonConfig = "{\"cri-sandboxers\": {\"kuasar\": {\"name\": \"shim\",\"address\": \"/run/vmm-sandboxer.sock\"}}}";
+    const std::string daemonConfig =
+        "{\"cri-sandboxers\": {\"kuasar\": {\"name\": \"shim\",\"address\": \"/run/vmm-sandboxer.sock\"}}}";
     struct service_arguments *args = CreateDummyServerConf(daemonConfig);
     ASSERT_NE(args, nullptr);
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(1).WillOnce(testing::Return(args));
@@ -148,7 +154,8 @@ TEST_F(ControllerManagerTest, InitTestFailedWithDupShimConfig)
 TEST_F(ControllerManagerTest, InitTestFailedWithDupKuasarConfig)
 {
     Errors err;
-    const std::string daemonConfig = "{\"cri-sandboxers\": {\"kuasar\": {\"name\": \"vmm1\",\"address\": \"/run/vmm1-sandboxer.sock\"},\"kuasar\": {\"name\": \"vmm2\",\"address\": \"/run/vmm2-sandboxer.sock\"}}}";
+    const std::string daemonConfig =
+        "{\"cri-sandboxers\": {\"kuasar\": {\"name\": \"vmm1\",\"address\": \"/run/vmm1-sandboxer.sock\"},\"kuasar\": {\"name\": \"vmm2\",\"address\": \"/run/vmm2-sandboxer.sock\"}}}";
     struct service_arguments *args = CreateDummyServerConf(daemonConfig);
     ASSERT_NE(args, nullptr);
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(1).WillOnce(testing::Return(args));
@@ -162,7 +169,8 @@ TEST_F(ControllerManagerTest, InitTestFailedWithDupKuasarConfig)
 TEST_F(ControllerManagerTest, InitTestFailedWithDupNameConfig)
 {
     Errors err;
-    const std::string daemonConfig = "{\"cri-sandboxers\": {\"kuasar1\": {\"name\": \"vmm\",\"address\": \"/run/vmm1-sandboxer.sock\"},\"kuasar2\": {\"name\": \"vmm\",\"address\": \"/run/vmm2-sandboxer.sock\"}}}";
+    const std::string daemonConfig =
+        "{\"cri-sandboxers\": {\"kuasar1\": {\"name\": \"vmm\",\"address\": \"/run/vmm1-sandboxer.sock\"},\"kuasar2\": {\"name\": \"vmm\",\"address\": \"/run/vmm2-sandboxer.sock\"}}}";
     struct service_arguments *args = CreateDummyServerConf(daemonConfig);
     ASSERT_NE(args, nullptr);
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(1).WillOnce(testing::Return(args));
@@ -176,7 +184,8 @@ TEST_F(ControllerManagerTest, InitTestFailedWithDupNameConfig)
 TEST_F(ControllerManagerTest, InitTestFailedWithDupInit)
 {
     Errors err;
-    const std::string daemonConfig = "{\"cri-sandboxers\": {\"kuasar\": {\"name\": \"vmm\",\"address\": \"/run/vmm-sandboxer.sock\"}}}";
+    const std::string daemonConfig =
+        "{\"cri-sandboxers\": {\"kuasar\": {\"name\": \"vmm\",\"address\": \"/run/vmm-sandboxer.sock\"}}}";
     struct service_arguments *args = CreateDummyServerConf(daemonConfig);
     ASSERT_NE(args, nullptr);
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(2).WillRepeatedly(testing::Return(args));

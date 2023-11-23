@@ -130,7 +130,8 @@ static void ModifyHostConfigscSupplementalGroups(const runtime::v1alpha2::LinuxC
     }
 }
 
-static void ApplyMaskedPathsToHostConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc, host_config *hostConfig,
+static void ApplyMaskedPathsToHostConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,
+                                         host_config *hostConfig,
                                          Errors &error)
 {
     if (sc.masked_paths_size() <= 0) {
@@ -159,7 +160,8 @@ static void ApplyMaskedPathsToHostConfig(const runtime::v1alpha2::LinuxContainer
     }
 }
 
-static void ApplyReadonlyPathsToHostConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc, host_config *hostConfig,
+static void ApplyReadonlyPathsToHostConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,
+                                           host_config *hostConfig,
                                            Errors &error)
 {
     if (sc.readonly_paths_size() <= 0) {

@@ -392,7 +392,7 @@ auto GetSecurityOpts(const commonSecurityContext &context, const char &separator
     }
 
     std::vector<std::string> selinuxOpts = CRIHelpersV1Alpha::GetSELinuxLabelOpts(context.hasSELinuxOption,
-                                                                           context.selinuxOption, separator, error);
+                                                                                  context.selinuxOption, separator, error);
     if (error.NotEmpty()) {
         error.Errorf("Failed to generate SELinuxLabel options for container %s", error.GetMessage().c_str());
         return securityOpts;

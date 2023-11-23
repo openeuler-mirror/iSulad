@@ -33,6 +33,7 @@ std::unique_ptr<sandbox::ControllerStreamInfo> CreateTestStreamInfo();
 
 std::unique_ptr<sandbox::ControllerPrepareParams> CreateTestPrepareParams();
 
-std::unique_ptr<sandbox::ControllerUpdateResourcesParams> CreateTestUpdateResourcesParams(google::protobuf::Map<std::string, std::string> &annotations);
+std::unique_ptr<sandbox::ControllerUpdateResourcesParams> CreateTestUpdateResourcesParams(
+    google::protobuf::Map<std::string, std::string> &annotations);
 
 #endif // _ISULAD_TEST_SANDBOX_CONTROLLER_CONTROLLER_COMMON_H

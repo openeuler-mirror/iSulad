@@ -24,7 +24,7 @@ namespace sandbox {
 const int64_t DEFERRED_QUEUE_CHECK_INTERVAL = 200; // milliseconds
 
 SandboxerClientMonitor::SandboxerClientMonitor(std::shared_ptr<grpc::Channel> channel, const std::string &sandboxer):
-    m_channel(channel), m_sandboxer(sandboxer) ,m_teardown(false)
+    m_channel(channel), m_sandboxer(sandboxer), m_teardown(false)
 {
     m_stub = containerd::services::sandbox::v1::Controller::NewStub(m_channel);
 }
@@ -46,7 +46,7 @@ auto SandboxerClientMonitor::Monitor(SandboxerAsyncWaitCall *call) -> bool
     }
 
     // Try to monitor the call, if failed, we should delete it right way
-    if (!call->Call(*m_stub ,m_cq)) {
+    if (!call->Call(*m_stub, m_cq)) {
         // The failure is most likely due to the fact that the completion queue is shutdown
         delete call;
         return false;
@@ -114,11 +114,11 @@ void SandboxerClientMonitor::WaitForDeferredCall()
 // 2. SandboxerAsyncWaitCall *: The call handled by the future
 void SandboxerClientMonitor::InvokeDeferredCall(SandboxerAsyncWaitCall *call)
 {
-    m_futures.push_back(std::async([this, call](){
+    m_futures.push_back(std::async([this, call]() {
         // Random sleep for 50 ~ 200 milliseconds to avoid thundering herd
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dis(DEFERRED_QUEUE_CHECK_INTERVAL/4, DEFERRED_QUEUE_CHECK_INTERVAL);
+        std::uniform_int_distribution<> dis(DEFERRED_QUEUE_CHECK_INTERVAL / 4, DEFERRED_QUEUE_CHECK_INTERVAL);
         int sleepTime = dis(gen);
         std::this_thread::sleep_for(std::chrono::milliseconds(sleepTime));
 
@@ -186,7 +186,7 @@ void SandboxerClientMonitor::CheckCompletedFutures()
                     // or OnSandboxExit in the HandleResponse function.
                     // In this case, the OnSandboxReady will overwrite the
                     // status, but it is ok, because:
-                    // 1. If OnSandboxPending has been invoked, 
+                    // 1. If OnSandboxPending has been invoked,
                     //    retry will happen pretty soon, and the
                     //    callback will be invoked again.
                     // 2. If OnSandboxExit has been invoked, the caller

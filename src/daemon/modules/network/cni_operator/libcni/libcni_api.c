@@ -209,7 +209,7 @@ static int inject_cni_aliases(const struct runtime_conf *rt, cni_net_conf_runtim
     }
 
     for (i = 0; i < rt->aliases_len; i++) {
-        rt_config->aliases[i]= util_strdup_s(rt->aliases[i]);
+        rt_config->aliases[i] = util_strdup_s(rt->aliases[i]);
     }
     rt_config->aliases_len = rt->aliases_len;
     return 0;
@@ -472,7 +472,7 @@ static int find_plugin_in_path(const char *plugin, const char * const *paths, si
         ERROR("Invalid plugin name: %s", plugin);
         return -1;
     }
-    
+
     for (i = 0; i < len; i++) {
         if (do_check_file(plugin, paths[i], find_path) == 0) {
             ret = 0;
@@ -689,7 +689,8 @@ int cni_add_network_list(const struct cni_network_list_conf *list, const struct 
         }
     }
 
-    if (*pret != NULL && version_greater_than_or_equal_to((*pret)->cniversion, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
+    if (*pret != NULL &&
+        version_greater_than_or_equal_to((*pret)->cniversion, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
         return 0;
     }
 
@@ -867,7 +868,7 @@ static int version_network(const char *plugin_name, cni_version_info **result_ve
 }
 
 int cni_version_network_list(const struct cni_network_list_conf *list,
-                            struct cni_version_info_list **result_version_list)
+                             struct cni_version_info_list **result_version_list)
 {
     int ret = 0;
     int i;

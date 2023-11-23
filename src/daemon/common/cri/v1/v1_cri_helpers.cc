@@ -391,7 +391,7 @@ auto GetSecurityOpts(const commonSecurityContext &context, const char &separator
     }
 
     std::vector<std::string> selinuxOpts = CRIHelpersV1::GetSELinuxLabelOpts(context.hasSELinuxOption,
-                                                                           context.selinuxOption, separator, error);
+                                                                             context.selinuxOption, separator, error);
     if (error.NotEmpty()) {
         error.Errorf("Failed to generate SELinuxLabel options for container %s", error.GetMessage().c_str());
         return securityOpts;
@@ -459,7 +459,8 @@ void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_co
     }
 
 }
-void GetContainerSandboxID(const std::string &containerID, std::string &realContainerID, std::string &sandboxID, Errors &error)
+void GetContainerSandboxID(const std::string &containerID, std::string &realContainerID, std::string &sandboxID,
+                           Errors &error)
 {
     std::string PodID;
     container_inspect *info = CRIHelpers::InspectContainer(containerID, error, false);
@@ -526,7 +527,8 @@ out:
     return sandboxer;
 }
 
-void ApplySandboxSecurityContextToHostConfig(const runtime::v1::LinuxSandboxSecurityContext &context, host_config *hc, Errors &error)
+void ApplySandboxSecurityContextToHostConfig(const runtime::v1::LinuxSandboxSecurityContext &context, host_config *hc,
+                                             Errors &error)
 {
     if (hc == nullptr) {
         ERROR("Invalid input arguments: empty hostconfig");

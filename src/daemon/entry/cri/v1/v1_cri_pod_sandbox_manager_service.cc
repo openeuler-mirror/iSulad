@@ -196,7 +196,8 @@ void PodSandboxManagerService::UpdateSandboxConfig(runtime::v1::PodSandboxConfig
     // TODO: Update SecurityContext with default values
 }
 
-void PodSandboxManagerService::SetupSandboxFiles(const std::string &resolvPath, const runtime::v1::PodSandboxConfig &config, Errors &error)
+void PodSandboxManagerService::SetupSandboxFiles(const std::string &resolvPath,
+                                                 const runtime::v1::PodSandboxConfig &config, Errors &error)
 {
     if (resolvPath.empty()) {
         return;
@@ -423,7 +424,8 @@ void PodSandboxManagerService::ClearCniNetwork(const std::shared_ptr<sandbox::Sa
     stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY, sandboxKey));
 
     Errors pluginErr;
-    m_pluginManager->TearDownPod(config.metadata().namespace_(), config.metadata().name(), Network::DEFAULT_NETWORK_INTERFACE_NAME, 
+    m_pluginManager->TearDownPod(config.metadata().namespace_(), config.metadata().name(),
+                                 Network::DEFAULT_NETWORK_INTERFACE_NAME,
                                  sandbox->GetId(), stdAnnos, pluginErr);
     if (pluginErr.NotEmpty()) {
         WARN("TearDownPod cni network failed: %s", pluginErr.GetCMessage());
@@ -492,7 +494,8 @@ auto PodSandboxManagerService::GetContainerListResponse(const std::string &readS
     }
 
     ret = m_cb->container.list(list_request, &list_response);
-    auto list_response_wrapper = makeUniquePtrCStructWrapper<container_list_response>(list_response, free_container_list_response);
+    auto list_response_wrapper = makeUniquePtrCStructWrapper<container_list_response>(list_response,
+                                                                                      free_container_list_response);
     if (list_response_wrapper == nullptr) {
         ERROR("Failed to call list container callback");
         errors.push_back("Failed to call list container callback");
@@ -510,7 +513,7 @@ auto PodSandboxManagerService::GetContainerListResponse(const std::string &readS
     }
 
     return list_response_wrapper;
-}                                                          
+}
 
 auto PodSandboxManagerService::StopAllContainersInSandbox(const std::string &readSandboxID,
                                                           Errors &error) -> int
@@ -751,8 +754,8 @@ void PodSandboxManagerService::GetIPs(std::shared_ptr<sandbox::Sandbox> sandbox,
         return;
     }
 
-    auto settings = std::unique_ptr<CStructWrapper<container_network_settings>>(new 
-                        CStructWrapper<container_network_settings>(network_settings, free_container_network_settings));
+    auto settings = std::unique_ptr<CStructWrapper<container_network_settings>>(new
+                                                                                CStructWrapper<container_network_settings>(network_settings, free_container_network_settings));
     if (settings == nullptr) {
         ERROR("Out of memory");
         return;

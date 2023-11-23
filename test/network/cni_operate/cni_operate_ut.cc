@@ -47,28 +47,28 @@ using namespace std;
 
 extern "C" {
     DECLARE_WRAPPER(cni_cache_read, cni_cached_info *,
-        (const char *cache_dir, const char *net_name, const struct runtime_conf *rc));
+                    (const char *cache_dir, const char *net_name, const struct runtime_conf *rc));
     DEFINE_WRAPPER(cni_cache_read, cni_cached_info *,
-        (const char *cache_dir, const char *net_name, const struct runtime_conf *rc),
-        (cache_dir, net_name, rc));
+                   (const char *cache_dir, const char *net_name, const struct runtime_conf *rc),
+                   (cache_dir, net_name, rc));
 
-    DECLARE_WRAPPER(cni_check_network_list, int, 
-        (const struct cni_network_list_conf *list, const struct runtime_conf *rc, struct cni_opt_result **p_result));
+    DECLARE_WRAPPER(cni_check_network_list, int,
+                    (const struct cni_network_list_conf *list, const struct runtime_conf *rc, struct cni_opt_result **p_result));
     DEFINE_WRAPPER(cni_check_network_list, int,
-        (const struct cni_network_list_conf *list, const struct runtime_conf *rc, struct cni_opt_result **p_result),
-        (list, rc, p_result));
+                   (const struct cni_network_list_conf *list, const struct runtime_conf *rc, struct cni_opt_result **p_result),
+                   (list, rc, p_result));
 
-    DECLARE_WRAPPER(util_atomic_write_file, int, 
-        (const char *fname, const char *content, size_t content_len, mode_t mode, bool sync));
+    DECLARE_WRAPPER(util_atomic_write_file, int,
+                    (const char *fname, const char *content, size_t content_len, mode_t mode, bool sync));
     DEFINE_WRAPPER(util_atomic_write_file, int,
-        (const char *fname, const char *content, size_t content_len, mode_t mode, bool sync),
-        (fname, content, content_len, mode, sync));
-    
-    DECLARE_WRAPPER(cni_del_network_list, int, 
-        (const struct cni_network_list_conf *list, const struct runtime_conf *rc, struct cni_opt_result **p_result));
+                   (const char *fname, const char *content, size_t content_len, mode_t mode, bool sync),
+                   (fname, content, content_len, mode, sync));
+
+    DECLARE_WRAPPER(cni_del_network_list, int,
+                    (const struct cni_network_list_conf *list, const struct runtime_conf *rc, struct cni_opt_result **p_result));
     DEFINE_WRAPPER(cni_del_network_list, int,
-        (const struct cni_network_list_conf *list, const struct runtime_conf *rc, struct cni_opt_result **p_result),
-        (list, rc, p_result));
+                   (const struct cni_network_list_conf *list, const struct runtime_conf *rc, struct cni_opt_result **p_result),
+                   (list, rc, p_result));
 
     DECLARE_WRAPPER(calloc, void *, (size_t nmemb, size_t size));
     DEFINE_WRAPPER(calloc, void *, (size_t nmemb, size_t size), (nmemb, size));
@@ -90,19 +90,19 @@ public:
         m_list.bytes = cni_net_conf_list_generate_json(m_list.list, &ctx, &jerr);
         m_aliases_array = invoke_network_get_aliases_from_cached_info(m_info);
         m_manager = {
-            .id = (char *)"827bdd4b0b4e28d24dbaf3c563687ff6ffd23cd8fda38cadf818ac324fe5de3e", 
+            .id = (char *)"827bdd4b0b4e28d24dbaf3c563687ff6ffd23cd8fda38cadf818ac324fe5de3e",
             .netns_path = (char *)"/var/run/netns/isulacni-7dbc2c7d85279d5a",
             .ifname = (char *)"eth0"
         };
         m_manager.annotations = map_new(MAP_STR_STR, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
-        
+
         ctx = { OPT_PARSE_STRICT, 0 };
         aliases_json = cni_array_of_strings_container_generate_json(m_aliases_array, &ctx, &jerr);
         if (aliases_json == nullptr) {
             printf("Parse aliases_json failed: %s", jerr);
         }
         (void)map_replace(m_manager.annotations, (void *)aliases_str, (void *)aliases_json);
-    
+
         free(aliases_json);
     }
 
@@ -140,7 +140,7 @@ TEST_F(CniOperateUnitTest, test_check_network_plane)
         MOCK_CLEAR(calloc);
     }
 
-    {    
+    {
         // cached info will be free in check_network_plane
         MOCK_SET(cni_cache_read, invoke_network_get_cached_info((char *)CNI_CACHE_INFO));
         MOCK_SET(cni_check_network_list, 0);

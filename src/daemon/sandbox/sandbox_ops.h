@@ -21,8 +21,7 @@
 #include <isula_libutils/oci_runtime_spec.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 int sandbox_prepare_container(const container_config_v2_common_config *config,

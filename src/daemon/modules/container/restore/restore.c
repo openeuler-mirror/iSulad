@@ -291,7 +291,8 @@ static void restore_state(container_t *cont)
             }
         }
         if (tempret != 0) {
-            WARN("Failed to restore container %s, make real status to STOPPED. Due to cannot load container with status %d", id, status);
+            WARN("Failed to restore container %s, make real status to STOPPED. Due to cannot load container with status %d", id,
+                 status);
             real_status.status = RUNTIME_CONTAINER_STATUS_STOPPED;
         }
     }

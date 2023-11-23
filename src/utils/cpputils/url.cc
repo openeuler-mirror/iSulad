@@ -122,8 +122,9 @@ int UnescapeDealWithPercentSign(size_t &i, std::string &s, const EncodeMode &mod
     }
     // for 3 bit hex, max value is 8
     if (mode == EncodeMode::ENCODE_HOST && s1 < 8 &&
-        std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i+3)) != percentSign) {
-        ERROR("invalid URL escape %s", std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i + 3)).c_str());
+        std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i + 3)) != percentSign) {
+        ERROR("invalid URL escape %s", std::string(s.begin() + static_cast<long>(i),
+                                                   s.begin() + static_cast<long>(i + 3)).c_str());
         return -1;
     }
     if (mode == EncodeMode::ENCODE_ZONE) {

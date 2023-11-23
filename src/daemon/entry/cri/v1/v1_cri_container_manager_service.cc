@@ -149,7 +149,7 @@ void ContainerManagerService::DoUsePodLevelSELinuxConfig(const runtime::v1::Cont
 auto ContainerManagerService::IsSELinuxLabelEmpty(const ::runtime::v1::SELinuxOption &selinuxOption) -> bool
 {
     return selinuxOption.user().length() == 0 && selinuxOption.role().length() == 0 &&
-            selinuxOption.type().length() == 0 && selinuxOption.level().length() == 0;
+           selinuxOption.type().length() == 0 && selinuxOption.level().length() == 0;
 }
 
 auto ContainerManagerService::GenerateCreateContainerHostConfig(
@@ -194,7 +194,7 @@ auto ContainerManagerService::GenerateCreateContainerHostConfig(
         DoUsePodLevelSELinuxConfig(containerConfig, hostconfig, sandbox, error);
         if (error.NotEmpty()) {
             ERROR("Failed to add pod: %s security context to host config for container: %s",
-                   sandbox.GetName().c_str(), containerConfig.metadata().name().c_str());
+                  sandbox.GetName().c_str(), containerConfig.metadata().name().c_str());
             goto cleanup;
         }
     }
@@ -539,8 +539,10 @@ void ContainerManagerService::CreateContainerLogSymlink(const std::string &conta
             WARN("Deleted previously existing symlink file: %s", path);
         }
         if (symlink(realPath, path) != 0) {
-            SYSERROR("failed to create symbolic link %s to the container log file %s for container %s", path, realPath, containerID.c_str());
-            error.Errorf("failed to create symbolic link %s to the container log file %s for container %s", path, realPath, containerID.c_str());
+            SYSERROR("failed to create symbolic link %s to the container log file %s for container %s", path, realPath,
+                     containerID.c_str());
+            error.Errorf("failed to create symbolic link %s to the container log file %s for container %s", path, realPath,
+                         containerID.c_str());
             goto cleanup;
         }
     } else {

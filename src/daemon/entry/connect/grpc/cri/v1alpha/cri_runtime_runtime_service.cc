@@ -23,7 +23,8 @@
 
 using namespace CRI;
 
-void RuntimeRuntimeServiceImpl::Init(std::string &podSandboxImage, std::shared_ptr<Network::PluginManager> networkPlugin, Errors &err)
+void RuntimeRuntimeServiceImpl::Init(std::string &podSandboxImage,
+                                     std::shared_ptr<Network::PluginManager> networkPlugin, Errors &err)
 {
     // Assembly implementation for CRIRuntimeServiceImpl
     service_executor_t *cb = get_service_executor();

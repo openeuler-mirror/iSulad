@@ -20,10 +20,6 @@
 
 #include "rb_tree.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct _map_t;
 
 #if defined(__cplusplus) || defined(c_plusplus)
@@ -110,10 +106,6 @@ void map_free(map_t *map);
 void map_clear(map_t *map);
 
 #if defined(__cplusplus) || defined(c_plusplus)
-}
-#endif
-
-#ifdef __cplusplus
 }
 #endif
 

@@ -165,7 +165,7 @@ static int vsock_connect(uint32_t cid, uint32_t port)
     sa.svm_cid = cid;
     sa.svm_port = port;
 
-    if (connect(fd, (struct sockaddr *)&sa, sizeof(sa)) !=0) {
+    if (connect(fd, (struct sockaddr *)&sa, sizeof(sa)) != 0) {
         SYSERROR("Failed to connect vsock socket");
         close(fd);
         return -1;
@@ -314,7 +314,7 @@ void delete_daemon_vsockpaths(const char *sandbox_id, const char *vsockpaths[])
     }
 }
 
-enum IOFlowType{
+enum IOFlowType {
     IO_SRC = 0,
     IO_DST,
     IO_FLOW_INVALID,
@@ -784,7 +784,8 @@ static void *IOCopyThread(void *arg)
     return NULL;
 }
 
-int start_vsock_io_copy(const char *exec_id, int sync_fd, bool detach, const char *fifoin, const char *fifoout, const char *fifoerr,
+int start_vsock_io_copy(const char *exec_id, int sync_fd, bool detach, const char *fifoin, const char *fifoout,
+                        const char *fifoerr,
                         int stdin_fd, struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
                         const char *vsocks[], pthread_t *tid)
 {

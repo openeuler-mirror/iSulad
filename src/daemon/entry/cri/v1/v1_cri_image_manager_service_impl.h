@@ -33,7 +33,7 @@ public:
                     std::vector<std::unique_ptr<runtime::v1::Image>> &images, Errors &error) override;
 
     std::unique_ptr<runtime::v1::Image> ImageStatus(const runtime::v1::ImageSpec &image,
-                                                          Errors &error) override;
+                                                    Errors &error) override;
 
     std::string PullImage(const runtime::v1::ImageSpec &image, const runtime::v1::AuthConfig &auth,
                           Errors &error) override;

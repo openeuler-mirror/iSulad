@@ -19,7 +19,8 @@
 #include <memory>
 
 namespace CRISecurityV1 {
-static void ModifyContainerConfig(const runtime::v1::LinuxContainerSecurityContext &sc, container_config *config, Errors &error)
+static void ModifyContainerConfig(const runtime::v1::LinuxContainerSecurityContext &sc, container_config *config,
+                                  Errors &error)
 {
     // none -> ""; username -> username; username, uid -> username; username, uid, gid -> username:gid;
     // username, gid -> username:gid; uid -> uid; uid, gid -> uid:gid; gid -> error
@@ -157,7 +158,8 @@ static void ApplyMaskedPathsToHostConfig(const runtime::v1::LinuxContainerSecuri
     }
 }
 
-static void ApplyReadonlyPathsToHostConfig(const runtime::v1::LinuxContainerSecurityContext &sc, host_config *hostConfig,
+static void ApplyReadonlyPathsToHostConfig(const runtime::v1::LinuxContainerSecurityContext &sc,
+                                           host_config *hostConfig,
                                            Errors &error)
 {
     if (sc.readonly_paths_size() <= 0) {

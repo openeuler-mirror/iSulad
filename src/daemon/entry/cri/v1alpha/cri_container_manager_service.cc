@@ -547,7 +547,8 @@ void ContainerManagerService::CreateContainerLogSymlink(const std::string &conta
             WARN("Deleted previously existing symlink file: %s", path);
         }
         if (symlink(realPath, path) != 0) {
-            SYSERROR("failed to create symbolic link %s to the container log file %s for container %s", path, realPath, containerID.c_str());
+            SYSERROR("failed to create symbolic link %s to the container log file %s for container %s", path, realPath,
+                     containerID.c_str());
             error.Errorf("failed to create symbolic link %s to the container log file %s for container %s: %s", path,
                          realPath, containerID.c_str());
             goto cleanup;

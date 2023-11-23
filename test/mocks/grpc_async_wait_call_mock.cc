@@ -34,7 +34,8 @@ SandboxerAsyncWaitCall::SandboxerAsyncWaitCall(std::shared_ptr<SandboxStatusCall
     m_remove = false;
 }
 
-auto SandboxerAsyncWaitCall::Call(containerd::services::sandbox::v1::Controller::StubInterface &stub, grpc::CompletionQueue &cq) -> bool
+auto SandboxerAsyncWaitCall::Call(containerd::services::sandbox::v1::Controller::StubInterface &stub,
+                                  grpc::CompletionQueue &cq) -> bool
 {
     if (g_sandboxer_async_wait_call_mock == NULL) {
         return true;

@@ -31,7 +31,7 @@
 #include "error.h"
 
 extern "C" {
-    #include <shim_v2.h>
+#include <shim_v2.h>
 }
 
 struct shim_monitor_data {

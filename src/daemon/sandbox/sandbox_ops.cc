@@ -70,7 +70,7 @@ static int do_sandbox_prepare(const container_config_v2_common_config *config,
     }
 
     params.containerId = config->id;
-    params.execId = (nullptr == exec_id) ? "" :exec_id;
+    params.execId = (nullptr == exec_id) ? "" : exec_id;
     params.spec = std::move(std::unique_ptr<std::string>(new std::string(oci_spec)));
 
     if (generate_ctrl_rootfs(params, config) != 0) {

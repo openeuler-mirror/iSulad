@@ -21,7 +21,8 @@
 
 #include "controller.h"
 
-class DummyClientAsyncResponseReader: public grpc::ClientAsyncResponseReaderInterface<containerd::services::sandbox::v1::ControllerWaitResponse> {
+class DummyClientAsyncResponseReader: public
+    grpc::ClientAsyncResponseReaderInterface<containerd::services::sandbox::v1::ControllerWaitResponse> {
 public:
     DummyClientAsyncResponseReader() = default;
     ~DummyClientAsyncResponseReader() = default;
@@ -30,26 +31,32 @@ public:
 
     void ReadInitialMetadata(void *tag) override {}
 
-    void Finish(containerd::services::sandbox::v1::ControllerWaitResponse *response, grpc::Status *status, void *tag) override {
+    void Finish(containerd::services::sandbox::v1::ControllerWaitResponse *response, grpc::Status *status,
+                void *tag) override
+    {
         response->set_exit_status(m_exitStatus);
         response->mutable_exited_at()->CopyFrom(m_exitedAt);
         *status = m_status;
         m_tag = tag;
     }
 
-    void SetExitAt(const google::protobuf::Timestamp &exitAt) {
+    void SetExitAt(const google::protobuf::Timestamp &exitAt)
+    {
         m_exitedAt = exitAt;
     }
 
-    void SetExitStatus(uint32_t status) {
+    void SetExitStatus(uint32_t status)
+    {
         m_exitStatus = status;
     }
 
-    void SetStatus(grpc::Status status) {
+    void SetStatus(grpc::Status status)
+    {
         m_status = status;
     }
 
-    void *GetTag() {
+    void *GetTag()
+    {
         return m_tag;
     }
 
@@ -70,28 +77,39 @@ enum AsyncWaitCallStatus {
 
 class DummyCallback: public sandbox::SandboxStatusCallback {
 public:
-    DummyCallback() {
+    DummyCallback()
+    {
         m_status = ASYNC_WAIT_CALL_STATUS_UNKNOWN;
     }
     ~DummyCallback() = default;
 
-    void OnSandboxReady() override { m_status = ASYNC_WAIT_CALL_STATUS_READY; }
-    void OnSandboxPending() override { m_status = ASYNC_WAIT_CALL_STATUS_PENDING; }
-    void OnSandboxExit(const sandbox::ControllerExitInfo &exitInfo) override {
+    void OnSandboxReady() override
+    {
+        m_status = ASYNC_WAIT_CALL_STATUS_READY;
+    }
+    void OnSandboxPending() override
+    {
+        m_status = ASYNC_WAIT_CALL_STATUS_PENDING;
+    }
+    void OnSandboxExit(const sandbox::ControllerExitInfo &exitInfo) override
+    {
         m_status = ASYNC_WAIT_CALL_STATUS_EXIT;
         m_exitStatus = exitInfo.exitStatus;
         m_exitedAt = exitInfo.exitedAt;
     }
 
-    AsyncWaitCallStatus GetStatus() {
+    AsyncWaitCallStatus GetStatus()
+    {
         return m_status;
     }
 
-    uint32_t GetExitStatus() {
+    uint32_t GetExitStatus()
+    {
         return m_exitStatus;
     }
 
-    uint64_t GetExitedAt() {
+    uint64_t GetExitedAt()
+    {
         return m_exitedAt;
     }
 private:

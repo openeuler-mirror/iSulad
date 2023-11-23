@@ -942,7 +942,8 @@ auto Sandbox::ParseSandboxMetadataFile() -> std::unique_ptr<CStructWrapper<sandb
     if (metadata == NULL) {
         return nullptr;
     }
-    return std::unique_ptr<CStructWrapper<sandbox_metadata>>(new CStructWrapper<sandbox_metadata>(metadata, free_sandbox_metadata));
+    return std::unique_ptr<CStructWrapper<sandbox_metadata>>(new CStructWrapper<sandbox_metadata>(metadata,
+                                                                                                  free_sandbox_metadata));
 }
 
 auto Sandbox::isValidMetadata(std::unique_ptr<CStructWrapper<sandbox_metadata>> &metadata) -> bool

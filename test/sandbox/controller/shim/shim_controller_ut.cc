@@ -24,7 +24,8 @@
 
 class ShimControllerTest : public testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         Errors err;
         m_contoller = std::move(std::unique_ptr<sandbox::ShimController>(new sandbox::ShimController(m_sandboxer)));
         m_containerCallbackMock = std::make_shared<MockContainerCallback>();
@@ -37,7 +38,8 @@ protected:
         service_callback_init();
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         m_contoller.reset(nullptr);
     }
 

@@ -25,7 +25,8 @@
 
 using namespace CRIV1;
 
-void RuntimeV1RuntimeServiceImpl::Init(std::string &podSandboxImage, std::shared_ptr<Network::PluginManager> networkPlugin, Errors &err)
+void RuntimeV1RuntimeServiceImpl::Init(std::string &podSandboxImage,
+                                       std::shared_ptr<Network::PluginManager> networkPlugin, Errors &err)
 {
     // Assembly implementation for CRIRuntimeServiceImpl
     service_executor_t *cb = get_service_executor();
@@ -47,8 +48,8 @@ void RuntimeV1RuntimeServiceImpl::Shutdown()
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::Version(grpc::ServerContext *context,
-                                                const runtime::v1::VersionRequest *request,
-                                                runtime::v1::VersionResponse *reply)
+                                                  const runtime::v1::VersionRequest *request,
+                                                  runtime::v1::VersionResponse *reply)
 {
     Errors error;
     if (request == nullptr || reply == nullptr) {
@@ -65,8 +66,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::Version(grpc::ServerContext *context,
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::CreateContainer(grpc::ServerContext *context,
-                                                        const runtime::v1::CreateContainerRequest *request,
-                                                        runtime::v1::CreateContainerResponse *reply)
+                                                          const runtime::v1::CreateContainerRequest *request,
+                                                          runtime::v1::CreateContainerResponse *reply)
 {
     Errors error;
 
@@ -91,8 +92,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::CreateContainer(grpc::ServerContext *c
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::StartContainer(grpc::ServerContext *context,
-                                                       const runtime::v1::StartContainerRequest *request,
-                                                       runtime::v1::StartContainerResponse *reply)
+                                                         const runtime::v1::StartContainerRequest *request,
+                                                         runtime::v1::StartContainerResponse *reply)
 {
     Errors error;
 
@@ -115,8 +116,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::StartContainer(grpc::ServerContext *co
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::StopContainer(grpc::ServerContext *context,
-                                                      const runtime::v1::StopContainerRequest *request,
-                                                      runtime::v1::StopContainerResponse *reply)
+                                                        const runtime::v1::StopContainerRequest *request,
+                                                        runtime::v1::StopContainerResponse *reply)
 {
     Errors error;
 
@@ -139,8 +140,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::StopContainer(grpc::ServerContext *con
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::RemoveContainer(grpc::ServerContext *context,
-                                                        const runtime::v1::RemoveContainerRequest *request,
-                                                        runtime::v1::RemoveContainerResponse *reply)
+                                                          const runtime::v1::RemoveContainerRequest *request,
+                                                          runtime::v1::RemoveContainerResponse *reply)
 {
     Errors error;
 
@@ -163,8 +164,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::RemoveContainer(grpc::ServerContext *c
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::ListContainers(grpc::ServerContext *context,
-                                                       const runtime::v1::ListContainersRequest *request,
-                                                       runtime::v1::ListContainersResponse *reply)
+                                                         const runtime::v1::ListContainersRequest *request,
+                                                         runtime::v1::ListContainersResponse *reply)
 {
     Errors error;
 
@@ -197,8 +198,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::ListContainers(grpc::ServerContext *co
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::ContainerStats(grpc::ServerContext *context,
-                                                       const runtime::v1::ContainerStatsRequest *request,
-                                                       runtime::v1::ContainerStatsResponse *reply)
+                                                         const runtime::v1::ContainerStatsRequest *request,
+                                                         runtime::v1::ContainerStatsResponse *reply)
 {
     Errors error;
 
@@ -223,8 +224,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::ContainerStats(grpc::ServerContext *co
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::ListContainerStats(grpc::ServerContext *context,
-                                                           const runtime::v1::ListContainerStatsRequest *request,
-                                                           runtime::v1::ListContainerStatsResponse *reply)
+                                                             const runtime::v1::ListContainerStatsRequest *request,
+                                                             runtime::v1::ListContainerStatsResponse *reply)
 {
     Errors error;
 
@@ -257,8 +258,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::ListContainerStats(grpc::ServerContext
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::ContainerStatus(grpc::ServerContext *context,
-                                                        const runtime::v1::ContainerStatusRequest *request,
-                                                        runtime::v1::ContainerStatusResponse *reply)
+                                                          const runtime::v1::ContainerStatusRequest *request,
+                                                          runtime::v1::ContainerStatusResponse *reply)
 {
     Errors error;
 
@@ -283,8 +284,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::ContainerStatus(grpc::ServerContext *c
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::ExecSync(grpc::ServerContext *context,
-                                                 const runtime::v1::ExecSyncRequest *request,
-                                                 runtime::v1::ExecSyncResponse *reply)
+                                                   const runtime::v1::ExecSyncRequest *request,
+                                                   runtime::v1::ExecSyncResponse *reply)
 {
     Errors error;
 
@@ -307,8 +308,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::ExecSync(grpc::ServerContext *context,
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::RunPodSandbox(grpc::ServerContext *context,
-                                                      const runtime::v1::RunPodSandboxRequest *request,
-                                                      runtime::v1::RunPodSandboxResponse *reply)
+                                                        const runtime::v1::RunPodSandboxRequest *request,
+                                                        runtime::v1::RunPodSandboxResponse *reply)
 {
     Errors error;
 
@@ -335,8 +336,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::RunPodSandbox(grpc::ServerContext *con
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::StopPodSandbox(grpc::ServerContext *context,
-                                                       const runtime::v1::StopPodSandboxRequest *request,
-                                                       runtime::v1::StopPodSandboxResponse *reply)
+                                                         const runtime::v1::StopPodSandboxRequest *request,
+                                                         runtime::v1::StopPodSandboxResponse *reply)
 {
     Errors error;
 
@@ -360,8 +361,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::StopPodSandbox(grpc::ServerContext *co
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::RemovePodSandbox(grpc::ServerContext *context,
-                                                         const runtime::v1::RemovePodSandboxRequest *request,
-                                                         runtime::v1::RemovePodSandboxResponse *reply)
+                                                           const runtime::v1::RemovePodSandboxRequest *request,
+                                                           runtime::v1::RemovePodSandboxResponse *reply)
 {
     Errors error;
 
@@ -385,8 +386,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::RemovePodSandbox(grpc::ServerContext *
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::PodSandboxStatus(grpc::ServerContext *context,
-                                                         const runtime::v1::PodSandboxStatusRequest *request,
-                                                         runtime::v1::PodSandboxStatusResponse *reply)
+                                                           const runtime::v1::PodSandboxStatusRequest *request,
+                                                           runtime::v1::PodSandboxStatusResponse *reply)
 {
     Errors error;
 
@@ -412,8 +413,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::PodSandboxStatus(grpc::ServerContext *
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::ListPodSandbox(grpc::ServerContext *context,
-                                                       const runtime::v1::ListPodSandboxRequest *request,
-                                                       runtime::v1::ListPodSandboxResponse *reply)
+                                                         const runtime::v1::ListPodSandboxRequest *request,
+                                                         runtime::v1::ListPodSandboxResponse *reply)
 {
     Errors error;
 
@@ -446,8 +447,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::ListPodSandbox(grpc::ServerContext *co
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::PodSandboxStats(grpc::ServerContext *context,
-                                                        const runtime::v1::PodSandboxStatsRequest *request,
-                                                        runtime::v1::PodSandboxStatsResponse *reply)
+                                                          const runtime::v1::PodSandboxStatsRequest *request,
+                                                          runtime::v1::PodSandboxStatsResponse *reply)
 {
     Errors error;
 
@@ -474,8 +475,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::PodSandboxStats(grpc::ServerContext *c
 
 grpc::Status
 RuntimeV1RuntimeServiceImpl::ListPodSandboxStats(grpc::ServerContext *context,
-                                               const runtime::v1::ListPodSandboxStatsRequest *request,
-                                               runtime::v1::ListPodSandboxStatsResponse *reply)
+                                                 const runtime::v1::ListPodSandboxStatsRequest *request,
+                                                 runtime::v1::ListPodSandboxStatsResponse *reply)
 {
     Errors error;
 
@@ -508,8 +509,8 @@ RuntimeV1RuntimeServiceImpl::ListPodSandboxStats(grpc::ServerContext *context,
 
 grpc::Status
 RuntimeV1RuntimeServiceImpl::UpdateContainerResources(grpc::ServerContext *context,
-                                                    const runtime::v1::UpdateContainerResourcesRequest *request,
-                                                    runtime::v1::UpdateContainerResourcesResponse *reply)
+                                                      const runtime::v1::UpdateContainerResourcesRequest *request,
+                                                      runtime::v1::UpdateContainerResourcesResponse *reply)
 {
     Errors error;
 
@@ -533,8 +534,8 @@ RuntimeV1RuntimeServiceImpl::UpdateContainerResources(grpc::ServerContext *conte
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::Exec(grpc::ServerContext *context,
-                                             const runtime::v1::ExecRequest *request,
-                                             runtime::v1::ExecResponse *response)
+                                               const runtime::v1::ExecRequest *request,
+                                               runtime::v1::ExecResponse *response)
 {
     Errors error;
 
@@ -558,8 +559,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::Exec(grpc::ServerContext *context,
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::Attach(grpc::ServerContext *context,
-                                               const runtime::v1::AttachRequest *request,
-                                               runtime::v1::AttachResponse *response)
+                                                 const runtime::v1::AttachRequest *request,
+                                                 runtime::v1::AttachResponse *response)
 {
     Errors error;
 
@@ -584,8 +585,8 @@ grpc::Status RuntimeV1RuntimeServiceImpl::Attach(grpc::ServerContext *context,
 
 grpc::Status
 RuntimeV1RuntimeServiceImpl::UpdateRuntimeConfig(grpc::ServerContext *context,
-                                               const runtime::v1::UpdateRuntimeConfigRequest *request,
-                                               runtime::v1::UpdateRuntimeConfigResponse *reply)
+                                                 const runtime::v1::UpdateRuntimeConfigRequest *request,
+                                                 runtime::v1::UpdateRuntimeConfigResponse *reply)
 {
     Errors error;
 
@@ -608,8 +609,8 @@ RuntimeV1RuntimeServiceImpl::UpdateRuntimeConfig(grpc::ServerContext *context,
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::Status(grpc::ServerContext *context,
-                                               const runtime::v1::StatusRequest *request,
-                                               runtime::v1::StatusResponse *reply)
+                                                 const runtime::v1::StatusRequest *request,
+                                                 runtime::v1::StatusResponse *reply)
 {
     Errors error;
 

@@ -39,15 +39,17 @@ public:
                                       const ControllerPrepareParams &params,
                                       Errors &error));
     MOCK_METHOD4(Purge, bool(const std::string &sandboxId, const std::string &containerId,
-                                const std::string &execId, Errors &error));
+                             const std::string &execId, Errors &error));
     MOCK_METHOD3(UpdateResources, bool(const std::string &sandboxId,
                                        const ControllerUpdateResourcesParams &params,
                                        Errors &error));
     MOCK_METHOD3(Stop, bool(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error));
     MOCK_METHOD3(Wait, bool(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error));
-    MOCK_METHOD3(Status, std::unique_ptr<ControllerSandboxStatus>(const std::string &sandboxId, bool verbose, Errors &error));
+    MOCK_METHOD3(Status, std::unique_ptr<ControllerSandboxStatus>(const std::string &sandboxId, bool verbose,
+                                                                  Errors &error));
     MOCK_METHOD2(Shutdown, bool(const std::string &sandboxId, Errors &error));
-    MOCK_METHOD3(UpdateNetworkSettings, bool(const std::string &sandboxId, const std::string &networkSettings, Errors &error));
+    MOCK_METHOD3(UpdateNetworkSettings, bool(const std::string &sandboxId, const std::string &networkSettings,
+                                             Errors &error));
 };
 
 void MockShimController_SetMock(std::shared_ptr<MockShimController> mock);

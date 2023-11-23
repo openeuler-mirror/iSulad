@@ -60,7 +60,8 @@ auto SandboxManager::Init(Errors &error) -> bool
     return true;
 }
 
-auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, std::string &netNsPath, std::string &netMode,
+auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, std::string &netNsPath,
+                                   std::string &netMode,
                                    const runtime::v1::PodSandboxConfig &sandboxConfig, const std::string &image, Errors &error) -> std::shared_ptr<Sandbox>
 {
     std::shared_ptr<Sandbox> sandbox;

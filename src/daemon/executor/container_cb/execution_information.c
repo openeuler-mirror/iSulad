@@ -250,7 +250,7 @@ static int get_proxy_env(char **proxy, const char *type)
         *proxy = NULL;
         goto out;
     }
-    
+
 out:
     util_free_sensitive_string(tmp_proxy);
     return ret;
@@ -634,7 +634,8 @@ out:
     return pid_arg;
 }
 
-static int get_pids(const char *name, const char *runtime, const char *rootpath, const char *statepath, pid_t **pids, size_t *pids_len,
+static int get_pids(const char *name, const char *runtime, const char *rootpath, const char *statepath, pid_t **pids,
+                    size_t *pids_len,
                     char **pid_args)
 {
     int ret = 0;

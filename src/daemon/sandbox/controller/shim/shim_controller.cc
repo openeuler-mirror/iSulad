@@ -247,7 +247,8 @@ auto ShimController::GenerateSandboxCreateContainerRequest(const std::string &sa
         return nullptr;
     }
 
-    auto requestWrapper = PackCreateContainerRequest(sandboxId, params, hostConfigWrapper->get(), customConfigWrapper->get(), error);
+    auto requestWrapper = PackCreateContainerRequest(sandboxId, params, hostConfigWrapper->get(),
+                                                     customConfigWrapper->get(), error);
     if (requestWrapper == nullptr) {
         ERROR("Failed to pack create container request");
         error.SetError("Failed to pack create container request");
@@ -570,7 +571,7 @@ bool ShimController::UpdateNetworkSettings(const std::string &sandboxId, const s
     }
 
     auto requestWrapper = makeUniquePtrCStructWrapper<container_update_network_settings_request>(
-                            free_container_update_network_settings_request);
+                              free_container_update_network_settings_request);
     if (requestWrapper == nullptr) {
         ERROR("container update network settings request: Out of memory");
         error.Errorf("container update network settings request: Out of memory");
@@ -583,7 +584,7 @@ bool ShimController::UpdateNetworkSettings(const std::string &sandboxId, const s
     container_update_network_settings_response *response { nullptr };
     int ret = m_cb->container.update_network_settings(request, &response);
     auto responseWrapper = makeUniquePtrCStructWrapper<container_update_network_settings_response>(
-                            response, free_container_update_network_settings_response);
+                               response, free_container_update_network_settings_response);
 
     if (ret != 0) {
         if (response != nullptr && response->errmsg != nullptr) {

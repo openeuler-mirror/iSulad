@@ -137,7 +137,7 @@ void free_cni_version_info_list(struct cni_version_info_list *val)
     if (val == NULL) {
         return;
     }
-    
+
     for (i = 0; i < val->result_versions_len; i++) {
         free_cni_version_info(val->result_versions[i]);
         val->result_versions[i] = NULL;

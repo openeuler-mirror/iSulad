@@ -25,7 +25,8 @@ void MockCallback_SetMock(std::shared_ptr<MockContainerCallback> mock)
     g_container_callback_mock = mock;
 }
 
-static int service_executor_container_create(const container_create_request *request, container_create_response **response)
+static int service_executor_container_create(const container_create_request *request,
+                                             container_create_response **response)
 {
     if (g_container_callback_mock != nullptr) {
         return g_container_callback_mock->ContainerCreate(request, response);
@@ -50,7 +51,8 @@ static int service_executor_container_stop(const container_stop_request *request
     return 0;
 }
 
-static int service_executor_container_remove(const container_delete_request *request, container_delete_response **response)
+static int service_executor_container_remove(const container_delete_request *request,
+                                             container_delete_response **response)
 {
     if (g_container_callback_mock != nullptr) {
         return g_container_callback_mock->ContainerRemove(request, response);
@@ -67,7 +69,7 @@ static int service_executor_container_wait(const container_wait_request *request
 }
 
 static int service_executor_container_update_network_settings(const container_update_network_settings_request *request,
-                                                               container_update_network_settings_response **response)
+                                                              container_update_network_settings_response **response)
 {
     if (g_container_callback_mock != nullptr) {
         return g_container_callback_mock->ContainerUpdateNetworkSettings(request, response);

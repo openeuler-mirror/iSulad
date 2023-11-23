@@ -43,7 +43,8 @@ struct archive_copy_info *copy_info_source_path(const char *path, bool follow_li
 char *prepare_archive_copy(const struct archive_copy_info *srcinfo, const struct archive_copy_info *dstinfo,
                            char **src_base, char **dst_base, char **err);
 
-int tar_resource(const struct archive_copy_info *info, const char *root_dir, struct io_read_wrapper *archive_reader, char **err);
+int tar_resource(const struct archive_copy_info *info, const char *root_dir, struct io_read_wrapper *archive_reader,
+                 char **err);
 
 int archive_copy_to(const struct io_read_wrapper *content, const struct archive_copy_info *srcinfo,
                     const char *dstpath, const char *root_dir, char **err);

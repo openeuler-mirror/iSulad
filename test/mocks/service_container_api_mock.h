@@ -23,7 +23,7 @@
 
 class MockServiceContainerApi {
 public:
-    MOCK_METHOD3(InspectContainer, container_inspect *(const char *id, int timeout, bool with_host_config));
+    MOCK_METHOD3(InspectContainer, container_inspect * (const char *id, int timeout, bool with_host_config));
 };
 
 void MockServiceContainerApi_SetMock(std::shared_ptr<MockServiceContainerApi> mock);

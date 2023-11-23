@@ -48,12 +48,14 @@ public:
 
     auto Platform(const std::string &sandboxId, ControllerPlatformInfo &platformInfo, Errors &error) -> bool;
 
-    auto Prepare(const std::string &sandboxId, const ControllerPrepareParams &params, std::string &bundle, Errors &error) -> bool;
+    auto Prepare(const std::string &sandboxId, const ControllerPrepareParams &params, std::string &bundle,
+                 Errors &error) -> bool;
 
     auto Purge(const std::string &sandboxId, const std::string &containerId,
                const std::string &execId, Errors &error) -> bool;
 
-    auto UpdateResources(const std::string &sandboxId, const ControllerUpdateResourcesParams &params, Errors &error) -> bool;
+    auto UpdateResources(const std::string &sandboxId, const ControllerUpdateResourcesParams &params,
+                         Errors &error) -> bool;
 
     auto Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) -> bool;
 
