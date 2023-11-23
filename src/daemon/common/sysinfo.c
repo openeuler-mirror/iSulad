@@ -393,6 +393,7 @@ sysinfo_t *get_sys_info(bool quiet)
     }
 
     sysinfo->ncpus = get_nprocs();
+    sysinfo->ncpus_conf = get_nprocs_conf();
 
     cgroup_version = common_get_cgroup_version();
     if (cgroup_version < 0) {

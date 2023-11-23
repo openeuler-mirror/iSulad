@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/utils_macro.h>
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/defs.h>
 #include <isula_libutils/host_config.h>
@@ -560,7 +561,7 @@ static bool check_cpu(const char *provided, const char *available)
 }
 
 /* parse unit list */
-int parse_unit_list(const char *val, bool *available_list, int cpu_num)
+STATIC int parse_unit_list(const char *val, bool *available_list, int cpu_num)
 {
     int ret = -1;
     char *str = NULL;
@@ -612,22 +613,13 @@ out:
 }
 
 /* is cpuset list available */
-static bool is_cpuset_list_available(const char *provided, const char *available)
+STATIC bool is_cpuset_list_available(const char *provided, const char *available, int cpu_num)
 {
-    int cpu_num = 0;
     int i = 0;
     bool ret = false;
     bool *parsed_provided = NULL;
     bool *parsed_available = NULL;
-    sysinfo_t *sysinfo = NULL;
 
-    sysinfo = get_sys_info(true);
-    if (sysinfo == NULL) {
-        ERROR("get sysinfo failed");
-        return false;
-    }
-
-    cpu_num = sysinfo->ncpus;
     parsed_provided = util_smart_calloc_s(sizeof(bool), (unsigned int)cpu_num);
     if (parsed_provided == NULL) {
         ERROR("memory alloc failed!");
@@ -661,10 +653,10 @@ out:
 }
 
 /* is cpuset cpus available */
-bool is_cpuset_cpus_available(const sysinfo_t *sysinfo, const char *cpus)
+STATIC bool is_cpuset_cpus_available(const sysinfo_t *sysinfo, const char *cpus)
 {
     bool ret = false;
-    ret = is_cpuset_list_available(cpus, sysinfo->cpusetinfo.cpus);
+    ret = is_cpuset_list_available(cpus, sysinfo->cpusetinfo.cpus, sysinfo->ncpus_conf);
     if (!ret) {
         ERROR("Checking cpuset.cpus got invalid format: %s.", cpus);
         isulad_set_error_message("Checking cpuset.cpus got invalid format: %s.", cpus);
@@ -673,10 +665,10 @@ bool is_cpuset_cpus_available(const sysinfo_t *sysinfo, const char *cpus)
 }
 
 /* is cpuset mems available */
-bool is_cpuset_mems_available(const sysinfo_t *sysinfo, const char *mems)
+STATIC bool is_cpuset_mems_available(const sysinfo_t *sysinfo, const char *mems)
 {
     bool ret = false;
-    ret = is_cpuset_list_available(mems, sysinfo->cpusetinfo.mems);
+    ret = is_cpuset_list_available(mems, sysinfo->cpusetinfo.mems, sysinfo->ncpus_conf);
     if (!ret) {
         ERROR("Checking cpuset.mems got invalid format: %s.", mems);
         isulad_set_error_message("Checking cpuset.mems got invalid format: %s.", mems);
@@ -685,7 +677,7 @@ bool is_cpuset_mems_available(const sysinfo_t *sysinfo, const char *mems)
 }
 
 // cpuset subsystem checks and adjustments
-static int verify_resources_cpuset(const sysinfo_t *sysinfo, const char *cpus, const char *mems)
+STATIC int verify_resources_cpuset(const sysinfo_t *sysinfo, const char *cpus, const char *mems)
 {
     int ret = 0;
     bool cpus_available = false;

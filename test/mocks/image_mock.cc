@@ -54,3 +54,19 @@ int im_umount_container_rootfs(const char *image_type, const char *image_name, c
     }
     return 0;
 }
+
+struct graphdriver_status *im_graphdriver_get_status(void)
+{
+    if (g_image_mock != nullptr) {
+        return g_image_mock->ImGraphdriverGetStatus();
+    }
+    return nullptr;
+}
+
+void im_free_graphdriver_status(struct graphdriver_status *status)
+{
+    if (g_image_mock != nullptr) {
+        g_image_mock->ImFreeGraphdriverStatus(status);
+    }
+    return;
+}

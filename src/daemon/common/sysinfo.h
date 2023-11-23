@@ -25,7 +25,10 @@ extern "C" {
 #include "cgroup.h"
 
 typedef struct {
+    // Number of processors currently online (i.e., available).
     int ncpus;
+    // Number of processors configured.
+    int ncpus_conf;
     cgroup_mem_info_t cgmeminfo;
     cgroup_cpu_info_t cgcpuinfo;
     cgroup_hugetlb_info_t hugetlbinfo;

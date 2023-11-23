@@ -28,6 +28,8 @@ public:
                                              const char *container_id));
     MOCK_METHOD3(ImUmountContainerRootfs, int(const char *image_type, const char *image_name,
                                               const char *container_id));
+    MOCK_METHOD0(ImGraphdriverGetStatus, struct graphdriver_status *());
+    MOCK_METHOD1(ImFreeGraphdriverStatus, void(struct graphdriver_status *status));
 };
 
 void MockImage_SetMock(MockImage *mock);
