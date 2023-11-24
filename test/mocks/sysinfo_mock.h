@@ -26,6 +26,7 @@ public:
     MOCK_METHOD1(FreeMountsInfo, void(mountinfo_t **minfos));
     MOCK_METHOD0(GetDefaultHugePageSize, char *(void));
     MOCK_METHOD2(ValidateHugetlb, char*(const char *pagesize, uint64_t limit));
+    MOCK_METHOD1(GetSysInfo, sysinfo_t *(bool quiet));
     MOCK_METHOD1(FreeSysinfo, void(sysinfo_t *sysinfo));
 };
 

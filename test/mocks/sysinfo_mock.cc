@@ -63,6 +63,14 @@ char *validate_hugetlb(const char *pagesize, uint64_t limit)
     return nullptr;
 }
 
+sysinfo_t *get_sys_info(bool quiet)
+{
+    if (g_sysinfo_mock != nullptr) {
+        return g_sysinfo_mock->GetSysInfo(quiet);
+    }
+    return nullptr;
+}
+
 void free_sysinfo(sysinfo_t *sysinfo)
 {
     if (g_sysinfo_mock != nullptr) {

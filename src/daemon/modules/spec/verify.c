@@ -41,7 +41,6 @@
 #include "constants.h"
 #include "err_msg.h"
 #include "isula_libutils/log.h"
-#include "sysinfo.h"
 #include "selinux_label.h"
 #include "image_api.h"
 #include "utils.h"
@@ -1614,16 +1613,13 @@ out:
 }
 
 /* verify container settings */
-int verify_container_settings(const oci_runtime_spec *container)
+int verify_container_settings(const oci_runtime_spec *container, const sysinfo_t *sysinfo)
 {
     int ret = 0;
-    sysinfo_t *sysinfo = NULL;
 
-    sysinfo = get_sys_info(true);
-    if (sysinfo == NULL) {
-        ERROR("Can not get system info");
-        ret = -1;
-        goto out;
+    if (container == NULL || sysinfo == NULL) {
+        ERROR("Invalid input arguments for verifying container settings");
+        return -1;
     }
 
     if (!util_valid_host_name(container->hostname)) {
@@ -1987,16 +1983,9 @@ static int host_config_settings_restart_policy(const host_config *hostconfig)
     return verify_restart_policy_name(rp, hostconfig);
 }
 
-static int host_config_settings_with_sysinfo(host_config *hostconfig, bool update)
+static int host_config_settings_with_sysinfo(host_config *hostconfig, const sysinfo_t *sysinfo, bool update)
 {
     int ret = 0;
-    sysinfo_t *sysinfo = NULL;
-
-    sysinfo = get_sys_info(true);
-    if (sysinfo == NULL) {
-        ERROR("Can not get system info");
-        return -1;
-    }
 
     ret = verify_host_config_hugetlbs(sysinfo, &(hostconfig->hugetlbs), &(hostconfig->hugetlbs_len));
     if (ret != 0) {
@@ -2055,7 +2044,7 @@ out:
 }
 
 /* verify host config settings */
-int verify_host_config_settings(host_config *hostconfig, bool update)
+int verify_host_config_settings(host_config *hostconfig, const sysinfo_t *sysinfo, bool update)
 {
     int ret = 0;
 #ifdef ENABLE_USERNS_REMAP
@@ -2063,6 +2052,13 @@ int verify_host_config_settings(host_config *hostconfig, bool update)
 #endif
 
     if (hostconfig == NULL) {
+        goto out;
+    }
+
+    if (sysinfo == NULL) {
+        ERROR("Invalid sysinfo for verifying host config settings");
+        isulad_set_error_message("Invalid sysinfo for verifying host config settings");
+        ret = -1;
         goto out;
     }
 
@@ -2081,7 +2077,7 @@ int verify_host_config_settings(host_config *hostconfig, bool update)
         goto out;
     }
 
-    ret = host_config_settings_with_sysinfo(hostconfig, update);
+    ret = host_config_settings_with_sysinfo(hostconfig, sysinfo, update);
     if (ret != 0) {
         goto out;
     }

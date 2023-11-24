@@ -1110,8 +1110,15 @@ static int update_host_config_check(container_t *cont, host_config *hostconfig)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
+    __isula_auto_sysinfo_t sysinfo_t *sysinfo = NULL;
 
-    ret = verify_host_config_settings(hostconfig, true);
+    sysinfo = get_sys_info(true);
+    if (sysinfo == NULL) {
+        ERROR("Failed to get system info for updating container %s", id);
+        return -1;
+    }
+
+    ret = verify_host_config_settings(hostconfig, sysinfo, true);
     if (ret != 0) {
         return -1;
     }

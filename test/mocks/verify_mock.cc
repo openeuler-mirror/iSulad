@@ -24,10 +24,10 @@ void MockVerify_SetMock(MockVerify *mock)
     g_verify_mock = mock;
 }
 
-int verify_host_config_settings(host_config *hostconfig, bool update)
+int verify_host_config_settings(host_config *hostconfig, const sysinfo_t *sysinfo, bool update)
 {
     if (g_verify_mock != nullptr) {
-        return g_verify_mock->VerifyHostConfigSettings(hostconfig, update);
+        return g_verify_mock->VerifyHostConfigSettings(hostconfig, sysinfo, update);
     }
     return 0;
 }

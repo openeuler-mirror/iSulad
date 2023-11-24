@@ -21,7 +21,7 @@
 
 class MockVerify {
 public:
-    MOCK_METHOD2(VerifyHostConfigSettings, int(host_config *hostconfig, bool update));
+    MOCK_METHOD3(VerifyHostConfigSettings, int(host_config *hostconfig, const sysinfo_t *sysinfo, bool update));
 };
 
 void MockVerify_SetMock(MockVerify* mock);
