@@ -777,6 +777,7 @@ int rt_lcr_rebuild_config(const char *name, const char *runtime, const rt_rebuil
 {
     int ret = -1;
     int nret = 0;
+    bool rebuild_success = false;
     char config_file[PATH_MAX] = { 0 };
     char bak_config_file[PATH_MAX] = { 0 };
     char oci_config_file[PATH_MAX] = { 0 };
@@ -825,8 +826,8 @@ int rt_lcr_rebuild_config(const char *name, const char *runtime, const rt_rebuil
         goto out;
     }
 
-    nret = engine_ops->engine_create_op(name, params->rootpath, (void *)oci_spec);
-    if (nret != 0) {
+    rebuild_success = engine_ops->engine_create_op(name, params->rootpath, (void *)oci_spec);
+    if (!rebuild_success) {
         // delete the invalid config file to prevent rename failed
         if (util_fileself_exists(config_file) && util_path_remove(config_file) != 0) {
             WARN("Failed to remove bak_config_file for container %s", name);
@@ -835,7 +836,8 @@ int rt_lcr_rebuild_config(const char *name, const char *runtime, const rt_rebuil
             WARN("Failed to rename backup old config to config for container %s", name);
         }
     }
-    ret = nret != 0 ? -1 : 0;
+    ret = rebuild_success ? 0 : -1;
+
 out:
     if (engine_ops != NULL && engine_ops->engine_clear_errmsg_op != NULL) {
         engine_ops->engine_clear_errmsg_op();
