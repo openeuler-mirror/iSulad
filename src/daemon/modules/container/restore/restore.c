@@ -58,7 +58,12 @@ static int restore_supervisor(const container_t *cont)
     char *exit_fifo = NULL;
     char *id = cont->common_config->id;
     char *statepath = cont->state_path;
+    char *runtime = cont->runtime;
     pid_ppid_info_t pid_info = { 0 };
+    rt_detect_process_params_t params = {
+        .pid = cont->state->state->pid,
+        .start_time = cont->state->state->start_time,
+    };
 
     nret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
     if (nret < 0 || (size_t)nret >= sizeof(container_state)) {
@@ -81,7 +86,7 @@ static int restore_supervisor(const container_t *cont)
         goto out;
     }
 
-    if (!util_process_alive(cont->state->state->pid, cont->state->state->start_time)) {
+    if (runtime_detect_process(id, runtime, &params) != 0) {
         ERROR("Container %s pid %d already dead, skip add supervisor", id, cont->state->state->pid);
         close(exit_fifo_fd);
         ret = -1;
@@ -112,8 +117,10 @@ static int post_stopped_container_to_gc(const char *id, const char *runtime, con
 {
     int ret = 0;
     pid_ppid_info_t pid_info = { 0 };
+    rt_read_pid_ppid_info_params_t params = { 0 };
+    params.pid = old_pid_info->pid;
 
-    (void)util_read_pid_ppid_info(old_pid_info->pid, &pid_info);
+    (void)runtime_read_pid_ppid_info(id, runtime, &params, &pid_info);
     if (pid_info.ppid == 0) {
         pid_info.ppid = old_pid_info->ppid;
         pid_info.pstart_time = old_pid_info->pstart_time;
@@ -180,9 +187,15 @@ static void restore_stopped_container(Container_Status status, const container_t
     pid_ppid_info_t pid_info = { 0 };
 
     if (status != CONTAINER_STATUS_STOPPED && status != CONTAINER_STATUS_CREATED) {
-        if (util_process_alive(cont->state->state->pid, cont->state->state->start_time)) {
+        rt_detect_process_params_t params = {
+            .pid = cont->state->state->pid,
+            .start_time = cont->state->state->start_time,
+        };
+        if (runtime_detect_process(id, cont->runtime, &params) == 0) {
             pid_info.pid = cont->state->state->pid;
+            pid_info.start_time = cont->state->state->start_time;
         }
+
         if (util_process_alive(cont->state->state->p_pid, cont->state->state->p_start_time)) {
             pid_info.ppid = cont->state->state->p_pid;
             pid_info.pstart_time = cont->state->state->p_start_time;
@@ -204,8 +217,11 @@ static void restore_running_container(Container_Status status, container_t *cont
     int nret = 0;
     const char *id = cont->common_config->id;
     pid_ppid_info_t pid_info = { 0 };
+    rt_read_pid_ppid_info_params_t params = {
+        .pid = info->pid,
+    };
 
-    nret = util_read_pid_ppid_info(info->pid, &pid_info);
+    nret = runtime_read_pid_ppid_info(id, cont->runtime, &params, &pid_info);
     if (nret == 0) {
         try_to_set_container_running(status, cont, &pid_info);
         container_state_reset_has_been_manual_stopped(cont->state);
@@ -234,10 +250,13 @@ static void restore_paused_container(Container_Status status, container_t *cont,
     int nret = 0;
     const char *id = cont->common_config->id;
     pid_ppid_info_t pid_info = { 0 };
+    rt_read_pid_ppid_info_params_t params = {
+        .pid = info->pid,
+    };
 
     container_state_set_paused(cont->state);
 
-    nret = util_read_pid_ppid_info(info->pid, &pid_info);
+    nret = runtime_read_pid_ppid_info(id, cont->runtime, &params, &pid_info);
     if (nret == 0) {
         try_to_set_paused_container_pid(status, cont, &pid_info);
         container_state_reset_has_been_manual_stopped(cont->state);

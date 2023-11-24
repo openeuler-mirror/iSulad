@@ -2174,3 +2174,14 @@ int rt_isula_rebuild_config(const char *name, const char *runtime, const rt_rebu
 {
     return 0;
 }
+
+int rt_isula_read_pid_ppid_info(const char *id, const char *runtime, const rt_read_pid_ppid_info_params_t *params,
+                                pid_ppid_info_t *pid_info)
+{
+    return util_read_pid_ppid_info(params->pid, pid_info);
+}
+
+int rt_isula_detect_process(const char *id, const char *runtime, const rt_detect_process_params_t *params)
+{
+    return util_process_alive(params->pid, params->start_time) ? 0 : -1;
+}

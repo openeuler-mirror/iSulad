@@ -847,3 +847,25 @@ int rt_shim_rebuild_config(const char *name, const char *runtime, const rt_rebui
 {
     return 0;
 }
+
+int rt_shim_read_pid_ppid_info(const char *name, const char *runtime, const rt_read_pid_ppid_info_params_t *params,
+                               pid_ppid_info_t *pid_info)
+{
+    if (pid_info == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    pid_info->pid = params->pid;
+    return 0;
+}
+
+int rt_shim_detect_process(const char *name, const char *runtime, const rt_detect_process_params_t *params)
+{
+    if (shim_v2_kill(name, NULL, 0, false) != 0) {
+        ERROR("%s: detect process failed", name);
+        return -1;
+    }
+
+    return 0;
+}

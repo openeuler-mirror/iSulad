@@ -208,6 +208,15 @@ typedef struct _rt_runtime_rebuild_config_params_t {
     const char *rootpath;
 } rt_rebuild_config_params_t;
 
+typedef struct _rt_runtime_read_pid_ppid_info_params_t {
+    int pid;
+} rt_read_pid_ppid_info_params_t;
+
+typedef struct _rt_runtime_detect_process_params_t {
+    int pid;
+    uint64_t start_time;
+} rt_detect_process_params_t;
+
 struct rt_ops {
     /* detect whether runtime is of this runtime type */
     bool (*detect)(const char *runtime);
@@ -245,6 +254,10 @@ struct rt_ops {
     int (*rt_resize)(const char *name, const char *runtime, const rt_resize_params_t *params);
     int (*rt_exec_resize)(const char *name, const char *runtime, const rt_exec_resize_params_t *params);
     int (*rt_rebuild_config)(const char *name, const char *runtime, const rt_rebuild_config_params_t *params);
+
+    int (*rt_read_pid_ppid_info)(const char *name, const char *runtime, const rt_read_pid_ppid_info_params_t *params,
+                                 pid_ppid_info_t *pid_info);
+    int (*rt_detect_process)(const char *name, const char *runtime, const rt_detect_process_params_t *params);
 };
 
 int runtime_create(const char *name, const char *runtime, const rt_create_params_t *params);
@@ -269,6 +282,10 @@ int runtime_rebuild_config(const char *name, const char *runtime, const rt_rebui
 void free_rt_listpids_out_t(rt_listpids_out_t *out);
 int runtime_resize(const char *name, const char *runtime, const rt_resize_params_t *params);
 int runtime_exec_resize(const char *name, const char *runtime, const rt_exec_resize_params_t *params);
+
+int runtime_read_pid_ppid_info(const char *name, const char *runtime, const rt_read_pid_ppid_info_params_t *params,
+                               pid_ppid_info_t *pid_info);
+int runtime_detect_process(const char *name, const char *runtime, const rt_detect_process_params_t *params);
 bool is_default_runtime(const char *name);
 
 int runtime_init(void);

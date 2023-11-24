@@ -46,6 +46,8 @@ static const struct rt_ops g_lcr_rt_ops = {
     .rt_exec_resize = rt_lcr_exec_resize,
     .rt_kill = rt_lcr_kill,
     .rt_rebuild_config = rt_lcr_rebuild_config,
+    .rt_read_pid_ppid_info = rt_lcr_read_pid_ppid_info,
+    .rt_detect_process = rt_lcr_detect_process,
 };
 
 static const struct rt_ops g_isula_rt_ops = {
@@ -67,6 +69,8 @@ static const struct rt_ops g_isula_rt_ops = {
     .rt_exec_resize = rt_isula_exec_resize,
     .rt_kill = rt_isula_kill,
     .rt_rebuild_config = rt_isula_rebuild_config,
+    .rt_read_pid_ppid_info = rt_isula_read_pid_ppid_info,
+    .rt_detect_process = rt_isula_detect_process,
 };
 
 #ifdef ENABLE_SHIM_V2
@@ -89,6 +93,8 @@ static const struct rt_ops g_shim_rt_ops = {
     .rt_exec_resize = rt_shim_exec_resize,
     .rt_kill = rt_shim_kill,
     .rt_rebuild_config = rt_shim_rebuild_config,
+    .rt_read_pid_ppid_info = rt_shim_read_pid_ppid_info,
+    .rt_detect_process = rt_shim_detect_process,
 };
 #endif
 
@@ -532,6 +538,42 @@ int runtime_exec_resize(const char *name, const char *runtime, const rt_exec_res
 
 out:
     return ret;
+}
+
+int runtime_read_pid_ppid_info(const char *name, const char *runtime, const rt_read_pid_ppid_info_params_t *params,
+                               pid_ppid_info_t *pid_info)
+{
+    const struct rt_ops *ops = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Invalid arguments for runtime exec resize");
+        return -1;
+    }
+
+    ops = rt_ops_query(runtime);
+    if (ops == NULL) {
+        ERROR("Failed to get runtime ops");
+        return -1;
+    }
+
+    return ops->rt_read_pid_ppid_info(name, runtime, params, pid_info);
+}
+
+int runtime_detect_process(const char *name, const char *runtime, const rt_detect_process_params_t *params)
+{
+    const struct rt_ops *ops = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Invalid arguments for runtime process alive");
+        return -1;
+    }
+
+    ops = rt_ops_query(runtime);
+    if (ops == NULL) {
+        return -1;
+    }
+
+    return ops->rt_detect_process(name, runtime, params);
 }
 
 bool is_default_runtime(const char *name)

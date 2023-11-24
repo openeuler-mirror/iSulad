@@ -386,6 +386,7 @@ static void gc_monitor_process(const char *id, pid_t pid, unsigned long long sta
 {
     INFO("Received garbage collector monitor of %s with pid %d", id, pid);
 
+    // for shim-v2, here is a ppid, which is always 0
     if (util_process_alive(pid, start_time)) {
         int ret = kill(pid, SIGKILL);
         if (ret < 0 && errno != ESRCH) {
@@ -461,14 +462,16 @@ static void gc_container_process(struct linked_list *it)
     char *runtime = NULL;
     char *id = NULL;
     container_garbage_config_gc_containers_element *gc_cont = NULL;
+    rt_detect_process_params_t detect_params = {
+        .pid = gc_cont->pid,
+        .start_time = gc_cont->start_time,
+    };
 
     gc_cont = (container_garbage_config_gc_containers_element *)it->elem;
     id = gc_cont->id;
     runtime = gc_cont->runtime;
-    pid = gc_cont->pid;
-    start_time = gc_cont->start_time;
 
-    if (util_process_alive(pid, start_time) == false) {
+    if (runtime_detect_process(id, runtime, &detect_params) < 0) {
         ret = clean_container_resource(id, runtime, pid);
         if (ret != 0) {
             WARN("Failed to clean resources of container %s", id);
@@ -495,7 +498,15 @@ static void gc_container_process(struct linked_list *it)
         free(it);
     } else {
         try_to_resume_container(id, runtime);
-        ret = kill(pid, SIGKILL);
+
+        rt_kill_params_t kill_params = {
+            .signal = SIGKILL,
+            .stop_signal = SIGKILL,
+            .pid = pid,
+            .start_time = start_time,
+        };
+
+        ret = runtime_kill(id, runtime, &kill_params);
         if (ret < 0 && errno != ESRCH) {
             ERROR("Can not kill process (pid=%d) with SIGKILL for container %s", pid, id);
         }
