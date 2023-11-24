@@ -37,6 +37,10 @@ function do_post()
     start_isulad_with_valgrind
 }
 
+# $1: pod runtime;
+# $2: pod config;
+# $3: eth0 ip;
+# $4: eth1 ip;
 function do_test_help()
 {
     msg_info "this is $0 do_test"
@@ -53,7 +57,7 @@ function do_test_help()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    sid=`crictl runp ${data_path}/$1`
+    sid=`crictl runp --runtime $1 ${data_path}/$2`
     if [ $? -ne 0 ]; then
         msg_err "Failed to run sandbox"
         TC_RET_T=$(($TC_RET_T+1))
@@ -61,7 +65,7 @@ function do_test_help()
 
     cnt=`ls /var/lib/cni/results/* | wc -l`
     target_cnt=1
-    if [ "x$3" != "x" ];then
+    if [ "x$4" != "x" ];then
         target_cnt=2
     fi
 
@@ -77,7 +81,7 @@ function do_test_help()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    cid=`crictl create $sid ${data_path}/container-config.json ${data_path}/$1`
+    cid=`crictl create $sid ${data_path}/container-config.json ${data_path}/$2`
     if [ $? -ne 0 ];then
         msg_err "create container failed"
         TC_RET_T=$(($TC_RET_T+1))
@@ -107,29 +111,29 @@ function do_test_help()
         nsenter -t $con_pid -n ifconfig eth0
         TC_RET_T=$(($TC_RET_T+1))
     fi
-    nsenter -t $pod_pid -n ifconfig eth0 | grep "$2"
+    nsenter -t $pod_pid -n ifconfig eth0 | grep "$3"
     if [ $? -ne 0 ];then
-        msg_err "expect ip: $1, get: "
+        msg_err "expect ip: $3, get: "
         nsenter -t $pod_pid -n ifconfig eth0
         TC_RET_T=$(($TC_RET_T+1))
     fi
-    crictl inspectp $sid | grep "$2"
+    crictl inspectp $sid | grep "$3"
     if [ $? -ne 0 ];then
-        msg_err "inspectp: expect ip: $1, get: "
+        msg_err "inspectp: expect ip: $3, get: "
         crictl inspectp $sid
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    if [ "x$3" != "x" ];then
-        nsenter -t $pod_pid -n ifconfig eth1 | grep "$3"
+    if [ "x$4" != "x" ];then
+        nsenter -t $pod_pid -n ifconfig eth1 | grep "$4"
         if [ $? -ne 0 ];then
-            msg_err "expect ip: $2, get: "
+            msg_err "expect ip: $4, get: "
             nsenter -t $pod_pid -n ifconfig eth1
             TC_RET_T=$(($TC_RET_T+1))
         fi
-        crictl inspectp $sid | grep "$3"
+        crictl inspectp $sid | grep "$4"
         if [ $? -ne 0 ];then
-            msg_err "inspectp expect ip: $2, get: "
+            msg_err "inspectp expect ip: $4, get: "
             crictl inspectp $sid
             TC_RET_T=$(($TC_RET_T+1))
         fi
@@ -170,7 +174,7 @@ function do_test_help()
 
 function default_cni_config()
 {
-    do_test_help "sandbox-config.json" "10\.1\."
+    do_test_help $1 "sandbox-config.json" "10\.1\."
 }
 
 function new_cni_config()
@@ -189,12 +193,12 @@ function new_cni_config()
         fi
     done
     tail $ISUALD_LOG
-    do_test_help "mutlnet_pod.json" "10\.2\." "10\.1\."
+    do_test_help $1 "mutlnet_pod.json" "10\.2\." "10\.1\."
 }
 
 function check_annotation_extension()
 {
-    sid=`crictl runp ${data_path}/sandbox-config.json`
+    sid=`crictl runp --runtime $1 ${data_path}/sandbox-config.json`
     if [ $? -ne 0 ]; then
         msg_err "Failed to run sandbox"
         TC_RET_T=$(($TC_RET_T+1))
@@ -253,7 +257,7 @@ function check_rollback()
     done
     tail $ISUALD_LOG
 
-    crictl runp ${data_path}/mutl_wrong_net_pod.json
+    crictl runp --runtime $1 ${data_path}/mutl_wrong_net_pod.json
     if [ $? -eq 0 ]; then
         msg_err "Run sandbox success with invalid cni configs"
         TC_RET_T=$(($TC_RET_T+1))
@@ -302,13 +306,14 @@ function check_rollback()
 # $2: expect ingress rate;
 # $3: input egress rate;
 # $4: expect egress rate;
+# $5: pod runtime;
 function check_annotation_valid_bandwidth()
 {
     rm bandwidth.json
     cp ${data_path}/mock_sandbox.json bandwidth.json
     sed -i "s#ingressholder#$1#g" bandwidth.json
     sed -i "s#engressholder#$3#g" bandwidth.json
-    sid=`crictl runp bandwidth.json`
+    sid=`crictl runp --runtime $5 bandwidth.json`
     if [ $? -ne 0 ]; then
         msg_err "Failed to run sandbox"
         TC_RET_T=$(($TC_RET_T+1))
@@ -345,6 +350,7 @@ function check_annotation_valid_bandwidth()
     return $TC_RET_T
 }
 
+# function not called
 function check_annotation_invalid_bandwidth()
 {
     rm bandwidth.json
@@ -386,44 +392,51 @@ function check_annotation()
     done
     tail $ISUALD_LOG
 
-    check_annotation_extension
+    check_annotation_extension $1
 
-    check_annotation_valid_bandwidth "10.24k" "10240" "-1.024k" "-1024"
-    check_annotation_valid_bandwidth "1024m" "2" "-1024m" "-1"
-    check_annotation_valid_bandwidth "1.000001Ki" "1025" "-1.00001Ki" "-1024"
-    check_annotation_valid_bandwidth "0.1Mi" "104858" "-0.01Mi" "-10485"
-    check_annotation_valid_bandwidth "1.00001e2" "101" "-1.0001e2" "-100"
+    check_annotation_valid_bandwidth "10.24k" "10240" "-1.024k" "-1024" $1
+    check_annotation_valid_bandwidth "1024m" "2" "-1024m" "-1" $1
+    check_annotation_valid_bandwidth "1.000001Ki" "1025" "-1.00001Ki" "-1024" $1
+    check_annotation_valid_bandwidth "0.1Mi" "104858" "-0.01Mi" "-10485" $1
+    check_annotation_valid_bandwidth "1.00001e2" "101" "-1.0001e2" "-100" $1
 
     return $TC_RET_T
 }
 
+function do_test_t()
+{
+    local ret=0
+    local runtime=$1
+    local test="cni_test => (${runtime})"
+    msg_info "${test} starting..."
+
+    default_cni_config $runtime || ((ret++))
+
+    new_cni_config $runtime || ((ret++))
+
+    check_annotation $runtime || ((ret++))
+
+    check_rollback $runtime || ((ret++))
+
+    msg_info "${test} finished with return ${ret}..."
+
+    return $ret
+}
+
 ret=0
 
-do_pre
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
+for element in ${RUNTIME_LIST[@]};
+do
+    do_pre
+    if [ $? -ne 0 ];then
+        let "ret=$ret + 1"
+    fi
 
-default_cni_config
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
-
-new_cni_config
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
-
-check_annotation
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
-
-check_rollback
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
-
-do_post
+    do_test_t $element
+    if [ $? -ne 0 ];then
+        let "ret=$ret + 1"
+    fi
+    do_post
+done
 
 show_result $ret "cni base test"

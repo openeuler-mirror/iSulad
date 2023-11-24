@@ -39,8 +39,9 @@ function do_pre() {
 
 function do_test() {
     local ret=0
-
-    msg_info "this is $0 do_test"
+    local runtime=$1
+    local test="seccomp test => (${runtime})"
+    msg_info "${test} starting..."
 
     cid1=$(isula run -tid --security-opt seccomp=/etc/isulad/seccomp_default.json busybox sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Failed to run container with the default seccomp profile" && ((ret++))
@@ -52,7 +53,7 @@ function do_test() {
         --security-opt seccomp=${test_data_path}/seccomp_profile_without_archmap.json busybox sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - Failed to run container with multiple seccomp profiles" && ((ret++))
 
-    isula stop "${cid1}" "${cid2}" "${cid3}"
+    isula stop -t 0 "${cid1}" "${cid2}" "${cid3}"
 
     isula rm -f $(isula ps -qa)
 
@@ -69,7 +70,10 @@ declare -i ans=0
 
 do_pre || ((ans++))
 
-do_test || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    do_test $element || ((ans++))
+done
 
 do_post
 

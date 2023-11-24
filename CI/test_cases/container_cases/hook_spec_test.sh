@@ -28,7 +28,8 @@ function test_hook_spec()
 {
     local ret=0
     local image="busybox"
-    local test="container hook test => (${FUNCNAME[@]})"
+    local runtime=$1
+    local test="container hook test => (${FUNCNAME[@]}) => $runtime"
     msg_info "${test} starting..."
 
     isula pull ${image}
@@ -37,7 +38,7 @@ function test_hook_spec()
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    CONT=`isula run -itd --hook-spec ${test_data_path}/test-hookspec.json ${image}`
+    CONT=`isula run -itd --runtime $runtime --hook-spec ${test_data_path}/test-hookspec.json ${image}`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     isula stop -t 0 ${CONT}
@@ -51,7 +52,7 @@ function test_hook_spec()
     isula run -n $no_permission_container -itd --hook-spec ${test_data_path}/no_permission.json ${image} > $runlog 2>&1
     [[ $? -ne 126 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check exit code container with image: ${image}" && ((ret++))
 
-    cat $runlog | grep "Permission denied"
+    cat $runlog | grep -i "Permission denied"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to get no_permission output: ${image}" && ((ret++))
 
     isula rm -f $no_permission_container
@@ -95,6 +96,9 @@ EOF
 
 declare -i ans=0
 
-test_hook_spec || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    test_hook_spec $element || ((ans++))
+done
 
 show_result ${ans} "${curr_path}/${0}"

@@ -130,7 +130,7 @@ function test_critest() {
 function do_test_t() {
     local ret=0
 
-    local runtime="lcr"
+    local runtime="runc"
     local test="critest => $runtime"
     msg_info "${test} starting..."
     echo "${test}" >> ${testcase_data}/critest.log
@@ -143,11 +143,11 @@ function do_test_t() {
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
     # replace default runtime
-    sed -i 's/"default-runtime": "lcr"/"default-runtime": "runc"/g' /etc/isulad/daemon.json
+    sed -i 's/"default-runtime": "runc"/"default-runtime": "lcr"/g' /etc/isulad/daemon.json
     start_isulad_without_valgrind --selinux-enabled --network-plugin cni
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad with selinux and cni failed" && ((ret++))
     
-    runtime=runc
+    runtime=lcr
     test="critest => $runtime"
     msg_info "${test} starting..."
     echo "${test}" >> ${testcase_data}/critest.log

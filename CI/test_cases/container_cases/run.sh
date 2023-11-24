@@ -25,7 +25,7 @@ source ../helpers.sh
 
 function do_test_t()
 {
-    tid=`isula run -tid --name hostname busybox`
+    tid=`isula run --runtime $1 -tid --name hostname busybox`
     chostname=`isula exec -it $tid hostname`
     fn_check_eq "$chostname" "${tid:0:12}" "default hostname is id of container"
     isula exec -it hostname env | grep HOSTNAME
@@ -37,7 +37,7 @@ function do_test_t()
     containername=test_basic_run
     containername2=container_to_join
 
-    isula run --name $containername  -td busybox
+    isula run --runtime $1 --name $containername  -td busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
@@ -48,7 +48,7 @@ function do_test_t()
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
-    isula run --name $containername -td -v /dev/shm:/dev/shm busybox
+    isula run --runtime $1 --name $containername -td -v /dev/shm:/dev/shm busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
@@ -61,7 +61,7 @@ function do_test_t()
 
     echo AA > /tmp/test_run_env
 
-    isula run --name $containername -itd --user 100:100 -e AAA=BB -e BAA --env-file /tmp/test_run_env busybox
+    isula run --runtime $1 --name $containername -itd --user 100:100 -e AAA=BB -e BAA --env-file /tmp/test_run_env busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
@@ -72,18 +72,21 @@ function do_test_t()
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
-    isula run --name $containername -itd --external-rootfs / --read-only none sh
-    fn_check_eq "$?" "0" "run container with host rootfs failed"
-    testcontainer $containername running
+    # runc directly uses the root directory as external rootfs and will report the error pivot_root .: device or resource busy
+    if [ $runtime == "lcr" ]; then
+        isula run --runtime $1 --name $containername -itd --external-rootfs / --read-only none sh
+        fn_check_eq "$?" "0" "run container with host rootfs failed"
+        testcontainer $containername running
 
-    isula stop -t 0 $containername
-    fn_check_eq "$?" "0" "stop failed"
-    testcontainer $containername exited
+        isula stop -t 0 $containername
+        fn_check_eq "$?" "0" "stop failed"
+        testcontainer $containername exited
 
-    isula rm $containername
-    fn_check_eq "$?" "0" "rm failed"
+        isula rm $containername
+        fn_check_eq "$?" "0" "rm failed"
+    fi
 
-    isula run --name $containername -itd --net=host --pid=host --ipc=host --uts=host busybox
+    isula run --runtime $1 --name $containername -itd --net=host --pid=host --ipc=host --uts=host busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
@@ -94,7 +97,7 @@ function do_test_t()
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
-    isula run --name $containername -itd --net=none --pid=none --ipc=none --uts=none busybox
+    isula run --runtime $1 --name $containername -itd --net=none --pid=none --ipc=none --uts=none busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
@@ -105,11 +108,11 @@ function do_test_t()
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
-    isula run --name $containername2 -itd busybox
+    isula run --runtime $1 --name $containername2 -itd busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername2 running
 
-    isula run --name $containername -itd --net=container:$containername2 --pid=container:$containername2 --ipc=container:$containername2 --uts=container:$containername2 busybox
+    isula run --runtime $1 --name $containername -itd --net=container:$containername2 --pid=container:$containername2 --ipc=container:$containername2 --uts=container:$containername2 busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
@@ -135,7 +138,7 @@ function do_run_remote_test_t()
     local ret=0
     local image="busybox"
     local config='tcp://127.0.0.1:2890'
-    local test="container start with --attach remote test => (${FUNCNAME[@]})"
+    local test="container start with --attach remote test => (${FUNCNAME[@]}) => $1"
 
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
@@ -144,13 +147,13 @@ function do_run_remote_test_t()
 
     containername=run_remote
 
-    isula run -ti -H "$config" --name $containername busybox xxx
+    isula run --runtime $1 -ti -H "$config" --name $containername busybox xxx
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed check invalid run ${containername} remote" && ((ret++))
     testcontainer $containername exited
     isula rm -f -H "$config" $containername
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container remote" && ((ret++))
 
-    isula run -ti -H "$config" --name $containername busybox /bin/sh -c 'echo "hello"' | grep hello
+    isula run --runtime $1 -ti -H "$config" --name $containername busybox /bin/sh -c 'echo "hello"' | grep hello
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run ${containername} remote" && ((ret++))
     testcontainer $containername exited
 
@@ -169,8 +172,10 @@ function do_run_remote_test_t()
 
 declare -i ans=0
 
-do_test_t || ((ans++))
-
-do_run_remote_test_t || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+    do_test_t $element || ((ans++))
+    do_run_remote_test_t $element || ((ans++))
+done
 
 show_result ${ans} "${curr_path}/${0}"

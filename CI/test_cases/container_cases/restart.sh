@@ -26,7 +26,8 @@ source ../helpers.sh
 function do_test_t()
 {
     containername=test_restart
-    isula run --name $containername -td busybox
+
+    isula run --runtime $1 --name $containername -td busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
@@ -46,9 +47,12 @@ function do_test_t()
 
 ret=0
 
-do_test_t
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
+for element in ${RUNTIME_LIST[@]};
+do
+    do_test_t $element
+    if [ $? -ne 0 ];then
+        let "ret=$ret + 1"
+    fi
+done
 
 show_result $ret "basic restart"

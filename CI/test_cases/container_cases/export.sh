@@ -26,7 +26,8 @@ function test_image_export()
 {
   local ret=0
   local image="busybox"
-  local test="export container test => (${FUNCNAME[@]})"
+  local runtime=$1
+  local test="export container test => (${FUNCNAME[@]}) => $runtime"
 
   msg_info "${test} starting..."
 
@@ -36,7 +37,7 @@ function test_image_export()
   isula images | grep busybox
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-  CONT=`isula run -itd busybox`
+  CONT=`isula run --runtime $runtime -itd busybox`
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
   isula export -o export.tar ${CONT}
@@ -55,6 +56,9 @@ function test_image_export()
 
 declare -i ans=0
 
-test_image_export || ((ans++))
+for element in ${RUNTIME_LIST[@]};
+do
+  test_image_export $element || ((ans++))
+done
 
 show_result ${ans} "${curr_path}/${0}"
