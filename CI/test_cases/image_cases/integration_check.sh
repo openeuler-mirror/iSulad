@@ -65,7 +65,7 @@ function test_image_info()
   echo "xxx:11" >> ${change_file}
 
   sed -i 's#image-layer-check": false#image-layer-check": true#g' /etc/isulad/daemon.json
-  pkill -9 isulad
+  kill -9 $(pidof isulad)
   start_isulad_with_valgrind
 
   isula ps -a | grep ${cid}
