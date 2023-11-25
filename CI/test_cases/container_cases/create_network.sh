@@ -37,7 +37,7 @@ function test_network_param()
 
     msg_info "${test} starting..."
 
-    root="`isula info | grep 'iSulad Root Dir' | awk -F ':' '{print $2}'`/engines/lcr"
+    root="`isula info | grep 'iSulad Root Dir' | awk -F ':' '{print $2}'`/engines/$DEFAULT_RUNTIME"
 
     isula pull ${image}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
