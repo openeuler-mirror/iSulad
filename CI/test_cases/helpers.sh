@@ -29,6 +29,8 @@ ISULAD_RUN_ROOT_PATH="/var/run/isulad"
 
 RUNTIME_LIST=(lcr runc)
 
+DEFAULT_RUNTIME=runc
+
 testcase_data="/tmp/testcases_data"
 
 enable_native_network=0
