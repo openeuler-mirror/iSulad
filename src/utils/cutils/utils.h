@@ -375,6 +375,8 @@ int util_input_noecho(char *buf, size_t maxlen);
 
 void util_usleep_nointerupt(unsigned long usec);
 
+// id : random string, notice: the length of id needs to be len + 1
+// len : the length of the random string that needs to be generated, notice: len needs to be an even number
 int util_generate_random_str(char *id, size_t len);
 
 int util_check_inherited_exclude_fds(bool closeall, int *fds_to_ignore, size_t len_fds);

@@ -37,6 +37,7 @@
 #include <termios.h> // IWYU pragma: keep
 #include <strings.h>
 #include <time.h>
+#include <openssl/rand.h>
 
 #include "isula_libutils/log.h"
 #include "isula_libutils/json_common.h"
@@ -1274,37 +1275,29 @@ void util_usleep_nointerupt(unsigned long usec)
 
 int util_generate_random_str(char *id, size_t len)
 {
-    int fd = -1;
-    int num = 0;
+#define MAX_RANDOM_BYTES_LEN 100
     size_t i;
-    const int m = 256;
+    unsigned char random_bytes[MAX_RANDOM_BYTES_LEN] = { 0 };
+    len = len / 2;
 
-    if (id == NULL) {
+    if (id == NULL || len > MAX_RANDOM_BYTES_LEN) {
+        ERROR("Invalid id or len");
         return -1;
     }
 
-    len = len / 2;
-    fd = open("/dev/urandom", O_RDONLY);
-    if (fd == -1) {
-        ERROR("Failed to open /dev/urandom");
+    if (RAND_bytes((unsigned char *)random_bytes, len) != 1) {
+        ERROR("Failed to get random bytes by RAND_bytes");
         return -1;
     }
     for (i = 0; i < len; i++) {
         int nret;
-        if (util_read_nointr(fd, &num, sizeof(int)) < 0) {
-            ERROR("Failed to read urandom value");
-            close(fd);
-            return -1;
-        }
-        unsigned char rs = (unsigned char)(num % m);
+        unsigned char rs = random_bytes[i];
         nret = snprintf((id + i * 2), ((len - i) * 2 + 1), "%02x", (unsigned int)rs);
         if (nret < 0 || (size_t)nret >= ((len - i) * 2 + 1)) {
             ERROR("Failed to snprintf random string");
-            close(fd);
             return -1;
         }
     }
-    close(fd);
     id[i * 2] = '\0';
     return 0;
 }
