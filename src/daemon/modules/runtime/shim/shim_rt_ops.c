@@ -115,7 +115,6 @@ bool is_valid_v2_runtime(const char* name)
 
     parts_len = util_array_len((const char **)parts);
     if (!(parts_len == 4 && strcmp(parts[0], "io") == 0 && strcmp(parts[1], "containerd") == 0)) {
-        ERROR("ShimV2 runtime format is wrong");
         util_free_array(parts);
         return false;
     }
