@@ -81,14 +81,14 @@ function test_run_image()
 {
   local ret=0
 
-  isula run -t -n embedded_test1 nonexistentname1:v1 /bin/sh
+  isula run --runtime lcr -t -n embedded_test1 nonexistentname1:v1 /bin/sh
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run nonexistent image should failed" && ((ret++))
 
   isula load -i "$embedded_manifest" -t embedded
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load embedded image failed" && ((ret++))
 
   # run container based on embedded image
-  isula run --name embedded_test1 test:v1 ls /home/home/home
+  isula run --runtime lcr --name embedded_test1 test:v1 ls /home/home/home
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run embedded image failed" && ((ret++))
 
   # delete container based on embedded image
@@ -96,7 +96,7 @@ function test_run_image()
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - delete container based on embedded image failed" && ((ret++))
 
   # test image's env
-  isula run --name embedded_test1 test:v1 /bin/sh -c "echo \$c | grep \"d e\""
+  isula run --runtime lcr --name embedded_test1 test:v1 /bin/sh -c "echo \$c | grep \"d e\""
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - test image's env failed" && ((ret++))
 
   # delete container based on embedded image
@@ -119,7 +119,7 @@ function test_mount()
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load embedded imagefailed" && ((ret++))
 
   # run --mount
-  isula run --mount type=bind,src="$embedded_basedir",dst=/usr,ro=true,bind-propagation=rprivate --name embedded_test2 test:v1 true
+  isula run --runtime lcr --mount type=bind,src="$embedded_basedir",dst=/usr,ro=true,bind-propagation=rprivate --name embedded_test2 test:v1 true
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run --mount failed" && ((ret++))
 
   testcontainer embedded_test2 exited
@@ -127,25 +127,25 @@ function test_mount()
   isula rm embedded_test2
 
   # test invalid mode
-  isula run --mount type=bind,src="$embedded_basedir",dst=/usr,ro=invalid --name embedded_test2 test:v1 true
+  isula run --runtime lcr --mount type=bind,src="$embedded_basedir",dst=/usr,ro=invalid --name embedded_test2 test:v1 true
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid mode should failed" && ((ret++))
 
   isula rm embedded_test2
 
   # test invalid bind propagation mode
-  isula run --mount type=bind,src="$embedded_basedir",dst=/usr,bind-propagation=invalid --name embedded_test2 test:v1 true
+  isula run --runtime lcr --mount type=bind,src="$embedded_basedir",dst=/usr,bind-propagation=invalid --name embedded_test2 test:v1 true
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid bind propagation mode should failed" && ((ret++))
 
   isula rm embedded_test2
 
   # test source not exist
-  isula run --mount type=bind,src=abcdefg/notexist,dst=/usr --name embedded_test2 test:v1 true
+  isula run --runtime lcr --mount type=bind,src=abcdefg/notexist,dst=/usr --name embedded_test2 test:v1 true
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid source not exist should failed" && ((ret++))
 
   isula rm embedded_test2
 
   # test source not a regular file
-  isula run --mount type=squashfs,src=/tmp,dst=/usr --name embedded_test2 test:v1 true
+  isula run --runtime lcr --mount type=squashfs,src=/tmp,dst=/usr --name embedded_test2 test:v1 true
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - source not a regular file should failed" && ((ret++))
 
   isula rm embedded_test2
@@ -153,7 +153,7 @@ function test_mount()
   # test path //tmp/test
   mkdir -p /tmp/test_mount
   mkdir -p /tmp/test_mount1/test
-  isula run -v /tmp/test_mount:/tmp --mount type=bind,src=/tmp/test_mount1,dst=//tmp/test_mount1,ro=true,bind-propagation=rprivate --name embedded_test2 test:v1 ls /tmp/test_mount1/test
+  isula run --runtime lcr -v /tmp/test_mount:/tmp --mount type=bind,src=/tmp/test_mount1,dst=//tmp/test_mount1,ro=true,bind-propagation=rprivate --name embedded_test2 test:v1 ls /tmp/test_mount1/test
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - test path //tmp/test failed" && ((ret++))
 
   isula rm embedded_test2
@@ -186,7 +186,7 @@ function test_query_image()
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect nonexist item should failed" && ((ret++))
 
   # test inspect container, it should conatainer image info
-  isula run --name embedded_inspect test:v1 ls /home/home/home
+  isula run --runtime lcr --name embedded_inspect test:v1 ls /home/home/home
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container for inspect failed" && ((ret++))
 
   isula inspect -f '{{json .Image}}' embedded_inspect
@@ -437,19 +437,19 @@ function test_entrypoint()
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load embedded image failed" && ((ret++))
 
   # test image's entrypoint
-  isula run --name embedded_entrypoint1 test:v1
+  isula run --runtime lcr --name embedded_entrypoint1 test:v1
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - test image's entrypoint failed" && ((ret++))
 
   isula rm embedded_entrypoint1
 
   # test image's entrypoint with cmds
-  isula run --name embedded_entrypoint1 test:v1 /bin
+  isula run --runtime lcr --name embedded_entrypoint1 test:v1 /bin
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - test image's entrypoint with cmds failed" && ((ret++))
 
   isula rm embedded_entrypoint1
 
   # test image's entrypoint override image's entrypoint
-  isula run --entrypoint=/bin/ls --name embedded_entrypoint1 test:v1 /bin
+  isula run --runtime lcr --entrypoint=/bin/ls --name embedded_entrypoint1 test:v1 /bin
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - test image's entrypoint override image's entrypoint failed" && ((ret++))
 
   isula rm embedded_entrypoint1
@@ -464,7 +464,7 @@ function test_entrypoint()
   isula load -i "$embedded_manifest_invalid" -t embedded
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - test entrypoint with variable failed" && ((ret++))
 
-  isula run -e env_id=me --name embedded_entrypoint1 test:v1
+  isula run --runtime lcr -e env_id=me --name embedded_entrypoint1 test:v1
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - test run embedded image with env failed" && ((ret++))
 
   isula rm embedded_entrypoint1
@@ -519,7 +519,7 @@ function test_symbolic()
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load embedded image failed" && ((ret++))
 
   # run container based on embedded image
-  isula run --name embedded_test_symbolic test:v1 ls /home/home/home
+  isula run --runtime lcr --name embedded_test_symbolic test:v1 ls /home/home/home
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container based on embedded image failed" && ((ret++))
 
   isula rm embedded_test_symbolic
