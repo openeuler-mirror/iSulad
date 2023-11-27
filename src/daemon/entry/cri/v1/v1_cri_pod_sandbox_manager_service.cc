@@ -358,14 +358,21 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
         goto cleanup_sandbox;
     }
 
-    // Step 8: Call sandbox create.
+    // Step 8: Save sandbox to disk
+    sandbox->Save(error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to save sandbox, %s", sandboxName.c_str());
+        goto cleanup_network;
+    }
+
+    // Step 9: Call sandbox create.
     sandbox->Create(error);
     if (error.NotEmpty()) {
         ERROR("Failed to create sandbox: %s", sandboxName.c_str());
         goto cleanup_network;
     }
 
-    // Step 9: Save network settings json to disk
+    // Step 10: Save network settings json to disk
     // Update network settings before start sandbox since sandbox container will use the sandbox key
     if (namespace_is_cni(networkMode.c_str())) {
         Errors tmpErr;
@@ -376,7 +383,7 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
         }
     }
 
-    // Step 10: Call sandbox start.
+    // Step 11: Call sandbox start.
     sandbox->Start(error);
     if (error.NotEmpty()) {
         ERROR("Failed to start sandbox: %s", sandboxName.c_str());

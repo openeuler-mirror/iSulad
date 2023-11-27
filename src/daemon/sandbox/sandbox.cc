@@ -599,12 +599,6 @@ void Sandbox::PrepareSandboxDirs(Errors &error)
         goto out;
     }
 
-    if (!Save(error)) {
-        error.Errorf("Failed to save sandbox, %s", m_id.c_str());
-        ERROR("Failed to save sandbox, %s", m_id.c_str());
-        goto out;
-    }
-
     umask(mask);
     return;
 
