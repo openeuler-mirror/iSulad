@@ -1472,7 +1472,7 @@ static void exec_runtime_process(process_t *p, int exec_fd)
     const char *params[MAX_RUNTIME_ARGS] = { 0 };
     get_runtime_cmd(p, log_path, pid_path, process_desc, params);
     execvp(p->runtime, (char * const *)params);
-    (void)dprintf(exec_fd, "fork/exec error: %s", strerror(errno));
+    (void)dprintf(exec_fd, "run process: %s error: %s", p->runtime, strerror(errno));
     _exit(EXIT_FAILURE);
 }
 
@@ -1510,16 +1510,18 @@ int create_process(process_t *p)
         close_fd(&p->stdio->resize);
     }
     nread = isula_file_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
-    if (nread > 0) {
-        write_message(ERR_MSG, "runtime error");
-        ret = SHIM_ERR;
-        goto out;
-    }
 
     /* block to wait runtime pid exit */
     ret = waitpid(pid, NULL, 0);
     if (ret != pid) {
         write_message(ERR_MSG, "wait runtime failed:%d", SHIM_SYS_ERR(errno));
+        ret = SHIM_ERR;
+        goto out;
+    }
+
+    // if an error occurs in exec_runtime_process, jump directly to the out branch after waitpid.
+    if (nread > 0) {
+        write_message(ERR_MSG, "%s", exec_buff);
         ret = SHIM_ERR;
         goto out;
     }
