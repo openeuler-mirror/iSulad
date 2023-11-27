@@ -906,21 +906,25 @@ realexec:
         }
 
         execvp(SHIM_BINARY, (char * const *)params);
-        (void)dprintf(shim_stderr_pipe[1], "exec failed: %s", strerror(errno));
+        (void)dprintf(shim_stderr_pipe[1], "run process: %s failed: %s", SHIM_BINARY, strerror(errno));
+        exit(EXIT_FAILURE);
     }
 
     close(shim_stderr_pipe[1]);
     close(shim_stdout_pipe[1]);
     num = util_read_nointr(shim_stderr_pipe[0], exec_buff, sizeof(exec_buff) - 1);
-    if (num > 0) {
-        ERROR("Exec failed: %s", exec_buff);
-        ret = -1;
-        goto out;
-    }
 
     status = util_wait_for_pid_status(pid);
     if (status < 0) {
         SYSERROR("Failed wait shim-parent %d exit", pid);
+        ret = -1;
+        goto out;
+    }
+
+    // if failed to exec, jump directly to the out branch after waitpid.
+    if (num > 0) {
+        ERROR("%s", exec_buff);
+        isulad_set_error_message("%s", exec_buff);
         ret = -1;
         goto out;
     }
