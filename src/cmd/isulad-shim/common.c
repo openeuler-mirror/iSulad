@@ -193,12 +193,12 @@ int cmd_combined_output(const char *binary, const char *params[], void *output, 
     }
     *output_len = read_nointr(stdio[0], output, BUFSIZ - 1);
 
-    close(stdio[0]);
-    close(exec_fd[0]);
-    wait(&status);
     ret = SHIM_OK;
 
 out:
+    close(stdio[0]);
+    close(exec_fd[0]);
+    wait(&status);
     if (ret != SHIM_OK) {
         kill(pid, 9);
     }

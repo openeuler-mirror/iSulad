@@ -183,23 +183,26 @@ static int shim_bin_v2_create(const char *runtime, const char *id, const char *w
         }
 
         execvp(binary, (char * const *)params);
-        (void)dprintf(exec_fd[1], "exec failed: %s", strerror(errno));
+        (void)dprintf(exec_fd[1], "run process: %s failed: %s", binary, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     close(exec_fd[1]);
     exec_fd[1] = -1;
-    if (util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1) > 0) {
-        ERROR("exec failed: %s", exec_buff);
-        ret = -1;
-        goto out;
-    }
+    nret = util_read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff) - 1);
     close(exec_fd[0]);
     exec_fd[0] = -1;
 
     status = util_wait_for_pid_status(pid);
     if (status < 0) {
         SYSERROR("failed to wait shim-parent %d exit", pid);
+        ret = -1;
+        goto out;
+    }
+
+    // if failed to exec, jump directly to the out branch after waitpid.
+    if (nret > 0) {
+        ERROR("%s", exec_buff);
         ret = -1;
         goto out;
     }
