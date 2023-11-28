@@ -32,7 +32,7 @@ kata-runtime start secure containers with lightweight virtual machines.
 
 ### Image
 
-`iSulad` supports multiple image formats, including OCI, external rootfs and embedded image.
+`iSulad` supports multiple image formats, including OCI and external rootfs.
 
 #### OCI
 
@@ -41,10 +41,6 @@ OCI is a docker-compatible image format that supports pulling images and running
 #### external rootfs
 
 External rootfs allows users to prepare a bootable `root fs` directory, which is mainly used in system container scenarios.
-
-#### embedded image
-
-Embedded image is a unique embedded image format of `iSulad`, which occupies low resources and is mainly used in embedded application scenarios.
 
 ### Operation Interface
 
