@@ -610,6 +610,43 @@ out:
     return ret;
 }
 
+static void transform_stats_info_from_runtime(shim_client_runtime_stats *stats, struct runtime_container_resources_stats_info *info)
+{
+    if (stats == NULL || stats->data == NULL) {
+        return;
+    }
+    if (stats->data->pids != NULL) {
+        info->pids_current = stats->data->pids->current;
+    }
+    if (stats->data->cpu != NULL && stats->data->cpu->usage != NULL) {
+        info->cpu_use_nanos = stats->data->cpu->usage->total;
+        info->cpu_system_use = stats->data->cpu->usage->kernel;
+    }
+    shim_client_runtime_stats_data_memory *memory = stats->data->memory;
+    if (memory != NULL && memory->usage != NULL) {
+        info->mem_used = memory->usage->usage;
+        info->mem_limit = memory->usage->limit;
+    }
+    if (memory != NULL && memory->raw != NULL) {
+        info->inactive_file_total = memory->raw->total_inactive_file;
+        info->rss_bytes = memory->raw->rss;
+        info->page_faults = memory->raw->pgfault;
+        info->major_page_faults = memory->raw->pgmajfault;
+    }
+    shim_client_runtime_stats_data_blkio *blkio = stats->data->blkio;
+    if (blkio == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < blkio->io_service_bytes_recursive_len; i++) {
+        if (strcasecmp(blkio->io_service_bytes_recursive[i]->op, "read") == 0) {
+            info->blkio_read += blkio->io_service_bytes_recursive[i]->value;
+        }
+        if (strcasecmp(blkio->io_service_bytes_recursive[i]->op, "write") == 0) {
+            info->blkio_write += blkio->io_service_bytes_recursive[i]->value;
+        }
+    }
+}
+
 static int runtime_call_stats(const char *workdir, const char *runtime, const char *id,
                               struct runtime_container_resources_stats_info *info)
 {
@@ -658,23 +695,7 @@ static int runtime_call_stats(const char *workdir, const char *runtime, const ch
         goto out;
     }
 
-    if (stats != NULL && stats->data != NULL && stats->data->pids != NULL) {
-        info->pids_current = stats->data->pids->current;
-    }
-    if (stats != NULL && stats->data != NULL && stats->data->cpu != NULL && stats->data->cpu->usage) {
-        info->cpu_use_nanos = stats->data->cpu->usage->total;
-        info->cpu_system_use = stats->data->cpu->usage->kernel;
-    }
-    if (stats != NULL && stats->data != NULL && stats->data->memory != NULL && stats->data->memory->usage) {
-        info->mem_used = stats->data->memory->usage->usage;
-        info->mem_limit = stats->data->memory->usage->limit;
-    }
-    if (stats != NULL && stats->data != NULL && stats->data->memory != NULL && stats->data->memory->raw) {
-        info->inactive_file_total = stats->data->memory->raw->total_inactive_file;
-        info->rss_bytes = stats->data->memory->raw->rss;
-        info->page_faults = stats->data->memory->raw->pgfault;
-        info->major_page_faults = stats->data->memory->raw->pgmajfault;
-    }
+    transform_stats_info_from_runtime(stats, info);
 
 out:
     free_shim_client_runtime_stats(stats);
