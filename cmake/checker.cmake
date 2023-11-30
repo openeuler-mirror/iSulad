@@ -125,7 +125,11 @@ endif()
 
 if (GRPC_CONNECTOR)
     # check protobuf
-    pkg_check_modules(PC_PROTOBUF "protobuf>=3.1.0")
+    if (ENABLE_CRI_API_V1)
+        pkg_check_modules(PC_PROTOBUF "protobuf>=3.14.0")
+    else()
+        pkg_check_modules(PC_PROTOBUF "protobuf>=3.1.0")
+    endif()
     find_library(PROTOBUF_LIBRARY protobuf
         HINTS ${PC_PROTOBUF_LIBDIR} ${PC_PROTOBUF_LIBRARY_DIRS})
     _CHECK(PROTOBUF_LIBRARY "PROTOBUF_LIBRARY-NOTFOUND" "libprotobuf.so")
@@ -136,6 +140,9 @@ if (GRPC_CONNECTOR)
     _CHECK(CMD_GRPC_CPP_PLUGIN "CMD_GRPC_CPP_PLUGIN-NOTFOUND" "grpc_cpp_plugin")
 
     # check grpc
+    if (ENABLE_CRI_API_V1)
+        pkg_check_modules(PC_GRPC++ "grpc++>=1.41.0")
+    endif()
     find_path(GRPC_INCLUDE_DIR grpc/grpc.h)
     _CHECK(GRPC_INCLUDE_DIR "GRPC_INCLUDE_DIR-NOTFOUND" "grpc/grpc.h")
     find_library(GRPC_PP_REFLECTION_LIBRARY grpc++_reflection)
