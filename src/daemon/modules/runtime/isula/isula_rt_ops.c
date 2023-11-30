@@ -564,6 +564,7 @@ out:
 
 static void transform_stats_info_from_runtime(shim_client_runtime_stats *stats, struct runtime_container_resources_stats_info *info)
 {
+    size_t i;
     if (stats == NULL || stats->data == NULL) {
         return;
     }
@@ -586,7 +587,7 @@ static void transform_stats_info_from_runtime(shim_client_runtime_stats *stats, 
     if (blkio == NULL) {
         return;
     }
-    for (size_t i = 0; i < blkio->io_service_bytes_recursive_len; i++) {
+    for (i = 0; i < blkio->io_service_bytes_recursive_len; i++) {
         if (strcasecmp(blkio->io_service_bytes_recursive[i]->op, "read") == 0) {
             info->blkio_read += blkio->io_service_bytes_recursive[i]->value;
         }
