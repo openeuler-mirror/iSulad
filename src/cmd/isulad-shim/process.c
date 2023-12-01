@@ -162,6 +162,7 @@ out:
 
 static int sync_exit_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
 {
+    epoll_loop_del_handler(descr, fd);
     return EPOLL_LOOP_HANDLE_CLOSE;
 }
 
@@ -213,23 +214,13 @@ static int stdout_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     int r_count = 0;
     int w_count = 0;
 
-    if (events & EPOLLHUP) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
-    }
-
-    if (!(events & EPOLLIN)) {
-        return EPOLL_LOOP_HANDLE_CONTINUE;
-    }
-
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
 
-    if (p->block_read) {
-        r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
-    } else {
-        r_count = read(fd, p->buf, DEFAULT_IO_COPY_BUF);
-    }
-    if (r_count <= 0) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
+    r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    if (r_count <= 0 ) {
+        epoll_loop_del_handler(descr, fd);
+        close(fd);
+        return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
     shim_write_container_log_file(p->terminal, STDID_OUT, p->buf, r_count);
@@ -255,23 +246,13 @@ static int stderr_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     int r_count = 0;
     int w_count = 0;
 
-    if (events & EPOLLHUP) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
-    }
-
-    if (!(events & EPOLLIN)) {
-        return EPOLL_LOOP_HANDLE_CONTINUE;
-    }
-
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
 
-    if (p->block_read) {
-        r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
-    } else {
-        r_count = read(fd, p->buf, DEFAULT_IO_COPY_BUF);
-    }
-    if (r_count <= 0) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
+    r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    if (r_count <= 0 ) {
+        epoll_loop_del_handler(descr, fd);
+        close(fd);
+        return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
     shim_write_container_log_file(p->terminal, STDID_ERR, p->buf, r_count);
@@ -297,18 +278,11 @@ static int resize_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     int r_count = 0;
     int resize_fd = -1;
 
-    if (events & EPOLLHUP) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
-    }
-
-    if (!(events & EPOLLIN)) {
-        return EPOLL_LOOP_HANDLE_CONTINUE;
-    }
-
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
     r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
     if (r_count <= 0) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
+        close(fd);
+        return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
     resize_fd = p->recv_fd;
@@ -411,9 +385,12 @@ static stdio_t *initialize_io(process_t *p)
         goto failure;
     }
 
-    /* don't open resize pipe */
-    if ((pipe2(stdio_fd[0], O_CLOEXEC | O_NONBLOCK) != 0) || (pipe2(stdio_fd[1], O_CLOEXEC | O_NONBLOCK) != 0) ||
-        (pipe2(stdio_fd[2], O_CLOEXEC | O_NONBLOCK) != 0)) {
+    /*
+     * don't open resize pipe;
+     * stdio pipes must not set to non-block, because 'cat big-file' will failed;
+     */
+    if ((pipe2(stdio_fd[0], O_CLOEXEC) != 0) || (pipe2(stdio_fd[1], O_CLOEXEC) != 0) ||
+        (pipe2(stdio_fd[2], O_CLOEXEC) != 0)) {
         write_message(ERR_MSG, "open pipe failed when init io:%d", SHIM_SYS_ERR(errno));
         goto failure;
     }
@@ -562,24 +539,6 @@ static int open_generic_io(process_t *p, struct epoll_descr *descr)
     return SHIM_OK;
 }
 
-static int set_non_block(int fd)
-{
-    int flag = -1;
-    int ret = SHIM_ERR;
-
-    flag = fcntl(fd, F_GETFL, 0);
-    if (flag < 0) {
-        return SHIM_ERR;
-    }
-
-    ret = fcntl(fd, F_SETFL, flag | O_NONBLOCK);
-    if (ret != 0) {
-        return SHIM_ERR;
-    }
-
-    return SHIM_OK;
-}
-
 /*
     std_id: channel type
     isulad_stdio: one side of the isulad fifo file
@@ -599,8 +558,6 @@ static int set_non_block(int fd)
 static void *io_epoll_loop(void *data)
 {
     int ret = 0;
-    int fd_out = -1;
-    int fd_err = -1;
     process_t *p = (process_t *)data;
     struct epoll_descr descr;
 
@@ -629,49 +586,23 @@ static void *io_epoll_loop(void *data)
 
     (void)sem_post(&p->sem_mainloop);
 
+    // th frist epoll_loop will exit in the following scenarios: 
+    // 1. Receive sync fd event 
+    // 2. stdin fd receive EPOLLHUP event
+    // 3. stdin fd read failed
     ret = epoll_loop(&descr, -1);
     if (ret != 0) {
         write_message(ERR_MSG, "epoll loop failed");
         exit(EXIT_FAILURE);
     }
 
-    // in order to avoid data loss, set fd non-block and read it
-    p->block_read = false;
-    if (p->state->terminal) {
-        fd_out = p->recv_fd;
-    } else {
-        fd_out = p->shim_io->out;
-        fd_err = p->shim_io->err;
-    }
-
-    if (fd_out > 0) {
-        ret = set_non_block(fd_out);
-        if (ret != SHIM_OK) {
-            write_message(ERR_MSG, "set fd %d non_block failed:%d", fd_out, SHIM_SYS_ERR(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        for (;;) {
-            ret = stdout_cb(fd_out, EPOLLIN, p, &descr);
-            if (ret == EPOLL_LOOP_HANDLE_CLOSE) {
-                break;
-            }
-        }
-    }
-
-    if (fd_err > 0) {
-        ret = set_non_block(fd_err);
-        if (ret != SHIM_OK) {
-            write_message(ERR_MSG, "set fd %d non_block failed:%d", fd_err, SHIM_SYS_ERR(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        for (;;) {
-            ret = stderr_cb(fd_err, EPOLLIN, p, &descr);
-            if (ret == EPOLL_LOOP_HANDLE_CLOSE) {
-                break;
-            }
-        }
+    // use a timeout epoll loop to ensure complete data reception 
+    // th second epoll_loop will exit in the following scenarios: 
+    // 1. both stdout fd and stderr fd failed to read
+    // 2. no event received within 3000 milliseconds
+    ret = epoll_loop(&descr, 3000);
+    if (ret != 0) {
+        write_message(ERR_MSG, "Repeat the epoll loop to ensure that all data is transferred");
     }
 
     return NULL;
@@ -847,7 +778,6 @@ process_t *new_process(char *id, char *bundle, char *runtime)
     p->bundle = bundle;
     p->runtime = runtime;
     p->state = p_state;
-    p->block_read = true;
     p->console_sock_path = NULL;
     p->exit_fd = -1;
     p->io_loop_fd = -1;
