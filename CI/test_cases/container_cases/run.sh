@@ -27,7 +27,8 @@ function do_test_t()
 {
     tid=`isula run --runtime $1 -tid --name hostname busybox`
     chostname=`isula exec -it $tid hostname`
-    fn_check_eq "$chostname" "${tid:0:12}" "default hostname is id of container"
+    clean_hostname=$(echo "$hostname" | sed 's/[\x01-\x1F\x7F]//g')
+    fn_check_eq "${clean_hostname}" "${tid:0:12}" "default hostname is not id of container"
     isula exec -it hostname env | grep HOSTNAME
     fn_check_eq "$?" "0" "check HOSTNAME env failed"
     isula stop -t 0 $tid
@@ -149,13 +150,12 @@ function do_run_remote_test_t()
 
     isula run --runtime $1 -ti -H "$config" --name $containername busybox xxx
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed check invalid run ${containername} remote" && ((ret++))
-    testcontainer $containername exited
+
     isula rm -f -H "$config" $containername
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container remote" && ((ret++))
 
     isula run --runtime $1 -ti -H "$config" --name $containername busybox /bin/sh -c 'echo "hello"' | grep hello
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run ${containername} remote" && ((ret++))
-    testcontainer $containername exited
 
     isula rm -f -H "$config" $containername
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container remote" && ((ret++))

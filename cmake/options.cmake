@@ -110,6 +110,7 @@ option(ENABLE_GRPC_REMOTE_CONNECT "enable gRPC remote connect" OFF)
 if (ENABLE_GRPC_REMOTE_CONNECT STREQUAL "ON")
 	add_definitions(-DENABLE_GRPC_REMOTE_CONNECT=1)
 	set(ENABLE_GRPC_REMOTE_CONNECT 1)
+    message("${Green}--  enable gRPC remote connect${ColourReset}")
 endif()
 
 option(ENABLE_SHIM_V2 "enable shim v2 runtime" OFF)
