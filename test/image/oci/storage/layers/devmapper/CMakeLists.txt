@@ -23,14 +23,18 @@ add_executable(${DRIVER_DEVMAPPER_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/utils/tar/util_gzip.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/utils/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/config/daemon_arguments.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/config/isulad_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/common/selinux_label.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/driver.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/driver_devmapper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/metadata_store.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../mocks/libdevmapper_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../mocks/isulad_config_mock.cc
     driver_devmapper_ut.cc)
 
 target_include_directories(${DRIVER_DEVMAPPER_EXE} PUBLIC
@@ -56,7 +60,7 @@ target_include_directories(${DRIVER_DEVMAPPER_EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../mocks
     )
 
-set_target_properties(${DRIVER_DEVMAPPER_EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_exec_cmd -Wl,--wrap,util_mount -Wl,--wrap,umount2")
+set_target_properties(${DRIVER_DEVMAPPER_EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_exec_cmd -Wl,--wrap,util_mount -Wl,--wrap,umount2 -Wl,--wrap,archive_unpack")
 
 target_link_libraries(${DRIVER_DEVMAPPER_EXE}
     ${GTEST_BOTH_LIBRARIES}
