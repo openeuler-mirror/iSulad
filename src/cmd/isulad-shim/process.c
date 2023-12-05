@@ -599,8 +599,8 @@ static void *io_epoll_loop(void *data)
     // use a timeout epoll loop to ensure complete data reception 
     // th second epoll_loop will exit in the following scenarios: 
     // 1. both stdout fd and stderr fd failed to read
-    // 2. no event received within 3000 milliseconds
-    ret = epoll_loop(&descr, 3000);
+    // 2. no event received within 100 milliseconds
+    ret = epoll_loop(&descr, 100);
     if (ret != 0) {
         write_message(ERR_MSG, "Repeat the epoll loop to ensure that all data is transferred");
     }
