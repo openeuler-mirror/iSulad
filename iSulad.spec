@@ -167,12 +167,6 @@ if [ -e %{_unitdir}/lcrd.service.rpmsave ]; then
     mv %{_unitdir}/lcrd.service.rpmsave %{_unitdir}/isulad.service
     sed -i 's/lcrd/isulad/g' %{_unitdir}/isulad.service
 fi
-systemctl status isulad | grep 'Active:' | grep 'running'
-if [ $? -eq 0 ]; then
-  systemctl restart isulad
-else
-  systemctl start isulad
-fi
 %else
 /sbin/service isulad status | grep 'Active:' | grep 'running'
 if [ $? -eq 0 ]; then
