@@ -1,24 +1,23 @@
 %global _version 2.1.4
-%global _release 1
+%global _release 2
 %global is_systemd 1
 %global enable_criv1 1
 %global enable_shimv2 1
-%global enable_embedded 1
+%global is_embedded 1
+%global cpp_std 17
 
 Name:      iSulad
 Version:   %{_version}
 Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v2
-URL:       isulad
-Source:    iSulad-2.1.tar.gz
+URL:       https://gitee.com/openeuler/iSulad
+Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
-ExclusiveArch:  x86_64 aarch64
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
 Provides:       libisula_client.so()(64bit)
-Provides:       libisulad_img.so()(64bit)
 Provides:       libisulad_tools.so()(64bit)
 %endif
 
@@ -33,40 +32,56 @@ Requires(preun): chkconfig
 Requires(preun): initscripts
 %endif
 
-%if 0%{?enable_embedded}
+%if 0%{?is_embedded}
 BuildRequires: sqlite-devel
-Requires:      sqlite
+Requires: sqlite
 %endif
 
+%if %{defined openeuler}
+BuildRequires: gtest-devel gmock-devel
+%endif
+
+%define lcrver_lower 2.1.3-0
+%define lcrver_upper 2.1.4-0
+
+BuildRequires: libisula-devel > %{lcrver_lower} libisula-devel < %{lcrver_upper}
+BuildRequires: cmake gcc-c++ yajl-devel
+BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
+BuildRequires: libcurl libcurl-devel libarchive-devel device-mapper-devel
+BuildRequires: http-parser-devel
+BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
+BuildRequires: systemd-devel git
+BuildRequires: libevhtp-devel libevent-devel
 %if 0%{?enable_shimv2}
-BuildRequires: lib-shim-v2-devel
+BuildRequires: lib-shim-v2 lib-shim-v2-devel
+%endif
+
+
+Requires:      libisula > %{lcrver_lower} libisula < %{lcrver_upper}
+Requires:      grpc protobuf
+Requires:      libcurl
+Requires:      http-parser libseccomp
+Requires:      libcap libselinux libwebsockets libarchive device-mapper
+Requires:      systemd
+Requires:      (docker-runc or runc)
+BuildRequires: libevhtp libevent
+%if 0%{?enable_shimv2}
 Requires:      lib-shim-v2
 %endif
-
-BuildRequires: cmake gcc-c++ lxc-devel lcr-devel yajl-devel libisula-devel
-BuildRequires: grpc-plugins grpc-devel protobuf-devel
-BuildRequires: libcurl-devel libarchive-devel device-mapper-devel
-BuildRequires: http-parser-devel
-BuildRequires: libselinux-devel libwebsockets-devel
-BuildRequires: systemd-devel git
-
-Requires:      libisula lxc
-Requires:      grpc libcurl http-parser
-Requires:      libselinux libwebsockets libarchive device-mapper
-Requires:      systemd
 
 %description
 This is a umbrella project for gRPC-services based Lightweight Container
 Runtime Daemon, written by C.
 
 %prep
-%autosetup -c -n iSulad-%{version}
+%autosetup -n iSulad-v%{_version} -Sgit -p1
 
 %build
 mkdir -p build
 cd build
 %cmake \
     -DDEBUG=ON \
+    -DCMAKE_SKIP_RPATH=TRUE \
     -DLIB_INSTALL_DIR=%{_libdir} \
     -DCMAKE_INSTALL_PREFIX=/usr \
 %if 0%{?enable_criv1}
@@ -76,36 +91,47 @@ cd build
 %if 0%{?enable_shimv2}
     -DENABLE_SHIM_V2=ON \
 %endif
+%if %{defined openeuler}
+    -DENABLE_UT=OFF \
+%endif
+    -DENABLE_GRPC_REMOTE_CONNECT=OFF \
+    -DENABLE_GRPC=ON \
+    -DCMAKE_CXX_STANDARD=%{cpp_std} \
     ../
+
+sed -i "10 a\# undef linux" grpc/src/api/services/cri/v1alpha/api.pb.h
+%if 0%{?enable_criv1}
+sed -i "10 a\# undef linux" grpc/src/api/services/cri/v1/api_v1.pb.h
+%endif
+
 %make_build
+
+%check
+%if %{defined openeuler}
+cd build
+# registry_images_ut and volume_ut must run with root user
+ctest -E "registry_images_ut|volume_ut"
+%endif
 
 %install
 rm -rf %{buildroot}
 cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
-install -m 0644 ./src/libisula_client.so             %{buildroot}/%{_libdir}/libisula_client.so
-install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
-chrpath -d ./src/libisulad_tools.so
-install -m 0644 ./src/libisulad_tools.so  %{buildroot}/%{_libdir}/libisulad_tools.so
-chrpath -d ./src/daemon/modules/image/libisulad_img.so
-install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
-chmod +x %{buildroot}/%{_libdir}/libisula_client.so
-chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
-chmod +x %{buildroot}/%{_libdir}/libisulad_img.so
+install -m 0755 ./src/libisula_client.so             %{buildroot}/%{_libdir}/libisula_client.so
+install -m 0755 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+install -m 0755 ./src/libisulad_tools.so  %{buildroot}/%{_libdir}/libisulad_tools.so
 
 install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
 
 install -d $RPM_BUILD_ROOT/%{_bindir}
+
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
 install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
-install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
-chrpath -d ./src/isula
-chrpath -d ./src/isulad-shim
-chrpath -d ./src/isulad
+
+install -m 0755 ./src/isulad                 %{buildroot}/%{_bindir}/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
-install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_includedir}/isulad/image_api.h
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
 install -m 0640 ../src/contrib/config/daemon.json           %{buildroot}/%{_sysconfdir}/isulad/daemon.json
@@ -134,8 +160,6 @@ install -d $RPM_BUILD_ROOT/%{_initddir}
 install -p -m 0640 ../src/contrib/init/isulad.init $RPM_BUILD_ROOT/%{_initddir}/isulad.init
 %endif
 
-install -d $RPM_BUILD_ROOT/usr/share/bash-completion/completions
-install -p -m 0644 ../src/contrib/completion/isula $RPM_BUILD_ROOT/usr/share/bash-completion/completions/isula
 %clean
 rm -rf %{buildroot}
 
@@ -143,19 +167,17 @@ rm -rf %{buildroot}
 # support update from lcrd to isulad, will remove in next version
 if [ "$1" = "2" ]; then
 %if 0%{?is_systemd}
-systemctl stop lcrd
-systemctl disable lcrd
+systemctl stop lcrd &>/dev/null
+systemctl disable lcrd &>/dev/null
 if [ -e %{_sysconfdir}/isulad/daemon.json ];then
     sed -i 's#/etc/default/lcrd/hooks#/etc/default/isulad/hooks#g' %{_sysconfdir}/isulad/daemon.json
 fi
 %else
-/sbin/chkconfig --del lcrd
+/sbin/chkconfig --del lcrd &>/dev/null
 %endif
 fi
 
 %post
-source /usr/share/bash-completion/completions/isula
-
 if ! getent group isula > /dev/null; then
     groupadd --system isula
 fi
@@ -173,12 +195,6 @@ elif [ "$1" = "2" ]; then
 if [ -e %{_unitdir}/lcrd.service.rpmsave ]; then
     mv %{_unitdir}/lcrd.service.rpmsave %{_unitdir}/isulad.service
     sed -i 's/lcrd/isulad/g' %{_unitdir}/isulad.service
-fi
-systemctl status isulad | grep 'Active:' | grep 'running'
-if [ $? -eq 0 ]; then
-  systemctl restart isulad
-else
-  systemctl start isulad
 fi
 %else
 /sbin/service isulad status | grep 'Active:' | grep 'running'
@@ -226,7 +242,6 @@ fi
 %{_initddir}/isulad.init
 %attr(0640,root,root) %{_initddir}/isulad.init
 %endif
-%{_includedir}/isulad/*
 %attr(0755,root,root) %{_libdir}/pkgconfig
 %attr(0640,root,root) %{_libdir}/pkgconfig/isulad.pc
 %defattr(0755,root,root,0755)
@@ -242,17 +257,5 @@ fi
 %else
 %config(noreplace,missingok) %{_initddir}/isulad.init
 %endif
-/usr/share/bash-completion/completions/isula
 
 %changelog
-* Tue Sep 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 2.0.5-20200910.140350.git72990229
-- Type:enhancement
-- ID:NA
-- SUG:NA
-- DESC: add chrpath
-
-* Mon Aug 03 2020 openEuler Buildteam <buildteam@openeuler.org> - 2.0.3-20200803.130854.git0c7dc28a
-- Type:enhancement
-- ID:NA
-- SUG:NA
-- DESC: add debug packages
