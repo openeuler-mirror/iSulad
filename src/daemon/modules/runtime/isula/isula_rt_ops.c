@@ -57,7 +57,7 @@
 
 #define SHIM_BINARY "isulad-shim"
 #define RESIZE_FIFO_NAME "resize_fifo"
-#define ATTACH_SOCKET "attach_socket.sock"
+#define ATTACH_SOCKET "attach.sock"
 #define SHIM_LOG_SIZE ((BUFSIZ - 100) / 2)
 #define RESIZE_DATA_SIZE 100
 #define PID_WAIT_TIME 120
