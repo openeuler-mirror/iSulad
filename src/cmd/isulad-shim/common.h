@@ -60,7 +60,7 @@ extern "C" {
 #define CONTAINER_ACTION_REBOOT 129
 #define CONTAINER_ACTION_SHUTDOWN 130
 
-#define ATTACH_SOCKET "attach_socket.sock"
+#define ATTACH_SOCKET "attach.sock"
 #define ATTACH_LOG_NAME "attach-log.json"
 #define ATTACH_DETACH_MSG "read escape sequence"
 #define MAX_ATTACH_NUM 16
