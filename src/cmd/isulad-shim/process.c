@@ -219,7 +219,6 @@ static int stdout_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
     if (r_count <= 0 ) {
         epoll_loop_del_handler(descr, fd);
-        close(fd);
         return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
@@ -251,7 +250,6 @@ static int stderr_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *
     r_count = read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
     if (r_count <= 0 ) {
         epoll_loop_del_handler(descr, fd);
-        close(fd);
         return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
