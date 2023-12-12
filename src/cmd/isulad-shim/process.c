@@ -169,6 +169,7 @@ static int get_exec_winsize(const char *buf, struct winsize *wsize)
 
 static int sync_exit_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t *descr)
 {
+    isula_epoll_remove_handler(descr, fd);
     return EPOLL_LOOP_HANDLE_CLOSE;
 }
 
@@ -364,23 +365,14 @@ static int stdout_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
     int r_count = 0;
     int w_count = 0;
 
-    if (events & EPOLLHUP) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
-    }
-
-    if (!(events & EPOLLIN)) {
-        return EPOLL_LOOP_HANDLE_CONTINUE;
-    }
-
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
 
-    if (p->block_read) {
-        r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
-    } else {
-        r_count = read(fd, p->buf, DEFAULT_IO_COPY_BUF);
-    }
-    if (r_count <= 0) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
+    r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    if (r_count <= 0 ) {
+        isula_epoll_remove_handler(descr, fd);
+        // fd cannot be closed here, which will cause the container process to exit abnormally
+        // due to terminal fd receiving the sighup signal.
+        return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
     shim_write_container_log_file(p->terminal, STDID_OUT, p->buf, r_count);
@@ -419,23 +411,14 @@ static int stderr_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
     int r_count = 0;
     int w_count = 0;
 
-    if (events & EPOLLHUP) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
-    }
-
-    if (!(events & EPOLLIN)) {
-        return EPOLL_LOOP_HANDLE_CONTINUE;
-    }
-
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
 
-    if (p->block_read) {
-        r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
-    } else {
-        r_count = read(fd, p->buf, DEFAULT_IO_COPY_BUF);
-    }
-    if (r_count <= 0) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
+    r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
+    if (r_count <= 0 ) {
+        isula_epoll_remove_handler(descr, fd);
+        // fd cannot be closed here, which will cause the container process to exit abnormally
+        // due to terminal fd receiving the sighup signal.
+        return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
     shim_write_container_log_file(p->terminal, STDID_ERR, p->buf, r_count);
@@ -474,18 +457,11 @@ static int resize_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
     int r_count = 0;
     int resize_fd = -1;
 
-    if (events & EPOLLHUP) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
-    }
-
-    if (!(events & EPOLLIN)) {
-        return EPOLL_LOOP_HANDLE_CONTINUE;
-    }
-
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
     r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
     if (r_count <= 0) {
-        return EPOLL_LOOP_HANDLE_CLOSE;
+        close(fd);
+        return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
     resize_fd = p->recv_fd;
@@ -915,8 +891,6 @@ static int open_generic_io(process_t *p, isula_epoll_descr_t *descr)
 static void *io_epoll_loop(void *data)
 {
     int ret = 0;
-    int fd_out = -1;
-    int fd_err = -1;
     process_t *p = (process_t *)data;
     isula_epoll_descr_t descr;
 
@@ -953,49 +927,23 @@ static void *io_epoll_loop(void *data)
 
     (void)sem_post(&p->sem_mainloop);
 
+    // th frist epoll_loop will exit in the following scenarios: 
+    // 1. Receive sync fd event 
+    // 2. stdin fd receive EPOLLHUP event
+    // 3. stdin fd read failed
     ret = isula_epoll_loop(&descr, -1);
     if (ret != 0) {
         write_message(ERR_MSG, "epoll loop failed");
         exit(EXIT_FAILURE);
     }
 
-    // in order to avoid data loss, set fd non-block and read it
-    p->block_read = false;
-    if (p->state->terminal) {
-        fd_out = p->recv_fd;
-    } else {
-        fd_out = p->shim_io->out;
-        fd_err = p->shim_io->err;
-    }
-
-    if (fd_out > 0) {
-        ret = isula_set_non_block(fd_out);
-        if (ret != SHIM_OK) {
-            write_message(ERR_MSG, "set fd %d non_block failed:%d", fd_out, SHIM_SYS_ERR(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        for (;;) {
-            ret = stdout_cb(fd_out, EPOLLIN, p, &descr);
-            if (ret == EPOLL_LOOP_HANDLE_CLOSE) {
-                break;
-            }
-        }
-    }
-
-    if (fd_err > 0) {
-        ret = isula_set_non_block(fd_err);
-        if (ret != SHIM_OK) {
-            write_message(ERR_MSG, "set fd %d non_block failed:%d", fd_err, SHIM_SYS_ERR(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        for (;;) {
-            ret = stderr_cb(fd_err, EPOLLIN, p, &descr);
-            if (ret == EPOLL_LOOP_HANDLE_CLOSE) {
-                break;
-            }
-        }
+    // use a timeout epoll loop to ensure complete data reception 
+    // th second epoll_loop will exit in the following scenarios: 
+    // 1. both stdout fd and stderr fd failed to read
+    // 2. no event received within 100 milliseconds
+    ret = isula_epoll_loop(&descr, 100);
+    if (ret != 0) {
+        write_message(ERR_MSG, "Repeat the epoll loop to ensure that all data is transferred");
     }
 
     return NULL;
@@ -1220,7 +1168,6 @@ process_t *new_process(char *id, char *bundle, char *runtime)
     p->bundle = bundle;
     p->runtime = runtime;
     p->state = p_state;
-    p->block_read = true;
     p->console_sock_path = NULL;
     p->exit_fd = -1;
     p->io_loop_fd = -1;

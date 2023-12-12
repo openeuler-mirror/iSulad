@@ -55,7 +55,6 @@ typedef struct process {
     int sync_fd;
     int listen_fd;
     int recv_fd;
-    bool block_read;
     log_terminal *terminal;
     stdio_t *stdio; // shim to on runtime side, in:r out/err: w
     stdio_t *shim_io; // shim io on isulad side, in: w  out/err: r
