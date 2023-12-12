@@ -31,8 +31,8 @@ ctest
 lcov --directory . --capture --output-file coverage.info --rc lcov_branch_coverage=1
 # Remove std/build files
 lcov --remove coverage.info '/usr/*' -o coverage.info --rc lcov_branch_coverage=1
-lcov --remove coverage.info 'build/*' -o coverage.info --rc lcov_branch_coverage=1
-lcov --remove coverage.info 'test/*' -o coverage.info --rc lcov_branch_coverage=1
+lcov --remove coverage.info "$ISULAD_SRC_PATH/build/*" -o coverage.info --rc lcov_branch_coverage=1
+lcov --remove coverage.info "$ISULAD_SRC_PATH/test/*" -o coverage.info --rc lcov_branch_coverage=1
 
 # Generate html
 genhtml --ignore-errors source -o $GCOV_RESULT_PATH/coverage coverage.info --branch-coverage --rc lcov_branch_coverage=1
