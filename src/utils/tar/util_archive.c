@@ -182,6 +182,26 @@ unlock_out:
     return ret;
 }
 
+static int is_parent_directory(const char *parent_path, const char *child_path)
+{
+    size_t parent_len = strlen(parent_path);
+    size_t child_len = strlen(child_path);
+
+    if (parent_len == 0 || child_len == 0 || parent_len >= child_len) {
+        return -1;
+    }
+
+    if (strncmp(parent_path, child_path, parent_len) != 0) {
+        return -1;
+    }
+
+    if (child_path[parent_len] != '/') {
+        return -1;
+    }
+
+    return 0;
+}
+
 static int make_safedir_is_noexec(const char *flock_path, const char *dstdir, char **safe_dir)
 {
     struct stat buf;
@@ -232,6 +252,12 @@ static int make_safedir_is_noexec(const char *flock_path, const char *dstdir, ch
 
     // ensure mode of new safe dir, same to dstdir
     if (util_mkdir_p(tmp_dir, buf.st_mode) != 0) {
+        return -1;
+    }
+
+    // prevent the parent directory from being bind mounted to the subdirectory
+    if (is_parent_directory(dstdir, tmp_dir) == 0) {
+        ERROR("Cannot bind mount the parent directory: %s to its subdirectory: %s", dstdir, tmp_dir);
         return -1;
     }
 
