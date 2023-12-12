@@ -20,18 +20,19 @@
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
+#include "sysinfo.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int verify_container_settings(const oci_runtime_spec *container);
+int verify_container_settings(const oci_runtime_spec *container, const sysinfo_t *sysinfo);
 
 int verify_oci_hook(const oci_runtime_spec_hooks *h);
 
 int verify_container_settings_start(const oci_runtime_spec *oci_spec);
 
-int verify_host_config_settings(host_config *hostconfig, bool update);
+int verify_host_config_settings(host_config *hostconfig, const sysinfo_t *sysinfo, bool update);
 
 int verify_container_config(const container_config *container_spec, const char *runtime);
 

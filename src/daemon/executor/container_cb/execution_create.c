@@ -145,7 +145,7 @@ static int merge_external_rootfs_to_host_config(host_config *host_spec, const ch
     return 0;
 }
 
-static host_config *get_host_spec(const container_create_request *request)
+static host_config *get_host_spec(const container_create_request *request, const sysinfo_t *sysinfo)
 {
     host_config *host_spec = NULL;
 
@@ -158,7 +158,7 @@ static host_config *get_host_spec(const container_create_request *request)
         goto error_out;
     }
 
-    if (verify_host_config_settings(host_spec, false)) {
+    if (verify_host_config_settings(host_spec, sysinfo, false)) {
         ERROR("Failed to verify host config settings");
         goto error_out;
     }
@@ -1109,17 +1109,9 @@ static int preparate_runtime_environment(const container_create_request *request
     return 0;
 }
 
-static int adapt_host_spec(host_config *host_spec)
+static int adapt_host_spec(host_config *host_spec, const sysinfo_t *sysinfo)
 {
     int ret = 0;
-    sysinfo_t *sysinfo = NULL;
-
-    sysinfo = get_sys_info(true);
-    if (sysinfo == NULL) {
-        ERROR("Can not get system info");
-        ret = -1;
-        goto out;
-    }
 
     if (host_spec->memory > 0 && host_spec->memory_swap == 0 && sysinfo->cgmeminfo.swap) {
         if (host_spec->memory > (INT64_MAX / 2)) {
@@ -1136,14 +1128,14 @@ out:
 }
 
 static int get_basic_spec(const container_create_request *request, host_config **host_spec,
-                          container_config **container_spec)
+                          container_config **container_spec, const sysinfo_t *sysinfo)
 {
-    *host_spec = get_host_spec(request);
+    *host_spec = get_host_spec(request, sysinfo);
     if (*host_spec == NULL) {
         return -1;
     }
 
-    if (adapt_host_spec(*host_spec) != 0) {
+    if (adapt_host_spec(*host_spec, sysinfo) != 0) {
         return -1;
     }
 
@@ -1393,6 +1385,7 @@ int container_create_cb(const container_create_request *request, container_creat
     int ret = 0;
     bool skip_id_name_manage = false;
     bool skip_sandbox_key_manage = false;
+    __isula_auto_sysinfo_t sysinfo_t *sysinfo = NULL;
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -1413,7 +1406,14 @@ int container_create_cb(const container_create_request *request, container_creat
         goto clean_nameindex;
     }
 
-    if (get_basic_spec(request, &host_spec, &container_spec) != 0) {
+    sysinfo = get_sys_info(true);
+    if (sysinfo == NULL) {
+        ERROR("Failed to get system info");
+        cc = ISULAD_ERR_EXEC;
+        goto clean_nameindex;
+    }
+
+    if (get_basic_spec(request, &host_spec, &container_spec, sysinfo) != 0) {
         cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;
     }
@@ -1540,7 +1540,7 @@ int container_create_cb(const container_create_request *request, container_creat
         goto clean_netns;
     }
 
-    if (verify_container_settings(oci_spec) != 0) {
+    if (verify_container_settings(oci_spec, sysinfo) != 0) {
         ERROR("Failed to verify container settings");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;

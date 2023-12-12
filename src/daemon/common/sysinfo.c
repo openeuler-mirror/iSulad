@@ -19,7 +19,6 @@
 #include <errno.h>
 #include <sys/sysinfo.h>
 
-#include <isula_libutils/auto_cleanup.h>
 #include <isula_libutils/log.h>
 
 #include "err_msg.h"
@@ -29,8 +28,6 @@
 
 #define etcOsRelease "/etc/os-release"
 #define altOsRelease "/usr/lib/os-release"
-
-static sysinfo_t *g_sysinfo = NULL;
 
 static char *get_pagesize(const char *pline)
 {
@@ -382,10 +379,6 @@ sysinfo_t *get_sys_info(bool quiet)
     sysinfo_t *sysinfo = NULL;
     int ret = 0;
 
-    if (g_sysinfo != NULL) {
-        return g_sysinfo;
-    }
-
     sysinfo = util_common_calloc_s(sizeof(sysinfo_t));
     if (sysinfo == NULL) {
         ERROR("Out of memory");
@@ -413,7 +406,6 @@ sysinfo_t *get_sys_info(bool quiet)
     if (ret != 0) {
         goto out;
     }
-    g_sysinfo = sysinfo;
 out:
     if (ret != 0) {
         free_sysinfo(sysinfo);
@@ -577,7 +569,7 @@ char *sysinfo_cgroup_controller_cpurt_mnt_path(void)
     __isula_auto_free char *mnt = NULL;
     __isula_auto_free char *root = NULL;
     char fpath[PATH_MAX] = { 0 };
-    sysinfo_t *sysinfo = NULL;
+    __isula_auto_sysinfo_t sysinfo_t *sysinfo = NULL;
 
     sysinfo = get_sys_info(true);
     if (sysinfo == NULL) {

@@ -21,6 +21,7 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "cgroup.h"
 
@@ -95,6 +96,11 @@ mountinfo_t *find_mount_info(mountinfo_t **minfos, const char *dir);
 void free_mounts_info(mountinfo_t **minfos);
 
 char *sysinfo_cgroup_controller_cpurt_mnt_path(void);
+
+// define auto free function callback for sysinfo_t
+define_auto_cleanup_callback(free_sysinfo, sysinfo_t)
+// define auto free macro for sysinfo_t
+#define __isula_auto_sysinfo_t auto_cleanup_tag(free_sysinfo)
 
 #ifdef __cplusplus
 }
