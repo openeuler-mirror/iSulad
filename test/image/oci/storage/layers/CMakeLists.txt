@@ -1,5 +1,7 @@
 project(iSulad_UT)
 
+add_subdirectory(devmapper)
+
 # storage_driver_ut
 SET(DRIVER_EXE storage_driver_ut)
 
