@@ -128,7 +128,7 @@ static void do_disable_unneccessary_caps()
 // Add flock when bind mount and make it private.
 // Because bind mount usually makes safedir shared mount point,
 // and sometimes it will cause "mount point explosion".
-// E.g. concurrently execute isula cp /tmp/<XXX-File> <CONTAINER-ID>:<CONTAINER-PAT>
+// E.g. concurrently execute isula cp DEFAULT_ISULAD_TMPDIR/<XXX-File> <CONTAINER-ID>:<CONTAINER-PAT>
 static int bind_mount_with_flock(const char *flock_path, const char *dstdir, const char *tmp_dir)
 {
     int fd = -1;
@@ -189,9 +189,10 @@ static int make_safedir_is_noexec(const char *flock_path, const char *dstdir, ch
     int nret;
 
     isulad_tmpdir_env = getenv("ISULAD_TMPDIR");
-    if (!util_valid_str(isulad_tmpdir_env)) {
-        // if not setted isulad tmpdir, just use /tmp
-        isulad_tmpdir_env = "/tmp";
+    if (!util_valid_isulad_tmpdir(isulad_tmpdir_env)) {
+        INFO("if not setted isulad tmpdir or setted unvalid dir, use DEFAULT_ISULAD_TMPDIR");
+        // if not setted isulad tmpdir, just use DEFAULT_ISULAD_TMPDIR
+        isulad_tmpdir_env = DEFAULT_ISULAD_TMPDIR;
     }
 
     nret = snprintf(isula_tmpdir, PATH_MAX, "%s/isulad_tmpdir", isulad_tmpdir_env);
