@@ -203,12 +203,12 @@ void do_isulad_tmpdir_cleaner(void)
     char *isula_tmp_dir = NULL;
 
     isula_tmp_dir = getenv("ISULAD_TMPDIR");
-    if (util_valid_str(isula_tmp_dir)) {
+    if (util_valid_isulad_tmpdir(isula_tmp_dir)) {
         cleanup_path(isula_tmp_dir);
     }
     // No matter whether ISULAD_TMPDIR is set or not,
-    // clean up the "/tmp" directory to prevent the mount point from remaining
-    cleanup_path("/tmp");
+    // clean up the DEFAULT_ISULAD_TMPDIR directory to prevent the mount point from remaining
+    cleanup_path(DEFAULT_ISULAD_TMPDIR);
 
     return;
 }

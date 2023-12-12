@@ -595,7 +595,7 @@ char *oci_get_isulad_tmpdir(const char *root_dir)
     }
 
     env_dir = getenv("ISULAD_TMPDIR");
-    if (util_valid_str(env_dir)) {
+    if (util_valid_isulad_tmpdir(env_dir)) {
         isulad_tmpdir = util_path_join(env_dir, "isulad_tmpdir");
     } else {
         isulad_tmpdir = util_path_join(root_dir, "isulad_tmpdir");

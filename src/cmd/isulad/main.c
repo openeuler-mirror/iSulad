@@ -1295,8 +1295,8 @@ static int ensure_isulad_tmpdir_security()
     char *isulad_tmp_dir = NULL;
 
     isulad_tmp_dir = getenv("ISULAD_TMPDIR");
-    if (!util_valid_str(isulad_tmp_dir)) {
-        isulad_tmp_dir = "/tmp";
+    if (!util_valid_isulad_tmpdir(isulad_tmp_dir)) {
+        isulad_tmp_dir = DEFAULT_ISULAD_TMPDIR;
     }
 
     if (do_ensure_isulad_tmpdir_security(isulad_tmp_dir) != 0) {
@@ -1304,14 +1304,15 @@ static int ensure_isulad_tmpdir_security()
         return -1;
     }
 
-    if (strcmp(isulad_tmp_dir, "/tmp") == 0) {
+    if (strcmp(isulad_tmp_dir, DEFAULT_ISULAD_TMPDIR) == 0) {
         return 0;
     }
 
     // No matter whether ISULAD_TMPDIR is set or not,
-    // ensure the "/tmp" directory is a safe directory
-    if (do_ensure_isulad_tmpdir_security("/tmp") != 0) {
-        WARN("Failed to ensure the /tmp directory is a safe directory");
+    // ensure the DEFAULT_ISULAD_TMPDIR directory is a safe directory
+    // TODO: if isula is no longer tarred in the future, we can delete it.
+    if (do_ensure_isulad_tmpdir_security(DEFAULT_ISULAD_TMPDIR) != 0) {
+        WARN("Failed to ensure the default ISULAD_TMPDIR : %s directory is a safe directory", DEFAULT_ISULAD_TMPDIR);
     }
 
     return 0;
