@@ -22,5 +22,5 @@
 #SYSMONITOR_OPTIONS='-H tcp://127.0.0.1:2375 --tlsverify --tlscacert=/root/.iSulad/ca.pem --tlscert=/root/.iSulad/cert.pem --tlskey=/root/.iSulad/key.pem'
 
 # Location used for temporary files, such as those created by isula load and pull operations.
-# Default is /var/tmp. Can be overridden by setting the following env variable.
-# ISULAD_TMPDIR=/var/tmp
+# Default is /var/lib/isulad. Can be overridden by setting the following env variable.
+# ISULAD_TMPDIR=/var/lib/isulad

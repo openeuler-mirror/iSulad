@@ -128,6 +128,8 @@ bool util_valid_sysctl(const char *sysctl_key);
 
 bool util_valid_volume_name(const char *name);
 
+bool util_valid_isulad_tmpdir(const char *dir);
+
 #ifdef __cplusplus
 }
 #endif

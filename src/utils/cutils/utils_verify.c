@@ -815,3 +815,8 @@ bool util_valid_volume_name(const char *name)
 
     return util_reg_match(patten, name) == 0;
 }
+
+bool util_valid_isulad_tmpdir(const char *dir)
+{
+    return util_valid_str(dir) && strcmp(dir, "/tmp") != 0;
+}
