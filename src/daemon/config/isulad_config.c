@@ -32,7 +32,6 @@
 
 #include "constants.h"
 #include "utils.h"
-#include "sysinfo.h"
 #include "err_msg.h"
 #include "daemon_arguments.h"
 #include "utils_array.h"
