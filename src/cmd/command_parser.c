@@ -438,7 +438,7 @@ int command_valid_socket_append_array(command_option_t *option, const char *arg)
     }
 
     if (util_array_append(option->data, arg) != 0) {
-        ERROR("merge hosts config failed");
+        COMMAND_ERROR("Merge hosts config failed");
         return -1;
     }
     len++;
