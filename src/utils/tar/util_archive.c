@@ -232,6 +232,12 @@ static int make_safedir_is_noexec(const char *flock_path, const char *dstdir, ch
         return -1;
     }
 
+    // prevent the parent directory from being bind mounted to the subdirectory
+    if (is_parent_directory(dstdir, tmp_dir) == 0) {
+        ERROR("Cannot bind mount the parent directory: %s to its subdirectory: %s", dstdir, tmp_dir);
+        return -1;
+    }
+
     if (stat(dstdir, &buf) < 0) {
         SYSERROR("Check chroot dir failed");
         return -1;
@@ -249,12 +255,6 @@ static int make_safedir_is_noexec(const char *flock_path, const char *dstdir, ch
 
     // ensure mode of new safe dir, same to dstdir
     if (util_mkdir_p(tmp_dir, buf.st_mode) != 0) {
-        return -1;
-    }
-
-    // prevent the parent directory from being bind mounted to the subdirectory
-    if (is_parent_directory(dstdir, tmp_dir) == 0) {
-        ERROR("Cannot bind mount the parent directory: %s to its subdirectory: %s", dstdir, tmp_dir);
         return -1;
     }
 
