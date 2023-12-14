@@ -36,6 +36,12 @@ struct client_arguments g_cmd_pull_args = {};
 static bool is_terminal_show_supported()
 {
 #ifdef GRPC_CONNECTOR
+    // if stdout is not tty, just ingore progress
+    if (!isatty(STDOUT_FILENO)) {
+        WARN("Stdout is not tty device, just ignore progress.");
+        return false;
+    }
+
     // Initialize the terminfo database
     setupterm(NULL, STDOUT_FILENO, (int *)0);
 

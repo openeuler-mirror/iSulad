@@ -77,6 +77,14 @@ int try_fill_image_spec(image_t *img, const char *id, const char *image_store_di
         goto out;
     }
 
+    // for new_image(), first try will failed because config file not exist
+    // and image_store_set_big_data() will retry this function
+    if (!util_file_exists(config_file)) {
+        WARN("Oci image spec: %s not found.", config_file);
+        ret = -1;
+        goto out;
+    }
+
     img->spec = oci_image_spec_parse_file(config_file, NULL, &err);
     if (img->spec == NULL) {
         ERROR("Failed to parse oci image spec: %s", err);
