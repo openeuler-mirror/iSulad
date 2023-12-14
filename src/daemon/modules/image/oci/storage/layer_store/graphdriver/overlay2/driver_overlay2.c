@@ -1133,7 +1133,12 @@ static char *read_layer_lower_file(const char *layer_dir)
         goto out;
     }
 
+    // lowest layer do not have lower file
+    if (!util_file_exists(lower_file)) {
+        goto out;
+    }
     lower = util_read_text_file(lower_file);
+
 out:
     free(lower_file);
     return lower;
