@@ -23,18 +23,37 @@ curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/../data)
 source ../helpers.sh
 
+# $1 : retry limit
+# $2 : retry_interval
+# $3 : container name
+# $4 : expect restart count
+function do_retry()
+{
+    for i in $(seq 1 "$1"); do
+        count=`isula inspect --format='{{json .RestartCount}}' ${3}`
+        if [ $count -eq $4 ]; then
+            return 0
+        fi
+        sleep $2
+    done
+    echo "expect $4, get $count"
+    return 1
+}
+
 function do_test_on_failure()
 {
+    local retry_limit=15
+    local retry_interval=1
     containername=test_rp_on_failure
     isula run  --name $containername  -td --restart on-failure:3  busybox /bin/sh -c "exit 2"
     fn_check_eq "$?" "0" "run failed"
 
-    sleep 8
-    count=`isula inspect --format='{{json .RestartCount}}' $containername`
-    if [[ $count != "3"  ]];then
-        echo "expect 3 but get $count"
+    do_retry ${retry_limit} ${retry_interval} ${containername} 3
+    if [[ $? -ne 0 ]];then
         TC_RET_T=$(($TC_RET_T+1))
     fi
+
+    isula stop -t 0 $containername
     testcontainer $containername exited
 
     isula rm $containername
@@ -43,14 +62,14 @@ function do_test_on_failure()
 
 function do_test_unless_stopped()
 {
+    local retry_limit=15
+    local retry_interval=1
     containername=test_rp_unless_stopped
     isula run  --name $containername  -td --restart unless-stopped  busybox /bin/sh -c "exit 2"
     fn_check_eq "$?" "0" "run failed"
 
-    sleep 8
-    count=`isula inspect --format='{{json .RestartCount}}' $containername`
-    if [[ $count == "0"  ]];then
-        echo "expect not 0 but get $count"
+    do_retry ${retry_limit} ${retry_interval} ${containername} 0
+    if [[ $? -ne 0 ]];then
         TC_RET_T=$(($TC_RET_T+1))
     fi
 

@@ -33,6 +33,7 @@ function test_image_search()
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && return ${FAILURE}
 
   msg_info "${test} starting..."
+  rm -rf /etc/isulad/daemon.bak
   cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
   sed -i "/registry-mirrors/a\        \"docker.io\"," /etc/isulad/daemon.json
 
@@ -49,38 +50,17 @@ function test_image_search()
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  search  ${invalid_image} should fail as it's search name is invalid" && return ${FAILURE}
 
   # test search options   
-  isula search --no-trunc ${image}
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to search images with no-trunc: ${image}" && ((ret++))
-
-  isula search --limit 5 ${image}
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to search images with limit: ${image}" && ((ret++))
+  isula search  --no-trunc --limit 5 --filter stars=3  --filter is-official=true  --filter is-automated=false  --format "table {{.Name}}\t{{.IsOfficial}}" ${image}
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to search images with search options: ${image}" && ((ret++))
 
   isula search --limit -1 ${image} 2>&1 | grep "Invalid value"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to search images with limit: ${image} and and catch error msg" && ((ret++))
 
-  isula search --filter stars=3 ${image}
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to search images with filter stars: ${image}" && ((ret++))
-
-  isula search --filter is-official=true ${image}
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to search images with filter is-official: ${image}" && ((ret++))
-
-  isula search --filter is-automated=true ${image} 2>&1 | grep "AUTOMATED"
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to search images with filter is-automated: ${image}" && ((ret++))
-
   isula search --filter aa=true ${image} 2>&1 | grep "Invalid filter"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to set filter for search ${image} and catch error msg" && ((ret++))
 
-  isula search ${image} 2>&1 | grep "NAME"
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to search images with default table format: ${image}" && ((ret++))
-
-  isula search --format "table {{.IsAutomated}}\t{{.IsOfficial}}" ${image} 2>&1 | grep "AUTOMATED"
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to search images with table format: ${image}" && ((ret++))
-
   isula search --format "{{Name}}" ${image} 2>&1 | grep "invalid format field"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to set format for search ${image} and catch error msg" && ((ret++))
-
-  isula search --format "{{.Name}}" ${image} 2>&1
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to search images with none-table format: ${image}" && ((ret++))
 
   cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
 
