@@ -22,6 +22,7 @@
 #include <isula_libutils/storage_image.h>
 #include <isula_libutils/imagetool_images_list.h>
 #include <isula_libutils/json_common.h>
+#include <isula_libutils/auto_cleanup.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -444,11 +445,161 @@ out:
     return value;
 }
 
+static int resort_image_names(const char **names, size_t names_len, char **first_name, char ***image_tags,
+                              char ***image_digests)
+{
+    int ret = 0;
+    size_t i;
+    char *prefix = NULL;
+
+    for (i = 0; i < names_len; i++) {
+        size_t len = strlen(names[i]);
+        if (strlen(names[i]) > MAX_IMAGE_NAME_LENGTH) {
+            prefix = util_sub_string(names[i], len - MAX_IMAGE_NAME_LENGTH,
+                                     MAX_IMAGE_NAME_LENGTH - MAX_IMAGE_DIGEST_LENGTH);
+        }
+
+        // TODO: maybe should support other digest
+        if (prefix != NULL && strcmp(prefix, DIGEST_PREFIX) == 0) {
+            if (util_array_append(image_digests, names[i]) != 0) {
+                ERROR("Failed to append image to digest: %s", names[i]);
+                ret = -1;
+                goto out;
+            }
+        } else {
+            if (util_array_append(image_tags, names[i]) != 0) {
+                ERROR("Failed to append image to tags: %s", names[i]);
+                ret = -1;
+                goto out;
+            }
+        }
+    }
+
+    if (first_name == NULL) {
+        goto out;
+    }
+
+    if (util_array_len((const char **)(*image_digests)) > 0) {
+        free(*first_name);
+        *first_name = util_strdup_s((*image_digests)[0]);
+    }
+
+    if (util_array_len((const char **)(*image_tags)) > 0) {
+        free(*first_name);
+        *first_name = util_strdup_s((*image_tags)[0]);
+    }
+
+out:
+    if (ret != 0) {
+        util_free_array(*image_digests);
+        util_free_array(*image_tags);
+        free(*first_name);
+    }
+    free(prefix);
+    return ret;
+}
+
+// Validate checks that the contents is a valid digest
+static bool validate_digest(const char *digest)
+{
+    bool ret = true;
+    const char *sha256_encode_patten = "^[a-f0-9]{64}$";
+    char *value = util_strdup_s(digest);
+    char *index = strchr(value, ':');
+    char *alg = NULL;
+    char *encode = NULL;
+
+    // contains ':' and is not the last character
+    if (index == NULL || index - value + 1 == strlen(value)) {
+        INFO("Invalid checksum digest format");
+        ret = false;
+        goto out;
+    }
+
+    *index++ = '\0';
+
+    alg = value;
+    encode = index;
+    // Currently only support SHA256 algorithm
+    if (strcmp(alg, "sha256") != 0) {
+        DEBUG("Unsupported digest algorithm: %s", alg);
+        ret = false;
+        goto out;
+    }
+
+    ret = util_reg_match(sha256_encode_patten, encode) == 0;
+
+out:
+    free(value);
+    return ret;
+}
+
+// Parsing a reference string as a possible identifier, full digest, or familiar name.
+static char *parse_digest_reference(const char *ref)
+{
+    char *indentfier_patten = "^[a-f0-9]{64}$";
+
+    if (util_reg_match(indentfier_patten, ref) == 0) {
+        return util_string_append(ref, "sha256:");
+    }
+
+    if (validate_digest(ref)) {
+        return util_strdup_s(ref);
+    }
+
+    return oci_normalize_image_name(ref);
+}
+
+static int is_name_digest_consistent(const char *name, char **names, size_t names_len, const char *digest)
+{
+    size_t i;
+    int ret = -1;
+    int nret = 0;
+    char *tag_pos = NULL;
+    char **tags = NULL;
+    char **digests = NULL;
+
+    if (resort_image_names((const char **)names, names_len, NULL, &tags, &digests) != 0) {
+        ERROR("Failed to resort image names");
+        goto out;
+    }
+
+    for (i = 0; i < util_array_len((const char **)tags); i++) {
+        __isula_auto_free char *ref = NULL;
+        __isula_auto_free char *tmp_repo_digests = NULL;
+        ref = parse_digest_reference(tags[i]);
+        if (ref == NULL) {
+            continue;
+        }
+        tag_pos = util_tag_pos(ref);
+        if (tag_pos == NULL) {
+            ERROR("invalid ref %s", ref);
+            continue;
+        }
+        *tag_pos = '\0';
+
+        nret = asprintf(&tmp_repo_digests, "%s@%s", ref, digest);
+        if (nret < 0) {
+            ERROR("Failed to receive repo digest");
+            goto out;
+        }
+        if (strcmp(name, tmp_repo_digests) == 0) {
+            ret = 0;
+            goto out;
+        }
+    }
+out:
+    util_free_array(tags);
+    util_free_array(digests);
+    return ret;
+}
+
 // by_digest returns the image which matches the specified name.
 static image_t *by_digest(const char *name)
 {
     digest_image_t *digest_filter_images = NULL;
     char *digest = NULL;
+    image_t *tmp_ret = NULL;
 
     // split digest for image name with digest
     digest = strrchr(name, '@');
@@ -457,12 +608,21 @@ static image_t *by_digest(const char *name)
     }
     digest++;
     digest_filter_images = (digest_image_t *)map_search(g_image_store->bydigest, (void *)digest);
-    if (digest_filter_images == NULL) {
+    if (digest_filter_images == NULL || linked_list_empty(&(digest_filter_images->images_list))) {
         return NULL;
     }
 
     // currently, a digest corresponds to an image, directly returning the first element
-    return linked_list_first_elem(&(digest_filter_images->images_list));
+    tmp_ret = linked_list_first_elem(&(digest_filter_images->images_list));
+
+    // verify name and digest consistency to ensure we are not matching images to different repositories,
+    // even if the digests match.
+    // For example, ubuntu@sha256:abc......, shouldn't match test@sha256:abc......
+    if (is_name_digest_consistent(name, tmp_ret->simage->names, tmp_ret->simage->names_len, digest) != 0) {
+        return NULL;
+    }
+
+    return tmp_ret;
 }
 
 static image_t *lookup(const char *id)
@@ -1999,107 +2159,6 @@ out:
     image_ref_dec(img);
     image_store_unlock();
     return ret;
-}
-
-static int resort_image_names(const char **names, size_t names_len, char **first_name, char ***image_tags,
-                              char ***image_digests)
-{
-    int ret = 0;
-    size_t i;
-    char *prefix = NULL;
-
-    for (i = 0; i < names_len; i++) {
-        size_t len = strlen(names[i]);
-        if (strlen(names[i]) > MAX_IMAGE_NAME_LENGTH) {
-            prefix = util_sub_string(names[i], len - MAX_IMAGE_NAME_LENGTH,
-                                     MAX_IMAGE_NAME_LENGTH - MAX_IMAGE_DIGEST_LENGTH);
-        }
-
-        // TODO: maybe should support other digest
-        if (prefix != NULL && strcmp(prefix, DIGEST_PREFIX) == 0) {
-            if (util_array_append(image_digests, names[i]) != 0) {
-                ERROR("Failed to append image to digest: %s", names[i]);
-                ret = -1;
-                goto out;
-            }
-        } else {
-            if (util_array_append(image_tags, names[i]) != 0) {
-                ERROR("Failed to append image to tags: %s", names[i]);
-                ret = -1;
-                goto out;
-            }
-        }
-    }
-
-    if (util_array_len((const char **)(*image_digests)) > 0) {
-        free(*first_name);
-        *first_name = util_strdup_s((*image_digests)[0]);
-    }
-
-    if (util_array_len((const char **)(*image_tags)) > 0) {
-        free(*first_name);
-        *first_name = util_strdup_s((*image_tags)[0]);
-    }
-
-out:
-    if (ret != 0) {
-        util_free_array(*image_digests);
-        util_free_array(*image_tags);
-        free(*first_name);
-    }
-    free(prefix);
-    return ret;
-}
-
-// Validate checks that the contents is a valid digest
-static bool validate_digest(const char *digest)
-{
-    bool ret = true;
-    const char *sha256_encode_patten = "^[a-f0-9]{64}$";
-    char *value = util_strdup_s(digest);
-    char *index = strchr(value, ':');
-    char *alg = NULL;
-    char *encode = NULL;
-
-    // contains ':' and is not the last character
-    if (index == NULL || index - value + 1 == strlen(value)) {
-        INFO("Invalid checksum digest format");
-        ret = false;
-        goto out;
-    }
-
-    *index++ = '\0';
-
-    alg = value;
-    encode = index;
-    // Currently only support SHA256 algorithm
-    if (strcmp(alg, "sha256") != 0) {
-        DEBUG("Unsupported digest algorithm: %s", alg);
-        ret = false;
-        goto out;
-    }
-
-    ret = util_reg_match(sha256_encode_patten, encode) == 0;
-
-out:
-    free(value);
-    return ret;
-}
-
-// Parsing a reference string as a possible identifier, full digest, or familiar name.
-static char *parse_digest_reference(const char *ref)
-{
-    char *indentfier_patten = "^[a-f0-9]{64}$";
-
-    if (util_reg_match(indentfier_patten, ref) == 0) {
-        return util_string_append(ref, "sha256:");
-    }
-
-    if (validate_digest(ref)) {
-        return util_strdup_s(ref);
-    }
-
-    return oci_normalize_image_name(ref);
 }
 
 static int pack_repo_digest(char ***old_repo_digests, const char **image_tags, const char *digest, char ***repo_digests)
