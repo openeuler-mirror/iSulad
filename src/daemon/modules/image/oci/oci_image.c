@@ -542,6 +542,17 @@ int oci_rmi(const im_rmi_request *request)
         goto out;
     }
 
+    for (i = 0; i < image_names_len; i++) {
+        if (strcmp(real_image_name, image_names[i]) == 0) {
+            break;
+        }
+    }
+    if (i == image_names_len) {
+        ERROR("Invalid real_image_name");
+        ret = -1;
+        goto out;
+    }
+
     reduced_image_names = (char **)util_smart_calloc_s(sizeof(char *), image_names_len - 1);
     if (reduced_image_names == NULL) {
         ERROR("Out of memory");
