@@ -538,6 +538,17 @@ int oci_rmi(const im_rmi_request *request)
         goto out;
     }
 
+    for (i = 0; i < image_names_len; i++) {
+        if (strcmp(real_image_name, image_names[i]) == 0) {
+            break;
+        }
+    }
+    if (i == image_names_len) {
+        ERROR("Invalid real_image_name");
+        ret = -1;
+        goto out;
+    }
+
     reduced_image_names = (char **)util_smart_calloc_s(sizeof(char *), image_names_len - 1);
     if (reduced_image_names == NULL) {
         ERROR("Out of memory");
@@ -548,11 +559,6 @@ int oci_rmi(const im_rmi_request *request)
     for (i = 0; i < image_names_len; i++) {
         if (strcmp(image_names[i], real_image_name) != 0) {
             reduced_image_names[reduced_image_names_len] = util_strdup_s(image_names[i]);
-            if (reduced_image_names[reduced_image_names_len] == NULL) {
-                ERROR("Out of memory");
-                ret = -1;
-                goto out;
-            }
             reduced_image_names_len++;
         }
     }
