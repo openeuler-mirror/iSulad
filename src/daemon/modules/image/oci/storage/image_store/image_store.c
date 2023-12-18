@@ -473,6 +473,8 @@ static int resort_image_names(const char **names, size_t names_len, char **first
                 goto out;
             }
         }
+        free(prefix);
+        prefix = NULL;
     }
 
     if (first_name == NULL) {
