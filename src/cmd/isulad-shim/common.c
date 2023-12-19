@@ -31,34 +31,161 @@
 
 #include <isula_libutils/utils_memory.h>
 #include <isula_libutils/utils_file.h>
+#include <isula_libutils/utils_string.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/auto_cleanup.h>
 
-int g_log_fd = -1;
-int g_attach_log_fd = -1;
+#include "shim_constants.h"
 
-int init_shim_log(void)
+static __thread char *g_shim_errmsg = NULL;
+
+// currently, log_to_stderr is only modified in the main process
+// and there is no need to set a thread-local variable. 
+// if it can be modified by multiple threads in the future,
+// this variable needs to be set as a thread-local variable.
+static bool log_to_stderr = false;
+
+static void shim_clear_errmsg(void)
 {
-    g_log_fd = open_no_inherit(SHIM_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, LOG_FILE_MODE);
-    if (g_log_fd < 0) {
-        return SHIM_ERR;
+    if (g_shim_errmsg != NULL) {
+        free(g_shim_errmsg);
+        g_shim_errmsg = NULL;
     }
-    return SHIM_OK;
 }
 
-int init_attach_log(void)
+void set_log_to_stderr(bool flag)
 {
-    g_attach_log_fd = open_no_inherit(ATTACH_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, LOG_FILE_MODE);
-    if (g_attach_log_fd < 0) {
-        return SHIM_ERR;
+    log_to_stderr = flag;
+}
+
+static int verify_log_path(const char *path)
+{
+    struct stat st = { 0 };
+    char real_path[PATH_MAX] = { 0 };
+    int ret = 0;
+
+    if (isula_clean_path(path, real_path, sizeof(real_path)) == NULL) {
+        ERROR("Failed to clean path: '%s'", path);
+        return false;
     }
-    return SHIM_OK;
+
+    if (lstat(real_path, &st) != 0) {
+        SYSERROR("lstat %s failed.", real_path);
+        return -1;
+    }
+
+    if (!S_ISFIFO(st.st_mode)) {
+        return -1;
+    }
+
+    if ((st.st_mode & 0777) != LOG_FIFO_MODE) {
+        return -1;
+    }
+
+    // chown to root
+    ret = lchown(path, 0, 0);
+    if (ret == 0 || (ret == EPERM && st.st_uid == 0 && st.st_gid == 0)) {
+        return 0;
+    }
+
+    SYSERROR("lchown %s failed", path);
+    return -1;
+}
+
+int isulad_shim_log_init(const char *file, const char *priority)
+{
+    __isula_auto_free char *full_path = NULL;
+    const char *pre_name = "fifo:";
+    size_t pre_len = strlen(pre_name);
+    struct isula_libutils_log_config lconf = { 0 };
+
+    if (file == NULL || priority == NULL || strncmp(file, pre_name, pre_len) != 0) {
+        dprintf(STDERR_FILENO, "invalid shim log params");
+        return -1;
+    }
+
+    lconf.name = "shim";
+    /* File has prefix "fifo:", */
+    full_path = isula_strdup_s(file + pre_len);
+
+    if (verify_log_path(full_path) != 0) {
+        dprintf(STDERR_FILENO, "unsafe shim log path");
+        return -1;
+    }
+
+    lconf.file = full_path;
+    lconf.driver = "fifo";
+    lconf.priority = priority;
+    if (isula_libutils_log_enable(&lconf) != 0) {
+        // because shim log init error, print error msg to stderr.
+        // isulad can obtain the reason why shim exits.
+        dprintf(STDERR_FILENO, "failed to init shim log");
+        return -1;
+    }
+
+    return 0;
+}
+
+void shim_set_error_message(const char *format, ...)
+{
+    int ret = 0;
+    char errbuf[BUFSIZ + 1] = { 0 };
+    va_list argp;
+
+    if (format == NULL) {
+        return;
+    }
+    va_start(argp, format);
+
+    ret = vsnprintf(errbuf, BUFSIZ, format, argp);
+    va_end(argp);
+    if (ret < 0) {
+        return;
+    }
+
+    shim_clear_errmsg();
+    g_shim_errmsg = isula_strdup_s(errbuf);
+}
+
+void shim_append_error_message(const char *format, ...)
+{
+    int ret = 0;
+    char errbuf[BUFSIZ + 1] = { 0 };
+    char *result = NULL;
+
+    va_list argp;
+    va_start(argp, format);
+
+    ret = vsnprintf(errbuf, BUFSIZ, format, argp);
+    va_end(argp);
+    if (ret < 0) {
+        return;
+    }
+    result = isula_string_append(g_shim_errmsg, errbuf);
+    if (result == NULL) {
+        return;
+    }
+    if (g_shim_errmsg != NULL) {
+        free(g_shim_errmsg);
+    }
+    g_shim_errmsg = result;
+}
+
+void error_exit(int exit_code)
+{
+    if (log_to_stderr && g_shim_errmsg != NULL) {
+        dprintf(STDERR_FILENO, "shim-error: %s\n", g_shim_errmsg);
+    }
+    exit(exit_code);
 }
 
 void signal_routine(int sig)
 {
     switch (sig) {
         case SIGALRM:
-            write_message(ERR_MSG, "runtime timeout");
-            exit(EXIT_FAILURE);
+            ERROR("runtime timeout");
+            shim_set_error_message("runtime timeout");
+            error_exit(EXIT_FAILURE);
         default:
             break;
     }
@@ -170,67 +297,6 @@ int generate_random_str(char *id, size_t len)
     id[i * 2] = '\0';
 
     return SHIM_OK;
-}
-
-#define MAX_MSG_JSON_TEMPLATE 32
-#define MAX_MESSAGE_CONTENT_LEN 128
-#define MAX_MESSAGE_LEN (MAX_MSG_JSON_TEMPLATE + MAX_MESSAGE_CONTENT_LEN)
-
-static void format_log_msg(const char *level, const char *buf, char *msg, int max_message_len)
-{
-    time_t current_time = time(NULL);
-    struct tm *local_time = localtime(&current_time);
-    char time_str[20];
-
-    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", local_time);
-
-    (void)snprintf(msg, max_message_len - 1, "{\"time\": \"%s\", \"level\": \"%s\", \"msg\": \"%s\"}\n", time_str, level,
-                   buf);
-}
-
-void write_message(const char *level, const char *fmt, ...)
-{
-    if (g_log_fd < 0) {
-        return;
-    }
-
-    char buf[MAX_MESSAGE_CONTENT_LEN] = { 0 };
-    char msg[MAX_MESSAGE_LEN] = { 0 };
-    int nwrite = -1;
-
-    va_list arg_list;
-    va_start(arg_list, fmt);
-    nwrite = vsnprintf(buf, MAX_MESSAGE_CONTENT_LEN, fmt, arg_list);
-    va_end(arg_list);
-    if (nwrite < 0) {
-        return;
-    }
-
-    format_log_msg(level, buf, msg, MAX_MESSAGE_CONTENT_LEN);
-
-    (void)isula_file_total_write_nointr(g_log_fd, msg, strlen(msg));
-}
-
-void write_attach_message(const char *level, const char *fmt, ...)
-{
-    char buf[MAX_MESSAGE_CONTENT_LEN] = { 0 };
-    char msg[MAX_MESSAGE_LEN] = { 0 };
-    int nwrite = -1;
-
-    if (g_attach_log_fd < 0) {
-        return;
-    }
-    va_list arg_list;
-    va_start(arg_list, fmt);
-    nwrite = vsnprintf(buf, MAX_MESSAGE_CONTENT_LEN, fmt, arg_list);
-    va_end(arg_list);
-    if (nwrite < 0) {
-        return;
-    }
-
-    format_log_msg(level, buf, msg, MAX_MESSAGE_CONTENT_LEN);
-
-    (void)isula_file_total_write_nointr(g_attach_log_fd, msg, strlen(msg));
 }
 
 /* note: This function can only read small text file. */

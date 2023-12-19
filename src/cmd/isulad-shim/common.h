@@ -36,13 +36,6 @@ extern "C" {
 #define SHIM_ERR_NOT_REQUIRED (-3)
 #define SHIM_ERR_TIMEOUT (-4)
 
-// common exit code is defined in stdlib.h
-// EXIT_FAILURE 1   : Failing exit status.
-// EXIT_SUCCESS 0   : Successful exit status.
-// custom shim exit code
-// SHIM_EXIT_TIMEOUT 2: Container process timeout exit code
-#define SHIM_EXIT_TIMEOUT 2
-
 #define INFO_MSG "info"
 #define WARN_MSG "warn"
 #define ERR_MSG "error"
@@ -55,12 +48,10 @@ extern "C" {
 #define MAX_RUNTIME_ARGS 100
 
 #define SHIM_BINARY "isulad-shim"
-#define SHIM_LOG_NAME "shim-log.json"
 
 #define CONTAINER_ACTION_REBOOT 129
 #define CONTAINER_ACTION_SHUTDOWN 130
 
-#define ATTACH_SOCKET "attach.sock"
 #define ATTACH_LOG_NAME "attach-log.json"
 #define ATTACH_DETACH_MSG "read escape sequence"
 #define MAX_ATTACH_NUM 16
@@ -72,9 +63,7 @@ extern "C" {
 #define SOCKET_DIRECTORY_MODE 0600
 #define ATTACH_FIFOPATH_MODE 0600
 
-int init_shim_log(void);
-
-int init_attach_log(void);
+int isulad_shim_log_init(const char *file, const char *priority);
 
 void signal_routine(int sig);
 
@@ -114,13 +103,17 @@ struct shim_fifos_fd {
     int err_fd;
 };
 
+void set_log_to_stderr(bool flag);
+
+void shim_set_error_message(const char *format, ...);
+
+void shim_append_error_message(const char *format, ...);
+
+void error_exit(int exit_code);
+
 char *read_text_file(const char *path);
 
 int cmd_combined_output(const char *binary, const char *params[], void *output, int *output_len);
-
-void write_message(const char *level, const char *fmt, ...);
-
-void write_attach_message(const char *level, const char *fmt, ...);
 
 int generate_random_str(char *id, size_t len);
 
