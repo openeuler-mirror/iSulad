@@ -909,7 +909,7 @@ static int inspect_container_helper(const char *id, int timeout, char **containe
 
     inspect = inspect_container(id, timeout, true);
     if (inspect == NULL) {
-        ERROR("Failed to inspect container:%s", id);
+        DEBUG("Failed to inspect container:%s", id);
         ret = -1;
         goto out;
     }
