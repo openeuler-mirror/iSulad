@@ -703,30 +703,22 @@ auto PodSandboxManagerService::GetRealSandboxIDToStop(const std::string &podSand
                                                       std::map<std::string, std::string> &stdAnnos, Errors &error)
 -> int
 {
-    Errors statusErr;
-
-    auto status = PodSandboxStatus(podSandboxID, statusErr);
-    if (statusErr.Empty()) {
-        if (status->linux().namespaces().has_options()) {
-            hostNetwork = (status->linux().namespaces().options().network() == runtime::v1alpha2::NamespaceMode::NODE);
-        }
-        // if metadata is invalid, don't return -1 and continue stopping pod
-        if (status->has_metadata()) {
-            name = status->metadata().name();
-            ns = status->metadata().namespace_();
-        }
-        realSandboxID = status->id();
-        CRIHelpers::ProtobufAnnoMapToStd(status->annotations(), stdAnnos);
-    } else {
-        if (CRIHelpers::IsContainerNotFoundError(statusErr.GetMessage())) {
-            WARN("Both sandbox container and checkpoint for id %s could not be found. "
-                 "Proceed without further sandbox information.",
-                 podSandboxID.c_str());
-        } else {
-            error.Errorf("failed to get sandbox status: %s", statusErr.GetCMessage());
-            return -1;
-        }
+    auto status = PodSandboxStatus(podSandboxID, error);
+    if (error.NotEmpty()) {
+        return -1;
     }
+
+    if (status->linux().namespaces().has_options()) {
+        hostNetwork = (status->linux().namespaces().options().network() == runtime::v1alpha2::NamespaceMode::NODE);
+    }
+    // if metadata is invalid, don't return -1 and continue stopping pod
+    if (status->has_metadata()) {
+        name = status->metadata().name();
+        ns = status->metadata().namespace_();
+    }
+    realSandboxID = status->id();
+    CRIHelpers::ProtobufAnnoMapToStd(status->annotations(), stdAnnos);
+
     if (realSandboxID.empty()) {
         realSandboxID = podSandboxID;
     }
