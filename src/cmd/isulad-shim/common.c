@@ -33,7 +33,7 @@ int g_log_fd = -1;
 
 int init_shim_log(void)
 {
-    g_log_fd = open_no_inherit(SHIM_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0640);
+    g_log_fd = open_no_inherit(SHIM_LOG_NAME, O_CREAT | O_WRONLY | O_APPEND | O_SYNC | O_NOFOLLOW, 0640);
     if (g_log_fd < 0) {
         return SHIM_ERR;
     }
