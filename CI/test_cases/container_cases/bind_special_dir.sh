@@ -42,7 +42,8 @@ function test_bind_special_dir()
     if [ $runtime == "runc" ]; then
         c_id=`isula run -itd -v -itd --runtime=$runtime -v /sys/fs:/sys/fs:rw -v /proc:/proc  -v /dev/pts:/dev/pts:rw busybox sh`
     else
-        c_id=`isula run --runtime=$runtime -itd -v -itd -v /sys/fs:/sys/fs:rw -v /proc:/proc -v /dev:/dev:ro -v /dev/pts:/dev/pts:rw busybox sh`
+        # lxc 5.X cannot support mount /dev directory
+        c_id=`isula run --runtime=$runtime -itd -v -itd -v /sys/fs:/sys/fs:rw -v /proc:/proc busybox sh`
     fi
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
