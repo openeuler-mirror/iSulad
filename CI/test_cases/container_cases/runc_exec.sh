@@ -53,6 +53,9 @@ function exec_runc_test()
     isula exec -tid $container_name /bin/sh -c 'exit 2'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - exit code should be 0" && ((ret++))
 
+    isula exec -ti --workdir /tmp $container_name pwd | grep "/tmp"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - workdir is not /workdir failed" && ((ret++))
+
     ls /var/run/isulad/runc/${ID}/exec/
     ls /var/run/isulad/runc/${ID}/exec/ | wc -l | grep 0
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual dir after success exec" && ((ret++))
