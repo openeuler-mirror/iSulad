@@ -1345,6 +1345,9 @@ static int preparation_exec(const char *id, const char *runtime, const char *wor
     p.runtime_args = (char **)runtime_args;
     p.runtime_args_len = runtime_args_len;
     copy_process(&p, process);
+    if (params->workdir != NULL) {
+        p.cwd = (char *)params->workdir;
+    }
 
     ret = create_process_json_file(workdir, &p);
     if (ret != 0) {

@@ -1274,6 +1274,10 @@ static void get_runtime_cmd(process_t *p, const char *log_path, const char *pid_
 #endif
         params[i++] = "--process";
         params[i++] = process_desc;
+        if (p->state->cwd != NULL) {
+            params[i++] = "--cwd";
+            params[i++] = p->state->cwd;
+        }
     } else {
         params[i++] = "create";
         params[i++] = "--bundle";
