@@ -48,7 +48,7 @@ extern "C" {
         "Username or UID (format: <name|uid>[:<group|gid>])",                                              \
         NULL },                                                                                            \
     { CMD_OPT_TYPE_STRING_DUP, false, "workdir", 0, &(cmdargs).custom_conf.workdir,                        \
-        "Working directory inside the container, supported only when runtime is lcr", NULL }
+        "Working directory inside the container", NULL }
 
 extern const char g_cmd_exec_desc[];
 extern const char g_cmd_exec_usage[];
