@@ -196,6 +196,16 @@ if [ -e %{_unitdir}/lcrd.service.rpmsave ]; then
     mv %{_unitdir}/lcrd.service.rpmsave %{_unitdir}/isulad.service
     sed -i 's/lcrd/isulad/g' %{_unitdir}/isulad.service
 fi
+# During the isulad upgrade process, the isulad service may still be running, but the service may be unavailable 
+# due to configuration updates and other reasons.
+# it may fail if the X package is upgraded synchronously with isulad and depends on the isulad command, 
+# For example syscontianer-tools and lxcfs-tools.
+# Therefore, after upgrading isulad, if the original status of isulad is running, 
+# we need to restart isulad to ensure that the service is available during the upgrade process.
+systemctl status isulad | grep 'Active:' | grep 'running'
+if [ $? -eq 0 ]; then
+  systemctl restart isulad
+fi
 %else
 /sbin/service isulad status | grep 'Active:' | grep 'running'
 if [ $? -eq 0 ]; then
