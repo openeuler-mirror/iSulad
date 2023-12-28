@@ -68,9 +68,6 @@ auto GetSELinuxLabelOpts(const bool hasSELinuxOption, const ::runtime::v1alpha2:
 auto GetSecurityOpts(const commonSecurityContext &context, const char &separator, Errors &error)
 -> std::vector<std::string>;
 
-auto GetPodSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
--> std::vector<std::string>;
-
 void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_config *hostconfig, Errors &error);
 
 }; // namespace CRIHelpers

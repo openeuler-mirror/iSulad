@@ -226,108 +226,37 @@ auto ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state
     }
 }
 
-struct iSuladOpt {
-    std::string key;
-    std::string value;
-    std::string msg;
-};
-
-auto fmtiSuladOpts(const std::vector<iSuladOpt> &opts, const char &sep) -> std::vector<std::string>
-{
-    std::vector<std::string> fmtOpts(opts.size());
-    for (size_t i {}; i < opts.size(); i++) {
-        fmtOpts[i] = opts.at(i).key + sep + opts.at(i).value;
-    }
-    return fmtOpts;
-}
-
-auto GetSeccompiSuladOptsByPath(const char *dstpath, Errors &error) -> std::vector<iSuladOpt>
-{
-    std::vector<iSuladOpt> ret { };
-    parser_error err = nullptr;
-    char *seccomp_json = nullptr;
-
-    docker_seccomp *seccomp_spec = get_seccomp_security_opt_spec(dstpath);
-    if (seccomp_spec == nullptr) {
-        error.Errorf("failed to parse seccomp profile");
-        return ret;
-    }
-    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
-    seccomp_json = docker_seccomp_generate_json(seccomp_spec, &ctx, &err);
-    if (seccomp_json == nullptr) {
-        error.Errorf("failed to generate seccomp json: %s", err);
-        goto out;
-    }
-
-    ret = std::vector<iSuladOpt> { { "seccomp", seccomp_json, "" } };
-
-out:
-    free(err);
-    free(seccomp_json);
-    free_docker_seccomp(seccomp_spec);
-    return ret;
-}
-
-auto GetlegacySeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> std::vector<iSuladOpt>
-{
-    if (seccompProfile.empty() || seccompProfile == "unconfined") {
-        DEBUG("Legacy seccomp is unconfined");
-        return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
-    }
-    if (seccompProfile == "iSulad/default" || seccompProfile == "docker/default" ||
-        seccompProfile == "runtime/default") {
-        // return nil so docker will load the default seccomp profile
-        return std::vector<iSuladOpt> {};
-    }
-    if (seccompProfile.compare(0, strlen("localhost/"), "localhost/") != 0) {
-        error.Errorf("unknown seccomp profile option: %s", seccompProfile.c_str());
-        return std::vector<iSuladOpt> {};
-    }
-    std::string fname = seccompProfile.substr(std::string("localhost/").length(), seccompProfile.length());
-    char dstpath[PATH_MAX] { 0 };
-    if (util_clean_path(fname.c_str(), dstpath, sizeof(dstpath)) == nullptr) {
-        error.Errorf("failed to get clean path");
-        return std::vector<iSuladOpt> {};
-    }
-    if (dstpath[0] != '/') {
-        error.Errorf("seccomp profile path must be absolute, but got relative path %s", fname.c_str());
-        return std::vector<iSuladOpt> {};
-    }
-
-    return GetSeccompiSuladOptsByPath(dstpath, error);
-}
-
 auto GetSeccompiSuladOpts(const bool hasSeccomp, const ::runtime::v1alpha2::SecurityProfile &seccomp,
                           const std::string &seccompProfile, Errors &error)
--> std::vector<iSuladOpt>
+-> std::vector<CRIHelpers::iSuladOpt>
 {
     if (!hasSeccomp) {
-        return GetlegacySeccompiSuladOpts(seccompProfile, error);
+        return CRIHelpers::GetlegacySeccompiSuladOpts(seccompProfile, error);
     }
 
     if (seccomp.profile_type() == ::runtime::v1alpha2::SecurityProfile_ProfileType_Unconfined) {
         DEBUG("Use set seccomp to unconfined");
-        return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
+        return std::vector<CRIHelpers::iSuladOpt> { { "seccomp", "unconfined", "" } };
     }
 
     if (seccomp.profile_type() == ::runtime::v1alpha2::SecurityProfile_ProfileType_RuntimeDefault) {
         // return nil so iSulad will load the default seccomp profile
-        return std::vector<iSuladOpt> {};
+        return std::vector<CRIHelpers::iSuladOpt> {};
     }
 
     if (seccomp.profile_type() == ::runtime::v1alpha2::SecurityProfile_ProfileType_Localhost) {
-        return GetSeccompiSuladOptsByPath(seccomp.localhost_ref().c_str(), error);
+        return CRIHelpers::GetSeccompiSuladOptsByPath(seccomp.localhost_ref().c_str(), error);
     }
 
     error.Errorf("unsupported seccomp profile type %d", seccomp.profile_type());
-    return std::vector<iSuladOpt> {};
+    return std::vector<CRIHelpers::iSuladOpt> {};
 }
 
 
 auto GetSelinuxiSuladOpts(const ::runtime::v1alpha2::SELinuxOption &selinux, Errors &error)
--> std::vector<iSuladOpt>
+-> std::vector<CRIHelpers::iSuladOpt>
 {
-    std::vector<iSuladOpt> selinuxOpts { };
+    std::vector<CRIHelpers::iSuladOpt> selinuxOpts { };
     // LabeSep is consistent with the separator used when parsing labels
     const char labeSep { ':' };
 
@@ -356,7 +285,7 @@ auto GetSeccompSecurityOpts(const bool hasSeccomp, const ::runtime::v1alpha2::Se
                             const std::string &seccompProfile, const char &separator, Errors &error)
 -> std::vector<std::string>
 {
-    std::vector<iSuladOpt> seccompOpts = GetSeccompiSuladOpts(hasSeccomp, seccomp, seccompProfile, error);
+    std::vector<CRIHelpers::iSuladOpt> seccompOpts = GetSeccompiSuladOpts(hasSeccomp, seccomp, seccompProfile, error);
     if (error.NotEmpty()) {
         return std::vector<std::string>();
     }
@@ -372,7 +301,7 @@ auto GetSELinuxLabelOpts(const bool hasSELinuxOption, const ::runtime::v1alpha2:
         return std::vector<std::string>();
     }
 
-    std::vector<iSuladOpt> selinuxOpts = GetSelinuxiSuladOpts(selinux, error);
+    std::vector<CRIHelpers::iSuladOpt> selinuxOpts = GetSelinuxiSuladOpts(selinux, error);
     if (error.NotEmpty()) {
         return std::vector<std::string>();
     }
@@ -400,37 +329,6 @@ auto GetSecurityOpts(const commonSecurityContext &context, const char &separator
     securityOpts.insert(securityOpts.end(), seccompSecurityOpts.begin(), seccompSecurityOpts.end());
     securityOpts.insert(securityOpts.end(), selinuxOpts.begin(), selinuxOpts.end());
     return securityOpts;
-}
-
-auto GetPodSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
--> std::vector<std::string>
-{
-    // security Opt Separator Change Version : k8s v1.23.0 (Corresponds to docker 1.11.x)
-    // New version '=' , old version ':', iSulad cri is based on v18.09, so iSulad cri use new version separator
-    const char securityOptSep { '=' };
-    // LabeSep is consistent with the separator used when parsing labels
-    const char labeSep { ':' };
-    std::vector<iSuladOpt> selinuxOpts { };
-    char **labelArr = nullptr;
-    size_t labelArrLen = 0;
-    std::vector<std::string> opts = {"user", "role", "type", "level"};
-    std::vector<std::string> vect;
-
-    labelArr = util_string_split_n(selinuxLabel.c_str(), labeSep, 4);
-    if (labelArr == nullptr) {
-        error.Errorf("Invalid selinux label: %s", selinuxLabel.c_str());
-        return vect;
-    }
-
-    labelArrLen = util_array_len((const char **)labelArr);
-    for (size_t i {}; i < labelArrLen; i++) {
-        iSuladOpt tmp = { "label", opts[i] + std::string(1, labeSep) + std::string(labelArr[i]), "" };
-        selinuxOpts.push_back(tmp);
-    }
-
-    util_free_array(labelArr);
-
-    return fmtiSuladOpts(selinuxOpts, securityOptSep);
 }
 
 void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_config *hostconfig, Errors &error)
