@@ -333,11 +333,11 @@ int im_image_summary(im_summary_request *request, im_summary_response **response
 
 void free_im_summary_request(im_summary_request *req);
 
-void free_im_summary_response(im_summary_response *resp);
+void free_im_summary_response(im_summary_response *res);
 
 void free_im_status_request(im_status_request *req);
 
-void free_im_status_response(im_status_response *resp);
+void free_im_status_response(im_status_response *req);
 
 int im_get_filesystem_info(const char *image_type, im_fs_info_response **response);
 

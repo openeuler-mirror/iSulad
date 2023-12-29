@@ -62,7 +62,7 @@ public:
                      const std::string &interfaceName, const std::string &podSandboxID,
                      const std::map<std::string, std::string> &annotations, Errors &error) override;
 
-    void Status(Errors &error) override;
+    void Status(Errors &err) override;
 
 private:
     auto GetNetworkSettingsJson(const std::string &podSandboxID, const std::string &netnsPath,
@@ -72,7 +72,7 @@ private:
     virtual void PlatformInit(Errors &error);
     virtual void SyncNetworkConfig();
 
-    virtual void CheckInitialized(Errors &error);
+    virtual void CheckInitialized(Errors &err);
 
     void RLockNetworkMap(Errors &error);
     void WLockNetworkMap(Errors &error);

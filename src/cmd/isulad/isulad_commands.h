@@ -25,8 +25,8 @@
 extern "C" {
 #endif
 
-void print_common_help();
-void print_version();
+void print_common_help(void);
+void print_version(void);
 
 // Default help command if implementation doesn't prvide one
 int command_default_help(const char * const program_name, int argc, char **argv);

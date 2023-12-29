@@ -265,7 +265,7 @@ int runtime_resize(const char *name, const char *runtime, const rt_resize_params
 int runtime_exec_resize(const char *name, const char *runtime, const rt_exec_resize_params_t *params);
 bool is_default_runtime(const char *name);
 
-int runtime_init();
+int runtime_init(void);
 #ifdef __cplusplus
 }
 #endif

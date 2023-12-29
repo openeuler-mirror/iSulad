@@ -55,7 +55,7 @@ void clean_module_fill_ctx(cleanup_ctx_data_t data_type, void *data)
     }
 }
 
-void clean_module_do_clean()
+void clean_module_do_clean(void)
 {
     if (g_clns == NULL || g_clean_ctx == NULL) {
         return;

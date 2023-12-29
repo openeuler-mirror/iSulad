@@ -1618,7 +1618,7 @@ static void *do_shutdown_handler(void *arg)
 }
 
 /* news_shutdown_handler */
-int new_shutdown_handler()
+int new_shutdown_handler(void)
 {
     int ret = -1;
     pthread_t shutdown_thread;

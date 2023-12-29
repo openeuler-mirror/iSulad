@@ -334,7 +334,7 @@ pexit:
 }
 
 /* new supervisor */
-int new_supervisor()
+int new_supervisor(void)
 {
     int ret = 0;
     pthread_t supervisor_thread;

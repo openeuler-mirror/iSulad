@@ -35,7 +35,7 @@ typedef struct {
 } log_terminal;
 
 void shim_write_container_log_file(log_terminal *terminal, int type, char *buf,
-                                   int bytes_read);
+                                   int read_count);
 
 int shim_create_container_log_file(log_terminal *terminal);
 

@@ -451,7 +451,7 @@ struct client_arguments {
 #define VERSION_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_BOOL, false, "version", 0, NULL, "Print version information and quit", NULL },
 
-extern void print_common_help();
+extern void print_common_help(void);
 
 extern int client_arguments_init(struct client_arguments *args);
 

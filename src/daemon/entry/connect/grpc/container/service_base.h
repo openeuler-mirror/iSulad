@@ -81,9 +81,9 @@ protected:
     virtual void SetThreadName() = 0;
     virtual Status Authenticate(ServerContext *context) = 0;
     virtual bool WithServiceExecutorOperator(service_executor_t *cb) = 0;
-    virtual int FillRequestFromgRPC(const RQ *request, void *containerReq) = 0;
+    virtual int FillRequestFromgRPC(const RQ *request, void *contReq) = 0;
     virtual void ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes) = 0;
-    virtual void FillResponseTogRPC(void *containerRes, RP *reply) = 0;
+    virtual void FillResponseTogRPC(void *containerRes, RP *gresponse) = 0;
     virtual void CleanUp(void *containerReq, void *containerRes) = 0;
 };
 

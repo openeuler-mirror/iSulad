@@ -270,7 +270,7 @@ out:
 }
 
 /* gc restore */
-int gc_restore()
+int gc_restore(void)
 {
     int ret = 0;
     size_t i = 0;
@@ -549,7 +549,7 @@ error:
 }
 
 /* new gchandler */
-int new_gchandler()
+int new_gchandler(void)
 {
     int ret = -1;
 
@@ -575,7 +575,7 @@ out:
 }
 
 /* start gchandler */
-int start_gchandler()
+int start_gchandler(void)
 {
     int ret = -1;
     pthread_t a_thread;

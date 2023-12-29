@@ -35,7 +35,7 @@
 #include "utils_verify.h"
 #include "utils_timestamp.h"
 
-void command_help_isulad_head()
+static void command_help_isulad_head()
 {
     fprintf(stdout, "isulad\n\nlightweight container runtime daemon\n");
 }

@@ -407,7 +407,7 @@ int network_module_update(const char *type)
     return pnet->ops->update();
 }
 
-void network_module_exit()
+void network_module_exit(void)
 {
     size_t i;
 

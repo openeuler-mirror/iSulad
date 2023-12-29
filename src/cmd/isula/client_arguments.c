@@ -314,7 +314,7 @@ void client_arguments_free(struct client_arguments *args)
 }
 
 /* print common help */
-void print_common_help()
+void print_common_help(void)
 {
     struct client_arguments cmd_common_args = {};
     struct command_option options[] = {

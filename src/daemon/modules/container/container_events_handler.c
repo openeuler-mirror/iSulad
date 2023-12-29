@@ -73,7 +73,7 @@ void container_events_handler_free(container_events_handler_t *handler)
 }
 
 /* events handler new */
-container_events_handler_t *container_events_handler_new()
+container_events_handler_t *container_events_handler_new(void)
 {
     int ret;
     container_events_handler_t *handler = NULL;

@@ -17,7 +17,7 @@
 #include "utils.h"
 #include "isula_libutils/log.h"
 
-struct clean_ctx *clean_ctx_init()
+struct clean_ctx *clean_ctx_init(void)
 {
     struct clean_ctx *ctx = util_common_calloc_s(sizeof(struct clean_ctx));
     if (ctx == NULL) {

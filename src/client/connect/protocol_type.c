@@ -1419,7 +1419,7 @@ void container_events_format_free(container_events_format_t *value)
     free(value);
 }
 
-void isula_volume_list_free(size_t volumes_len, struct isula_volume_info *volumes)
+void isula_volume_list_free(size_t volumes_num, struct isula_volume_info *volumes)
 {
     size_t i = 0;
     struct isula_volume_info *volume = NULL;
@@ -1428,7 +1428,7 @@ void isula_volume_list_free(size_t volumes_len, struct isula_volume_info *volume
         return;
     }
 
-    for (i = 0, volume = volumes; i < volumes_len; i++, volume++) {
+    for (i = 0, volume = volumes; i < volumes_num; i++, volume++) {
         free(volume->driver);
         free(volume->name);
     }

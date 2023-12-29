@@ -25,7 +25,7 @@ extern "C" {
 
 extern char *exit_fifo_name(const char *cont_state_path);
 
-extern int new_supervisor();
+extern int new_supervisor(void);
 
 #ifdef __cplusplus
 }
