@@ -46,6 +46,7 @@
 #include <isula_libutils/utils_buffer.h>
 #include <isula_libutils/utils_linked_list.h>
 #include <isula_libutils/utils_array.h>
+#include <isula_libutils/utils.h>
 
 #include "common.h"
 #include "terminal.h"
@@ -1387,6 +1388,14 @@ static void exec_runtime_process(process_t *p, int exec_fd)
         if (p->shim_io->resize != -1) {
             close(p->shim_io->resize);
             p->shim_io->resize = -1;
+        }
+    } else {
+        // When the terminal parameter is set, since the container's standard streams are pseudo-terminals
+        // and the container's log can be obtained through log.json,
+        // the standard streams of the child process are set to /dev/null to prevent incorrect information acquisition.
+        if (isula_null_stdfds() != 0) {
+            (void)dprintf(exec_fd, "failed to set std console to /dev/null");
+            exit(EXIT_FAILURE);           
         }
     }
 

@@ -25,12 +25,6 @@
 #include <limits.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <isula_libutils/auto_cleanup.h>
-#include <isula_libutils/defs.h>
-#include <isula_libutils/isulad_daemon_configs.h>
-#include <isula_libutils/json_common.h>
-#include <isula_libutils/oci_runtime_spec.h>
-#include <isula_libutils/utils_file.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -40,13 +34,20 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include "isula_libutils/log.h"
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/isulad_daemon_configs.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_runtime_spec.h>
+#include <isula_libutils/utils_file.h>
+#include <isula_libutils/shim_client_process_state.h>
+#include <isula_libutils/shim_client_runtime_stats.h>
+#include <isula_libutils/shim_client_cgroup_resources.h>
+#include <isula_libutils/oci_runtime_state.h>
+#include <isula_libutils/utils.h>
+#include <isula_libutils/log.h>
 #include "runtime_api.h"
 #include "constants.h"
-#include "isula_libutils/shim_client_process_state.h"
-#include "isula_libutils/shim_client_runtime_stats.h"
-#include "isula_libutils/shim_client_cgroup_resources.h"
-#include "isula_libutils/oci_runtime_state.h"
 #include "isulad_config.h"
 #include "utils_string.h"
 #include "err_msg.h"
@@ -880,13 +881,19 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
             exit(EXIT_FAILURE);
         }
 
+        //prevent the child process from having the same standard streams as the parent process
+        if (isula_null_stdfds() != 0) {
+            (void)dprintf(shim_stderr_pipe[1], "failed to set std console to /dev/null");
+            exit(EXIT_FAILURE);           
+        }
+
         if (fg) {
-            // child process, dup2 shim_stdout_pipe[1] to STDOUT
+            // child process, dup2 shim_stdout_pipe[1] to STDOUT, get container process exit_code in STDOUT
             if (dup2(shim_stdout_pipe[1], STDOUT_FILENO) < 0) {
                 (void)dprintf(shim_stderr_pipe[1], "Dup stdout fd error: %s", strerror(errno));
                 exit(EXIT_FAILURE);
             }
-            // child process, dup2 shim_stderr_pipe[1] to STDERR
+            // child process, dup2 shim_stderr_pipe[1] to STDERR, get isulad-shim errmsg in STDERR
             if (dup2(shim_stderr_pipe[1], STDERR_FILENO) < 0) {
                 (void)dprintf(shim_stderr_pipe[1], "Dup stderr fd error: %s", strerror(errno));
                 exit(EXIT_FAILURE);
