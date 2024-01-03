@@ -3397,7 +3397,7 @@ static int umount_deactivate_dev_all(const struct device_set *devset)
         struct stat st;
         int pathname_len;
 
-        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
 

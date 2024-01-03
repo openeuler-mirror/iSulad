@@ -66,12 +66,12 @@ static int console_cb_tty_stdin_with_escape(int fd, uint32_t events, void *cbdat
     }
 
     if (ts->tty_exit != -1) {
-        if (c == ts->tty_exit && !(ts->saw_tty_exit)) {
+        if (c == ts->tty_exit && ts->saw_tty_exit == 0) {
             ts->saw_tty_exit = 1;
             goto out;
         }
 
-        if (c == 'q' && ts->saw_tty_exit) {
+        if (c == 'q' && ts->saw_tty_exit != 0) {
             ret = EPOLL_LOOP_HANDLE_CLOSE;
             goto out;
         }
@@ -246,7 +246,7 @@ int console_fifo_delete(const char *fifo_path)
         return 0;
     }
 
-    if (unlink(real_path) && errno != ENOENT) {
+    if (unlink(real_path) != 0 && errno != ENOENT) {
         WARN("Unlink %s failed", real_path);
         return -1;
     }

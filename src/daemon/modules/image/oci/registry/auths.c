@@ -205,7 +205,7 @@ int auths_load(char *host, char **username, char **password)
     }
 
     for (i = 0; i < auths->auths->len; i++) {
-        if (!strcmp(host, auths->auths->keys[i])) {
+        if (strcmp(host, auths->auths->keys[i]) == 0) {
             ret = decode_auth_aes(auths->auths->values[i]->auth, username, password);
             if (ret != 0) {
                 ERROR("Decode auth with aes failed");
@@ -288,7 +288,7 @@ static int add_auth(registry_auths *auths, char *host, char *auth)
     }
 
     for (i = 0; i < auths->auths->len; i++) {
-        if (!strcmp(host, auths->auths->keys[i])) {
+        if (strcmp(host, auths->auths->keys[i]) == 0) {
             free(auths->auths->keys[i]);
             auths->auths->keys[i] = util_strdup_s(host);
             free(auths->auths->values[i]->auth);
@@ -426,7 +426,7 @@ static void delete_auth(registry_auths *auths, char *host)
     }
 
     for (i = 0; i < auths->auths->len; i++) {
-        if (!strcmp(host, auths->auths->keys[i])) {
+        if (strcmp(host, auths->auths->keys[i]) == 0) {
             // Free current position
             free(auths->auths->keys[i]);
             auths->auths->keys[i] = NULL;

@@ -38,7 +38,7 @@ int rbtree_str_cmp(const void *first, const void *last)
     while (true) {
         char a = *key1++;
         char b = *key2++;
-        if (!a || a != b) {
+        if (a == '\0' || a != b) {
             return ((int)(a > b) - (int)(a < b));
         }
     }

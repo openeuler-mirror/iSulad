@@ -134,7 +134,7 @@ static void stats_print(const struct isula_container_info *stats)
     }
 
     printf("%-16s %-10.2f %-26s %-10.2f %-26s %-10llu", short_id, cpu_percent, mem_str,
-           stats->mem_limit ? ((double)stats->workingset_bytes / stats->mem_limit) * PERCENT : 0.00, iosb_str,
+           stats->mem_limit != 0 ? ((double)stats->workingset_bytes / stats->mem_limit) * PERCENT : 0.00, iosb_str,
            (unsigned long long)stats->pids_current);
     free(short_id);
 }

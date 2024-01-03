@@ -175,8 +175,8 @@ int cmd_update_main(int argc, const char **argv)
     isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_update_desc,
                  g_cmd_update_usage);
-    if (command_parse_args(&cmd, &g_cmd_update_args.argc, &g_cmd_update_args.argv) ||
-        update_checker(&g_cmd_update_args)) {
+    if (command_parse_args(&cmd, &g_cmd_update_args.argc, &g_cmd_update_args.argv) != 0 ||
+        update_checker(&g_cmd_update_args) != 0) {
         exit(EINVALIDARGS);
     }
     if (argc <= 3) {

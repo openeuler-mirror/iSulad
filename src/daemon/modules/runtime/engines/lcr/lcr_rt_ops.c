@@ -74,7 +74,7 @@ int rt_lcr_create(const char *name, const char *runtime, const rt_create_params_
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Create container error: %s",
-                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -148,8 +148,8 @@ int rt_lcr_start(const char *name, const char *runtime, const rt_start_params_t 
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Start container error: %s",
-                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
-        ERROR("Start container error: %s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+        ERROR("Start container error: %s", (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -189,7 +189,7 @@ int rt_lcr_clean_resource(const char *name, const char *runtime, const rt_clean_
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_try_set_error_message("Clean resource container error;%s",
-                                     (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                     (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -243,9 +243,9 @@ int rt_lcr_rm(const char *name, const char *runtime, const rt_rm_params_t *param
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Runtime delete container error: %s",
-                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ERROR("Runtime delete container error: %s",
-              (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+              (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         if (tmpmsg != NULL && strstr(tmpmsg, "No such container") != NULL) {
             // container root path may been corrupted, try to remove by daemon
             WARN("container %s root path may been corrupted, try to remove by daemon", name);
@@ -289,9 +289,9 @@ int rt_lcr_status(const char *name, const char *runtime, const rt_status_params_
             status->error_code = INVALID_CONFIG_ERR_CODE;
         }
         isulad_set_error_message("Runtime state container error: %s",
-                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) != 0 ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ERROR("Runtime state container error: %s",
-              (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) != 0 ? tmpmsg : DEF_ERR_RUNTIME_STR);
+              (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         goto out;
     }
 
@@ -486,7 +486,7 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Exec container error;%s",
-                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         util_contain_errmsg(g_isulad_errmsg, exit_code);
         ret = -1;
         goto out;
@@ -520,7 +520,7 @@ int rt_lcr_pause(const char *name, const char *runtime, const rt_pause_params_t 
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Pause container error;%s",
-                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -550,7 +550,7 @@ int rt_lcr_resume(const char *name, const char *runtime, const rt_resume_params_
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Resume container error;%s",
-                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -581,7 +581,7 @@ int rt_lcr_attach(const char *name, const char *runtime, const rt_attach_params_
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Attach container error;%s",
-                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -644,7 +644,7 @@ int rt_lcr_update(const char *id, const char *runtime, const rt_update_params_t 
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Cannot update container %s: %s", id,
-                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -680,7 +680,7 @@ int rt_lcr_listpids(const char *name, const char *runtime, const rt_listpids_par
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Runtime top container error: %s",
-                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -710,7 +710,7 @@ int rt_lcr_resize(const char *id, const char *runtime, const rt_resize_params_t 
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Resize container error;%s",
-                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
 
         ret = -1;
         goto out;
@@ -741,7 +741,7 @@ int rt_lcr_exec_resize(const char *id, const char *runtime, const rt_exec_resize
             tmpmsg = engine_ops->engine_get_errmsg_op();
         }
         isulad_set_error_message("Resize container error;%s",
-                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }

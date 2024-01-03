@@ -85,7 +85,7 @@ static void update_option_insecure_registry(registry_pull_options *options, char
     }
 
     for (registry = insecure_registries; (registry != NULL) && (*registry != NULL); registry++) {
-        if (!strcmp(*registry, host)) {
+        if (strcmp(*registry, host) == 0) {
             options->insecure_registry = true;
         }
     }

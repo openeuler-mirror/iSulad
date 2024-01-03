@@ -549,7 +549,7 @@ void WebsocketServer::ServiceWorkThread(int threadid)
 
     prctl(PR_SET_NAME, "WebsocketServer");
 
-    while (n >= 0 && !m_forceExit) {
+    while (n >= 0 && m_forceExit == 0) {
         n = lws_service(m_context, 0);
     }
 }

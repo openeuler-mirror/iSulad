@@ -364,7 +364,7 @@ void isula_top_request_free(struct isula_top_request *request)
     free(request->name);
     request->name = NULL;
 
-    if (request->ps_argc && request->ps_args != NULL) {
+    if (request->ps_argc != 0 && request->ps_args != NULL) {
         int i;
         for (i = 0; i < request->ps_argc; i++) {
             free(request->ps_args[i]);
@@ -390,7 +390,7 @@ void isula_top_response_free(struct isula_top_response *response)
     free(response->errmsg);
     response->errmsg = NULL;
 
-    if (response->processes_len && response->processes != NULL) {
+    if (response->processes_len != 0 && response->processes != NULL) {
         size_t i;
         for (i = 0; i < response->processes_len; i++) {
             free(response->processes[i]);
@@ -774,7 +774,7 @@ void isula_stats_response_free(struct isula_stats_response *response)
     free(response->errmsg);
     response->errmsg = NULL;
 
-    if (response->container_stats != NULL && response->container_num) {
+    if (response->container_stats != NULL && response->container_num != 0) {
         size_t i;
         for (i = 0; i < response->container_num; i++) {
             free(response->container_stats[i].id);

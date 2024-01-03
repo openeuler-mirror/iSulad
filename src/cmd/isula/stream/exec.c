@@ -252,7 +252,7 @@ static int exec_prepare_console(struct command_fifo_config **command_fifos, bool
     int istty = 0;
 
     istty = isatty(0);
-    if (istty && custom_cfg->tty && custom_cfg->attach_stdin) {
+    if (istty != 0 && custom_cfg->tty && custom_cfg->attach_stdin) {
         if (setup_tios(0, oldtios)) {
             ERROR("Failed to setup terminal properties");
             ret = ECOMMON;
@@ -260,7 +260,7 @@ static int exec_prepare_console(struct command_fifo_config **command_fifos, bool
         }
         *reset_tty = true;
     }
-    if (!istty) {
+    if (istty == 0) {
         INFO("The input device is not a TTY");
     }
 
@@ -290,14 +290,14 @@ static int remote_cmd_exec_setup_tty(const struct client_arguments *args, bool *
     int istty = 0;
 
     istty = isatty(0);
-    if (istty && args->custom_conf.tty && args->custom_conf.attach_stdin) {
+    if (istty != 0 && args->custom_conf.tty && args->custom_conf.attach_stdin) {
         if (setup_tios(0, oldtios)) {
             ERROR("Failed to setup terminal properties");
             return -1;
         }
         *reset_tty = true;
     }
-    if (!istty) {
+    if (istty == 0) {
         INFO("The input device is not a TTY");
     }
     return 0;
@@ -482,5 +482,5 @@ int cmd_exec_main(int argc, const char **argv)
 
 out:
     free_container_inspect(inspect_data);
-    exit(exit_code ? (int)exit_code : ret);
+    exit(exit_code != 0 ? (int)exit_code : ret);
 }

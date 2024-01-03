@@ -1196,7 +1196,7 @@ static int util_input_notty(char *buf, size_t maxlen)
         buf[i] = (char)c;
     }
 
-    return ret ? ret : (int)i;
+    return ret != 0 ? ret : (int)i;
 }
 
 int util_input_readall(char *buf, size_t maxlen)
@@ -1237,7 +1237,7 @@ int util_input_readall(char *buf, size_t maxlen)
         i--;
     }
 
-    return ret ? ret : (int)i;
+    return ret != 0 ? ret : (int)i;
 }
 
 static int util_input(char *buf, size_t maxlen, bool echo_back)
@@ -1456,28 +1456,28 @@ static void normalized_host_variant(const char *host_arch, char **host_variant)
         { "9", "v9" }
     };
 
-    if (strcmp(host_arch, "arm") && strcmp(host_arch, "arm64")) {
+    if (strcmp(host_arch, "arm") != 0 && strcmp(host_arch, "arm64") != 0) {
         return;
     }
 
     *host_variant = get_cpu_variant();
-    if (!strcmp(host_arch, "arm64") && *host_variant != NULL &&
-        (!strcmp(*host_variant, "8") || !strcmp(*host_variant, "v8"))) {
+    if (strcmp(host_arch, "arm64") == 0 && *host_variant != NULL &&
+        (strcmp(*host_variant, "8") == 0 || strcmp(*host_variant, "v8") == 0)) {
         free(*host_variant);
         *host_variant = NULL;
     }
 
-    if (!strcmp(host_arch, "arm") && *host_variant == NULL) {
+    if (strcmp(host_arch, "arm") == 0 && *host_variant == NULL) {
         *host_variant = util_strdup_s("v7");
         return;
     }
 
-    if (!strcmp(host_arch, "arm") && *host_variant != NULL) {
+    if (strcmp(host_arch, "arm") == 0 && *host_variant != NULL) {
         size_t i;
         tmp_variant = *host_variant;
         *host_variant = util_strdup_s(tmp_variant);
         for (i = 0; i < sizeof(variant_map) / sizeof(variant_map[0]); ++i) {
-            if (!strcmp(tmp_variant, variant_map[i][0])) {
+            if (strcmp(tmp_variant, variant_map[i][0]) == 0) {
                 free(*host_variant);
                 *host_variant = util_strdup_s(variant_map[i][1]);
                 break;

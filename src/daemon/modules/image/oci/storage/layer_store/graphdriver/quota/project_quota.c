@@ -269,7 +269,7 @@ static void get_next_project_id(const char *dirpath, struct pquota_control *ctrl
         int pathname_len;
         uint32_t project_id = 0;
 
-        if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
+        if (strcmp(pdirent->d_name, ".") == 0 || strcmp(pdirent->d_name, "..") == 0) {
             continue;
         }
 

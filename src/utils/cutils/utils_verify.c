@@ -124,7 +124,7 @@ bool util_valid_device_mode(const char *mode)
     int w_count = 0;
     int m_count = 0;
 
-    if (mode == NULL || !strcmp(mode, "")) {
+    if (mode == NULL || strcmp(mode, "") == 0) {
         return false;
     }
 
@@ -406,7 +406,7 @@ bool util_valid_key_type(const char *key)
         return false;
     }
 
-    return !strcmp(key, "type");
+    return strcmp(key, "type") == 0;
 }
 
 bool util_valid_key_src(const char *key)
@@ -415,7 +415,7 @@ bool util_valid_key_src(const char *key)
         return false;
     }
 
-    return !strcmp(key, "src") || !strcmp(key, "source");
+    return strcmp(key, "src") == 0 || strcmp(key, "source") == 0;
 }
 
 bool util_valid_key_dst(const char *key)
@@ -424,7 +424,7 @@ bool util_valid_key_dst(const char *key)
         return false;
     }
 
-    return !strcmp(key, "dst") || !strcmp(key, "destination") || !strcmp(key, "target");
+    return strcmp(key, "dst") == 0 || strcmp(key, "destination") == 0 || strcmp(key, "target") == 0;
 }
 
 bool util_valid_key_ro(const char *key)
@@ -433,7 +433,7 @@ bool util_valid_key_ro(const char *key)
         return false;
     }
 
-    return !strcmp(key, "ro") || !strcmp(key, "readonly");
+    return strcmp(key, "ro") == 0 || strcmp(key, "readonly") == 0;
 }
 
 bool util_valid_key_propagation(const char *key)
@@ -442,7 +442,7 @@ bool util_valid_key_propagation(const char *key)
         return false;
     }
 
-    return !strcmp(key, "bind-propagation");
+    return strcmp(key, "bind-propagation") == 0;
 }
 
 bool util_valid_key_selinux(const char *key)
@@ -451,7 +451,7 @@ bool util_valid_key_selinux(const char *key)
         return false;
     }
 
-    return !strcmp(key, "bind-selinux-opts") || !strcmp(key, "selinux-opts");
+    return strcmp(key, "bind-selinux-opts") == 0 || strcmp(key, "selinux-opts") == 0;
 }
 
 bool util_valid_key_tmpfs_size(const char *key)
@@ -460,7 +460,7 @@ bool util_valid_key_tmpfs_size(const char *key)
         return false;
     }
 
-    return !strcmp(key, "tmpfs-size");
+    return strcmp(key, "tmpfs-size") == 0;
 }
 
 bool util_valid_key_tmpfs_mode(const char *key)
@@ -469,7 +469,7 @@ bool util_valid_key_tmpfs_mode(const char *key)
         return false;
     }
 
-    return !strcmp(key, "tmpfs-mode");
+    return strcmp(key, "tmpfs-mode") == 0;
 }
 
 bool util_valid_key_nocopy(const char *key)
@@ -478,7 +478,7 @@ bool util_valid_key_nocopy(const char *key)
         return false;
     }
 
-    return !strcmp(key, "volume-nocopy");
+    return strcmp(key, "volume-nocopy") == 0;
 }
 
 bool util_valid_value_true(const char *value)
@@ -487,7 +487,7 @@ bool util_valid_value_true(const char *value)
         return false;
     }
 
-    return !strcmp(value, "1") || !strcmp(value, "true");
+    return strcmp(value, "1") == 0 || strcmp(value, "true") == 0;
 }
 
 bool util_valid_value_false(const char *value)
@@ -496,7 +496,7 @@ bool util_valid_value_false(const char *value)
         return false;
     }
 
-    return !strcmp(value, "0") || !strcmp(value, "false");
+    return strcmp(value, "0") == 0 || strcmp(value, "false") == 0;
 }
 
 bool util_valid_bool_string(const char *val)
@@ -514,7 +514,7 @@ bool util_valid_rw_mode(const char *mode)
         return false;
     }
 
-    return !strcmp(mode, "rw") || !strcmp(mode, "ro");
+    return strcmp(mode, "rw") == 0 || strcmp(mode, "ro") == 0;
 }
 
 bool util_valid_label_mode(const char *mode)
@@ -523,7 +523,7 @@ bool util_valid_label_mode(const char *mode)
         return false;
     }
 
-    return !strcmp(mode, "z") || !strcmp(mode, "Z");
+    return strcmp(mode, "z") == 0 || strcmp(mode, "Z") == 0;
 }
 
 bool util_valid_copy_mode(const char *mode)
@@ -531,7 +531,7 @@ bool util_valid_copy_mode(const char *mode)
     if (mode == NULL) {
         return false;
     }
-    return !strcmp(mode, "nocopy");
+    return strcmp(mode, "nocopy") == 0;
 }
 
 bool util_valid_propagation_mode(const char *mode)
@@ -539,8 +539,8 @@ bool util_valid_propagation_mode(const char *mode)
     if (mode == NULL) {
         return false;
     }
-    return !strcmp(mode, "private") || !strcmp(mode, "rprivate") || !strcmp(mode, "slave") || !strcmp(mode, "rslave") ||
-           !strcmp(mode, "shared") || !strcmp(mode, "rshared");
+    return strcmp(mode, "private") == 0 || strcmp(mode, "rprivate") == 0 || strcmp(mode, "slave") == 0 || strcmp(mode, "rslave") == 0 ||
+           strcmp(mode, "shared") == 0 || strcmp(mode, "rshared") == 0;
 }
 
 bool util_valid_mount_mode(const char *mode)

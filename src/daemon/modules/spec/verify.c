@@ -518,7 +518,7 @@ int max_cpu(const char *cores)
         } else {
             subchr = tmp;
         }
-        if (util_safe_int(subchr, &value) || value < 0) {
+        if (util_safe_int(subchr, &value) != 0 || value < 0) {
             max = -1;
             goto out;
         }
@@ -580,7 +580,7 @@ STATIC int parse_unit_list(const char *val, bool *available_list, int cpu_num)
         subchr = strchr(tmp, '-');
         if (subchr == NULL) {
             int value = 0;
-            if (util_safe_int(tmp, &value) || value < 0 || value >= cpu_num) {
+            if (util_safe_int(tmp, &value) != 0 || value < 0 || value >= cpu_num) {
                 goto out;
             }
             available_list[value] = true;
@@ -589,7 +589,7 @@ STATIC int parse_unit_list(const char *val, bool *available_list, int cpu_num)
             int max = 0;
             int i = 0;
             *subchr++ = '\0';
-            if (util_safe_int(tmp, &min) || min < 0) {
+            if (util_safe_int(tmp, &min) != 0 || min < 0) {
                 goto out;
             }
             if (util_safe_int(subchr, &max) || max < 0 || max >= cpu_num) {
@@ -952,7 +952,7 @@ static bool check_hugetlbs_repeated(size_t newlen, const char *pagesize,
     size_t j;
 
     for (j = 0; j < newlen; j++) {
-        if (newtlb[j] != NULL && newtlb[j]->page_size != NULL && !strcmp(newtlb[j]->page_size, pagesize)) {
+        if (newtlb[j] != NULL && newtlb[j]->page_size != NULL && strcmp(newtlb[j]->page_size, pagesize) == 0) {
             WARN("hugetlb-limit setting of %s is repeated, former setting %" PRIu64 " will be replaced with %" PRIu64,
                  pagesize, newtlb[j]->limit, hugetlb->limit);
             newtlb[j]->limit = hugetlb->limit;

@@ -60,7 +60,7 @@ static int do_clean_path(const char *respath, const char *limit_respath, const c
             ++stpos;
         }
 
-        for (endpos = stpos; *endpos && !ISSLASH(*endpos); ++endpos) {
+        for (endpos = stpos; *endpos != '\0' && !ISSLASH(*endpos); ++endpos) {
         }
 
         if (endpos - stpos == 0) {
@@ -272,7 +272,7 @@ static void do_eval_symlinks_skip_slash(const char **start, const char **end)
         ++(*start);
     }
 
-    for (*end = *start; **end && !ISSLASH(**end); ++(*end)) {
+    for (*end = *start; **end != '\0' && !ISSLASH(**end); ++(*end)) {
     }
 }
 

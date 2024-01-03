@@ -364,7 +364,7 @@ static int recursive_rmdir_helper(const char *dirpath, int recursive_depth, int 
         struct stat fstat;
         int pathname_len;
 
-        if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
+        if (strcmp(pdirent->d_name, ".") == 0 || strcmp(pdirent->d_name, "..") == 0) {
             continue;
         }
 
@@ -465,7 +465,7 @@ int util_recursive_rmdir(const char *dirpath, int recursive_depth)
 
 err_out:
     errno = saved_errno;
-    return failure ? -1 : 0;
+    return failure != 0 ? -1 : 0;
 }
 
 char *util_path_join(const char *dir, const char *file)
@@ -562,7 +562,7 @@ int util_build_dir(const char *name)
         }
         set_char_to_terminator(p);
         nret = mkdir(n, DEFAULT_SECURE_DIRECTORY_MODE);
-        if (nret && (errno != EEXIST || !util_dir_exists(n))) {
+        if (nret != 0 && (errno != EEXIST || !util_dir_exists(n))) {
             ERROR("failed to create directory '%s'.", n);
             free(n);
             return -1;
@@ -1243,7 +1243,7 @@ static void recursive_cal_dir_size_helper(const char *dirpath, int recursive_dep
     for (; pdirent != NULL; pdirent = readdir(directory)) {
         int pathname_len;
 
-        if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
+        if (strcmp(pdirent->d_name, ".") == 0 || strcmp(pdirent->d_name, "..") == 0) {
             continue;
         }
 
@@ -1331,7 +1331,7 @@ static void recursive_cal_dir_size__without_hardlink_helper(const char *dirpath,
         struct stat fstat;
         int pathname_len;
 
-        if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
+        if (strcmp(pdirent->d_name, ".") == 0 || strcmp(pdirent->d_name, "..") == 0) {
             continue;
         }
 

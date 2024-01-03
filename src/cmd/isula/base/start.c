@@ -76,7 +76,7 @@ static int start_prepare_console(const struct client_arguments *args, struct ter
 
 
     istty = isatty(0);
-    if (istty && args->custom_conf.tty && args->custom_conf.attach_stdin) {
+    if (istty != 0 && args->custom_conf.tty && args->custom_conf.attach_stdin) {
         if (setup_tios(0, oldtios)) {
             ERROR("Failed to setup terminal properties");
             ret = ECOMMON;
@@ -84,7 +84,7 @@ static int start_prepare_console(const struct client_arguments *args, struct ter
         }
         *reset_tty = true;
     }
-    if (!istty) {
+    if (istty == 0) {
         INFO("The input device is not a TTY");
     }
 
@@ -145,8 +145,8 @@ static int do_client_start(const struct client_arguments *args, struct command_f
     ret = ops->container.start(&request, response, &config);
     if (ret) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
-        if (response->server_errono ||
-            (response->errmsg && !strcmp(response->errmsg, errno_to_error_message(ISULAD_ERR_CONNECT)))) {
+        if (response->server_errono != 0 ||
+            (response->errmsg != NULL && strcmp(response->errmsg, errno_to_error_message(ISULAD_ERR_CONNECT))) == 0) {
             ret = ESERVERERROR;
             util_contain_errmsg(response->errmsg, &ret);
         } else {
@@ -212,7 +212,7 @@ static int client_remote_start_set_tty(const struct client_arguments *args, bool
     int istty = 0;
 
     istty = isatty(0);
-    if (istty && args->custom_conf.tty && args->custom_conf.attach_stdin) {
+    if (istty != 0 && args->custom_conf.tty && args->custom_conf.attach_stdin) {
         if (setup_tios(0, oldtios)) {
             ERROR("Failed to setup terminal properties");
             return -1;
@@ -260,8 +260,8 @@ int client_remote_start(const struct client_arguments *args)
     if (ret) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
         ret = ECOMMON;
-        if (response->server_errono ||
-            (response->errmsg && !strcmp(response->errmsg, errno_to_error_message(ISULAD_ERR_CONNECT)))) {
+        if (response->server_errono != 0 ||
+            (response->errmsg != NULL && strcmp(response->errmsg, errno_to_error_message(ISULAD_ERR_CONNECT)) == 0)) {
             ret = ESERVERERROR;
         }
         goto out;

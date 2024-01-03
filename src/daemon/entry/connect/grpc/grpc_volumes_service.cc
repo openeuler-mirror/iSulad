@@ -148,7 +148,7 @@ Status VolumeServiceImpl::List(ServerContext *context, const ListVolumeRequest *
     if (tret != 0) {
         reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
         reply->set_cc(ISULAD_ERR_INPUT);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+        ERROR("Failed to translate response to grpc, operation is %s", ret != 0 ? "failed" : "success");
     }
 
     return Status::OK;
@@ -187,7 +187,7 @@ Status VolumeServiceImpl::Remove(ServerContext *context, const RemoveVolumeReque
     if (tret != 0) {
         reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
         reply->set_cc(ISULAD_ERR_INPUT);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+        ERROR("Failed to translate response to grpc, operation is %s", ret != 0 ? "failed" : "success");
     }
 
     return Status::OK;
@@ -224,7 +224,7 @@ Status VolumeServiceImpl::Prune(ServerContext *context, const PruneVolumeRequest
     if (tret != 0) {
         reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
         reply->set_cc(ISULAD_ERR_INPUT);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+        ERROR("Failed to translate response to grpc, operation is %s", ret != 0 ? "failed" : "success");
     }
 
     return Status::OK;

@@ -104,7 +104,7 @@ static int setup_ssl_config(pull_descriptor *desc, struct http_get_options *opti
     }
 
     // If target is registry server, we can save ssl related config to avoid load it again next time.
-    if (!strcmp(host, desc->host)) {
+    if (strcmp(host, desc->host) == 0) {
         if (!desc->cert_loaded) {
             ret = certs_load(host, desc->use_decrypted_key, &desc->ca_file, &desc->cert_file, &desc->key_file);
             if (ret != 0) {
@@ -366,7 +366,7 @@ static int setup_auth_challenges(pull_descriptor *desc, char ***custom_headers)
         if (desc->challenges[i].schema == NULL || desc->challenges[i].realm == NULL) {
             continue;
         }
-        if (!strcasecmp(desc->challenges[i].schema, "Basic")) {
+        if (strcasecmp(desc->challenges[i].schema, "Basic") == 0) {
             // Setup auth config only when username and password are provided.
             if (desc->username == NULL || desc->password == NULL) {
                 WARN("username or password not found while challenges is basic, try other challenges");
@@ -379,7 +379,7 @@ static int setup_auth_challenges(pull_descriptor *desc, char ***custom_headers)
                 ret = -1;
                 goto out;
             }
-        } else if (!strcasecmp(desc->challenges[i].schema, "Bearer")) {
+        } else if (strcasecmp(desc->challenges[i].schema, "Bearer") == 0) {
             (void)pthread_mutex_lock(&desc->challenges_mutex);
             ret = get_bearer_token(desc, &desc->challenges[i]);
             if (ret != 0) {
