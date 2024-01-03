@@ -74,6 +74,12 @@ public:
     static const std::string IMAGE_NAME_ANNOTATION_KEY;
 };
 
+struct iSuladOpt {
+    std::string key;
+    std::string value;
+    std::string msg;
+};
+
 auto GetDefaultSandboxImage(Errors &err) -> std::string;
 
 auto MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels, Errors &error)
@@ -92,8 +98,6 @@ auto FiltersAddLabel(defs_filters *filters, const std::string &key, const std::s
 
 void ProtobufAnnoMapToStd(const google::protobuf::Map<std::string, std::string> &annotations,
                           std::map<std::string, std::string> &newAnnos);
-
-auto StringVectorToCharArray(std::vector<std::string> &path) -> char **;
 
 auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_image_summary *;
 
@@ -116,9 +120,9 @@ auto InspectContainer(const std::string &Id, Errors &err, bool with_host_config)
 
 auto ToInt32Timeout(int64_t timeout) -> int32_t;
 
-void GetContainerLogPath(const std::string &containerID, char **path, char **realPath, Errors &error);
-
 void RemoveContainerLogSymlink(const std::string &containerID, Errors &error);
+
+void CreateContainerLogSymlink(const std::string &containerID, Errors &error);
 
 void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt,
                             int64_t *startedAt, int64_t *finishedAt, Errors &err);
@@ -139,6 +143,14 @@ char *GenerateExecSuffix();
 std::string CRIRuntimeConvert(const std::string &runtime);
 
 int64_t ParseQuantity(const std::string &str, Errors &error);
+
+auto fmtiSuladOpts(const std::vector<iSuladOpt> &opts, const char &sep) -> std::vector<std::string>;
+
+auto GetPodSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error) -> std::vector<std::string>;
+
+auto GetlegacySeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> std::vector<iSuladOpt>;
+
+auto GetSeccompiSuladOptsByPath(const char *dstpath, Errors &error) -> std::vector<iSuladOpt>;
 }; // namespace CRIHelpers
 
 #endif // DAEMON_ENTRY_CRI_CRI_HELPERS_H

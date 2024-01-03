@@ -20,6 +20,7 @@
 #include <sys/utsname.h>
 #include <utility>
 
+#include <isula_libutils/auto_cleanup.h>
 #include <isula_libutils/log.h>
 #include <isula_libutils/parse_common.h>
 
@@ -275,21 +276,6 @@ auto FiltersAddLabel(defs_filters *filters, const std::string &key, const std::s
     return FiltersAdd(filters, "label", key + "=" + value);
 }
 
-auto StringVectorToCharArray(std::vector<std::string> &path) -> char **
-{
-    size_t len = path.size();
-    char **result = (char **)util_smart_calloc_s(sizeof(char *), (len + 1));
-    if (result == nullptr) {
-        return nullptr;
-    }
-    size_t i {};
-    for (const auto &it : path) {
-        result[i++] = util_strdup_s(it.c_str());
-    }
-
-    return result;
-}
-
 auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_image_summary *
 {
     im_summary_request *request { nullptr };
@@ -500,7 +486,7 @@ int32_t ToInt32Timeout(int64_t timeout)
     return (int32_t)timeout;
 }
 
-void GetContainerLogPath(const std::string &containerID, char **path, char **realPath, Errors &error)
+void GetContainerLogPath(const std::string &containerID, std::string &path, std::string &realPath, Errors &error)
 {
     container_inspect *info = InspectContainer(containerID, error, false);
     if (info == nullptr || error.NotEmpty()) {
@@ -510,17 +496,16 @@ void GetContainerLogPath(const std::string &containerID, char **path, char **rea
 
     if (info->config != nullptr && (info->config->labels != nullptr)) {
         for (size_t i = 0; i < info->config->labels->len; i++) {
-            if (strcmp(info->config->labels->keys[i], CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str()) ==
-                0 &&
+            if (strcmp(info->config->labels->keys[i], CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str()) == 0 &&
                 strcmp(info->config->labels->values[i], "") != 0) {
-                *path = util_strdup_s(info->config->labels->values[i]);
+                path = std::string(info->config->labels->values[i]);
                 break;
             }
         }
     }
 
     if (info->log_path != nullptr && strcmp(info->log_path, "") != 0) {
-        *realPath = util_strdup_s(info->log_path);
+        realPath = std::string(info->log_path);
     }
     free_container_inspect(info);
 }
@@ -528,26 +513,48 @@ void GetContainerLogPath(const std::string &containerID, char **path, char **rea
 // CreateContainerLogSymlink creates the symlink for container log.
 void RemoveContainerLogSymlink(const std::string &containerID, Errors &error)
 {
-    char *path { nullptr };
-    char *realPath { nullptr };
-
-    GetContainerLogPath(containerID, &path, &realPath, error);
+    std::string path, realPath;
+    GetContainerLogPath(containerID, path, realPath, error);
     if (error.NotEmpty()) {
         error.Errorf("Failed to get container %s log path: %s", containerID.c_str(), error.GetCMessage());
         return;
     }
 
-    if (path != nullptr) {
+    if (!path.empty()) {
         // Only remove the symlink when container log path is specified.
-        if (util_path_remove(path) != 0 && errno != ENOENT) {
+        if (util_path_remove(path.c_str()) != 0 && errno != ENOENT) {
             SYSERROR("Failed to remove container %s log symlink %s.", containerID.c_str(), path);
             error.Errorf("Failed to remove container %s log symlink %s.", containerID.c_str(), path);
-            goto cleanup;
         }
     }
-cleanup:
-    free(path);
-    free(realPath);
+}
+
+void CreateContainerLogSymlink(const std::string &containerID, Errors &error)
+{
+    std::string path, realPath;
+
+    GetContainerLogPath(containerID, path, realPath, error);
+    if (error.NotEmpty()) {
+        error.Errorf("failed to get container %s log path: %s", containerID.c_str(), error.GetCMessage());
+        return;
+    }
+    if (path.empty()) {
+        INFO("Container %s log path isn't specified, will not create the symlink", containerID.c_str());
+        return;
+    }
+    if (realPath.empty()) {
+        WARN("Cannot create symbolic link because container log file doesn't exist!");
+        return;
+    }
+    if (util_path_remove(path.c_str()) == 0) {
+        WARN("Deleted previously existing symlink file: %s", path.c_str());
+    }
+    if (symlink(realPath.c_str(), path.c_str()) != 0) {
+        SYSERROR("failed to create symbolic link %s to the container log file %s for container %s", path.c_str(), realPath.c_str(),
+                 containerID.c_str());
+        error.Errorf("failed to create symbolic link %s to the container log file %s for container %s: %s", path.c_str(),
+                     realPath.c_str(), containerID.c_str());
+    }
 }
 
 void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
@@ -1047,6 +1054,90 @@ int64_t ParseQuantity(const std::string &str, Errors &error)
     }
     DEBUG("parse quantity: %s to %ld", str.c_str(), result);
     return result;
+}
+
+auto fmtiSuladOpts(const std::vector<iSuladOpt> &opts, const char &sep) -> std::vector<std::string>
+{
+    std::vector<std::string> fmtOpts(opts.size());
+    for (size_t i {}; i < opts.size(); i++) {
+        fmtOpts[i] = opts.at(i).key + sep + opts.at(i).value;
+    }
+    return fmtOpts;
+}
+
+auto GetSeccompiSuladOptsByPath(const char *dstpath, Errors &error) -> std::vector<iSuladOpt>
+{
+    std::vector<iSuladOpt> ret { };
+    __isula_auto_free parser_error err = nullptr;
+    __isula_auto_free char *seccomp_json = nullptr;
+
+    docker_seccomp *seccomp_spec = get_seccomp_security_opt_spec(dstpath);
+    if (seccomp_spec == nullptr) {
+        error.Errorf("failed to parse seccomp profile");
+        return ret;
+    }
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    seccomp_json = docker_seccomp_generate_json(seccomp_spec, &ctx, &err);
+    if (seccomp_json == nullptr) {
+        error.Errorf("failed to generate seccomp json: %s", err);
+    } else {
+        ret = std::vector<iSuladOpt> { { "seccomp", seccomp_json, "" } };
+    }
+
+    free_docker_seccomp(seccomp_spec);
+    return ret;
+}
+
+auto GetlegacySeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> std::vector<iSuladOpt>
+{
+    if (seccompProfile.empty() || seccompProfile == "unconfined") {
+        DEBUG("Legacy seccomp is unconfined");
+        return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
+    }
+    if (seccompProfile == "iSulad/default" || seccompProfile == "docker/default" ||
+        seccompProfile == "runtime/default") {
+        // return nil so iSulad will load the default seccomp profile
+        return std::vector<iSuladOpt> {};
+    }
+
+    const std::string localHostStr("localhost/");
+    if (seccompProfile.compare(0, localHostStr.length(), localHostStr) != 0) {
+        error.Errorf("unknown seccomp profile option: %s", seccompProfile.c_str());
+        return std::vector<iSuladOpt> {};
+    }
+    std::string fname = seccompProfile.substr(localHostStr.length(), seccompProfile.length());
+    char dstpath[PATH_MAX] { 0 };
+    if (util_clean_path(fname.c_str(), dstpath, sizeof(dstpath)) == nullptr) {
+        error.Errorf("failed to get clean path");
+        return std::vector<iSuladOpt> {};
+    }
+    if (dstpath[0] != '/') {
+        error.Errorf("seccomp profile path must be absolute, but got relative path %s", fname.c_str());
+        return std::vector<iSuladOpt> {};
+    }
+
+    return GetSeccompiSuladOptsByPath(dstpath, error);
+}
+
+auto GetPodSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error)
+-> std::vector<std::string>
+{
+    // security Opt Separator Change Version : k8s v1.23.0 (Corresponds to docker 1.11.x)
+    // New version '=' , old version ':', iSulad cri is based on v18.09, so iSulad cri use new version separator
+    const char securityOptSep { '=' };
+    // LabeSep is consistent with the separator used when parsing labels
+    const char labeSep { ':' };
+    std::vector<iSuladOpt> selinuxOpts { };
+    std::vector<std::string> opts = {"user", "role", "type", "level"};
+    std::vector<std::string> vect;
+
+    auto labelArr = CXXUtils::SplitN(selinuxLabel.c_str(), labeSep, opts.size());
+    for (size_t i {0}; i < labelArr.size(); i++) {
+        iSuladOpt tmp = { "label", opts[i] + std::string(1, labeSep) + std::string(labelArr[i]), "" };
+        selinuxOpts.push_back(tmp);
+    }
+
+    return fmtiSuladOpts(selinuxOpts, securityOptSep);
 }
 
 } // namespace CRIHelpers

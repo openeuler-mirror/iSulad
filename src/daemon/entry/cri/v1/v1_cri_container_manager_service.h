@@ -96,7 +96,6 @@ private:
                                     host_config *hostconfig, sandbox::Sandbox &sandbox, Errors &error);
     void MakeContainerConfig(const runtime::v1::ContainerConfig &config, container_config *cConfig,
                              Errors &error);
-    void CreateContainerLogSymlink(const std::string &containerID, Errors &error);
     void ListContainersFromGRPC(const runtime::v1::ContainerFilter *filter, container_list_request **request,
                                 Errors &error);
     void ListContainersToGRPC(container_list_response *response,

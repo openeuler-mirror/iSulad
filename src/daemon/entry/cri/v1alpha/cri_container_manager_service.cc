@@ -141,7 +141,7 @@ auto ContainerManagerService::DoUsePodLevelSELinuxConfig(const runtime::v1alpha2
     }
 
     tmp_str = std::string(inspect->process_label);
-    selinuxLabelOpts = CRIHelpersV1Alpha::GetPodSELinuxLabelOpts(tmp_str, error);
+    selinuxLabelOpts = CRIHelpers::GetPodSELinuxLabelOpts(tmp_str, error);
     if (error.NotEmpty()) {
         ERROR("Failed to get SELinuxLabelOpts for container %s", containerConfig.metadata().name().c_str());
         goto cleanup;
@@ -528,39 +528,6 @@ cleanup:
     return response_id;
 }
 
-void ContainerManagerService::CreateContainerLogSymlink(const std::string &containerID, Errors &error)
-{
-    char *path { nullptr };
-    char *realPath { nullptr };
-
-    CRIHelpers::GetContainerLogPath(containerID, &path, &realPath, error);
-    if (error.NotEmpty()) {
-        error.Errorf("failed to get container %s log path: %s", containerID.c_str(), error.GetCMessage());
-        return;
-    }
-    if (path == nullptr) {
-        INFO("Container %s log path isn't specified, will not create the symlink", containerID.c_str());
-        goto cleanup;
-    }
-    if (realPath != nullptr) {
-        if (util_path_remove(path) == 0) {
-            WARN("Deleted previously existing symlink file: %s", path);
-        }
-        if (symlink(realPath, path) != 0) {
-            SYSERROR("failed to create symbolic link %s to the container log file %s for container %s", path, realPath,
-                     containerID.c_str());
-            error.Errorf("failed to create symbolic link %s to the container log file %s for container %s: %s", path,
-                         realPath, containerID.c_str());
-            goto cleanup;
-        }
-    } else {
-        WARN("Cannot create symbolic link because container log file doesn't exist!");
-    }
-cleanup:
-    free(path);
-    free(realPath);
-}
-
 void ContainerManagerService::StartContainer(const std::string &containerID, Errors &error)
 {
     if (containerID.empty()) {
@@ -591,7 +558,7 @@ void ContainerManagerService::StartContainer(const std::string &containerID, Err
     ret = m_cb->container.start(request, &response, -1, nullptr, nullptr);
 
     // Create container log symlink for all containers (including failed ones).
-    CreateContainerLogSymlink(realContainerID, error);
+    CRIHelpers::CreateContainerLogSymlink(realContainerID, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }

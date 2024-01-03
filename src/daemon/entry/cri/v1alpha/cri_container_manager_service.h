@@ -93,7 +93,6 @@ private:
                                     const std::string &realPodSandboxID, Errors &error) -> int;
     void MakeContainerConfig(const runtime::v1alpha2::ContainerConfig &config, container_config *cConfig,
                              Errors &error);
-    void CreateContainerLogSymlink(const std::string &containerID, Errors &error);
     void ListContainersFromGRPC(const runtime::v1alpha2::ContainerFilter *filter, container_list_request **request,
                                 Errors &error);
     void ListContainersToGRPC(container_list_response *response,
