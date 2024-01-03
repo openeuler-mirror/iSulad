@@ -656,7 +656,7 @@ int64_t util_time_seconds_since(const char *in)
     time_t currentime;
     struct tm result_time = { 0 };
 
-    if (in == NULL || !strcmp(in, defaultContainerTime) || !strcmp(in, "-")) {
+    if (in == NULL || strcmp(in, defaultContainerTime) == 0 || strcmp(in, "-") == 0) {
         return 0;
     }
 
@@ -878,7 +878,7 @@ int util_time_format_duration(const char *in, char *out, size_t len)
         return -1;
     }
 
-    if (in == NULL || !strcmp(in, defaultContainerTime) || !strcmp(in, "-")) {
+    if (in == NULL || strcmp(in, defaultContainerTime) == 0 || strcmp(in, "-") == 0) {
         return time_format_duration_bad(out, len);
     }
 
@@ -970,7 +970,7 @@ int util_to_unix_nanos_from_str(const char *str, int64_t *nanos)
     }
 
     *nanos = 0;
-    if (str == NULL || !strcmp(str, "") || !strcmp(str, defaultContainerTime)) {
+    if (str == NULL || strcmp(str, "") == 0 || strcmp(str, defaultContainerTime) == 0) {
         return 0;
     }
 

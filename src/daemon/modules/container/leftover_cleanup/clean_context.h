@@ -28,7 +28,7 @@ struct clean_ctx {
     struct linked_list broken_rootfs_list;
 };
 
-struct clean_ctx *clean_ctx_init();
+struct clean_ctx *clean_ctx_init(void);
 
 void clean_ctx_destroy(struct clean_ctx *ctx);
 

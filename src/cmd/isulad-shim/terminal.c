@@ -183,7 +183,7 @@ static bool util_get_time_buffer(struct timespec *timestamp, char *timebuffer, s
     size_t len = 0;
     int ret = 0;
 
-    if (!timebuffer || !maxsize) {
+    if (timebuffer == NULL || maxsize == 0) {
         return false;
     }
 

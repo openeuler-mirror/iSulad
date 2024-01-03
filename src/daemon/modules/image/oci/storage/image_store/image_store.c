@@ -605,7 +605,7 @@ static image_t *by_digest(const char *name)
 
     // split digest for image name with digest
     digest = strrchr(name, '@');
-    if (digest == NULL || util_reg_match(__DIGESTPattern, digest)) {
+    if (digest == NULL || util_reg_match(__DIGESTPattern, digest) != 0) {
         return NULL;
     }
     digest++;
@@ -3313,7 +3313,7 @@ static int get_layers_from_manifest(const registry_manifest_schema1 *manifest, l
             for (j = 0; j < list->layers_len; j++) {
                 if ((list->layers[j]->parent == NULL && index == 0) ||
                     (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
-                     !strcmp(list->layers[j]->parent, util_without_sha256_prefix(parent_chain_id)))) {
+                     strcmp(list->layers[j]->parent, util_without_sha256_prefix(parent_chain_id)) == 0)) {
                     layers[index].diff_id = util_strdup_s(list->layers[j]->uncompressed_digest);
                     layers[i].chain_id = util_string_append(list->layers[j]->id, SHA256_PREFIX);
                     parent_chain_id = layers[i].chain_id;

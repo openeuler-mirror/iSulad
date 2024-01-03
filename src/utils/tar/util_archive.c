@@ -398,7 +398,7 @@ static int remove_files_in_opq_dir(const char *dirpath, int recursive_depth, map
         struct stat fstat;
         int pathname_len;
 
-        if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
+        if (strcmp(pdirent->d_name, ".") == 0 || strcmp(pdirent->d_name, "..") == 0) {
             continue;
         }
 

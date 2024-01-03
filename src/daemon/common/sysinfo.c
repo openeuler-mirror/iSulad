@@ -311,7 +311,7 @@ static void is_hugelimit_valid(const char *pagesize, uint64_t limit)
     int64_t sizeint = 0;
 
     ret = util_parse_byte_size_string(pagesize, &sizeint);
-    if (ret < 0 || !sizeint) {
+    if (ret < 0 || sizeint == 0) {
         WARN("Invalid pagesize: %s", pagesize);
         return;
     }
@@ -327,7 +327,7 @@ char *validate_hugetlb(const char *pagesize, uint64_t limit)
     char *newpagesize = NULL;
     int64_t sizeint = 0;
 
-    if (pagesize != NULL && strlen(pagesize)) {
+    if (pagesize != NULL && strlen(pagesize) != 0) {
         int nret = util_parse_byte_size_string(pagesize, &sizeint);
         if (nret < 0) {
             ERROR("Invalid pagesize: %s", pagesize);
@@ -514,7 +514,7 @@ mountinfo_t *find_mount_info(mountinfo_t **minfos, const char *dir)
     }
 
     for (it = minfos; it && *it; it++) {
-        if ((*it)->mountpoint && !strcmp((*it)->mountpoint, dir)) {
+        if ((*it)->mountpoint && strcmp((*it)->mountpoint, dir) == 0) {
             return *it;
         }
     }

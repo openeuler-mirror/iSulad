@@ -100,7 +100,7 @@ bool network_module_ready(const char *type);
 
 int network_module_update(const char *type);
 
-void network_module_exit();
+void network_module_exit(void);
 
 int network_module_insert_portmapping(const char *val, network_api_conf *conf);
 

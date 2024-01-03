@@ -39,7 +39,7 @@ struct cleaners {
     struct linked_list cleaner_list;
 };
 
-struct cleaners *cleaners_init();
+struct cleaners *cleaners_init(void);
 
 void destroy_cleaners(struct cleaners *clns);
 

@@ -45,11 +45,11 @@ struct command {
 const struct command *command_by_name(const struct command *cmds, const char * const name);
 
 // Default help command if implementation doesn't prvide one
-int command_default_help(const char * const program_name, struct command *commands, int argc, const char **argv);
+int command_default_help(const char * const program_name, struct command *all_commands, int argc, const char **argv);
 
-int command_subcmd_help(const char * const program_name, struct command *commands, int argc, const char **argv);
+int command_subcmd_help(const char * const program_name, struct command *all_commands, int argc, const char **argv);
 
-int run_command(struct command *commands, int argc, const char **argv);
+int run_command(struct command *all_commands, int argc, const char **argv);
 
 #ifdef __cplusplus
 }

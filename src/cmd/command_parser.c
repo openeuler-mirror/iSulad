@@ -35,7 +35,7 @@
 #include "utils_verify.h"
 #include "utils_timestamp.h"
 
-void command_help_isulad_head()
+static void command_help_isulad_head()
 {
     fprintf(stdout, "isulad\n\nlightweight container runtime daemon\n");
 }
@@ -379,7 +379,7 @@ int command_parse_args(command_t *self, int *argc, char * const **argv)
 
     for (; self->argc; self->argc--, self->argv++) {
         const char *arg_opt = self->argv[0];
-        if (arg_opt[0] != '-' || !arg_opt[1]) {
+        if (arg_opt[0] != '-' || arg_opt[1] == '\0') {
             break;
         }
 
@@ -387,14 +387,14 @@ int command_parse_args(command_t *self, int *argc, char * const **argv)
         if (arg_opt[1] != '-') {
             arg_opt = arg_opt + 1;
             ret = command_parse_short_arg(self, arg_opt);
-            if (!ret) {
+            if (ret == 0) {
                 continue;
             }
             break;
         }
 
         // --
-        if (!arg_opt[2]) {
+        if (arg_opt[2] == '\0') {
             self->argc--;
             self->argv++;
             break;
@@ -617,7 +617,7 @@ int command_convert_membytes(command_option_t *option, const char *arg)
     if (option == NULL) {
         return -1;
     }
-    if (util_parse_byte_size_string(arg, option->data) || (*(int64_t *)(option->data)) < 0) {
+    if (util_parse_byte_size_string(arg, option->data) != 0 || (*(int64_t *)(option->data)) < 0) {
         COMMAND_ERROR("Invalid value \"%s\" for flag --%s", arg, option->large);
         return EINVALIDARGS;
     }
@@ -648,7 +648,7 @@ int command_convert_swappiness(command_option_t *option, const char *arg)
         *(int64_t *)(option->data) = -1;
         return 0;
     }
-    if (util_parse_byte_size_string(arg, option->data) || (*(int64_t *)(option->data)) < 0 ||
+    if (util_parse_byte_size_string(arg, option->data) != 0 || (*(int64_t *)(option->data)) < 0 ||
         (*(int64_t *)(option->data)) > 100) {
         COMMAND_ERROR("Invalid value \"%s\" for flag --%s. Valid memory swappiness range is 0-100", arg, option->large);
         return EINVALIDARGS;

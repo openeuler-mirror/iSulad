@@ -1498,7 +1498,7 @@ bool container_has_mount_for(container_t *cont, const char *mpath)
     return false;
 }
 
-int container_module_init()
+int container_module_init(void)
 {
     if (new_gchandler()) {
         ERROR("Create garbage handler thread failed");

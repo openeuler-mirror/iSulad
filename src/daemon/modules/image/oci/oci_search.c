@@ -40,7 +40,7 @@ static void update_search_option_insecure_registry(registry_search_options *opti
     }
 
     for (registry = insecure_registries; (registry != NULL) && (*registry != NULL); registry++) {
-        if (!strcmp(*registry, host)) {
+        if (strcmp(*registry, host) == 0) {
             options->insecure_registry = true;
             break;
         }

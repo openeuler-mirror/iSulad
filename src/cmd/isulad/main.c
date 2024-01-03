@@ -239,7 +239,7 @@ static void umount_daemon_mntpoint()
 
 static inline bool unlink_ignore_enoent(const char *fname)
 {
-    return unlink(fname) && errno != ENOENT;
+    return unlink(fname) != 0 && errno != ENOENT;
 }
 
 static void clean_residual_files()
@@ -260,7 +260,7 @@ static void clean_residual_files()
     fname = conf_get_isulad_pidfile();
     if (fname == NULL) {
         ERROR("Failed to get isulad pid file path");
-    } else if (unlink(fname) && errno != ENOENT) {
+    } else if (unlink(fname) != 0 && errno != ENOENT) {
         SYSWARN("Unlink file: %s.", fname);
     }
     free(fname);
@@ -410,7 +410,7 @@ static int daemonize()
         goto unlock_out;
     }
 
-    if (args->json_confs != NULL && create_client_run_path(args->json_confs->group)) {
+    if (args->json_confs != NULL && create_client_run_path(args->json_confs->group) != 0) {
         ERROR("Create client run directory failed");
         ret = -1;
         goto unlock_out;
@@ -508,7 +508,7 @@ int check_and_set_default_isulad_log_file(struct service_arguments *args)
             args->logpath = util_strdup_s(args->json_confs->graph);
         }
     }
-    if (args != NULL && util_validate_absolute_path(args->logpath)) {
+    if (args != NULL && util_validate_absolute_path(args->logpath) != 0) {
         ERROR("Daemon log path \"%s\" must be abosulte path.", args->logpath);
         return -1;
     }
@@ -791,7 +791,7 @@ static int parse_conf_time_duration(struct service_arguments *args)
 
     /* parse start timeout */
     if (args->json_confs->start_timeout != NULL &&
-        parse_time_duration(args->json_confs->start_timeout, &args->start_timeout)) {
+        parse_time_duration(args->json_confs->start_timeout, &args->start_timeout) != 0) {
         ret = -1;
         goto out;
     }
@@ -1618,7 +1618,7 @@ static void *do_shutdown_handler(void *arg)
 }
 
 /* news_shutdown_handler */
-int new_shutdown_handler()
+int new_shutdown_handler(void)
 {
     int ret = -1;
     pthread_t shutdown_thread;

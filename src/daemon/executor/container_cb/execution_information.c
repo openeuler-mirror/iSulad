@@ -463,7 +463,7 @@ static int parse_output_check(char **pid_s, int pid_num, int *out_num)
     // in "isula top" client command
     if (strcmp(pid_s[pid_num], "-") == 0) {
     } else {
-        if (util_safe_int(pid_s[pid_num], out_num) || *out_num < 0) {
+        if (util_safe_int(pid_s[pid_num], out_num) != 0 || *out_num < 0) {
             ret = -1;
             goto out;
         }
@@ -507,7 +507,7 @@ static int parse_output_by_lines(char **process, char **tmp, int pid_num, int st
         for (j = 0; j < pids_len; j++) {
             if (i > 1 && strcmp(pid_s[pid_num], "-") == 0 && !flag) {
                 flag = true;
-                if ((tmp_num == pids[j] || !strcmp(pid_s[stime], pid_s_pre[stime]))) {
+                if ((tmp_num == pids[j] || strcmp(pid_s[stime], pid_s_pre[stime]) == 0)) {
                     process[k++] = util_strdup_s(tmp[i]);
                 }
             } else if (tmp_num == pids[j]) {

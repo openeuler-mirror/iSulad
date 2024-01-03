@@ -723,7 +723,6 @@ void CheckNetworkStatus(const std::string &ns, const std::string &name, const st
                         const std::string &interfaceName, const std::string &netnsPath, const std::string &podSandboxID,
                         std::vector<std::string> &ips, Errors &err)
 {
-    // int network_module_check(const network_api_conf *conf, const char *type, network_api_result_list **result);
     network_api_conf *config = nullptr;
     std::map<std::string, std::string> fakeMap;
     BuildAdaptorCNIConfig(ns, interfaceName, name, netnsPath, podSandboxID, podCidr, fakeMap, fakeMap, &config, err);

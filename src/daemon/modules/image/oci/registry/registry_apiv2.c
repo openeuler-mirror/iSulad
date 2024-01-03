@@ -99,7 +99,7 @@ static int parse_challenges(pull_descriptor *desc, char *schema, char *params)
     int ret = -1;
 
     // Support "Bearer" and "Basic" only.
-    if (!strcasecmp(schema, "Bearer")) {
+    if (strcasecmp(schema, "Bearer") == 0) {
         // params:
         // realm="https://auth.isula.org/token",service="registry.isula.org"
         params = util_trim_space(params);
@@ -114,17 +114,17 @@ static int parse_challenges(pull_descriptor *desc, char *schema, char *params)
             }
             value = util_trim_space(kv[1]);
             value = util_trim_quotation(value);
-            if (!strcmp(kv[0], "realm")) {
+            if (strcmp(kv[0], "realm") == 0) {
                 free(c.realm);
                 c.realm = util_strdup_s(value);
-            } else if (!strcmp(kv[0], "service")) {
+            } else if (strcmp(kv[0], "service") == 0) {
                 free(c.service);
                 c.service = util_strdup_s(value);
             }
             util_free_array(kv);
             kv = NULL;
         }
-    } else if (!strcasecmp(schema, "Basic")) {
+    } else if (strcasecmp(schema, "Basic") == 0) {
         c.realm = util_strdup_s(schema);
     } else {
         WARN("Found unsupported schema %s", schema);
@@ -205,7 +205,7 @@ static int parse_auths(pull_descriptor *desc, struct parsed_http_message *m)
     int ret = 0;
 
     for (i = 0; i < m->num_headers; i++) {
-        if (!strcasecmp(m->headers[i][0], "Www-Authenticate")) {
+        if (strcasecmp(m->headers[i][0], "Www-Authenticate") == 0) {
             ret = parse_auth(desc, (char *)m->headers[i][1]);
             if (ret != 0) {
                 WARN("parse auth %s failed", (char *)m->headers[i][1]);
@@ -478,11 +478,11 @@ static int check_content_type(const char *content_type)
         return -1;
     }
 
-    if (!strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_JSON) ||
-        !strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) ||
-        !strcmp(content_type, DOCKER_MANIFEST_SCHEMA2_JSON) || !strcmp(content_type, DOCKER_MANIFEST_SCHEMA2_LIST) ||
-        !strcmp(content_type, OCI_MANIFEST_V1_JSON) || !strcmp(content_type, MEDIA_TYPE_APPLICATION_JSON) ||
-        !strcmp(content_type, OCI_INDEX_V1_JSON)) {
+    if (strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_JSON) == 0 ||
+        strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) == 0 ||
+        strcmp(content_type, DOCKER_MANIFEST_SCHEMA2_JSON) == 0 || strcmp(content_type, DOCKER_MANIFEST_SCHEMA2_LIST) == 0 ||
+        strcmp(content_type, OCI_MANIFEST_V1_JSON) == 0 || strcmp(content_type, MEDIA_TYPE_APPLICATION_JSON) == 0 ||
+        strcmp(content_type, OCI_INDEX_V1_JSON) == 0) {
         return 0;
     }
 
@@ -781,7 +781,7 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
         }
 
         // If content is signatured, digest is for payload but not fetched data
-        if (strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) && digest != NULL) {
+        if (strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) != 0 && digest != NULL) {
             if (!sha256_valid_digest_file(file, digest)) {
                 type = BODY_ONLY;
                 if (retry_times > 0 && !desc->cancel) {
@@ -811,7 +811,7 @@ static bool is_variant_same(char *variant1, char *variant2)
     if (variant1 == NULL || variant2 == NULL) {
         return true;
     }
-    return !strcasecmp(variant1, variant2);
+    return strcasecmp(variant1, variant2) == 0;
 }
 
 static int select_oci_manifest(oci_image_index *index, char **content_type, char **digest)
@@ -840,7 +840,7 @@ static int select_oci_manifest(oci_image_index *index, char **content_type, char
         if (platform == NULL || platform->architecture == NULL || platform->os == NULL) {
             continue;
         }
-        if (!strcasecmp(platform->architecture, host_arch) && !strcasecmp(platform->os, host_os) &&
+        if (strcasecmp(platform->architecture, host_arch) == 0 && strcasecmp(platform->os, host_os) == 0 &&
             is_variant_same(host_variant, platform->variant)) {
             free(*content_type);
             *content_type = util_strdup_s(index->manifests[i]->media_type);
@@ -897,7 +897,7 @@ static int select_docker_manifest(registry_manifest_list *manifests, char **cont
         if (platform == NULL || platform->architecture == NULL || platform->os == NULL) {
             continue;
         }
-        if (!strcasecmp(platform->architecture, host_arch) && !strcasecmp(platform->os, host_os) &&
+        if (strcasecmp(platform->architecture, host_arch) == 0 && strcasecmp(platform->os, host_os) == 0 &&
             is_variant_same(host_variant, platform->variant)) {
             free(*content_type);
             *content_type = util_strdup_s(manifests->manifests[i]->media_type);
@@ -940,7 +940,7 @@ static int select_manifest(char *file, char **content_type, char **digest)
         return -1;
     }
 
-    if (!strcmp(*content_type, OCI_INDEX_V1_JSON)) {
+    if (strcmp(*content_type, OCI_INDEX_V1_JSON) == 0) {
         index = oci_image_index_parse_file((const char *)file, NULL, &err);
         if (index == NULL) {
             ERROR("parse oci image index failed: %s", err);
@@ -953,7 +953,7 @@ static int select_manifest(char *file, char **content_type, char **digest)
             ret = -1;
             goto out;
         }
-    } else if (!strcmp(*content_type, DOCKER_MANIFEST_SCHEMA2_LIST)) {
+    } else if (strcmp(*content_type, DOCKER_MANIFEST_SCHEMA2_LIST) == 0) {
         manifests = registry_manifest_list_parse_file((const char *)file, NULL, &err);
         if (manifests == NULL) {
             ERROR("parse docker image manifest list failed: %s", err);
@@ -1002,7 +1002,7 @@ static int fetch_manifest_data(pull_descriptor *desc, char *file, char **content
     }
 
     // If it's manifest list, we must choose the manifest which match machine's architecture to download.
-    if (!strcmp(*content_type, DOCKER_MANIFEST_SCHEMA2_LIST) || !strcmp(*content_type, OCI_INDEX_V1_JSON)) {
+    if (strcmp(*content_type, DOCKER_MANIFEST_SCHEMA2_LIST) == 0 || strcmp(*content_type, OCI_INDEX_V1_JSON) == 0) {
         ret = select_manifest(file, content_type, digest);
         if (ret != 0) {
             manifest_text = util_read_text_file(file);

@@ -35,7 +35,7 @@ typedef int (*tag_parser)(const char *, map_t *, char **);
 
 bool check_raw_log_opt(const char *key);
 
-bool check_opt_container_log_opt(const char *driver, const char *opt);
+bool check_opt_container_log_opt(const char *driver, const char *opt_key);
 
 bool check_opt_container_log_driver(const char *driver);
 

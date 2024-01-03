@@ -36,9 +36,9 @@ protected:
     void SetThreadName() override;
     Status Authenticate(ServerContext *context) override;
     bool WithServiceExecutorOperator(service_executor_t *cb) override;
-    int FillRequestFromgRPC(const InfoRequest *request, void *containerReq) override;
+    int FillRequestFromgRPC(const InfoRequest *request, void *contReq) override;
     void ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes) override;
-    void FillResponseTogRPC(void *containerRes, InfoResponse *reply) override;
+    void FillResponseTogRPC(void *containerRes, InfoResponse *gresponse) override;
     void CleanUp(void *containerReq, void *containerRes) override;
 
 private:

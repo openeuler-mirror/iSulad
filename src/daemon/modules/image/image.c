@@ -905,12 +905,12 @@ out:
     return ret;
 }
 
-int im_list_images(const im_list_request *ctx, im_list_response **response)
+int im_list_images(const im_list_request *request, im_list_response **response)
 {
     size_t i;
     imagetool_images_list *images_tmp = NULL;
 
-    if (ctx == NULL || response == NULL) {
+    if (request == NULL || response == NULL) {
         ERROR("Empty arguments");
         return -1;
     }
@@ -928,7 +928,7 @@ int im_list_images(const im_list_request *ctx, im_list_response **response)
             DEBUG("bim %s umimplements list images operator", g_bims[i].image_type);
             continue;
         }
-        int ret = g_bims[i].ops->list_ims(ctx, &images_tmp);
+        int ret = g_bims[i].ops->list_ims(request, &images_tmp);
         if (ret != 0) {
             ERROR("Failed to list all images with type:%s", g_bims[i].image_type);
             continue;

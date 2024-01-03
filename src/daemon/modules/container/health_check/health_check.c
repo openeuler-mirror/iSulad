@@ -256,7 +256,7 @@ static char **get_shell()
 {
     char **shell = NULL;
 
-    if (util_array_append(&shell, "/bin/sh") || util_array_append(&shell, "-c")) {
+    if (util_array_append(&shell, "/bin/sh") != 0 || util_array_append(&shell, "-c") != 0) {
         ERROR("Failed to add shell, out of memory");
         util_free_array(shell);
         return NULL;

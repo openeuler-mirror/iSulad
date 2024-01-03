@@ -30,13 +30,13 @@ typedef struct _containers_gc_t_ {
     struct linked_list containers_list;
 } containers_gc_t;
 
-int new_gchandler();
+int new_gchandler(void);
 
 int gc_add_container(const char *id, const char *runtime, const pid_ppid_info_t *pid_info);
 
-int gc_restore();
+int gc_restore(void);
 
-int start_gchandler();
+int start_gchandler(void);
 
 bool gc_is_gc_progress(const char *id);
 

@@ -819,7 +819,7 @@ static host_config_devices_element *parse_one_device(const char *device_path, co
     host_config_devices_element *device_map = NULL;
     char tmp_container_path[PATH_MAX] = { 0 };
 
-    if (device_path == NULL || !strcmp(device_path, "")) {
+    if (device_path == NULL || strcmp(device_path, "") == 0) {
         ERROR("devices can't be empty");
         return NULL;
     }

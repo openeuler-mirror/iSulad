@@ -1011,7 +1011,7 @@ out:
     return ret;
 }
 
-int events_module_init()
+int events_module_init(void)
 {
     if (newcollector()) {
         ERROR("Create collector thread failed");

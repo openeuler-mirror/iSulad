@@ -112,7 +112,7 @@ static void *monitored(void *arg)
     }
     mhandler.fifo_path = fifo_file_path;
 
-    if (mknod(fifo_file_path, S_IFIFO | S_IRUSR | S_IWUSR, (dev_t)0) && errno != EEXIST) {
+    if (mknod(fifo_file_path, S_IFIFO | S_IRUSR | S_IWUSR, (dev_t)0) != 0 && errno != EEXIST) {
         SYSERROR("Create monitored fifo file failed");
         goto err;
     }

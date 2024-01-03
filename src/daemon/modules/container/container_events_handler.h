@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-container_events_handler_t *container_events_handler_new();
+container_events_handler_t *container_events_handler_new(void);
 
 void container_events_handler_free(container_events_handler_t *handler);
 

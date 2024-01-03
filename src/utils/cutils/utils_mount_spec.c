@@ -460,7 +460,7 @@ int util_parse_mount_spec(char *mount_str, mount_spec **spec, char **errmsg_out)
         CACHE_ERRMSG(errmsg, "Invalid mount specification: can't be empty");
         return -1;
     }
-    if (!mount_str[0]) {
+    if (mount_str[0] == '\0') {
         CACHE_ERRMSG(errmsg, "Invalid mount specification: can't be empty");
         return -1;
     }
@@ -546,5 +546,5 @@ bool util_valid_mount_spec(const char *mount_str, char **errmsg)
 out:
     free_mount_spec(m);
 
-    return ret ? false : true;
+    return ret != 0 ? false : true;
 }

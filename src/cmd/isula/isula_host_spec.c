@@ -266,7 +266,7 @@ static host_config_devices_element *parse_device(const char *devices)
     size_t tmp_str_len = 0;
     host_config_devices_element *device_map = NULL;
 
-    if (devices == NULL || !strcmp(devices, "")) {
+    if (devices == NULL || strcmp(devices, "") == 0) {
         ERROR("devices can't be empty");
         return NULL;
     }
@@ -476,7 +476,7 @@ static defs_blkio_weight_device *pack_blkio_weight_devices(const char *devices)
     size_t tmp_str_len = 0;
     defs_blkio_weight_device *weight_dev = NULL;
 
-    if (devices == NULL || !strcmp(devices, "")) {
+    if (devices == NULL || strcmp(devices, "") == 0) {
         COMMAND_ERROR("Weight devices can't be empty");
         return NULL;
     }
@@ -570,7 +570,7 @@ static defs_blkio_device *pack_throttle_bps_device(const char *device)
     uint64_t rate = 0;
     defs_blkio_device *bps_dev = NULL;
 
-    if (device == NULL || !strcmp(device, "")) {
+    if (device == NULL || strcmp(device, "") == 0) {
         COMMAND_ERROR("blkio throttle read bps device can't be empty");
         return NULL;
     }
@@ -644,7 +644,7 @@ static defs_blkio_device *pack_throttle_iops_device(const char *device)
     uint64_t rate = 0;
     defs_blkio_device *iops_dev = NULL;
 
-    if (device == NULL || !strcmp(device, "")) {
+    if (device == NULL || strcmp(device, "") == 0) {
         COMMAND_ERROR("blkio throttle read bps device can't be empty");
         return NULL;
     }

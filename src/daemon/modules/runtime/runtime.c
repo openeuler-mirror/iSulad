@@ -561,7 +561,7 @@ bool is_default_runtime(const char *name)
     return false;
 }
 
-int runtime_init()
+int runtime_init(void)
 {
     if (engines_global_init()) {
         ERROR("Init engines global failed");

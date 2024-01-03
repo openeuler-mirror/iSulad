@@ -331,7 +331,7 @@ static int check_volume_element(const char *volume)
 {
     int ret = 0;
 
-    if (volume == NULL || !strcmp(volume, "")) {
+    if (volume == NULL || strcmp(volume, "") == 0) {
         ERROR("Volume can't be empty");
         ret = -1;
         return ret;

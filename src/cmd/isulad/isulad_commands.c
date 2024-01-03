@@ -38,7 +38,7 @@
 const char isulad_desc[] = "GLOBAL OPTIONS:";
 const char isulad_usage[] = "[global options]";
 
-void print_version()
+void print_version(void)
 {
     printf("Version %s, commit %s\n", VERSION, ISULAD_GIT_COMMIT);
 }

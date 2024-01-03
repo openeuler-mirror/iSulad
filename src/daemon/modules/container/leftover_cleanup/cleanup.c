@@ -88,7 +88,7 @@ static int default_cleaner()
     return 0;
 }
 
-struct cleaners *cleaners_init()
+struct cleaners *cleaners_init(void)
 {
     int ret = 0;
     struct cleaners *clns = create_cleaners();

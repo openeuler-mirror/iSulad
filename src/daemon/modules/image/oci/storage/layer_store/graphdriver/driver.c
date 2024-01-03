@@ -389,27 +389,27 @@ container_inspect_graph_driver *graphdriver_get_metadata(const char *id)
 
     inspect_driver->name = util_strdup_s(g_graphdriver->name);
 
-    if (!strcmp(g_graphdriver->name, DRIVER_OVERLAY_NAME) || !strcmp(g_graphdriver->name, DRIVER_OVERLAY2_NAME)) {
+    if (strcmp(g_graphdriver->name, DRIVER_OVERLAY_NAME) == 0 || strcmp(g_graphdriver->name, DRIVER_OVERLAY2_NAME) == 0) {
         for (i = 0; i < metadata->len; i++) {
-            if (!strcmp(metadata->keys[i], "LowerDir")) {
+            if (strcmp(metadata->keys[i], "LowerDir") == 0) {
                 inspect_driver->data->lower_dir = util_strdup_s(metadata->values[i]);
-            } else if (!strcmp(metadata->keys[i], "MergedDir")) {
+            } else if (strcmp(metadata->keys[i], "MergedDir") == 0) {
                 inspect_driver->data->merged_dir = util_strdup_s(metadata->values[i]);
-            } else if (!strcmp(metadata->keys[i], "UpperDir")) {
+            } else if (strcmp(metadata->keys[i], "UpperDir") == 0) {
                 inspect_driver->data->upper_dir = util_strdup_s(metadata->values[i]);
-            } else if (!strcmp(metadata->keys[i], "WorkDir")) {
+            } else if (strcmp(metadata->keys[i], "WorkDir") == 0) {
                 inspect_driver->data->work_dir = util_strdup_s(metadata->values[i]);
             }
         }
-    } else if (!strcmp(g_graphdriver->name, DRIVER_DEVMAPPER_NAME)) {
+    } else if (strcmp(g_graphdriver->name, DRIVER_DEVMAPPER_NAME) == 0) {
         for (i = 0; i < metadata->len; i++) {
-            if (!strcmp(metadata->keys[i], "DeviceId")) {
+            if (strcmp(metadata->keys[i], "DeviceId") == 0) {
                 inspect_driver->data->device_id = util_strdup_s(metadata->values[i]);
-            } else if (!strcmp(metadata->keys[i], "DeviceName")) {
+            } else if (strcmp(metadata->keys[i], "DeviceName") == 0) {
                 inspect_driver->data->device_name = util_strdup_s(metadata->values[i]);
-            } else if (!strcmp(metadata->keys[i], "DeviceSize")) {
+            } else if (strcmp(metadata->keys[i], "DeviceSize") == 0) {
                 inspect_driver->data->device_size = util_strdup_s(metadata->values[i]);
-            } else if (!strcmp(metadata->keys[i], "MergedDir")) {
+            } else if (strcmp(metadata->keys[i], "MergedDir") == 0) {
                 inspect_driver->data->merged_dir = util_strdup_s(metadata->values[i]);
             }
         }

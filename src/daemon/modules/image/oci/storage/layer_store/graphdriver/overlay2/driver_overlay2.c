@@ -229,7 +229,7 @@ static void rm_invalid_symlink(const char *dirpath)
     for (; pdirent != NULL; pdirent = readdir(directory)) {
         int pathname_len;
 
-        if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
+        if (strcmp(pdirent->d_name, ".") == 0 || strcmp(pdirent->d_name, "..") == 0) {
             continue;
         }
 

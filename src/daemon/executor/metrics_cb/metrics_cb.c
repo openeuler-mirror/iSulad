@@ -313,7 +313,7 @@ static int metrics_msg_get_by_type(const char *url, char **metrics, int *len)
         return -1;
     }
 
-    export_all = !strcmp(url, "all");
+    export_all = (strcmp(url, "all") == 0);
     msg = (char *)util_common_calloc_s(METRICS_BUF_SIZE);
     if (msg == NULL) {
         ERROR("Out of memory");

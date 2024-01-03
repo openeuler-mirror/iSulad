@@ -148,7 +148,7 @@ static void file_read_int(const char *fname, int *val)
         return;
     }
 
-    if (!util_safe_int(sint, &ival)) {
+    if (util_safe_int(sint, &ival) == 0) {
         *val = ival;
     }
 
@@ -1022,7 +1022,7 @@ static int get_container_process_pid(const char *workdir)
             return -1;
         }
         file_read_int(fname, &pid);
-        if (!pid) {
+        if (pid == 0) {
             if (shim_alive(workdir)) {
                 util_usleep_nointerupt(100000);
                 continue;

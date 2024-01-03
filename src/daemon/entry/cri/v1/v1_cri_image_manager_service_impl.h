@@ -19,7 +19,6 @@
 #include <string>
 #include <vector>
 #include <memory>
-// #include "cri_services.h"
 #include "image_api.h"
 #include "v1_cri_image_manager_service.h"
 

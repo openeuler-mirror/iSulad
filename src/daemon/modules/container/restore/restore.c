@@ -350,7 +350,7 @@ static int remove_invalid_container(const container_t *cont, const char *runtime
         goto out;
     }
 
-    if (cont != NULL && im_remove_container_rootfs(cont->common_config->image_type, id)) {
+    if (cont != NULL && im_remove_container_rootfs(cont->common_config->image_type, id) != 0) {
         ERROR("Failed to remove rootfs for container %s", id);
         ret = -1;
         goto out;

@@ -293,8 +293,8 @@ static bool is_manifest_schemav1(char *media_type)
         return false;
     }
 
-    if (!strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_JSON) || !strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) ||
-        !strcmp(media_type, MEDIA_TYPE_APPLICATION_JSON)) {
+    if (strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_JSON) == 0 || strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) == 0 ||
+        strcmp(media_type, MEDIA_TYPE_APPLICATION_JSON) == 0) {
         return true;
     }
 
@@ -312,9 +312,9 @@ static int parse_manifest(pull_descriptor *desc)
     }
 
     media_type = desc->manifest.media_type;
-    if (!strcmp(media_type, DOCKER_MANIFEST_SCHEMA2_JSON)) {
+    if (strcmp(media_type, DOCKER_MANIFEST_SCHEMA2_JSON) == 0) {
         ret = parse_manifest_schema2(desc);
-    } else if (!strcmp(media_type, OCI_MANIFEST_V1_JSON)) {
+    } else if (strcmp(media_type, OCI_MANIFEST_V1_JSON) == 0) {
         ret = parse_manifest_ociv1(desc);
     } else if (is_manifest_schemav1(media_type)) {
         WARN("found manifest schema1 %s, it has been deprecated", media_type);
@@ -366,7 +366,7 @@ static void del_cached_layer(char *blob_digest, char *file)
     }
     if (cache->file_list_len != 0) {
         linked_list_for_each_safe(item, &(cache->file_list), next) {
-            if (!strcmp(((file_elem *)item->elem)->file, file)) {
+            if (strcmp(((file_elem *)item->elem)->file, file) == 0) {
                 linked_list_del(item);
                 free_file_elem(item->elem);
                 free(item);
@@ -1055,9 +1055,9 @@ static int parse_config(pull_descriptor *desc)
 
     media_type = desc->config.media_type;
     manifest_media_type = desc->manifest.media_type;
-    if (!strcmp(media_type, DOCKER_IMAGE_V1) || !strcmp(manifest_media_type, DOCKER_MANIFEST_SCHEMA2_JSON)) {
+    if (strcmp(media_type, DOCKER_IMAGE_V1) == 0 || strcmp(manifest_media_type, DOCKER_MANIFEST_SCHEMA2_JSON) == 0) {
         ret = parse_docker_config(desc);
-    } else if (!strcmp(media_type, OCI_IMAGE_V1) || !strcmp(manifest_media_type, OCI_MANIFEST_V1_JSON)) {
+    } else if (strcmp(media_type, OCI_IMAGE_V1) == 0 || strcmp(manifest_media_type, OCI_MANIFEST_V1_JSON) == 0) {
         ret = parse_oci_config(desc);
     } else {
         ERROR("Unsupported config media type %s %s", media_type, manifest_media_type);
@@ -1151,7 +1151,7 @@ static void set_cached_layers_info(char *blob_digest, char *diffid, int result, 
         if (info->diffid == NULL) {
             info->diffid = util_strdup_s(diffid);
         }
-        if (!strcmp(src_file, elem->file)) {
+        if (strcmp(src_file, elem->file) == 0) {
             continue;
         }
         if (link(src_file, elem->file) != 0) {
@@ -1551,7 +1551,7 @@ static int fetch_all(pull_descriptor *desc)
             for (j = 0; j < list->layers_len; j++) {
                 if ((list->layers[j]->parent == NULL && i == 0) ||
                     (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
-                     !strcmp(list->layers[j]->parent, util_without_sha256_prefix(parent_chain_id)) &&
+                     strcmp(list->layers[j]->parent, util_without_sha256_prefix(parent_chain_id)) == 0 &&
                      strcmp(list->layers[j]->uncompressed_digest, list->layers[j]->compressed_digest))) {
                     // If can't set hold refs, it means it not exist anymore.
                     if (storage_inc_hold_refs(list->layers[j]->id) != 0) {
@@ -1760,7 +1760,7 @@ static bool reuse_image(pull_descriptor *desc)
         goto out;
     }
 
-    if (!strcmp(id, image->id)) {
+    if (strcmp(id, image->id) == 0) {
         DEBUG("image %s with id %s already exist, ignore pulling", desc->image_name, image->id);
         reuse = true;
     }

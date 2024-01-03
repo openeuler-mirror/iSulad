@@ -932,10 +932,10 @@ inline static int request_pack_host_device_cgroup_rules(const struct client_argu
 
 inline static int request_pack_host_blockio(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
-    return (request_pack_host_weight_devices(args, hostconfig) || request_pack_host_device_read_bps(args, hostconfig) ||
-            request_pack_host_device_write_bps(args, hostconfig) ||
-            request_pack_host_device_read_iops(args, hostconfig) ||
-            request_pack_host_device_write_iops(args, hostconfig));
+    return (request_pack_host_weight_devices(args, hostconfig) != 0 || request_pack_host_device_read_bps(args, hostconfig) != 0 ||
+            request_pack_host_device_write_bps(args, hostconfig) != 0 ||
+            request_pack_host_device_read_iops(args, hostconfig) != 0 ||
+            request_pack_host_device_write_iops(args, hostconfig) != 0);
 }
 
 inline static int request_pack_host_devices(const struct client_arguments *args, isula_host_config_t *hostconfig)
@@ -1298,8 +1298,8 @@ static int do_client_create(const struct client_arguments *args, const isula_con
     if (ret != 0) {
         if (response->cc == ISULAD_ERR_INPUT) {
             ret = EINVALIDARGS;
-        } else if (response->server_errono ||
-                   (response->errmsg && !strcmp(response->errmsg, errno_to_error_message(ISULAD_ERR_CONNECT)))) {
+        } else if (response->server_errono != 0 ||
+                   (response->errmsg != NULL && strcmp(response->errmsg, errno_to_error_message(ISULAD_ERR_CONNECT)) == 0)) {
             ret = ESERVERERROR;
         } else {
             ret = ECOMMON;
@@ -1743,8 +1743,8 @@ int cmd_create_main(int argc, const char **argv)
     isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_create_desc,
                  g_cmd_create_usage);
-    if (command_parse_args(&cmd, &g_cmd_create_args.argc, &g_cmd_create_args.argv) ||
-        create_checker(&g_cmd_create_args)) {
+    if (command_parse_args(&cmd, &g_cmd_create_args.argc, &g_cmd_create_args.argv) != 0 ||
+        create_checker(&g_cmd_create_args) != 0) {
         nret = EINVALIDARGS;
         goto out;
     }
@@ -1796,7 +1796,7 @@ static bool check_devices_conf_valid(const char *devices)
     char *cgroup_permissions = NULL;
     char *path_in_container = NULL;
 
-    if (devices == NULL || !strcmp(devices, "")) {
+    if (devices == NULL || strcmp(devices, "") == 0) {
         COMMAND_ERROR("Invalid value \"%s\" for flag --device", devices ? devices : "null");
         return false;
     }
@@ -1920,7 +1920,7 @@ free_out:
 
 static bool check_volumes_conf_valid(const char *volume)
 {
-    if (volume == NULL || !strcmp(volume, "")) {
+    if (volume == NULL || strcmp(volume, "") == 0) {
         COMMAND_ERROR("Volume can't be empty");
         return false;
     }

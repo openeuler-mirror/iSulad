@@ -130,14 +130,14 @@ int invokeHttpRequestV1(const char *url, struct http_get_options *options, long 
     Buffer *output_buffer = (Buffer *)options->output;
 
     std::string data_path = get_dir() + "/data/v1/";
-    if (!strcmp(url, "https://quay.io/v2/")) {
+    if (strcmp(url, "https://quay.io/v2/") == 0) {
         ping_count++;
         if (ping_count == 1) {
             file = data_path + "ping_head1";
         } else {
             file = data_path + "ping_head";
         }
-    } else if (!strcmp(url, "https://quay.io/v2/coreos/etcd/manifests/v3.3.17-arm64")) {
+    } else if (strcmp(url, "https://quay.io/v2/coreos/etcd/manifests/v3.3.17-arm64") == 0) {
         file = data_path + "manifest";
     } else if (util_has_prefix(url, "https://auth.quay.io")) {
         token_count++;
@@ -199,10 +199,10 @@ int invokeHttpRequestV2(const char *url, struct http_get_options *options, long 
     }
 
     std::string data_path = get_dir() + "/data/v2/";
-    if (!strcmp(url, "http://hub-mirror.c.163.com/v2/")) {
+    if (strcmp(url, "http://hub-mirror.c.163.com/v2/") == 0) {
         count++;
         file = data_path + "ping_head";
-    } else if (!strcmp(url, "http://hub-mirror.c.163.com/v2/library/busybox/manifests/latest")) {
+    } else if (strcmp(url, "http://hub-mirror.c.163.com/v2/library/busybox/manifests/latest") == 0) {
         // test not found
         if (count == COUNT_TEST_NOT_FOUND) {
             file = data_path + "manifest_404";
@@ -272,9 +272,9 @@ int invokeHttpRequestOCI(const char *url, struct http_get_options *options, long
     Buffer *output_buffer = (Buffer *)options->output;
 
     std::string data_path = get_dir() + "/data/oci/";
-    if (!strcmp(url, "https://hub-mirror.c.163.com/v2/")) {
+    if (strcmp(url, "https://hub-mirror.c.163.com/v2/") == 0) {
         file = data_path + "ping_head";
-    } else if (!strcmp(url, "https://hub-mirror.c.163.com/v2/library/busybox/manifests/latest")) {
+    } else if (strcmp(url, "https://hub-mirror.c.163.com/v2/library/busybox/manifests/latest") == 0) {
         file = data_path + "index";
     } else if (util_has_prefix(url, "https://hub-mirror.c.163.com/v2/library/busybox/manifests/sha256:106429d7")) {
         file = data_path + "manifest_body";
@@ -321,7 +321,7 @@ int invokeHttpRequestLogin(const char *url, struct http_get_options *options, lo
     Buffer *output_buffer = (Buffer *)options->output;
 
     std::string data_path = get_dir() + "/data/v2/";
-    if (!strcmp(url, "https://hub-mirror.c.163.com/v2/") || !strcmp(url, "https://test2.com/v2/")) {
+    if (strcmp(url, "https://hub-mirror.c.163.com/v2/") == 0 || strcmp(url, "https://test2.com/v2/") == 0) {
         file = data_path + "ping_head";
     } else {
         ERROR("%s not match failed", url);
@@ -358,7 +358,7 @@ int invokeHttpRequestSearch(const char *url, struct http_get_options *options, l
     ERROR("search_count is %d", search_count);
 
     std::string data_path = get_dir() + "/data/oci/";
-    if (!strcmp(url, "https://index.docker.io/v1/_ping")) {
+    if (strcmp(url, "https://index.docker.io/v1/_ping") == 0) {
         file = data_path + "ping_v1_head";
     } else if (util_has_prefix(url, "https://index.docker.io/v1/search?q=busybox")) {
         search_count++;

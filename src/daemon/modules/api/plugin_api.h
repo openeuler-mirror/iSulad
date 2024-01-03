@@ -89,7 +89,7 @@ int pm_scan(void);
 /*
  * destroy at isulad exit
  */
-int pm_destroy();
+int pm_destroy(void);
 /*
  * init plugin manifest
  */
