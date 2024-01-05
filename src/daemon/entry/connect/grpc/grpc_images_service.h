@@ -32,37 +32,35 @@ using grpc::Status;
 using grpc::StatusCode;
 using google::protobuf::Timestamp;
 
-using namespace images;
-
 // Implement of images service
-class ImagesServiceImpl final : public ImagesService::Service {
+class ImagesServiceImpl final : public images::ImagesService::Service {
 public:
     ImagesServiceImpl() = default;
     ImagesServiceImpl(const ImagesServiceImpl &) = delete;
     ImagesServiceImpl &operator=(const ImagesServiceImpl &) = delete;
     virtual ~ImagesServiceImpl() = default;
 
-    Status List(ServerContext *context, const ListImagesRequest *request, ListImagesResponse *reply) override;
+    Status List(ServerContext *context, const images::ListImagesRequest *request, images::ListImagesResponse *reply) override;
 
-    Status Delete(ServerContext *context, const DeleteImageRequest *request, DeleteImageResponse *reply) override;
+    Status Delete(ServerContext *context, const images::DeleteImageRequest *request, images::DeleteImageResponse *reply) override;
 
-    Status Tag(ServerContext *context, const TagImageRequest *request, TagImageResponse *reply) override;
+    Status Tag(ServerContext *context, const images::TagImageRequest *request, images::TagImageResponse *reply) override;
 
-    Status Import(ServerContext *context, const ImportRequest *request, ImportResponse *reply) override;
+    Status Import(ServerContext *context, const images::ImportRequest *request, images::ImportResponse *reply) override;
 
-    Status Load(ServerContext *context, const LoadImageRequest *request, LoadImageResponse *reply) override;
+    Status Load(ServerContext *context, const images::LoadImageRequest *request, images::LoadImageResponse *reply) override;
 
-    Status Inspect(ServerContext *context, const InspectImageRequest *request, InspectImageResponse *reply) override;
+    Status Inspect(ServerContext *context, const images::InspectImageRequest *request, images::InspectImageResponse *reply) override;
 
-    Status Login(ServerContext *context, const LoginRequest *request, LoginResponse *reply) override;
+    Status Login(ServerContext *context, const images::LoginRequest *request, images::LoginResponse *reply) override;
 
-    Status Logout(ServerContext *context, const LogoutRequest *request, LogoutResponse *reply) override;
+    Status Logout(ServerContext *context, const images::LogoutRequest *request, images::LogoutResponse *reply) override;
 
-    Status PullImage(ServerContext *context, const PullImageRequest *request,
-                     ServerWriter<PullImageResponse> *writer) override;
+    Status PullImage(ServerContext *context, const images::PullImageRequest *request,
+                     ServerWriter<images::PullImageResponse> *writer) override;
 
 #ifdef ENABLE_IMAGE_SEARCH
-    Status Search(ServerContext *context, const SearchRequest *request, SearchResponse *reply) override;
+    Status Search(ServerContext *context, const images::SearchRequest *request, images::SearchResponse *reply) override;
 #endif
 
 private:
@@ -80,36 +78,36 @@ private:
             gresponse->set_errmsg(response->errmsg);
         }
     }
-    int image_list_request_from_grpc(const ListImagesRequest *grequest, image_list_images_request **request);
+    int image_list_request_from_grpc(const images::ListImagesRequest *grequest, image_list_images_request **request);
 
-    void image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse);
+    void image_list_response_to_grpc(image_list_images_response *response, images::ListImagesResponse *gresponse);
 
-    int image_remove_request_from_grpc(const DeleteImageRequest *grequest, image_delete_image_request **request);
+    int image_remove_request_from_grpc(const images::DeleteImageRequest *grequest, image_delete_image_request **request);
 
-    int image_tag_request_from_grpc(const TagImageRequest *grequest, image_tag_image_request **request);
+    int image_tag_request_from_grpc(const images::TagImageRequest *grequest, image_tag_image_request **request);
 
-    int image_import_request_from_grpc(const ImportRequest *grequest, image_import_request **request);
+    int image_import_request_from_grpc(const images::ImportRequest *grequest, image_import_request **request);
 
-    void import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse);
+    void import_response_to_grpc(const image_import_response *response, images::ImportResponse *gresponse);
 
-    int image_load_request_from_grpc(const LoadImageRequest *grequest, image_load_image_request **request);
+    int image_load_request_from_grpc(const images::LoadImageRequest *grequest, image_load_image_request **request);
 
-    int inspect_request_from_grpc(const InspectImageRequest *grequest, image_inspect_request **request);
+    int inspect_request_from_grpc(const images::InspectImageRequest *grequest, image_inspect_request **request);
 
-    void inspect_response_to_grpc(const image_inspect_response *response, InspectImageResponse *gresponse);
+    void inspect_response_to_grpc(const image_inspect_response *response, images::InspectImageResponse *gresponse);
 
-    int image_login_request_from_grpc(const LoginRequest *grequest, image_login_request **request);
+    int image_login_request_from_grpc(const images::LoginRequest *grequest, image_login_request **request);
 
-    int image_logout_request_from_grpc(const LogoutRequest *grequest, image_logout_request **request);
+    int image_logout_request_from_grpc(const images::LogoutRequest *grequest, image_logout_request **request);
 
-    int image_pull_request_from_grpc(const PullImageRequest *grequest, image_pull_image_request **request);
+    int image_pull_request_from_grpc(const images::PullImageRequest *grequest, image_pull_image_request **request);
 
-    void image_pull_response_to_grpc(const image_pull_image_response *response, PullImageResponse *gresponse);
+    void image_pull_response_to_grpc(const image_pull_image_response *response, images::PullImageResponse *gresponse);
 
 #ifdef ENABLE_IMAGE_SEARCH
-    int search_request_from_grpc(const SearchRequest *grequest, image_search_images_request **request);
+    int search_request_from_grpc(const images::SearchRequest *grequest, image_search_images_request **request);
 
-    void search_response_to_grpc(const image_search_images_response *response, SearchResponse *gresponse);
+    void search_response_to_grpc(const image_search_images_response *response, images::SearchResponse *gresponse);
 #endif
 };
 

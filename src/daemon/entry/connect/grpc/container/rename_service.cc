@@ -29,7 +29,7 @@ bool ContainerRenameService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.rename != nullptr;
 }
 
-int ContainerRenameService::FillRequestFromgRPC(const RenameRequest *request, void *contReq)
+int ContainerRenameService::FillRequestFromgRPC(const containers::RenameRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<isulad_container_rename_request *>(
                        util_common_calloc_s(sizeof(isulad_container_rename_request)));
@@ -57,7 +57,7 @@ void ContainerRenameService::ServiceRun(service_executor_t *cb, void *containerR
                                static_cast<isulad_container_rename_response **>(containerRes));
 }
 
-void ContainerRenameService::FillResponseTogRPC(void *containerRes, RenameResponse *gresponse)
+void ContainerRenameService::FillResponseTogRPC(void *containerRes, containers::RenameResponse *gresponse)
 {
     const isulad_container_rename_response *response =
         static_cast<const isulad_container_rename_response *>(containerRes);

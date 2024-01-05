@@ -29,7 +29,7 @@ bool ContainerExportService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.export_rootfs != nullptr;
 }
 
-int ContainerExportService::FillRequestFromgRPC(const ExportRequest *request, void *contReq)
+int ContainerExportService::FillRequestFromgRPC(const containers::ExportRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_export_request *>(util_common_calloc_s(sizeof(container_export_request)));
     if (tmpreq == nullptr) {
@@ -56,7 +56,7 @@ void ContainerExportService::ServiceRun(service_executor_t *cb, void *containerR
                                       static_cast<container_export_response **>(containerRes));
 }
 
-void ContainerExportService::FillResponseTogRPC(void *containerRes, ExportResponse *gresponse)
+void ContainerExportService::FillResponseTogRPC(void *containerRes, containers::ExportResponse *gresponse)
 {
     const container_export_response *response = static_cast<const container_export_response *>(containerRes);
 

@@ -376,13 +376,3 @@ TEST_F(ControllerSandboxerClientTest, ShutdownTestStatusNotOK)
     EXPECT_FALSE(m_sandboxerClient->Shutdown(DUMMY_SANDBOX_ID, err));
     EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("gRPC Abort"));
 }
-
-/************* Unit tests for Wait *************/
-// TEST_F(ControllerSandboxerClientTest, WaitTestSucceed) {
-//     Errors err;
-
-//     sandbox::ControllerSandboxStatus sandboxStatus;
-//     std::unique_ptr<containerd::services::sandbox::v1::ControllerStatusResponse> response = CreateTestStatusResponse();
-//     EXPECT_CALL(*m_stub, Status).Times(1).WillOnce(testing::DoAll(testing::SetArgPointee<2>(*response), testing::Return(grpc::Status::OK)));
-//     EXPECT_TRUE(m_sandboxerClient->Wait(DUMMY_SANDBOX_ID, false, sandboxStatus, err));
-// }

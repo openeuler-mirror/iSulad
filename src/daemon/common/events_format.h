@@ -15,7 +15,6 @@
 #ifndef DAEMON_COMMON_EVENTS_FORMAT_H
 #define DAEMON_COMMON_EVENTS_FORMAT_H
 
-#include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
 

@@ -28,6 +28,8 @@
 #include "grpc_server_tls_auth.h"
 #include "grpc_containers_service.h"
 
+using namespace images;
+
 int ImagesServiceImpl::image_list_request_from_grpc(const ListImagesRequest *grequest,
                                                     image_list_images_request **request)
 {

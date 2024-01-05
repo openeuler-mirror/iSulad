@@ -22,8 +22,6 @@
 #include "callback.h"
 #include "error.h"
 
-using namespace containers;
-
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
@@ -42,71 +40,71 @@ bool grpc_add_initial_metadata(void *context, const char *header, const char *va
 bool grpc_event_write_function(void *writer, void *data);
 
 // Implement of containers service
-class ContainerServiceImpl final : public ContainerService::Service {
+class ContainerServiceImpl final : public containers::ContainerService::Service {
 public:
     ContainerServiceImpl() = default;
     ContainerServiceImpl(const ContainerServiceImpl &) = delete;
     ContainerServiceImpl &operator=(const ContainerServiceImpl &) = delete;
     virtual ~ContainerServiceImpl() = default;
 
-    Status Version(ServerContext *context, const VersionRequest *request, VersionResponse *reply) override;
+    Status Version(ServerContext *context, const containers::VersionRequest *request, containers::VersionResponse *reply) override;
 
-    Status Info(ServerContext *context, const InfoRequest *request, InfoResponse *reply) override;
+    Status Info(ServerContext *context, const containers::InfoRequest *request, containers::InfoResponse *reply) override;
 
-    Status Create(ServerContext *context, const CreateRequest *request, CreateResponse *reply) override;
+    Status Create(ServerContext *context, const containers::CreateRequest *request, containers::CreateResponse *reply) override;
 
-    Status Start(ServerContext *context, const StartRequest *request, StartResponse *reply) override;
+    Status Start(ServerContext *context, const containers::StartRequest *request, containers::StartResponse *reply) override;
 
-    Status Top(ServerContext *context, const TopRequest *request, TopResponse *reply) override;
+    Status Top(ServerContext *context, const containers::TopRequest *request, containers::TopResponse *reply) override;
 
-    Status Stop(ServerContext *context, const StopRequest *request, StopResponse *reply) override;
+    Status Stop(ServerContext *context, const containers::StopRequest *request, containers::StopResponse *reply) override;
 
-    Status Restart(ServerContext *context, const RestartRequest *request, RestartResponse *reply) override;
+    Status Restart(ServerContext *context, const containers::RestartRequest *request, containers::RestartResponse *reply) override;
 
-    Status Kill(ServerContext *context, const KillRequest *request, KillResponse *reply) override;
+    Status Kill(ServerContext *context, const containers::KillRequest *request, containers::KillResponse *reply) override;
 
-    Status Delete(ServerContext *context, const DeleteRequest *request, DeleteResponse *reply) override;
+    Status Delete(ServerContext *context, const containers::DeleteRequest *request, containers::DeleteResponse *reply) override;
 
-    Status Exec(ServerContext *context, const ExecRequest *request, ExecResponse *reply) override;
+    Status Exec(ServerContext *context, const containers::ExecRequest *request, containers::ExecResponse *reply) override;
 
-    Status Inspect(ServerContext *context, const InspectContainerRequest *request,
-                   InspectContainerResponse *reply) override;
+    Status Inspect(ServerContext *context, const containers::InspectContainerRequest *request,
+                   containers::InspectContainerResponse *reply) override;
 
-    Status List(ServerContext *context, const ListRequest *request, ListResponse *reply) override;
+    Status List(ServerContext *context, const containers::ListRequest *request, containers::ListResponse *reply) override;
 
-    Status Attach(ServerContext *context, ServerReaderWriter<AttachResponse, AttachRequest> *stream) override;
+    Status Attach(ServerContext *context, ServerReaderWriter<containers::AttachResponse, containers::AttachRequest> *stream) override;
 
-    Status Pause(ServerContext *context, const PauseRequest *request, PauseResponse *reply) override;
+    Status Pause(ServerContext *context, const containers::PauseRequest *request, containers::PauseResponse *reply) override;
 
-    Status Resume(ServerContext *context, const ResumeRequest *request, ResumeResponse *reply) override;
+    Status Resume(ServerContext *context, const containers::ResumeRequest *request, containers::ResumeResponse *reply) override;
 
-    Status Rename(ServerContext *context, const RenameRequest *request, RenameResponse *reply) override;
+    Status Rename(ServerContext *context, const containers::RenameRequest *request, containers::RenameResponse *reply) override;
 
-    Status Resize(ServerContext *context, const ResizeRequest *request, ResizeResponse *reply) override;
+    Status Resize(ServerContext *context, const containers::ResizeRequest *request, containers::ResizeResponse *reply) override;
 
-    Status Update(ServerContext *context, const UpdateRequest *request, UpdateResponse *reply) override;
+    Status Update(ServerContext *context, const containers::UpdateRequest *request, containers::UpdateResponse *reply) override;
 
-    Status Stats(ServerContext *context, const StatsRequest *request, StatsResponse *reply) override;
+    Status Stats(ServerContext *context, const containers::StatsRequest *request, containers::StatsResponse *reply) override;
 
-    Status Wait(ServerContext *context, const WaitRequest *request, WaitResponse *reply) override;
+    Status Wait(ServerContext *context, const containers::WaitRequest *request, containers::WaitResponse *reply) override;
 
-    Status Events(ServerContext *context, const EventsRequest *request, ServerWriter<Event> *writer) override;
+    Status Events(ServerContext *context, const containers::EventsRequest *request, ServerWriter<containers::Event> *writer) override;
 
-    Status Export(ServerContext *context, const ExportRequest *request, ExportResponse *reply) override;
+    Status Export(ServerContext *context, const containers::ExportRequest *request, containers::ExportResponse *reply) override;
 
     Status RemoteStart(ServerContext *context,
-                       ServerReaderWriter<RemoteStartResponse, RemoteStartRequest> *stream) override;
+                       ServerReaderWriter<containers::RemoteStartResponse, containers::RemoteStartRequest> *stream) override;
 
     Status RemoteExec(ServerContext *context,
-                      ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream) override;
+                      ServerReaderWriter<containers::RemoteExecResponse, containers::RemoteExecRequest> *stream) override;
 
-    Status CopyFromContainer(ServerContext *context, const CopyFromContainerRequest *request,
-                             ServerWriter<CopyFromContainerResponse> *writer) override;
+    Status CopyFromContainer(ServerContext *context, const containers::CopyFromContainerRequest *request,
+                             ServerWriter<containers::CopyFromContainerResponse> *writer) override;
 
     Status CopyToContainer(ServerContext *context,
-                           ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *stream) override;
+                           ServerReaderWriter<containers::CopyToContainerResponse, containers::CopyToContainerRequest> *stream) override;
 
-    Status Logs(ServerContext *context, const LogsRequest *request, ServerWriter<LogsResponse> *writer) override;
+    Status Logs(ServerContext *context, const containers::LogsRequest *request, ServerWriter<containers::LogsResponse> *writer) override;
 
 private:
     template <class T1, class T2>
@@ -124,13 +122,13 @@ private:
         }
     }
 
-    int wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request);
+    int wait_request_from_grpc(const containers::WaitRequest *grequest, container_wait_request **request);
 
-    void wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse);
+    void wait_response_to_grpc(const container_wait_response *response, containers::WaitResponse *gresponse);
 
-    int events_request_from_grpc(const EventsRequest *grequest, struct isulad_events_request **request);
+    int events_request_from_grpc(const containers::EventsRequest *grequest, struct isulad_events_request **request);
 
-    int copy_from_container_request_from_grpc(const CopyFromContainerRequest *grequest,
+    int copy_from_container_request_from_grpc(const containers::CopyFromContainerRequest *grequest,
                                               struct isulad_copy_from_container_request **request);
 
     int remote_exec_request_from_stream(ServerContext *context, container_exec_request **request, std::string &errmsg);
@@ -150,7 +148,7 @@ private:
 
     void add_start_trailing_metadata(ServerContext *context, container_start_response *response);
 
-    int logs_request_from_grpc(const LogsRequest *grequest, struct isulad_logs_request **request);
+    int logs_request_from_grpc(const containers::LogsRequest *grequest, struct isulad_logs_request **request);
 };
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_CONTAINERS_SERVICE_H

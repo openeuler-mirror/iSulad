@@ -29,7 +29,7 @@ bool ContainerUpdateService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.update != nullptr;
 }
 
-int ContainerUpdateService::FillRequestFromgRPC(const UpdateRequest *request, void *contReq)
+int ContainerUpdateService::FillRequestFromgRPC(const containers::UpdateRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_update_request *>(util_common_calloc_s(sizeof(container_update_request)));
     if (tmpreq == nullptr) {
@@ -56,7 +56,7 @@ void ContainerUpdateService::ServiceRun(service_executor_t *cb, void *containerR
                                static_cast<container_update_response **>(containerRes));
 }
 
-void ContainerUpdateService::FillResponseTogRPC(void *containerRes, UpdateResponse *gresponse)
+void ContainerUpdateService::FillResponseTogRPC(void *containerRes, containers::UpdateResponse *gresponse)
 {
     const container_update_response *response = static_cast<const container_update_response *>(containerRes);
 

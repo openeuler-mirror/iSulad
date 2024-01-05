@@ -29,7 +29,7 @@ bool ContainerDeleteService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.remove != nullptr;
 }
 
-int ContainerDeleteService::FillRequestFromgRPC(const DeleteRequest *request, void *contReq)
+int ContainerDeleteService::FillRequestFromgRPC(const containers::DeleteRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_delete_request *>(util_common_calloc_s(sizeof(container_delete_request)));
     if (tmpreq == nullptr) {
@@ -54,7 +54,7 @@ void ContainerDeleteService::ServiceRun(service_executor_t *cb, void *containerR
                                static_cast<container_delete_response **>(containerRes));
 }
 
-void ContainerDeleteService::FillResponseTogRPC(void *containerRes, DeleteResponse *gresponse)
+void ContainerDeleteService::FillResponseTogRPC(void *containerRes, containers::DeleteResponse *gresponse)
 {
     const container_delete_response *response = static_cast<const container_delete_response *>(containerRes);
 

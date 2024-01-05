@@ -23,7 +23,7 @@
 
 RuntimeV1ImageServiceImpl::RuntimeV1ImageServiceImpl()
 {
-    std::unique_ptr<ImageManagerService> service(new ImageManagerServiceImpl);
+    std::unique_ptr<CRIV1::ImageManagerService> service(new CRIV1::ImageManagerServiceImpl);
     rService = std::move(service);
 }
 

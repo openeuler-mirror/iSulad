@@ -29,7 +29,7 @@ bool ContainerRestartService::WithServiceExecutorOperator(service_executor_t *cb
     return cb->container.restart != nullptr;
 }
 
-int ContainerRestartService::FillRequestFromgRPC(const RestartRequest *request, void *contReq)
+int ContainerRestartService::FillRequestFromgRPC(const containers::RestartRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_restart_request *>(util_common_calloc_s(sizeof(container_restart_request)));
     if (tmpreq == nullptr) {
@@ -53,7 +53,7 @@ void ContainerRestartService::ServiceRun(service_executor_t *cb, void *container
                                 static_cast<container_restart_response **>(containerRes));
 }
 
-void ContainerRestartService::FillResponseTogRPC(void *containerRes, RestartResponse *gresponse)
+void ContainerRestartService::FillResponseTogRPC(void *containerRes, containers::RestartResponse *gresponse)
 {
     const container_restart_response *response = static_cast<const container_restart_response *>(containerRes);
 

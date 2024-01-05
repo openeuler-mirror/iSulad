@@ -16,7 +16,6 @@
 #define DAEMON_COMMON_STREAM_WRAPPER_H
 
 #include <stdbool.h>
-#include <stdint.h>
 #include "utils_timestamp.h"
 
 #ifdef __cplusplus

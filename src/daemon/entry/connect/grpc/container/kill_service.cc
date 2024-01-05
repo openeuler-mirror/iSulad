@@ -29,7 +29,7 @@ bool ContainerKillService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.kill != nullptr;
 }
 
-int ContainerKillService::FillRequestFromgRPC(const KillRequest *request, void *contReq)
+int ContainerKillService::FillRequestFromgRPC(const containers::KillRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_kill_request *>(util_common_calloc_s(sizeof(container_kill_request)));
     if (tmpreq == nullptr) {
@@ -54,7 +54,7 @@ void ContainerKillService::ServiceRun(service_executor_t *cb, void *containerReq
                              static_cast<container_kill_response **>(containerRes));
 }
 
-void ContainerKillService::FillResponseTogRPC(void *containerRes, KillResponse *gresponse)
+void ContainerKillService::FillResponseTogRPC(void *containerRes, containers::KillResponse *gresponse)
 {
     const container_kill_response *response = static_cast<const container_kill_response *>(containerRes);
 

@@ -29,7 +29,7 @@ bool ContainerPauseService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.pause != nullptr;
 }
 
-int ContainerPauseService::FillRequestFromgRPC(const PauseRequest *request, void *contReq)
+int ContainerPauseService::FillRequestFromgRPC(const containers::PauseRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_pause_request *>(util_common_calloc_s(sizeof(container_pause_request)));
     if (tmpreq == nullptr) {
@@ -52,7 +52,7 @@ void ContainerPauseService::ServiceRun(service_executor_t *cb, void *containerRe
                               static_cast<container_pause_response **>(containerRes));
 }
 
-void ContainerPauseService::FillResponseTogRPC(void *containerRes, PauseResponse *gresponse)
+void ContainerPauseService::FillResponseTogRPC(void *containerRes, containers::PauseResponse *gresponse)
 {
     const container_pause_response *response = static_cast<const container_pause_response *>(containerRes);
 

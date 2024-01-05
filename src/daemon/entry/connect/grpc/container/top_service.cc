@@ -29,7 +29,7 @@ bool ContainerTopService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.top != nullptr;
 }
 
-int ContainerTopService::FillRequestFromgRPC(const TopRequest *request, void *contReq)
+int ContainerTopService::FillRequestFromgRPC(const containers::TopRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_top_request *>(util_common_calloc_s(sizeof(container_top_request)));
     if (tmpreq == nullptr) {
@@ -65,7 +65,7 @@ void ContainerTopService::ServiceRun(service_executor_t *cb, void *containerReq,
                             static_cast<container_top_response **>(containerRes));
 }
 
-void ContainerTopService::FillResponseTogRPC(void *containerRes, TopResponse *gresponse)
+void ContainerTopService::FillResponseTogRPC(void *containerRes, containers::TopResponse *gresponse)
 {
     const container_top_response *response = static_cast<const container_top_response *>(containerRes);
 

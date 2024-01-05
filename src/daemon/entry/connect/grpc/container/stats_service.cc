@@ -29,7 +29,7 @@ bool ContainerStatsService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.stats != nullptr;
 }
 
-int ContainerStatsService::FillRequestFromgRPC(const StatsRequest *request, void *contReq)
+int ContainerStatsService::FillRequestFromgRPC(const containers::StatsRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_stats_request *>(util_common_calloc_s(sizeof(container_stats_request)));
     if (tmpreq == nullptr) {
@@ -63,7 +63,7 @@ void ContainerStatsService::ServiceRun(service_executor_t *cb, void *containerRe
                               static_cast<container_stats_response **>(containerRes));
 }
 
-void ContainerStatsService::FillResponseTogRPC(void *containerRes, StatsResponse *gresponse)
+void ContainerStatsService::FillResponseTogRPC(void *containerRes, containers::StatsResponse *gresponse)
 {
     const container_stats_response *response = static_cast<const container_stats_response *>(containerRes);
 

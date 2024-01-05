@@ -379,7 +379,7 @@ static void InsertBandWidthIntoAdaptorAnnotations(const std::map<std::string, st
     parser_error jerr = nullptr;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY | OPT_GEN_KEY_VALUE, 0 };
     char *bandwidth_str = cni_bandwidth_entry_generate_json(&bandwidth, &ctx, &jerr);
-    if (bandwidth_str == NULL) {
+    if (bandwidth_str == nullptr) {
         ERROR("generate bandwidth json failed: %s", jerr);
         err.SetError("generate bandwidth json failed");
         goto out;
@@ -746,7 +746,7 @@ void CheckNetworkStatus(const std::string &ns, const std::string &name, const st
         goto out;
     }
     for (size_t i = 0; i < result->len; i++) {
-        if (result->items[i]->interface == NULL) {
+        if (result->items[i]->interface == nullptr) {
             continue;
         }
         if (interfaceName != result->items[i]->interface) {

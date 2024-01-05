@@ -21,8 +21,6 @@
 #include "callback.h"
 #include "v1_cri_image_manager_service.h"
 
-using namespace CRIV1;
-
 // Implement of runtime RuntimeService
 class RuntimeV1ImageServiceImpl : public
     runtime::v1::ImageService::Service {

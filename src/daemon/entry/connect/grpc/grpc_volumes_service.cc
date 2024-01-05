@@ -25,6 +25,8 @@
 #include "utils.h"
 #include "grpc_server_tls_auth.h"
 
+using namespace volume;
+
 int VolumeServiceImpl::volume_list_request_from_grpc(const ListVolumeRequest *grequest,
                                                      volume_list_volume_request **request)
 {

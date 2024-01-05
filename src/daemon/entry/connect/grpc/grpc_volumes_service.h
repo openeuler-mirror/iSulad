@@ -25,21 +25,19 @@
 using grpc::ServerContext;
 using grpc::Status;
 
-using namespace volume;
-
 // Implement of volume service
-class VolumeServiceImpl final : public VolumeService::Service {
+class VolumeServiceImpl final : public volume::VolumeService::Service {
 public:
     VolumeServiceImpl() = default;
     VolumeServiceImpl(const VolumeServiceImpl &) = delete;
     VolumeServiceImpl &operator=(const VolumeServiceImpl &) = delete;
     virtual ~VolumeServiceImpl() = default;
 
-    Status List(ServerContext *context, const ListVolumeRequest *request, ListVolumeResponse *reply) override;
+    Status List(ServerContext *context, const volume::ListVolumeRequest *request, volume::ListVolumeResponse *reply) override;
 
-    Status Remove(ServerContext *context, const RemoveVolumeRequest *request, RemoveVolumeResponse *reply) override;
+    Status Remove(ServerContext *context, const volume::RemoveVolumeRequest *request, volume::RemoveVolumeResponse *reply) override;
 
-    Status Prune(ServerContext *context, const PruneVolumeRequest *request, PruneVolumeResponse *reply) override;
+    Status Prune(ServerContext *context, const volume::PruneVolumeRequest *request, volume::PruneVolumeResponse *reply) override;
 
 private:
     template <class T1, class T2>
@@ -58,13 +56,13 @@ private:
 
     int volume_list_request_from_grpc(const volume::ListVolumeRequest*, volume_list_volume_request**);
 
-    int volume_list_response_to_grpc(volume_list_volume_response *response, ListVolumeResponse *gresponse);
+    int volume_list_response_to_grpc(volume_list_volume_response *response, volume::ListVolumeResponse *gresponse);
 
-    int volume_remove_request_from_grpc(const RemoveVolumeRequest *grequest, volume_remove_volume_request **request);
+    int volume_remove_request_from_grpc(const volume::RemoveVolumeRequest *grequest, volume_remove_volume_request **request);
 
-    int volume_prune_request_from_grpc(const PruneVolumeRequest *grequest, volume_prune_volume_request **request);
+    int volume_prune_request_from_grpc(const volume::PruneVolumeRequest *grequest, volume_prune_volume_request **request);
 
-    int volume_prune_response_to_grpc(volume_prune_volume_response *response, PruneVolumeResponse *gresponse);
+    int volume_prune_response_to_grpc(volume_prune_volume_response *response, volume::PruneVolumeResponse *gresponse);
 };
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_VOLUMES_SERVICE_H

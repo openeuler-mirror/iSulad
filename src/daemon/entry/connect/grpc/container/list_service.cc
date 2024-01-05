@@ -29,7 +29,7 @@ bool ContainerListService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.list != nullptr;
 }
 
-int ContainerListService::FillRequestFromgRPC(const ListRequest *request, void *contReq)
+int ContainerListService::FillRequestFromgRPC(const containers::ListRequest *request, void *contReq)
 {
     size_t len;
     container_list_request *tmpreq { nullptr };
@@ -97,14 +97,14 @@ void ContainerListService::ServiceRun(service_executor_t *cb, void *containerReq
                              static_cast<container_list_response **>(containerRes));
 }
 
-void ContainerListService::FillResponseTogRPC(void *containerRes, ListResponse *gresponse)
+void ContainerListService::FillResponseTogRPC(void *containerRes, containers::ListResponse *gresponse)
 {
     const container_list_response *response = static_cast<const container_list_response *>(containerRes);
 
     ResponseToGrpc(response, gresponse);
 
     for (size_t i { 0 }; i < response->containers_len; ++i) {
-        Container *container = gresponse->add_containers();
+        containers::Container *container = gresponse->add_containers();
         if (response->containers[i]->id != nullptr) {
             container->set_id(response->containers[i]->id);
         }
@@ -114,7 +114,7 @@ void ContainerListService::FillResponseTogRPC(void *containerRes, ListResponse *
         if (response->containers[i]->pid != 0) {
             container->set_pid(response->containers[i]->pid);
         }
-        container->set_status(static_cast<ContainerStatus>(response->containers[i]->status));
+        container->set_status(static_cast<containers::ContainerStatus>(response->containers[i]->status));
         if (response->containers[i]->image != nullptr) {
             container->set_image(response->containers[i]->image);
         }

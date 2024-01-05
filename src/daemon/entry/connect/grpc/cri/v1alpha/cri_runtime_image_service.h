@@ -21,8 +21,6 @@
 #include "callback.h"
 #include "cri_image_manager_service.h"
 
-using namespace CRI;
-
 // Implement of runtime RuntimeService
 class RuntimeImageServiceImpl : public
     runtime::v1alpha2::ImageService::Service {
@@ -50,7 +48,7 @@ public:
                              runtime::v1alpha2::RemoveImageResponse *reply) override;
 
 private:
-    std::unique_ptr<ImageManagerService> rService;
+    std::unique_ptr<CRI::ImageManagerService> rService;
 };
 #endif // DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_IMAGE_SERVICE_H
 

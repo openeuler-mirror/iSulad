@@ -29,7 +29,7 @@ bool QueryInfoService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.info != nullptr;
 }
 
-int QueryInfoService::FillRequestFromgRPC(const InfoRequest *request, void *contReq)
+int QueryInfoService::FillRequestFromgRPC(const containers::InfoRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<host_info_request *>(util_common_calloc_s(sizeof(host_info_request)));
     if (tmpreq == nullptr) {
@@ -47,7 +47,7 @@ void QueryInfoService::ServiceRun(service_executor_t *cb, void *containerReq, vo
                              static_cast<host_info_response **>(containerRes));
 }
 
-void QueryInfoService::PackOSInfo(const host_info_response *response, InfoResponse *gresponse)
+void QueryInfoService::PackOSInfo(const host_info_response *response, containers::InfoResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
@@ -85,7 +85,7 @@ void QueryInfoService::PackOSInfo(const host_info_response *response, InfoRespon
     }
 }
 
-void QueryInfoService::PackProxyInfo(const host_info_response *response, InfoResponse *gresponse)
+void QueryInfoService::PackProxyInfo(const host_info_response *response, containers::InfoResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
@@ -105,7 +105,7 @@ void QueryInfoService::PackProxyInfo(const host_info_response *response, InfoRes
     }
 }
 
-void QueryInfoService::PackDriverInfo(const host_info_response *response, InfoResponse *gresponse)
+void QueryInfoService::PackDriverInfo(const host_info_response *response, containers::InfoResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
@@ -121,7 +121,7 @@ void QueryInfoService::PackDriverInfo(const host_info_response *response, InfoRe
     }
 }
 
-void QueryInfoService::FillResponseTogRPC(void *containerRes, InfoResponse *gresponse)
+void QueryInfoService::FillResponseTogRPC(void *containerRes, containers::InfoResponse *gresponse)
 {
     const host_info_response *response = static_cast<const host_info_response *>(containerRes);
 

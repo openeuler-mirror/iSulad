@@ -29,7 +29,7 @@ bool QueryVersionService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.version != nullptr;
 }
 
-int QueryVersionService::FillRequestFromgRPC(const VersionRequest *request, void *contReq)
+int QueryVersionService::FillRequestFromgRPC(const containers::VersionRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_version_request *>(util_common_calloc_s(sizeof(container_version_request)));
     if (tmpreq == nullptr) {
@@ -48,7 +48,7 @@ void QueryVersionService::ServiceRun(service_executor_t *cb, void *containerReq,
                                 static_cast<container_version_response **>(containerRes));
 }
 
-void QueryVersionService::FillResponseTogRPC(void *containerRes, VersionResponse *gresponse)
+void QueryVersionService::FillResponseTogRPC(void *containerRes, containers::VersionResponse *gresponse)
 {
     const container_version_response *response = static_cast<const container_version_response *>(containerRes);
 

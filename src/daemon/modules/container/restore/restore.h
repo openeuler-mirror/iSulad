@@ -15,7 +15,6 @@
 #ifndef DAEMON_MODULES_CONTAINER_RESTORE_RESTORE_H
 #define DAEMON_MODULES_CONTAINER_RESTORE_RESTORE_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus

@@ -29,7 +29,7 @@ bool ContainerStopService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.stop != nullptr;
 }
 
-int ContainerStopService::FillRequestFromgRPC(const StopRequest *request, void *contReq)
+int ContainerStopService::FillRequestFromgRPC(const containers::StopRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_stop_request *>(util_common_calloc_s(sizeof(container_stop_request)));
     if (tmpreq == nullptr) {
@@ -54,7 +54,7 @@ void ContainerStopService::ServiceRun(service_executor_t *cb, void *containerReq
                              static_cast<container_stop_response **>(containerRes));
 }
 
-void ContainerStopService::FillResponseTogRPC(void *containerRes, StopResponse *gresponse)
+void ContainerStopService::FillResponseTogRPC(void *containerRes, containers::StopResponse *gresponse)
 {
     const container_stop_response *response = static_cast<const container_stop_response *>(containerRes);
 

@@ -22,10 +22,8 @@
 #include "error.h"
 
 using grpc::ServerContext;
-// Implement of containers service
-using namespace containers;
 
-class ContainerDeleteService : public ContainerServiceBase<DeleteRequest, DeleteResponse> {
+class ContainerDeleteService : public ContainerServiceBase<containers::DeleteRequest, containers::DeleteResponse> {
 public:
     ContainerDeleteService() = default;
     ContainerDeleteService(const ContainerDeleteService &) = default;
@@ -36,9 +34,9 @@ protected:
     void SetThreadName() override;
     Status Authenticate(ServerContext *context) override;
     bool WithServiceExecutorOperator(service_executor_t *cb) override;
-    int FillRequestFromgRPC(const DeleteRequest *request, void *contReq) override;
+    int FillRequestFromgRPC(const containers::DeleteRequest *request, void *contReq) override;
     void ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes) override;
-    void FillResponseTogRPC(void *containerRes, DeleteResponse *gresponse) override;
+    void FillResponseTogRPC(void *containerRes, containers::DeleteResponse *gresponse) override;
     void CleanUp(void *containerReq, void *containerRes) override;
 };
 

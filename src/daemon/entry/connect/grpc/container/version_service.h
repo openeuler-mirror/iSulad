@@ -22,10 +22,8 @@
 #include "error.h"
 
 using grpc::ServerContext;
-// Implement of query service
-using namespace containers;
 
-class QueryVersionService : public ContainerServiceBase<VersionRequest, VersionResponse> {
+class QueryVersionService : public ContainerServiceBase<containers::VersionRequest, containers::VersionResponse> {
 public:
     QueryVersionService() = default;
     QueryVersionService(const QueryVersionService &) = default;
@@ -36,9 +34,9 @@ protected:
     void SetThreadName() override;
     Status Authenticate(ServerContext *context) override;
     bool WithServiceExecutorOperator(service_executor_t *cb) override;
-    int FillRequestFromgRPC(const VersionRequest *request, void *contReq) override;
+    int FillRequestFromgRPC(const containers::VersionRequest *request, void *contReq) override;
     void ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes) override;
-    void FillResponseTogRPC(void *containerRes, VersionResponse *gresponse) override;
+    void FillResponseTogRPC(void *containerRes, containers::VersionResponse *gresponse) override;
     void CleanUp(void *containerReq, void *containerRes) override;
 };
 

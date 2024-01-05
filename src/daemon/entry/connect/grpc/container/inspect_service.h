@@ -22,10 +22,8 @@
 #include "error.h"
 
 using grpc::ServerContext;
-// Implement of containers service
-using namespace containers;
 
-class ContainerInspectService : public ContainerServiceBase<InspectContainerRequest, InspectContainerResponse> {
+class ContainerInspectService : public ContainerServiceBase<containers::InspectContainerRequest, containers::InspectContainerResponse> {
 public:
     ContainerInspectService() = default;
     ContainerInspectService(const ContainerInspectService &) = default;
@@ -36,9 +34,9 @@ protected:
     void SetThreadName() override;
     Status Authenticate(ServerContext *context) override;
     bool WithServiceExecutorOperator(service_executor_t *cb) override;
-    int FillRequestFromgRPC(const InspectContainerRequest *request, void *contReq) override;
+    int FillRequestFromgRPC(const containers::InspectContainerRequest *request, void *contReq) override;
     void ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes) override;
-    void FillResponseTogRPC(void *containerRes, InspectContainerResponse *gresponse) override;
+    void FillResponseTogRPC(void *containerRes, containers::InspectContainerResponse *gresponse) override;
     void CleanUp(void *containerReq, void *containerRes) override;
 };
 

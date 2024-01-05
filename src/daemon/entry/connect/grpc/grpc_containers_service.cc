@@ -48,6 +48,8 @@
 #include "version_service.h"
 #include "info_service.h"
 
+using namespace containers;
+
 void protobuf_timestamp_to_grpc(const types_timestamp_t *timestamp, Timestamp *gtimestamp)
 {
     gtimestamp->set_seconds(timestamp->seconds);
@@ -400,7 +402,7 @@ public:
         m_read_pipe_fd = read_pipe_fd;
     }
 
-    void run()
+    void run() override
     {
         RemoteExecRequest request;
         while (stopRequested() == false && m_stream->Read(&request)) {

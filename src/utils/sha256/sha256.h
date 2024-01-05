@@ -16,7 +16,6 @@
 #define UTILS_SHA256_SHA256_H 1
 
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <zlib.h>
 

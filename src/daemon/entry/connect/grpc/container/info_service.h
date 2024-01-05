@@ -22,10 +22,8 @@
 #include "error.h"
 
 using grpc::ServerContext;
-// Implement of query service
-using namespace containers;
 
-class QueryInfoService : public ContainerServiceBase<InfoRequest, InfoResponse> {
+class QueryInfoService : public ContainerServiceBase<containers::InfoRequest, containers::InfoResponse> {
 public:
     QueryInfoService() = default;
     QueryInfoService(const QueryInfoService &) = default;
@@ -36,15 +34,15 @@ protected:
     void SetThreadName() override;
     Status Authenticate(ServerContext *context) override;
     bool WithServiceExecutorOperator(service_executor_t *cb) override;
-    int FillRequestFromgRPC(const InfoRequest *request, void *contReq) override;
+    int FillRequestFromgRPC(const containers::InfoRequest *request, void *contReq) override;
     void ServiceRun(service_executor_t *cb, void *containerReq, void *containerRes) override;
-    void FillResponseTogRPC(void *containerRes, InfoResponse *gresponse) override;
+    void FillResponseTogRPC(void *containerRes, containers::InfoResponse *gresponse) override;
     void CleanUp(void *containerReq, void *containerRes) override;
 
 private:
-    void PackOSInfo(const host_info_response *response, InfoResponse *gresponse);
-    void PackProxyInfo(const host_info_response *response, InfoResponse *gresponse);
-    void PackDriverInfo(const host_info_response *response, InfoResponse *gresponse);
+    void PackOSInfo(const host_info_response *response, containers::InfoResponse *gresponse);
+    void PackProxyInfo(const host_info_response *response, containers::InfoResponse *gresponse);
+    void PackDriverInfo(const host_info_response *response, containers::InfoResponse *gresponse);
 };
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_QUERY_INFO_SERVICE_H

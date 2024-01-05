@@ -189,11 +189,11 @@ public:
             grequest->set_runtime(request->runtime);
         }
 
-        if (request->container_spec_json != NULL) {
+        if (request->container_spec_json != nullptr) {
             grequest->set_customconfig(request->container_spec_json);
         }
 
-        if (request->host_spec_json != NULL) {
+        if (request->host_spec_json != nullptr) {
             grequest->set_hostconfig(request->host_spec_json);
         }
 
@@ -1625,7 +1625,7 @@ public:
             return -1;
         }
 
-        if (request->host_spec_json != NULL) {
+        if (request->host_spec_json != nullptr) {
             grequest->set_hostconfig(request->host_spec_json);
         }
         if (request->name != nullptr) {

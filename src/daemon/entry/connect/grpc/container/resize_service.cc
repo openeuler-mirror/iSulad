@@ -29,7 +29,7 @@ bool ContainerResizeService::WithServiceExecutorOperator(service_executor_t *cb)
     return cb->container.resize != nullptr;
 }
 
-int ContainerResizeService::FillRequestFromgRPC(const ResizeRequest *request, void *contReq)
+int ContainerResizeService::FillRequestFromgRPC(const containers::ResizeRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<isulad_container_resize_request *>(
                        util_common_calloc_s(sizeof(isulad_container_resize_request)));
@@ -61,7 +61,7 @@ void ContainerResizeService::ServiceRun(service_executor_t *cb, void *containerR
                                static_cast<isulad_container_resize_response **>(containerRes));
 }
 
-void ContainerResizeService::FillResponseTogRPC(void *containerRes, ResizeResponse *gresponse)
+void ContainerResizeService::FillResponseTogRPC(void *containerRes, containers::ResizeResponse *gresponse)
 {
     const isulad_container_resize_response *response =
         static_cast<const isulad_container_resize_response *>(containerRes);

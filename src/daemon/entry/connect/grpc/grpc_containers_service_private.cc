@@ -17,6 +17,8 @@
 #include "utils.h"
 #include "error.h"
 
+using namespace containers;
+
 int ContainerServiceImpl::wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request)
 {
     container_wait_request *tmpreq = (container_wait_request *)util_common_calloc_s(sizeof(container_wait_request));

@@ -29,7 +29,7 @@ bool ContainerInspectService::WithServiceExecutorOperator(service_executor_t *cb
     return cb->container.inspect != nullptr;
 }
 
-int ContainerInspectService::FillRequestFromgRPC(const InspectContainerRequest *request, void *contReq)
+int ContainerInspectService::FillRequestFromgRPC(const containers::InspectContainerRequest *request, void *contReq)
 {
     auto *tmpreq = static_cast<container_inspect_request *>(util_common_calloc_s(sizeof(container_inspect_request)));
     if (tmpreq == nullptr) {
@@ -55,7 +55,7 @@ void ContainerInspectService::ServiceRun(service_executor_t *cb, void *container
                                 static_cast<container_inspect_response **>(containerRes));
 }
 
-void ContainerInspectService::FillResponseTogRPC(void *containerRes, InspectContainerResponse *gresponse)
+void ContainerInspectService::FillResponseTogRPC(void *containerRes, containers::InspectContainerResponse *gresponse)
 {
     const container_inspect_response *response = static_cast<const container_inspect_response *>(containerRes);
 
