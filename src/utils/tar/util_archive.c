@@ -1055,6 +1055,29 @@ static void link_kvfree(void *key, void *value)
     return;
 }
 
+static bool check_archive_write_entry_filetype_unsupported(struct archive_entry *entry)
+{
+    bool unsupported = true;
+    /*
+     * The file types to be archived must comply with the pax interchange format,
+     * the following switch-case lists the file types that meet the standard,
+     * the socket and other file types do not meet the standard, therefore, archiving is not supported.
+     */
+    switch (archive_entry_filetype(entry)) {
+        case AE_IFBLK:
+        case AE_IFCHR:
+        case AE_IFIFO:
+        case AE_IFLNK:
+        case AE_IFREG:
+        case AE_IFDIR:
+            unsupported = false;
+            break;
+        default: /* AE_IFSOCK and unknown */
+            break;
+    }
+    return unsupported;
+}
+
 int tar_handler(struct archive *r, struct archive *w, const char *src_base, const char *dst_base)
 {
     int ret = ARCHIVE_OK;
@@ -1094,6 +1117,12 @@ int tar_handler(struct archive *r, struct archive *w, const char *src_base, cons
             ret = ARCHIVE_FAILED;
             break;
         }
+
+        if (check_archive_write_entry_filetype_unsupported(entry)) {
+            WARN("%s ignored", archive_entry_pathname(entry));
+            continue;
+        }
+
         ret = archive_write_header(w, entry);
         if (ret != ARCHIVE_OK) {
             ERROR("Fail to write tar header: %s.\nlink:%s target:%s", archive_error_string(w),
