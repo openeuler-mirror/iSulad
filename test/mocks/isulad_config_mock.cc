@@ -194,3 +194,19 @@ char *conf_get_isulad_userns_remap()
     }
     return nullptr;
 }
+
+char *conf_get_engine_log_file(void)
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetEngineLogFile();
+    }
+    return nullptr;
+}
+
+char *conf_get_isulad_loglevel(void)
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetIsuladLogLevel();
+    }
+    return nullptr;
+}

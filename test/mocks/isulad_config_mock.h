@@ -43,6 +43,8 @@ public:
     MOCK_METHOD0(ConfGetServerConf, struct service_arguments * (void));
     MOCK_METHOD0(ConfGetSandboxRootPath, char *(void));
     MOCK_METHOD0(ConfGetSandboxStatePath, char *(void));
+    MOCK_METHOD0(ConfGetEngineLogFile, char *(void));
+    MOCK_METHOD0(ConfGetIsuladLogLevel, char *(void));
 };
 
 void MockIsuladConf_SetMock(MockIsuladConf *mock);

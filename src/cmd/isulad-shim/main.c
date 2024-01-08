@@ -24,9 +24,11 @@
 #include <isula_libutils/shim_client_process_state.h>
 #include <isula_libutils/utils_convert.h>
 #include <isula_libutils/utils_memory.h>
+#include <isula_libutils/log.h>
 
 #include "common.h"
 #include "process.h"
+#include "shim_constants.h"
 
 static void set_timeout_exit(unsigned int timeout)
 {
@@ -91,18 +93,34 @@ int main(int argc, char **argv)
     char *bundle = NULL;
     char *rt_name = NULL;
     char *log_level = NULL;
+    char *engine_log_path = NULL;
     int ret = SHIM_ERR;
     process_t *p = NULL;
     // execSync timeout
     uint64_t timeout = 0;
     pthread_t tid_epoll;
 
-    ret = init_shim_log();
-    if (ret != SHIM_OK) {
-        // because shim log init error, print error msg to stderr.
-        // isulad can obtain the reason why shim exits.
-        dprintf(STDERR_FILENO, "failed to init shim log");
+    engine_log_path = getenv(SHIIM_LOG_PATH_ENV);
+    if (engine_log_path == NULL) {
+        dprintf(STDERR_FILENO, "empty SHIIM_LOG_PATH_ENV");
+         _exit(EXIT_FAILURE);
+    }
+
+    log_level = getenv(SHIIM_LOG_LEVEL_ENV);
+    if (log_level == NULL) {
+        dprintf(STDERR_FILENO, "empty SHIIM_LOG_LEVEL_ENV");
         _exit(EXIT_FAILURE);
+    }
+
+    ret = isulad_shim_log_init(engine_log_path, log_level);
+    if (ret != SHIM_OK) {
+        _exit(EXIT_FAILURE);
+    }
+
+    // environment variables are required for initialization logs and are not needed later.
+    if (unsetenv(SHIIM_LOG_PATH_ENV) != 0 || unsetenv(SHIIM_LOG_LEVEL_ENV) != 0) {
+        ERROR("failed to unset SHIIM_LOG_PATH_ENV or SHIIM_LOG_LEVEL_ENV");
+        error_exit(EXIT_FAILURE);
     }
 
     /*
@@ -113,21 +131,25 @@ int main(int argc, char **argv)
 
     ret = set_subreaper();
     if (ret != SHIM_OK) {
-        write_message(ERR_MSG, "set subreaper failed:%d", ret);
-        exit(EXIT_FAILURE);
+        ERROR("set subreaper failed:%d", ret);
+        error_exit(EXIT_FAILURE);
     }
 
     ret = parse_args(argc, argv, &container_id, &bundle, &rt_name, &log_level, &timeout);
     if (ret != SHIM_OK) {
-        write_message(ERR_MSG, "parse args failed:%d", ret);
-        exit(EXIT_FAILURE);
+        ERROR("parse args failed:%d", ret);
+        error_exit(EXIT_FAILURE);
     }
 
     p = new_process(container_id, bundle, rt_name);
     if (p == NULL) {
-        write_message(ERR_MSG, "new process failed");
-        exit(EXIT_FAILURE);
+        ERROR("new process failed");
+        error_exit(EXIT_FAILURE);
     }
+
+    // If isulad-shim is a child process of the isulad process,
+    // print the log to stderr so that isulad can obtain the exit information of isulad-shim.
+    set_log_to_stderr((p->state->exec) && (p->state->isulad_stdin != NULL || p->state->isulad_stdout != NULL || p->state->isulad_stderr != NULL));
 
     /*
      * Open exit pipe
@@ -138,8 +160,9 @@ int main(int argc, char **argv)
         if (p->state->exit_fifo != NULL) {
             int efd = open_no_inherit("exit_fifo", O_WRONLY, -1);
             if (efd < 0) {
-                write_message(ERR_MSG, "open exit pipe failed:%d", SHIM_SYS_ERR(errno));
-                exit(EXIT_FAILURE);
+                ERROR("open exit pipe failed:%d", SHIM_SYS_ERR(errno));
+                shim_set_error_message("open exit pipe failed:%d", SHIM_SYS_ERR(errno));
+                error_exit(EXIT_FAILURE);
             }
             p->exit_fd = efd;
         }
@@ -148,22 +171,18 @@ int main(int argc, char **argv)
     if (p->state->attach_socket != NULL) {
         ret = prepare_attach_socket(p);
         if (ret != SHIM_OK) {
-            write_message(ERR_MSG, "failed to prepare attach socket:%d", ret);
-            exit(EXIT_FAILURE);
-        }
-
-        ret = init_attach_log();
-        if (ret != SHIM_OK) {
-            write_message(ERR_MSG, "failed to init shim attach log");
-            exit(EXIT_FAILURE);
+            ERROR("failed to prepare attach socket:%d", ret);
+            shim_append_error_message("open exit pipe failed:%d", SHIM_SYS_ERR(errno));
+            error_exit(EXIT_FAILURE);
         }
     }
 
     /* start epoll for io copy */
     ret = process_io_start(p, &tid_epoll);
     if (ret != SHIM_OK) {
-        write_message(ERR_MSG, "process io init failed:%d", ret);
-        exit(EXIT_FAILURE);
+        ERROR("process io init failed:%d", ret);
+        shim_set_error_message("process io init failed:%d", ret);
+        error_exit(EXIT_FAILURE);
     }
 
     ret = create_process(p);
@@ -171,17 +190,17 @@ int main(int argc, char **argv)
         if (p->console_sock_path != NULL) {
             (void)unlink(p->console_sock_path);
         }
-        exit(EXIT_FAILURE);
+        error_exit(EXIT_FAILURE);
     }
 
     released_timeout_exit();
 
     ret = process_signal_handle_routine(p, tid_epoll, timeout);
     if (ret == SHIM_ERR) {
-        exit(EXIT_FAILURE);
+        error_exit(EXIT_FAILURE);
     }
     if (ret == SHIM_ERR_TIMEOUT) {
-        exit(SHIM_EXIT_TIMEOUT);
+        error_exit(SHIM_EXIT_TIMEOUT);
     }
 
     exit(EXIT_SUCCESS);

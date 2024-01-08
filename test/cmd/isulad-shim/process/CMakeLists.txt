@@ -14,6 +14,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cmd/isulad-shim
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/common
     )
 
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULAD_SHIM_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)

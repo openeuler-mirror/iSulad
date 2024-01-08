@@ -55,21 +55,31 @@
 #include "utils_convert.h"
 #include "utils_file.h"
 #include "console.h"
+#include "shim_constants.h"
 
 #define SHIM_BINARY "isulad-shim"
 #define RESIZE_FIFO_NAME "resize_fifo"
-#define ATTACH_SOCKET "attach.sock"
 #define SHIM_LOG_SIZE ((BUFSIZ - 100) / 2)
 #define RESIZE_DATA_SIZE 100
 #define PID_WAIT_TIME 120
 #define ATTACH_WAIT_TIME 120
-#define SHIM_EXIT_TIMEOUT 2
+#define RUNTIME_LOG_LINE_NUM 3
 
 // file name formats of cgroup resources json
 #define RESOURCE_FNAME_FORMATS "%s/resources.json"
 
 // handle string from stderr output.
 typedef int(*handle_output_callback_t)(const char *output);
+typedef struct {
+    bool fg;
+    const char *id;
+    char *workdir;
+    const char *bundle;
+    const char *runtime_cmd;
+    int *exit_code;
+    char *timeout;
+    int shim_exit_code;
+} shim_create_args;
 
 static void copy_process(shim_client_process_state *p, defs_process *dp)
 {
@@ -155,93 +165,95 @@ static void file_read_int(const char *fname, int *val)
     free(sint);
 }
 
-static void get_err_message(char *buf, int buf_size, const char *workdir, const char *file)
+static int get_err_message(char *buf, int buf_size, const char *workdir, const char *file)
 {
     int nret;
+    int ret = 0;
     char fname[PATH_MAX] = { 0 };
     FILE *fp = NULL;
     char *pline = NULL;
-    char *lines[3] = { 0 };
+    char *lines[RUNTIME_LOG_LINE_NUM] = { 0 };
     size_t length = 0;
+    int line_count = 0;
 
     nret = snprintf(fname, PATH_MAX, "%s/%s", workdir, file);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("failed make full path %s/%s", workdir, file);
-        return;
+        return ret;
     }
 
     fp = util_fopen(fname, "r");
     if (fp == NULL) {
-        return;
+        return ret;
     }
 
     while (getline(&pline, &length, fp) != -1) {
-        if (pline == NULL) {
+        if (pline == NULL || line_count >= RUNTIME_LOG_LINE_NUM) {
             break;
         }
         if (util_strings_contains_word(pline, "error")) {
-            if (lines[0] == NULL) {
-                lines[0] = pline;
-                pline = NULL;
-                continue;
-            }
-            if (lines[1] == NULL) {
-                lines[1] = pline;
-                pline = NULL;
-                continue;
-            }
-            if (lines[2] == NULL) {
-                lines[2] = pline;
-                pline = NULL;
-                break;
-            }
+            lines[line_count] = pline;
+            pline = NULL;
+            line_count++;
+            continue;
         }
+        free(pline);
+        pline = NULL;
     }
     fclose(fp);
 
-    if (lines[2] != NULL) {
-        (void)snprintf(buf, buf_size, "%s%s%s", lines[0], lines[1], lines[2]);
-    } else if (lines[1] != NULL) {
-        (void)snprintf(buf, buf_size, "%s%s", lines[0], lines[1]);
-    } else if (lines[0] != NULL) {
-        (void)snprintf(buf, buf_size, "%s", lines[0]);
+    for (int i = 0; i < line_count; i++) {
+        nret = snprintf(buf + ret, buf_size - ret, "%s", lines[i]);
+        if (nret < 0 || (size_t)nret >= buf_size - ret) {
+            ERROR("Filed to snprintf runtime log line %d", i);
+            continue;
+        }
+        ret += nret;
     }
 
     UTIL_FREE_AND_SET_NULL(pline);
-    UTIL_FREE_AND_SET_NULL(lines[0]);
-    UTIL_FREE_AND_SET_NULL(lines[1]);
-    UTIL_FREE_AND_SET_NULL(lines[2]);
+    for (int i = 0; i < RUNTIME_LOG_LINE_NUM; i++) {
+        UTIL_FREE_AND_SET_NULL(lines[i]);
+    }
+    return ret;
 }
 
-static void show_shim_runtime_errlog(const char *workdir)
+static void show_runtime_errlog(const char *workdir)
 {
     char buf[BUFSIZ] = { 0 };
-    char buf1[SHIM_LOG_SIZE] = { 0 };
-    char buf2[SHIM_LOG_SIZE] = { 0 };
+    int nret;
 
     if (g_isulad_errmsg != NULL) {
         return;
     }
 
-    get_err_message(buf1, sizeof(buf1), workdir, "shim-log.json");
-    get_err_message(buf2, sizeof(buf2), workdir, "log.json");
-    ERROR("shim-log: %s", buf1);
-    ERROR("runtime-log: %s", buf2);
-    (void)snprintf(buf, sizeof(buf), "shim-log error: %s\nruntime-log error: %s\n", buf1, buf2);
-    isulad_set_error_message(buf);
+    nret = get_err_message(buf, sizeof(buf), workdir, "log.json");
+    if (nret == 0) {
+        ERROR("empty runtime-log : %s", workdir);
+        return;
+    }
+    ERROR("runtime-log: %s", buf);
+    isulad_set_error_message("runtime-log error: %s\n", buf);
 }
 
-static void show_shim_attach_errlog(const char *workdir)
+static void show_shim_errlog(const int fd)
 {
-    char buf[SHIM_LOG_SIZE] = { 0 };
+    int num;
+    char buf[BUFSIZ] = { 0 };
 
     if (g_isulad_errmsg != NULL) {
         return;
     }
 
-    get_err_message(buf, sizeof(buf), workdir, "attach-log.json");
-    ERROR("shim-log: %s", buf);
-    isulad_set_error_message("shim-log error:\n%s\n", buf);
+    num = util_read_nointr(fd, buf, sizeof(buf) - 1);
+    if (num < 0) {
+        SYSERROR("Failed to read err msg from shim stderr");
+        return;
+    }
+    if (num == 0) {
+        return;
+    }
+    isulad_set_error_message(buf);
 }
 
 bool rt_isula_detect(const char *runtime)
@@ -819,12 +831,28 @@ static int status_to_exit_code(int status)
     return exit_code;
 }
 
+static int get_engine_routine_log_info(char **engine_log_path, char **log_level)
+{
+    *engine_log_path = conf_get_engine_log_file();
+    if (*engine_log_path == NULL) {
+        ERROR("Log fifo path is NULL");
+        return -1;
+    }
+
+    *log_level = conf_get_isulad_loglevel();
+    if (*log_level == NULL) {
+        ERROR("Log level is NULL");
+        return -1;
+    }
+
+    return 0;
+}
+
 /*
     exit_code records the exit code of the container, obtained by reading the stdout of isulad-shim;
     shim_exit_code records the exit code of isulad-shim, obtained through waitpid;
 */
-static int shim_create(bool fg, const char *id, const char *workdir, const char *bundle, const char *runtime_cmd,
-                       int *exit_code, const char *timeout, int *shim_exit_code)
+static int shim_create(shim_create_args *args)
 {
     pid_t pid = 0;
     int shim_stderr_pipe[2] = { -1, -1 };
@@ -834,22 +862,29 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
     char exec_buff[BUFSIZ + 1] = { 0 };
     char fpid[PATH_MAX] = { 0 };
     const char *params[PARAM_NUM] = { 0 };
+    __isula_auto_free char *engine_log_path = NULL;
+    __isula_auto_free char *log_level = NULL;
     int i = 0;
     int status = 0;
     int nret = 0;
 
     params[i++] = SHIM_BINARY;
-    params[i++] = id;
-    params[i++] = bundle;
-    params[i++] = runtime_cmd;
+    params[i++] = args->id;
+    params[i++] = args->bundle;
+    params[i++] = args->runtime_cmd;
     params[i++] = "info";
     // execSync timeout
-    if (timeout != NULL) {
-        params[i++] = timeout;
+    if (args->timeout != NULL) {
+        params[i++] = args->timeout;
     }
     runtime_exec_param_dump(params);
 
-    nret = snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir);
+    if (get_engine_routine_log_info(&engine_log_path, &log_level) != 0) {
+        ERROR("failed to get engine log path");
+        return -1; 
+    }
+
+    nret = snprintf(fpid, sizeof(fpid), "%s/shim-pid", args->workdir);
     if (nret < 0 || (size_t)nret >= sizeof(fpid)) {
         ERROR("failed make shim-pid full path");
         return -1;
@@ -876,8 +911,8 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
     }
 
     if (pid == (pid_t)0) {
-        if (chdir(workdir) < 0) {
-            (void)dprintf(shim_stderr_pipe[1], "%s: failed chdir to %s", id, workdir);
+        if (chdir(args->workdir) < 0) {
+            (void)dprintf(shim_stderr_pipe[1], "%s: failed chdir to %s", args->id, args->workdir);
             exit(EXIT_FAILURE);
         }
 
@@ -887,7 +922,7 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
             exit(EXIT_FAILURE);           
         }
 
-        if (fg) {
+        if (args->fg) {
             // child process, dup2 shim_stdout_pipe[1] to STDOUT, get container process exit_code in STDOUT
             if (dup2(shim_stdout_pipe[1], STDOUT_FILENO) < 0) {
                 (void)dprintf(shim_stderr_pipe[1], "Dup stdout fd error: %s", strerror(errno));
@@ -903,18 +938,18 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
 
         // clear NOTIFY_SOCKET from the env to adapt runc create
         if (unsetenv("NOTIFY_SOCKET") != 0) {
-            (void)dprintf(shim_stderr_pipe[1], "%s: unset env NOTIFY_SOCKET failed %s", id, strerror(errno));
+            (void)dprintf(shim_stderr_pipe[1], "%s: unset env NOTIFY_SOCKET failed %s", args->id, strerror(errno));
             exit(EXIT_FAILURE);
         }
 
         pid = fork();
         if (pid < 0) {
-            (void)dprintf(shim_stderr_pipe[1], "%s: fork shim-process failed %s", id, strerror(errno));
+            (void)dprintf(shim_stderr_pipe[1], "%s: fork shim-process failed %s", args->id, strerror(errno));
             _exit(EXIT_FAILURE);
         }
         if (pid != 0) {
             if (file_write_int(fpid, pid) != 0) {
-                (void)dprintf(shim_stderr_pipe[1], "%s: write %s with %d failed", id, fpid, pid);
+                (void)dprintf(shim_stderr_pipe[1], "%s: write %s with %d failed", args->id, fpid, pid);
             }
             _exit(EXIT_SUCCESS);
         }
@@ -925,12 +960,22 @@ realexec:
         close(shim_stdout_pipe[0]);
 
         if (setsid() < 0) {
-            (void)dprintf(shim_stderr_pipe[1], "%s: failed setsid for process %d", id, getpid());
+            (void)dprintf(shim_stderr_pipe[1], "%s: failed setsid for process %d", args->id, getpid());
             exit(EXIT_FAILURE);
         }
 
         if (util_check_inherited(true, shim_stderr_pipe[1]) != 0) {
             (void)dprintf(shim_stderr_pipe[1], "close inherited fds failed");
+            exit(EXIT_FAILURE);
+        }
+
+        if (setenv(SHIIM_LOG_PATH_ENV, engine_log_path, 1) != 0) {
+            (void)dprintf(shim_stderr_pipe[1], "%s: failed to set SHIIM_LOG_PATH_ENV for process %d", args->id, getpid());
+            exit(EXIT_FAILURE);
+        }
+
+        if (setenv(SHIIM_LOG_LEVEL_ENV, log_level, 1) != 0) {
+            (void)dprintf(shim_stderr_pipe[1], "%s: failed to set SHIIM_LOG_LEVEL_ENV env for process %d", args->id, getpid());
             exit(EXIT_FAILURE);
         }
 
@@ -958,38 +1003,41 @@ realexec:
         goto out;
     }
 
-    *shim_exit_code = status_to_exit_code(status);
-    if (*shim_exit_code != 0) {
-        ERROR("Isulad-shim exit error");
+    args->shim_exit_code = status_to_exit_code(status);
+    if (args->shim_exit_code != 0) {
+        ERROR("isulad-shim exit error : %d", args->shim_exit_code);
         ret = -1;
         goto out;
     }
 
     // exit_code is NULL when command is create.
-    if (exit_code == NULL) {
+    if (args->exit_code == NULL) {
         goto out;
     }
 
     // when exec in background, exit code is shim exit code
-    if (!fg) {
-        *exit_code = *shim_exit_code;
+    if (!args->fg) {
+        *(args->exit_code) = args->shim_exit_code;
         goto out;
     }
-    ret = util_read_nointr(shim_stdout_pipe[0], exit_code, sizeof(int));
+    ret = util_read_nointr(shim_stdout_pipe[0], args->exit_code, sizeof(int));
     if (ret <= 0) {
-        *exit_code = 137;
+        // if the exit code cannot be obtained, set the default exit code to 137.
+        // it means container was immediately terminated by the operating system via SIGKILL signal
+        *(args->exit_code) = 137;
     }
     ret = 0;
 
 out:
-    close(shim_stderr_pipe[0]);
     close(shim_stdout_pipe[0]);
     if (ret != 0) {
-        show_shim_runtime_errlog(workdir);
-        if (timeout != NULL) {
+        show_runtime_errlog(args->workdir);
+        show_shim_errlog(shim_stderr_pipe[0]);
+        if (args->timeout != NULL) {
             kill(pid, SIGKILL); /* can kill other process? */
         }
     }
+    close(shim_stderr_pipe[0]);
 
     return ret;
 }
@@ -1068,7 +1116,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     char workdir[PATH_MAX] = { 0 };
     char attach_socket[PATH_MAX] = { 0 };
     shim_client_process_state p = { 0 };
-    int shim_exit_code = 0;
+    shim_create_args args = { 0 };
     int nret = 0;
 
     if (id == NULL || runtime == NULL || params == NULL) {
@@ -1115,7 +1163,14 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     }
 
     get_runtime_cmd(runtime, &cmd);
-    ret = shim_create(false, id, workdir, params->bundle, cmd, NULL, NULL, &shim_exit_code);
+    args.fg = false;
+    args.id = id;
+    args.workdir = workdir;
+    args.bundle = params->bundle;
+    args.runtime_cmd = cmd;
+    args.exit_code = NULL;
+    args.timeout = NULL;
+    ret = shim_create(&args);
     if (ret != 0) {
         runtime_call_delete_force(workdir, runtime, id);
         ERROR("%s: failed create shim process", id);
@@ -1192,7 +1247,7 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
     ret = 0;
 out:
     if (ret != 0) {
-        show_shim_runtime_errlog(workdir);
+        show_runtime_errlog(workdir);
         shim_kill_force(workdir);
     }
     return ret;
@@ -1373,8 +1428,8 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     int pid = 0;
     char bundle[PATH_MAX] = { 0 };
     char workdir[PATH_MAX] = { 0 };
+    shim_create_args args = { 0 };
     char *timeout = NULL;
-    int shim_exit_code = 0;
 
     if (id == NULL || runtime == NULL || params == NULL || exit_code == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -1421,8 +1476,15 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
         }
     }
 
-    ret = shim_create(fg_exec(params), id, workdir, bundle, cmd, exit_code, timeout, &shim_exit_code);
-    if (shim_exit_code == SHIM_EXIT_TIMEOUT) {
+    args.fg = fg_exec(params);
+    args.id = id;
+    args.workdir = workdir;
+    args.bundle = bundle;
+    args.runtime_cmd = cmd;
+    args.exit_code = exit_code;
+    args.timeout = timeout;
+    ret = shim_create(&args);
+    if (args.shim_exit_code == SHIM_EXIT_TIMEOUT) {
         ret = -1;
         isulad_set_error_message("Exec container error;exec timeout");
         ERROR("isulad-shim %d exit for execing timeout", pid);
@@ -1442,7 +1504,10 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
 
 errlog_out:
     if (ret != 0) {
-        show_shim_runtime_errlog(workdir);
+        show_runtime_errlog(workdir);
+        if (g_isulad_errmsg == NULL && args.shim_exit_code != 0) {
+            isulad_set_error_message("isulad-shim exit error : %d, please get more information from log", args.shim_exit_code);
+        }
     }
 
     if (timeout != NULL) {
@@ -1569,13 +1634,13 @@ int rt_isula_attach(const char *id, const char *runtime, const rt_attach_params_
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("Null argument");
-        return -1;
+        goto err_out;
     }
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
     if (ret < 0 || (size_t)ret >= sizeof(workdir)) {
         ERROR("Failed join exec full path");
-        return -1;
+        goto err_out;
     }
 
     // the communication format between isulad and isulad-shim attach is:
@@ -1583,19 +1648,19 @@ int rt_isula_attach(const char *id, const char *runtime, const rt_attach_params_
     len = snprintf(buf, sizeof(buf), "%s %s %s", params->stdin, params->stdout, params->stderr);
     if (len < 0 || (size_t)len >= sizeof(buf)) {
         ERROR("Failed to snprintf string");
-        return -1;
+        goto err_out;
     }
 
     ret = snprintf(attach_socket, sizeof(attach_socket), "%s/%s", workdir, ATTACH_SOCKET);
     if (ret < 0 || (size_t)ret >= sizeof(attach_socket)) {
         ERROR("Failed to get full attach socket path");
-        return -1;
+        goto err_out;
     }
 
     ret = get_attach_socketfd(attach_socket, &socket_fd);
     if (ret < 0) {
         ERROR("Failed to get attach socketfd");
-        return -1;
+        goto err_out;
     }
 
     DEBUG("write %s to attach fd", buf);
@@ -1603,16 +1668,19 @@ int rt_isula_attach(const char *id, const char *runtime, const rt_attach_params_
     ret = isula_file_write_nointr(socket_fd, buf, len);
     if (ret < 0) {
         SYSERROR("Failed to write attach isulad fd");
-        return -1;
+        goto err_out;
     }
 
     status_code = get_container_attach_statuscode(workdir, socket_fd);
     if (status_code < 0) {
-        show_shim_attach_errlog(workdir);
-        return -1;
+        ERROR("Failed to attach container io, get more information from log");
+        goto err_out;
     }
 
     return 0;
+err_out:
+    isulad_set_error_message("Failed to attach container io, get more information from log");
+    return -1;
 }
 
 static int to_engine_resources_unified(const host_config *hostconfig, shim_client_cgroup_resources *cr)
