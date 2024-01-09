@@ -1,3 +1,79 @@
+2024-01-09 xuepengxu release 2.1.5
+    - !2342 move sandbox_state.json to /var/lib * move sandbox_state.json to /var/lib
+    - !2325 refactor isulad-shim log
+    - !2339 codecheck fix * codecheck fix
+    - !2335 extract common methods & use string instead of char *
+    - !2338 improve code Merge pull request !2338 from zhongtao/improve
+    - !2337 bugfix:ignore some unsupported file types when archiving
+    - !2332 update api_v1.proto of cri to 1.29 * update api_v1.proto of cri to 1.29
+    - !2330 set the subprocess standard console to /dev/null * set the subprocess standard console to /dev/null
+    - !2333 iSulad: restart isuald when upgrade active isulad
+    - !2327 add cri 1.29 api change docs
+    - !2331 add exec workdir support for oci runtime
+    - !2329 modify mount /dev directory for lxc 5.X * modify mount /dev directory for lxc 5.X
+    - !2324 fix stopp removes cont error & remove inspect error log
+    - !2313 use lxc 5.X in CI testcase * use lxc 5.X in CI testcase
+    - !2323 bugfix for resort_image_names
+    - !2321 verify name and digest consistency and code improve for oci_rmi Merge pull request !2321 from zhongtao/fixci
+    - !2320 improve CI test * improve CI test
+    - !2316 improve code of pull
+    - !2314 bugfix:del redundant code
+    - !2317 remove /var/* in coverage and fix build/test remove
+    - !2310 verify the mount dir first and then create tmpdir
+    - !2312 Add Huawei Cloud CodeArts compilation script * 将codecheck_compile.sh 移动到tools下 * 新增华为云codeArs编译脚本
+    - !2300 Maintaining a uniform code style * update src/cmd/command_parser.c.
+    - !2308 Remove unused header file * Fix compiling failure in image oci UT
+    - !2306 modify the default value of ISULAD_TMPDIR to /var/lib/isulad and prevent the parent dir from being bind mounted to the subdir
+    - !2273 Acquire system info in on demand
+    - !2303 use a timeout epoll loop to ensure complete data reception * use a timeout epoll loop to ensure complete data reception
+    - !2304 remove build and test in coverage * remove build and test in coverage
+    - !2298 bugfix for hook_ignore_poststart_error run in oci runtime * bugfix for hook_ignore_poststart_error run in oci runtime
+    - !2296 modify attach socket name
+    - !2295 keep the service status unchanged after iSulad service upgrade * keep the service status unchanged after iSulad service upgrade and
+    - !2292 bugfix for run.sh and add build notify msg for ENABLE_GRPC_REMOTE_CONNECT * bugfix for run.sh and add build notify msg for ENABLE_GRPC_REMOTE_CONNECT
+    - !2291 improve ut for devicemapper
+    - !2289 check protobuf and grpc version in cmake for cri v1 * check protobuf and grpc version in cmake for cri v1
+    - !2288 move variable declaration out of loop
+    - !2268 bugfix for the bliko zero value exception when executing the stats command on the oci container * bugfix for the bliko zero value exception when executing the stats com…
+    - !2281 save sandbox to disk after network ready
+    - !2284 remove embedded image support in readme
+    - !2280 fix the problem of abnormal branches not waiting for child processes
+    - !2283 modify the container runtime when running embedded.sh
+    - !2279 modify create_network.sh for default runtime changed
+    - !2276 bugfix for integration_check.sh * bugfix for integration_check.sh
+    - !2277 remove shim v2 format error log * remove shim v2 format error log
+    - !2270 add ut for devicemapper
+    - !2275 bugfix for rt_lcr_rebuild_config * bugfix for rt_lcr_rebuild_config
+    - !2272 modify daemon json default runtime to runc Merge pull request !2272 from zhongtao/default_runtime
+    - !2255 Fix cpusets offline issue * Fix cpusets offline issue
+    - !2230 format code * format code tools/static_check.sh
+    - !2267 improve code of pull progress Merge pull request !2267 from haozi007/work
+    - !2084 增加image pull 时进度条显示的设计 * Refine document by the implementation. * Refine a word. * Add progress bard proposal.
+    - !2170 增加isula image pull进度显示 * Refine some issues. * Address comment * Address comments * 1. Address comments. * Address comments * Address comments * Address comments * Address comments * Address comments * Address comments * Address comments * Address comments * Address comments * Address test issue * Address test compile issue * Address compile issue * Fix compile issue * Address comments * Address comments * Address comments. * Address issuse * Address many issues. * Fix some minor issuses. * Address comments. * Refine as Haozi's comments * Fix some issues by Haozi's comments. * Refine formats. * Add process bar show for pull functions.
+    - !2260 bugfix for rebuild config * bugfix for rebuild config
+    - !2261 bugfix of update restart policy for auto remove container
+    - !2253 bugfix for runc container exec * bugfix for runc container exec
+    - !2254 lcr container with a damaged config file will rebuild the config during restore * lcr container with a damaged config file will rebuild the config during restore
+    - !2252 Add compatibility info between iSulad and k8s
+    - !2251 open ENABLE_GRPC_REMOTE_CONNECT in CI * open ENABLE_GRPC_REMOTE_CONNECT in CI
+    - !2248 improve event logs
+    - !2250 Remove PERFMON, BPF, CHECKPOINT_RESTORE Merge pull request !2250 from xuxuepeng/master
+    - !2247 compatibility for manage pods which created by old iSulad
+    - !2232 add runc attach implement Merge pull request !2232 from zhongtao/runc_attach_change
+    - !2246 support gcov of CI
+    - !2245 fix utils_verify_ut failure when remote grpc function is turned off * fix utils_verify_ut failure when remote grpc function is turned off
+    - !2243 Refactor capbilities specs * Refactor capbilities specs
+    - !2233 add runc append function design doc * add runc append function design doc
+    - !2244 Save task address of shim v2 * Save task address of shim v2
+    - !2242 disable grpc remote connect by default * disable grpc remote connect by default
+    - !2236 Add Readonly/Masked Path and RunAsGroup support for cri
+    - !2241 network:support version opt Merge pull request !2241 from liuxu/bugfix-dnsname
+    - !2231 sandbox:del m_containers and m_containersMutex
+
+    dev stats:
+      - 357 files changed, 7886 insertions(+), 2849 deletions(-)
+      - contributors: zhongtao, jikai, haozi007, jake, liuxu, xuxuepeng, zhangxiaoyu, sailorvii, chen524, dreamloy, l00804245, yangjiaqi
+
 2023-11-07 xuepengxu release 2.1.4
     - !2238 modify the default value of EANBLE_IMAGE_LIBARAY to off * modify the default value of EANBLE_IMAGE_LIBARAY to off
     - !2237 delete the disabled reload configuration in isulad.service

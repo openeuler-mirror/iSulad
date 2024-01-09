@@ -1,5 +1,5 @@
-%global _version 2.1.4
-%global _release 2
+%global _version 2.1.5
+%global _release 1
 %global is_systemd 1
 %global enable_criv1 1
 %global enable_shimv2 1
@@ -41,8 +41,8 @@ Requires: sqlite
 BuildRequires: gtest-devel gmock-devel
 %endif
 
-%define lcrver_lower 2.1.3-0
-%define lcrver_upper 2.1.4-0
+%define lcrver_lower 2.1.4-0
+%define lcrver_upper 2.1.5-0
 
 BuildRequires: libisula-devel > %{lcrver_lower} libisula-devel < %{lcrver_upper}
 BuildRequires: cmake gcc-c++ yajl-devel
