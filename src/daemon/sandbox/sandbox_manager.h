@@ -79,6 +79,7 @@ private:
 private:
     static std::atomic<SandboxManager *> m_instance;
     std::string m_rootdir;
+    // m_statedir is not used yet, but saved for future storage of running sandbox info
     std::string m_statedir;
     // id --> sandbox map
     std::map<std::string, std::shared_ptr<Sandbox>> m_storeMap;

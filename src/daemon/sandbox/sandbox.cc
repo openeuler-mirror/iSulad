@@ -1065,7 +1065,7 @@ auto Sandbox::GetMetadataJsonPath() -> std::string
 
 auto Sandbox::GetStatePath() -> std::string
 {
-    return m_statedir + std::string("/") + SANDBOX_STATE_JSON;
+    return m_rootdir + std::string("/") + SANDBOX_STATE_JSON;
 }
 
 auto Sandbox::GetNetworkSettingsPath() -> std::string
