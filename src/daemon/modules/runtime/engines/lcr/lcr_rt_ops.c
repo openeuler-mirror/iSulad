@@ -53,6 +53,13 @@ int rt_lcr_create(const char *name, const char *runtime, const rt_create_params_
     char *runtime_root = NULL;
     struct engine_operation *engine_ops = NULL;
 
+    if (conf_get_systemd_cgroup()) {
+        ERROR("Systemd cgroup not supported for lcr runtime");
+        isulad_set_error_message("Systemd cgroup not supported for lcr runtime");
+        ret = -1;
+        goto out;
+    }
+
     runtime_root = conf_get_routine_rootdir(runtime);
     if (runtime_root == NULL) {
         ERROR("Root path is NULL");

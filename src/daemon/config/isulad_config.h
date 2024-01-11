@@ -114,6 +114,8 @@ char *conf_get_isulad_monitor_fifo_path(void);
 int init_isulad_daemon_constants(void);
 isulad_daemon_constants *get_isulad_daemon_constants(void);
 
+bool conf_get_systemd_cgroup(void);
+
 #ifdef __cplusplus
 }
 #endif

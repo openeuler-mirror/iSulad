@@ -1287,6 +1287,12 @@ static void get_runtime_cmd(process_t *p, const char *log_path, const char *pid_
             params[i++] = p->state->cwd;
         }
     } else {
+        // the --systemd-cgroup argument is not in oci spec, but up to now,
+        // the latest version of runc, crun, youki, runsc, kata-runtime all support this argument
+        // should ensure that this is supported for oci runtime
+        if (p->state->systemd_cgroup) {
+            params[i++] = "--systemd-cgroup";
+        }
         params[i++] = "create";
         params[i++] = "--bundle";
         params[i++] = p->bundle;
