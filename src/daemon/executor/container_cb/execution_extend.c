@@ -259,6 +259,8 @@ static container_info *get_container_stats(const container_t *cont,
     info->major_page_faults = einfo->major_page_faults;
     info->kmem_used = einfo->kmem_used;
     info->kmem_limit = einfo->kmem_limit;
+    info->swap_used = einfo->swap_used;
+    info->swap_limit = einfo->swap_limit;
     info->timestamp = util_get_now_time_nanos();
 
     // workingset is zero if memory used < total inactive file
