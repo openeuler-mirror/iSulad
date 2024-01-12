@@ -123,6 +123,7 @@ private:
                                const std::vector<Network::NetworkInterfaceStats> &netMetrics,
                                const std::unique_ptr<ContainerManagerService> &containerManager,
                                std::unique_ptr<runtime::v1::PodSandboxStats> &podStats,
+                               sandbox::StatsInfo &statsInfo,
                                Errors &error);
     void GetFilterPodSandbox(const runtime::v1::PodSandboxStatsFilter *filter,
                              std::vector<std::string> &podSandboxIDs, Errors &error);
