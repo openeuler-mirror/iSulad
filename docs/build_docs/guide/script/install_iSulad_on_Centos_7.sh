@@ -91,7 +91,7 @@ patch -p1 -F1 -s < ../libwebsockets-fix-coredump.patch
 mkdir build
 cd build
 cmake -DLWS_WITH_SSL=0 -DLWS_MAX_SMP=32 -DCMAKE_BUILD_TYPE=Debug ../
-make -j16 $(nproc)
+make -j16 
 make install
 ldconfig
 
@@ -126,7 +126,7 @@ cmake ..
 make -j16
 make install
 
-build and install iSulad
+#build and install iSulad
 cd $BUILD_DIR
 git clone https://github.com/iscas-fork/iSulad.git
 cd iSulad
