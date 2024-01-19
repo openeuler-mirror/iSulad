@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 project (isulad)
-
+add_definitions(-DENABLE_CRI_API_V1=1)
 include(cmake/helper.cmake)
 
 include(cmake/options.cmake)

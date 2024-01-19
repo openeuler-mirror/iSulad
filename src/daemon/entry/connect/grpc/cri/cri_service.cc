@@ -81,11 +81,11 @@ int CRIService::Init(const isulad_daemon_configs *config)
         return -1;
     }
 
-    m_runtimeRuntimeService.Init(m_podSandboxImage, m_pluginManager, err);
-    if (err.NotEmpty()) {
-        ERROR("Init CRI v1alpha runtime service failed: %s", err.GetCMessage());
-        return -1;
-    }
+    // m_runtimeRuntimeService.Init(m_podSandboxImage, m_pluginManager, err);
+    // if (err.NotEmpty()) {
+    //     ERROR("Init CRI v1alpha runtime service failed: %s", err.GetCMessage());
+    //     return -1;
+    // }
 
 #ifdef ENABLE_CRI_API_V1
     m_enableCRIV1 = config->enable_cri_v1;
@@ -128,12 +128,13 @@ int CRIService::Init(const isulad_daemon_configs *config)
 void CRIService::Register(grpc::ServerBuilder &sb)
 {
     // Register CRI v1alpha services, runtime and image
-    sb.RegisterService(&m_runtimeRuntimeService);
-    sb.RegisterService(&m_runtimeImageService);
+    // sb.RegisterService(&m_runtimeRuntimeService);
+    // sb.RegisterService(&m_runtimeImageService);
 
 #ifdef ENABLE_CRI_API_V1
     // Register CRI v1 services, runtime and image
     if (m_enableCRIV1) {
+        INFO("Register V1RuntimeService V1ImageService");
         sb.RegisterService(&m_runtimeV1RuntimeService);
         sb.RegisterService(&m_runtimeV1ImageService);
     }
@@ -142,7 +143,7 @@ void CRIService::Register(grpc::ServerBuilder &sb)
 
 void CRIService::Wait(void)
 {
-    m_runtimeRuntimeService.Wait();
+    // m_runtimeRuntimeService.Wait();
 #ifdef ENABLE_CRI_API_V1
     if (m_enableCRIV1) {
         m_runtimeV1RuntimeService.Wait();
@@ -153,7 +154,7 @@ void CRIService::Wait(void)
 
 void CRIService::Shutdown(void)
 {
-    m_runtimeRuntimeService.Shutdown();
+    // m_runtimeRuntimeService.Shutdown();
 #ifdef ENABLE_CRI_API_V1
     if (m_enableCRIV1) {
         m_runtimeV1RuntimeService.Shutdown();

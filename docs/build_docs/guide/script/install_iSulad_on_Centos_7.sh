@@ -1,5 +1,6 @@
 #！/bin/bash
 
+# when gcc 9.X.X maybe cause some error in protoc, gcc 8.X.X or above 10.X.X is ok
 
 set -x
 set -e
@@ -27,7 +28,7 @@ cd libarchive-3.4.1
 patch -p1 -F1 -s < ../libarchive-uninitialized-value.patch
 cd build
 cmake -DCMAKE_USE_SYSTEM_LIBRARIES=ON ../
-make -j $(nproc)
+make -j16
 make install
 ldconfig
 
@@ -40,7 +41,7 @@ tar -xzvf protobuf-all-3.9.0.tar.gz
 cd protobuf-3.9.0
 ./autogen.sh
 ./configure
-make -j $(nproc)
+make -j16
 make install
 ldconfig
 
@@ -53,7 +54,7 @@ tar -xzvf c-ares-1.15.0.tar.gz
 cd c-ares-1.15.0
 autoreconf -if
 ./configure --enable-shared --disable-dependency-tracking
-make -j $(nproc)
+make -j16 
 make install
 ldconfig
 
@@ -64,7 +65,7 @@ cd grpc
 git checkout openEuler-20.03-LTS-tag
 tar -xzvf grpc-1.22.0.tar.gz
 cd grpc-1.22.0
-make -j $(nproc)
+make -j16
 make install
 ldconfig
 
@@ -75,7 +76,7 @@ cd http-parser
 git checkout openEuler-20.03-LTS-tag
 tar -xzvf http-parser-2.9.2.tar.gz
 cd http-parser-2.9.2
-make -j CFLAGS="-Wno-error"
+make -j16 CFLAGS="-Wno-error"
 make CFLAGS="-Wno-error" install
 ldconfig
 
@@ -90,19 +91,19 @@ patch -p1 -F1 -s < ../libwebsockets-fix-coredump.patch
 mkdir build
 cd build
 cmake -DLWS_WITH_SSL=0 -DLWS_MAX_SMP=32 -DCMAKE_BUILD_TYPE=Debug ../
-make -j $(nproc)
+make -j16 $(nproc)
 make install
 ldconfig
 
 # build lxc
 cd $BUILD_DIR
-git clone https://gitee.com/src-openeuler/lxc.git
+git clone -b openEuler-22.03-LTS-SP2 https://gitee.com/src-openeuler/lxc.git
 cd lxc
 ./apply-patches
 cd lxc-4.0.3
 ./autogen.sh
 ./configure
-make -j
+make -j16
 make install
 
 # build lcr
@@ -112,7 +113,7 @@ cd lcr
 mkdir build
 cd build
 cmake ..
-make -j
+make -j16
 make install
 
 # build and install clibcni
@@ -122,15 +123,15 @@ cd clibcni
 mkdir build
 cd build
 cmake ..
-make -j
+make -j16
 make install
 
-# build and install iSulad
+build and install iSulad
 cd $BUILD_DIR
-git clone https://gitee.com/openeuler/iSulad.git
+git clone https://github.com/iscas-fork/iSulad.git
 cd iSulad
 mkdir build
 cd build
-cmake ..
+cmake -DENABLE_CRI_API_V1=ON ..
 make
 make install

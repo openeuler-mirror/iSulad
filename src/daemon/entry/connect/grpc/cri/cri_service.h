@@ -43,13 +43,15 @@ private:
     void doNetworkInit(Network::NetworkPluginConf &mConf, Errors &err);
 private:
     // CRI v1alpha service
-    RuntimeRuntimeServiceImpl m_runtimeRuntimeService;
-    RuntimeImageServiceImpl m_runtimeImageService;
+    // RuntimeRuntimeServiceImpl m_runtimeRuntimeService;
+    // RuntimeImageServiceImpl m_runtimeImageService;
 
 #ifdef ENABLE_CRI_API_V1
     // CRI v1 service
     RuntimeV1RuntimeServiceImpl m_runtimeV1RuntimeService;
     RuntimeV1ImageServiceImpl m_runtimeV1ImageService;
+
+
 #endif
 
     // all required depends in CRI services

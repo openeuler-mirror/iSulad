@@ -1,5 +1,5 @@
 set(PROTOS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/api/services)
-
+option(ENABLE_CRI_API_V1 "Enable CRI API V1" ON)
 set(GRPC_OUT_PRE_PATH ${CMAKE_BINARY_DIR}/grpc)
 set(CONTAINER_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/containers)
 set(IMAGE_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/images)

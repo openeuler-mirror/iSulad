@@ -102,6 +102,13 @@ public:
     grpc::Status Status(grpc::ServerContext *context, const runtime::v1alpha2::StatusRequest *request,
                         runtime::v1alpha2::StatusResponse *reply) override;
 
+    grpc::Status CheckpointContainer(grpc::ServerContext* context, const runtime::v1alpha2::CheckpointContainerRequest* request, runtime::v1alpha2::CheckpointContainerResponse* response) override{return grpc::Status::OK;}
+    grpc::Status GetContainerEvents(grpc::ServerContext* context, const runtime::v1alpha2::GetEventsRequest* request, grpc::ServerWriter< runtime::v1alpha2::ContainerEventResponse>* writer) override {return grpc::Status::OK;}
+    grpc::Status ListMetricDescriptors(grpc::ServerContext* context, const runtime::v1alpha2::ListMetricDescriptorsRequest* request, runtime::v1alpha2::ListMetricDescriptorsResponse* response)override{return grpc::Status::OK;}
+    grpc::Status ListPodSandboxMetrics(grpc::ServerContext* context, const runtime::v1alpha2::ListPodSandboxMetricsRequest* request, runtime::v1alpha2::ListPodSandboxMetricsResponse* response)override{return grpc::Status::OK;}
+    grpc::Status RuntimeConfig(grpc::ServerContext* context, const runtime::v1alpha2::RuntimeConfigRequest* request, runtime::v1alpha2::RuntimeConfigResponse* response) override {return grpc::Status::OK;}
+
+
 private:
     std::unique_ptr<CRI::CRIRuntimeService> m_rService;
 };
