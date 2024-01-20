@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <limits.h>
+#include <stdint.h>
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/container_config_v2.h>
 #include <isula_libutils/defs.h>
@@ -75,6 +77,13 @@
 #ifndef CLONE_NEWCGROUP
 #define CLONE_NEWCGROUP 0x02000000
 #endif
+
+struct readonly_default_oci_spec {
+    oci_runtime_spec *cont;
+    oci_runtime_spec *system_cont;
+};
+
+static struct readonly_default_oci_spec g_rdspec;
 
 static int make_sure_oci_spec_annotations(oci_runtime_spec *oci_spec)
 {
@@ -375,6 +384,44 @@ static int make_annotations(oci_runtime_spec *oci_spec, container_config *contai
 
 out:
     return ret;
+}
+
+int update_spec_annotations(oci_runtime_spec *oci_spec, container_config *container_spec, host_config *host_spec)
+{
+    int ret = 0;
+    if (oci_spec == NULL || container_spec == NULL || host_spec == NULL) {
+        return -1;
+    }
+
+    ret = make_sure_container_spec_annotations(container_spec);
+    if (ret < 0) {
+        return -1;
+    }
+
+    ret = make_annotations_cgroup_dir(container_spec, host_spec);
+    if (ret != 0) {
+        return -1;
+    }
+
+    /* add rootfs.mount */
+    ret = add_rootfs_mount(container_spec);
+    if (ret != 0) {
+        ERROR("Failed to add rootfs mount");
+        return -1;
+    }
+
+    /* add native.umask */
+    ret = add_native_umask(container_spec);
+    if (ret != 0) {
+        ERROR("Failed to add native umask");
+        return -1;
+    }
+
+    if (merge_annotations(oci_spec, container_spec)) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /* default_spec returns default oci spec used by isulad. */
@@ -1714,7 +1761,12 @@ static int merge_resources_conf(oci_runtime_spec *oci_spec, host_config *host_sp
         goto out;
     }
 
-    ret = merge_conf_device(oci_spec, host_spec);
+    ret = merge_conf_blkio_device(oci_spec, host_spec);
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = merge_conf_devices(oci_spec, host_spec);
     if (ret != 0) {
         goto out;
     }
@@ -2327,4 +2379,26 @@ out_free:
     free(err);
     free(json_container);
     return ret;
+}
+
+const oci_runtime_spec *get_readonly_default_oci_spec(bool system_container)
+{
+    if (system_container) {
+        return g_rdspec.system_cont;
+    }
+
+    return g_rdspec.cont;
+}
+
+int spec_module_init(void)
+{
+    g_rdspec.cont = default_spec(false);
+    if (g_rdspec.cont == NULL) {
+        return -1;
+    }
+    g_rdspec.system_cont = default_spec(true);
+    if (g_rdspec.system_cont == NULL) {
+        return -1;
+    }
+    return 0;
 }

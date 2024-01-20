@@ -40,6 +40,12 @@ int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, ch
 int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
                           const container_config_v2_common_config_network_settings *network_settings);
 
+int update_spec_annotations(oci_runtime_spec *oci_spec, container_config *container_spec, host_config *host_spec);
+
+const oci_runtime_spec *get_readonly_default_oci_spec(bool system_container);
+
+int spec_module_init(void);
+
 #ifdef __cplusplus
 }
 #endif
