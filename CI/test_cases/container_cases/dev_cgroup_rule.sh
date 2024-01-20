@@ -29,6 +29,9 @@ function test_cpu_dev_cgoup_rule_spec()
     local image="busybox"
     local test="container device cgroup rule test with (${runtime}) => (${FUNCNAME[@]})"
     local test_dev="/dev/testA"
+    local default_config="/etc/default/isulad/config.json"
+    local default_config_bak="/etc/default/isulad/config.json.bak"
+    local test_cgroup_parent="/testABC"
 
     msg_info "${test} starting..."
 
@@ -53,6 +56,27 @@ function test_cpu_dev_cgoup_rule_spec()
     cnt=$(cat ${RUNTIME_ROOT_PATH}/${runtime}/$priv_cid/config.json | grep "minor\": 88" | wc -l)
     [[ $? -ne 0 ]] && [[ $cnt -le $priv_minor_88_cnt ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check device minor failed" && ((ret++))
     isula rm -f $priv_cid
+
+    def_cid=$(isula run -tid --runtime $runtime -m 10m $image /bin/sh)
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container failed" && ((ret++))
+    cp $default_config $default_config_bak
+    sed -i '/"linux": {/a \ \t\t"devices": [\n\t\t{\n\t\t\t"type": "c",\n\t\t\t"path": "\/dev\/testABC",\n\t\t\t"major": 88,\n\t\t\t"minor": 88\n\t\t}\n\t\t],' $default_config
+    stop_isulad_without_valgrind
+    start_isulad_with_valgrind --cgroup-parent $test_cgroup_parent
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
+    isula restart -t 0 $def_cid
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - restart container failed" && ((ret++))
+    cat /sys/fs/cgroup/memory/$test_cgroup_parent/$def_cid/memory.limit_in_bytes | grep ^10485760$
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --cgroup-parent cannot work" && ((ret++))
+    cnt=$(cat ${RUNTIME_ROOT_PATH}/${runtime}/$def_cid/config.json | grep "major\": 88" | wc -l)
+    [[ $? -ne 0 ]]&& [[ $cnt -ne 2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check device major failed" && ((ret++))
+    cnt=$(cat ${RUNTIME_ROOT_PATH}/${runtime}/$def_cid/config.json | grep "minor\": 88" | wc -l)
+    [[ $? -ne 0 ]] && [[ $cnt -ne 2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - check device minor failed" && ((ret++))
+    isula rm -f $def_cid
+    cp $default_config_bak $default_config
+    stop_isulad_without_valgrind
+    start_isulad_with_valgrind
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
     cid=$(isula run -tid --device "$test_dev:$test_dev" --runtime $runtime $image /bin/sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container failed" && ((ret++))
