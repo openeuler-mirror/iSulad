@@ -403,19 +403,8 @@ int update_spec_annotations(oci_runtime_spec *oci_spec, container_config *contai
         return -1;
     }
 
-    /* add rootfs.mount */
-    ret = add_rootfs_mount(container_spec);
-    if (ret != 0) {
-        ERROR("Failed to add rootfs mount");
-        return -1;
-    }
-
-    /* add native.umask */
-    ret = add_native_umask(container_spec);
-    if (ret != 0) {
-        ERROR("Failed to add native umask");
-        return -1;
-    }
+    // other annotations will either not be updated after containers created
+    // or for rootfs mnt and umask, we do not support the update operation
 
     if (merge_annotations(oci_spec, container_spec)) {
         return -1;
