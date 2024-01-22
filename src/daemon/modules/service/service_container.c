@@ -688,8 +688,8 @@ static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, contai
     char *cgroup_parent = NULL;
     int ret;
 
-    // First renew annotations for oci spec, cgroup path, rootfs.mount, native.mask
-    // for iSulad daemon might get updated
+    // Renew annotations for oci spec, cgroup path only,
+    // since lxc uses the "cgroup.dir" in oci annotations to create cgroup
     ret = update_spec_annotations(oci_spec, container_spec, hostconfig);
     if (ret < 0) {
         return -1;
