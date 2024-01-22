@@ -693,25 +693,20 @@ out:
 
 static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, container_config *container_spec, host_config *hostconfig)
 {
-    __isula_auto_free char *cgroup_parent = NULL;
     int ret;
 
-    // First renew annotations for oci spec, cgroup path, rootfs.mount, native.mask
-    // for iSulad daemon might get updated
+    // Renew annotations for oci spec, cgroup path only,
+    // since lxc uses the "cgroup.dir" in oci annotations to create cgroup
+    // should ensure that container spec has the same annotations as oci spec
     ret = update_spec_annotations(oci_spec, container_spec, hostconfig);
     if (ret < 0) {
         return -1;
     }
 
     // If isulad daemon cgroup parent updated, we should update this config into oci spec
-    cgroup_parent = merge_container_cgroups_path(id, hostconfig);
-    if (cgroup_parent == NULL) {
+    ret = update_oci_container_cgroups_path(id, oci_spec, hostconfig);
+    if (ret < 0) {
         return -1;
-    }
-    if (oci_spec->linux->cgroups_path != NULL && strcmp(oci_spec->linux->cgroups_path, cgroup_parent) != 0) {
-        free(oci_spec->linux->cgroups_path);
-        oci_spec->linux->cgroups_path = cgroup_parent;
-        cgroup_parent = NULL;
     }
 
     // For Linux.Resources, isula update will save changes into oci spec;
@@ -725,7 +720,8 @@ static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, contai
     }
 
     // If isulad daemon ulimit updated, we should update this config into oci spec.
-    if (merge_global_ulimit(oci_spec) != 0) {
+    ret = update_oci_ulimit(oci_spec, hostconfig);
+    if (ret < 0) {
         return -1;
     }
 

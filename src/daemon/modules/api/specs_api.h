@@ -47,6 +47,10 @@ oci_runtime_spec *load_oci_config(const char *rootpath, const char *name);
 
 oci_runtime_spec *default_spec(bool system_container);
 
+int update_oci_container_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *host_spec);
+
+int update_oci_ulimit(oci_runtime_spec *oci_spec, const host_config *host_spec);
+
 const oci_runtime_spec *get_readonly_default_oci_spec(bool system_container);
 
 int spec_module_init(void);
