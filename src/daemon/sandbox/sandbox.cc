@@ -1086,8 +1086,7 @@ void Sandbox::FillSandboxMetadata(sandbox_metadata* metadata, Errors &error)
     metadata->task_address = util_strdup_s(m_taskAddress.c_str());
     metadata->net_ns_path = util_strdup_s(m_netNsPath.c_str());
 
-    google::protobuf::util::MessageToJsonString(*m_sandboxConfig.get(), &jsonStr);
-    if (jsonStr.length() == 0) {
+    if (!google::protobuf::util::MessageToJsonString(*m_sandboxConfig.get(), &jsonStr).ok()) {
         error.Errorf("Failed to get sandbox config json for sandbox: '%s'", m_id.c_str());
         ERROR("Failed to get sandbox config json for sandbox: '%s'", m_id.c_str());
     }

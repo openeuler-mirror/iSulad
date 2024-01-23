@@ -154,7 +154,83 @@ if (GRPC_CONNECTOR)
     find_library(GPR_LIBRARY gpr)
     _CHECK(GPR_LIBRARY "GPR_LIBRARY-NOTFOUND" "libgpr.so")
     # no check
+
+    # The use of absl libraries depends on the version of protobuf and grpc.
+    # Versions of protobuf before v22.0 do not require absl libraries at all. 
+    # However, versions after v22.0 require the support of absl libraries. 
+    # As a result, we skip the check for absl libraries in order to accommodate different protobuf and grpc versions.
+    set(ISULAD_ABSL_USED_TARGETS)
     find_library(ABSL_SYNC_LIB absl_synchronization)
+    if (ABSL_SYNC_LIB)
+        set(ISULAD_ABSL_USED_TARGETS
+            ${ISULAD_ABSL_USED_TARGETS}
+            ${ABSL_SYNC_LIB}
+        )
+    endif()
+    
+    find_library(ABSL_CORD_LIB absl_cord)
+    if (ABSL_CORD_LIB)
+        set(ISULAD_ABSL_USED_TARGETS
+            ${ISULAD_ABSL_USED_TARGETS}
+            ${ABSL_CORD_LIB}
+        )
+    endif()
+    
+    find_library(ABSL_CORDZ_FUNCTIONS_LIB absl_cordz_functions)
+    if (ABSL_CORDZ_FUNCTIONS_LIB)
+        set(ISULAD_ABSL_USED_TARGETS
+            ${ISULAD_ABSL_USED_TARGETS}
+            ${ABSL_CORDZ_FUNCTIONS_LIB}
+        )
+    endif()
+    
+    find_library(ABSL_CORDZ_INFO_LIB absl_cordz_info)
+    if (ABSL_CORDZ_INFO_LIB)
+        set(ISULAD_ABSL_USED_TARGETS
+            ${ISULAD_ABSL_USED_TARGETS}
+            ${ABSL_CORDZ_INFO_LIB}
+        )
+    endif()
+    
+    find_library(ABSL_HASH_LIB absl_hash)
+    if (ABSL_HASH_LIB)
+        set(ISULAD_ABSL_USED_TARGETS
+            ${ISULAD_ABSL_USED_TARGETS}
+            ${ABSL_HASH_LIB}
+        )
+    endif()
+    
+    find_library(ABSL_LOG_INTERNAL_CHECK_OP_LIB absl_log_internal_check_op)
+    if (ABSL_LOG_INTERNAL_CHECK_OP_LIB)
+        set(ISULAD_ABSL_USED_TARGETS
+            ${ISULAD_ABSL_USED_TARGETS}
+            ${ABSL_LOG_INTERNAL_CHECK_OP_LIB}
+        )
+    endif()
+    
+    find_library(ABSL_LOG_INTERNAL_MESSAGE_LIB absl_log_internal_message)
+    if (ABSL_LOG_INTERNAL_MESSAGE_LIB)
+        set(ISULAD_ABSL_USED_TARGETS
+            ${ISULAD_ABSL_USED_TARGETS}
+            ${ABSL_LOG_INTERNAL_MESSAGE_LIB}
+        )
+    endif()
+    
+    find_library(ABSL_LOG_INTERNAL_NULLGUARD_LIB absl_log_internal_nullguard)
+    if (ABSL_LOG_INTERNAL_NULLGUARD_LIB)
+        set(ISULAD_ABSL_USED_TARGETS
+            ${ISULAD_ABSL_USED_TARGETS}
+            ${ABSL_LOG_INTERNAL_NULLGUARD_LIB}
+        )
+    endif()
+    
+    find_library(ABSL_STATUS_LIB absl_status)
+    if (ABSL_STATUS_LIB)
+        set(ISULAD_ABSL_USED_TARGETS
+            ${ISULAD_ABSL_USED_TARGETS}
+            ${ABSL_STATUS_LIB}
+        )
+    endif()
 
     # check websocket
     find_path(WEBSOCKET_INCLUDE_DIR libwebsockets.h)
