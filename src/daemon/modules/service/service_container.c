@@ -690,6 +690,7 @@ static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, contai
 
     // Renew annotations for oci spec, cgroup path only,
     // since lxc uses the "cgroup.dir" in oci annotations to create cgroup
+    // should ensure that container spec has the same annotations as oci spec
     ret = update_spec_annotations(oci_spec, container_spec, hostconfig);
     if (ret < 0) {
         return -1;
