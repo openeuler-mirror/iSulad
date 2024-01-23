@@ -31,6 +31,15 @@ extern "C" {
 #define CGROUP_MOUNTPOINT "/sys/fs/cgroup"
 #define CGROUP_ISULAD_PATH CGROUP_MOUNTPOINT"/isulad"
 
+struct cgfile_t {
+    char *name;
+    char *file;
+    char *match;
+    int (*get_value)(const char *content, const char *match, void *result);
+};
+
+int get_match_value_ull(const char *content, const char *match, void *result);
+
 int common_get_cgroup_version(void);
 
 int common_find_cgroup_mnt_and_root(const char *subsystem, char **mountpoint, char **root);
@@ -41,7 +50,6 @@ static inline void common_cgroup_do_log(bool quiet, bool do_log, const char *msg
         WARN("%s", msg);
     }
 }
-
 
 typedef struct {
     char **controllers;
@@ -140,6 +148,7 @@ typedef struct {
 } cgroup_metrics_t;
 
 int common_get_cgroup_v1_metrics(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics);
+int common_get_cgroup_v2_metrics(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics);
 
 char *common_get_init_cgroup(const char *subsystem);
 

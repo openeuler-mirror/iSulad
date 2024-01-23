@@ -23,20 +23,8 @@
 
 #define CGROUP_HUGETLB_LIMIT "hugetlb.%s.limit_in_bytes"
 
-typedef struct {
-    char *match;
-} cgfile_callback_args_t;
-
-struct cgfile_t {
-    char *name;
-    char *file;
-    int (*get_value)(const char *content, const cgfile_callback_args_t *args, void *result);
-};
-
-static int get_value_ll(const char *content, const cgfile_callback_args_t *args, void *result);
-static int get_value_ull(const char *content, const cgfile_callback_args_t *args, void *result);
-static int get_match_value_ull(const char *content, const cgfile_callback_args_t *args, void *result);
-static int get_value_string(const char *content, const cgfile_callback_args_t *args, void *result);
+static int get_value_ll(const char *content, const char *match, void *result);
+static int get_value_string(const char *content, const char *match, void *result);
 
 typedef enum {
     // CPU subsystem
@@ -63,46 +51,46 @@ typedef enum {
 
 static struct cgfile_t g_cgroup_v1_files[] = {
     // CPU subsystem
-    [CPU_RT_PERIOD]                 = {"cpu_rt_period",         "cpu.rt_period_us",                 get_value_ull},
-    [CPU_RT_RUNTIME]                = {"cpu_rt_runtime",        "cpu.rt_runtime_us",                get_value_ull},
-    [CPU_SHARES]                    = {"cpu_shares",            "cpu.shares",                       get_value_ull},
-    [CPU_CFS_PERIOD]                = {"cpu_cfs_period",        "cpu.cfs_period_us",                get_value_ull},
-    [CPU_CFS_QUOTA]                 = {"cpu_cfs_quota",         "cpu.cfs_quota_us",                 get_value_ll},
+    [CPU_RT_PERIOD]               = {"cpu_rt_period",         "cpu.rt_period_us",                 NULL,                    get_match_value_ull},
+    [CPU_RT_RUNTIME]              = {"cpu_rt_runtime",        "cpu.rt_runtime_us",                NULL,                    get_match_value_ull},
+    [CPU_SHARES]                  = {"cpu_shares",            "cpu.shares",                       NULL,                    get_match_value_ull},
+    [CPU_CFS_PERIOD]              = {"cpu_cfs_period",        "cpu.cfs_period_us",                NULL,                    get_match_value_ull},
+    [CPU_CFS_QUOTA]               = {"cpu_cfs_quota",         "cpu.cfs_quota_us",                 NULL,                    get_value_ll},
     // CPUSET subsystem
-    [CPUSET_CPUS]                   = {"cpuset_cpus",           "cpuset.cpus",                      get_value_string},
-    [CPUSET_MEMS]                   = {"cpuset_mems",           "cpuset.mems",                      get_value_string},
+    [CPUSET_CPUS]                 = {"cpuset_cpus",           "cpuset.cpus",                      NULL,                    get_value_string},
+    [CPUSET_MEMS]                 = {"cpuset_mems",           "cpuset.mems",                      NULL,                    get_value_string},
     // CPUACCT subsystem
-    [CPUACCT_USE_NANOS]             = {"cpu_use_nanos",         "cpuacct.usage",                    get_value_ull},
-    [CPUACCT_USE_USER]              = {"cpu_use_user",          "cpuacct.stat",                     get_match_value_ull},
-    [CPUACCT_USE_SYS]               = {"cpu_use_sys",           "cpuacct.stat",                     get_match_value_ull},
+    [CPUACCT_USE_NANOS]           = {"cpu_use_nanos",         "cpuacct.usage",                    NULL,                    get_match_value_ull},
+    [CPUACCT_USE_USER]            = {"cpu_use_user",          "cpuacct.stat",                     NULL,                    get_match_value_ull},
+    [CPUACCT_USE_SYS]             = {"cpu_use_sys",           "cpuacct.stat",                     NULL,                    get_match_value_ull},
     // MEMORY subsystem
-    [MEMORY_LIMIT]                  = {"mem_limit",             "memory.limit_in_bytes",            get_value_ull},
-    [MEMORY_USAGE]                  = {"mem_usage",             "memory.usage_in_bytes",            get_value_ull},
-    [MEMORY_SOFT_LIMIT]             = {"mem_soft_limit",        "memory.soft_limit_in_bytes",       get_value_ull},
-    [MEMORY_KMEM_LIMIT]             = {"kmem_limit",            "memory.kmem.limit_in_bytes",       get_value_ull},
-    [MEMORY_KMEM_USAGE]             = {"kmem_usage",            "memory.kmem.usage_in_bytes",       get_value_ull},
-    [MEMORY_SWAPPINESS]             = {"swappiness",            "memory.swappiness",                NULL},
-    [MEMORY_SW_LIMIT]               = {"memsw_limit",           "memory.memsw.limit_in_bytes",      get_value_ull},
-    [MEMORY_SW_USAGE]               = {"memsw_usage",           "memory.memsw.usage_in_bytes",      get_value_ull},
-    [MEMORY_CACHE]                  = {"cache",                 "memory.stat",                      get_match_value_ull},
-    [MEMORY_CACHE_TOTAL]            = {"cache_total",           "memory.stat",                      get_match_value_ull},
-    [MEMORY_TOTAL_RSS]              = {"total_rss",             "memory.stat",                      get_match_value_ull},
-    [MEMORY_TOTAL_PGFAULT]          = {"total_page_fault",      "memory.stat",                      get_match_value_ull},
-    [MEMORY_TOTAL_PGMAJFAULT]       = {"total_page_majfault",   "memory.stat",                      get_match_value_ull},
-    [MEMORY_TOTAL_INACTIVE_FILE]    = {"total_inactive_file",   "memory.stat",                      get_match_value_ull},
-    [MEMORY_OOM_CONTROL]            = {"oom_control",           "memory.oom_control",               NULL},
+    [MEMORY_LIMIT]                = {"mem_limit",             "memory.limit_in_bytes",            NULL,                    get_match_value_ull},
+    [MEMORY_USAGE]                = {"mem_usage",             "memory.usage_in_bytes",            NULL,                    get_match_value_ull},
+    [MEMORY_SOFT_LIMIT]           = {"mem_soft_limit",        "memory.soft_limit_in_bytes",       NULL,                    get_match_value_ull},
+    [MEMORY_KMEM_LIMIT]           = {"kmem_limit",            "memory.kmem.limit_in_bytes",       NULL,                    get_match_value_ull},
+    [MEMORY_KMEM_USAGE]           = {"kmem_usage",            "memory.kmem.usage_in_bytes",       NULL,                    get_match_value_ull},
+    [MEMORY_SWAPPINESS]           = {"swappiness",            "memory.swappiness",                NULL,                    NULL},
+    [MEMORY_SW_LIMIT]             = {"memsw_limit",           "memory.memsw.limit_in_bytes",      NULL,                    get_match_value_ull},
+    [MEMORY_SW_USAGE]             = {"memsw_usage",           "memory.memsw.usage_in_bytes",      NULL,                    get_match_value_ull},
+    [MEMORY_CACHE]                = {"cache",                 "memory.stat",                      NULL,                    get_match_value_ull},
+    [MEMORY_CACHE_TOTAL]          = {"cache_total",           "memory.stat",                      NULL,                    get_match_value_ull},
+    [MEMORY_TOTAL_RSS]            = {"total_rss",             "memory.stat",                      "total_rss",             get_match_value_ull},
+    [MEMORY_TOTAL_PGFAULT]        = {"total_page_fault",      "memory.stat",                      "total_pgfault",         get_match_value_ull},
+    [MEMORY_TOTAL_PGMAJFAULT]     = {"total_page_majfault",   "memory.stat",                      "total_pgmajfault",      get_match_value_ull},
+    [MEMORY_TOTAL_INACTIVE_FILE]  = {"total_inactive_file",   "memory.stat",                      "total_inactive_file",   get_match_value_ull},
+    [MEMORY_OOM_CONTROL]          = {"oom_control",           "memory.oom_control",               NULL,                    NULL},
     // BLKIO subsystem
-    [BLKIO_WEIGTH]                  = {"blkio_weigth",          "blkio.weight",                     NULL},
-    [BLKIO_WEIGTH_DEVICE]           = {"blkio_weigth_device",   "blkio.weight_device",              NULL},
-    [BLKIO_READ_BPS]                = {"blkio_read_bps",        "blkio.throttle.read_bps_device",   NULL},
-    [BLKIO_WRITE_BPS]               = {"blkio_write_bps",       "blkio.throttle.write_bps_device",  NULL},
-    [BLKIO_READ_IOPS]               = {"blkio_read_iops",       "blkio.throttle.read_iops_device",  NULL},
-    [BLKIO_WRITE_IOPS]              = {"blkio_write_iops",      "blkio.throttle.write_iops_device", NULL},
+    [BLKIO_WEIGTH]                = {"blkio_weigth",          "blkio.weight",                     NULL,                    NULL},
+    [BLKIO_WEIGTH_DEVICE]         = {"blkio_weigth_device",   "blkio.weight_device",              NULL,                    NULL},
+    [BLKIO_READ_BPS]              = {"blkio_read_bps",        "blkio.throttle.read_bps_device",   NULL,                    NULL},
+    [BLKIO_WRITE_BPS]             = {"blkio_write_bps",       "blkio.throttle.write_bps_device",  NULL,                    NULL},
+    [BLKIO_READ_IOPS]             = {"blkio_read_iops",       "blkio.throttle.read_iops_device",  NULL,                    NULL},
+    [BLKIO_WRITE_IOPS]            = {"blkio_write_iops",      "blkio.throttle.write_iops_device", NULL,                    NULL},
     // PIDS subsystem
-    [PIDS_CURRENT]                  = {"pids_current",          "pids.current",                     get_value_ull},
+    [PIDS_CURRENT]                = {"pids_current",          "pids.current",                     NULL,                    get_match_value_ull},
 };
 
-static int get_value_ll(const char *content, const cgfile_callback_args_t *args, void *result)
+static int get_value_ll(const char *content, const char *match, void *result)
 {
     long long ll_result = 0;
 
@@ -115,81 +103,7 @@ static int get_value_ll(const char *content, const cgfile_callback_args_t *args,
     return 0;
 }
 
-static int get_value_ull(const char *content, const cgfile_callback_args_t *args, void *result)
-{
-    uint64_t ull_result = 0;
-
-    if (util_safe_uint64(content, &ull_result) != 0) {
-        ERROR("Failed to convert %s to uint64", content);
-        return -1;
-    }
-
-    *(uint64_t *)result = ull_result;
-    return 0;
-}
-
-static int get_match_value_ull(const char *content, const cgfile_callback_args_t *args, void *result)
-{
-    int ret = 0;
-    uint64_t llu_result = 0;
-    char *llu_string = NULL;
-    char *match_with_space = NULL;
-    char **lines = NULL;
-    char **worker = NULL;
-
-    if (args == NULL || args->match == NULL || strlen(args->match) == 0) {
-        ERROR("Invalid arguments");
-        return -1;
-    }
-
-    // match full string
-    match_with_space = util_string_append(" ", args->match);
-    if (match_with_space == NULL) {
-        ERROR("Failed to append string");
-        return -1;
-    }
-
-    lines = util_string_split(content, '\n');
-    if (lines == NULL) {
-        ERROR("Failed to split content %s", content);
-        ret = -1;
-        goto out;
-    }
-
-    for (worker = lines; worker && *worker; worker++) {
-        if (util_has_prefix(*worker, match_with_space)) {
-            break;
-        }
-    }
-    if (*worker == NULL) {
-        ERROR("Cannot find match string %s", args->match);
-        ret = -1;
-        goto out;
-    }
-
-    llu_string = util_sub_string(*worker, strlen(match_with_space), strlen(*worker) - strlen(match_with_space));
-    if (llu_string == NULL) {
-        ERROR("Failed to sub string");
-        ret = -1;
-        goto out;
-    }
-    llu_string = util_trim_space(llu_string);
-
-    ret = util_safe_uint64(llu_string, &llu_result);
-    if (ret != 0) {
-        ERROR("Failed to convert %s to uint64", llu_string);
-    } else {
-        *(uint64_t *)result = llu_result;
-    }
-
-out:
-    free(match_with_space);
-    free(llu_string);
-    util_free_array(lines);
-    return ret;
-}
-
-static int get_value_string(const char *content, const cgfile_callback_args_t *args, void *result)
+static int get_value_string(const char *content, const char *match, void *result)
 {
     *(char **)result = util_strdup_s(content);
     return 0;
@@ -228,7 +142,7 @@ static bool check_cgroup_v1_helper(const char *mountpoint, const cgroup_v1_files
 }
 
 static int get_cgroup_v1_value_helper(const char *path, const cgroup_v1_files_index index,
-                                      const cgfile_callback_args_t *args, void *result)
+                                      void *result)
 {
     int nret = 0;
     char file_path[PATH_MAX] = { 0 };
@@ -265,7 +179,7 @@ static int get_cgroup_v1_value_helper(const char *path, const cgroup_v1_files_in
     util_trim_newline(content);
     content = util_trim_space(content);
 
-    nret = g_cgroup_v1_files[index].get_value(content, args, result);
+    nret = g_cgroup_v1_files[index].get_value(content, g_cgroup_v1_files[index].match, result);
     if (nret != 0) {
         ERROR("%s: failed to get value", g_cgroup_v1_files[index].name);
     }
@@ -308,11 +222,11 @@ static void check_cgroup_v1_cpuset(const cgroup_layer_t *layers, const bool quie
         return;
     }
 
-    if (get_cgroup_v1_value_helper(mountpoint, CPUSET_CPUS, NULL, (void *)&cpusetinfo->cpus) != 0) {
+    if (get_cgroup_v1_value_helper(mountpoint, CPUSET_CPUS, (void *)&cpusetinfo->cpus) != 0) {
         ERROR("Failed to get cgroup cpuset.cpus data");
         return;
     }
-    if (get_cgroup_v1_value_helper(mountpoint, CPUSET_MEMS, NULL, (void *)&cpusetinfo->mems) != 0) {
+    if (get_cgroup_v1_value_helper(mountpoint, CPUSET_MEMS, (void *)&cpusetinfo->mems) != 0) {
         free(cpusetinfo->cpus);
         cpusetinfo->cpus = NULL;
         ERROR("Failed to get cgroup cpuset.cpus data");
@@ -463,7 +377,7 @@ static void get_cgroup_v1_metrics_cpu(const cgroup_layer_t *layers, const char *
         return;
     }
 
-    get_cgroup_v1_value_helper(path, CPUACCT_USE_NANOS, NULL, (void *)&cgroup_cpu_metrics->cpu_use_nanos);
+    get_cgroup_v1_value_helper(path, CPUACCT_USE_NANOS, (void *)&cgroup_cpu_metrics->cpu_use_nanos);
 }
 
 static void get_cgroup_v1_metrics_memory(const cgroup_layer_t *layers, const char *cgroup_path,
@@ -472,18 +386,6 @@ static void get_cgroup_v1_metrics_memory(const cgroup_layer_t *layers, const cha
     int nret = 0;
     char *mountpoint = NULL;
     char path[PATH_MAX] = { 0 };
-    const cgfile_callback_args_t total_inactive_file_arg = {
-        .match = "total_inactive_file",
-    };
-    const cgfile_callback_args_t total_rss_arg = {
-        .match = "total_rss",
-    };
-    const cgfile_callback_args_t total_pgfault_arg = {
-        .match = "total_pgfault",
-    };
-    const cgfile_callback_args_t total_pgmajfault_arg = {
-        .match = "total_pgmajfault",
-    };
 
     mountpoint = common_find_cgroup_subsystem_mountpoint(layers, "memory");
     if (mountpoint == NULL) {
@@ -497,14 +399,14 @@ static void get_cgroup_v1_metrics_memory(const cgroup_layer_t *layers, const cha
         return;
     }
 
-    get_cgroup_v1_value_helper(path, MEMORY_LIMIT, NULL, (void *)&cgroup_mem_metrics->mem_limit);
-    get_cgroup_v1_value_helper(path, MEMORY_USAGE, NULL, (void *)&cgroup_mem_metrics->mem_used);
-    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_RSS, &total_rss_arg, (void *)&cgroup_mem_metrics->total_rss);
-    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_PGFAULT, &total_pgfault_arg,
+    get_cgroup_v1_value_helper(path, MEMORY_LIMIT, (void *)&cgroup_mem_metrics->mem_limit);
+    get_cgroup_v1_value_helper(path, MEMORY_USAGE, (void *)&cgroup_mem_metrics->mem_used);
+    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_RSS, (void *)&cgroup_mem_metrics->total_rss);
+    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_PGFAULT,
                                (void *)&cgroup_mem_metrics->total_pgfault);
-    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_PGMAJFAULT, &total_pgmajfault_arg,
+    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_PGMAJFAULT,
                                (void *)&cgroup_mem_metrics->total_pgmajfault);
-    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_INACTIVE_FILE, &total_inactive_file_arg,
+    get_cgroup_v1_value_helper(path, MEMORY_TOTAL_INACTIVE_FILE,
                                (void *)&cgroup_mem_metrics->total_inactive_file);
 }
 
@@ -527,7 +429,7 @@ static void get_cgroup_v1_metrics_pid(const cgroup_layer_t *layers, const char *
         return;
     }
 
-    get_cgroup_v1_value_helper(path, PIDS_CURRENT, NULL, (void *)&cgroup_pids_metrics->pid_current);
+    get_cgroup_v1_value_helper(path, PIDS_CURRENT, (void *)&cgroup_pids_metrics->pid_current);
 }
 
 int common_get_cgroup_v1_metrics(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics)

@@ -1337,7 +1337,7 @@ void PodSandboxManagerService::GetPodSandboxCgroupMetrics(const container_inspec
     if (cgroupVersion == CGROUP_VERSION_1) {
         nret = common_get_cgroup_v1_metrics(cgroupParent, &cgroupMetrics);
     } else {
-        // todo: get cgroup v2 metrics
+        nret = common_get_cgroup_v2_metrics(cgroupParent, &cgroupMetrics);
     }
 
     if (nret != 0) {

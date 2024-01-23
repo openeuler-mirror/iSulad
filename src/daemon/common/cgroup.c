@@ -29,32 +29,6 @@
 #include "utils_array.h"
 #include "sysinfo.h"
 
-// Cgroup V2 Item Definition
-#define CGROUP2_CPU_WEIGHT "cpu.weight"
-#define CGROUP2_CPU_MAX "cpu.max"
-#define CGROUP2_CPUSET_CPUS_EFFECTIVE "cpuset.cpus.effective"
-#define CGROUP2_CPUSET_MEMS_EFFECTIVE "cpuset.mems.effective"
-#define CGROUP2_CPUSET_CPUS "cpuset.cpus"
-#define CGROUP2_CPUSET_MEMS "cpuset.mems"
-#define CGROUP2_IO_WEIGHT "io.weight"
-#define CGROUP2_IO_BFQ_WEIGHT "io.bfq.weight"
-#define CGROUP2_IO_MAX "io.max"
-#define CGROUP2_MEMORY_MAX "memory.max"
-#define CGROUP2_MEMORY_LOW "memory.low"
-#define CGROUP2_MEMORY_SWAP_MAX "memory.swap.max"
-#define CGROUP2_HUGETLB_MAX "hugetlb.%s.max"
-#define CGROUP2_PIDS_MAX "pids.max"
-#define CGROUP2_FILES_LIMIT "files.limit"
-
-#define CGROUP2_CONTROLLERS_PATH CGROUP_MOUNTPOINT"/cgroup.controllers"
-#define CGROUP2_SUBTREE_CONTROLLER_PATH CGROUP_MOUNTPOINT"/cgroup.subtree_control"
-#define CGROUP2_CPUSET_CPUS_EFFECTIVE_PATH CGROUP_MOUNTPOINT"/cpuset.cpus.effective"
-#define CGROUP2_CPUSET_MEMS_EFFECTIVE_PATH CGROUP_MOUNTPOINT"/cpuset.mems.effective"
-
-#ifndef CGROUP2_SUPER_MAGIC
-#define CGROUP2_SUPER_MAGIC 0x63677270
-#endif
-
 #ifndef CGROUP_SUPER_MAGIC
 #define CGROUP_SUPER_MAGIC 0x27e0eb
 #endif
@@ -485,20 +459,6 @@ out:
     return layers;
 }
 
-/* cgroup enabled */
-static bool cgroup_enabled(const char *mountpoint, const char *name)
-{
-    char path[PATH_MAX] = { 0 };
-    int nret;
-
-    nret = snprintf(path, sizeof(path), "%s/%s", mountpoint, name);
-    if (nret < 0 || (size_t)nret >= sizeof(path)) {
-        ERROR("Path is too long");
-        return false;
-    }
-    return util_file_exists(path);
-}
-
 char *common_find_cgroup_subsystem_mountpoint(const cgroup_layer_t *layers, const char *subsystem)
 {
     size_t i;
@@ -607,188 +567,59 @@ int common_get_cgroup_version(void)
     return CGROUP_VERSION_1;
 }
 
-static int cgroup2_enable_all()
+static int get_value_ull(const char *content, void *result)
 {
-    int ret = 0;
-    int nret = 0;
-    int n = 0;
-    size_t i = 0;
-    const char *space = "";
-    char *controllers_str = NULL;
-    char *subtree_controller_str = NULL;
-    char **controllers = NULL;
-    char enable_controllers[PATH_MAX] = { 0 };
+    uint64_t ull_result = 0;
 
-    controllers_str = util_read_content_from_file(CGROUP2_CONTROLLERS_PATH);
-    if (controllers_str == NULL || strlen(controllers_str) == 0 || strcmp(controllers_str, "\n") == 0) {
-        WARN("no cgroup controller found");
-        goto out;
-    }
-
-    subtree_controller_str = util_read_content_from_file(CGROUP2_SUBTREE_CONTROLLER_PATH);
-    if (subtree_controller_str != NULL && strcmp(controllers_str, subtree_controller_str) == 0) {
-        goto out;
-    }
-
-    controllers = util_string_split(controllers_str, ' ');
-    if (controllers == NULL) {
-        ERROR("split %s failed", controllers_str);
-        ret = -1;
-        goto out;
-    }
-
-    for (i = 0; i < util_array_len((const char **)controllers); i++) {
-        nret = snprintf(enable_controllers + n, PATH_MAX - n, "%s+%s", space, controllers[i]);
-        if (nret < 0 || (size_t)nret >= PATH_MAX - n) {
-            ERROR("Path is too long");
-            goto out;
-        }
-        n += nret;
-        space = " ";
-    }
-    ret = util_write_file(CGROUP2_SUBTREE_CONTROLLER_PATH, enable_controllers, strlen(enable_controllers),
-                          DEFAULT_CGROUP_FILE_MODE);
-    if (ret != 0) {
-        SYSERROR("write %s to %s failed", enable_controllers, CGROUP2_SUBTREE_CONTROLLER_PATH);
-        goto out;
-    }
-
-out:
-    util_free_array(controllers);
-    free(controllers_str);
-    free(subtree_controller_str);
-
-    return ret;
-}
-
-#if defined (__ANDROID__) || defined(__MUSL__)
-static bool cgroup2_no_controller()
-{
-    char *controllers_str = NULL;
-
-    controllers_str = util_read_content_from_file(CGROUP2_CONTROLLERS_PATH);
-    if (controllers_str == NULL || strlen(controllers_str) == 0 || strcmp(controllers_str, "\n") == 0) {
-        free(controllers_str);
-        return true;
-    }
-
-    free(controllers_str);
-    return false;
-}
-#endif
-
-static int make_sure_cgroup2_isulad_path_exist()
-{
-    int ret = 0;
-
-    if (util_dir_exists(CGROUP_ISULAD_PATH)) {
-        return 0;
-    }
-
-    if (cgroup2_enable_all() != 0) {
+    if (util_safe_uint64(content, &ull_result) != 0) {
+        ERROR("Failed to convert %s to uint64", content);
         return -1;
     }
 
-#if defined (__ANDROID__) || defined(__MUSL__)
-    if (cgroup2_no_controller()) {
-        DEBUG("no cgroup controller found");
-        return 0;
-    }
-#endif
-
-    ret = mkdir(CGROUP_ISULAD_PATH, DEFAULT_CGROUP_DIR_MODE);
-    if (ret != 0 && (errno != EEXIST || !util_dir_exists(CGROUP_ISULAD_PATH))) {
-        return -1;
-    }
-
-    return ret;
+    *(uint64_t *)result = ull_result;
+    return 0;
 }
 
-int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
-                              cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
-                              cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                              cgroup_files_info_t *filesinfo, bool quiet)
+int get_match_value_ull(const char *content, const char *match, void *result)
 {
-    int ret = 0;
-    int nret = 0;
-    char *size = NULL;
-    char path[PATH_MAX] = { 0 };
+    __isula_auto_free char *llu_string = NULL;
+    __isula_auto_free char *match_with_space = NULL;
+    __isula_auto_array_t char **lines = NULL;
+    char **worker = NULL;
 
-    if (make_sure_cgroup2_isulad_path_exist() != 0) {
+    if (match == NULL) {
+        return get_value_ull(content, result);
+    }
+
+    // match full string
+    match_with_space = util_string_append(" ", match);
+    if (match_with_space == NULL) {
+        ERROR("Failed to append string");
         return -1;
     }
 
-    // cpu cgroup
-    cpuinfo->cpu_shares = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPU_WEIGHT);
-    common_cgroup_do_log(quiet, !(cpuinfo->cpu_shares), "Your kernel does not support cgroup2 cpu weight");
-
-    cpuinfo->cpu_cfs_period = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPU_MAX);
-    cpuinfo->cpu_cfs_quota = cpuinfo->cpu_cfs_period;
-    common_cgroup_do_log(quiet, !(cpuinfo->cpu_cfs_period), "Your kernel does not support cgroup2 cpu max");
-
-    cpusetinfo->cpuset = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_CPUS_EFFECTIVE) &&
-                         cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_CPUS) &&
-                         cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_MEMS_EFFECTIVE) &&
-                         cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_MEMS);
-    common_cgroup_do_log(quiet, !(cpusetinfo->cpuset), "Your kernel does not support cpuset");
-    if (cpusetinfo->cpuset) {
-        cpusetinfo->cpus = util_read_content_from_file(CGROUP2_CPUSET_CPUS_EFFECTIVE_PATH);
-        cpusetinfo->mems = util_read_content_from_file(CGROUP2_CPUSET_MEMS_EFFECTIVE_PATH);
-        if (cpusetinfo->cpus == NULL || cpusetinfo->mems == NULL) {
-            ERROR("read cpus or mems failed");
-            return -1;
-        }
-        cpusetinfo->cpus = util_trim_space(cpusetinfo->cpus);
-        cpusetinfo->mems = util_trim_space(cpusetinfo->mems);
+    lines = util_string_split(content, '\n');
+    if (lines == NULL) {
+        ERROR("Failed to split content %s", content);
+        return -1;
     }
 
-    // io cgroup
-    blkioinfo->blkio_weight = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_BFQ_WEIGHT) ||
-                              cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_WEIGHT);
-    blkioinfo->blkio_weight_device = blkioinfo->blkio_weight;
-    common_cgroup_do_log(quiet, !(blkioinfo->blkio_weight), "Your kernel does not support cgroup2 io weight");
-
-    blkioinfo->blkio_read_bps_device = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_MAX);
-    blkioinfo->blkio_write_bps_device = blkioinfo->blkio_read_bps_device;
-    blkioinfo->blkio_read_iops_device = blkioinfo->blkio_read_bps_device;
-    blkioinfo->blkio_write_iops_device = blkioinfo->blkio_read_bps_device;
-    common_cgroup_do_log(quiet, !(blkioinfo->blkio_read_bps_device), "Your kernel does not support cgroup2 io max");
-
-    // memory cgroup
-    meminfo->limit = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_MAX);
-    common_cgroup_do_log(quiet, !(meminfo->limit), "Your kernel does not support cgroup2 memory max");
-
-    meminfo->reservation = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_LOW);
-    common_cgroup_do_log(quiet, !(meminfo->reservation), "Your kernel does not support cgroup2 memory low");
-
-    meminfo->swap = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_SWAP_MAX);
-    common_cgroup_do_log(quiet, !(meminfo->swap), "Your kernel does not support cgroup2 memory swap max");
-
-    // pids cgroup
-    pidsinfo->pidslimit = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_PIDS_MAX);
-    common_cgroup_do_log(quiet, !(pidsinfo->pidslimit), "Your kernel does not support cgroup2 pids max");
-
-    // hugetlb cgroup
-    size = get_default_huge_page_size();
-    if (size != NULL) {
-        nret = snprintf(path, sizeof(path), CGROUP2_HUGETLB_MAX, size);
-        if (nret < 0 || (size_t)nret >= sizeof(path)) {
-            WARN("Failed to print hugetlb path");
-            ret = -1;
-            goto out;
+    for (worker = lines; worker && *worker; worker++) {
+        if (util_has_prefix(*worker, match_with_space)) {
+            break;
         }
-        hugetlbinfo->hugetlblimit = cgroup_enabled(CGROUP_ISULAD_PATH, path);
-        common_cgroup_do_log(quiet, !hugetlbinfo->hugetlblimit, "Your kernel does not support cgroup2 hugetlb limit");
-    } else {
-        WARN("Your kernel does not support cgroup2 hugetlb limit");
+    }
+    if (*worker == NULL) {
+        ERROR("Cannot find match string %s", match);
+        return -1;
     }
 
-    // files cgroup
-    filesinfo->fileslimit = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_FILES_LIMIT);
-    common_cgroup_do_log(quiet, !(filesinfo->fileslimit), "Your kernel does not support cgroup2 files limit");
+    llu_string = util_sub_string(*worker, strlen(match_with_space), strlen(*worker) - strlen(match_with_space));
+    if (llu_string == NULL) {
+        ERROR("Failed to sub string");
+        return -1;
+    }
+    llu_string = util_trim_space(llu_string);
 
-out:
-    free(size);
-
-    return ret;
+    return get_value_ull(llu_string, result);
 }
