@@ -218,18 +218,18 @@ static int make_safedir_is_noexec(const char *flock_path, const char *dstdir, ch
         isulad_tmpdir_env = DEFAULT_ISULAD_TMPDIR;
     }
 
-    nret = snprintf(isula_tmpdir, PATH_MAX, "%s/isulad_tmpdir", isulad_tmpdir_env);
+    if (realpath(isulad_tmpdir_env, cleanpath) == NULL) {
+        ERROR("Failed to get real path for %s", isula_tmpdir);
+        return -1;
+    }
+
+    nret = snprintf(isula_tmpdir, PATH_MAX, "%s/isulad_tmpdir", cleanpath);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to snprintf");
         return -1;
     }
 
-    if (util_clean_path(isula_tmpdir, cleanpath, sizeof(cleanpath)) == NULL) {
-        ERROR("clean path for %s failed", isula_tmpdir);
-        return -1;
-    }
-
-    nret = snprintf(tmp_dir, PATH_MAX, "%s/tar-chroot-XXXXXX", cleanpath);
+    nret = snprintf(tmp_dir, PATH_MAX, "%s/tar-chroot-XXXXXX", isula_tmpdir);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to snprintf string");
         return -1;
@@ -247,7 +247,7 @@ static int make_safedir_is_noexec(const char *flock_path, const char *dstdir, ch
     }
 
     // ensure parent dir is exist
-    if (util_mkdir_p(cleanpath, ISULAD_TEMP_DIRECTORY_MODE) != 0) {
+    if (util_mkdir_p(isula_tmpdir, ISULAD_TEMP_DIRECTORY_MODE) != 0) {
         return -1;
     }
 
