@@ -175,22 +175,22 @@ static void cleanup_path(char *dir)
     char tmp_dir[PATH_MAX] = { 0 };
     char cleanpath[PATH_MAX] = { 0 };
 
-    nret = snprintf(tmp_dir, PATH_MAX, "%s/isulad_tmpdir", dir);
+    if (realpath(dir, cleanpath) == NULL) {
+        ERROR("get real path for %s failed", tmp_dir);
+        return;
+    }
+
+    nret = snprintf(tmp_dir, PATH_MAX, "%s/isulad_tmpdir", cleanpath);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to snprintf");
         return;
     }
 
-    if (util_clean_path(tmp_dir, cleanpath, sizeof(cleanpath)) == NULL) {
-        ERROR("clean path for %s failed", tmp_dir);
+    if (!util_dir_exists(tmp_dir)) {
         return;
     }
 
-    if (!util_dir_exists(cleanpath)) {
-        return;
-    }
-
-    nret = util_scan_subdirs(cleanpath, walk_isulad_tmpdir_cb, NULL);
+    nret = util_scan_subdirs(tmp_dir, walk_isulad_tmpdir_cb, NULL);
     if (nret != 0) {
         ERROR("failed to scan isulad tmp subdirs");
     }
