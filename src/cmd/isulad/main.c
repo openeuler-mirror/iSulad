@@ -1271,23 +1271,23 @@ static int do_ensure_isulad_tmpdir_security(const char *isulad_tmp_dir)
     char tmp_dir[PATH_MAX] = { 0 };
     char cleanpath[PATH_MAX] = { 0 };
 
-    nret = snprintf(tmp_dir, PATH_MAX, "%s/isulad_tmpdir", isulad_tmp_dir);
+    if (realpath(isulad_tmp_dir, cleanpath) == NULL) {
+        ERROR("Failed to get real path for %s", tmp_dir);
+        return -1;
+    }
+
+    nret = snprintf(tmp_dir, PATH_MAX, "%s/isulad_tmpdir", cleanpath);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to snprintf");
         return -1;
     }
 
-    if (util_clean_path(tmp_dir, cleanpath, sizeof(cleanpath)) == NULL) {
-        ERROR("Failed to clean path for %s", tmp_dir);
-        return -1;
-    }
-
-    if (isulad_tmpdir_security_check(cleanpath) == 0) {
+    if (isulad_tmpdir_security_check(tmp_dir) == 0) {
         return 0;
     }
 
     INFO("iSulad tmpdir: %s does not meet security requirements, recreate it", isulad_tmp_dir);
-    return recreate_tmpdir(cleanpath);
+    return recreate_tmpdir(tmp_dir);
 }
 
 static int ensure_isulad_tmpdir_security()
