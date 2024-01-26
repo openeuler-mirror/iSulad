@@ -174,8 +174,19 @@ static void cleanup_path(char *dir)
     int nret;
     char tmp_dir[PATH_MAX] = { 0 };
     char cleanpath[PATH_MAX] = { 0 };
+    char dir_cleanpath[PATH_MAX] = { 0 };
 
-    if (realpath(dir, cleanpath) == NULL) {
+    if (util_clean_path(dir, dir_cleanpath, sizeof(dir_cleanpath)) == NULL) {
+        ERROR("clean path for %s failed", dir);
+        return;
+    }
+
+    // If dir does not exist, skip cleanup
+    if (!util_dir_exists(dir_cleanpath)) {
+        return;
+    }
+
+    if (realpath(dir_cleanpath, cleanpath) == NULL) {
         ERROR("get real path for %s failed", tmp_dir);
         return;
     }
