@@ -1270,8 +1270,26 @@ static int do_ensure_isulad_tmpdir_security(const char *isulad_tmp_dir)
     int nret;
     char tmp_dir[PATH_MAX] = { 0 };
     char cleanpath[PATH_MAX] = { 0 };
+    char isulad_tmp_cleanpath[PATH_MAX] = { 0 };
 
-    if (realpath(isulad_tmp_dir, cleanpath) == NULL) {
+    if (util_clean_path(isulad_tmp_dir, isulad_tmp_cleanpath, sizeof(isulad_tmp_cleanpath)) == NULL) {
+        ERROR("Failed to clean path for %s", isulad_tmp_dir);
+        return -1;
+    }
+
+    // Determine whether isulad_tmp_dir exists. If it does not exist, create it
+    // to prevent realpath from reporting errors because the folder does not exist.
+    if (!util_dir_exists(isulad_tmp_cleanpath)) {
+        nret = snprintf(tmp_dir, PATH_MAX, "%s/isulad_tmpdir", isulad_tmp_cleanpath);
+        if (nret < 0 || (size_t)nret >= PATH_MAX) {
+            ERROR("Failed to snprintf");
+            return -1;
+        }
+        INFO("iSulad tmpdir: %s does not exist, create it", isulad_tmp_dir);
+        return recreate_tmpdir(tmp_dir);
+    }
+
+    if (realpath(isulad_tmp_cleanpath, cleanpath) == NULL) {
         ERROR("Failed to get real path for %s", tmp_dir);
         return -1;
     }
