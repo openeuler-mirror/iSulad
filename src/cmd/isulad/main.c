@@ -1252,7 +1252,7 @@ static int isulad_tmpdir_security_check(const char *tmp_dir)
 
 static int recreate_tmpdir(const char *tmp_dir)
 {
-    if (util_recursive_rmdir(tmp_dir, 0) != 0) {
+    if (util_path_remove(tmp_dir) != 0) {
         ERROR("Failed to remove directory %s", tmp_dir);
         return -1;
     }

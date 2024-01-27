@@ -1908,7 +1908,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         goto out;
     }
 
-    sret = snprintf(blobpath, PATH_MAX, "%s/registry-XXXXXX", image_tmp_path);
+    sret = snprintf(blobpath, PATH_MAX, "%s/%sXXXXXX", image_tmp_path, REGISTRY_TMPDIR_PREFIX);
     if (sret < 0 || (size_t)sret >= PATH_MAX) {
         ERROR("image tmp work path too long");
         ret = -1;

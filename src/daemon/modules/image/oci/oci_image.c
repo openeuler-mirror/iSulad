@@ -283,10 +283,42 @@ out:
     return ret;
 }
 
+// remove dir that image module created
+// return false when failed to rmdir
+// eg: oci-image-load-XXXXXX && registry-XXXXXX
+static bool remove_image_tmpdir_cb(const char *path_name, const struct dirent *sub_dir, void *context)
+{
+    int nret = 0;
+    char tmpdir[PATH_MAX] = { 0 };
+
+    if (sub_dir == NULL) {
+        return true;
+    }
+
+    if (!util_has_prefix(sub_dir->d_name, LOAD_TMPDIR_PREFIX) && !util_has_prefix(sub_dir->d_name, REGISTRY_TMPDIR_PREFIX)) {
+        // only remove directory that image module created
+        return true;
+    }
+
+    nret = snprintf(tmpdir, PATH_MAX, "%s/%s", path_name, sub_dir->d_name);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Failed to snprintf for %s", sub_dir->d_name);
+        return false;
+    }
+
+    if (util_recursive_rmdir(tmpdir, 0) != 0) {
+        ERROR("Failed to remove path %s", tmpdir);
+        return false;
+    }
+
+    return true;
+}
+
 static int recreate_image_tmpdir()
 {
     char *image_tmp_path = NULL;
     int ret = 0;
+    int nret = 0;
 
     image_tmp_path = oci_get_isulad_tmpdir(g_oci_image_module_data.root_dir);
     if (image_tmp_path == NULL) {
@@ -295,10 +327,14 @@ static int recreate_image_tmpdir()
         goto out;
     }
 
-    if (util_recursive_rmdir(image_tmp_path, 0)) {
-        ERROR("failed to remove directory %s", image_tmp_path);
-        ret = -1;
-        goto out;
+    // If image_tmp_path exist, cleanup it
+    if (util_dir_exists(image_tmp_path)) {
+        nret = util_scan_subdirs(image_tmp_path, remove_image_tmpdir_cb, NULL);
+        if (nret != 0) {
+            ERROR("Failed to scan isulad tmp subdirs");
+            ret = -1;
+            goto out;
+        }
     }
 
     if (util_mkdir_p(image_tmp_path, TEMP_DIRECTORY_MODE)) {
