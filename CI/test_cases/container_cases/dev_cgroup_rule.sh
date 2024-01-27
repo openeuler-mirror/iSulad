@@ -60,7 +60,7 @@ function test_cpu_dev_cgoup_rule_spec()
     def_cid=$(isula run -tid --runtime $runtime -m 10m $image /bin/sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container failed" && ((ret++))
     cp $default_config $default_config_bak
-    sed -i '/"linux": {/a \ \t\t"devices": [\n\t\t{\n\t\t\t"type": "c",\n\t\t\t"path": "\/dev\/testABC",\n\t\t\t"major": 88,\n\t\t\t"minor": 88\n\t\t}\n\t\t],' $default_config
+    sed -i '/"linux": {/a \ \t\t"devices": [\n\t\t{\n\t\t\t"type": "c",\n\t\t\t"path": "\/dev\/testA",\n\t\t\t"major": 88,\n\t\t\t"minor": 88\n\t\t}\n\t\t],' $default_config
     stop_isulad_without_valgrind
     start_isulad_with_valgrind --cgroup-parent $test_cgroup_parent
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
