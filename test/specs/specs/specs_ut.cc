@@ -19,6 +19,7 @@
 #include "mock.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "specs_api.h"
+#include "specs_mount.h"
 #include "specs_namespace.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
@@ -40,6 +41,46 @@ using ::testing::Invoke;
 using ::testing::_;
 
 using namespace std;
+
+static int g_malloc_count = 0;
+static int g_malloc_match = 1;
+
+extern "C" {
+    DECLARE_WRAPPER_V(util_common_calloc_s, void *, (size_t size));
+    DEFINE_WRAPPER_V(util_common_calloc_s, void *, (size_t size), (size));
+
+    DECLARE_WRAPPER_V(util_smart_calloc_s, void *, (size_t size, size_t len));
+    DEFINE_WRAPPER_V(util_smart_calloc_s, void *, (size_t size, size_t len), (size, len));
+
+    DECLARE_WRAPPER(get_readonly_default_oci_spec, const oci_runtime_spec *, (bool system_container));
+    DEFINE_WRAPPER(get_readonly_default_oci_spec, const oci_runtime_spec *, (bool system_container), (system_container));
+}
+
+void *util_common_calloc_s_fail(size_t size)
+{
+    g_malloc_count++;
+
+    if (g_malloc_count == g_malloc_match) {
+        g_malloc_match++;
+        g_malloc_count = 0;
+        return nullptr;
+    } else {
+        return __real_util_common_calloc_s(size);
+    }
+}
+
+void *util_smart_calloc_s_fail(size_t size, size_t len)
+{
+    g_malloc_count++;
+
+    if (g_malloc_count == g_malloc_match) {
+        g_malloc_match++;
+        g_malloc_count = 0;
+        return nullptr;
+    } else {
+        return __real_util_smart_calloc_s(size, len);
+    }
+}
 
 class SpecsUnitTest : public testing::Test {
 public:
@@ -323,4 +364,53 @@ TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_5)
     free(merged_cp);
 
     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
+}
+
+TEST_F(SpecsUnitTest, SpecsUnitTest_test_update_devcies_for_oci_spec)
+{
+    parser_error err = nullptr;
+    oci_runtime_spec *readonly_spec = oci_runtime_spec_parse_data("{\"ociVersion\": \"1.0.1\", \"linux\": \
+                                                                { \"devices\": \
+                                                                 [ { \"type\": \"c\", \"path\": \"/dev/testA\", \
+                                                                    \"fileMode\": 8612, \"major\": 99, \"minor\": 99} ], \
+                                                                 \"resources\": { \"devices\": [ { \"allow\": false, \
+					                                                              \"type\": \"a\", \"major\": -1, \
+					                                                              \"minor\": -1, \"access\": \"rwm\" } ] } } }", nullptr, &err);
+    ASSERT_NE(readonly_spec, nullptr);
+    free(err);
+    err = nullptr;
+    host_config *hostspec = static_cast<host_config *>(util_common_calloc_s(sizeof(host_config)));
+    ASSERT_NE(hostspec, nullptr);
+
+    oci_runtime_spec *ocispec = oci_runtime_spec_parse_data("{\"ociVersion\": \"1.0.1\", \"linux\": \
+                                                                { \"devices\": [  ], \
+                                                                 \"resources\": { \"devices\": [ ] } } }", nullptr, &err);
+    ASSERT_NE(ocispec, nullptr);
+
+    MOCK_SET(get_readonly_default_oci_spec, readonly_spec);
+    MOCK_SET_V(util_smart_calloc_s, util_smart_calloc_s_fail);
+    MOCK_SET_V(util_common_calloc_s, util_common_calloc_s_fail);
+
+    ASSERT_EQ(update_devcies_for_oci_spec(ocispec, hostspec), -1);
+    ASSERT_EQ(update_devcies_for_oci_spec(ocispec, hostspec), -1);
+    ASSERT_EQ(update_devcies_for_oci_spec(ocispec, hostspec), -1);
+    free(ocispec->linux->devices[0]);
+    free(ocispec->linux->devices);
+    ocispec->linux->devices = NULL;
+    ocispec->linux->devices_len = 0;
+    ASSERT_EQ(update_devcies_for_oci_spec(ocispec, hostspec), -1);
+    free(ocispec->linux->devices[0]);
+    free(ocispec->linux->devices);
+    ocispec->linux->devices = NULL;
+    ocispec->linux->devices_len = 0;
+    ASSERT_EQ(update_devcies_for_oci_spec(ocispec, hostspec), 0);
+
+    MOCK_CLEAR(get_readonly_default_oci_spec);
+    MOCK_CLEAR(util_smart_calloc_s);
+    MOCK_CLEAR(util_common_calloc_s);
+
+    free_oci_runtime_spec(readonly_spec);
+    free_oci_runtime_spec(ocispec);
+    free_host_config(hostspec);
+    free(err);
 }
