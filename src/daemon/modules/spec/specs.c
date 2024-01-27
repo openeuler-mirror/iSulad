@@ -2382,11 +2382,11 @@ const oci_runtime_spec *get_readonly_default_oci_spec(bool system_container)
 int spec_module_init(void)
 {
     g_rdspec.cont = default_spec(false);
-    if (g_rdspec.cont == NULL) {
+    if (g_rdspec.cont == NULL || make_sure_oci_spec_linux_resources(g_rdspec.cont) != 0) {
         return -1;
     }
     g_rdspec.system_cont = default_spec(true);
-    if (g_rdspec.system_cont == NULL) {
+    if (g_rdspec.system_cont == NULL || make_sure_oci_spec_linux_resources(g_rdspec.system_cont) != 0) {
         return -1;
     }
     return 0;
