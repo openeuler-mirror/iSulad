@@ -1044,7 +1044,7 @@ static char *oci_load_path_create()
         goto out;
     }
 
-    nret = snprintf(tmp_dir, PATH_MAX, "%s/oci-image-load-XXXXXX", image_tmp_path);
+    nret = snprintf(tmp_dir, PATH_MAX, "%s/%sXXXXXX", image_tmp_path, LOAD_TMPDIR_PREFIX);
     if (nret < 0 || (size_t)nret >= sizeof(tmp_dir)) {
         ERROR("Path is too long");
         ret = -1;

@@ -38,6 +38,10 @@ struct oci_image_module_data {
     char **insecure_registries;
     size_t insecure_registries_len;
 };
+
+#define LOAD_TMPDIR_PREFIX "oci-image-load-"
+#define REGISTRY_TMPDIR_PREFIX "registry-"
+
 struct oci_image_module_data *get_oci_image_data(void);
 
 int oci_init(const isulad_daemon_configs *args);
