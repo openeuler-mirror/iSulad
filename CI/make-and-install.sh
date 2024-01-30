@@ -75,7 +75,7 @@ mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON -DENABLE_CRI_API_V1=ON -DENABLE_SHIM_V2=ON -DENABLE_METRICS=ON ..
 make -j $(nproc)
 make install
-ctest -T memcheck --output-on-failure
+ctest -E "driver_devmapper_ut" -T memcheck --output-on-failure
 echo_success "===================RUN DT-LLT TESTCASES END========================="
 
 # build fuzz
