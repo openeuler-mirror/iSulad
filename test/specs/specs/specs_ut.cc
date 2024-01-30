@@ -273,6 +273,32 @@ char *invoke_conf_get_isulad_cgroup_parent()
     return util_strdup_s("/var/lib/isulad/engines/lcr");
 }
 
+int invoke_conf_get_isulad_default_ulimit_empty(host_config_ulimits_element ***ulimit)
+{
+    if (ulimit == nullptr) {
+        return -1;
+    }
+    return 0;
+}
+
+int invoke_conf_get_isulad_default_ulimit(host_config_ulimits_element ***ulimit)
+{
+    if (ulimit == nullptr) {
+        return -1;
+    }
+    host_config_ulimits_element *ele = static_cast<host_config_ulimits_element*>(util_common_calloc_s(sizeof(host_config_ulimits_element)));
+    if (ele == nullptr) {
+        return -1;
+    }
+    ele->hard = 8192;
+    ele->soft = 2048;
+    ele->name = util_strdup_s("NPROC");
+
+    int ret = ulimit_array_append(ulimit, ele, ulimit_array_len(*ulimit));
+    free_host_config_ulimits_element(ele);
+    return ret;
+}
+
 TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_1)
 {
     ASSERT_EQ(merge_container_cgroups_path(nullptr, nullptr), nullptr);
@@ -366,7 +392,59 @@ TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_5)
     testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
 }
 
-TEST_F(SpecsUnitTest, SpecsUnitTest_test_update_devcies_for_oci_spec)
+TEST_F(SpecsUnitTest, test_update_oci_container_cgroups_path)
+{
+    parser_error err = nullptr;
+    host_config *hostspec = static_cast<host_config *>(util_common_calloc_s(sizeof(host_config)));
+    ASSERT_NE(hostspec, nullptr);
+
+    oci_runtime_spec *ocispec = oci_runtime_spec_parse_data("{\"ociVersion\": \"1.0.1\", \"linux\": \
+                                                                {} }", nullptr, &err);
+    ASSERT_NE(ocispec, nullptr);
+
+    ocispec->linux->cgroups_path = util_strdup_s("/isulad");
+    ASSERT_EQ(update_oci_container_cgroups_path("abcdef", nullptr, nullptr), -1);
+    EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent));
+    ASSERT_EQ(update_oci_container_cgroups_path("abcdef", ocispec, hostspec), 0);
+    ASSERT_STREQ(ocispec->linux->cgroups_path, "/var/lib/isulad/engines/lcr/abcdef");
+
+    free(err);
+    free_host_config(hostspec);
+    free_oci_runtime_spec(ocispec);
+
+    testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
+}
+
+TEST_F(SpecsUnitTest, test_update_oci_ulimit)
+{
+    parser_error err = nullptr;
+    host_config *hostspec = static_cast<host_config *>(util_common_calloc_s(sizeof(host_config)));
+    ASSERT_NE(hostspec, nullptr);
+
+    char *oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
+    ASSERT_TRUE(oci_config_file != nullptr);
+    oci_runtime_spec *ocispec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_NE(ocispec, nullptr);
+
+    ASSERT_EQ(update_oci_ulimit(nullptr, nullptr), -1);
+    EXPECT_CALL(m_isulad_conf, GetUlimit(_)).WillRepeatedly(Invoke(invoke_conf_get_isulad_default_ulimit));
+    ASSERT_EQ(update_oci_ulimit(ocispec, hostspec), 0);
+    ASSERT_EQ(ocispec->process->rlimits_len, 1);
+    ASSERT_EQ(ocispec->process->rlimits[0]->hard, 8192);
+    ASSERT_EQ(ocispec->process->rlimits[0]->soft, 2048);
+    ASSERT_STREQ(ocispec->process->rlimits[0]->type, "RLIMIT_NPROC");
+    EXPECT_CALL(m_isulad_conf, GetUlimit(_)).WillRepeatedly(Invoke(invoke_conf_get_isulad_default_ulimit_empty));
+    ASSERT_EQ(update_oci_ulimit(ocispec, hostspec), 0);
+    ASSERT_EQ(ocispec->process->rlimits_len, 0);
+
+    free(err);
+    free(oci_config_file);
+    free_host_config(hostspec);
+    free_oci_runtime_spec(ocispec);
+    testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
+}
+
+TEST_F(SpecsUnitTest, test_update_devcies_for_oci_spec)
 {
     parser_error err = nullptr;
     oci_runtime_spec *readonly_spec = oci_runtime_spec_parse_data("{\"ociVersion\": \"1.0.1\", \"linux\": \
