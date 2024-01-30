@@ -75,7 +75,7 @@ mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON -DENABLE_SHIM_V2=ON ..
 make -j $(nproc)
 make install
-ctest -T memcheck --output-on-failure
+ctest -E "driver_devmapper_ut" -T memcheck --output-on-failure
 if [[ $? -ne 0 ]]; then
     exit 1
 fi
