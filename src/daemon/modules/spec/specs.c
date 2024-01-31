@@ -385,6 +385,44 @@ out:
     return ret;
 }
 
+int update_spec_annotations(oci_runtime_spec *oci_spec, container_config *container_spec, host_config *host_spec)
+{
+    int ret = 0;
+    if (oci_spec == NULL || container_spec == NULL || host_spec == NULL) {
+        return -1;
+    }
+
+    ret = make_sure_container_spec_annotations(container_spec);
+    if (ret < 0) {
+        return -1;
+    }
+
+    ret = make_annotations_cgroup_dir(container_spec, host_spec);
+    if (ret != 0) {
+        return -1;
+    }
+
+    /* add rootfs.mount */
+    ret = add_rootfs_mount(container_spec);
+    if (ret != 0) {
+        ERROR("Failed to add rootfs mount");
+        return -1;
+    }
+
+    /* add native.umask */
+    ret = add_native_umask(container_spec);
+    if (ret != 0) {
+        ERROR("Failed to add native umask");
+        return -1;
+    }
+
+    if (merge_annotations(oci_spec, container_spec)) {
+        return -1;
+    }
+
+    return 0;
+}
+
 static int make_sure_oci_spec_root(oci_runtime_spec *oci_spec)
 {
     if (oci_spec->root == NULL) {
@@ -2502,3 +2540,4 @@ int spec_module_init(void)
     }
     return 0;
 }
+
