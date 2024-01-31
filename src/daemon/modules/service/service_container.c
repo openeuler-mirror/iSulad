@@ -691,10 +691,17 @@ out:
     epoll_loop_close(&descr);
 }
 
-static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, host_config *hostconfig)
+static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, container_config *container_spec, host_config *hostconfig)
 {
     __isula_auto_free char *cgroup_parent = NULL;
     int ret;
+
+    // First renew annotations for oci spec, cgroup path, rootfs.mount, native.mask
+    // for iSulad daemon might get updated
+    ret = update_spec_annotations(oci_spec, container_spec, hostconfig);
+    if (ret < 0) {
+        return -1;
+    }
 
     // If isulad daemon cgroup parent updated, we should update this config into oci spec
     cgroup_parent = merge_container_cgroups_path(id, hostconfig);
@@ -802,9 +809,16 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     }
 
     // Update possible changes
-    nret = do_oci_spec_update(id, oci_spec, cont->hostconfig);
+    nret = do_oci_spec_update(id, oci_spec, cont->common_config->config, cont->hostconfig);
     if (nret != 0) {
         ERROR("Failed to update possible changes for oci spec");
+        ret = -1;
+        goto close_exit_fd;
+    }
+
+    nret = container_to_disk(cont);
+    if (nret != 0) {
+        ERROR("Failed to save container info to disk");
         ret = -1;
         goto close_exit_fd;
     }
