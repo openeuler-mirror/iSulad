@@ -106,7 +106,10 @@ function test_kernel_without_cpurt()
 
     msg_info "${test} starting..."
 
-    start_isulad_without_valgrind --cpu-rt-period 1000000 --cpu-rt-runtime 950000
+    isulad --cpu-rt-period 1000000 --cpu-rt-runtime 950000 2>&1 | grep 'Your kernel does not support cgroup rt period'
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - kernel does not support cpu-rt, but start isulad with cpu-rt success" && ((ret++))
+
+    start_isulad_without_valgrind
 
     isula pull ${image}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
