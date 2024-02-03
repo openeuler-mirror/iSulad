@@ -385,6 +385,33 @@ out:
     return ret;
 }
 
+int update_spec_annotations(oci_runtime_spec *oci_spec, container_config *container_spec, host_config *host_spec)
+{
+    int ret = 0;
+    if (oci_spec == NULL || container_spec == NULL || host_spec == NULL) {
+        return -1;
+    }
+
+    ret = make_sure_container_spec_annotations(container_spec);
+    if (ret < 0) {
+        return -1;
+    }
+
+    ret = make_annotations_cgroup_dir(container_spec, host_spec);
+    if (ret != 0) {
+        return -1;
+    }
+
+    // other annotations will either not be updated after containers created
+    // or for rootfs mnt and umask, we do not support the update operation
+
+    if (merge_annotations(oci_spec, container_spec)) {
+        return -1;
+    }
+
+    return 0;
+}
+
 static int make_sure_oci_spec_root(oci_runtime_spec *oci_spec)
 {
     if (oci_spec->root == NULL) {
@@ -2264,6 +2291,27 @@ char *merge_container_cgroups_path(const char *id, const host_config *host_spec)
     return util_path_join(path, id);
 }
 
+int update_oci_container_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *hostconfig)
+{
+    if (oci_spec == NULL || oci_spec->linux == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    __isula_auto_free char *cgroup_parent = merge_container_cgroups_path(id, hostconfig);
+    if (cgroup_parent == NULL) {
+        return -1;
+    }
+
+    if (oci_spec->linux->cgroups_path != NULL && strcmp(oci_spec->linux->cgroups_path, cgroup_parent) != 0) {
+        free(oci_spec->linux->cgroups_path);
+        oci_spec->linux->cgroups_path = cgroup_parent;
+        cgroup_parent = NULL;
+    }
+
+    return 0;
+}
+
 static int merge_oci_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     if (id == NULL || oci_spec == NULL || host_spec == NULL) {
@@ -2407,6 +2455,30 @@ out:
     return ret;
 }
 
+int update_oci_ulimit(oci_runtime_spec *oci_spec, const host_config *hostconfig) {
+    if (oci_spec == NULL || hostconfig == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    size_t i = 0;
+    if (oci_spec->process != NULL) {
+        for (i = 0; i < oci_spec->process->rlimits_len; i++) {
+            free_defs_process_rlimits_element(oci_spec->process->rlimits[i]);
+            oci_spec->process->rlimits[i] = NULL;
+        }
+        free(oci_spec->process->rlimits);
+        oci_spec->process->rlimits = NULL;
+        oci_spec->process->rlimits_len = 0;
+    }
+
+    if (merge_conf_ulimits(oci_spec, hostconfig) != 0 || merge_global_ulimit(oci_spec) != 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
 /* read oci config */
 oci_runtime_spec *load_oci_config(const char *rootpath, const char *name)
 {
@@ -2502,3 +2574,4 @@ int spec_module_init(void)
     }
     return 0;
 }
+

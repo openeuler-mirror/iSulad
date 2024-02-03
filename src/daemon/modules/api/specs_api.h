@@ -41,9 +41,15 @@ int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_sp
                           const container_config_v2_common_config *v2_spec,
                           const container_network_settings *network_settings);
 
+int update_spec_annotations(oci_runtime_spec *oci_spec, container_config *container_spec, host_config *host_spec);
+
 oci_runtime_spec *load_oci_config(const char *rootpath, const char *name);
 
 oci_runtime_spec *default_spec(bool system_container);
+
+int update_oci_container_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *host_spec);
+
+int update_oci_ulimit(oci_runtime_spec *oci_spec, const host_config *host_spec);
 
 const oci_runtime_spec *get_readonly_default_oci_spec(bool system_container);
 

@@ -40,10 +40,9 @@ function test_bind_special_dir()
     # when create container in container, runc not support to mount /dev
     # adapt fedora base image, we just remove rshared option of sys dir
     if [ $runtime == "runc" ]; then
-        c_id=`isula run -itd -v -itd --runtime=$runtime -v /sys/fs:/sys/fs:rw -v /proc:/proc  -v /dev/pts:/dev/pts:rw busybox sh`
+        c_id=`isula run -itd --runtime=$runtime -v /sys/fs:/sys/fs:rw -v /proc:/proc  -v /dev/pts:/dev/pts:rw busybox sh`
     else
-        # lxc 5.X cannot support mount /dev directory
-        c_id=`isula run --runtime=$runtime -itd -v -itd -v /sys/fs:/sys/fs:rw -v /proc:/proc busybox sh`
+        c_id=`isula run --runtime=$runtime -itd -v /sys/fs:/sys/fs:rw -v /proc:/proc -v /dev:/dev:ro -v /dev/pts:/dev/pts:rw busybox sh`
     fi
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
