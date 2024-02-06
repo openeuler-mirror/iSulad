@@ -673,6 +673,8 @@ void WebsocketServer::ServiceWorkThread(int threadid)
 
     while (n >= 0 && !m_forceExit) {
         n = lws_service(m_context, 0);
+        // sleep some time to prevent the CPU from being occupied all the time
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
