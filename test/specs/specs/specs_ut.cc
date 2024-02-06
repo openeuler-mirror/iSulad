@@ -319,6 +319,7 @@ TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_2)
     ASSERT_TRUE(host_spec != nullptr);
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent_null));
+    EXPECT_CALL(m_isulad_conf, ConfGetSystemdCgroup()).WillRepeatedly(Return(false));
 
     merged_cp = merge_container_cgroups_path("123", host_spec);
     ASSERT_NE(merged_cp, nullptr);
@@ -347,6 +348,7 @@ TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_3)
     host_spec->cgroup_parent = util_strdup_s("/test");
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent_null));
+    EXPECT_CALL(m_isulad_conf, ConfGetSystemdCgroup()).WillRepeatedly(Return(false));
 
     merged_cp = merge_container_cgroups_path("123", host_spec);
     ASSERT_NE(merged_cp, nullptr);
@@ -373,6 +375,7 @@ TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_4)
     ASSERT_TRUE(host_spec != nullptr);
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent));
+    EXPECT_CALL(m_isulad_conf, ConfGetSystemdCgroup()).WillRepeatedly(Return(false));
 
     merged_cp = merge_container_cgroups_path("123", host_spec);
     ASSERT_NE(merged_cp, nullptr);
@@ -401,11 +404,57 @@ TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_5)
     host_spec->cgroup_parent = util_strdup_s("/test");
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent));
+    EXPECT_CALL(m_isulad_conf, ConfGetSystemdCgroup()).WillRepeatedly(Return(false));
 
     merged_cp = merge_container_cgroups_path("123", host_spec);
     ASSERT_NE(merged_cp, nullptr);
 
     ASSERT_STREQ(merged_cp, "/test/123");
+
+    free_oci_runtime_spec(oci_spec);
+    free_host_config(host_spec);
+    free(merged_cp);
+
+    testing::Mock::VerifyAndClearExpectations(&m_isulad_conf);
+}
+
+// systemd cgroup test
+TEST_F(SpecsUnitTest, test_merge_container_cgroups_path_6)
+{
+    oci_runtime_spec *oci_spec = nullptr;
+    host_config *host_spec = nullptr;
+    char *merged_cp = nullptr;
+
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
+    ASSERT_TRUE(oci_spec != nullptr);
+
+    host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
+    ASSERT_TRUE(host_spec != nullptr);
+
+    EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent_null));
+    EXPECT_CALL(m_isulad_conf, ConfGetSystemdCgroup()).WillRepeatedly(Return(true));
+
+    merged_cp = merge_container_cgroups_path("123", host_spec);
+    ASSERT_NE(merged_cp, nullptr);
+    ASSERT_STREQ(merged_cp, "system.slice:isulad:123");
+    free(merged_cp);
+
+    host_spec->cgroup_parent = util_strdup_s("/test");
+    merged_cp = merge_container_cgroups_path("123", host_spec);
+    ASSERT_EQ(merged_cp, nullptr);
+    free(host_spec->cgroup_parent);
+
+    host_spec->cgroup_parent = util_strdup_s("test.slice");
+    merged_cp = merge_container_cgroups_path("123", host_spec);
+    ASSERT_NE(merged_cp, nullptr);
+    ASSERT_STREQ(merged_cp, "test.slice:isulad:123");
+    free(merged_cp);
+    free(host_spec->cgroup_parent);
+
+    host_spec->cgroup_parent = util_strdup_s("test/test-a/test-a-b.slice");
+    merged_cp = merge_container_cgroups_path("123", host_spec);
+    ASSERT_NE(merged_cp, nullptr);
+    ASSERT_STREQ(merged_cp, "test-a-b.slice:isulad:123");
 
     free_oci_runtime_spec(oci_spec);
     free_host_config(host_spec);

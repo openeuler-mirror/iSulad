@@ -210,3 +210,11 @@ char *conf_get_isulad_loglevel(void)
     }
     return nullptr;
 }
+
+bool conf_get_systemd_cgroup(void)
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetSystemdCgroup();
+    }
+    return false;
+}
