@@ -1024,6 +1024,7 @@ void PodSandboxManagerService::PodSandboxStatsToGRPC(const std::string &id, cons
                                                      const std::vector<Network::NetworkInterfaceStats> &netMetrics,
                                                      const std::unique_ptr<ContainerManagerService> &containerManager,
                                                      std::unique_ptr<runtime::v1::PodSandboxStats> &podStats,
+                                                     sandbox::StatsInfo &oldStatsRec,
                                                      Errors &error)
 {
     std::unique_ptr<runtime::v1::PodSandboxStats> podStatsPtr(
@@ -1044,8 +1045,13 @@ void PodSandboxManagerService::PodSandboxStatsToGRPC(const std::string &id, cons
     auto cpu = podStatsPtr->mutable_linux()->mutable_cpu();
     cpu->set_timestamp(timestamp);
     cpu->mutable_usage_core_nano_seconds()->set_value(cgroupMetrics.cgcpu_metrics.cpu_use_nanos);
-    // todo
-    // cpu->mutable_usage_nano_cores()->set_value(getNanoCores());
+    if (oldStatsRec.cpuUseNanos != 0 && timestamp > oldStatsRec.timestamp &&
+        cgroupMetrics.cgcpu_metrics.cpu_use_nanos > oldStatsRec.cpuUseNanos) {
+        uint64_t usage = cgroupMetrics.cgcpu_metrics.cpu_use_nanos - oldStatsRec.cpuUseNanos;
+        uint64_t nanoSeconds = timestamp - oldStatsRec.timestamp;
+        uint64_t usage_nano_cores = (uint64_t)(((double)usage / (double)nanoSeconds) * (double)Time_Second);
+        cpu->mutable_usage_nano_cores()->set_value(usage_nano_cores);
+    }
 
     // Memory
     auto memory = podStatsPtr->mutable_linux()->mutable_memory();
@@ -1114,6 +1120,7 @@ auto PodSandboxManagerService::PodSandboxStats(const std::string &podSandboxID,
         return nullptr;
     }
     auto &config = sandbox->GetSandboxConfig();
+    auto oldStatsRec = sandbox->GetStatsInfo();
 
     auto status = PodSandboxStatus(sandbox->GetId(), tmpErr);
     if (error.NotEmpty()) {
@@ -1136,12 +1143,16 @@ auto PodSandboxManagerService::PodSandboxStats(const std::string &podSandboxID,
         tmpErr.Clear();
     }
 
-    PodSandboxStatsToGRPC(sandbox->GetId(), cgroupMetrics, netMetrics, containerManager, podStats, tmpErr);
+    PodSandboxStatsToGRPC(sandbox->GetId(), cgroupMetrics, netMetrics, containerManager, podStats, oldStatsRec, tmpErr);
     if (tmpErr.NotEmpty()) {
         ERROR("Failed to set PodSandboxStats: %s", tmpErr.GetCMessage());
         error.Errorf("Failed to set PodSandboxStats");
         return nullptr;
     }
+
+    // update stats info that sandbox recorded
+    sandbox::StatsInfo newStatsRec { podStats->linux().cpu().timestamp(), podStats->linux().cpu().usage_core_nano_seconds().value() };
+    sandbox->UpdateStatsInfo(newStatsRec);
 
     return podStats;
 }
