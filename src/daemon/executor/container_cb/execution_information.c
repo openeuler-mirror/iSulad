@@ -1116,6 +1116,11 @@ static void restore_names_at_fail(container_t *cont, const char *ori_name, const
     if (!container_name_index_rename(ori_name, new_name, id)) {
         ERROR("Failed to restore name from \"%s\" to \"%s\" for container %s", new_name, ori_name, id);
     }
+
+    // restore name in id-name manager
+    if (!id_name_manager_rename(ori_name, new_name)) {
+        ERROR("Failed to restore name from \"%s\" to \"%s\" in id-name manager", new_name, ori_name);
+    }
 }
 
 static int container_rename(container_t *cont, const char *new_name)
