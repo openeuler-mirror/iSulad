@@ -26,7 +26,7 @@ RUN dnf install -y rust rust-packaging cargo
 RUN dnf install -y grpc grpc-plugins grpc-devel protobuf-devel libwebsockets libwebsockets-devel
 
 # depends for image module and restful client of iSulad
-RUN dnf install -y libcurl libcurl-devel libarchive-devel http-parser-devel
+RUN dnf install -y libcurl libcurl-devel libarchive-devel
 
 # depends for embedded image of iSulad: -DENABLE_EMBEDDED=ON
 RUN dnf install -y sqlite-devel

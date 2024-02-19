@@ -71,7 +71,6 @@ RUN apt update -y && apt upgrade -y && \
 			language-pack-en \
 			curl \
 			cmake \
-			libhttp-parser-dev \
 			libprotobuf-dev \
 			libgrpc-dev \
 			libgrpc++-dev \

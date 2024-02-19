@@ -68,17 +68,6 @@ make -j $(nproc)
 make install
 ldconfig
 
-# build http_parser
-cd $BUILD_DIR
-git clone https://gitee.com/src-openeuler/http-parser.git
-cd http-parser
-git checkout openEuler-20.03-LTS-tag
-tar -xzvf http-parser-2.9.2.tar.gz
-cd http-parser-2.9.2
-make -j CFLAGS="-Wno-error"
-make CFLAGS="-Wno-error" install
-ldconfig
-
 # build libwebsockets
 cd $BUILD_DIR
 git clone https://gitee.com/src-openeuler/libwebsockets.git

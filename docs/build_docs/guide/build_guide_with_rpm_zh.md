@@ -25,7 +25,7 @@ BUILD  BUILDROOT  RPMS	SOURCES  SPECS	SRPMS
 
 ```shell
 dnf install -y patch automake autoconf libtool cmake make libcap libcap-devel libselinux libselinux-devel libseccomp libseccomp-devel git libcgroup tar python3 python3-pip  libcurl-devel zlib-devel glibc-headers openssl-devel gcc gcc-c++ systemd-devel systemd-libs golang libtar && \
-dnf --enablerepo=powertools install -y yajl-devel device-mapper-devel http-parser-devel && \
+dnf --enablerepo=powertools install -y yajl-devel device-mapper-devel && \
 dnf install -y epel-release && \
 dnf --enablerepo=powertools install libuv-devel &&\
 dnf install libwebsockets-devel
@@ -272,7 +272,6 @@ rpm -Uvh libarchive-devel-3.4.3-4.x86_64.rpm
 ### 9.1 安装iSulad的依赖
 
 ```shell
-dnf --enablerepo=powertools install http-parser-devel
 dnf install -y sqlite-devel
 ```
 
@@ -310,7 +309,6 @@ dnf install libwebsockets-devel
 再安装isulad：
 
 ```shell
-dnf --enablerepo=powertools install http-parser-devel
 dnf install -y sqlite-devel.x86_64
 rpm -Uvh iSulad-2.1.0-1.x86_64.rpm
 ```

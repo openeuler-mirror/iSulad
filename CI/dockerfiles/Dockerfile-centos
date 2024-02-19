@@ -207,19 +207,6 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	make install && \
 	ldconfig
 
-# install http-parser
-RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
-	set -x && \
-	cd ~ && \
-	git clone https://gitee.com/src-openeuler/http-parser.git && \
-	cd http-parser && \
-	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
-	tar -xzvf http-parser-2.9.2.tar.gz && \
-	cd http-parser-2.9.2 && \
-	make -j CFLAGS="-Wno-error" && \
-	make CFLAGS="-Wno-error" install && \
-	ldconfig
-
 # install libwebsockets
 RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	set -x && \
