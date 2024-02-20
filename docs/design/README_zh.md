@@ -18,6 +18,8 @@
 
 - 查看 restart 模块的设计文档： [restart_manager_design](./detailed/Container/restart_manager_design.md)。
 
+- 查看 cgroup v2 的设计文档： [cgroup_v2_design](./detailed/Container/cgroup_v2_design_zh.md)。
+
 ## CRI
 
 - 查看 CRI的启动程序的重构文档： [cri_cni_refactor](./detailed/CRI/cri_cni_refactor_zh.md) 。
