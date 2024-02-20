@@ -634,6 +634,11 @@ static void try_to_replace_exited_dst(const char *dst_path, struct archive_entry
     }
 }
 
+/**
+ * This function has to be used with chroot to prevent a potential attack from manipulating
+ * the path of the file to be extracted, such as using a symbolic link to extract the file to
+ * a location outside the path.
+ */
 int archive_unpack_handler(const struct io_read_wrapper *content, const struct archive_options *options)
 {
     int ret = 0;
@@ -668,10 +673,12 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const struct a
     flags |= ARCHIVE_EXTRACT_PERM;
     flags |= ARCHIVE_EXTRACT_ACL;
     flags |= ARCHIVE_EXTRACT_FFLAGS;
-    flags |= ARCHIVE_EXTRACT_SECURE_SYMLINKS;
-    flags |= ARCHIVE_EXTRACT_SECURE_NODOTDOT;
     flags |= ARCHIVE_EXTRACT_XATTR;
-    flags |= ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS;
+    /**
+     * ARCHIVE_EXTRACT_SECURE_SYMLINKS, ARCHIVE_EXTRACT_SECURE_NODOTDOT,
+     * ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS flags are not set here,
+     * since this function is called after chroot, the security of the path is guaranteed.
+     */
 
     a = archive_read_new();
     if (a == NULL) {
