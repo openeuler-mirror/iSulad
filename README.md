@@ -240,4 +240,4 @@ iSulad Version | Kubernetes Version | CRI Version
 --- | --- | ---
 v2.0.0+ | v1.13-v1.18 | v1alpha2
 v2.0.8+ | v1.19-v1.22 | v1alpha2
-v2.1.4+ | v1.23-v1.26 | v1, v1alpha2
+v2.1.4+ | v1.23-v1.29 | v1, v1alpha2
