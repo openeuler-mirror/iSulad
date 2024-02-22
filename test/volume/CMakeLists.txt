@@ -20,8 +20,10 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/sysinfo.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/cgroup.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/cgroup_v1.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/cgroup/cgroup.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/cgroup/cgroup_v1.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/cgroup/cgroup_v2.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/cgroup/cgroup_common.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/cmd/command_parser.c
     volume_ut.cc)
 
@@ -34,6 +36,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/http
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/api
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common/cgroup
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/volume
     ${CMAKE_BINARY_DIR}/conf
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256

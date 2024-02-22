@@ -69,13 +69,21 @@ TEST(CgroupCpuUnitTest, test_common_find_cgroup_mnt_and_root)
 {
     char *mnt = NULL;
     char *root = NULL;
-    ASSERT_EQ(common_find_cgroup_mnt_and_root(nullptr, &mnt, &root), -1);
+
+    int ret = cgroup_ops_init();
+    ASSERT_EQ(ret, 0);
+
+    ASSERT_EQ(common_get_cgroup_mnt_and_root_path(nullptr, &mnt, &root), -1);
 }
 
 TEST(CgroupCpuUnitTest, test_sysinfo_cgroup_controller_cpurt_mnt_path)
 {
     MOCK_SET(util_common_calloc_s, nullptr);
     ASSERT_EQ(get_sys_info(true), nullptr);
-    ASSERT_EQ(sysinfo_cgroup_controller_cpurt_mnt_path(), nullptr);
+    
+    int ret = cgroup_ops_init();
+    ASSERT_EQ(ret, 0);
+
+    ASSERT_EQ(sysinfo_get_cpurt_mnt_path(), nullptr);
     MOCK_CLEAR(util_common_calloc_s);
 }
