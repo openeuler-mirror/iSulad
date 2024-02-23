@@ -461,7 +461,7 @@ auto SandboxManager::LoadSandbox(std::string &id) -> std::shared_ptr<Sandbox>
     Errors tmpError;
 
     if (!sandbox->Load(tmpError)) {
-        ERROR("Failed to load subdir:%s", id.c_str());
+        ERROR("Failed to load subdir:%s: %s", id.c_str(), tmpError.GetMessage().c_str());
         return nullptr;
     }
 
