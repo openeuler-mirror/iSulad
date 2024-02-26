@@ -4,6 +4,13 @@
 
 <a href="https://github.com/openeuler-mirror/iSulad"><img src="https://img.shields.io/badge/github-iSulad-blue"/></a> ![license](https://img.shields.io/badge/license-Mulan%20PSL%20v2-blue) ![language](https://img.shields.io/badge/language-C%2FC%2B%2B-blue)
 
+## Our contributions
+
+- Compatibility
+  - [CRI v1](https://github.com/openeuler-mirror/iSulad/commit/cbba4483de46216f4492559065291bacabdea11a)
+- Functionality
+  - [CNI]()
+
 ## Introduction
 
 `iSulad` , written in C/C++, is a lightweight container engine that has the advantage of being light, fast and applicable to multiple hardware specifications and architecture. `iSulad` has a wide application prospect. 
