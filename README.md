@@ -8,7 +8,6 @@
 
 - Compatibility
   - [CRI v1](https://github.com/openeuler-mirror/iSulad/commit/cbba4483de46216f4492559065291bacabdea11a)
-- Functionality
   - [CNI]()
 
 ## Introduction
