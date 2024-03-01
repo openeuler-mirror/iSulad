@@ -680,6 +680,12 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
     char *parent_chain_id_sha256 = "";
     char *id = NULL;
     char *parent_chain_id = NULL;
+    // exist_flag is used to mark whether a non-existent layer has been encountered during this layer reuse process.
+    // 1.exist_flag is true if the layers are currently reusable;
+    // 2.exist_flag is false if encounter an uncreated layer that cannot be reused
+    // Prevent concurrent competition between the creation layer function
+    // and the reuse layer function on the im -> layer_of_hold_refs variable
+    bool exist_flag = true;
 
     if (im == NULL || manifest == NULL || dstdir == NULL) {
         ERROR("Invalid input params image or manifest is null");
@@ -761,7 +767,7 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
             goto out;
         }
 
-        if (storage_inc_hold_refs(id) == 0) {
+        if (exist_flag && storage_inc_hold_refs(id) == 0) {
             free(im->layer_of_hold_refs);
             im->layer_of_hold_refs = util_strdup_s(id);
             if (parent_chain_id != NULL && storage_dec_hold_refs(parent_chain_id) != 0) {
@@ -781,6 +787,7 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
             continue;
         }
 
+        exist_flag = false;
         if (check_and_set_digest_from_tarball(im->layers[i], conf->rootfs->diff_ids[i]) != 0) {
             ERROR("Check layer digest failed");
             ret = -1;
