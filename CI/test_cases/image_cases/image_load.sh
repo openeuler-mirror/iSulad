@@ -79,7 +79,54 @@ function test_image_load()
   return ${ret}
 }
 
+function test_concurrent_load()
+{
+  local ret=0
+  local test="isula load image test => (${FUNCNAME[@]})"
+
+  msg_info "${test} starting..."
+
+  # clean exist image
+  ubuntu_id=`isula inspect -f '{{.image.id}}' ubuntu`
+  busybox_id=`isula inspect -f '{{.image.id}}' busybox`
+  isula rmi $ubuntu_id $busybox_id
+
+  concurrent_time=10
+  for i in `seq 1 $concurrent_time`
+  do
+      isula load -i $mult_image &
+      pids[$i]=$!
+  done
+
+  for i in `seq 1 $concurrent_time`;do
+      wait ${pids[$i]}
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to do isulad load $i" && ((ret++))
+  done
+
+  ubuntu_id=`isula inspect -f '{{.image.id}}' ubuntu`
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image: ubuntu" && ((ret++))
+
+  top_layer_id=$(isula inspect -f '{{.image.top_layer}}' ${ubuntu_id})
+
+  busybox_id=`isula inspect -f '{{.image.id}}' busybox`
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image: busybox" && ((ret++))
+
+  # delete image after concurrent load
+  isula rmi $ubuntu_id $busybox_id
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image ${ubuntu_id} and ${busybox_id}" && ((ret++))
+
+  ls -l /var/lib/isulad/storage/overlay-layers
+  local top_layer_dir=/var/lib/isulad/storage/overlay-layers/${top_layer_id}
+  test -e ${top_layer_dir}
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - top layer dir ${top_layer_id} exist after delete image" && ((ret++))
+
+  msg_info "${test} finished with return ${ret}..."
+  return ${ret}
+}
+
 declare -i ans=0
+
+test_concurrent_load || ((ans++))
 
 test_image_load || ((ans++))
 
