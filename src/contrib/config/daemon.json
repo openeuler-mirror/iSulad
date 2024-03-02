@@ -28,7 +28,7 @@
     "pod-sandbox-image": "",
     "native.umask": "normal",
     "network-plugin": "",
-    "cni-bin-dir": "",
+    "cni-bin-dir": "cni",
     "cni-conf-dir": "",
     "image-layer-check": false,
     "use-decrypted-key": true,
