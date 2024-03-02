@@ -1510,6 +1510,12 @@ static int fetch_all(pull_descriptor *desc)
     struct layer_list *list = NULL;
     pthread_t tid = 0;
     struct timespec ts = { 0 };
+    // exist_flag is used to mark whether a non-existent layer has been encountered during this layer reuse process.
+    // 1.exist_flag is true if the layers are currently reusable;
+    // 2.exist_flag is false if encounter an uncreated layer that cannot be reused
+    // Prevent concurrent competition between the creation layer function
+    // and the reuse layer function on the im -> layer_of_hold_refs variable
+    bool exist_flag = true;
 
     if (desc == NULL) {
         ERROR("Invalid NULL param");
@@ -1541,7 +1547,7 @@ static int fetch_all(pull_descriptor *desc)
 
         // Skip layer that already exist in local store
         list = storage_layers_get_by_compress_digest(desc->layers[i].digest);
-        if (list != NULL) {
+        if (exist_flag && list != NULL) {
             for (j = 0; j < list->layers_len; j++) {
                 if ((list->layers[j]->parent == NULL && i == 0) ||
                     (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
@@ -1573,6 +1579,7 @@ static int fetch_all(pull_descriptor *desc)
                 continue;
             }
         }
+        exist_flag = false;
 
         // parent_chain_id = NULL means no parent chain match from now on, so no longer need
         // to get layers by compressed digest to reuse layer.
