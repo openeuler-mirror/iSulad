@@ -390,6 +390,7 @@ int archive_copy_to(const struct io_read_wrapper *content, const struct archive_
 {
     int ret = -1;
     struct archive_copy_info *dstinfo = NULL;
+    char cleanpath[PATH_MAX] = { 0 };
     char *dstdir = NULL;
     char *src_base = NULL;
     char *dst_base = NULL;
@@ -410,7 +411,12 @@ int archive_copy_to(const struct io_read_wrapper *content, const struct archive_
         goto cleanup;
     }
 
-    ret = archive_chroot_untar_stream(content, dstdir, ".", src_base, dst_base, root_dir, err);
+    if (realpath(dstdir, cleanpath) == NULL) {
+        ERROR("Failed to get real path for %s", dstdir);
+        return -1;
+    }
+
+    ret = archive_chroot_untar_stream(content, cleanpath, ".", src_base, dst_base, root_dir, err);
 
 cleanup:
     free_archive_copy_info(dstinfo);
@@ -427,6 +433,7 @@ static int tar_resource_rebase(const char *path, const char *rebase, const char 
     struct stat st;
     char *srcdir = NULL;
     char *srcbase = NULL;
+    char cleanpath[PATH_MAX] = { 0 };
 
     if (lstat(path, &st) < 0) {
         SYSERROR("lstat %s failed", path);
@@ -437,9 +444,14 @@ static int tar_resource_rebase(const char *path, const char *rebase, const char 
         ERROR("Can not split path: %s", path);
         goto cleanup;
     }
+ 
+    if (realpath(srcdir, cleanpath) == NULL) {
+        ERROR("Failed to get real path for %s", srcdir);
+        return -1;
+    }
 
     DEBUG("chroot tar stream srcdir(%s) srcbase(%s) rebase(%s)", srcdir, srcbase, rebase);
-    nret = archive_chroot_tar_stream(srcdir, srcbase, srcbase, rebase, root_dir, archive_reader);
+    nret = archive_chroot_tar_stream(cleanpath, srcbase, srcbase, rebase, root_dir, archive_reader);
     if (nret < 0) {
         ERROR("Can not archive path: %s", path);
         goto cleanup;
