@@ -413,7 +413,7 @@ int archive_copy_to(const struct io_read_wrapper *content, const struct archive_
 
     if (realpath(dstdir, cleanpath) == NULL) {
         ERROR("Failed to get real path for %s", dstdir);
-        return -1;
+        goto cleanup;
     }
 
     ret = archive_chroot_untar_stream(content, cleanpath, ".", src_base, dst_base, root_dir, err);
@@ -447,7 +447,7 @@ static int tar_resource_rebase(const char *path, const char *rebase, const char 
  
     if (realpath(srcdir, cleanpath) == NULL) {
         ERROR("Failed to get real path for %s", srcdir);
-        return -1;
+        goto cleanup;
     }
 
     DEBUG("chroot tar stream srcdir(%s) srcbase(%s) rebase(%s)", srcdir, srcbase, rebase);
