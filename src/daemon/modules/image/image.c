@@ -1535,7 +1535,7 @@ int im_tag_image(const im_tag_request *request, im_tag_response **response)
         return -1;
     }
 
-    *response = util_common_calloc_s(sizeof(im_remove_response));
+    *response = util_common_calloc_s(sizeof(im_tag_response));
     if (*response == NULL) {
         ERROR("Out of memory");
         return -1;
