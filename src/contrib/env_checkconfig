@@ -164,7 +164,6 @@ config_set CONFIG_SMP && echo -n "Cpuset Cgroup Result: " && config_enable CONFI
 echo ""
 echo "--- Third-party Packages ---"
 echo -n "libyajl: " && has_lib libyajl
-echo -n "libhttp_parser: " && has_lib libhttp_parser
 echo -n "libevhtp.so.1.2.16: " && has_lib libevhtp.so.1.2.16
 echo -n "libseccomp: " && has_lib libseccomp
 echo -n "libcap.so: " && has_lib libcap.so

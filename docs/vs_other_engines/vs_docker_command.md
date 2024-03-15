@@ -114,7 +114,6 @@ Installing dependencies:
  abseil-cpp                  
  clibcni                     
  grpc                   
- http-parser          
  lcr                        
  lib-shim-v2  
  libwebsockets 

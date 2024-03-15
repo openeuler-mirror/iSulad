@@ -48,7 +48,6 @@ BuildRequires: libisula-devel > %{lcrver_lower} libisula-devel < %{lcrver_upper}
 BuildRequires: cmake gcc-c++ yajl-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel libarchive-devel device-mapper-devel
-BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 BuildRequires: libevhtp-devel libevent-devel
@@ -60,7 +59,7 @@ BuildRequires: lib-shim-v2 lib-shim-v2-devel
 Requires:      libisula > %{lcrver_lower} libisula < %{lcrver_upper}
 Requires:      grpc protobuf
 Requires:      libcurl
-Requires:      http-parser libseccomp
+Requires:      libseccomp
 Requires:      libcap libselinux libwebsockets libarchive device-mapper
 Requires:      systemd
 Requires:      (docker-runc or runc)

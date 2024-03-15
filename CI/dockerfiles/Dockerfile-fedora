@@ -42,7 +42,6 @@ RUN dnf update -y && dnf install -y automake \
 			grpc-plugins \
 			libevent-devel \
 			libwebsockets-devel \
-			http-parser-devel \
 			gtest-devel \
 			gmock-devel \
 			libarchive-devel \
