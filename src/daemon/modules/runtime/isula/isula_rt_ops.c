@@ -647,6 +647,10 @@ static void transform_stats_info_from_runtime(shim_client_runtime_stats *stats, 
         info->page_faults = memory->raw->pgfault;
         info->major_page_faults = memory->raw->pgmajfault;
     }
+    if (memory != NULL && memory->swap != NULL) {
+        info->swap_used = memory->swap->usage;
+        info->swap_limit = memory->swap->limit;
+    }
     shim_client_runtime_stats_data_blkio *blkio = stats->data->blkio;
     if (blkio == NULL) {
         return;
