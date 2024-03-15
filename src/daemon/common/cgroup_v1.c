@@ -554,3 +554,119 @@ int common_get_cgroup_v1_metrics(const char *cgroup_path, cgroup_metrics_t *cgro
     return 0;
 }
 
+/* parse cgroup files, such as /proc/self/cgroup or /proc/1/cgroup */
+static int parse_cgroup_file(const char *path, char ***nlist, char ***plist)
+{
+    int ret = 0;
+    size_t length = 0;
+    __isula_auto_file FILE *fp = NULL;
+    __isula_auto_free char *pline = NULL;
+
+    fp = util_fopen(path, "r");
+    if (fp == NULL) {
+        return -1;
+    }
+
+    while (getline(&pline, &length, fp) != -1) {
+        char *pos = NULL;
+        char *pos2 = NULL;
+        char *pos3 = NULL;
+        char *ptoken = NULL;
+        char *psave = NULL;
+        pos = strchr(pline, ':');
+        if (pos == NULL) {
+            ERROR("Invalid cgroup entry: must contain at least two colons: %s", pline);
+            ret = -1;
+            goto out;
+        }
+        pos++;
+        pos2 = strchr(pos, ':');
+        if (pos2 == NULL) {
+            ERROR("Invalid cgroup entry: must contain at least two colons: %s", pline);
+            ret = -1;
+            goto out;
+        }
+        pos3 = strchr(pos2, '\n');
+        if (pos3 != NULL) {
+            *pos3 = '\0';
+        }
+        *pos2 = '\0';
+
+        if ((pos2 - pos) == 0) {
+            INFO("Cgroup entry: %s not supported by cgroup v1", pline);
+            continue;
+        }
+
+        for (ptoken = strtok_r(pos, ",", &psave); ptoken; ptoken = strtok_r(NULL, ",", &psave)) {
+            ret = util_array_append(nlist, ptoken);
+            if (ret != 0) {
+                ERROR("Failed to append string");
+                goto out;
+            }
+
+            ret = util_array_append(plist, pos2 + 1);
+            if (ret != 0) {
+                ERROR("Failed to append string");
+                goto out;
+            }
+        }
+    }
+
+out:
+    if (ret != 0) {
+        util_free_array(*nlist);
+        *nlist = NULL;
+        util_free_array(*plist);
+        *plist = NULL;
+    }
+    return ret;
+}
+
+static char *common_get_cgroup_path(const char *path, const char *subsystem)
+{
+    char **nlist = NULL, **plist = NULL;
+    size_t i = 0;
+    char *res = NULL;
+    if (path == NULL) {
+        ERROR("Invalid NULL param");
+        return NULL;
+    }
+
+    if (parse_cgroup_file(path, &nlist, &plist) < 0) {
+        return NULL;
+    }
+
+    for (i = 0; i < util_array_len((const char **)nlist); i++) {
+        const char *prefix = "name=";
+        bool find_sub = (strcmp(nlist[i], subsystem) == 0 || (strncmp(nlist[i], prefix, strlen(prefix)) == 0
+                        && strcmp(nlist[i]+strlen(prefix), subsystem) == 0));
+        if (find_sub) {
+            res = util_strdup_s(plist[i]);
+            break;
+        }
+    }
+
+    util_free_array(nlist);
+    util_free_array(plist);
+    return res;
+}
+
+char *common_get_init_cgroup(const char *subsystem)
+{
+    if (common_get_cgroup_version() != CGROUP_VERSION_1) {
+        ERROR("Not implemented for cgroup v2 hierarchy");
+        return NULL;
+    }
+
+    return common_get_cgroup_path("/proc/1/cgroup", subsystem);
+}
+
+char *common_get_own_cgroup(const char *subsystem)
+{
+    if (common_get_cgroup_version() != CGROUP_VERSION_1) {
+        ERROR("Not implemented for cgroup v2 hierarchy");
+        return NULL;
+    }
+
+    return common_get_cgroup_path("/proc/self/cgroup", subsystem);
+}

@@ -188,7 +188,10 @@ static char *do_get_container_cgroup_path(const host_config *host_spec)
     }
 
     if (path == NULL) {
-        // third, all faild, just use default '/isulad'
+        // third, all faild, just use default '/isulad' for cgroupfs or "system.slice" for systemd
+        if (conf_get_systemd_cgroup()) {
+            return util_strdup_s("system.slice");
+        }
         path = util_strdup_s("/isulad");
     }
 
@@ -2287,6 +2290,23 @@ char *merge_container_cgroups_path(const char *id, const host_config *host_spec)
     }
 
     path = do_get_container_cgroup_path(host_spec);
+
+    if (conf_get_systemd_cgroup()) {
+        // systemd cgroup path has the form of [slice]:[prefix]:[name]
+#define SYSTEMD_CGROUP_PATH_LEN 3
+        if (!util_has_suffix(path, ".slice")) {
+            ERROR("Invalid cgroup path %s for systemd", path);
+            isulad_set_error_message("Invalid cgroup path %s for systemd", path);
+            return NULL;
+        }
+
+        // slice must not contain slashes
+        // convert test.slice/test-a.slice/test-a-b.slice to become test-a-b.slice
+        __isula_auto_free char *base = util_path_base(path);
+        const char *isulad_prefix = "isulad";
+        const char *parts[SYSTEMD_CGROUP_PATH_LEN] = {base, isulad_prefix, id};
+        return util_string_join(":", parts, SYSTEMD_CGROUP_PATH_LEN);
+    }
 
     return util_path_join(path, id);
 }

@@ -427,6 +427,32 @@ static int cpurt_controller_init(const char *id, const host_config *host_spec)
         return 0;
     }
 
+    if (conf_get_systemd_cgroup()) {
+        // currently it is the same as docker, yet it is unclear that
+        // if systemd cgroup is used and cgroup parent is set to a slice rather than system.slice
+        // should iSulad set cpu.rt_runtime_us and cpu.rt_period_us for the parent path?
+        // in fact, even if system.slice is used,
+        // cpu.rt_runtime_us and cpu.rt_period_us might still needed to be set manually
+        __isula_auto_free char *init_cgroup = common_get_init_cgroup("cpu");
+        if (init_cgroup == NULL) {
+            ERROR("Failed to get init cgroup");
+            return -1;
+        }
+        // make sure that the own cgroup path for cpu existed
+        __isula_auto_free char *own_cgroup = common_get_own_cgroup("cpu");
+        if (own_cgroup == NULL) {
+            ERROR("Failed to get own cgroup");
+            return -1;
+        }
+        char *new_cgroups_path = util_path_join(init_cgroup, cgroups_path);
+        if (new_cgroups_path == NULL) {
+            ERROR("Failed to join path");
+            return -1;
+        }
+        free(cgroups_path);
+        cgroups_path = new_cgroups_path;
+    }
+
     mnt_root = sysinfo_cgroup_controller_cpurt_mnt_path();
     if (mnt_root == NULL) {
         ERROR("Failed to get cpu rt controller mnt root path");

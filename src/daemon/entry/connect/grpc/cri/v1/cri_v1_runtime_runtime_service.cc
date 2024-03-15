@@ -632,3 +632,28 @@ grpc::Status RuntimeV1RuntimeServiceImpl::Status(grpc::ServerContext *context,
 
     return grpc::Status::OK;
 }
+
+grpc::Status
+RuntimeV1RuntimeServiceImpl::RuntimeConfig(grpc::ServerContext *context,
+                                           const runtime::v1::RuntimeConfigRequest *request,
+                                           runtime::v1::RuntimeConfigResponse *reply)
+{
+    Errors error;
+
+    if (request == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
+    EVENT("Event: {Object: CRI, Type: Runtime Config}");
+
+    m_rService->RuntimeConfig(reply, error);
+    if (!error.Empty()) {
+        ERROR("Object: CRI, Type: Failed to get runtime config:%s", error.GetMessage().c_str());
+        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+    }
+
+    EVENT("Event: {Object: CRI, Type: Runtime Config}");
+
+    return grpc::Status::OK;
+}

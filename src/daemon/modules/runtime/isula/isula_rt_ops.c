@@ -1157,6 +1157,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     p.runtime_args = (char **)runtime_args;
     p.runtime_args_len = runtime_args_len;
     p.attach_socket = attach_socket;
+    p.systemd_cgroup = conf_get_systemd_cgroup();
     copy_process(&p, config->process);
     copy_annotations(&p, config->annotations);
 

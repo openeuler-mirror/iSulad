@@ -92,6 +92,8 @@ public:
 
     auto Status(Errors &error) -> std::unique_ptr<runtime::v1::RuntimeStatus> override;
 
+    void RuntimeConfig(runtime::v1::RuntimeConfigResponse *reply, Errors &error) override;
+
 protected:
     std::unique_ptr<RuntimeVersionerService> m_runtimeVersioner;
     std::unique_ptr<ContainerManagerService> m_containerManager;

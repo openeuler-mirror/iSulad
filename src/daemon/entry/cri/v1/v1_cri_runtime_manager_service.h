@@ -39,6 +39,8 @@ public:
 
     auto Status(Errors &error) -> std::unique_ptr<runtime::v1::RuntimeStatus>;
 
+    void RuntimeConfig(runtime::v1::RuntimeConfigResponse *reply, Errors &error);
+
 private:
     service_executor_t *m_cb;
     std::shared_ptr<Network::PluginManager> m_pluginManager;

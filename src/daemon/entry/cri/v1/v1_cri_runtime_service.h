@@ -89,6 +89,8 @@ public:
     virtual void UpdateRuntimeConfig(const runtime::v1::RuntimeConfig &config, Errors &error) = 0;
 
     virtual auto Status(Errors &error) -> std::unique_ptr<runtime::v1::RuntimeStatus> = 0;
+
+    virtual void RuntimeConfig(runtime::v1::RuntimeConfigResponse *reply, Errors &error) = 0;
 };
 } // namespace CRIV1
 #endif // DAEMON_ENTRY_CRI_V1_CRI_RUNTIME_SERVICE_INTERFACE_H

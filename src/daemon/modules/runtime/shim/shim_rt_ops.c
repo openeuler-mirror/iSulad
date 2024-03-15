@@ -35,6 +35,7 @@
 #include "engine.h"
 #include "shim_rt_monitor.h"
 #include "supervisor.h"
+#include "isulad_config.h"
 
 #define EXIT_SIGNAL_OFFSET_X 128
 
@@ -367,6 +368,11 @@ int rt_shim_create(const char *id, const char *runtime, const rt_create_params_t
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("Invalid input params");
+        return -1;
+    }
+
+    if (conf_get_systemd_cgroup()) {
+        ERROR("ShimV2 does not support systemd cgroup yet");
         return -1;
     }
 

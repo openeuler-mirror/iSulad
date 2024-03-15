@@ -1762,6 +1762,8 @@ int merge_json_confs_into_global(struct service_arguments *args)
     args->json_confs->enable_cri_v1 = tmp_json_confs->enable_cri_v1;
 #endif
 
+    args->json_confs->systemd_cgroup = tmp_json_confs->systemd_cgroup;
+
     if (merge_cri_runtimes_into_global(args, tmp_json_confs)) {
         ret = -1;
         goto out;
@@ -1894,4 +1896,25 @@ out:
 isulad_daemon_constants *get_isulad_daemon_constants(void)
 {
     return g_isulad_daemon_constants;
+}
+
+bool conf_get_systemd_cgroup()
+{
+    bool systemd_cgroup = false;
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return false;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL) {
+        goto out;
+    }
+
+    systemd_cgroup = conf->json_confs->systemd_cgroup;
+
+out:
+    (void)isulad_server_conf_unlock();
+    return systemd_cgroup;
 }

@@ -45,6 +45,7 @@ public:
     MOCK_METHOD0(ConfGetSandboxStatePath, char *(void));
     MOCK_METHOD0(ConfGetEngineLogFile, char *(void));
     MOCK_METHOD0(ConfGetIsuladLogLevel, char *(void));
+    MOCK_METHOD0(ConfGetSystemdCgroup, bool(void));
 };
 
 void MockIsuladConf_SetMock(MockIsuladConf *mock);
