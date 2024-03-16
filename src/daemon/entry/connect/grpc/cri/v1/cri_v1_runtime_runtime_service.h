@@ -108,6 +108,10 @@ public:
     grpc::Status RuntimeConfig(grpc::ServerContext* context, const runtime::v1::RuntimeConfigRequest* request, runtime::v1::RuntimeConfigResponse* response) override {return grpc::Status::OK;}
 
 
+    grpc::Status RuntimeConfig(grpc::ServerContext *context,
+                               const runtime::v1::RuntimeConfigRequest *request,
+                               runtime::v1::RuntimeConfigResponse *reply) override;
+
 private:
     std::unique_ptr<CRIV1::CRIRuntimeService> m_rService;
 };

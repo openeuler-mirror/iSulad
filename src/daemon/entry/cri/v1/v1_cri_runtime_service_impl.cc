@@ -161,4 +161,9 @@ auto CRIRuntimeServiceImpl::Status(Errors &error) -> std::unique_ptr<runtime::v1
     return m_runtimeManager->Status(error);
 }
 
+void CRIRuntimeServiceImpl::RuntimeConfig(runtime::v1::RuntimeConfigResponse *reply, Errors &error)
+{
+    m_runtimeManager->RuntimeConfig(reply, error);
+}
+
 } // namespace CRIV1

@@ -16,7 +16,7 @@
 
 #include <dlfcn.h>
 #include <string.h>
-#include <http_parser.h>
+#include <isula_libutils/http_parser.h>
 #include <stdlib.h>
 
 #include "isula_libutils/log.h"

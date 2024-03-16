@@ -36,5 +36,6 @@
     "cri-runtimes": {
         "kata": "io.containerd.kata.v2"
     },
-    "enable-cri-v1": false
+    "enable-cri-v1": false,
+    "systemd-cgroup": false
 }

@@ -150,19 +150,6 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-#### build and install http-parser
-
-```bash
-$ git clone https://gitee.com/src-openeuler/http-parser.git
-$ cd http-parser
-$ git checkout openEuler-20.03-LTS-tag
-$ tar -xzvf http-parser-2.9.2.tar.gz
-$ cd http-parser-2.9.2
-$ sudo -E make -j CFLAGS="-Wno-error"
-$ sudo -E make CFLAGS="-Wno-error" install
-$ sudo -E ldconfig
-```
-
 #### build and install libwebsockets
 
 ```bash

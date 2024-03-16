@@ -66,11 +66,6 @@ if (ANDROID OR MUSL)
     _CHECK(CRYPTO_LIBRARY "LIBSSL_LIBRARY-NOTFOUND" "libssl.so")
 endif()
 
-find_path(HTTP_PARSER_INCLUDE_DIR http_parser.h)
-_CHECK(HTTP_PARSER_INCLUDE_DIR "HTTP_PARSER_INCLUDE_DIR-NOTFOUND" "http_parser.h")
-find_library(HTTP_PARSER_LIBRARY http_parser)
-_CHECK(HTTP_PARSER_LIBRARY "HTTP_PARSER_LIBRARY-NOTFOUND" "libhttp_parser.so")
-
 pkg_check_modules(PC_CURL "libcurl>=7.4.0")
 find_path(CURL_INCLUDE_DIR "curl/curl.h"
     HINTS ${PC_CURL_INCLUDEDIR} ${PC_CURL_INCLUDE_DIRS})

@@ -890,6 +890,17 @@ void ContainerManagerService::ContainerStatsToGRPC(
         if (response->container_stats[i]->major_page_faults != 0u) {
             container->mutable_memory()->mutable_major_page_faults()->set_value(response->container_stats[i]->major_page_faults);
         }
+
+        // Swap
+        container->mutable_swap()->set_timestamp(timestamp);
+        if (response->container_stats[i]->swap_used != 0u) {
+            container->mutable_swap()->mutable_swap_usage_bytes()->set_value(response->container_stats[i]->swap_used);
+        }
+        if (response->container_stats[i]->swap_limit >= response->container_stats[i]->swap_used) {
+            container->mutable_swap()->mutable_swap_available_bytes()->set_value(response->container_stats[i]->swap_limit
+                                                                                 - response->container_stats[i]->swap_used);
+        }
+
         containerstats.push_back(std::move(container));
     }
 }

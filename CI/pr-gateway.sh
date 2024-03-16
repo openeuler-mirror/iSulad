@@ -22,7 +22,7 @@ sed -i "s#http://repo.openeuler.org#https://repo.huaweicloud.com/openeuler#g" /e
 
 dnf update -y
 
-dnf install -y docbook2X doxygen gtest-devel gmock-devel diffutils cmake gcc-c++ yajl-devel patch make libtool libevent-devel libevhtp-devel grpc grpc-plugins grpc-devel protobuf-devel libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel http-parser-devel libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel systemd-devel git chrpath ncurses-devel
+dnf install -y docbook2X doxygen gtest-devel gmock-devel diffutils cmake gcc-c++ yajl-devel patch make libtool libevent-devel libevhtp-devel grpc grpc-plugins grpc-devel protobuf-devel libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel systemd-devel git chrpath ncurses-devel
 if [ $? -ne 0 ]; then
     echo "install dependences failed"
     exit 1

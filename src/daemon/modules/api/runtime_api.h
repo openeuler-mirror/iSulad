@@ -66,6 +66,9 @@ struct runtime_container_resources_stats_info {
     uint64_t cache;
     uint64_t cache_total;
     uint64_t inactive_file_total;
+    /* Swap usage*/
+    uint64_t swap_used;
+    uint64_t swap_limit;
 };
 
 typedef struct _rt_create_params_t {

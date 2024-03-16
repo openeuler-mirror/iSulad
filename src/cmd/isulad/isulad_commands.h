@@ -226,6 +226,8 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       &(cmdargs)->json_confs->storage_opts,                                                                       \
       "Storage driver options",                                                                                   \
       command_append_array },                                                                                     \
+    { CMD_OPT_TYPE_BOOL, false, "systemd-cgroup", 0, &(cmdargs)->json_confs->systemd_cgroup,                      \
+      "Use systemd cgroup driver(default false)", NULL },                                                         \
     SUP_GROUPS_OPT(cmdargs)                                                                                       \
     { CMD_OPT_TYPE_CALLBACK,                                                                                      \
       false,                                                                                                      \

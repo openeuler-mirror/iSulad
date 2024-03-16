@@ -16,6 +16,7 @@
 #include "isula_libutils/log.h"
 #include "v1_cri_helpers.h"
 #include "cri_helpers.h"
+#include "isulad_config.h"
 
 namespace CRIV1 {
 void RuntimeManagerService::UpdateRuntimeConfig(const runtime::v1::RuntimeConfig &config, Errors & /*error*/)
@@ -67,6 +68,17 @@ auto RuntimeManagerService::Status(Errors &error) -> std::unique_ptr<runtime::v1
         error.Clear();
     }
     return status;
+}
+
+void RuntimeManagerService::RuntimeConfig(runtime::v1::RuntimeConfigResponse *reply, Errors &error)
+{
+    if (reply == nullptr) {
+        ERROR("Invaliad params");
+        error.SetError("Invalid params");
+        return;
+    }
+
+    reply->mutable_linux()->set_cgroup_driver(conf_get_systemd_cgroup() ? runtime::v1::SYSTEMD : runtime::v1::CGROUPFS);
 }
 
 } // namespace CRI

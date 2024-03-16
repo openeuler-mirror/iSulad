@@ -141,6 +141,10 @@ typedef struct {
 
 int common_get_cgroup_v1_metrics(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics);
 
+char *common_get_init_cgroup(const char *subsystem);
+
+char *common_get_own_cgroup(const char *subsystem);
+
 #ifdef __cplusplus
 }
 #endif

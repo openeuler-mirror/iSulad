@@ -647,6 +647,10 @@ static void transform_stats_info_from_runtime(shim_client_runtime_stats *stats, 
         info->page_faults = memory->raw->pgfault;
         info->major_page_faults = memory->raw->pgmajfault;
     }
+    if (memory != NULL && memory->swap != NULL) {
+        info->swap_used = memory->swap->usage;
+        info->swap_limit = memory->swap->limit;
+    }
     shim_client_runtime_stats_data_blkio *blkio = stats->data->blkio;
     if (blkio == NULL) {
         return;
@@ -1153,6 +1157,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     p.runtime_args = (char **)runtime_args;
     p.runtime_args_len = runtime_args_len;
     p.attach_socket = attach_socket;
+    p.systemd_cgroup = conf_get_systemd_cgroup();
     copy_process(&p, config->process);
     copy_annotations(&p, config->annotations);
 

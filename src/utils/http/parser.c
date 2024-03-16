@@ -38,7 +38,7 @@
  */
 
 #include "parser.h"
-#include <http_parser.h>
+#include <isula_libutils/http_parser.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
