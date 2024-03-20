@@ -105,48 +105,12 @@ static struct cgfile_t g_cgroup_v2_files[] = {
 
 static int get_cgroup_v2_value_helper(const char *path, const cgroup_v2_files_index index, void *result)
 {
-    int nret = 0;
-    char file_path[PATH_MAX] = { 0 };
-    char real_path[PATH_MAX] = { 0 };
-    char *content = NULL;
-
     if (index >= CGROUP_V2_FILES_INDEX_MAXS) {
         ERROR("Index out of range");
         return false;
     }
 
-    if (path == NULL || strlen(path) == 0 || result == NULL) {
-        ERROR("%s: Invalid arguments", g_cgroup_v2_files[index].name);
-        return -1;
-    }
-
-    nret = snprintf(file_path, sizeof(file_path), "%s/%s", path, g_cgroup_v2_files[index].file);
-    if (nret < 0 || (size_t)nret >= sizeof(file_path)) {
-        ERROR("%s: failed to snprintf", g_cgroup_v2_files[index].name);
-        return -1;
-    }
-
-    if (util_clean_path(file_path, real_path, sizeof(real_path)) == NULL) {
-        ERROR("%s: failed to clean path %s", g_cgroup_v2_files[index].name, file_path);
-        return -1;
-    }
-
-    content = util_read_content_from_file(real_path);
-    if (content == NULL) {
-        ERROR("%s: failed to read file %s", g_cgroup_v2_files[index].name, real_path);
-        return -1;
-    }
-
-    util_trim_newline(content);
-    content = util_trim_space(content);
-
-    nret = g_cgroup_v2_files[index].get_value(content, g_cgroup_v2_files[index].match, result);
-    if (nret != 0) {
-        ERROR("%s: failed to get value", g_cgroup_v2_files[index].name);
-    }
-
-    free(content);
-    return nret;
+    return get_cgroup_value_helper(path, &g_cgroup_v2_files[index], result);
 }
 
 static void get_cgroup_v2_metrics_cpu(const char *cgroup_path, cgroup_cpu_metrics_t *cgroup_cpu_metrics)
@@ -306,28 +270,18 @@ static bool cgroup_v2_enabled(const char *mountpoint, const char *name)
     return util_file_exists(path);
 }
 
-int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
-                              cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
-                              cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                              cgroup_files_info_t *filesinfo, bool quiet)
+static void get_cgroup_v2_cpu_info(const bool quiet, cgroup_cpu_info_t *cpuinfo)
 {
-    int ret = 0;
-    int nret = 0;
-    __isula_auto_free char *size = NULL;
-    char path[PATH_MAX] = { 0 };
-
-    if (make_sure_cgroup2_isulad_path_exist() != 0) {
-        return -1;
-    }
-
-    // cpu cgroup
     cpuinfo->cpu_shares = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPU_WEIGHT);
     common_cgroup_do_log(quiet, !(cpuinfo->cpu_shares), "Your kernel does not support cgroup2 cpu weight");
 
     cpuinfo->cpu_cfs_period = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPU_MAX);
     cpuinfo->cpu_cfs_quota = cpuinfo->cpu_cfs_period;
     common_cgroup_do_log(quiet, !(cpuinfo->cpu_cfs_period), "Your kernel does not support cgroup2 cpu max");
+}
 
+static int get_cgroup_v2_cpuset_info(const bool quiet, cgroup_cpuset_info_t *cpusetinfo)
+{
     cpusetinfo->cpuset = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_CPUS_EFFECTIVE) &&
                          cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_CPUS) &&
                          cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_MEMS_EFFECTIVE) &&
@@ -343,8 +297,23 @@ int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpu
         cpusetinfo->cpus = util_trim_space(cpusetinfo->cpus);
         cpusetinfo->mems = util_trim_space(cpusetinfo->mems);
     }
+    return 0;
+}
 
-    // io cgroup
+static void get_cgroup_v2_mem_info(const bool quiet, cgroup_mem_info_t *meminfo)
+{
+    meminfo->limit = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_MAX);
+    common_cgroup_do_log(quiet, !(meminfo->limit), "Your kernel does not support cgroup2 memory max");
+
+    meminfo->reservation = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_LOW);
+    common_cgroup_do_log(quiet, !(meminfo->reservation), "Your kernel does not support cgroup2 memory low");
+
+    meminfo->swap = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_SWAP_MAX);
+    common_cgroup_do_log(quiet, !(meminfo->swap), "Your kernel does not support cgroup2 memory swap max");
+}
+
+static void get_cgroup_v2_blkio_info(const bool quiet, cgroup_blkio_info_t *blkioinfo)
+{
     blkioinfo->blkio_weight = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_BFQ_WEIGHT) ||
                               cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_WEIGHT);
     blkioinfo->blkio_weight_device = blkioinfo->blkio_weight;
@@ -355,22 +324,14 @@ int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpu
     blkioinfo->blkio_read_iops_device = blkioinfo->blkio_read_bps_device;
     blkioinfo->blkio_write_iops_device = blkioinfo->blkio_read_bps_device;
     common_cgroup_do_log(quiet, !(blkioinfo->blkio_read_bps_device), "Your kernel does not support cgroup2 io max");
+}
 
-    // memory cgroup
-    meminfo->limit = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_MAX);
-    common_cgroup_do_log(quiet, !(meminfo->limit), "Your kernel does not support cgroup2 memory max");
+static int get_cgroup_v2_hugetlb_info(const bool quiet, cgroup_hugetlb_info_t *hugetlbinfo)
+{
+    __isula_auto_free char *size = NULL;
+    int nret = 0;
+    char path[PATH_MAX] = { 0 };
 
-    meminfo->reservation = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_LOW);
-    common_cgroup_do_log(quiet, !(meminfo->reservation), "Your kernel does not support cgroup2 memory low");
-
-    meminfo->swap = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_SWAP_MAX);
-    common_cgroup_do_log(quiet, !(meminfo->swap), "Your kernel does not support cgroup2 memory swap max");
-
-    // pids cgroup
-    pidsinfo->pidslimit = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_PIDS_MAX);
-    common_cgroup_do_log(quiet, !(pidsinfo->pidslimit), "Your kernel does not support cgroup2 pids max");
-
-    // hugetlb cgroup
     size = get_default_huge_page_size();
     if (size != NULL) {
         nret = snprintf(path, sizeof(path), CGROUP2_HUGETLB_MAX, size);
@@ -383,15 +344,55 @@ int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpu
     } else {
         WARN("Your kernel does not support cgroup2 hugetlb limit");
     }
+    return 0;
+}
 
-    // files cgroup
+static void get_cgroup_v2_pids_info(const bool quiet, cgroup_pids_info_t *pidsinfo)
+{
+    pidsinfo->pidslimit = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_PIDS_MAX);
+    common_cgroup_do_log(quiet, !(pidsinfo->pidslimit), "Your kernel does not support cgroup2 pids max");
+
+}
+
+static void get_cgroup_v2_files_info(const bool quiet, cgroup_files_info_t *filesinfo)
+{
     filesinfo->fileslimit = cgroup_v2_enabled(CGROUP_ISULAD_PATH, CGROUP2_FILES_LIMIT);
     common_cgroup_do_log(quiet, !(filesinfo->fileslimit), "Your kernel does not support cgroup2 files limit");
 
-    return ret;
 }
 
-int common_get_cgroup_v2_metrics(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics)
+static int get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
+                              cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
+                              cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
+                              cgroup_files_info_t *filesinfo, bool quiet)
+{
+    int ret = 0;
+    if (make_sure_cgroup2_isulad_path_exist() != 0) {
+        return -1;
+    }
+
+    get_cgroup_v2_cpu_info(quiet, cpuinfo);
+
+    ret = get_cgroup_v2_cpuset_info(quiet, cpusetinfo);
+    if (ret != 0) {
+        return ret;
+    }
+
+    get_cgroup_v2_mem_info(quiet, meminfo);
+    get_cgroup_v2_blkio_info(quiet, blkioinfo);
+
+    ret = get_cgroup_v2_hugetlb_info(quiet, hugetlbinfo);
+    if (ret != 0) {
+        return ret;
+    }
+    
+    get_cgroup_v2_pids_info(quiet, pidsinfo);
+    get_cgroup_v2_files_info(quiet, filesinfo);
+
+    return 0;
+}
+
+static int get_cgroup_metrics_v2(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics)
 {
     if (cgroup_path == NULL || strlen(cgroup_path) == 0 || cgroup_metrics == NULL) {
         ERROR("Invalid arguments");
@@ -402,5 +403,28 @@ int common_get_cgroup_v2_metrics(const char *cgroup_path, cgroup_metrics_t *cgro
     get_cgroup_v2_metrics_memory(cgroup_path, &cgroup_metrics->cgmem_metrics);
     get_cgroup_v2_metrics_pid(cgroup_path, &cgroup_metrics->cgpids_metrics);
 
+    return 0;
+}
+
+static int get_cgroup_mnt_and_root_v2(const char *subsystem, char **mountpoint, char **root)
+{
+    *mountpoint = util_strdup_s(CGROUP_ISULAD_PATH);
+    return 0;
+}
+
+int get_cgroup_version_v2()
+{
+    return CGROUP_VERSION_2;
+}
+
+int cgroup_v2_ops_init(cgroup_ops *ops)
+{
+    if (ops == NULL) {
+        return -1;
+    }
+    ops->get_cgroup_version = get_cgroup_version_v2;
+    ops->get_cgroup_info = get_cgroup_info_v2;
+    ops->get_cgroup_metrics = get_cgroup_metrics_v2;
+    ops->get_cgroup_mnt_and_root_path = get_cgroup_mnt_and_root_v2;
     return 0;
 }

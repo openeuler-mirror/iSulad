@@ -188,15 +188,10 @@ static char **get_huge_page_sizes()
     struct dirent *info_archivo = NULL;
     int cgroup_version = 0;
 
-    cgroup_version = common_get_cgroup_version();
-    if (cgroup_version == CGROUP_VERSION_2) {
-        hugetlbmp = util_strdup_s(CGROUP_ISULAD_PATH);
-    } else {
-        ret = common_find_cgroup_mnt_and_root("hugetlb", &hugetlbmp, NULL);
-        if (ret != 0 || hugetlbmp == NULL) {
-            ERROR("Hugetlb cgroup not supported");
-            return NULL;
-        }
+    ret = common_get_cgroup_mnt_and_root_path("hugetlb", &hugetlbmp, NULL);
+    if (ret != 0 || hugetlbmp == NULL) {
+        ERROR("Hugetlb cgroup not supported");
+        return NULL;
     }
 
     dir = opendir(hugetlbmp);
@@ -211,6 +206,7 @@ static char **get_huge_page_sizes()
         char *pos = NULL;
         char *dot2 = NULL;
 
+        cgroup_version = common_get_cgroup_version();
         if (cgroup_version == CGROUP_VERSION_2) {
             if (!is_hugetlb_max(info_archivo->d_name)) {
                 continue;
@@ -375,7 +371,6 @@ void free_sysinfo(sysinfo_t *sysinfo)
 /* get sys info */
 sysinfo_t *get_sys_info(bool quiet)
 {
-    int cgroup_version = 0;
     sysinfo_t *sysinfo = NULL;
     int ret = 0;
 
@@ -388,21 +383,9 @@ sysinfo_t *get_sys_info(bool quiet)
     sysinfo->ncpus = get_nprocs();
     sysinfo->ncpus_conf = get_nprocs_conf();
 
-    cgroup_version = common_get_cgroup_version();
-    if (cgroup_version < 0) {
-        ret = -1;
-        goto out;
-    }
-
-    if (cgroup_version == CGROUP_VERSION_1) {
-        ret = common_get_cgroup_info_v1(&sysinfo->cgmeminfo, &sysinfo->cgcpuinfo, &sysinfo->hugetlbinfo,
+    ret = common_get_cgroup_info(&sysinfo->cgmeminfo, &sysinfo->cgcpuinfo, &sysinfo->hugetlbinfo,
                                         &sysinfo->blkioinfo, &sysinfo->cpusetinfo, &sysinfo->pidsinfo,
                                         &sysinfo->filesinfo, quiet);
-    } else {
-        ret = common_get_cgroup_info_v2(&sysinfo->cgmeminfo, &sysinfo->cgcpuinfo, &sysinfo->hugetlbinfo,
-                                        &sysinfo->blkioinfo, &sysinfo->cpusetinfo, &sysinfo->pidsinfo,
-                                        &sysinfo->filesinfo, quiet);
-    }
     if (ret != 0) {
         goto out;
     }
@@ -563,7 +546,7 @@ free_out:
     return minfos;
 }
 
-char *sysinfo_cgroup_controller_cpurt_mnt_path(void)
+char *sysinfo_get_cpurt_mnt_path(void)
 {
     int nret = 0;
     __isula_auto_free char *mnt = NULL;
@@ -583,7 +566,7 @@ char *sysinfo_cgroup_controller_cpurt_mnt_path(void)
         return NULL;
     }
 
-    nret = common_find_cgroup_mnt_and_root("cpu", &mnt, &root);
+    nret = common_get_cgroup_mnt_and_root_path("cpu", &mnt, &root);
     if (nret != 0 || mnt == NULL || root == NULL) {
         ERROR("Can not find cgroup mnt and root path for subsystem 'cpu'");
         isulad_set_error_message("Can not find cgroup mnt and root path for subsystem 'cpu'");
