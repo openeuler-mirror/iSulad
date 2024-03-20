@@ -270,7 +270,7 @@ bool container_is_valid_state_string(const char *state);
 void container_update_health_monitor(const char *container_id);
 
 extern int container_supervisor_add_exit_monitor(int fd, const pid_ppid_info_t *pid_info, const char *name,
-                                                 const char *runtime);
+                                                 const char *runtime, bool sandbox_container);
 
 extern char *container_exit_fifo_create(const char *cont_state_path);
 

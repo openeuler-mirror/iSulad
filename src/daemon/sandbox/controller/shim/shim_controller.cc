@@ -397,39 +397,8 @@ bool ShimController::Stop(const std::string &sandboxId, uint32_t timeoutSecs, Er
 
 bool ShimController::Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error)
 {
-    std::thread([this, cb, sandboxId]() {
-        if (m_cb == nullptr || m_cb->container.wait == nullptr) {
-            ERROR("Unimplemented callback");
-            return;
-        }
-
-        auto requestWrapper = makeUniquePtrCStructWrapper<container_wait_request>(free_container_wait_request);
-        if (requestWrapper == nullptr) {
-            ERROR("Out of memory");
-            return;
-        }
-        auto request = requestWrapper->get();
-        request->id = isula_strdup_s(sandboxId.c_str());
-        request->condition = WAIT_CONDITION_STOPPED;
-        container_wait_response *response { nullptr };
-
-        int ret = m_cb->container.wait(request, &response);
-        auto responseWrapper = makeUniquePtrCStructWrapper<container_wait_response>(response, free_container_wait_response);
-
-        if (ret != 0) {
-            std::string msg = (response != nullptr && response->errmsg != nullptr) ? response->errmsg : "internal";
-            ERROR("Failed to wait sandbox %s: %s", sandboxId.c_str(), msg.c_str());
-            return;
-        }
-
-        ControllerExitInfo info;
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        auto duration = currentTime.time_since_epoch();
-        info.exitedAt = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-        info.exitStatus = response->exit_code;
-        cb->OnSandboxExit(info);
-    }).detach();
-
+    // ShimController will use sandbox_on_exit callback of supervisor in lower container level
+    // to notify the sandbox exit event
     return true;
 }
 

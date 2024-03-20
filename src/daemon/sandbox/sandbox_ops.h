@@ -36,6 +36,8 @@ int sandbox_purge_container(const container_config_v2_common_config *config);
 
 int sandbox_purge_exec(const container_config_v2_common_config *config, const char *exec_id);
 
+int sandbox_on_sandbox_exit(const char *sandbox_id, int exit_code);
+
 #ifdef __cplusplus
 }
 #endif
