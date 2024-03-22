@@ -34,6 +34,7 @@
 #include "utils_verify.h"
 #include "opt_ulimit.h"
 #include "opt_log.h"
+#include "sysinfo.h"
 
 const char isulad_desc[] = "GLOBAL OPTIONS:";
 const char isulad_usage[] = "[global options]";
@@ -411,6 +412,33 @@ out:
     return ret;
 }
 
+static int check_args_cpu_rt(const struct service_arguments *args)
+{
+    int ret = 0;
+    __isula_auto_sysinfo_t sysinfo_t *sysinfo = NULL;
+
+    sysinfo = get_sys_info(true);
+    if (sysinfo == NULL) {
+        COMMAND_ERROR("Failed to get system info");
+        ERROR("Failed to get system info");
+        return -1;
+    }
+
+    if (!(sysinfo->cgcpuinfo.cpu_rt_period) && args->json_confs->cpu_rt_period != 0) {
+        COMMAND_ERROR("Invalid --cpu-rt-period: Your kernel does not support cgroup rt period");
+        ERROR("Invalid --cpu-rt-period: Your kernel does not support cgroup rt period");
+        return -1;
+    }
+
+    if (!(sysinfo->cgcpuinfo.cpu_rt_runtime) && args->json_confs->cpu_rt_runtime != 0) {
+        COMMAND_ERROR("Invalid --cpu-rt-runtime: Your kernel does not support cgroup rt runtime");
+        ERROR("Invalid --cpu-rt-runtime: Your kernel does not support cgroup rt runtime");
+        return -1;
+    }
+
+    return ret;
+}
+
 int check_args(struct service_arguments *args)
 {
     int ret = 0;
@@ -471,6 +499,10 @@ int check_args(struct service_arguments *args)
         goto out;
     }
 
+    if (check_args_cpu_rt(args) != 0) {
+        ret = -1;
+        goto out;
+    }
 out:
     return ret;
 }
