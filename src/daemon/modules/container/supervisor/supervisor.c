@@ -38,6 +38,9 @@
 #include "container_api.h"
 #include "event_type.h"
 #include "utils_file.h"
+#ifdef ENABLE_CRI_API_V1
+#include "sandbox_ops.h"
+#endif
 
 pthread_mutex_t g_supervisor_lock = PTHREAD_MUTEX_INITIALIZER;
 struct epoll_descr g_supervisor_descr;
@@ -47,6 +50,7 @@ struct supervisor_handler_data {
     int exit_code;
     char *name;
     char *runtime;
+    bool is_sandbox_container;
     pid_ppid_info_t pid_info;
 };
 
@@ -211,6 +215,14 @@ retry:
 
     (void)isulad_monitor_send_container_event(name, STOPPED, (int)pid, data->exit_code, NULL, NULL);
 
+#ifdef ENABLE_CRI_API_V1
+    if (data->is_sandbox_container) {
+        if (sandbox_on_sandbox_exit(name, data->exit_code) < 0) {
+            ERROR("Failed to handle sandbox %s exit", name);
+        }
+    }
+#endif
+
     supervisor_handler_data_free(data);
 
     DAEMON_CLEAR_ERRMSG();
@@ -259,7 +271,7 @@ static int supervisor_exit_cb(int fd, uint32_t events, void *cbdata, struct epol
 
 /* supervisor add exit monitor */
 int container_supervisor_add_exit_monitor(int fd, const pid_ppid_info_t *pid_info, const char *name,
-                                          const char *runtime)
+                                          const char *runtime, bool sandbox_container)
 {
     int ret = 0;
     struct supervisor_handler_data *data = NULL;
@@ -285,6 +297,7 @@ int container_supervisor_add_exit_monitor(int fd, const pid_ppid_info_t *pid_inf
     data->fd = fd;
     data->name = util_strdup_s(name);
     data->runtime = util_strdup_s(runtime);
+    data->is_sandbox_container = sandbox_container;
     data->pid_info.pid = pid_info->pid;
     data->pid_info.start_time = pid_info->start_time;
     data->pid_info.ppid = pid_info->ppid;

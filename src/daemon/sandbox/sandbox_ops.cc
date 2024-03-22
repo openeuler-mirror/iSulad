@@ -18,6 +18,7 @@
 #include <isula_libutils/log.h>
 
 #include "controller_manager.h"
+#include "sandbox_manager.h"
 #include "namespace.h"
 #include "utils.h"
 
@@ -174,4 +175,26 @@ int sandbox_purge_container(const container_config_v2_common_config *config)
 int sandbox_purge_exec(const container_config_v2_common_config *config, const char *exec_id)
 {
     return do_sandbox_purge(config, exec_id);
+}
+
+int sandbox_on_sandbox_exit(const char *sandbox_id, int exit_code)
+{
+    if (nullptr == sandbox_id) {
+        ERROR("Invalid parameter: sandbox_id");
+        return -1;
+    }
+
+    auto sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(sandbox_id);
+    if (nullptr == sandbox) {
+        ERROR("Sandbox %s not found", sandbox_id);
+        return -1;
+    }
+
+    sandbox::ControllerExitInfo info;
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    auto duration = currentTime.time_since_epoch();
+    info.exitedAt = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+    info.exitStatus = exit_code;
+    sandbox->OnSandboxExit(info);
+    return 0;
 }
