@@ -68,8 +68,9 @@ set(LIB_ISULAD_IMG_SRCS
     ${CMAKE_SOURCE_DIR}/src/utils/buffer/buffer.c
     ${CMAKE_SOURCE_DIR}/src/daemon/common/err_msg.c
     ${CMAKE_SOURCE_DIR}/src/daemon/common/sysinfo.c
-    ${CMAKE_SOURCE_DIR}/src/daemon/common/cgroup.c
-    ${CMAKE_SOURCE_DIR}/src/daemon/common/cgroup_v1.c
+    ${CMAKE_SOURCE_DIR}/src/daemon/common/cgroup/cgroup.c
+    ${CMAKE_SOURCE_DIR}/src/daemon/common/cgroup/cgroup_v1.c
+    ${CMAKE_SOURCE_DIR}/src/daemon/common/cgroup/cgroup_v2.c
     ${CMAKE_SOURCE_DIR}/src/utils/tar/util_gzip.c
     ${CMAKE_SOURCE_DIR}/src/daemon/config/isulad_config.c
     ${CMAKE_SOURCE_DIR}/src/daemon/config/daemon_arguments.c
@@ -102,6 +103,7 @@ target_include_directories(${LIB_ISULAD_IMG} PUBLIC
     ${CMAKE_SOURCE_DIR}/src/utils/tar
     ${CMAKE_SOURCE_DIR}/src/daemon/config
     ${CMAKE_SOURCE_DIR}/src/daemon/common
+    ${CMAKE_SOURCE_DIR}/src/daemon/common/cgroup
     ${CMAKE_SOURCE_DIR}/src/daemon/modules/spec/
     ${CMAKE_SOURCE_DIR}/src/utils/cutils
     ${CMAKE_SOURCE_DIR}/src/utils/cutils/map

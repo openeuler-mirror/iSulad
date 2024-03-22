@@ -82,6 +82,7 @@
 #include "network_api.h"
 #endif
 #include "id_name_manager.h"
+#include "cgroup.h"
 
 sem_t g_daemon_shutdown_sem;
 sem_t g_daemon_wait_shutdown_sem;
@@ -1703,6 +1704,11 @@ static int pre_init_daemon(int argc, char **argv)
      */
     if (geteuid() != 0) {
         SYSERROR("iSulad must be called by root");
+        goto out;
+    }
+
+    if (cgroup_ops_init() != 0) {
+        ERROR("Failed to init cgroup");
         goto out;
     }
 

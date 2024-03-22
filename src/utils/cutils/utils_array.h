@@ -18,6 +18,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +57,11 @@ bool util_string_array_contain(const string_array *sarr, const char *elem);
 void util_free_sensitive_array(char **array);
 
 void util_free_sensitive_array_by_len(char **array, size_t len);
+
+// define auto free function callback for char *
+define_auto_cleanup_callback(util_free_array, char *);
+// define auto free macro for char *
+#define __isula_auto_array_t auto_cleanup_tag(util_free_array)
 
 #ifdef __cplusplus
 }

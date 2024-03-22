@@ -413,6 +413,13 @@ static int cpurt_controller_init(const char *id, const host_config *host_spec)
     char *dirpath = NULL;
     int64_t cpu_rt_period = 0;
     int64_t cpu_rt_runtime = 0;
+    int cgroup_version = 0;
+
+    // cgroup v2 is not support cpurt
+    cgroup_version = common_get_cgroup_version();
+    if (cgroup_version == CGROUP_VERSION_2) {
+        return 0;
+    }
 
     cgroups_path = merge_container_cgroups_path(id, host_spec);
     if (cgroups_path == NULL || strcmp(cgroups_path, "/") == 0 || strcmp(cgroups_path, ".") == 0) {
@@ -433,13 +440,13 @@ static int cpurt_controller_init(const char *id, const host_config *host_spec)
         // should iSulad set cpu.rt_runtime_us and cpu.rt_period_us for the parent path?
         // in fact, even if system.slice is used,
         // cpu.rt_runtime_us and cpu.rt_period_us might still needed to be set manually
-        __isula_auto_free char *init_cgroup = common_get_init_cgroup("cpu");
+        __isula_auto_free char *init_cgroup = common_get_init_cgroup_path("cpu");
         if (init_cgroup == NULL) {
             ERROR("Failed to get init cgroup");
             return -1;
         }
         // make sure that the own cgroup path for cpu existed
-        __isula_auto_free char *own_cgroup = common_get_own_cgroup("cpu");
+        __isula_auto_free char *own_cgroup = common_get_own_cgroup_path("cpu");
         if (own_cgroup == NULL) {
             ERROR("Failed to get own cgroup");
             return -1;
@@ -453,7 +460,7 @@ static int cpurt_controller_init(const char *id, const host_config *host_spec)
         cgroups_path = new_cgroups_path;
     }
 
-    mnt_root = sysinfo_cgroup_controller_cpurt_mnt_path();
+    mnt_root = sysinfo_get_cpurt_mnt_path();
     if (mnt_root == NULL) {
         ERROR("Failed to get cpu rt controller mnt root path");
         return -1;

@@ -872,18 +872,7 @@ void PodSandboxManagerService::GetPodSandboxCgroupMetrics(const std::string &cgr
         return;
     }
 
-    auto cgroupVersion = common_get_cgroup_version();
-    if (cgroupVersion < 0) {
-        error.Errorf("Invalid cgroup version");
-        return;
-    }
-
-    if (cgroupVersion == CGROUP_VERSION_1) {
-        nret = common_get_cgroup_v1_metrics(cgroupParent.c_str(), &cgroupMetrics);
-    } else {
-        // todo: get cgroup v2 metrics
-    }
-
+    nret = common_get_cgroup_metrics(cgroupParent.c_str(), &cgroupMetrics);
     if (nret != 0) {
         error.Errorf("Failed to get cgroup metrics");
     }

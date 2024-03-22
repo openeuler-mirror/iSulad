@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -8,12 +8,12 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: zhangxiaoyu
- * Create: 2023-03-29
- * Description: provide cgroup definition
+ * Author: zhongtao
+ * Create: 2024-03-22
+ * Description: provide cgroup common func definition
  ******************************************************************************/
-#ifndef DAEMON_COMMON_CGROUP_H
-#define DAEMON_COMMON_CGROUP_H
+#ifndef DAEMON_COMMON_CGROUP_COMMON_H
+#define DAEMON_COMMON_CGROUP_COMMON_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -31,9 +31,14 @@ extern "C" {
 #define CGROUP_MOUNTPOINT "/sys/fs/cgroup"
 #define CGROUP_ISULAD_PATH CGROUP_MOUNTPOINT"/isulad"
 
-int common_get_cgroup_version(void);
+struct cgfile_t {
+    char *name;
+    char *file;
+    char *match;
+    int (*get_value)(const char *content, const char *match, void *result);
+};
 
-int common_find_cgroup_mnt_and_root(const char *subsystem, char **mountpoint, char **root);
+int get_match_value_ull(const char *content, const char *match, void *result);
 
 static inline void common_cgroup_do_log(bool quiet, bool do_log, const char *msg)
 {
@@ -42,24 +47,7 @@ static inline void common_cgroup_do_log(bool quiet, bool do_log, const char *msg
     }
 }
 
-
-typedef struct {
-    char **controllers;
-    char *mountpoint;
-} cgroup_layers_item;
-
-typedef struct {
-    cgroup_layers_item **items;
-    size_t len;
-    size_t cap;
-} cgroup_layer_t;
-
-char *common_find_cgroup_subsystem_mountpoint(const cgroup_layer_t *layers, const char *subsystem);
-
-cgroup_layer_t *common_cgroup_layers_find(void);
-
-void common_free_cgroup_layer(cgroup_layer_t *layers);
-
+int get_cgroup_value_helper(const char *path, struct cgfile_t *cgfile, void *result);
 
 typedef struct {
     bool limit;
@@ -105,17 +93,6 @@ typedef struct {
     bool fileslimit;
 } cgroup_files_info_t;
 
-int common_get_cgroup_info_v1(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
-                              cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
-                              cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                              cgroup_files_info_t *filesinfo, bool quiet);
-
-int common_get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
-                              cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
-                              cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                              cgroup_files_info_t *filesinfo, bool quiet);
-
-
 typedef struct {
     uint64_t cpu_use_nanos;
 } cgroup_cpu_metrics_t;
@@ -139,14 +116,22 @@ typedef struct {
     cgroup_pids_metrics_t cgpids_metrics;
 } cgroup_metrics_t;
 
-int common_get_cgroup_v1_metrics(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics);
+typedef struct {
+    int (*get_cgroup_version)(void);
+    int (*get_cgroup_info)(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
+                            cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
+                            cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
+                            cgroup_files_info_t *filesinfo, bool quiet);
+    int (*get_cgroup_metrics)(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics);
 
-char *common_get_init_cgroup(const char *subsystem);
+    int (*get_cgroup_mnt_and_root_path)(const char *subsystem, char **mountpoint, char **root);
 
-char *common_get_own_cgroup(const char *subsystem);
+    char *(*get_init_cgroup_path)(const char *subsystem);
+    char *(*get_own_cgroup_path)(const char *subsystem);
+} cgroup_ops;
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // DAEMON_COMMON_CGROUP_H
+#endif // DAEMON_COMMON_CGROUP_COMMON_H

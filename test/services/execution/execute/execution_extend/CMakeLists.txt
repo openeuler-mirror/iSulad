@@ -21,7 +21,10 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/mainloop.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/filters.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/err_msg.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/cgroup.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/cgroup/cgroup.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/cgroup/cgroup_v1.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/cgroup/cgroup_v2.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/cgroup/cgroup_common.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/events_sender/event_sender.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/console/console.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils.c
@@ -59,6 +62,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/console
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/cgroup
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/api
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image
