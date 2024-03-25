@@ -750,7 +750,7 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     oci_runtime_spec *oci_spec = NULL;
     rt_create_params_t create_params = { 0 };
     rt_start_params_t start_params = { 0 };
-    bool sandbox_container;
+    bool sandbox_container = false;
 
     nret = snprintf(bundle, sizeof(bundle), "%s/%s", cont->root_path, id);
     if (nret < 0 || (size_t)nret >= sizeof(bundle)) {
