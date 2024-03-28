@@ -133,6 +133,9 @@ static container_events_type_t lcrsta2Evetype(int value)
         case THAWED:
             et = EVENTS_TYPE_THAWED;
             break;
+        case OOM:
+            et = EVENTS_TYPE_OOM;
+            break;
         default:
             et = EVENTS_TYPE_EXIT;
             break;
@@ -822,8 +825,8 @@ static int post_event_to_events_hander(const struct isulad_events_format *events
         return -1;
     }
 
-    /* only post STOPPED event to events_hander */
-    if (events->type != EVENTS_TYPE_STOPPED1) {
+    /* only post STOPPED event and OOM event to events_hander */
+    if (events->type != EVENTS_TYPE_STOPPED1 && events->type != EVENTS_TYPE_OOM) {
         return 0;
     }
 

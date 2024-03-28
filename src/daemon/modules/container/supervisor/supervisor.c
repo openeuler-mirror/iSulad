@@ -41,6 +41,8 @@
 #ifdef ENABLE_CRI_API_V1
 #include "sandbox_ops.h"
 #endif
+#include "cgroup.h"
+#include "specs_api.h"
 
 pthread_mutex_t g_supervisor_lock = PTHREAD_MUTEX_INITIALIZER;
 struct epoll_descr g_supervisor_descr;
@@ -269,20 +271,48 @@ static int supervisor_exit_cb(int fd, uint32_t events, void *cbdata, struct epol
     return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
+static int oom_handle_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
+{
+    cgroup_oom_handler_info_t *oom_handler_info = (cgroup_oom_handler_info_t *)cbdata;
+    bool close_oom_handler = CGROUP_OOM_HANDLE_CLOSE;
+    // supervisor only handle one oom event, so we remove the handler directly
+    if (oom_handler_info != NULL && oom_handler_info->oom_event_handler != NULL) {
+        close_oom_handler = oom_handler_info->oom_event_handler(fd, oom_handler_info);
+    }
+
+    if (close_oom_handler == CGROUP_OOM_HANDLE_CLOSE) {
+        supervisor_handler_lock();
+        epoll_loop_del_handler(&g_supervisor_descr, fd);
+        supervisor_handler_unlock();
+
+        common_free_cgroup_oom_handler_info(oom_handler_info);
+    }
+
+    return EPOLL_LOOP_HANDLE_CONTINUE;
+}
+
 /* supervisor add exit monitor */
-int container_supervisor_add_exit_monitor(int fd, const pid_ppid_info_t *pid_info, const char *name,
-                                          const char *runtime, bool sandbox_container)
+int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const pid_ppid_info_t *pid_info, const container_t *cont)
 {
     int ret = 0;
     struct supervisor_handler_data *data = NULL;
+    cgroup_oom_handler_info_t *oom_handler_info = NULL;
+    __isula_auto_free char *cgroup_path = NULL;
 
     if (fd < 0) {
         ERROR("Invalid exit fifo fd");
         return -1;
     }
 
-    if (pid_info == NULL || name == NULL || runtime == NULL) {
+    if (pid_info == NULL || cont == NULL || cont->common_config == NULL) {
         ERROR("Invalid input arguments");
+        close(fd);
+        return -1;
+    }
+
+    cgroup_path = merge_container_cgroups_path(cont->common_config->id, cont->hostconfig);
+    if (cgroup_path == NULL) {
+        ERROR("Failed to get cgroup path");
         close(fd);
         return -1;
     }
@@ -295,15 +325,26 @@ int container_supervisor_add_exit_monitor(int fd, const pid_ppid_info_t *pid_inf
     }
 
     data->fd = fd;
-    data->name = util_strdup_s(name);
-    data->runtime = util_strdup_s(runtime);
-    data->is_sandbox_container = sandbox_container;
+    data->name = util_strdup_s(cont->common_config->id);
+    data->runtime = util_strdup_s(cont->runtime);
+#ifdef ENABLE_CRI_API_V1
+    data->is_sandbox_container = is_sandbox_container(cont->common_config->sandbox_info);
+#endif
     data->pid_info.pid = pid_info->pid;
     data->pid_info.start_time = pid_info->start_time;
     data->pid_info.ppid = pid_info->ppid;
     data->pid_info.pstart_time = pid_info->pstart_time;
+    oom_handler_info = common_get_cgroup_oom_handler(fd, cont->common_config->id, cgroup_path, exit_fifo);
 
     supervisor_handler_lock();
+    if (oom_handler_info != NULL) {
+        ret = epoll_loop_add_handler(&g_supervisor_descr, oom_handler_info->oom_event_fd, oom_handle_cb, oom_handler_info);
+        if (ret != 0) {
+            ERROR("Failed to add handler for oom event");
+            goto err;
+        }
+    }
+
     ret = epoll_loop_add_handler(&g_supervisor_descr, fd, supervisor_exit_cb, data);
     if (ret != 0) {
         ERROR("Failed to add handler for exit fifo");
@@ -314,6 +355,7 @@ int container_supervisor_add_exit_monitor(int fd, const pid_ppid_info_t *pid_inf
 
 err:
     supervisor_handler_data_free(data);
+    common_free_cgroup_oom_handler_info(oom_handler_info);
 out:
     supervisor_handler_unlock();
     return ret;

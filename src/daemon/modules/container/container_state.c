@@ -154,6 +154,7 @@ void container_state_set_running(container_state_t *s, const pid_ppid_info_t *pi
         state->paused = false;
     }
     state->exit_code = 0;
+    state->oom_killed = false;
 
     if (pid_info != NULL) {
         state->pid = pid_info->pid;
@@ -218,6 +219,19 @@ void container_state_set_paused(container_state_t *s)
 
     state = s->state;
     state->paused = true;
+
+    container_state_unlock(s);
+}
+
+void container_state_set_oom_killed(container_state_t *s)
+{
+    if (s == NULL || s->state == NULL) {
+        return;
+    }
+
+    container_state_lock(s);
+
+    s->state->oom_killed = true;
 
     container_state_unlock(s);
 }
@@ -573,6 +587,7 @@ container_inspect_state *container_state_to_inspect_state(container_state_t *s)
     state->running = s->state->running;
     state->paused = s->state->paused;
     state->restarting = s->state->restarting;
+    state->oom_killed = s->state->oom_killed;
     state->pid = s->state->pid;
 
     state->exit_code = s->state->exit_code;

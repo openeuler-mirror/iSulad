@@ -275,14 +275,13 @@ static void clean_resources_on_failure(const container_t *cont, const char *engi
     return;
 }
 
-static int do_post_start_on_success(const char *id, const char *runtime, bool sandbox_container,
-                                    const char *pidfile, int exit_fifo_fd,
-                                    const pid_ppid_info_t *pid_info)
+static int do_post_start_on_success(container_t *cont, int exit_fifo_fd,
+                                    const char *exit_fifo, const pid_ppid_info_t *pid_info)
 {
     int ret = 0;
 
     // exit_fifo_fd was closed in container_supervisor_add_exit_monitor
-    if (container_supervisor_add_exit_monitor(exit_fifo_fd, pid_info, id, runtime, sandbox_container)) {
+    if (container_supervisor_add_exit_monitor(exit_fifo_fd, exit_fifo, pid_info, cont)) {
         ERROR("Failed to add exit monitor to supervisor");
         ret = -1;
     }
@@ -750,7 +749,6 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     oci_runtime_spec *oci_spec = NULL;
     rt_create_params_t create_params = { 0 };
     rt_start_params_t start_params = { 0 };
-    bool sandbox_container = false;
 
     nret = snprintf(bundle, sizeof(bundle), "%s/%s", cont->root_path, id);
     if (nret < 0 || (size_t)nret >= sizeof(bundle)) {
@@ -899,7 +897,6 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     if (cont->common_config->sandbox_info != NULL) {
         create_params.task_addr = cont->common_config->sandbox_info->task_address;
     }
-    sandbox_container = is_sandbox_container(cont->common_config->sandbox_info);
 #endif
 
     if (runtime_create(id, runtime, &create_params) != 0) {
@@ -924,7 +921,7 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
 
     ret = runtime_start(id, runtime, &start_params, pid_info);
     if (ret == 0) {
-        if (do_post_start_on_success(id, runtime, sandbox_container, pidfile, exit_fifo_fd, pid_info) != 0) {
+        if (do_post_start_on_success(cont, exit_fifo_fd, exit_fifo, pid_info) != 0) {
             ERROR("Failed to do post start on runtime start success");
             ret = -1;
             goto clean_resources;

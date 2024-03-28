@@ -134,3 +134,92 @@ char *common_get_own_cgroup_path(const char *subsystem)
 
     return g_cgroup_ops.get_own_cgroup_path(subsystem);
 }
+
+char *common_convert_cgroup_path(const char *cgroup_path)
+{
+    char *token = NULL;
+    char result[PATH_MAX + 1] = {0};
+    __isula_auto_array_t char **arr = NULL;
+
+    if (cgroup_path == NULL) {
+        ERROR("Invalid NULL cgroup path");
+        return NULL;
+    }
+
+    // for cgroup fs cgroup path, return directly
+    if (!util_has_suffix(cgroup_path, ".slice")) {
+        return util_strdup_s(cgroup_path);
+    }
+
+    // for systemd cgroup, cgroup_path should have the form slice:prefix:id,
+    // convert it to a true path, such as from test-a.slice:isulad:id
+    // to test.slice/test-a.slice/isulad-id.scope
+    arr = util_string_split_n(cgroup_path, ':', 3);
+    if (arr == NULL || util_array_len((const char **)arr) != 3) {
+        ERROR("Invalid systemd cgroup parent");
+        return NULL;
+    }
+
+    token = strchr(arr[0], '-');
+    while (token != NULL) {
+        *token = '\0';
+        if (strlen(arr[0]) > PATH_MAX || strlen(result) + 1 + strlen(".slice") >
+            PATH_MAX - strlen(arr[0])) {
+            ERROR("Invalid systemd cgroup parent: exceeds max length of path");
+            *token = '-';
+            return NULL;
+        }
+        if (result[0] != '\0') {
+            strcat(result, "/");
+        }
+        strcat(result, arr[0]);
+        strcat(result, ".slice");
+        *token = '-';
+        token = strchr(token + 1, '-');
+    }
+
+    // Add /arr[0]/arr[1]-arr[2].scope, 3 include two slashes and one dash
+    if (strlen(cgroup_path) > PATH_MAX || strlen(result) + 3 + strlen(".scope") >
+        PATH_MAX - strlen(arr[0] - strlen(arr[1]) - strlen(arr[2]))) {
+        ERROR("Invalid systemd cgroup parent: exceeds max length of path");
+        return NULL;
+    }
+
+    (void)strcat(result, "/");
+    (void)strcat(result, arr[0]);
+    (void)strcat(result, "/");
+    (void)strcat(result, arr[1]);
+    (void)strcat(result, "-");
+    (void)strcat(result, arr[2]);
+    (void)strcat(result, ".scope");
+
+    return util_strdup_s(result);
+}
+
+cgroup_oom_handler_info_t *common_get_cgroup_oom_handler(int fd, const char *name, const char *cgroup_path, const char *exit_fifo)
+{
+    if (g_cgroup_ops.get_cgroup_oom_handler == NULL) {
+        ERROR("Unimplmented get_cgroup_oom_handler op");
+        return NULL;
+    }
+
+    return g_cgroup_ops.get_cgroup_oom_handler(fd, name, cgroup_path, exit_fifo);
+}
+
+void common_free_cgroup_oom_handler_info(cgroup_oom_handler_info_t *info)
+{
+    if (info == NULL) {
+        return;
+    }
+
+    if (info->oom_event_fd >= 0) {
+        close(info->oom_event_fd);
+    }
+    if (info->cgroup_file_fd >= 0) {
+        close(info->cgroup_file_fd);
+    }
+
+    free(info->name);
+    free(info->cgroup_memory_event_path);
+    free(info);
+}

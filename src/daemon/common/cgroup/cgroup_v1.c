@@ -12,14 +12,20 @@
  * Create: 2023-03-29
  * Description: provide cgroup v1 functions
  ******************************************************************************/
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "cgroup.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/eventfd.h>
 
 #include "utils.h"
 #include "sysinfo.h"
 #include "err_msg.h"
+#include "events_sender_api.h"
 
 #define CGROUP_HUGETLB_LIMIT "hugetlb.%s.limit_in_bytes"
 #define CGROUP_MOUNT_PATH_PREFIX "/sys/fs/cgroup/"
@@ -1045,6 +1051,159 @@ static char *common_get_cgroup_path(const char *path, const char *subsystem)
     return res;
 }
 
+static bool oom_cb_cgroup_v1(int fd, void *cbdata)
+{
+    cgroup_oom_handler_info_t *info = (cgroup_oom_handler_info_t *)cbdata;
+    /* Try to read cgroup.event_control and known if the cgroup was removed
+     * if the cgroup was removed and only one event received,
+     * we know that it is a cgroup removal event rather than an oom event
+     */
+    bool cgroup_removed = false;
+    if (info == NULL) {
+        ERROR("Invalide callback data");
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    if (access(info->cgroup_memory_event_path, F_OK) < 0) {
+        DEBUG("Cgroup event path was removed");
+        cgroup_removed = true;
+    }
+
+    uint64_t event_count;
+    ssize_t num_read = util_read_nointr(fd, &event_count, sizeof(uint64_t));
+    if (num_read < 0) {
+        ERROR("Failed to read oom event from eventfd");
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    if (num_read == 0) {
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    if (num_read != sizeof(uint64_t)) {
+        ERROR("Failed to read full oom event from eventfd");
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    if (event_count == 0) {
+        ERROR("Unexpected event count when reading for oom event");
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    if (event_count == 1 && cgroup_removed) {
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    INFO("OOM event detected");
+    (void)isulad_monitor_send_container_event(info->name, OOM, -1, 0, NULL, NULL);
+
+    return CGROUP_OOM_HANDLE_CLOSE;
+}
+
+static char *get_memory_cgroup_path_v1(const char *cgroup_path)
+{
+    int nret = 0;
+    __isula_auto_free char *converted_cgroup_path = NULL;
+    __isula_auto_free char *mnt = NULL;
+    __isula_auto_free char *root = NULL;
+    char fpath[PATH_MAX] = { 0 };
+
+    converted_cgroup_path = common_convert_cgroup_path(cgroup_path);
+    if (converted_cgroup_path == NULL) {
+        ERROR("Failed to transfer cgroup path");
+        return NULL;
+    }
+
+    nret = get_cgroup_mnt_and_root_path_v1("memory", &mnt, &root);
+    if (nret != 0 || mnt == NULL || root == NULL) {
+        ERROR("Can not find cgroup mnt and root path for subsystem 'memory'");
+        return NULL;
+    }
+
+    // When iSulad is run inside docker, the root is based of the host cgroup.
+    // Replace root to "/"
+    if (strncmp(root, "/docker/", strlen("/docker/")) == 0) {
+        root[1] = '\0';
+    }
+
+    nret = snprintf(fpath, sizeof(fpath), "%s/%s", mnt, root);
+    if (nret < 0 || (size_t)nret >= sizeof(fpath)) {
+        ERROR("Failed to print string");
+        return NULL;
+    }
+
+    return util_path_join(fpath, converted_cgroup_path);
+}
+
+static cgroup_oom_handler_info_t *get_cgroup_oom_handler_v1(int fd, const char *name, const char *cgroup_path, const char *exit_fifo)
+{
+    __isula_auto_free char *memory_cgroup_path = NULL;
+    __isula_auto_free char *memory_cgroup_oom_control_path = NULL;
+    __isula_auto_free char *data = NULL;
+    __isula_auto_close int cgroup_event_control_fd = -1;
+    if (name == NULL || cgroup_path == NULL || exit_fifo == NULL) {
+        ERROR("Invalid arguments");
+        return NULL;
+    }
+
+    cgroup_oom_handler_info_t *info = util_common_calloc_s(sizeof(cgroup_oom_handler_info_t));
+    if (info == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+    info->name = util_strdup_s(name);
+    info->cgroup_file_fd =  -1;
+    info->oom_event_fd = -1;
+    info->oom_event_handler = oom_cb_cgroup_v1;
+
+    memory_cgroup_path = get_memory_cgroup_path_v1(cgroup_path);
+    if (memory_cgroup_path == NULL) {
+        ERROR("Failed to get memory cgroup path");
+        goto cleanup;
+    }
+
+    info->cgroup_memory_event_path = util_path_join(memory_cgroup_path, "cgroup.event_control");
+    if (info->cgroup_memory_event_path == NULL) {
+        ERROR("Failed to join memory cgroup file path");
+        goto cleanup;
+    }
+
+    cgroup_event_control_fd = util_open(info->cgroup_memory_event_path, O_WRONLY | O_CLOEXEC, 0);
+    if (cgroup_event_control_fd < 0) {
+        ERROR("Failed to open %s", info->cgroup_memory_event_path);
+        goto cleanup;
+    }
+
+    memory_cgroup_oom_control_path = util_path_join(memory_cgroup_path, "memory.oom_control");
+    if (memory_cgroup_oom_control_path == NULL) {
+        ERROR("Failed to join memory cgroup file path");
+        goto cleanup;
+    }
+
+    info->cgroup_file_fd = util_open(memory_cgroup_oom_control_path, O_RDONLY | O_CLOEXEC, 0);
+    if (info->cgroup_file_fd < 0) {
+        ERROR("Failed to open %s", memory_cgroup_oom_control_path);
+        goto cleanup;
+    }
+
+    info->oom_event_fd = eventfd(0, EFD_CLOEXEC);
+    if (info->oom_event_fd < 0) {
+        ERROR("Failed to create oom eventfd");
+        goto cleanup;
+    }
+
+    if (asprintf(&data, "%d %d", info->oom_event_fd, info->cgroup_file_fd) < 0 ||
+        util_write_nointr(cgroup_event_control_fd, data, strlen(data)) < 0) {
+        ERROR("Failed to write to cgroup.event_control");
+        goto cleanup;
+    }
+
+    return info;
+cleanup:
+    common_free_cgroup_oom_handler_info(info);
+    return NULL;
+}
+
 char *get_init_cgroup_path_v1(const char *subsystem)
 {
     return common_get_cgroup_path("/proc/1/cgroup", subsystem);
@@ -1071,5 +1230,6 @@ int cgroup_v1_ops_init(cgroup_ops *ops)
     ops->get_cgroup_mnt_and_root_path = get_cgroup_mnt_and_root_path_v1;
     ops->get_init_cgroup_path = get_init_cgroup_path_v1;
     ops->get_own_cgroup_path = get_own_cgroup_v1;
+    ops->get_cgroup_oom_handler = get_cgroup_oom_handler_v1;
     return 0;
 }
