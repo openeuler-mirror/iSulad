@@ -27,6 +27,7 @@ function test_inspect_spec()
 {
     local ret=0
     local image="busybox"
+    local ubuntu_image="ubuntu"
     local test="container inspect test => (${FUNCNAME[@]})"
 
     msg_info "${test} starting..."
@@ -36,6 +37,12 @@ function test_inspect_spec()
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
+
+    isula pull ${ubuntu_image}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${ubuntu_image}" && return ${FAILURE}
+
+    isula images | grep ubuntu
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${ubuntu_image}" && ((ret++))
 
     containername=test_inspect
 
@@ -136,6 +143,13 @@ function test_inspect_spec()
 
     isula inspect -f "{{json .State.Status}} {{.Name}}" $containername 2>&1 | sed -n '2p' | grep ${containername}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
+
+    isula rm -f $containername
+
+    isula run -it -m 4m --name $containername $ubuntu_image perl -e 'for ($i = 0; $i < 100000000; $i++) { $a .= " " x 1024 }'
+
+    isula inspect -f "{{json .State.OOMKilled}} {{.Name}}" $containername 2>&1 | sed -n '1p' | grep "true"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${ubuntu_image}" && ((ret++))
 
     isula rm -f $containername
 

@@ -13,6 +13,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/command_parser.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/daemon_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/isulad_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/sender_mock.cc
     cgroup_cpu_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
@@ -23,6 +24,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/cgroup
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/api
     ${CMAKE_BINARY_DIR}/conf
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd

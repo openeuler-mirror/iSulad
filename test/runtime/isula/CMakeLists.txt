@@ -31,6 +31,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/engine_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/isulad_config_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime/isula/isula_rt_ops.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/sender_mock.cc
     isula_rt_ops_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
