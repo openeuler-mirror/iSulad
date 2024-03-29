@@ -36,6 +36,7 @@
 #include "sandbox_manager.h"
 #include "transform.h"
 #include "isulad_config.h"
+#include "mailbox.h"
 
 namespace CRIV1 {
 void PodSandboxManagerService::PrepareSandboxData(const runtime::v1::PodSandboxConfig &config,
@@ -302,6 +303,7 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
     std::string jsonCheckpoint;
     std::string network_setting_json;
     runtime::v1::PodSandboxConfig copyConfig = config;
+    cri_container_message_t msg = { 0 };
 
     // Step 1: Parepare sandbox name, runtime and networkMode
     PrepareSandboxData(config, runtimeHandler, sandboxName, runtimeInfo, networkMode, error);
@@ -372,6 +374,11 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
         goto cleanup_network;
     }
 
+    msg.container_id = sandbox->GetId().c_str();
+    msg.sandbox_id = sandbox->GetId().c_str();
+    msg.type = CRI_CONTAINER_MESSAGE_TYPE_CREATED;
+    mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &msg);
+
     // Step 10: Save network settings json to disk
     // Update network settings before start sandbox since sandbox container will use the sandbox key
     if (namespace_is_cni(networkMode.c_str())) {
@@ -390,6 +397,9 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
         // If start failed, sandbox should be NotReady, we cleanup network and delete sandbox in remove
         return response_id;
     }
+
+    msg.type = CRI_CONTAINER_MESSAGE_TYPE_STARTED;
+    mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &msg);
 
     return sandbox->GetId();
 
@@ -700,6 +710,13 @@ void PodSandboxManagerService::RemovePodSandbox(const std::string &podSandboxID,
         ERROR("Failed to delete sandbox %s: %s", podSandboxID.c_str(), error.GetCMessage());
     }
 
+    if (error.Empty()) {
+        cri_container_message_t msg = { 0 };
+        msg.container_id = sandbox->GetId().c_str();
+        msg.sandbox_id = sandbox->GetId().c_str();
+        msg.type = CRI_CONTAINER_MESSAGE_TYPE_DELETED;
+        mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &msg);
+    }
 }
 
 auto PodSandboxManagerService::SharesHostNetwork(const container_inspect *inspect) -> runtime::v1::NamespaceMode
@@ -800,10 +817,29 @@ void PodSandboxManagerService::SetSandboxStatusNetwork(std::shared_ptr<sandbox::
     }
 }
 
-std::unique_ptr<runtime::v1::PodSandboxStatus>
-PodSandboxManagerService::PodSandboxStatus(const std::string &podSandboxID, Errors &error)
+void PodSandboxManagerService::GetContainerStatuses(const std::string &podSandboxID,
+                                                    std::vector<std::unique_ptr<runtime::v1::ContainerStatus>> &containerStatuses,
+                                                    std::vector<std::string> &errors) {
+    auto list_response_wrapper = GetContainerListResponse(podSandboxID, errors);
+    if (list_response_wrapper == nullptr) {
+        return;
+    }
+
+    auto list_response = list_response_wrapper->get();
+    // Remove all containers in the sandbox.
+    for (size_t i = 0; i < list_response->containers_len; i++) {
+        Errors stError;
+        containerStatuses.push_back(CRIHelpersV1::GetContainerStatus(m_cb, list_response->containers[i]->id, stError));
+        if (stError.NotEmpty()) {
+            ERROR("Error get container status: %s: %s", list_response->containers[i]->id, stError.GetCMessage());
+            errors.push_back(stError.GetMessage());
+        }
+    }
+}
+
+std::unique_ptr<runtime::v1::PodSandboxStatus> PodSandboxManagerService::GetPodSandboxStatus(const std::string &podSandboxID, Errors &error)
 {
-    std::unique_ptr<runtime::v1::PodSandboxStatus> podStatus(new runtime::v1::PodSandboxStatus);
+    std::unique_ptr<runtime::v1::PodSandboxStatus> podStatus(new (std::nothrow) runtime::v1::PodSandboxStatus);
     if (podStatus == nullptr) {
         ERROR("Out of memory");
         error.SetError("Out of memory");
@@ -829,6 +865,50 @@ PodSandboxManagerService::PodSandboxStatus(const std::string &podSandboxID, Erro
     // get default network status
     SetSandboxStatusNetwork(sandbox, podStatus);
     return podStatus;
+}
+
+void PodSandboxManagerService::PodSandboxStatus(const std::string &podSandboxID,
+                                                runtime::v1::PodSandboxStatusResponse *reply, Errors &error)
+{
+    if (reply == nullptr) {
+        ERROR("Invalid NULL reply");
+        error.SetError("Invalid NULL reply");
+        return;
+    }
+
+ 
+    auto podStatus = GetPodSandboxStatus(podSandboxID, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to get pod sandbox status: %s", error.GetCMessage());
+        return;
+    }
+
+    auto sandbox = sandbox::SandboxManager::GetInstance()->GetSandbox(podSandboxID);
+    if (sandbox == nullptr) {
+        ERROR("Failed to find sandbox id %s", podSandboxID.c_str());
+        error.Errorf("Failed to find sandbox id %s", podSandboxID.c_str());
+        return;
+    }
+
+    *(reply->mutable_status()) = *podStatus;
+
+
+    if (!m_enablePodEvents) {
+        return;
+    }
+
+    std::vector<std::unique_ptr<runtime::v1::ContainerStatus>> containerStatuses;
+    std::vector<std::string> errors;
+    GetContainerStatuses(sandbox->GetId(), containerStatuses, errors);
+    if (errors.size() != 0) {
+        error.SetAggregate(errors);
+        return;
+    }
+
+    for (auto &containerStatus : containerStatuses) {
+        *(reply->add_containers_statuses()) = *containerStatus;
+    }
+    return;
 }
 
 void PodSandboxManagerService::ListPodSandbox(const runtime::v1::PodSandboxFilter &filter,
@@ -944,7 +1024,7 @@ void PodSandboxManagerService::GetPodSandboxNetworkMetrics(const std::string &ne
 void PodSandboxManagerService::PackagePodSandboxStatsAttributes(
     const std::string &id, std::unique_ptr<runtime::v1::PodSandboxStats> &podStatsPtr, Errors &error)
 {
-    auto status = PodSandboxStatus(id, error);
+    auto status = GetPodSandboxStatus(id, error);
     if (error.NotEmpty()) {
         return;
     }
@@ -1111,8 +1191,8 @@ auto PodSandboxManagerService::PodSandboxStats(const std::string &podSandboxID,
     auto &config = sandbox->GetSandboxConfig();
     auto oldStatsRec = sandbox->GetStatsInfo();
 
-    auto status = PodSandboxStatus(sandbox->GetId(), tmpErr);
-    if (error.NotEmpty()) {
+    auto status = GetPodSandboxStatus(sandbox->GetId(), tmpErr);
+    if (tmpErr.NotEmpty()) {
         ERROR("Failed to get podsandbox %s status: %s", sandbox->GetId().c_str(), tmpErr.GetCMessage());
         error.Errorf("Failed to get podsandbox %s status", sandbox->GetId().c_str());
         return nullptr;

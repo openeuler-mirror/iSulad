@@ -26,7 +26,8 @@ namespace CRIV1 {
 class CRIRuntimeServiceImpl : public CRIRuntimeService {
 public:
     CRIRuntimeServiceImpl(const std::string &podSandboxImage, service_executor_t *cb,
-                          std::shared_ptr<Network::PluginManager> pluginManager);
+                          std::shared_ptr<Network::PluginManager> pluginManager,
+                          bool enablePodEvents);
     CRIRuntimeServiceImpl(const CRIRuntimeServiceImpl &) = delete;
     auto operator=(const CRIRuntimeServiceImpl &) -> CRIRuntimeServiceImpl & = delete;
     virtual ~CRIRuntimeServiceImpl() = default;
@@ -72,8 +73,7 @@ public:
 
     void RemovePodSandbox(const std::string &podSandboxID, Errors &error) override;
 
-    auto PodSandboxStatus(const std::string &podSandboxID, Errors &error)
-    -> std::unique_ptr<runtime::v1::PodSandboxStatus> override;
+    void PodSandboxStatus(const std::string &podSandboxID, runtime::v1::PodSandboxStatusResponse *reply, Errors &error) override;
 
     void ListPodSandbox(const runtime::v1::PodSandboxFilter &filter,
                         std::vector<std::unique_ptr<runtime::v1::PodSandbox>> &pods, Errors &error) override;
@@ -103,6 +103,7 @@ protected:
 private:
     std::string m_podSandboxImage;
     std::shared_ptr<Network::PluginManager> m_pluginManager { nullptr };
+    bool m_enablePodEvents;
 };
 } // namespace CRIV1
 #endif // DAEMON_ENTRY_CRI_V1_CRI_RUNTIME_SERVICE_IMPL_H

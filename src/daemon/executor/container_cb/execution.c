@@ -62,6 +62,7 @@
 #include "event_type.h"
 #include "utils_timestamp.h"
 #include "utils_verify.h"
+#include "mailbox.h"
 #ifdef ENABLE_NATIVE_NETWORK
 #include "service_network_api.h"
 
@@ -542,6 +543,9 @@ static int container_start_cb(const container_start_request *request, container_
     container_t *cont = NULL;
     int sync_fd = -1;
     pthread_t thread_id = 0;
+#ifdef ENABLE_CRI_API_V1
+    cri_container_message_t message;
+#endif
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -595,6 +599,15 @@ static int container_start_cb(const container_start_request *request, container_
 
     EVENT("Event: {Object: %s, Type: Running}", id);
     (void)isulad_monitor_send_container_event(id, START, -1, 0, NULL, NULL);
+
+#ifdef ENABLE_CRI_API_V1
+    if (is_container_in_sandbox(cont->common_config->sandbox_info)) {
+        message.container_id = id;
+        message.sandbox_id = cont->common_config->sandbox_info->id;
+        message.type = CRI_CONTAINER_MESSAGE_TYPE_STARTED;
+        mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &message);
+    }
+#endif
 
 pack_response:
     handle_start_io_thread_by_cc(cc, sync_fd, thread_id);
@@ -1009,6 +1022,9 @@ static int container_delete_cb(const container_delete_request *request, containe
     char *name = NULL;
     char *id = NULL;
     container_t *cont = NULL;
+#ifdef ENABLE_CRI_API_V1
+    cri_container_message_t message;
+#endif
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || response == NULL) {
@@ -1062,6 +1078,15 @@ static int container_delete_cb(const container_delete_request *request, containe
     }
 
     EVENT("Event: {Object: %s, Type: Deleted}", id);
+
+#ifdef ENABLE_CRI_API_V1
+    if (is_container_in_sandbox(cont->common_config->sandbox_info)) {
+        message.container_id = cont->common_config->id;
+        message.sandbox_id = cont->common_config->sandbox_info->id;
+        message.type = CRI_CONTAINER_MESSAGE_TYPE_DELETED;
+        mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &message);
+    }
+#endif
 
 pack_response:
     pack_delete_response(*response, cc, id);

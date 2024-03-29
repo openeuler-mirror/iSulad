@@ -23,6 +23,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/grpc_sandboxer_client_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/controller_stub_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/shim_controller_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/mailbox_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sandbox_ut.cc)
 
@@ -33,6 +34,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/entry/cri
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/executor
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/mailbox
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/shim
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller/sandboxer

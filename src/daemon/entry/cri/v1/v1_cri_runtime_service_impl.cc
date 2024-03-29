@@ -19,11 +19,12 @@
 
 namespace CRIV1 {
 CRIRuntimeServiceImpl::CRIRuntimeServiceImpl(const std::string &podSandboxImage, service_executor_t *cb,
-                                             std::shared_ptr<Network::PluginManager> pluginManager)
+                                             std::shared_ptr<Network::PluginManager> pluginManager, bool enablePodEvents)
     : m_runtimeVersioner(new RuntimeVersionerService(cb))
     , m_containerManager(new ContainerManagerService(cb))
-    , m_podSandboxManager(new PodSandboxManagerService(podSandboxImage, cb, pluginManager))
+    , m_podSandboxManager(new PodSandboxManagerService(podSandboxImage, cb, pluginManager, enablePodEvents))
     , m_runtimeManager(new RuntimeManagerService(cb, pluginManager))
+    , m_enablePodEvents(enablePodEvents)
 {
 }
 
@@ -124,10 +125,9 @@ void CRIRuntimeServiceImpl::RemovePodSandbox(const std::string &podSandboxID, Er
     m_podSandboxManager->RemovePodSandbox(podSandboxID, error);
 }
 
-auto CRIRuntimeServiceImpl::PodSandboxStatus(const std::string &podSandboxID, Errors &error)
--> std::unique_ptr<runtime::v1::PodSandboxStatus>
+void CRIRuntimeServiceImpl::PodSandboxStatus(const std::string &podSandboxID, runtime::v1::PodSandboxStatusResponse *reply, Errors &error)
 {
-    return m_podSandboxManager->PodSandboxStatus(podSandboxID, error);
+    m_podSandboxManager->PodSandboxStatus(podSandboxID, reply, error);
 }
 
 void CRIRuntimeServiceImpl::ListPodSandbox(const runtime::v1::PodSandboxFilter &filter,

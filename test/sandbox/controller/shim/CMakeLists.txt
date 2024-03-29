@@ -7,6 +7,7 @@ add_executable(${EXE}
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/gogo.pb.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/cri/v1/v1_cri_helpers.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/cri/v1/v1_cri_security_context.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/cri/v1/v1_naming.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/cri/checkpoint_handler.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/cri/cri_constants.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/cri/cri_helpers.cc

@@ -70,8 +70,8 @@ public:
 
     virtual void RemovePodSandbox(const std::string &podSandboxID, Errors &error) = 0;
 
-    virtual auto PodSandboxStatus(const std::string &podSandboxID,
-                                  Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStatus> = 0;
+    virtual void PodSandboxStatus(const std::string &podSandboxID, runtime::v1::PodSandboxStatusResponse *reply,
+                                  Errors &error) = 0;
 
     virtual void ListPodSandbox(const runtime::v1::PodSandboxFilter &filter,
                                 std::vector<std::unique_ptr<runtime::v1::PodSandbox>> &pods, Errors &error) = 0;

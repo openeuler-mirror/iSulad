@@ -27,6 +27,8 @@
 #include "checkpoint_handler.h"
 #include "constants.h"
 #include "errors.h"
+#include "callback.h"
+#include "cstruct_wrapper.h"
 
 namespace CRIHelpersV1 {
 
@@ -77,6 +79,9 @@ std::string CRISandboxerConvert(const std::string &runtime);
 
 void ApplySandboxSecurityContextToHostConfig(const runtime::v1::LinuxSandboxSecurityContext &context, host_config *hc,
                                              Errors &error);
+
+auto GetContainerStatus(service_executor_t *m_cb, const std::string &containerID, Errors &error)
+-> std::unique_ptr<runtime::v1::ContainerStatus>;
 
 }; // namespace CRIHelpers
 

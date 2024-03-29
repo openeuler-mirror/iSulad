@@ -62,6 +62,7 @@
 #include "opt_log.h"
 #include "runtime_api.h"
 #include "id_name_manager.h"
+#include "mailbox.h"
 
 #ifdef ENABLE_CRI_API_V1
 static bool validate_sandbox_info(const container_sandbox_info *sandbox)
@@ -1389,6 +1390,9 @@ int container_create_cb(const container_create_request *request, container_creat
     bool skip_id_name_manage = false;
     bool skip_sandbox_key_manage = false;
     __isula_auto_sysinfo_t sysinfo_t *sysinfo = NULL;
+#ifdef ENABLE_CRI_API_V1
+    cri_container_message_t message;
+#endif
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -1572,6 +1576,14 @@ int container_create_cb(const container_create_request *request, container_creat
 
     EVENT("Event: {Object: %s, Type: Created %s}", id, name);
     (void)isulad_monitor_send_container_event(id, CREATE, -1, 0, NULL, NULL);
+#ifdef ENABLE_CRI_API_V1
+    if (is_container_in_sandbox(request->sandbox)) {
+        message.container_id = id;
+        message.sandbox_id = request->sandbox->id;
+        message.type = CRI_CONTAINER_MESSAGE_TYPE_CREATED;
+        mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &message);
+    }
+#endif
     goto pack_response;
 
 umount_channel:

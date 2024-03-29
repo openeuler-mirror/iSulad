@@ -1760,6 +1760,7 @@ int merge_json_confs_into_global(struct service_arguments *args)
     args->json_confs->cri_sandboxers = tmp_json_confs->cri_sandboxers;
     tmp_json_confs->cri_sandboxers = NULL;
     args->json_confs->enable_cri_v1 = tmp_json_confs->enable_cri_v1;
+    args->json_confs->enable_pod_events = tmp_json_confs->enable_pod_events;
 #endif
 
     args->json_confs->systemd_cgroup = tmp_json_confs->systemd_cgroup;
