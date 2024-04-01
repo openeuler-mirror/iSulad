@@ -221,6 +221,8 @@ void container_state_set_restarting(container_state_t *s, int exit_code);
 void container_state_set_paused(container_state_t *s);
 void container_state_reset_paused(container_state_t *s);
 
+void container_state_set_oom_killed(container_state_t *s);
+
 void container_state_set_dead(container_state_t *s);
 
 void container_state_increase_restart_count(container_state_t *s);
@@ -269,8 +271,7 @@ bool container_is_valid_state_string(const char *state);
 
 void container_update_health_monitor(const char *container_id);
 
-extern int container_supervisor_add_exit_monitor(int fd, const pid_ppid_info_t *pid_info, const char *name,
-                                                 const char *runtime, bool sandbox_container);
+extern int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const pid_ppid_info_t *pid_info, const container_t *cont);
 
 extern char *container_exit_fifo_create(const char *cont_state_path);
 

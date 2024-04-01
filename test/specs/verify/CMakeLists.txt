@@ -38,6 +38,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/storage_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/image_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/storage_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/sender_mock.cc
     verify_ut.cc)
 
 target_include_directories(${EXE} PUBLIC

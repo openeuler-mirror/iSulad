@@ -17,12 +17,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/inotify.h>
 
 #include <isula_libutils/auto_cleanup.h>
 
 #include "utils.h"
 #include "path.h"
 #include "sysinfo.h"
+#include "events_sender_api.h"
 
 // Cgroup V2 Item Definition
 #define CGROUP2_CPU_WEIGHT "cpu.weight"
@@ -408,8 +410,141 @@ static int get_cgroup_metrics_v2(const char *cgroup_path, cgroup_metrics_t *cgro
 
 static int get_cgroup_mnt_and_root_v2(const char *subsystem, char **mountpoint, char **root)
 {
-    *mountpoint = util_strdup_s(CGROUP_ISULAD_PATH);
+    if (mountpoint != NULL) {
+        *mountpoint = util_strdup_s(CGROUP_ISULAD_PATH);
+    }
     return 0;
+}
+
+static bool oom_cb_cgroup_v2(int fd, void *cbdata)
+{
+    const size_t events_size = sizeof(struct inotify_event) + NAME_MAX + 1;
+    char events[events_size];
+    cgroup_oom_handler_info_t *info = (cgroup_oom_handler_info_t *)cbdata;
+
+    if (info == NULL) {
+        ERROR("Invalid callback data");
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    ssize_t num_read = util_read_nointr(fd, &events, events_size);
+    if (num_read < 0) {
+        ERROR("Failed to read oom event from eventfd in v2");
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    if (((struct inotify_event *)events)->mask & ( IN_DELETE | IN_DELETE_SELF)) {
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    __isula_auto_file FILE *fp = fopen(info->cgroup_memory_event_path, "re");
+    if (fp == NULL) {
+        ERROR("Failed to open cgroups file: %s", info->cgroup_memory_event_path);
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    __isula_auto_free char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    while ((read = getline(&line, &len, fp)) != -1) {
+        int count;
+        const char *oom_str = "oom ";
+        const char *oom_kill_str = "oom_kill ";
+        const int oom_len = strlen(oom_str), oom_kill_len = strlen(oom_kill_str);
+
+        if (read >= oom_kill_len + 2 && memcmp(line, oom_kill_str, oom_kill_len) == 0) {
+            len = oom_kill_len;
+        } else if (read >= oom_len + 2 && memcmp(line, oom_str, oom_len) == 0) {
+            len = oom_len;
+        } else {
+            continue;
+        }
+
+        // to make use of util_safe_int, it requires it ends with '\0'
+        line[strcspn(line, "\n")] = '\0';
+        if (util_safe_int(&line[len], &count) < 0) {
+            ERROR("Failed to parse: %s", &line[len]);
+            continue;
+        }
+
+        if (count == 0) {
+            continue;
+        }
+
+        INFO("OOM event detected in cgroup v2");
+        (void)isulad_monitor_send_container_event(info->name, OOM, -1, 0, NULL, NULL);
+
+        return CGROUP_OOM_HANDLE_CLOSE;
+    }
+
+    return CGROUP_OOM_HANDLE_CONTINUE;
+}
+
+static char *get_real_cgroup_path_v2(const char *cgroup_path)
+{
+    __isula_auto_free char *converted_cgroup_path = NULL;
+    converted_cgroup_path = common_convert_cgroup_path(cgroup_path);
+    if (converted_cgroup_path == NULL) {
+        ERROR("Failed to convert cgroup path");
+        return NULL;
+    }
+
+    return util_path_join(CGROUP_MOUNTPOINT, converted_cgroup_path);
+}
+
+cgroup_oom_handler_info_t *get_cgroup_oom_handler_v2(int fd, const char *name, const char *cgroup_path, const char *exit_fifo)
+{
+    __isula_auto_free char *real_cgroup_path = NULL;
+    if (name == NULL || cgroup_path == NULL || exit_fifo == NULL) {
+        ERROR("Invalid arguments");
+        return NULL;
+    }
+
+    cgroup_oom_handler_info_t *info = util_common_calloc_s(sizeof(cgroup_oom_handler_info_t));
+    if (info == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    info->name = util_strdup_s(name);
+    info->oom_event_fd = -1;
+    info->cgroup_file_fd = -1;
+    info->oom_event_handler = oom_cb_cgroup_v2;
+
+    real_cgroup_path = get_real_cgroup_path_v2(cgroup_path);
+    if (real_cgroup_path == NULL) {
+        ERROR("Failed to transfer cgroup path: %s", cgroup_path);
+        goto cleanup;
+    }
+
+    info->cgroup_memory_event_path = util_path_join(real_cgroup_path, "memory.events");
+    if (info->cgroup_memory_event_path == NULL) {
+        ERROR("Failed to join path");
+        goto cleanup;
+    }
+
+    if ((info->oom_event_fd = inotify_init()) < 0) {
+        ERROR("Failed to init inotify fd");
+        goto cleanup;
+    }
+
+    if (inotify_add_watch(info->oom_event_fd, info->cgroup_memory_event_path, IN_MODIFY) < 0) {
+        ERROR("Failed to watch inotify fd for %s", info->cgroup_memory_event_path);
+        goto cleanup;
+    }
+
+    // watch exit fifo for container exit, so we can close the inotify fd
+    // because inotify cannot watch cgroup file delete event
+    if (inotify_add_watch(info->oom_event_fd, exit_fifo, IN_DELETE | IN_DELETE_SELF) < 0) {
+        ERROR("Failed to watch inotify fd for %s", exit_fifo);
+        goto cleanup;
+    }
+
+    return info;
+
+cleanup:
+    common_free_cgroup_oom_handler_info(info);
+    return NULL;
 }
 
 int get_cgroup_version_v2()
@@ -426,5 +561,6 @@ int cgroup_v2_ops_init(cgroup_ops *ops)
     ops->get_cgroup_info = get_cgroup_info_v2;
     ops->get_cgroup_metrics = get_cgroup_metrics_v2;
     ops->get_cgroup_mnt_and_root_path = get_cgroup_mnt_and_root_v2;
+    ops->get_cgroup_oom_handler = get_cgroup_oom_handler_v2;
     return 0;
 }

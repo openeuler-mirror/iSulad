@@ -29,6 +29,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/container_unix_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/engine_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/sender_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/isulad_config_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c
     lcr_rt_ops_ut.cc)

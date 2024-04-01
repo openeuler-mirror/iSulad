@@ -41,6 +41,11 @@ int common_get_cgroup_mnt_and_root_path(const char *subsystem, char **mountpoint
 char *common_get_init_cgroup_path(const char *subsystem);
 char *common_get_own_cgroup_path(const char *subsystem);
 
+char *common_convert_cgroup_path(const char *cgroup_path);
+
+cgroup_oom_handler_info_t *common_get_cgroup_oom_handler(int fd, const char *name, const char *cgroup_path, const char *exit_fifo);
+void common_free_cgroup_oom_handler_info(cgroup_oom_handler_info_t *info);
+
 #ifdef __cplusplus
 }
 #endif

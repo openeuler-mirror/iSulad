@@ -1055,6 +1055,9 @@ void ContainerManagerService::UpdateBaseStatusFromInspect(
         } else { // Case 3
             state = runtime::v1::CONTAINER_CREATED;
         }
+        if (inspect->state->oom_killed) {
+            reason = "OOMKilled";
+        }
         if (inspect->state->error != nullptr) {
             message = inspect->state->error;
         }

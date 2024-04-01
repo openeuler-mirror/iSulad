@@ -114,7 +114,7 @@ static int container_state_changed(container_t *cont, const struct isulad_events
     bool has_been_manually_stopped = false;
 
     /* only handle Exit event */
-    if (events->type != EVENTS_TYPE_STOPPED1) {
+    if (events->type != EVENTS_TYPE_STOPPED1 && events->type != EVENTS_TYPE_OOM) {
         return 0;
     }
 
@@ -187,6 +187,16 @@ static int container_state_changed(container_t *cont, const struct isulad_events
             }
 
             break;
+
+        case EVENTS_TYPE_OOM: {
+            container_lock(cont);
+            container_state_set_oom_killed(cont->state);
+            if (container_state_to_disk(cont)) {
+                WARN("Failed to save container \"%s\" to disk", id);
+            }
+            container_unlock(cont);
+            break;
+        }
         default:
             /* ignore garbage */
             break;

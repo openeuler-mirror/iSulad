@@ -116,6 +116,17 @@ typedef struct {
     cgroup_pids_metrics_t cgpids_metrics;
 } cgroup_metrics_t;
 
+#define CGROUP_OOM_HANDLE_CONTINUE false
+#define CGROUP_OOM_HANDLE_CLOSE true
+
+typedef struct _cgroup_oom_handler_info_t {
+    int oom_event_fd;
+    int cgroup_file_fd;
+    char *name;
+    char *cgroup_memory_event_path;
+    bool (*oom_event_handler)(int, void *);
+} cgroup_oom_handler_info_t;
+
 typedef struct {
     int (*get_cgroup_version)(void);
     int (*get_cgroup_info)(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
@@ -128,6 +139,8 @@ typedef struct {
 
     char *(*get_init_cgroup_path)(const char *subsystem);
     char *(*get_own_cgroup_path)(const char *subsystem);
+
+    cgroup_oom_handler_info_t *(*get_cgroup_oom_handler)(int fd, const char *name, const char *cgroup_path, const char *exit_fifo);
 } cgroup_ops;
 
 #ifdef __cplusplus
