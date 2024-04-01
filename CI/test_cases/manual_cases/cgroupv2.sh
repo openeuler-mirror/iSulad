@@ -31,59 +31,59 @@ function test_cgroup2_cpu()
 
   if [[ -f /sys/fs/cgroup/isulad/cpu.weight ]];then
     # min value
-    isula run -ti --rm --cpu-shares 2 busybox cat /sys/fs/cgroup/cpu.weight | grep ^1$'\r'
+    isula run --runtime $1 -ti --rm --cpu-shares 2 busybox cat /sys/fs/cgroup/cpu.weight | grep ^1$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.weight min value failed" && ((ret++))
 
     # max value
-    isula run -ti --rm --cpu-shares 262144 busybox cat /sys/fs/cgroup/cpu.weight | grep ^10000$'\r'
+    isula run --runtime $1 -ti --rm --cpu-shares 262144 busybox cat /sys/fs/cgroup/cpu.weight | grep ^10000$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.weight max value failed" && ((ret++))
 
     # invalid value
-    isula run -ti --rm --cpu-shares -1 busybox echo hello
+    isula run --runtime $1 -ti --rm --cpu-shares -1 busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.weight -1 failed" && ((ret++))
 
     # default value
-    isula run -ti --rm --cpu-shares 0 busybox cat /sys/fs/cgroup/cpu.weight | grep ^100$'\r'
+    isula run --runtime $1 -ti --rm --cpu-shares 0 busybox cat /sys/fs/cgroup/cpu.weight | grep ^100$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.weight default value failed" && ((ret++))
   fi
 
   if [[ -f /sys/fs/cgroup/isulad/cpu.max ]];then
     # normal value
-    isula run -ti --rm --cpu-quota 50000 --cpu-period 12345 busybox cat /sys/fs/cgroup/cpu.max | grep ^"50000 12345"$'\r'
+    isula run --runtime $1 -ti --rm --cpu-quota 50000 --cpu-period 12345 busybox cat /sys/fs/cgroup/cpu.max | grep ^"50000 12345"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.max normal value failed" && ((ret++))
 
     # invalid min period
-    isula run -ti --rm --cpu-quota 50000 --cpu-period 999 busybox echo hello
+    isula run --runtime $1 -ti --rm --cpu-quota 50000 --cpu-period 999 busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.max invalid min period failed" && ((ret++))
 
     # invalid max period
-    isula run -ti --rm --cpu-quota 50000 --cpu-period 1000001 busybox echo hello
+    isula run --runtime $1 -ti --rm --cpu-quota 50000 --cpu-period 1000001 busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.max invalid max period failed" && ((ret++))
 
     # invalid quota
-    isula run -ti --rm --cpu-quota 999 --cpu-period 1000000 busybox echo hello
+    isula run --runtime $1 -ti --rm --cpu-quota 999 --cpu-period 1000000 busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.max invalid quota failed" && ((ret++))
 
     # default 0 quota
-    isula run -ti --rm --cpu-quota 0 --cpu-period 1000000 busybox cat /sys/fs/cgroup/cpu.max | grep ^"max 1000000"$'\r'
+    isula run --runtime $1 -ti --rm --cpu-quota 0 --cpu-period 1000000 busybox cat /sys/fs/cgroup/cpu.max | grep ^"max 1000000"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.max default 0 quota failed" && ((ret++))
 
     # default -1 quota
-    isula run -ti --rm --cpu-quota -1 --cpu-period 1000000 busybox cat /sys/fs/cgroup/cpu.max | grep ^"max 1000000"$'\r'
+    isula run --runtime $1 -ti --rm --cpu-quota -1 --cpu-period 1000000 busybox cat /sys/fs/cgroup/cpu.max | grep ^"max 1000000"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.max default -1 quota failed" && ((ret++))
 
     # cpus 1
-    isula run -ti --rm --cpus 1 busybox cat /sys/fs/cgroup/cpu.max | grep ^"100000 100000"$'\r'
+    isula run --runtime $1 -ti --rm --cpus 1 busybox cat /sys/fs/cgroup/cpu.max | grep ^"100000 100000"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.max cpus 1 failed" && ((ret++))
 
     # cpus 0
-    isula run -ti --rm --cpus 0 busybox cat /sys/fs/cgroup/cpu.max | grep ^"max 100000"$'\r'
+    isula run --runtime $1 -ti --rm --cpus 0 busybox cat /sys/fs/cgroup/cpu.max | grep ^"max 100000"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpu.max cpus 0 failed" && ((ret++))
   fi
 
   if [[ -f /sys/fs/cgroup/isulad/cpuset.cpus.effective ]];then
     # normal value
-    isula run -tid -n cpuset --cpuset-cpus 0 --cpuset-mems 0 busybox sh
+    isula run --runtime $1 -tid -n cpuset --cpuset-cpus 0 --cpuset-mems 0 busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpuset run container failed" && ((ret++))
 
     isula exec -ti cpuset cat /sys/fs/cgroup/cpuset.cpus | grep ^0$'\r'
@@ -96,19 +96,19 @@ function test_cgroup2_cpu()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpuset remove container failed" && ((ret++))
 
     # invalid cpus -1 value
-    isula run -tid -n cpuset --cpuset-cpus -1 busybox sh
+    isula run --runtime $1 -tid -n cpuset --cpuset-cpus -1 busybox sh
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpuset cpus invalid -1 failed" && ((ret++))
 
     # invalid cpus 100000 value
-    isula run -tid -n cpuset --cpuset-cpus 100000 busybox sh
+    isula run --runtime $1 -tid -n cpuset --cpuset-cpus 100000 busybox sh
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpuset cpus invalid 100000 failed" && ((ret++))
 
     # invalid mems -1 value
-    isula run -tid -n cpuset --cpuset-mems -1 busybox sh
+    isula run --runtime $1 -tid -n cpuset --cpuset-mems -1 busybox sh
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpuset mems invalid -1 failed" && ((ret++))
 
     # invalid mems 100000 value
-    isula run -tid -n cpuset --cpuset-mems 100000 busybox sh
+    isula run --runtime $1 -tid -n cpuset --cpuset-mems 100000 busybox sh
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 cpuset mems invalid 100000 failed" && ((ret++))
   fi
 
@@ -121,33 +121,38 @@ function test_cgroup2_io()
 
   if [[ -f "/sys/fs/cgroup/isulad/io.bfq.weight" ]];then
     # min value
-    isula run -ti --rm --blkio-weight 10 busybox cat "/sys/fs/cgroup/io.bfq.weight" | grep 1$'\r'
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.bfq.weight min value failed" && ((ret++))
+    if [ $1 == "lcr" ]; then
+      isula run --runtime $1 -ti --rm --blkio-weight 10 busybox cat "/sys/fs/cgroup/io.bfq.weight" | grep 1$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.bfq.weight min value failed" && ((ret++))
+    else
+      isula run --runtime $1 -ti --rm --blkio-weight 10 busybox cat "/sys/fs/cgroup/io.bfq.weight" | grep 10$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.bfq.weight min value failed" && ((ret++))
+    fi
 
     # max value
-    isula run -ti --rm --blkio-weight 1000 busybox cat "/sys/fs/cgroup/io.bfq.weight" | grep 1000$'\r'
+    isula run --runtime $1 -ti --rm --blkio-weight 1000 busybox cat "/sys/fs/cgroup/io.bfq.weight" | grep 1000$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.bfq.weight max value failed" && ((ret++))
 
     # default value
-    isula run -ti --rm --blkio-weight 0 busybox cat "/sys/fs/cgroup/io.bfq.weight" | grep 100$'\r'
+    isula run --runtime $1 -ti --rm --blkio-weight 0 busybox cat "/sys/fs/cgroup/io.bfq.weight" | grep 100$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.bfq.weight default value failed" && ((ret++))
 
     # invalid value
-    isula run -ti --rm --blkio-weight -1 busybox echo hello
+    isula run --runtime $1 -ti --rm --blkio-weight -1 busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.bfq.weight -1 failed" && ((ret++))
   fi
 
   if [[ -f "/sys/fs/cgroup/isulad/io.bfq.weight_device" ]];then
     # min value
-    isula run -ti --rm --blkio-weight-device /dev/null:10 busybox cat "/sys/fs/cgroup/io.bfq.weight_device" | grep ^"1:3 10"$'\r'
+    isula run --runtime $1 -ti --rm --blkio-weight-device /dev/null:10 busybox cat "/sys/fs/cgroup/io.bfq.weight_device" | grep ^"1:3 10"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.bfq.weight_device max value failed" && ((ret++))
 
     # max value
-    isula run -ti --rm --blkio-weight-device /dev/null:1000 busybox cat "/sys/fs/cgroup/io.bfq.weight_device" | grep ^"1:3 10000"$'\r'
+    isula run --runtime $1 -ti --rm --blkio-weight-device /dev/null:1000 busybox cat "/sys/fs/cgroup/io.bfq.weight_device" | grep ^"1:3 10000"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.bfq.weight_device max value failed" && ((ret++))
 
     # disable weight device
-    isula run -tid -n weight_device --rm --blkio-weight-device /dev/null:0 busybox sh
+    isula run --runtime $1 -tid -n weight_device --rm --blkio-weight-device /dev/null:0 busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.bfq.weight_device failed" && ((ret++))
 
     isula exec -ti weight_device cat "/sys/fs/cgroup/io.bfq.weight_device" | grep "1:3"
@@ -159,33 +164,43 @@ function test_cgroup2_io()
 
   if [[ -f "/sys/fs/cgroup/isulad/io.weight" ]];then
     # min value
-    isula run -ti --rm --blkio-weight 10 busybox cat "/sys/fs/cgroup/io.weight" | grep ^"default 1"$'\r'
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight min value failed" && ((ret++))
+    if [ $1 == "lcr" ]; then
+      isula run --runtime $1 -ti --rm --blkio-weight 10 busybox cat "/sys/fs/cgroup/io.weight" | grep ^"default 1"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight min value failed" && ((ret++))
+    else
+      isula run --runtime $1 -ti --rm --blkio-weight 10 busybox cat "/sys/fs/cgroup/io.bfq.weight" | grep ^"default 10"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight min value failed" && ((ret++))
+    fi
 
     # max value
-    isula run -ti --rm --blkio-weight 1000 busybox cat "/sys/fs/cgroup/io.weight" | grep ^"default 10000"$'\r'
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight max value failed" && ((ret++))
+    if [ $1 == "lcr" ]; then
+      isula run --runtime $1 -ti --rm --blkio-weight 1000 busybox cat "/sys/fs/cgroup/io.weight" | grep ^"default 10000"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight max value failed" && ((ret++))
+    else
+        isula run --runtime $1 -ti --rm --blkio-weight 1000 busybox cat "/sys/fs/cgroup/io.bfq.weight" | grep ^"default 1000"$'\r'
+        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight max value failed" && ((ret++))
+    fi
 
     # default value
-    isula run -ti --rm --blkio-weight 0 busybox cat "/sys/fs/cgroup/io.weight" | grep ^"default 100"$'\r'
+    isula run --runtime $1 -ti --rm --blkio-weight 0 busybox cat "/sys/fs/cgroup/io.weight" | grep ^"default 100"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight default value failed" && ((ret++))
 
     # invalid value
-    isula run -ti --rm --blkio-weight -1 busybox echo hello
+    isula run --runtime $1 -ti --rm --blkio-weight -1 busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight -1 failed" && ((ret++))
   fi
 
   if [[ -f "/sys/fs/cgroup/isulad/io.weight_device" ]];then
     # min value
-    isula run -ti --rm --blkio-weight-device /dev/null:10 busybox cat "/sys/fs/cgroup/io.weight_device" | grep ^"1:3 10"$'\r'
+    isula run --runtime $1 -ti --rm --blkio-weight-device /dev/null:10 busybox cat "/sys/fs/cgroup/io.weight_device" | grep ^"1:3 10"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight max value failed" && ((ret++))
 
     # max value
-    isula run -ti --rm --blkio-weight-device /dev/null:1000 busybox cat "/sys/fs/cgroup/io.weight_device" | grep ^"1:3 10000"$'\r'
+    isula run --runtime $1 -ti --rm --blkio-weight-device /dev/null:1000 busybox cat "/sys/fs/cgroup/io.weight_device" | grep ^"1:3 10000"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight max value failed" && ((ret++))
 
     # disable weight device
-    isula run -tid -n weight_device --rm --blkio-weight-device /dev/null:0 busybox sh
+    isula run --runtime $1 -tid -n weight_device --rm --blkio-weight-device /dev/null:0 busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.weight failed" && ((ret++))
 
     isula exec -ti weight_device cat "/sys/fs/cgroup/io.weight_device" | grep ^"1:3"$'\r'
@@ -197,16 +212,22 @@ function test_cgroup2_io()
 
   if [[ -f /sys/fs/cgroup/isulad/io.max ]];then
     # normal value
-    isula run -ti --rm --device-read-bps /dev/null:1g --device-read-iops /dev/null:1000 --device-write-bps /dev/null:2g --device-write-iops /dev/null:2000 busybox cat /sys/fs/cgroup/io.max | grep ^"1:3 rbps=1073741824 wbps=2147483648 riops=1000 wiops=2000"$'\r'
+    isula run --runtime $1 -ti --rm --device-read-bps /dev/null:1g --device-read-iops /dev/null:1000 --device-write-bps /dev/null:2g --device-write-iops /dev/null:2000 busybox cat /sys/fs/cgroup/io.max | grep ^"1:3 rbps=1073741824 wbps=2147483648 riops=1000 wiops=2000"$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.max failed" && ((ret++))
 
     # invalid
-    isula run -ti --rm --device-read-bps /dev/null:-1 busybox echo hello
+    isula run --runtime $1 -ti --rm --device-read-bps /dev/null:-1 busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.max -1 failed" && ((ret++))
 
-    # 0 is no limit
-    isula run -ti --rm --device-read-bps /dev/null:0 --device-read-iops /dev/null:0 --device-write-bps /dev/null:0 --device-write-iops /dev/null:0 busybox echo hello
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.max 0 failed" && ((ret++))
+    if [ $1 == "lcr" ]; then
+      # 0 is no limit
+      isula run --runtime $1 -ti --rm --device-read-bps /dev/null:0 --device-read-iops /dev/null:0 --device-write-bps /dev/null:0 --device-write-iops /dev/null:0 busybox echo hello
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.max 0 failed" && ((ret++))
+    else
+      # 0 is limit
+      isula run --runtime $1 -ti --rm --device-read-bps /dev/null:0 --device-read-iops /dev/null:0 --device-write-bps /dev/null:0 --device-write-iops /dev/null:0 busybox echo hello
+      [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 io.max 0 success" && ((ret++))
+    fi
   fi
 
   return ${ret}
@@ -218,51 +239,51 @@ function test_cgroup2_memory()
 
   if [[ -f /sys/fs/cgroup/isulad/memory.max ]];then
     # normal value
-    isula run -ti --rm -m 10m busybox cat /sys/fs/cgroup/memory.max | grep ^10485760$'\r'
+    isula run --runtime $1 -ti --rm -m 10m busybox cat /sys/fs/cgroup/memory.max | grep ^10485760$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.max run container failed" && ((ret++))
 
     # 0 is max
-    isula run -ti --rm -m 0 busybox cat /sys/fs/cgroup/memory.max | grep ^max$'\r'
+    isula run --runtime $1 -ti --rm -m 0 busybox cat /sys/fs/cgroup/memory.max | grep ^max$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.max 0 failed" && ((ret++))
 
     # invalid
-    isula run -ti --rm -m -1 busybox echo hello
+    isula run --runtime $1 -ti --rm -m -1 busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.max -1 failed" && ((ret++))
   fi
 
   if [[ -f /sys/fs/cgroup/isulad/memory.low ]];then
     # normal value
-    isula run -ti --rm --memory-reservation 10m busybox cat /sys/fs/cgroup/memory.low | grep ^10485760$'\r'
+    isula run --runtime $1 -ti --rm --memory-reservation 10m busybox cat /sys/fs/cgroup/memory.low | grep ^10485760$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.low normal value failed" && ((ret++))
 
     # -1 is invalid
-    isula run -ti --rm --memory-reservation -1 busybox echo hello
+    isula run --runtime $1 -ti --rm --memory-reservation -1 busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.low invalid failed" && ((ret++))
 
     # 0
-    isula run -ti --rm --memory-reservation 0 busybox cat /sys/fs/cgroup/memory.low | grep ^0$'\r'
+    isula run --runtime $1 -ti --rm --memory-reservation 0 busybox cat /sys/fs/cgroup/memory.low | grep ^0$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.low 0 failed" && ((ret++))
   fi
 
   if [[ -f /sys/fs/cgroup/isulad/memory.swap.max ]];then
     # normal value
-    isula run -ti --rm --memory 10m --memory-swap 20m busybox cat /sys/fs/cgroup/memory.swap.max | grep ^10485760$'\r'
+    isula run --runtime $1 -ti --rm --memory 10m --memory-swap 20m busybox cat /sys/fs/cgroup/memory.swap.max | grep ^10485760$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.swap.max normal value failed" && ((ret++))
 
     # invalid
-    isula run -ti --rm --memory 10m --memory-swap 5m busybox echo hello
+    isula run --runtime $1 -ti --rm --memory 10m --memory-swap 5m busybox echo hello
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.swap.max invalid failed" && ((ret++))
 
     # 0 is the same as memory
-    isula run -ti --rm --memory 10m --memory-swap 0 busybox cat /sys/fs/cgroup/memory.swap.max | grep ^10485760$'\r'
+    isula run --runtime $1 -ti --rm --memory 10m --memory-swap 0 busybox cat /sys/fs/cgroup/memory.swap.max | grep ^10485760$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.swap.max 0 failed" && ((ret++))
 
     # -1 is max
-    isula run -ti --rm --memory 10m --memory-swap -1 busybox cat /sys/fs/cgroup/memory.swap.max | grep ^max$'\r'
+    isula run --runtime $1 -ti --rm --memory 10m --memory-swap -1 busybox cat /sys/fs/cgroup/memory.swap.max | grep ^max$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.swap.max -1 failed" && ((ret++))
 
     # disable swap
-    isula run -ti --rm --memory 10m --memory-swap 10m busybox cat /sys/fs/cgroup/memory.swap.max | grep ^0$'\r'
+    isula run --runtime $1 -ti --rm --memory 100m --memory-swap 100m busybox cat /sys/fs/cgroup/memory.swap.max | grep ^0$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 memory.swap.max disable swap failed" && ((ret++))
   fi
 
@@ -275,15 +296,15 @@ function test_cgroup2_pids()
 
   if [[ -f /sys/fs/cgroup/isulad/pids.max ]];then
     # normal value
-    isula run -ti --rm --pids-limit 123456 busybox cat /sys/fs/cgroup/pids.max | grep ^123456$'\r'
+    isula run --runtime $1 -ti --rm --pids-limit 123456 busybox cat /sys/fs/cgroup/pids.max | grep ^123456$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 pids.max run container failed" && ((ret++))
 
     # -1 is max
-    isula run -ti --rm --pids-limit -1 busybox cat /sys/fs/cgroup/pids.max | grep ^max$'\r'
+    isula run --runtime $1 -ti --rm --pids-limit -1 busybox cat /sys/fs/cgroup/pids.max | grep ^max$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 pids.max run container failed" && ((ret++))
 
     # 0 is max
-    isula run -ti --rm --pids-limit 0 busybox cat /sys/fs/cgroup/pids.max | grep ^max$'\r'
+    isula run --runtime $1 -ti --rm --pids-limit 0 busybox cat /sys/fs/cgroup/pids.max | grep ^max$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 pids.max run container failed" && ((ret++))
   fi
 
@@ -295,7 +316,7 @@ function test_cgroup2_hugetlb()
   local ret=0
 
   if [[ -f /sys/fs/cgroup/isulad/hugetlb.2MB.max ]];then
-    isula run -ti --rm --hugetlb-limit 2M:32M busybox cat /sys/fs/cgroup/hugetlb.2MB.max | grep ^33554432$'\r'
+    isula run --runtime $1 -ti --rm --hugetlb-limit 2M:32M busybox cat /sys/fs/cgroup/hugetlb.2MB.max | grep ^33554432$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 hugetlb.2M.max run container failed" && ((ret++))
   fi
 
@@ -307,7 +328,7 @@ function test_cgroup2_freeze()
   local ret=0
 
   if [[ -f /sys/fs/cgroup/isulad/cgroup.freeze ]];then
-    isula run -tid -n freeze busybox sh
+    isula run --runtime $1 -tid -n freeze busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 freeze run container failed" && ((ret++))
 
     isula pause freeze
@@ -335,15 +356,15 @@ function test_cgroup2_files()
 
   if [[ -f /sys/fs/cgroup/isulad/files.limit ]];then
     # normal value
-    isula run -ti --rm --files-limit 123 busybox cat /sys/fs/cgroup/files.limit | grep ^123$'\r'
+    isula run --runtime $1 -ti --rm --files-limit 123 busybox cat /sys/fs/cgroup/files.limit | grep ^123$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 files.limit run container failed" && ((ret++))
 
     # -1 is max
-    isula run -ti --rm --files-limit -1 busybox cat /sys/fs/cgroup/files.limit | grep ^max$'\r'
+    isula run --runtime $1 -ti --rm --files-limit -1 busybox cat /sys/fs/cgroup/files.limit | grep ^max$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 files.limit run container failed" && ((ret++))
 
     # 0 is max
-    isula run -ti --rm --files-limit 0 busybox cat /sys/fs/cgroup/files.limit | grep ^max$'\r'
+    isula run --runtime $1 -ti --rm --files-limit 0 busybox cat /sys/fs/cgroup/files.limit | grep ^max$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 files.limit run container failed" && ((ret++))
   fi
 
@@ -405,8 +426,13 @@ function test_cgroup2_cpu_update()
     isula update --cpu-quota 0 --cpu-period 1000000 $cgroup2_update
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update cpu.max 0 quota failed" && ((ret++))
 
-    isula exec -ti $cgroup2_update cat /sys/fs/cgroup/cpu.max | grep ^"max 1000000"$'\r'
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update cpu.max 0 quota value not right" && ((ret++))
+    if [ $1 == "lcr" ]; then
+      isula exec -ti $cgroup2_update cat /sys/fs/cgroup/cpu.max | grep ^"max 1000000"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update cpu.max 0 quota value not right" && ((ret++))
+    else
+      isula exec -ti $cgroup2_update cat /sys/fs/cgroup/cpu.max | grep ^"50000 1000000"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update cpu.max 0 quota value not right" && ((ret++))
+    fi
 
     # default -1 quota
     isula update --cpu-quota -1 --cpu-period 1000000 $cgroup2_update
@@ -416,7 +442,7 @@ function test_cgroup2_cpu_update()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update cpu.max -1 quota value not right" && ((ret++))
 
     # cpus 1
-    isula run -tid -n cpu_update busybox sh
+    isula run --runtime $1 -tid -n cpu_update busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 run cpu_update failed" && ((ret++))
 
     isula update --cpus 1 cpu_update
@@ -476,8 +502,13 @@ function test_cgroup2_io_update()
     isula update --blkio-weight 10 $cgroup2_update
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.bfq.weight min value failed" && ((ret++))
 
-    isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.bfq.weight" | grep 1$'\r'
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.bfq.weight min value not right" && ((ret++))
+    if [ $1 == "lcr" ]; then
+      isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.bfq.weight" | grep 1$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.bfq.weight min value not right" && ((ret++))
+    else
+      isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.bfq.weight" | grep 10$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.bfq.weight min value not right" && ((ret++))
+    fi
 
     # max value
     isula update --blkio-weight 1000 $cgroup2_update
@@ -503,22 +534,38 @@ function test_cgroup2_io_update()
     isula update --blkio-weight 10 $cgroup2_update
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight min value failed" && ((ret++))
 
-    isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.weight" | grep ^"default 1"$'\r'
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight min value not right" && ((ret++))
+    if [ $1 == "lcr" ]; then
+      isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.weight" | grep ^"default 1"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight min value not right" && ((ret++))
+    else
+      isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.bfq.weight" | grep ^"default 10"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight min value not right" && ((ret++))
+    fi
 
     # max value
     isula update --blkio-weight 1000 $cgroup2_update
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight max value failed" && ((ret++))
 
-    isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.weight" | grep ^"default 10000"$'\r'
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight max value not right" && ((ret++))
+    if [ $1 == "lcr" ]; then
+      isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.weight" | grep ^"default 10000"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight max value not right" && ((ret++))
+    else
+      isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.bfq.weight" | grep ^"default 1000"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight max value not right" && ((ret++))
+    fi
 
     # 0 means value not change
     isula update --blkio-weight 0 $cgroup2_update
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight 0 failed" && ((ret++))
 
-    isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.weight" | grep ^"default 10000"$'\r'
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight 0 not right" && ((ret++))
+
+    if [ $1 == "lcr" ]; then
+      isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.weight" | grep ^"default 10000"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight max value not right" && ((ret++))
+    else
+      isula exec -ti $cgroup2_update cat "/sys/fs/cgroup/io.bfq.weight" | grep ^"default 1000"$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update io.weight max value not right" && ((ret++))
+    fi
 
     # invalid value
     isula update --blkio-weight -1 $cgroup2_update echo hello
@@ -591,12 +638,13 @@ function test_cgroup2_memory_update()
     isula exec -ti $cgroup2_update cat /sys/fs/cgroup/memory.swap.max | grep ^10485760$'\r'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update memory.swap.max 0 value not right" && ((ret++))
 
-    # -1 is max
-    isula update --memory 10m --memory-swap -1 $cgroup2_update
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update memory.swap.max -1 failed" && ((ret++))
-
-    isula exec -ti $cgroup2_update cat /sys/fs/cgroup/memory.swap.max | grep ^max$'\r'
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update memory.swap.max -1 value not right" && ((ret++))
+    if [ $1 == "lcr" ]; then
+      # -1 is max
+      isula update --memory 10m --memory-swap -1 $cgroup2_update
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update memory.swap.max -1 failed" && ((ret++))
+      isula exec -ti $cgroup2_update cat /sys/fs/cgroup/memory.swap.max | grep ^max$'\r'
+      [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 update memory.swap.max -1 value not right" && ((ret++))
+    fi
 
     # disable swap
     isula update --memory 10m --memory-swap 10m $cgroup2_update
@@ -613,16 +661,16 @@ function test_cgroup2_unsupported()
 {
   local ret=0
 
-  isula run -ti --rm --cpu-rt-period 1000000 --cpu-rt-runtime 1000000 busybox echo hello
+  isula run --runtime $1 -ti --rm --cpu-rt-period 1000000 --cpu-rt-runtime 1000000 busybox echo hello
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --cpu-rt-period and --cpu-rt-runtime should failed" && ((ret++))
 
-  isula run -ti --rm --kernel-memory 100m busybox echo hello
+  isula run --runtime $1 -ti --rm --kernel-memory 100m busybox echo hello
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --kernel-memory should failed" && ((ret++))
 
-  isula run -ti --rm --memory-swappiness 50 busybox echo hello
+  isula run --runtime $1 -ti --rm --memory-swappiness 50 busybox echo hello
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --memory-swappiness should failed" && ((ret++))
 
-  isula run -ti --rm --oom-kill-disable busybox echo hello
+  isula run --runtime $1 -ti --rm --oom-kill-disable busybox echo hello
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --oom-kill-disable should failed" && ((ret++))
 
   isula update --cpu-rt-period 1000000 --cpu-rt-runtime 1000000 $cgroup2_update
@@ -641,7 +689,7 @@ function test_cgroup2_parent()
   rmdir /sys/fs/cgroup/isulad
   rmdir /sys/fs/cgroup/abc
 
-  id=`isula run -tid --cgroup-parent /abc -m 10m busybox sh`
+  id=`isula run --runtime $1 -tid --cgroup-parent /abc -m 10m busybox sh`
   cat /sys/fs/cgroup/abc/$id/memory.max | grep ^10485760$
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --cgroup-parent cannot work" && ((ret++))
 
@@ -657,39 +705,39 @@ function test_cgroup2_device()
   mknod_num=$(echo $dev_num | sed 's/:/ /g')
 
   # read only
-  isula run -ti --rm --device=$dev_name:/dev/sdx:r busybox sh -c 'echo q | fdisk /dev/sdx | grep "read only"'
+  isula run --runtime $1 -ti --rm --device=$dev_name:/dev/sdx:r busybox sh -c 'echo q | fdisk /dev/sdx | grep "read only"'
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device r failed" && ((ret++))
 
-  isula run -ti --rm --device=$dev_name:/dev/sdx:rm busybox sh -c 'echo q | fdisk /dev/sdx | grep "read only"'
+  isula run --runtime $1 -ti --rm --device=$dev_name:/dev/sdx:rm busybox sh -c 'echo q | fdisk /dev/sdx | grep "read only"'
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device rm failed" && ((ret++))
 
-  isula run -ti --rm --device-cgroup-rule="b $dev_num r" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx | grep 'read only'"
+  isula run --runtime $1 -ti --rm --device-cgroup-rule="b $dev_num r" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx | grep 'read only'"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device r failed" && ((ret++))
 
-  isula run -ti --rm --device-cgroup-rule="b $dev_num rm" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx | grep 'read only'"
+  isula run --runtime $1 -ti --rm --device-cgroup-rule="b $dev_num rm" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx | grep 'read only'"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device rm failed" && ((ret++))
 
   # can't read
-  isula run -ti --rm --device=$dev_name:/dev/sdx:w busybox sh -c 'echo q | fdisk /dev/sdx 2>&1 | grep "t open"'
+  isula run --runtime $1 -ti --rm --device=$dev_name:/dev/sdx:w busybox sh -c 'echo q | fdisk /dev/sdx 2>&1 | grep "t open"'
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device w failed" && ((ret++))
 
-  isula run -ti --rm --device=$dev_name:/dev/sdx:wm busybox sh -c 'echo q | fdisk /dev/sdx 2>&1 | grep "t open"'
+  isula run --runtime $1 -ti --rm --device=$dev_name:/dev/sdx:wm busybox sh -c 'echo q | fdisk /dev/sdx 2>&1 | grep "t open"'
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device wm failed" && ((ret++))
 
-  isula run -ti --rm --device-cgroup-rule="b $dev_num w" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx 2>&1 | grep 't open'"
+  isula run --runtime $1 -ti --rm --device-cgroup-rule="b $dev_num w" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx 2>&1 | grep 't open'"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device w failed" && ((ret++))
 
-  isula run -ti --rm --device-cgroup-rule="b $dev_num wm" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx 2>&1 | grep 't open'"
+  isula run --runtime $1 -ti --rm --device-cgroup-rule="b $dev_num wm" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx 2>&1 | grep 't open'"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device wm failed" && ((ret++))
 
   # can't read write
-  isula run -ti --rm --device=$dev_name:/dev/sdx:m busybox sh -c 'echo q | fdisk /dev/sdx 2>&1 | grep "t open"'
+  isula run --runtime $1 -ti --rm --device=$dev_name:/dev/sdx:m busybox sh -c 'echo q | fdisk /dev/sdx 2>&1 | grep "t open"'
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device m" && ((ret++))
 
-  isula run -ti --rm --device-cgroup-rule="b $dev_num m" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx 2>&1 | grep 't open'"
+  isula run --runtime $1 -ti --rm --device-cgroup-rule="b $dev_num m" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx 2>&1 | grep 't open'"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device wm failed" && ((ret++))
 
-  isula run -ti --rm --device-cgroup-rule="b *:* m" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx 2>&1 | grep 't open'"
+  isula run --runtime $1 -ti --rm --device-cgroup-rule="b *:* m" busybox sh -c "mknod /dev/sdx b $mknod_num && echo q | fdisk /dev/sdx 2>&1 | grep 't open'"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 --device wm failed" && ((ret++))
 
   return ${ret}
@@ -723,7 +771,7 @@ function prepare_test_cgroupv2()
 
   isula rm -f `isula ps -a -q`
 
-  isula run -tid -n $cgroup2_update busybox sh
+  isula run --runtime $1 -tid -n $cgroup2_update busybox sh
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cgroup2 run container failed" && ((ret++))
 
   return ${ret}
@@ -740,25 +788,31 @@ declare -i ans=0
 msg_info "${test} starting..."
 [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
-prepare_test_cgroupv2 || ((ans++))
-if [ "$cgroupv2" == "1" ];then
-  test_cgroup2_cpu || ((ans++))
-  test_cgroup2_io || ((ans++))
-  test_cgroup2_memory || ((ans++))
-  test_cgroup2_pids || ((ans++))
-  test_cgroup2_hugetlb || ((ans++))
-  test_cgroup2_freeze || ((ans++))
-  test_cgroup2_files || ((ans++))
-  test_cgroup2_cpu_update || ((ans++))
-  test_cgroup2_io_update || ((ans++))
-  test_cgroup2_memory_update || ((ans++))
-  test_cgroup2_unsupported || ((ans++))
-  test_cgroup2_parent || ((ans++))
-  test_cgroup2_device || ((ans++))
-else
-  msg_info "${test} not cgroup v2 enviorment, ignore test..."
-fi
-post_test_cgroupv2
+for element in ${RUNTIME_LIST[@]};
+do
+  prepare_test_cgroupv2 $element || ((ans++))
+  if [ "$cgroupv2" == "1" ];then
+    local test="cgroup v2 test => (${element})"
+    msg_info "${test} starting..."
+    test_cgroup2_cpu $element || ((ans++))
+    test_cgroup2_io $element || ((ans++))
+    test_cgroup2_memory $element || ((ans++))
+    test_cgroup2_pids $element || ((ans++))
+    test_cgroup2_hugetlb $element || ((ans++))
+    test_cgroup2_freeze $element || ((ans++))
+    test_cgroup2_files $element || ((ans++))
+    test_cgroup2_cpu_update $element || ((ans++))
+    test_cgroup2_io_update $element || ((ans++))
+    test_cgroup2_memory_update $element || ((ans++))
+    test_cgroup2_unsupported $element || ((ans++))
+    test_cgroup2_parent $element || ((ans++))
+    test_cgroup2_device $element || ((ans++))
+    msg_info "${test} finished with return ${ans}..."
+  else
+    msg_info "${test} not cgroup v2 enviorment, ignore test..."
+  fi
+  post_test_cgroupv2 $element
+done
 
 msg_info "${test} finished with return ${ans}..."
 
