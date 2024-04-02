@@ -106,11 +106,12 @@ message_queue *message_queue_create(void (*release)(void *))
         return NULL;
     }
 
-    bq = blocking_queue_create(BLOCKING_QUEUE_NO_TIMEOUT, release);
-    if (bq == NULL) {
+    mq->messages = blocking_queue_create(BLOCKING_QUEUE_NO_TIMEOUT, release);
+    if (mq->messages == NULL) {
         ERROR("Failed to create events queue");
         return NULL;
     }
+    bq = mq->messages;
 
     mq->subscribers = map_new(MAP_PTR_INT, MAP_DEFAULT_CMP_FUNC, message_queue_subscriber_free);
     if (mq->subscribers == NULL) {
@@ -131,7 +132,7 @@ message_queue *message_queue_create(void (*release)(void *))
         return NULL;
     }
 
-    mq->messages = isula_transfer_ptr(bq);
+    bq = NULL;
     return isula_transfer_ptr(mq);
 }
 
