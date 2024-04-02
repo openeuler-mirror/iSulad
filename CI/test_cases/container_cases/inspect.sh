@@ -147,7 +147,7 @@ function test_inspect_spec()
     isula rm -f $containername
 
     # use more than 10m memory limit, otherwise it might fail to run
-    isula run -it -m 10m --name $containername $ubuntu_image perl -e 'for ($i = 0; $i < 100000000; $i++) { $a .= " " x 1024 }'
+    isula run -it -m 10m --runtime runc --name $containername $ubuntu_image perl -e 'for ($i = 0; $i < 100000000; $i++) { $a .= " " x 1024 }'
 
     isula inspect -f "{{json .State.OOMKilled}} {{.Name}}" $containername 2>&1 | sed -n '1p' | grep "true"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${ubuntu_image}" && ((ret++))
