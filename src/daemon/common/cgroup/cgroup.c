@@ -146,17 +146,18 @@ char *common_convert_cgroup_path(const char *cgroup_path)
         return NULL;
     }
 
-    // for cgroup fs cgroup path, return directly
-    if (!util_has_suffix(cgroup_path, ".slice")) {
-        return util_strdup_s(cgroup_path);
-    }
-
     // for systemd cgroup, cgroup_path should have the form slice:prefix:id,
     // convert it to a true path, such as from test-a.slice:isulad:id
     // to test.slice/test-a.slice/isulad-id.scope
     arr = util_string_split_n(cgroup_path, ':', 3);
     if (arr == NULL || util_array_len((const char **)arr) != 3) {
-        ERROR("Invalid systemd cgroup parent");
+        // not a systemd cgroup, return cgroup path directly
+        return util_strdup_s(cgroup_path);
+    }
+
+    // for cgroup fs cgroup path, return directly
+    if (!util_has_suffix(arr[0], ".slice")) {
+        ERROR("Invalid systemd cgroup path: %s", cgroup_path);
         return NULL;
     }
 
