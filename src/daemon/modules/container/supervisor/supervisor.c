@@ -38,6 +38,7 @@
 #include "container_api.h"
 #include "event_type.h"
 #include "utils_file.h"
+#include "mailbox.h"
 #ifdef ENABLE_CRI_API_V1
 #include "sandbox_ops.h"
 #endif
@@ -51,6 +52,7 @@ struct supervisor_handler_data {
     int fd;
     int exit_code;
     char *name;
+    char *sandbox_name;
     char *runtime;
     bool is_sandbox_container;
     pid_ppid_info_t pid_info;
@@ -152,6 +154,9 @@ static void supervisor_handler_data_free(struct supervisor_handler_data *data)
     free(data->name);
     data->name = NULL;
 
+    free(data->sandbox_name);
+    data->sandbox_name = NULL;
+
     free(data->runtime);
     data->runtime = NULL;
 
@@ -172,6 +177,9 @@ static void *clean_resources_thread(void *arg)
     pid_t pid = data->pid_info.pid;
     int retry_count = 0;
     int max_retry = 10;
+#ifdef ENABLE_CRI_API_V1
+    cri_container_message_t msg;
+#endif
 
     ret = pthread_detach(pthread_self());
     if (ret != 0) {
@@ -218,6 +226,13 @@ retry:
     (void)isulad_monitor_send_container_event(name, STOPPED, (int)pid, data->exit_code, NULL, NULL);
 
 #ifdef ENABLE_CRI_API_V1
+    if (data->sandbox_name) {
+        msg.container_id = name;
+        msg.sandbox_id = data->sandbox_name;
+        msg.type = CRI_CONTAINER_MESSAGE_TYPE_STOPPED;
+        mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &msg);
+    }
+
     if (data->is_sandbox_container) {
         if (sandbox_on_sandbox_exit(name, data->exit_code) < 0) {
             ERROR("Failed to handle sandbox %s exit", name);
@@ -329,6 +344,9 @@ int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const p
     data->runtime = util_strdup_s(cont->runtime);
 #ifdef ENABLE_CRI_API_V1
     data->is_sandbox_container = is_sandbox_container(cont->common_config->sandbox_info);
+    if (is_container_in_sandbox(cont->common_config->sandbox_info)) {
+        data->sandbox_name = util_strdup_s(cont->common_config->sandbox_info->id);
+    }
 #endif
     data->pid_info.pid = pid_info->pid;
     data->pid_info.start_time = pid_info->start_time;

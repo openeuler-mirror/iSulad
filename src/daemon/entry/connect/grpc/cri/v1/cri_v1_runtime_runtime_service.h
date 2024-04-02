@@ -26,9 +26,13 @@
 // Implement of runtime RuntimeService
 class RuntimeV1RuntimeServiceImpl : public runtime::v1::RuntimeService::Service {
 public:
-    void Init(std::string &podSandboxImage, std::shared_ptr<Network::PluginManager> networkPlugin, Errors &err);
+    void Init(std::string &podSandboxImage, std::shared_ptr<Network::PluginManager> networkPlugin,
+              bool enablePodEvents, Errors &err);
     void Wait();
     void Shutdown();
+    auto GenerateCRIContainerEvent(const char *container_id, const char *sandbox_id, runtime::v1::ContainerEventType type)
+    -> runtime::v1::ContainerEventResponse *;
+
     grpc::Status Version(grpc::ServerContext *context, const runtime::v1::VersionRequest *request,
                          runtime::v1::VersionResponse *reply) override;
 
@@ -105,8 +109,13 @@ public:
                                const runtime::v1::RuntimeConfigRequest *request,
                                runtime::v1::RuntimeConfigResponse *reply) override;
 
+    grpc::Status GetContainerEvents(grpc::ServerContext *context,
+                                    const runtime::v1::GetEventsRequest *request,
+                                    grpc::ServerWriter<runtime::v1::ContainerEventResponse> *writer) override;
+
 private:
     std::unique_ptr<CRIV1::CRIRuntimeService> m_rService;
+    bool m_enablePodEvents;
 };
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_CRI_V1_RUNTIME_RUNTIME_SERVICE_H

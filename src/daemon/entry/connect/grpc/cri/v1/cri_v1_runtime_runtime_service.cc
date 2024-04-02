@@ -22,11 +22,37 @@
 #include "callback.h"
 #include "network_plugin.h"
 #include "v1_cri_runtime_service_impl.h"
+#include "mailbox.h"
+#include "mailbox_message.h"
 
 using namespace CRIV1;
 
+static void *cri_container_topic_handler(void *context, void *arg)
+{
+    if (context == nullptr || arg == nullptr) {
+        ERROR("Invalid input arguments");
+        return nullptr;
+    }
+
+    auto v1runtimeService = static_cast<RuntimeV1RuntimeServiceImpl *>(context);
+    auto msg = static_cast<cri_container_message_t *>(arg);
+    return v1runtimeService->GenerateCRIContainerEvent(msg->container_id, msg->sandbox_id,
+                                                       static_cast<runtime::v1::ContainerEventType>(msg->type));
+}
+
+static void cri_container_topic_release(void *arg)
+{
+    if (arg == nullptr) {
+        return;
+    }
+
+    auto resp = static_cast<runtime::v1::ContainerEventResponse *>(arg);
+    delete resp;
+}
+
 void RuntimeV1RuntimeServiceImpl::Init(std::string &podSandboxImage,
-                                       std::shared_ptr<Network::PluginManager> networkPlugin, Errors &err)
+                                       std::shared_ptr<Network::PluginManager> networkPlugin,
+                                       bool enablePodEvents, Errors &err)
 {
     // Assembly implementation for CRIRuntimeServiceImpl
     service_executor_t *cb = get_service_executor();
@@ -36,7 +62,18 @@ void RuntimeV1RuntimeServiceImpl::Init(std::string &podSandboxImage,
         return;
     }
 
-    m_rService = std::unique_ptr<CRIV1::CRIRuntimeService>(new CRIRuntimeServiceImpl(podSandboxImage, cb, networkPlugin));
+    if (enablePodEvents) {
+        if (mailbox_register_topic_handler(MAILBOX_TOPIC_CRI_CONTAINER, cri_container_topic_handler,
+                                           this, cri_container_topic_release, true) != 0) {
+            ERROR("Failed to register container topic handler");
+            err.SetError("Failed to register container topic handler");
+            return;
+        }
+        m_enablePodEvents = enablePodEvents;
+    }
+
+
+    m_rService = std::unique_ptr<CRIV1::CRIRuntimeService>(new CRIRuntimeServiceImpl(podSandboxImage, cb, networkPlugin, m_enablePodEvents));
 }
 
 void RuntimeV1RuntimeServiceImpl::Wait()
@@ -45,6 +82,54 @@ void RuntimeV1RuntimeServiceImpl::Wait()
 
 void RuntimeV1RuntimeServiceImpl::Shutdown()
 {
+    mailbox_unregister_topic_handler(MAILBOX_TOPIC_CRI_CONTAINER);
+}
+
+auto RuntimeV1RuntimeServiceImpl::GenerateCRIContainerEvent(const char *container_id, const char *sandbox_id,
+                                                            runtime::v1::ContainerEventType type) -> runtime::v1::ContainerEventResponse *
+{
+    if (container_id == nullptr || sandbox_id == nullptr) {
+        ERROR("Invalid input arguments");
+        return nullptr;
+    }
+
+    if (type <  runtime::v1::ContainerEventType::CONTAINER_CREATED_EVENT ||
+        type > runtime::v1::ContainerEventType::CONTAINER_DELETED_EVENT) {
+        ERROR("Invalid container event type %d", type);
+        return nullptr;
+    }
+
+    std::string containerID(container_id), sandboxID(sandbox_id);
+    Errors error;
+    runtime::v1::ContainerEventResponse *response = new (std::nothrow) runtime::v1::ContainerEventResponse();
+    if (response == nullptr) {
+        ERROR("Out of memory");
+        return nullptr;
+    }
+
+    runtime::v1::PodSandboxStatusResponse *statusReply = new (std::nothrow) runtime::v1::PodSandboxStatusResponse();
+    if (statusReply == nullptr) {
+        ERROR("Out of memory");
+        delete response;
+        return nullptr;
+    }
+
+    m_rService->PodSandboxStatus(sandboxID, statusReply, error);
+    if (!error.Empty()) {
+        WARN("Object: CRI, Type: Failed to status pod:%s due to %s", sandboxID.c_str(),
+              error.GetMessage().c_str());
+    } else {
+        *(response->mutable_pod_sandbox_status()) = *(statusReply->mutable_status());
+        for (auto &containerStatus : statusReply->containers_statuses()) {
+            *(response->add_containers_statuses()) = containerStatus;
+        }
+    }
+
+    response->set_container_event_type((runtime::v1::ContainerEventType)type);
+    response->set_container_id(containerID);
+    response->set_created_at(util_get_now_time_nanos());
+
+    return response;
 }
 
 grpc::Status RuntimeV1RuntimeServiceImpl::Version(grpc::ServerContext *context,
@@ -398,14 +483,12 @@ grpc::Status RuntimeV1RuntimeServiceImpl::PodSandboxStatus(grpc::ServerContext *
 
     INFO("Event: {Object: CRI, Type: Status Pod: %s}", request->pod_sandbox_id().c_str());
 
-    std::unique_ptr<runtime::v1::PodSandboxStatus> podStatus;
-    podStatus = m_rService->PodSandboxStatus(request->pod_sandbox_id(), error);
-    if (!error.Empty() || !podStatus) {
+    m_rService->PodSandboxStatus(request->pod_sandbox_id(), reply, error);
+    if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to status pod:%s due to %s", request->pod_sandbox_id().c_str(),
               error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
     }
-    *(reply->mutable_status()) = *podStatus;
 
     INFO("Event: {Object: CRI, Type: Statused Pod: %s}", request->pod_sandbox_id().c_str());
 
@@ -654,6 +737,58 @@ RuntimeV1RuntimeServiceImpl::RuntimeConfig(grpc::ServerContext *context,
     }
 
     EVENT("Event: {Object: CRI, Type: Runtime Config}");
+
+    return grpc::Status::OK;
+}
+
+grpc::Status RuntimeV1RuntimeServiceImpl::GetContainerEvents(grpc::ServerContext *context,
+                                                             const runtime::v1::GetEventsRequest *request,
+                                                             grpc::ServerWriter<runtime::v1::ContainerEventResponse> *writer)
+{
+    Errors error;
+
+    if (context == nullptr || request == nullptr || writer == nullptr) {
+        ERROR("Invalid input arguments");
+        return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Invalid input arguments");
+    }
+
+    if (!m_enablePodEvents) {
+        ERROR("Pod events is not enabled");
+        return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "Pod events is not enabled");
+    }
+
+    INFO("Event: {Object: CRI, Type: Getting Container Events}");
+
+    __isula_auto_subscriber auto sub = mailbox_subscribe(MAILBOX_TOPIC_CRI_CONTAINER);
+    if (sub == nullptr) {
+        ERROR("Object: CRI, Type: Failed to subscribe container events");
+        return grpc::Status(grpc::StatusCode::UNKNOWN, "Failed to subscribe container events");
+    }
+
+    for (;;) {
+        __isula_auto_mailbox_message mailbox_message *msg = NULL;
+        int ret = message_subscriber_pop(sub, &msg);
+        if (ret == 0) {
+            if (msg == nullptr) {
+                // nullptr response indicates eventqueue being shutdown, not need to unscribe now
+                return grpc::Status(grpc::StatusCode::UNKNOWN, "Event queue is shutdown");
+            }
+            auto *response = static_cast<runtime::v1::ContainerEventResponse *>(msg->data);
+            if (!writer->Write(*response)) {
+                break;
+            }
+        } else if (ret != ETIMEDOUT) {
+            ERROR("Failed to pop message from subscriber");
+            break;
+        }
+        if (context->IsCancelled()) {
+            INFO("Object: CRI, Type: GetContainerEvents is cancelled");
+            break;
+        }
+    }
+
+    mailbox_unsubscribe(MAILBOX_TOPIC_CRI_CONTAINER, sub);
+    INFO("Event: {Object: CRI, Type: Got Container Events}");
 
     return grpc::Status::OK;
 }

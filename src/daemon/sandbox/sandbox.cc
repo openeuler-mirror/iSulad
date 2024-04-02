@@ -37,6 +37,7 @@
 #include "cxxutils.h"
 #include "controller_manager.h"
 #include "utils_timestamp.h"
+#include "mailbox.h"
 
 #define SANDBOX_READY_STATE_STR "SANDBOX_READY"
 #define SANDBOX_NOTREADY_STATE_STR "SANDBOX_NOTREADY"
@@ -526,6 +527,14 @@ void Sandbox::OnSandboxExit(const ControllerExitInfo &exitInfo)
 
     if (!SaveState(error)) {
         ERROR("Failed to save sandbox state, %s", m_id.c_str());
+    }
+
+    if (error.Empty()) {
+        cri_container_message_t msg = { 0 };
+        msg.container_id = GetId().c_str();
+        msg.sandbox_id = GetId().c_str();
+        msg.type = CRI_CONTAINER_MESSAGE_TYPE_STOPPED;
+        mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &msg);
     }
 }
 

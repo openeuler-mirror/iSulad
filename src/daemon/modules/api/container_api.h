@@ -289,6 +289,11 @@ static inline bool is_sandbox_container(container_sandbox_info *sandbox)
 {
     return sandbox != NULL && sandbox->is_sandbox_container;
 }
+
+static inline bool is_container_in_sandbox(container_sandbox_info *sandbox)
+{
+    return sandbox != NULL && !sandbox->is_sandbox_container;
+}
 #endif
 
 #if defined(__cplusplus) || defined(c_plusplus)

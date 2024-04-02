@@ -38,10 +38,11 @@ namespace CRIV1 {
 class PodSandboxManagerService {
 public:
     PodSandboxManagerService(const std::string &podSandboxImage, service_executor_t *cb,
-                             std::shared_ptr<Network::PluginManager> pluginManager)
+                             std::shared_ptr<Network::PluginManager> pluginManager, bool enablePodEvents)
         : m_podSandboxImage(podSandboxImage)
         , m_cb(cb)
         , m_pluginManager(pluginManager)
+        , m_enablePodEvents(enablePodEvents)
     {
     }
     PodSandboxManagerService(const PodSandboxManagerService &) = delete;
@@ -55,8 +56,7 @@ public:
 
     void RemovePodSandbox(const std::string &podSandboxID, Errors &error);
 
-    auto PodSandboxStatus(const std::string &podSandboxID, Errors &error)
-    -> std::unique_ptr<runtime::v1::PodSandboxStatus>;
+    void PodSandboxStatus(const std::string &podSandboxID, runtime::v1::PodSandboxStatusResponse *reply, Errors &error);
 
     void ListPodSandbox(const runtime::v1::PodSandboxFilter &filter,
                         std::vector<std::unique_ptr<runtime::v1::PodSandbox>> &pods, Errors &error);
@@ -129,6 +129,9 @@ private:
                              std::vector<std::string> &podSandboxIDs, Errors &error);
     void ApplySandboxLinuxOptions(const runtime::v1::LinuxPodSandboxConfig &lc, host_config *hc,
                                   container_config *custom_config, Errors &error);
+    auto GetPodSandboxStatus(const std::string &podSandboxID, Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStatus>;
+    void GetContainerStatuses(const std::string &podSandboxID, std::vector<std::unique_ptr<runtime::v1::ContainerStatus>> &containerStatuses,
+                              std::vector<std::string> &errors);
 
 private:
     std::string m_podSandboxImage;
@@ -136,6 +139,7 @@ private:
     std::map<std::string, bool> m_networkReady;
     service_executor_t *m_cb { nullptr };
     std::shared_ptr<Network::PluginManager> m_pluginManager { nullptr };
+    bool m_enablePodEvents;
 };
 } // namespace CRI
 

@@ -32,6 +32,7 @@
 #include "service_container_api.h"
 #include "isulad_config.h"
 #include "sha256.h"
+#include "v1_naming.h"
 
 namespace CRIHelpersV1 {
 
@@ -456,6 +457,210 @@ void ApplySandboxSecurityContextToHostConfig(const runtime::v1::LinuxSandboxSecu
         error.Errorf("Failed to add securityOpts to hostconfig: %s", error.GetMessage().c_str());
         return;
     }
+}
+
+void PackContainerImageToStatus(
+    container_inspect *inspect, std::unique_ptr<runtime::v1::ContainerStatus> &contStatus, Errors &error)
+{
+    if (inspect->config == nullptr) {
+        return;
+    }
+
+    if (inspect->config->image != nullptr) {
+        contStatus->mutable_image()->set_image(inspect->config->image);
+    }
+
+    contStatus->set_image_ref(CRIHelpers::ToPullableImageID(inspect->config->image, inspect->config->image_ref));
+}
+
+void UpdateBaseStatusFromInspect(
+    container_inspect *inspect, int64_t &createdAt, int64_t &startedAt, int64_t &finishedAt,
+    std::unique_ptr<runtime::v1::ContainerStatus> &contStatus)
+{
+    runtime::v1::ContainerState state { runtime::v1::CONTAINER_UNKNOWN };
+    std::string reason;
+    std::string message;
+    int32_t exitCode { 0 };
+
+    if (inspect->state == nullptr) {
+        goto pack_status;
+    }
+
+    if (inspect->state->running) {
+        // Container is running
+        state = runtime::v1::CONTAINER_RUNNING;
+    } else {
+        // Container is not running.
+        if (finishedAt != 0) { // Case 1
+            state = runtime::v1::CONTAINER_EXITED;
+            if (inspect->state->exit_code == 0) {
+                reason = "Completed";
+            } else {
+                reason = "Error";
+            }
+        } else if (inspect->state->exit_code != 0) { // Case 2
+            state = runtime::v1::CONTAINER_EXITED;
+            finishedAt = createdAt;
+            startedAt = createdAt;
+            reason = "ContainerCannotRun";
+        } else { // Case 3
+            state = runtime::v1::CONTAINER_CREATED;
+        }
+        if (inspect->state->error != nullptr) {
+            message = inspect->state->error;
+        }
+        exitCode = (int32_t)inspect->state->exit_code;
+    }
+
+pack_status:
+    contStatus->set_exit_code(exitCode);
+    contStatus->set_state(state);
+    contStatus->set_created_at(createdAt);
+    contStatus->set_started_at(startedAt);
+    contStatus->set_finished_at(finishedAt);
+    contStatus->set_reason(reason);
+    contStatus->set_message(message);
+}
+
+void PackLabelsToStatus(container_inspect *inspect,
+                        std::unique_ptr<runtime::v1::ContainerStatus> &contStatus)
+{
+    if (inspect->config == nullptr || inspect->config->labels == nullptr) {
+        return;
+    }
+    CRIHelpers::ExtractLabels(inspect->config->labels, *contStatus->mutable_labels());
+    CRIHelpers::ExtractAnnotations(inspect->config->annotations, *contStatus->mutable_annotations());
+    for (size_t i = 0; i < inspect->config->labels->len; i++) {
+        if (strcmp(inspect->config->labels->keys[i], CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str()) == 0) {
+            contStatus->set_log_path(inspect->config->labels->values[i]);
+            break;
+        }
+    }
+}
+
+void ConvertMountsToStatus(container_inspect *inspect,
+                           std::unique_ptr<runtime::v1::ContainerStatus> &contStatus)
+{
+    for (size_t i = 0; i < inspect->mounts_len; i++) {
+        runtime::v1::Mount *mount = contStatus->add_mounts();
+        mount->set_host_path(inspect->mounts[i]->source);
+        mount->set_container_path(inspect->mounts[i]->destination);
+        mount->set_readonly(!inspect->mounts[i]->rw);
+        if (inspect->mounts[i]->propagation == nullptr || strcmp(inspect->mounts[i]->propagation, "rprivate") == 0) {
+            mount->set_propagation(runtime::v1::PROPAGATION_PRIVATE);
+        } else if (strcmp(inspect->mounts[i]->propagation, "rslave") == 0) {
+            mount->set_propagation(runtime::v1::PROPAGATION_HOST_TO_CONTAINER);
+        } else if (strcmp(inspect->mounts[i]->propagation, "rshared") == 0) {
+            mount->set_propagation(runtime::v1::PROPAGATION_BIDIRECTIONAL);
+        }
+        // Note: Can't set SeLinuxRelabel
+    }
+}
+
+void ConvertResourcesToStatus(container_inspect *inspect,
+                              std::unique_ptr<runtime::v1::ContainerStatus> &contStatus)
+{
+    if (inspect->resources == nullptr) {
+        return;
+    }
+    runtime::v1::LinuxContainerResources *resources = contStatus->mutable_resources()->mutable_linux();
+    if (inspect->resources->cpu_shares != 0) {
+        resources->set_cpu_shares(inspect->resources->cpu_shares);
+    }
+    if (inspect->resources->cpu_period != 0) {
+        resources->set_cpu_period(inspect->resources->cpu_period);
+    }
+    if (inspect->resources->cpu_quota != 0) {
+        resources->set_cpu_quota(inspect->resources->cpu_quota);
+    }
+    if (inspect->resources->memory != 0) {
+        resources->set_memory_limit_in_bytes(inspect->resources->memory);
+    }
+    if (inspect->resources->memory_swap != 0) {
+        resources->set_memory_swap_limit_in_bytes(inspect->resources->memory_swap);
+    }
+    for (size_t i = 0; i < inspect->resources->hugetlbs_len; i++) {
+        runtime::v1::HugepageLimit *hugepage = resources->add_hugepage_limits();
+        hugepage->set_page_size(inspect->resources->hugetlbs[i]->page_size);
+        hugepage->set_limit(inspect->resources->hugetlbs[i]->limit);
+    }
+    if (inspect->resources->unified != nullptr) {
+        for (size_t i = 0; i < inspect->resources->unified->len; i++) {
+            auto &resUnified = *(resources->mutable_unified());
+            resUnified[inspect->resources->unified->keys[i]] = inspect->resources->unified->values[i];
+        }
+    }
+}
+
+void ContainerStatusToGRPC(container_inspect *inspect,
+                           std::unique_ptr<runtime::v1::ContainerStatus> &contStatus,
+                           Errors &error)
+{
+    if (inspect->id != nullptr) {
+        contStatus->set_id(inspect->id);
+    }
+
+    int64_t createdAt {};
+    int64_t startedAt {};
+    int64_t finishedAt {};
+    CRIHelpers::GetContainerTimeStamps(inspect, &createdAt, &startedAt, &finishedAt, error);
+    if (error.NotEmpty()) {
+        return;
+    }
+    contStatus->set_created_at(createdAt);
+    contStatus->set_started_at(startedAt);
+    contStatus->set_finished_at(finishedAt);
+
+    PackContainerImageToStatus(inspect, contStatus, error);
+    UpdateBaseStatusFromInspect(inspect, createdAt, startedAt, finishedAt, contStatus);
+    PackLabelsToStatus(inspect, contStatus);
+    CRINamingV1::ParseContainerName(contStatus->annotations(), contStatus->mutable_metadata(), error);
+    if (error.NotEmpty()) {
+        return;
+    }
+    ConvertMountsToStatus(inspect, contStatus);
+    ConvertResourcesToStatus(inspect, contStatus);
+}
+
+std::unique_ptr<runtime::v1::ContainerStatus> GetContainerStatus(service_executor_t *m_cb, const std::string &containerID, Errors &error)
+{
+    if (m_cb == nullptr) {
+        error.SetError("Invalid input arguments: empty service executor");
+        return nullptr;
+    }
+
+    if (containerID.empty()) {
+        error.SetError("Empty container id");
+        return nullptr;
+    }
+
+    std::string realContainerID = CRIHelpers::GetRealContainerOrSandboxID(m_cb, containerID, false, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to find container id %s: %s", containerID.c_str(), error.GetCMessage());
+        error.Errorf("Failed to find container id %s: %s", containerID.c_str(), error.GetCMessage());
+        return nullptr;
+    }
+
+    container_inspect *inspect = CRIHelpers::InspectContainer(realContainerID, error, false);
+    if (error.NotEmpty()) {
+        return nullptr;
+    }
+    if (inspect == nullptr) {
+        error.SetError("Get null inspect");
+        return nullptr;
+    }
+    using ContainerStatusPtr = std::unique_ptr<runtime::v1::ContainerStatus>;
+    ContainerStatusPtr contStatus(new (std::nothrow) runtime::v1::ContainerStatus);
+    if (contStatus == nullptr) {
+        error.SetError("Out of memory");
+        free_container_inspect(inspect);
+        return nullptr;
+    }
+
+    ContainerStatusToGRPC(inspect, contStatus, error);
+
+    free_container_inspect(inspect);
+    return contStatus;
 }
 
 } // v1 namespace CRIHelpers

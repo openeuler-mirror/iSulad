@@ -108,10 +108,10 @@ public:
 
     void Shutdown(void)
     {
-        m_server->Shutdown();
-
-        // call CRI to shutdown stream server
+        // call CRI to shutdown stream server, shutdown cri first to notify events thread to exit
         m_criService.Shutdown();
+
+        m_server->Shutdown();
 
         // Shutdown daemon, this operation should remove socket file.
         for (const auto &address : m_socketPath) {

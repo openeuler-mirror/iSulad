@@ -111,19 +111,6 @@ private:
                                            std::unique_ptr<runtime::v1::ContainerStats> &container);
     void SetFsUsage(const imagetool_fs_info *fs_usage, int64_t timestamp,
                     std::unique_ptr<runtime::v1::ContainerStats> &container);
-    void ContainerStatusToGRPC(container_inspect *inspect,
-                               std::unique_ptr<runtime::v1::ContainerStatus> &contStatus, Errors &error);
-    void PackContainerImageToStatus(container_inspect *inspect,
-                                    std::unique_ptr<runtime::v1::ContainerStatus> &contStatus, Errors &error);
-    void UpdateBaseStatusFromInspect(container_inspect *inspect, int64_t &createdAt, int64_t &startedAt,
-                                     int64_t &finishedAt,
-                                     std::unique_ptr<runtime::v1::ContainerStatus> &contStatus);
-    void PackLabelsToStatus(container_inspect *inspect,
-                            std::unique_ptr<runtime::v1::ContainerStatus> &contStatus);
-    void ConvertMountsToStatus(container_inspect *inspect,
-                               std::unique_ptr<runtime::v1::ContainerStatus> &contStatus);
-    void ConvertResourcesToStatus(container_inspect *inspect,
-                                  std::unique_ptr<runtime::v1::ContainerStatus> &contStatus);
     void ExecSyncFromGRPC(const std::string &containerID, const google::protobuf::RepeatedPtrField<std::string> &cmd,
                           int64_t timeout, container_exec_request **request, Errors &error);
     auto ValidateExecRequest(const runtime::v1::ExecRequest &req, Errors &error) -> int;

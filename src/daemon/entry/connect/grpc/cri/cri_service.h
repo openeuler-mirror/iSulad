@@ -56,6 +56,7 @@ private:
     std::string m_podSandboxImage;
     std::shared_ptr<Network::PluginManager> m_pluginManager;
     bool m_enableCRIV1;
+    bool m_enablePodEvents;
 };
 
 }
