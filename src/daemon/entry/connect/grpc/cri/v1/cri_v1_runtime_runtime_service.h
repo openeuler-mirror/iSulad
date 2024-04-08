@@ -114,6 +114,9 @@ public:
                                     grpc::ServerWriter<runtime::v1::ContainerEventResponse> *writer) override;
 
 private:
+
+    grpc::Status ToGRPCStatus(Errors &error);
+
     std::unique_ptr<CRIV1::CRIRuntimeService> m_rService;
     bool m_enablePodEvents;
 };
