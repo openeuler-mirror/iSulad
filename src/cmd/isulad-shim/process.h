@@ -44,7 +44,7 @@ typedef struct {
 typedef struct process {
     char *id;
     char *bundle;
-    char *runtime;
+    char *runtime_cmd;
     char *console_sock_path; // pty socket path
     char *workdir;
     char *root_path;
@@ -70,7 +70,7 @@ typedef struct {
     int status;
 } process_exit_t;
 
-process_t* new_process(char *id, char *bundle, char *runtime);
+process_t* new_process(char *id, char *bundle, char *runtime_cmd);
 
 int prepare_attach_socket(process_t *p);
 

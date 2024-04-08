@@ -1154,6 +1154,7 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     p.isulad_stdin = (char *)params->stdin;
     p.isulad_stdout = (char *)params->stdout;
     p.isulad_stderr = (char *)params->stderr;
+    p.runtime = (char *)runtime;
     p.runtime_args = (char **)runtime_args;
     p.runtime_args_len = runtime_args_len;
     p.attach_socket = attach_socket;
@@ -1409,6 +1410,7 @@ static int preparation_exec(const char *id, const char *runtime, const char *wor
     p.isulad_stdout = (char *)params->console_fifos[1];
     p.isulad_stderr = (char *)params->console_fifos[2];
     p.resize_fifo = resize_fifo_dir;
+    p.runtime = (char *)runtime;
     p.runtime_args = (char **)runtime_args;
     p.runtime_args_len = runtime_args_len;
     copy_process(&p, process);
