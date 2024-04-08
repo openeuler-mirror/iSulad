@@ -14,23 +14,66 @@
  ******************************************************************************/
 #include "cdi_operate_api.h"
 
+#include <isula_libutils/log.h>
+
+#include "utils.h"
+#include "error.h"
+#include "cdi_registry.h"
+#include "cdi_annotations.h"
+#include "cdi_spec_dirs.h"
+
 int cdi_operate_registry_init(char **specs_dirs, size_t specs_dirs_len)
 {
-    return 0;
+    string_array spec_dirs_array = {
+        .items = specs_dirs,
+        .len = specs_dirs_len,
+        .cap = specs_dirs_len,
+    };
+    
+    return cdi_registry_init(&spec_dirs_array);
 }
 
 int cdi_operate_refresh(void)
 {
-    return 0;
+    struct cdi_registry *registry = cdi_get_registry();
+    if (registry == NULL || registry->ops == NULL || registry->ops->refresh == NULL) {
+        ERROR("Failed to get registry");
+        return -1;
+    }
+    
+    return registry->ops->refresh(registry->cdi_cache);
 }
 
 int cdi_operate_inject_devices(oci_runtime_spec *spec, string_array *devices)
 {
-    return 0;
+    struct cdi_registry *registry = NULL;
+
+    if (spec == NULL || devices == NULL) {
+        ERROR("Invalid params");
+        return -1;
+    }
+    
+    registry = cdi_get_registry();
+    if (registry == NULL || registry->ops == NULL || registry->ops->inject_devices == NULL) {
+        ERROR("Failed to get registry");
+        return -1;
+    }
+    
+    return registry->ops->inject_devices(registry->cdi_cache, spec, devices);
 }
 
 int cdi_operate_parse_annotations(json_map_string_string *annotations, string_array **keys,
                                   string_array **devices, char **error)
 {
-    return 0;
+    if (error == NULL) {
+        ERROR("Invalid argument");
+        return -1;
+    }
+    if (annotations == NULL || keys == NULL || devices == NULL) {
+        ERROR("Invalid params");
+        *error = util_strdup_s("Invalid params");
+        return -1;
+    }
+
+    return cdi_parse_annotations(annotations, keys, devices, error);
 }
