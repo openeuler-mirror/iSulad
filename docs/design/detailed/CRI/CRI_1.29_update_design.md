@@ -234,4 +234,8 @@ enum ContainerEventType {
 
 ### 使用限制
 
-以上特性仅保证容器运行时设置为runc时支持。
+1. 以上新增特性，iSulad仅提供容器运行时设置为runc时的支持。
+2. 由于cgroup oom会同时触发容器cgroup路径删除，若iSulad对oom事件处理发生在
+cgroup路径删除之后，iSulad则无法成功捕捉容器oom事件，
+可能导致ContainerStatus中reason字段设置不正确。
+3. iSulad不支持交叉使用不同的cgroup驱动管理容器，启动容器后iSulad的cgroup驱动配置不应该发生变化。
