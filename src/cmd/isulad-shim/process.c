@@ -1131,7 +1131,7 @@ static int init_root_path(process_t *p)
         return SHIM_ERR;
     }
 
-    if (buffer->nappend(buffer, PATH_MAX, "%s/%s", state_path, p->runtime) < 0) {
+    if (buffer->nappend(buffer, PATH_MAX, "%s/%s", state_path, p->state->runtime) < 0) {
         ERROR("Failed to append state_path\n");
         isula_buffer_free(buffer);
         return SHIM_ERR;
@@ -1146,7 +1146,7 @@ static int init_root_path(process_t *p)
     return SHIM_OK;
 }
 
-process_t *new_process(char *id, char *bundle, char *runtime)
+process_t *new_process(char *id, char *bundle, char *runtime_cmd)
 {
     shim_client_process_state *p_state;
     process_t *p = NULL;
@@ -1174,7 +1174,7 @@ process_t *new_process(char *id, char *bundle, char *runtime)
 
     p->id = id;
     p->bundle = bundle;
-    p->runtime = runtime;
+    p->runtime_cmd = runtime_cmd;
     p->state = p_state;
     p->console_sock_path = NULL;
     p->exit_fd = -1;
@@ -1247,7 +1247,7 @@ static void set_common_params(process_t *p, const char *params[], int *index, co
 {
     int j;
 
-    params[(*index)++]  = p->runtime;
+    params[(*index)++]  = p->runtime_cmd;
     for (j = 0; j < p->state->runtime_args_len; j++) {
         params[(*index)++]  = p->state->runtime_args[j];
     }
@@ -1261,7 +1261,7 @@ static void set_common_params(process_t *p, const char *params[], int *index, co
 
     // In addition to kata, other commonly used oci runtimes (runc, crun, youki, gvisor)
     // need to set the --root option
-    if (strcasecmp(p->runtime, "kata-runtime") != 0) {
+    if (strcasecmp(p->state->runtime, "kata-runtime") != 0) {
         params[(*index)++] = "--root";
         params[(*index)++] = p->root_path;
     }
@@ -1347,7 +1347,7 @@ static void process_kill_all(process_t *p)
     params[i++] = p->id;
     params[i++] = "SIGKILL";
 
-    (void)cmd_combined_output(p->runtime, params, output, &output_len);
+    (void)cmd_combined_output(p->runtime_cmd, params, output, &output_len);
 
     return;
 }
@@ -1375,7 +1375,7 @@ static void process_delete(process_t *p)
     params[i++] = "--force";
     params[i++] = p->id;
 
-    (void)cmd_combined_output(p->runtime, params, output, &output_len);
+    (void)cmd_combined_output(p->runtime_cmd, params, output, &output_len);
 
     return;
 }
@@ -1444,8 +1444,8 @@ static void exec_runtime_process(process_t *p, int exec_fd)
 
     const char *params[MAX_RUNTIME_ARGS] = { 0 };
     get_runtime_cmd(p, log_path, pid_path, process_desc, params);
-    execvp(p->runtime, (char * const *)params);
-    (void)dprintf(exec_fd, "run process: %s error: %s", p->runtime, strerror(errno));
+    execvp(p->runtime_cmd, (char * const *)params);
+    (void)dprintf(exec_fd, "run process: %s error: %s", p->runtime_cmd, strerror(errno));
     _exit(EXIT_FAILURE);
 }
 
@@ -1586,7 +1586,7 @@ static int waitpid_with_timeout(int ctr_pid,  int *status, const uint64_t timeou
 static int wait_container_process_with_timeout(process_t *p, const uint64_t timeout, int *status)
 {
     // currently, kata runtime does not support setting timeout during exec
-    if (strcasecmp(p->runtime, "kata-runtime") != 0 && timeout > 0) {
+    if (strcasecmp(p->state->runtime, "kata-runtime") != 0 && timeout > 0) {
         return waitpid_with_timeout(p->ctr_pid, status, timeout);
     }
 
