@@ -107,6 +107,9 @@ public:
                         runtime::v1alpha2::StatusResponse *reply) override;
 
 private:
+
+    grpc::Status ToGRPCStatus(Errors &err);
+
     std::unique_ptr<CRI::CRIRuntimeService> rService;
 };
 

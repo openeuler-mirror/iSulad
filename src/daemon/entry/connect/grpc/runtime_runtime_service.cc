@@ -28,6 +28,23 @@
 
 using namespace CRI;
 
+grpc::Status RuntimeRuntimeServiceImpl::ToGRPCStatus(Errors &error)
+{
+    if (error.Empty()) {
+        return grpc::Status::OK;
+    }
+    if (error.GetMessage().find("Failed to find") != std::string::npos) {
+        return grpc::Status(grpc::StatusCode::NOT_FOUND, error.GetMessage());
+    }
+
+    // Attach exceeded timeout for lxc and Exec container error;exec timeout for runc
+    if (error.GetMessage().find("Attach exceeded timeout") != std::string::npos
+        || error.GetMessage().find("Exec container error;exec timeout") != std::string::npos) {
+        return grpc::Status(grpc::StatusCode::DEADLINE_EXCEEDED, error.GetMessage());
+    }
+    return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+}
+
 void RuntimeRuntimeServiceImpl::Init(Network::NetworkPluginConf mConf, isulad_daemon_configs *config, Errors &err)
 {
     std::string podSandboxImage;
@@ -124,7 +141,7 @@ grpc::Status RuntimeRuntimeServiceImpl::CreateContainer(grpc::ServerContext *con
         rService->CreateContainer(request->pod_sandbox_id(), request->config(), request->sandbox_config(), error);
     if (!error.Empty() || responseID.empty()) {
         ERROR("Object: CRI, Type: Failed to create container");
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
     reply->set_container_id(responseID);
 
@@ -149,7 +166,7 @@ grpc::Status RuntimeRuntimeServiceImpl::StartContainer(grpc::ServerContext *cont
     rService->StartContainer(request->container_id(), error);
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to start container %s", request->container_id().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
 
     EVENT("Event: {Object: CRI, Type: Started Container: %s}", request->container_id().c_str());
@@ -173,7 +190,7 @@ grpc::Status RuntimeRuntimeServiceImpl::StopContainer(grpc::ServerContext *conte
     rService->StopContainer(request->container_id(), (int64_t)request->timeout(), error);
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to stop container %s", request->container_id().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
 
     EVENT("Event: {Object: CRI, Type: Stopped Container: %s}", request->container_id().c_str());
@@ -197,7 +214,7 @@ grpc::Status RuntimeRuntimeServiceImpl::RemoveContainer(grpc::ServerContext *con
     rService->RemoveContainer(request->container_id(), error);
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to remove container %s", request->container_id().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
 
     EVENT("Event: {Object: CRI, Type: Removed Container: %s}", request->container_id().c_str());
@@ -316,7 +333,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ContainerStatus(grpc::ServerContext *con
         rService->ContainerStatus(request->container_id(), error);
     if (!error.Empty() || !contStatus) {
         ERROR("Object: CRI, Type: Failed to get container status %s", request->container_id().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
     *(reply->mutable_status()) = *contStatus;
 
@@ -341,7 +358,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ExecSync(grpc::ServerContext *context,
     rService->ExecSync(request->container_id(), request->cmd(), request->timeout(), reply, error);
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to sync exec container: %s", request->container_id().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
 
     WARN("Event: {Object: CRI, Type: sync execed Container: %s}", request->container_id().c_str());
@@ -395,7 +412,7 @@ grpc::Status RuntimeRuntimeServiceImpl::StopPodSandbox(grpc::ServerContext *cont
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to stop pod:%s due to %s", request->pod_sandbox_id().c_str(),
               error.GetMessage().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
 
     EVENT("Event: {Object: CRI, Type: Stopped Pod: %s}", request->pod_sandbox_id().c_str());
@@ -420,7 +437,7 @@ grpc::Status RuntimeRuntimeServiceImpl::RemovePodSandbox(grpc::ServerContext *co
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to remove pod:%s due to %s", request->pod_sandbox_id().c_str(),
               error.GetMessage().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
 
     EVENT("Event: {Object: CRI, Type: Removed Pod: %s}", request->pod_sandbox_id().c_str());
@@ -446,7 +463,7 @@ grpc::Status RuntimeRuntimeServiceImpl::PodSandboxStatus(grpc::ServerContext *co
     if (!error.Empty() || !podStatus) {
         ERROR("Object: CRI, Type: Failed to status pod:%s due to %s", request->pod_sandbox_id().c_str(),
               error.GetMessage().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
     *(reply->mutable_status()) = *podStatus;
 
@@ -506,7 +523,7 @@ RuntimeRuntimeServiceImpl::UpdateContainerResources(grpc::ServerContext *context
     if (error.NotEmpty()) {
         ERROR("Object: CRI, Type: Failed to update container:%s due to %s", request->container_id().c_str(),
               error.GetMessage().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
 
     WARN("Event: {Object: CRI, Type: Updated container resources: %s}", request->container_id().c_str());
@@ -531,7 +548,7 @@ grpc::Status RuntimeRuntimeServiceImpl::Exec(grpc::ServerContext *context,
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to exec container:%s due to %s", request->container_id().c_str(),
               error.GetMessage().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
 
     EVENT("Event: {Object: CRI, Type: execed Container: %s}", request->container_id().c_str());
@@ -556,7 +573,7 @@ grpc::Status RuntimeRuntimeServiceImpl::Attach(grpc::ServerContext *context,
     if (!error.Empty()) {
         ERROR("Object: CRI, Type: Failed to attach container:%s due to %s", request->container_id().c_str(),
               error.GetMessage().c_str());
-        return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
+        return ToGRPCStatus(error);
     }
 
     EVENT("Event: {Object: CRI, Type: attched Container: %s}", request->container_id().c_str());
