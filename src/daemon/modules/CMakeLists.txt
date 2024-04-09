@@ -49,6 +49,16 @@ if (ENABLE_PLUGIN)
         )
 endif()
 
+if (ENABLE_CDI)
+    add_subdirectory(device)
+    list(APPEND local_modules_srcs
+        ${DEVICE_SRCS}
+        )
+    list(APPEND local_modules_incs
+        ${DEVICE_INCS}
+        )
+endif()
+
 set(MODULES_SRCS
     ${local_modules_srcs}
     PARENT_SCOPE
@@ -69,4 +79,5 @@ if(ENABLE_NETWORK)
         PARENT_SCOPE
         )
 endif()
+
 
