@@ -757,7 +757,8 @@ auto Sandbox::Remove(Errors &error) -> bool
 
     WriteGuard<RWMutex> lock(m_mutex);
 
-    if (!DoStop(DEFAULT_STOP_TIMEOUT, error)) {
+    // Only stop the sandbox when it is running
+    if (IsReady() && !DoStop(DEFAULT_STOP_TIMEOUT, error)) {
         ERROR("Failed to stop Sandbox before removing, id='%s'", m_id.c_str());
         return false;
     }

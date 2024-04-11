@@ -517,12 +517,20 @@ bool ShimController::Shutdown(const std::string &sandboxId, Errors &error)
     container_delete_response *response {nullptr};
     int ret = m_cb->container.remove(request, &response);
     auto responseWrapper = makeUniquePtrCStructWrapper<container_delete_response>(response, free_container_delete_response);
-
-    if (ret != 0) {
-        std::string msg = (response != nullptr && response->errmsg != nullptr) ? response->errmsg : "internal";
-        ERROR("Failed to remove sandbox %s: %s", sandboxId.c_str(), msg.c_str());
-        error.SetError(msg);
+    if (ret == 0) {
+        return true;
     }
+
+    std::string errMsg = "internal";
+    if (response != nullptr && response->errmsg != nullptr) {
+        if (strstr(response->errmsg, "No such container") != nullptr) {
+            ERROR("Container for sandbox %s not found", sandboxId.c_str());
+            return true;
+        }
+        errMsg = response->errmsg;
+    }
+    ERROR("Failed to remove sandbox %s: %s", sandboxId.c_str(), errMsg.c_str());
+    error.SetError(errMsg);
     return error.Empty();
 }
 
