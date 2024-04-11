@@ -62,6 +62,7 @@ void RuntimeV1RuntimeServiceImpl::Init(std::string &podSandboxImage,
         return;
     }
 
+    m_enablePodEvents = false;
     if (enablePodEvents) {
         if (mailbox_register_topic_handler(MAILBOX_TOPIC_CRI_CONTAINER, cri_container_topic_handler,
                                            this, cri_container_topic_release, true) != 0) {
@@ -71,7 +72,6 @@ void RuntimeV1RuntimeServiceImpl::Init(std::string &podSandboxImage,
         }
         m_enablePodEvents = enablePodEvents;
     }
-
 
     m_rService = std::unique_ptr<CRIV1::CRIRuntimeService>(new CRIRuntimeServiceImpl(podSandboxImage, cb, networkPlugin, m_enablePodEvents));
 }
