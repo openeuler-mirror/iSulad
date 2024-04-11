@@ -238,7 +238,13 @@ int rt_lcr_rm(const char *name, const char *runtime, const rt_rm_params_t *param
 
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_delete_op == NULL) {
-        ERROR("Failed to get engine delete operations");
+        // if engine_ops is NULL, container root path may have been corrupted, try to remove by daemon
+        // If user runs container with lcr but remove lcr runtime after, there might be resources remaining
+        ERROR("Failed to get engine delete operations, container %s root path may have been corrupted, try to remove by daemon", name);
+        if (remove_container_rootpath(name, params->rootpath) == 0) {
+            ret = 0;
+            goto out;
+        }
         ret = -1;
         goto out;
     }
