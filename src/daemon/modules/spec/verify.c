@@ -1518,7 +1518,7 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
 
     for (i = 0; i < len; ++i) {
         iter = *(mounts + i);
-        if (iter == NULL || strcmp(iter->type, MOUNT_TYPE_BIND)) {
+        if (iter == NULL || iter->type == NULL || strcmp(iter->type, MOUNT_TYPE_BIND)) {
             continue;
         }
 

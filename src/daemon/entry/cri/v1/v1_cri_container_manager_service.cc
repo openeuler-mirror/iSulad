@@ -199,6 +199,14 @@ auto ContainerManagerService::GenerateCreateContainerHostConfig(
         }
     }
 
+#ifdef ENABLE_CDI
+    CRIHelpersV1::GenerateCDIRequestedDevices(containerConfig, hostconfig, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to generate CDI requested devices");
+        goto cleanup;
+    }
+#endif /* ENABLE_CDI */
+
     return hostconfig;
 
 cleanup:

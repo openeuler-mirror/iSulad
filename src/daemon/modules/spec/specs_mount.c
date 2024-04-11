@@ -28,6 +28,7 @@
 #include <isula_libutils/container_config_v2.h>
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/oci_runtime_config_linux.h>
+#include <isula_libutils/auto_cleanup.h>
 #include <limits.h>
 #include <stdint.h>
 
@@ -54,6 +55,9 @@
 #include "volume_api.h"
 #include "parse_volume.h"
 #include "specs_api.h"
+#ifdef ENABLE_CDI
+#include "cdi_operate_api.h"
+#endif /* ENABLE_CDI */
 
 enum update_rw {
     update_rw_untouch,
@@ -3582,6 +3586,15 @@ int update_devcies_for_oci_spec(oci_runtime_spec *oci_spec, host_config *hostcon
         oci_spec->linux->resources->devices_len += 1;
     }
 
+    // extend step: inject CDI devcies
+#ifdef ENABLE_CDI
+    ret = inject_CDI_devcies_for_oci_spec(oci_spec, hostconfig);
+    if (ret != 0) {
+        ERROR("Failed to inject CDI devices");
+        return -1;
+    }
+#endif /* ENABLE_CDI */
+
     // Step8: do update devices and cgroup device rules at here
     if (hostconfig->privileged) {
         // Step8.1: for priviledged container, we should merge all devices under /dev
@@ -3593,3 +3606,31 @@ int update_devcies_for_oci_spec(oci_runtime_spec *oci_spec, host_config *hostcon
 
     return ret;
 }
+
+#ifdef ENABLE_CDI
+int inject_CDI_devcies_for_oci_spec(oci_runtime_spec *oci_spec, host_config *hostconfig)
+{
+    int ret = 0;
+    string_array devices_array = { 0 };
+    __isula_auto_free char *error = NULL;
+    
+    if (oci_spec == NULL || hostconfig == NULL) {
+        ERROR("Invalid params");
+        return -1;
+    }
+    if (hostconfig->cdi_requested_devices == NULL) {
+        return 0;
+    }
+    devices_array.items = hostconfig->cdi_requested_devices;
+    devices_array.len = hostconfig->cdi_requested_devices_len;
+    devices_array.cap = hostconfig->cdi_requested_devices_len;
+    if (cdi_operate_refresh() != 0) {
+        WARN("CDI registry has errors, please check past logs");
+    }
+    if (cdi_operate_inject_devices(oci_spec, &devices_array) != 0) {
+        ERROR("Failed to inject CDI devices");
+        ret = -1;
+    }
+    return ret;
+}
+#endif /* ENABLE_CDI */

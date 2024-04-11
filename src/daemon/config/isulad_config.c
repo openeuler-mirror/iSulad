@@ -1830,6 +1830,14 @@ int merge_json_confs_into_global(struct service_arguments *args)
     args->json_confs->metrics_port = tmp_json_confs->metrics_port;
 #endif
 
+#ifdef ENABLE_CDI
+    args->json_confs->enable_cdi = tmp_json_confs->enable_cdi;
+    args->json_confs->cdi_spec_dirs = tmp_json_confs->cdi_spec_dirs;
+    tmp_json_confs->cdi_spec_dirs = NULL;
+    args->json_confs->cdi_spec_dirs_len = tmp_json_confs->cdi_spec_dirs_len;
+    tmp_json_confs->cdi_spec_dirs_len = 0;
+#endif /* ENABLE_CDI */
+ 
 out:
     free(err);
     free_isulad_daemon_configs(tmp_json_confs);

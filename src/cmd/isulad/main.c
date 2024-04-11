@@ -83,6 +83,9 @@
 #endif
 #include "id_name_manager.h"
 #include "cgroup.h"
+#ifdef ENABLE_CDI
+#include "cdi_operate_api.h"
+#endif /* ENABLE_CDI */
 
 sem_t g_daemon_shutdown_sem;
 sem_t g_daemon_wait_shutdown_sem;
@@ -1399,6 +1402,14 @@ static int isulad_server_init_common()
         goto out;
     }
 #endif
+
+#ifdef ENABLE_CDI
+    if (args->json_confs->enable_cdi &&
+        cdi_operate_registry_init(args->json_confs->cdi_spec_dirs, args->json_confs->cdi_spec_dirs_len) != 0) {
+        ERROR("Failed to init CDI module");
+        goto out;
+    }
+#endif /* ENABLE_CDI */
 
     if (spec_module_init() != 0) {
         ERROR("Failed to init spec module");

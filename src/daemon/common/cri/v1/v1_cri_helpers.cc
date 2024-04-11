@@ -22,6 +22,7 @@
 
 #include <isula_libutils/log.h>
 #include <isula_libutils/parse_common.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "v1_cri_security_context.h"
 #include "cri_helpers.h"
@@ -33,6 +34,9 @@
 #include "isulad_config.h"
 #include "sha256.h"
 #include "v1_naming.h"
+#ifdef ENABLE_CDI
+#include "cdi_operate_api.h"
+#endif /* ENABLE_CDI */
 
 namespace CRIHelpersV1 {
 
@@ -665,5 +669,80 @@ std::unique_ptr<runtime::v1::ContainerStatus> GetContainerStatus(service_executo
     free_container_inspect(inspect);
     return contStatus;
 }
+
+#ifdef ENABLE_CDI
+static int InsertCDIDevices(std::unordered_set<std::string> &fromCRI, const std::string &devName,
+                            string_array *requested, Errors &err)
+{
+    if (fromCRI.find(devName) == fromCRI.end()) {
+        fromCRI.insert(devName);
+        if (util_append_string_array(requested, devName.c_str()) != 0) {
+            ERROR("Out of memory");
+            err.Errorf("Out of memory");
+            return -1;
+        }
+        DEBUG("Appended device: %s", devName.c_str());
+    } else {
+        INFO("Skipping duplicate CDI device %s", devName.c_str());
+    }
+    return 0;
+}
+ 
+void GenerateCDIRequestedDevices(const runtime::v1::ContainerConfig &config, host_config *hostconfig, Errors &err)
+{
+    std::unordered_set<std::string> fromCRI;
+    __isula_auto_string_array_t string_array *requested = nullptr;
+    __isula_auto_string_array_t string_array *keys = nullptr;
+    __isula_auto_string_array_t string_array *devices = nullptr;
+    json_map_string_string *annotations = nullptr;
+    __isula_auto_free char *error = nullptr;
+ 
+    if (hostconfig == nullptr) {
+        ERROR("Invalid input arguments");
+        err.Errorf("Invalid input arguments");
+        return;
+    }
+    
+    if (config.cdi_devices().empty() && config.annotations().empty()) {
+        return;
+    }
+    requested = (string_array *)util_common_calloc_s(sizeof(*requested));
+    if (requested == nullptr) {
+        ERROR("Out of memory");
+        err.Errorf("Out of memory");
+        return;
+    }
+    if (!config.cdi_devices().empty()) {
+        for (int i = 0; i < config.cdi_devices().size(); i++) {
+            if (InsertCDIDevices(fromCRI, config.cdi_devices(i).name(), requested, err) != 0) {
+                goto free_out;
+            }
+        }
+    }
+    if (!config.annotations().empty()) {
+        annotations = CRIHelpers::MakeAnnotations(config.annotations(), err);
+        if (err.NotEmpty()) {
+            goto free_out;
+        }
+        if (cdi_operate_parse_annotations(annotations, &keys, &devices, &error) != 0) {
+            ERROR("Failed to parse CDI annotations: %s", error);
+            err.Errorf("Failed to parse CDI annotations: %s", error);
+            goto free_out;
+        }
+        for (size_t i = 0; i < devices->len; i++) {
+            if (InsertCDIDevices(fromCRI, std::string(devices->items[i]), requested, err) != 0) {
+                goto free_out;
+            }
+        }
+    }
+    hostconfig->cdi_requested_devices = requested->items;
+    requested->items = nullptr;
+    hostconfig->cdi_requested_devices_len = requested->len;
+    requested->len = 0;
+ 
+free_out:
+    free_json_map_string_string(annotations);
+}
+#endif /* ENABLE_CDI */
 
 } // v1 namespace CRIHelpers
