@@ -14,27 +14,174 @@
  ******************************************************************************/
 #include "cdi_version.h"
 
-#define CDI_V_CURRENT_VERSION "v"##CDI_CURRENT_VERSION
+#include <ctype.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/auto_cleanup.h>
 
-#define CDI_V010        "v0.1.0"
-#define CDI_V020        "v0.2.0"
-#define CDI_V030        "v0.3.0"
-#define CDI_V040        "v0.4.0"
-#define CDI_V050        "v0.5.0"
-#define CDI_V060        "v0.6.0"
+#include "error.h"
+#include "utils_version.h"
+#include "utils_string.h"
+#include "cdi_container_edits.h"
+#include "cdi_parser.h"
+
+#define CDI_V010        "0.1.0"
+#define CDI_V020        "0.2.0"
+#define CDI_V030        "0.3.0"
+#define CDI_V040        "0.4.0"
+#define CDI_V050        "0.5.0"
+#define CDI_V060        "0.6.0"
 #define CDI_V_EARLIEST  CDI_V030
+
+typedef bool (*required_version_cb)(cdi_spec *spec);
+
+struct required_version_map {
+    char *version;
+    required_version_cb cb;
+};
+
+static bool requires_v060(cdi_spec *spec)
+{
+    size_t i;
+    int ret = 0;
+    __isula_auto_free char *vendor = NULL;
+    __isula_auto_free char *class = NULL;
+
+    // The 0.6.0 spec allows annotations to be specified at a spec level
+    if (spec->annotations != NULL) {
+        return true;
+    }
+
+    // The 0.6.0 spec allows annotations to be specified at a device level
+    if (spec->devices != NULL) {
+        for (i = 0; i < spec->devices_len; i++) {
+            if (spec->devices[i]->annotations != NULL) {
+                return true;
+            }
+        }
+    }
+
+    // The 0.6.0 spec allows dots "." in Kind name label (class)
+    ret = cdi_parser_parse_qualifier(spec->kind, &vendor, &class);
+    if (ret == 0 && vendor != NULL) {
+        if (util_strings_count(class, '.') > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool check_host_path(cdi_container_edits *e)
+{
+    size_t i;
+
+    if (e == NULL) {
+        return false;
+    }
+    for (i = 0; i < e->device_nodes_len; i++) {
+        // The HostPath field was added in 0.5.0
+        if (e->device_nodes[i]->host_path != NULL) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool requires_v050(cdi_spec *spec)
+{
+    size_t i;
+
+    for (i = 0; i < spec->devices_len; i++) {
+        // The 0.5.0 spec allowed device names to start with a digit instead of requiring a letter
+        if (spec->devices[i]->name != NULL && strlen(spec->devices[i]->name) > 0 &&
+            !isalpha(spec->devices[i]->name[0])) {
+            return true;
+        }
+        if (check_host_path(spec->devices[i]->container_edits)) {
+            return true;
+        }
+    }
+
+    return check_host_path(spec->container_edits);
+}
+
+static bool check_mount_type(cdi_container_edits *e)
+{
+    size_t i;
+
+    if (e == NULL) {
+        return false;
+    }
+    for (i = 0; i < e->mounts_len; i++) {
+        // The Type field was added in 0.4.0
+        if (e->mounts[i]->type != NULL) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool requires_v040(cdi_spec *spec)
+{
+    size_t i;
+
+    for (i = 0; i < spec->devices_len; i++) {
+        if (check_mount_type(spec->devices[i]->container_edits)) {
+            return true;
+        }
+    }
+
+    return check_mount_type(spec->container_edits);
+}
+
+#define VALID_SPEC_VERSIONS_LEN 6
+static struct required_version_map g_valid_spec_versions[VALID_SPEC_VERSIONS_LEN] = {
+    {CDI_V010, NULL},
+    {CDI_V020, NULL},
+    {CDI_V030, NULL},
+    {CDI_V040, requires_v060},
+    {CDI_V050, requires_v050},
+    {CDI_V060, requires_v040}
+};
 
 const char *cdi_minimum_required_version(cdi_spec *spec)
 {
-    return NULL;
-}
+    const char *min_version = CDI_V_EARLIEST;
+    int i;
+    bool result = true;
 
-bool cdi_is_greater_than_version(const char *v, const char *o)
-{
-    return true;
+    if (spec == NULL) {
+        return NULL;
+    }
+
+    for (i = 0; i < VALID_SPEC_VERSIONS_LEN; i++) {
+        if (g_valid_spec_versions[i].cb == NULL) {
+            continue;
+        }
+        if (g_valid_spec_versions[i].cb(spec)) {
+            if (util_version_greater_than(g_valid_spec_versions[i].version, min_version, &result) != 0) {
+                ERROR("Failed to compare version %s and %s", g_valid_spec_versions[i].version, min_version);
+                return NULL;
+            }
+            if (result) {
+                min_version = g_valid_spec_versions[i].version;
+            }
+        }
+        if (strcmp(min_version, CDI_CURRENT_VERSION)) {
+            break;
+        }
+    }
+
+    return min_version;
 }
 
 bool cdi_is_valid_version(const char *spec_version)
 {
-    return true;
+    int i;
+    
+    for (i = 0; i < VALID_SPEC_VERSIONS_LEN; i++) {
+        if (strcmp(g_valid_spec_versions[i].version, spec_version) == 0) {
+            return true;
+        }
+    }
+    return false;
 }

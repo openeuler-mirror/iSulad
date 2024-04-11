@@ -24,7 +24,6 @@ extern "C" {
 #define CDI_CURRENT_VERSION "0.6.0"
 
 const char *cdi_minimum_required_version(cdi_spec *spec);
-bool cdi_is_greater_than_version(const char *v, const char *o);
 bool cdi_is_valid_version(const char *spec_version);
 
 #ifdef __cplusplus
