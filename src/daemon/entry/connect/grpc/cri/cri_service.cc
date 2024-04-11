@@ -89,9 +89,8 @@ int CRIService::Init(const isulad_daemon_configs *config)
 
 #ifdef ENABLE_CRI_API_V1
     m_enableCRIV1 = config->enable_cri_v1;
-    m_enablePodEvents = config->enable_pod_events;
     if (m_enableCRIV1) {
-        m_runtimeV1RuntimeService.Init(m_podSandboxImage, m_pluginManager, m_enablePodEvents, err);
+        m_runtimeV1RuntimeService.Init(m_podSandboxImage, m_pluginManager, config->enable_pod_events, err);
         if (err.NotEmpty()) {
             ERROR("Init CRI v1 runtime service failed: %s", err.GetCMessage());
             return -1;
