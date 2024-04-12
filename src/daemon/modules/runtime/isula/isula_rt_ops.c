@@ -903,11 +903,17 @@ static int shim_create(shim_create_args *args)
 
     if (pipe2(shim_stdout_pipe, O_CLOEXEC) != 0) {
         ERROR("Failed to create pipe for shim stdout");
+        close(shim_stderr_pipe[0]);
+        close(shim_stderr_pipe[1]);
         return -1;
     }
 
     if (pipe2(exec_err_pipe, O_CLOEXEC) != 0) {
         ERROR("Failed to create pipe for exec err");
+        close(shim_stderr_pipe[0]);
+        close(shim_stderr_pipe[1]);
+        close(shim_stdout_pipe[0]);
+        close(shim_stdout_pipe[1]);
         return -1;
     }
 
