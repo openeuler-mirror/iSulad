@@ -53,6 +53,11 @@ int rt_lcr_create(const char *name, const char *runtime, const rt_create_params_
     char *runtime_root = NULL;
     struct engine_operation *engine_ops = NULL;
 
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
     if (conf_get_systemd_cgroup()) {
         ERROR("Systemd cgroup not supported for lcr runtime");
         isulad_set_error_message("Systemd cgroup not supported for lcr runtime");
@@ -129,6 +134,11 @@ int rt_lcr_start(const char *name, const char *runtime, const rt_start_params_t 
     struct engine_operation *engine_ops = NULL;
     engine_start_request_t request = { 0 };
 
+    if (name == NULL || runtime == NULL || params == NULL || pid_info == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_start_op == NULL) {
         ERROR("Failed to get engine start operations");
@@ -183,6 +193,11 @@ int rt_lcr_clean_resource(const char *name, const char *runtime, const rt_clean_
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
 
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_clean_op == NULL) {
         ERROR("Failed to get engine clean operations");
@@ -236,6 +251,15 @@ int rt_lcr_rm(const char *name, const char *runtime, const rt_rm_params_t *param
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
 
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+    if (params->rootpath == NULL) {
+        ERROR("Missing root path");
+        return -1;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_delete_op == NULL) {
         // if engine_ops is NULL, container root path may have been corrupted, try to remove by daemon
@@ -284,6 +308,11 @@ int rt_lcr_status(const char *name, const char *runtime, const rt_status_params_
     int nret = 0;
     struct engine_operation *engine_ops = NULL;
 
+    if (name == NULL || runtime == NULL || params == NULL || status == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_get_container_status_op == NULL) {
         ERROR("Failed to get engine status operations");
@@ -321,6 +350,11 @@ int rt_lcr_resources_stats(const char *name, const char *runtime, const rt_stats
     int ret = 0;
     int nret = 0;
     struct engine_operation *engine_ops = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL || rs_stats == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
 
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_get_container_resources_stats_op == NULL) {
@@ -451,6 +485,11 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
     char *user = NULL;
     char *add_gids = NULL;
 
+    if (id == NULL || runtime == NULL || params == NULL || exit_code == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_exec_op == NULL) {
         DEBUG("Failed to get engine exec operations");
@@ -519,6 +558,11 @@ int rt_lcr_pause(const char *name, const char *runtime, const rt_pause_params_t 
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
 
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_pause_op == NULL) {
         DEBUG("Failed to get engine pause operations");
@@ -549,6 +593,11 @@ int rt_lcr_resume(const char *name, const char *runtime, const rt_resume_params_
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
 
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_resume_op == NULL) {
         DEBUG("Failed to get engine resume operations");
@@ -578,6 +627,11 @@ int rt_lcr_attach(const char *name, const char *runtime, const rt_attach_params_
 {
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Null argument");
+        return -1;
+    }
 
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_console_op == NULL) {
@@ -641,6 +695,11 @@ int rt_lcr_update(const char *id, const char *runtime, const rt_update_params_t 
     struct engine_operation *engine_ops = NULL;
     struct engine_cgroup_resources cr = { 0 };
 
+    if (id == NULL || runtime == NULL || params == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_update_op == NULL) {
         DEBUG("Failed to get engine update operations");
@@ -673,10 +732,9 @@ int rt_lcr_listpids(const char *name, const char *runtime, const rt_listpids_par
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
 
-    if (out == NULL) {
+    if (name == NULL || runtime == NULL || params == NULL || out == NULL) {
         ERROR("Invalid arguments");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     engine_ops = engines_get_handler(runtime);
@@ -709,6 +767,11 @@ int rt_lcr_resize(const char *id, const char *runtime, const rt_resize_params_t 
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
 
+    if (id == NULL || runtime == NULL || params == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_resize_op == NULL) {
         DEBUG("Failed to get engine resume operations");
@@ -740,6 +803,11 @@ int rt_lcr_exec_resize(const char *id, const char *runtime, const rt_exec_resize
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
 
+    if (id == NULL || runtime == NULL || params == NULL) {
+        ERROR("Nullptr arguments not allowed");
+        return -1;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_resize_op == NULL) {
         DEBUG("Failed to get engine resume operations");
@@ -767,6 +835,11 @@ out:
 
 int rt_lcr_kill(const char *id, const char *runtime, const rt_kill_params_t *params)
 {
+    if (id == NULL || runtime == NULL || params == NULL || params->pid < 0) {
+        ERROR("Invalid arguments not allowed");
+        return -1;
+    }
+
     if (util_process_alive(params->pid, params->start_time) == false) {
         if (params->signal == params->stop_signal || params->signal == SIGKILL) {
             WARN("Process %d is not alive", params->pid);
@@ -797,6 +870,11 @@ int rt_lcr_rebuild_config(const char *name, const char *runtime, const rt_rebuil
     struct engine_operation *engine_ops = NULL;
     oci_runtime_spec *oci_spec = NULL;
     __isula_auto_free parser_error err = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Invalid arguments not allowed");
+        return -1;
+    }
 
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_create_op == NULL) {
