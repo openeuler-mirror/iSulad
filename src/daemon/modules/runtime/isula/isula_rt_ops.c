@@ -792,6 +792,8 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
 
     if (pipe2(shim_stdout_pipe, O_CLOEXEC) != 0) {
         ERROR("Failed to create pipe for shim stdout");
+        close(shim_stderr_pipe[0]);
+        close(shim_stderr_pipe[1]);
         return -1;
     }
 
