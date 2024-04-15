@@ -23,7 +23,7 @@ string_array g_default_spec_dirs = {
     .cap = DEFAULT_SPEC_DIRS_LEN,
 };
  
-char *cdi_scan_spec_dirs(string_array *dirs, struct cdi_scan_fn_maps *scan_fn_maps, cdi_scan_spec_func scan_fn)
+int cdi_scan_spec_dirs(string_array *dirs, struct cdi_scan_fn_maps *scan_fn_maps, cdi_scan_spec_func scan_fn)
 {
-    return NULL;
+    return 0;
 }

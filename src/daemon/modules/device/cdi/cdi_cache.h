@@ -33,12 +33,12 @@ struct cdi_cache;
 struct cdi_cache_ops {
     // injecting CDI devices into an OCI Spec.
     // Resolver
-    string_array *(*inject_devices)(struct cdi_cache *c, oci_runtime_spec *spec, string_array *devices, char **error);
+    int (*inject_devices)(struct cdi_cache *c, oci_runtime_spec *spec, string_array *devices);
     
     // refreshing the cache of CDI Specs and devices.
     // Refresher
-    char *(*configure)(struct cdi_cache *c, string_array *spec_dirs);
-    char *(*refresh)(struct cdi_cache *c);
+    int (*configure)(struct cdi_cache *c, string_array *spec_dirs);
+    int (*refresh)(struct cdi_cache *c);
     map_t *(*get_errors)(struct cdi_cache *c);
     string_array *(*get_spec_directories)(struct cdi_cache *c);
     map_t *(*get_spec_dir_errors)(struct cdi_cache *c);
@@ -65,7 +65,7 @@ struct cdi_cache {
 
 void free_cdi_cache(struct cdi_cache *c);
  
-struct cdi_cache *cdi_new_cache(string_array *spec_dirs, char **error);
+struct cdi_cache *cdi_new_cache(string_array *spec_dirs);
 struct cdi_cache_ops *cdi_get_cache_ops(void);
 
 #ifdef __cplusplus

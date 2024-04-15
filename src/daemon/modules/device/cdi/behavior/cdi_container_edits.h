@@ -27,9 +27,9 @@
 extern "C" {
 #endif
 
-char *cdi_container_edits_apply(cdi_container_edits *e, oci_runtime_spec *spec);
-char *cdi_container_edits_validate(cdi_container_edits *e);
-cdi_container_edits *cdi_container_edits_append(cdi_container_edits *e, cdi_container_edits *o);
+int cdi_container_edits_apply(cdi_container_edits *e, oci_runtime_spec *spec);
+int cdi_container_edits_validate(cdi_container_edits *e, char **error);
+int cdi_container_edits_append(cdi_container_edits *e, cdi_container_edits *o);
 bool cdi_container_edits_is_empty(cdi_container_edits *e);
 
 #ifdef __cplusplus

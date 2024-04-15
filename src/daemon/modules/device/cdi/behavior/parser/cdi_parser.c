@@ -24,9 +24,9 @@ bool cdi_parser_is_qualified_name(const char *device)
     return true;
 }
 
-char *cdi_parser_parse_qualified_name(const char *device, char **vendor, char **class, char **name)
+int cdi_parser_parse_qualified_name(const char *device, char **vendor, char **class, char **name)
 {
-    return NULL;
+    return 0;
 }
 
 int cdi_parser_parse_device(const char *device, char **vendor, char **class, char **name)
@@ -39,17 +39,17 @@ int cdi_parser_parse_qualifier(const char *kind, char **vendor, char **class)
     return 0;
 }
 
-char *cdi_parser_validate_vendor_name(const char *vendor)
+int cdi_parser_validate_vendor_name(const char *vendor, char **error)
 {
-    return NULL;
+    return 0;
 }
 
-char *cdi_parser_validate_class_name(const char *class)
+int cdi_parser_validate_class_name(const char *class, char **error)
 {
-    return NULL;
+    return 0;
 }
 
-char *cdi_parser_validate_device_name(const char *name)
+int cdi_parser_validate_device_name(const char *name, char **error)
 {
-    return NULL;
+    return 0;
 }

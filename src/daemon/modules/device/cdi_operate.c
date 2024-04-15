@@ -19,17 +19,18 @@ int cdi_operate_registry_init(char **specs_dirs, size_t specs_dirs_len)
     return 0;
 }
 
-char *cdi_operate_refresh(void)
+int cdi_operate_refresh(void)
 {
-    return NULL;
+    return 0;
 }
 
-string_array *cdi_operate_inject_devices(oci_runtime_spec *spec, string_array *devices, char **error)
+int cdi_operate_inject_devices(oci_runtime_spec *spec, string_array *devices)
 {
-    return NULL;
+    return 0;
 }
 
-char *cdi_operate_parse_annotations(json_map_string_string *annotations, string_array **keys, string_array **devices)
+int cdi_operate_parse_annotations(json_map_string_string *annotations, string_array **keys,
+                                  string_array **devices, char **error)
 {
-    return NULL;
+    return 0;
 }

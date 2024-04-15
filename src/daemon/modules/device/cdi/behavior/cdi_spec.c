@@ -54,7 +54,7 @@ int cdi_spec_get_priority(struct cdi_cache_spec *s)
     return 0;
 }
 
-cdi_container_edits *cdi_spec_edits(struct cdi_cache_spec *s)
+cdi_container_edits *cdi_spec_get_edits(struct cdi_cache_spec *s)
 {
     return NULL;
 }

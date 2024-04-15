@@ -19,24 +19,24 @@ void free_cdi_cache(struct cdi_cache *c)
     (void)c;
 }
 
-struct cdi_cache *cdi_new_cache(string_array *spec_dirs, char **error)
+struct cdi_cache *cdi_new_cache(string_array *spec_dirs)
 {
     return NULL;
 }
 
-static string_array *cdi_inject_devices(struct cdi_cache *c, oci_runtime_spec *oci_spec, string_array *devices, char **error)
+static int cdi_inject_devices(struct cdi_cache *c, oci_runtime_spec *oci_spec, string_array *devices)
 {
-    return NULL;
+    return 0;
 }
 
-static char *cdi_configure(struct cdi_cache *c, string_array *spec_dirs)
+static int cdi_configure(struct cdi_cache *c, string_array *spec_dirs)
 {
-    return NULL;
+    return 0;
 }
 
-static char *cdi_refresh(struct cdi_cache *c)
+static int cdi_refresh(struct cdi_cache *c)
 {
-    return NULL;
+    return 0;
 }
 
 static map_t *cdi_get_errors(struct cdi_cache *c)
