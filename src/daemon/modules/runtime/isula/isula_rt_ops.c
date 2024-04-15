@@ -861,6 +861,8 @@ static int shim_create(shim_create_args *args)
     pid_t pid = 0;
     int shim_stderr_pipe[2] = { -1, -1 };
     int shim_stdout_pipe[2] = { -1, -1 };
+    // used to accept exec error msg
+    int exec_err_pipe[2] = {-1, -1};
     int num = 0;
     int ret = 0;
     char exec_buff[BUFSIZ + 1] = { 0 };
@@ -901,6 +903,17 @@ static int shim_create(shim_create_args *args)
 
     if (pipe2(shim_stdout_pipe, O_CLOEXEC) != 0) {
         ERROR("Failed to create pipe for shim stdout");
+        close(shim_stderr_pipe[0]);
+        close(shim_stderr_pipe[1]);
+        return -1;
+    }
+
+    if (pipe2(exec_err_pipe, O_CLOEXEC) != 0) {
+        ERROR("Failed to create pipe for exec err");
+        close(shim_stderr_pipe[0]);
+        close(shim_stderr_pipe[1]);
+        close(shim_stdout_pipe[0]);
+        close(shim_stdout_pipe[1]);
         return -1;
     }
 
@@ -911,30 +924,32 @@ static int shim_create(shim_create_args *args)
         close(shim_stderr_pipe[1]);
         close(shim_stdout_pipe[0]);
         close(shim_stdout_pipe[1]);
+        close(exec_err_pipe[0]);
+        close(exec_err_pipe[1]);
         return -1;
     }
 
     if (pid == (pid_t)0) {
         if (chdir(args->workdir) < 0) {
-            (void)dprintf(shim_stderr_pipe[1], "%s: failed chdir to %s", args->id, args->workdir);
+            (void)dprintf(exec_err_pipe[1], "%s: failed chdir to %s", args->id, args->workdir);
             exit(EXIT_FAILURE);
         }
 
         //prevent the child process from having the same standard streams as the parent process
         if (isula_null_stdfds() != 0) {
-            (void)dprintf(shim_stderr_pipe[1], "failed to set std console to /dev/null");
+            (void)dprintf(exec_err_pipe[1], "failed to set std console to /dev/null");
             exit(EXIT_FAILURE);           
         }
 
         if (args->fg) {
             // child process, dup2 shim_stdout_pipe[1] to STDOUT, get container process exit_code in STDOUT
             if (dup2(shim_stdout_pipe[1], STDOUT_FILENO) < 0) {
-                (void)dprintf(shim_stderr_pipe[1], "Dup stdout fd error: %s", strerror(errno));
+                (void)dprintf(exec_err_pipe[1], "Dup stdout fd error: %s", strerror(errno));
                 exit(EXIT_FAILURE);
             }
             // child process, dup2 shim_stderr_pipe[1] to STDERR, get isulad-shim errmsg in STDERR
             if (dup2(shim_stderr_pipe[1], STDERR_FILENO) < 0) {
-                (void)dprintf(shim_stderr_pipe[1], "Dup stderr fd error: %s", strerror(errno));
+                (void)dprintf(exec_err_pipe[1], "Dup stderr fd error: %s", strerror(errno));
                 exit(EXIT_FAILURE);
             }
             goto realexec;
@@ -942,18 +957,18 @@ static int shim_create(shim_create_args *args)
 
         // clear NOTIFY_SOCKET from the env to adapt runc create
         if (unsetenv("NOTIFY_SOCKET") != 0) {
-            (void)dprintf(shim_stderr_pipe[1], "%s: unset env NOTIFY_SOCKET failed %s", args->id, strerror(errno));
+            (void)dprintf(exec_err_pipe[1], "%s: unset env NOTIFY_SOCKET failed %s", args->id, strerror(errno));
             exit(EXIT_FAILURE);
         }
 
         pid = fork();
         if (pid < 0) {
-            (void)dprintf(shim_stderr_pipe[1], "%s: fork shim-process failed %s", args->id, strerror(errno));
+            (void)dprintf(exec_err_pipe[1], "%s: fork shim-process failed %s", args->id, strerror(errno));
             _exit(EXIT_FAILURE);
         }
         if (pid != 0) {
             if (file_write_int(fpid, pid) != 0) {
-                (void)dprintf(shim_stderr_pipe[1], "%s: write %s with %d failed", args->id, fpid, pid);
+                (void)dprintf(exec_err_pipe[1], "%s: write %s with %d failed", args->id, fpid, pid);
             }
             _exit(EXIT_SUCCESS);
         }
@@ -962,35 +977,38 @@ realexec:
         /* real shim process. */
         close(shim_stderr_pipe[0]);
         close(shim_stdout_pipe[0]);
+        close(exec_err_pipe[0]);
 
         if (setsid() < 0) {
-            (void)dprintf(shim_stderr_pipe[1], "%s: failed setsid for process %d", args->id, getpid());
+            (void)dprintf(exec_err_pipe[1], "%s: failed setsid for process %d", args->id, getpid());
             exit(EXIT_FAILURE);
         }
 
         if (util_check_inherited(true, shim_stderr_pipe[1]) != 0) {
-            (void)dprintf(shim_stderr_pipe[1], "close inherited fds failed");
+            (void)dprintf(exec_err_pipe[1], "close inherited fds failed");
             exit(EXIT_FAILURE);
         }
 
         if (setenv(SHIIM_LOG_PATH_ENV, engine_log_path, 1) != 0) {
-            (void)dprintf(shim_stderr_pipe[1], "%s: failed to set SHIIM_LOG_PATH_ENV for process %d", args->id, getpid());
+            (void)dprintf(exec_err_pipe[1], "%s: failed to set SHIIM_LOG_PATH_ENV for process %d", args->id, getpid());
             exit(EXIT_FAILURE);
         }
 
         if (setenv(SHIIM_LOG_LEVEL_ENV, log_level, 1) != 0) {
-            (void)dprintf(shim_stderr_pipe[1], "%s: failed to set SHIIM_LOG_LEVEL_ENV env for process %d", args->id, getpid());
+            (void)dprintf(exec_err_pipe[1], "%s: failed to set SHIIM_LOG_LEVEL_ENV env for process %d", args->id, getpid());
             exit(EXIT_FAILURE);
         }
 
         execvp(SHIM_BINARY, (char * const *)params);
-        (void)dprintf(shim_stderr_pipe[1], "run process: %s failed: %s", SHIM_BINARY, strerror(errno));
+        (void)dprintf(exec_err_pipe[1], "run process: %s failed: %s", SHIM_BINARY, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     close(shim_stderr_pipe[1]);
     close(shim_stdout_pipe[1]);
-    num = util_read_nointr(shim_stderr_pipe[0], exec_buff, sizeof(exec_buff) - 1);
+    close(exec_err_pipe[1]);
+    num = util_read_nointr(exec_err_pipe[0], exec_buff, sizeof(exec_buff) - 1);
+    close(exec_err_pipe[0]);
 
     status = util_wait_for_pid_status(pid);
     if (status < 0) {
@@ -1035,8 +1053,10 @@ realexec:
 out:
     close(shim_stdout_pipe[0]);
     if (ret != 0) {
-        show_runtime_errlog(args->workdir);
         show_shim_errlog(shim_stderr_pipe[0]);
+        // Since users are more concerned about runtime error information, 
+        // the runtime log will overwrite the shim log if it exists.
+        show_runtime_errlog(args->workdir);
         if (args->timeout != NULL) {
             kill(pid, SIGKILL); /* can kill other process? */
         }
@@ -1491,14 +1511,13 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
     args.exit_code = exit_code;
     args.timeout = timeout;
     ret = shim_create(&args);
-    if (args.shim_exit_code == SHIM_EXIT_TIMEOUT) {
-        ret = -1;
-        isulad_set_error_message("Exec container error;exec timeout");
-        ERROR("isulad-shim %d exit for execing timeout", pid);
-        goto errlog_out;
-    }
     if (ret != 0) {
-        ERROR("%s: failed create shim process for exec %s", id, exec_id);
+        if (args.shim_exit_code == SHIM_EXIT_TIMEOUT) {
+            isulad_set_error_message("Exec container error;exec timeout");
+            ERROR("isulad-shim %d exit for execing timeout", pid);
+        } else {
+            ERROR("%s: failed create shim process for exec %s", id, exec_id);
+        }
         goto errlog_out;
     }
 
