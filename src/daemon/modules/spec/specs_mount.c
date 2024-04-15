@@ -2822,7 +2822,7 @@ static inline int set_sharable_ipc_mode(host_config *host_spec, container_config
 static inline int set_connected_container_shm_path(host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
     container_t *cont = NULL;
-    char *tmp_cid = NULL;
+    __isula_auto_free char *tmp_cid = NULL;
     char *right_path = NULL;
 
 #ifdef ENABLE_CRI_API_V1
