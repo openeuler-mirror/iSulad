@@ -2854,23 +2854,25 @@ static inline int set_sharable_ipc_mode(host_config *host_spec, container_config
 
 static inline int set_connected_container_shm_path(host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
+    int ret = 0;
     container_t *cont = NULL;
     char *tmp_cid = NULL;
-    char *right_path = NULL;
 
     tmp_cid = namespace_get_connected_container(host_spec->ipc_mode);
     cont = containers_store_get(tmp_cid);
     if (cont == NULL) {
         ERROR("Invalid share path: %s", host_spec->ipc_mode);
-        return -1;
+        ret = -1;
+    } else {
+        char *right_path = util_strdup_s(cont->common_config->shm_path);
+        container_unref(cont);
+
+        free(v2_spec->shm_path);
+        v2_spec->shm_path = right_path;
     }
-    right_path = util_strdup_s(cont->common_config->shm_path);
-    container_unref(cont);
 
-    free(v2_spec->shm_path);
-    v2_spec->shm_path = right_path;
-
-    return 0;
+    free(tmp_cid);
+    return ret;
 }
 
 #define SHM_MOUNT_POINT "/dev/shm"
