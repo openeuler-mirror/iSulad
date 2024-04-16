@@ -34,7 +34,7 @@ char *cdi_device_get_qualified_name(struct cdi_cache_device *d)
     return NULL;
 }
 
-cdi_container_edits *cdi_device_edits(struct cdi_cache_device *d)
+cdi_container_edits *cdi_device_get_edits(struct cdi_cache_device *d)
 {
     return NULL;
 }

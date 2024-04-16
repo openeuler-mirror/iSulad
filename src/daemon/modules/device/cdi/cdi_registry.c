@@ -14,12 +14,24 @@
  ******************************************************************************/
 #include "cdi_registry.h"
 
+#include <util_atomic.h>
+#include <isula_libutils/auto_cleanup.h>
+
+static struct cdi_registry g_cdi_reg = { 0 };
+
 int cdi_registry_init(string_array *spec_dirs)
 {
+    // isulad will use default dirs when spec_dirs == NULL
+    g_cdi_reg.cdi_cache = cdi_new_cache(spec_dirs);
+    if (g_cdi_reg.cdi_cache == NULL) {
+        ERROR("Failed to init registry");
+        return -1;
+    }
+    g_cdi_reg.ops = cdi_get_cache_ops();
     return 0;
 }
 
 struct cdi_registry *cdi_get_registry(void)
 {
-    return NULL;
+    return &g_cdi_reg;
 }

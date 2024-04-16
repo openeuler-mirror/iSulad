@@ -23,7 +23,8 @@
 extern "C" {
 #endif
 
-char *cdi_parse_annotations(json_map_string_string *annotations, string_array **keys, string_array **devices);
+int cdi_parse_annotations(json_map_string_string *annotations, string_array **keys,
+                          string_array **devices, char **error);
 
 #ifdef __cplusplus
 }

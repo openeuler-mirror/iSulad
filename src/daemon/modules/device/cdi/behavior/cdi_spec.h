@@ -47,7 +47,7 @@ const char *cdi_spec_get_class(struct cdi_cache_spec *s);
 struct cdi_cache_device *cdi_spec_get_cache_device(struct cdi_cache_spec *s, const char *name);
 const char *cdi_spec_get_path(struct cdi_cache_spec *s);
 int cdi_spec_get_priority(struct cdi_cache_spec *s);
-cdi_container_edits *cdi_spec_edits(struct cdi_cache_spec *s);
+cdi_container_edits *cdi_spec_get_edits(struct cdi_cache_spec *s);
 
 #ifdef __cplusplus
 }

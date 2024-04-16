@@ -320,6 +320,8 @@ struct signame {
         }                         \
     } while (0)
 
+void util_swap_ptr(void **p1, void **p2);
+
 int util_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize);
 
 int util_check_inherited(bool closeall, int fd_to_ignore);

@@ -59,6 +59,17 @@ int malloc_trim(size_t pad)
 }
 #endif
 
+void util_swap_ptr(void **p1, void **p2)
+{
+    void *tmp;
+    if (p1 == NULL || p2 == NULL) {
+        return;
+    }
+    tmp = *p1;
+    *p1 = *p2;
+    *p2 = tmp;
+}
+
 int util_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize)
 {
     void *tmp = NULL;

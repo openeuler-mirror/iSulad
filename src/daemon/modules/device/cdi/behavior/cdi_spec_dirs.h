@@ -35,10 +35,10 @@ struct cdi_scan_fn_maps {
     map_t *spec_errors;
     string_array *result;
 };
-typedef char *(*cdi_scan_spec_func)(struct cdi_scan_fn_maps *scan_fn_maps, const char *path, int priority,
-                                    struct cdi_cache_spec *spec, char **error);
+typedef void(*cdi_scan_spec_func)(struct cdi_scan_fn_maps *scan_fn_maps, const char *path, int priority,
+                                    struct cdi_cache_spec *spec, char *error);
 
-char *cdi_scan_spec_dirs(string_array *dirs, struct cdi_scan_fn_maps *scan_fn_maps, cdi_scan_spec_func scan_fn);
+int cdi_scan_spec_dirs(string_array *dirs, struct cdi_scan_fn_maps *scan_fn_maps, cdi_scan_spec_func scan_fn);
 
 #ifdef __cplusplus
 }
