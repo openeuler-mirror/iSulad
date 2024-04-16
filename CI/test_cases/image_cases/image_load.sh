@@ -103,6 +103,8 @@ function test_concurrent_load()
       [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to do isulad load $i" && ((ret++))
   done
 
+  tail -n 50 /var/lib/isulad/isulad.log
+
   ubuntu_id=`isula inspect -f '{{.image.id}}' ubuntu`
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image: ubuntu" && ((ret++))
 
