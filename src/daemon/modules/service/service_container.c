@@ -1718,6 +1718,12 @@ void umount_share_shm(container_t *cont)
         return;
     }
     if (cont->hostconfig->ipc_mode == NULL || namespace_is_shareable(cont->hostconfig->ipc_mode)) {
+#ifdef ENABLE_CRI_API_V1
+        // For sandbox in cri v1, the shm path is created and umounted in CRI
+        if (is_sandbox_container(cont->common_config->sandbox_info)) {
+            return;
+        }
+#endif
         if (cont->common_config == NULL || cont->common_config->shm_path == NULL) {
             return;
         }
