@@ -39,9 +39,6 @@ struct cdi_cache_ops {
     // Refresher
     int (*configure)(struct cdi_cache *c, string_array *spec_dirs);
     int (*refresh)(struct cdi_cache *c);
-    map_t *(*get_errors)(struct cdi_cache *c);
-    string_array *(*get_spec_directories)(struct cdi_cache *c);
-    map_t *(*get_spec_dir_errors)(struct cdi_cache *c);
 };
 
 struct cdi_watch {
@@ -54,11 +51,9 @@ struct cdi_watch {
 struct cdi_cache {
     pthread_mutex_t mutex;
     string_array *spec_dirs; // cdi-spec-dirs will scan for CDI Spec files
-    map_t *specs;        // MAP_STR_PTR     specs[vendor] = cdi_cache_spec**
+    map_t *specs;        // MAP_STR_PTR     specs[vendor] = common_array of cdi_cache_spec*
     map_t *devices;      // MAP_STR_PTR     devices[cdi_device.name] = cdi_cache_device*
-    map_t *errors;       // MAP_STR_PTR     errors[cdi_cache_spec.path] = string_array *errors
-    map_t *dir_errors;   // MAP_STR_STR     dir_errors[spec_dirs[i]] = error
-
+    bool refresh_error_flag;
     bool auto_refresh; 
     struct cdi_watch *watch;
 };

@@ -32,8 +32,7 @@ struct cdi_scan_fn_maps {
     map_t *specs;
     map_t *devices;
     map_t *conflicts;
-    map_t *spec_errors;
-    string_array *result;
+    bool *refresh_error_flag;
 };
 typedef void(*cdi_scan_spec_func)(struct cdi_scan_fn_maps *scan_fn_maps, const char *path, int priority,
                                     struct cdi_cache_spec *spec, char *error);
