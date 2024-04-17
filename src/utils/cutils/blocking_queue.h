@@ -37,7 +37,7 @@ typedef struct blocking_queue {
     blocking_node *head;
     blocking_node *tail;
     pthread_mutex_t lock;
-    struct timespec timeout;
+    int64_t timeout;
     pthread_cond_t not_empty;
     void (*release)(void *);
 } blocking_queue;
