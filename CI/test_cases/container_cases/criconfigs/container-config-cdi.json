@@ -1,0 +1,50 @@
+{
+    "metadata": {
+        "name": "haozi"
+    },
+    "image":{
+        "image": "busybox:latest"
+    },
+    "command": [
+        "/bin/sh",
+        "-c",
+        "i=0; while true; do echo \"$i: $(date)\"; i=$((i+1)); sleep 10; done"
+    ],
+    "labels": {
+        "filter_label_key": "filter_label_val"
+    },
+    "annotations": {
+        "extension.network.kubernetes.io/cni/instancename": "pod_instance_name",
+        "cdi.k8s.io/test": "vendor0.com/device=loop8,vendor0.com/device=loop9"
+    },
+    "CDI_Devices":[
+        { "Name": "vendor0.com/device=loop8" },
+        { "Name": "vendor0.com/device=loop9" } 
+    ],
+    "mounts" : [
+        {
+            "container_path": "/tmp/contpath",
+            "host_path": "/tmp/hostpath",
+            "readonly": true,
+            "selinux_relabel": true,
+            "propagation": 0
+        },
+        {
+            "container_path": "/tmp/contpath2",
+            "host_path": "/tmp/hostpath2",
+            "readonly": false,
+            "selinux_relabel": false,
+            "propagation": 0
+        }
+    ],
+    "linux": {
+	    "security_context": {
+		    "namespace_options": {
+		        "host_network": true,
+		        "host_pid": false,
+		        "host_ipc": false
+		    }
+	    }
+    },
+    "log_path": "cri_test.log"
+}

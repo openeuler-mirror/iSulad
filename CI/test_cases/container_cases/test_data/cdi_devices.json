@@ -1,0 +1,53 @@
+{
+  "cdiVersion": "0.6.0",
+  "kind": "vendor0.com/device",
+  "annotations":{
+      "cdi_annotation":"cdi_annotation_value"
+  },
+  "devices": [
+    {
+      "name": "loop8",
+      "annotations":{
+          "loop8_annotation":"loop8_annotation_value"
+      },
+      "containerEdits": {
+          "env": [
+              "LOOP8=CDI8",
+              "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/dev"
+          ],
+          "deviceNodes": [
+              {"path": "/dev/loop8", "type": "b", "fileMode": 416},
+              {"path": "/dev/loop8c", "type": "c"}
+          ],
+          "mounts": [
+              {"hostPath": "/tmp/cdi_mounts_test_loop8", "containerPath": "/tmp/cdi_mounts_test_loop8", "options": ["ro","nosuid","nodev","bind"]},
+              {"hostPath": "tmpfs", "containerPath": "/tmp/data", "type": "tmpfs", "options": ["nosuid","strictatime","mode=755","size=65536k"]}
+          ]
+      }
+    },{
+      "name": "loop9",
+      "containerEdits": {
+          "env":["LOOP9=present"],
+          "deviceNodes": [{
+                  "path": "/dev/loop9", "type": "b", "major": 7, "minor": 9, "fileMode": 420
+              }
+          ]
+      }
+    }
+  ],
+  "containerEdits": {
+    "env": [
+      "VENDOR0=injected",
+      "BAR=BARVALUE1"
+    ],
+    "hooks": [
+      {"hookName": "prestart", "path": "/tmp/cdi_printargs.sh", "args":["prestart0", "prestart1"], "env":["prestartenv=value"]},
+      {"hookName": "prestart", "path": "/tmp/cdi_printargs.sh", "args":["prestart0", "prestart1"], "env":["prestartenv=value"]},
+      {"hookName": "poststart", "path": "/tmp/cdi_printargs.sh", "args":["poststart0", "poststart1"], "env":["poststartenv=value"]},
+      {"hookName": "poststop", "path": "/tmp/cdi_printargs.sh", "args":["poststop0", "poststop1"], "env":["poststopenv=value"]}
+    ],
+    "mounts": [
+      {"hostPath": "/tmp/cdi_mounts_test", "containerPath": "/tmp/cdi_mounts_test", "options": ["ro","nosuid","nodev","bind"]}
+    ]
+  }
+}
