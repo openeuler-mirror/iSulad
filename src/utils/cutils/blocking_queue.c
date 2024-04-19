@@ -55,12 +55,11 @@ blocking_queue *blocking_queue_create(int64_t timeout, void (*release)(void *))
     queue->release = release;
 
     if (timeout >= 0) {
-        queue->timeout.tv_sec = timeout / (Time_Second / Time_Milli);
-        queue->timeout.tv_nsec = (timeout % (Time_Second / Time_Milli) ) * Time_Milli;
+        queue->timeout = timeout;
     } else {
-        queue->timeout.tv_sec = -1;
+        queue->timeout = -1;
     }
-    
+
     return isula_transfer_ptr(queue);
 }
 
@@ -112,8 +111,10 @@ int blocking_queue_pop(blocking_queue *queue, void **data) {
     lock = &queue->lock;
 
     while (queue->head->next == NULL) {
-        if (queue->timeout.tv_sec >= 0) {
-            int ret = pthread_cond_timedwait(&queue->not_empty, &queue->lock, &queue->timeout);
+        if (queue->timeout >= 0) {
+            struct timespec timeout = { 0 };
+            timeout.tv_sec = queue->timeout + time(NULL);
+            int ret = pthread_cond_timedwait(&queue->not_empty, &queue->lock, &timeout);
             if (ret != 0) {
                 if (ret != ETIMEDOUT) {
                     ERROR("Failed to wait cond");

@@ -20,8 +20,8 @@
 
 #include "utils.h"
 
-// default set subscriber timeout to 1000ms, maybe could be configured later
-const int64_t subscribe_timeout = 1000;
+// default set subscriber timeout to 300s, maybe could be configured later
+const int64_t subscribe_timeout = 300;
 
 static void message_queue_subscriber_free(void *key, void *val)
 {
