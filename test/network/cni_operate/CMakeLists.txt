@@ -14,6 +14,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_string.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_array.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_regex.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_version.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/namespace.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
