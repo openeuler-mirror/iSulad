@@ -28,6 +28,7 @@
 #include <isula_libutils/auto_cleanup.h>
 
 #include "utils.h"
+#include "utils_version.h"
 #include "utils_network.h"
 #include "libcni_cached.h"
 #include "libcni_conf.h"
@@ -544,97 +545,6 @@ free_out:
     return ret;
 }
 
-struct parse_version {
-    int major;
-    int minor;
-    int micro;
-};
-
-static bool do_parse_version(const char **splits, size_t splits_len, struct parse_version *ret)
-{
-    if (util_safe_int(splits[0], &ret->major) != 0) {
-        ERROR("failed to convert major version part: %s", splits[0]);
-        return false;
-    }
-
-    if (splits_len >= 2 && util_safe_int(splits[1], &ret->minor) != 0) {
-        ERROR("failed to convert minor version part: %s", splits[1]);
-        return false;
-    }
-
-    if (splits_len >= 3 && util_safe_int(splits[2], &ret->micro) != 0) {
-        ERROR("failed to convert micro version part: %s", splits[2]);
-        return false;
-    }
-
-    return true;
-}
-
-static bool parse_version_from_str(const char *src_version, struct parse_version *result)
-{
-    char **splits = NULL;
-    const size_t max_len = 4;
-    size_t tlen = 0;
-    bool ret = false;
-
-    splits = util_string_split(src_version, '.');
-    if (splits == NULL) {
-        ERROR("Split version: \"%s\" failed", src_version);
-        return false;
-    }
-    tlen = util_array_len((const char **)splits);
-    if (tlen < 1 || tlen >= max_len) {
-        ERROR("Invalid version: \"%s\"", src_version);
-        goto out;
-    }
-
-    ret = do_parse_version((const char **)splits, tlen, result);
-
-out:
-    util_free_array(splits);
-    return ret;
-}
-
-static bool do_compare_version(const struct parse_version *p_first, const struct parse_version *p_second)
-{
-    bool ret = false;
-
-    if (p_first->major > p_second->major) {
-        ret = true;
-    } else if (p_first->major == p_second->major) {
-        if (p_first->minor > p_second->minor) {
-            ret = true;
-        } else if (p_first->minor == p_second->minor && p_first->micro >= p_second->micro) {
-            ret = true;
-        }
-    }
-
-    return ret;
-}
-
-static int version_greater_than_or_equal_to(const char *first, const char *second, bool *result)
-{
-    struct parse_version first_parsed = { 0 };
-    struct parse_version second_parsed = { 0 };
-
-    if (result == NULL) {
-        ERROR("Invalid argument");
-        return -1;
-    }
-
-    if (!parse_version_from_str(first, &first_parsed)) {
-        return -1;
-    }
-
-    if (!parse_version_from_str(second, &second_parsed)) {
-        return -1;
-    }
-
-    *result = do_compare_version(&first_parsed, &second_parsed);
-
-    return 0;
-}
-
 static inline bool check_add_network_args(const cni_net_conf *net, const struct runtime_conf *rc)
 {
     return (net == NULL || rc == NULL);
@@ -690,7 +600,7 @@ int cni_add_network_list(const struct cni_network_list_conf *list, const struct 
     }
 
     if (*pret != NULL &&
-        version_greater_than_or_equal_to((*pret)->cniversion, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
+        util_version_greater_than_or_equal_to((*pret)->cniversion, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
         return 0;
     }
 
@@ -741,7 +651,7 @@ int cni_del_network_list(const struct cni_network_list_conf *list, const struct 
         return -1;
     }
 
-    if (version_greater_than_or_equal_to(list->list->cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
+    if (util_version_greater_than_or_equal_to(list->list->cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
         return -1;
     }
 
@@ -807,7 +717,7 @@ int cni_check_network_list(const struct cni_network_list_conf *list, const struc
         return -1;
     }
 
-    if (version_greater_than_or_equal_to(list->list->cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
+    if (util_version_greater_than_or_equal_to(list->list->cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
         return -1;
     }
 

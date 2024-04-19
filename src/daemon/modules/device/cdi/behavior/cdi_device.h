@@ -28,16 +28,16 @@ extern "C" {
 struct cdi_cache_spec;
 
 struct cdi_cache_device {
-    cdi_device *raw_device;
-    struct cdi_cache_spec *cache_spec;
+    const cdi_device *raw_device;
+    const struct cdi_cache_spec *cache_spec;
 };
 
 void free_cdi_cache_device(struct cdi_cache_device *d);
 
-struct cdi_cache_device *cdi_device_new_device(struct cdi_cache_spec *spec, cdi_device *d, char **error);
-struct cdi_cache_spec *cdi_device_get_spec(struct cdi_cache_device *d);
-char *cdi_device_get_qualified_name(struct cdi_cache_device *d);
-cdi_container_edits *cdi_device_get_edits(struct cdi_cache_device *d);
+struct cdi_cache_device *cdi_device_new_device(struct cdi_cache_spec *spec, cdi_device *d);
+const struct cdi_cache_spec *cdi_device_get_spec(const struct cdi_cache_device *d);
+char *cdi_device_get_qualified_name(const struct cdi_cache_device *d);
+cdi_container_edits *cdi_device_get_edits(const struct cdi_cache_device *d);
 
 #ifdef __cplusplus
 }

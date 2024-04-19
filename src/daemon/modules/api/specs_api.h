@@ -55,6 +55,19 @@ const oci_runtime_spec *get_readonly_default_oci_spec(bool system_container);
 
 int spec_module_init(void);
 
+#ifdef ENABLE_CDI
+int defs_process_add_multiple_env(defs_process *dp, const char **envs, size_t env_len);
+int spec_add_multiple_process_env(oci_runtime_spec *oci_spec, const char **envs, size_t env_len);
+int spec_add_device(oci_runtime_spec *oci_spec, defs_device *device);
+int spec_add_linux_resources_device(oci_runtime_spec *oci_spec, bool allow, const char *dev_type,
+                                    int64_t major, int64_t minor, const char *access);
+void spec_remove_mount(oci_runtime_spec *oci_spec, const char *dest);
+int spec_add_mount(oci_runtime_spec *oci_spec, defs_mount *mnt);
+int spec_add_prestart_hook(oci_runtime_spec *oci_spec, defs_hook *prestart_hook);
+int spec_add_poststart_hook(oci_runtime_spec *oci_spec, defs_hook *poststart_hook);
+int spec_add_poststop_hook(oci_runtime_spec *oci_spec, defs_hook *poststop_hook);
+#endif /* ENABLE_CDI */
+
 #ifdef __cplusplus
 }
 #endif

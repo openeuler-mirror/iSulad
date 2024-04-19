@@ -206,13 +206,12 @@ static void map_cdi_cache_specs_kvfree(void *key, void *value)
 static void map_cdi_cache_device_kvfree(void *key, void *value)
 {
     free(key);
-    free_cdi_cache_device((struct cdi_cache_device *)value);
-}
-
-static void set_refresh_error_flag(bool *refresh_error_flag, const char *error, const char *path)
-{
-    *refresh_error_flag = true;
-    ERROR("Cdi refresh error: %s, spec %s", error, path);
+    /* 
+     * map_cdi_cache_device_kvfree should not be recursively free cdi_cache_device.
+     * Otherwise, the function conflicts with the cdi_cache_specs free devices,
+     * triggering double free. 
+     */
+    (void)value;
 }
 
 static bool resolve_conflict(struct cdi_scan_fn_maps *scan_fn_maps, const char *name,
@@ -220,8 +219,8 @@ static bool resolve_conflict(struct cdi_scan_fn_maps *scan_fn_maps, const char *
 {
     map_t *conflicts = scan_fn_maps->conflicts;
     bool *refresh_error_flag = scan_fn_maps->refresh_error_flag;
-    struct cdi_cache_spec *dev_spec = NULL;
-    struct cdi_cache_spec *old_spec = NULL;
+    const struct cdi_cache_spec *dev_spec = NULL;
+    const struct cdi_cache_spec *old_spec = NULL;
     int dev_prio;
     int old_prio;
     bool val = true;
@@ -251,7 +250,7 @@ static bool resolve_conflict(struct cdi_scan_fn_maps *scan_fn_maps, const char *
 }
 
 static void refresh_scan_spec_func(struct cdi_scan_fn_maps *scan_fn_maps, const char *path, 
-                                    int priority, struct cdi_cache_spec *spec, char *error)
+                                    int priority, struct cdi_cache_spec *spec)
 {
     map_t *specs = scan_fn_maps->specs;
     map_t *devices = scan_fn_maps->devices;
@@ -267,12 +266,6 @@ static void refresh_scan_spec_func(struct cdi_scan_fn_maps *scan_fn_maps, const 
 
     if (util_clean_path(path, clean_path, sizeof(clean_path)) == NULL) {
         ERROR("Failed to get clean path %s", path);
-        format_errorf(&tmp_error, "Failed to get clean path %s", path);
-        return;
-    }
-    if (error != NULL) {
-        ERROR("Failed to load CDI Spec %s", error);
-        format_errorf(&tmp_error, "Failed to load CDI Spec %s", error);
         goto error_out;
     }
 
@@ -282,18 +275,15 @@ static void refresh_scan_spec_func(struct cdi_scan_fn_maps *scan_fn_maps, const 
         spec_array = util_common_array_new(1, (free_common_array_item_cb)free_cdi_cache_spec, util_clone_ptr);
         if (spec_array == NULL) {
             ERROR("Out of memory");
-            tmp_error = util_strdup_s("Out of memory");
             goto error_out;
         }
         if (!map_insert(specs, (void *)vendor, spec_array)) {
             ERROR("Failed to insert spec array to specs");
-            tmp_error = util_strdup_s("Failed to insert spec array to specs");
             goto error_out;
         }
     }
     if (util_append_common_array(spec_array, spec) != 0) {
         ERROR("Failed to append spec");
-        tmp_error = util_strdup_s("Failed to append spec");
         goto error_out;
     }
     spec_array = NULL;
@@ -301,7 +291,6 @@ static void refresh_scan_spec_func(struct cdi_scan_fn_maps *scan_fn_maps, const 
     itor = map_itor_new(spec->devices);
     if (itor == NULL) {
         ERROR("Out of memory, create new map itor failed");
-        tmp_error = util_strdup_s("Out of memory, create new map itor failed");
         goto error_out;
     }
     for (; map_itor_valid(itor); map_itor_next(itor)) {
@@ -315,7 +304,6 @@ static void refresh_scan_spec_func(struct cdi_scan_fn_maps *scan_fn_maps, const 
         }
         if (!map_replace(devices, (void *)qualified, dev)) {
             ERROR("Failed to insert device to devices by name %s", qualified);
-            format_errorf(&tmp_error, "Failed to insert device to devices by name %s", qualified);
             goto error_out;
         }
         free(qualified);
@@ -324,7 +312,7 @@ static void refresh_scan_spec_func(struct cdi_scan_fn_maps *scan_fn_maps, const 
     goto out;
 
 error_out:
-    set_refresh_error_flag(refresh_error_flag, tmp_error, path);
+    *refresh_error_flag = true;
 out:
     map_itor_free(itor);
     return;
@@ -333,7 +321,6 @@ out:
 static int refresh(struct cdi_cache *c)
 {
     int ret = 0;
-    __isula_auto_free char *error = NULL;
     map_t *specs = NULL;
     map_t *devices = NULL;
     map_t *conflicts = NULL;
@@ -559,8 +546,6 @@ error_out:
 
 static void watch_setup(struct cdi_watch *w, string_array *dirs)
 {
-    __isula_auto_free char *error = NULL;
-
     if (w == NULL || dirs == NULL || dirs->len == 0) {
         ERROR("Invalid param");
         return;
@@ -735,7 +720,6 @@ static void update_add_watch_dir(struct cdi_watch *w, const char *dir, bool *upd
 {
     int wd = -1;
     bool tmp_value = true;
-    __isula_auto_free char *error = NULL;
 
     wd = inotify_add_watch(w->watcher_fd, dir, CDI_WATCH_EVENTS);
     if (wd < 0) {
@@ -770,7 +754,6 @@ static bool watch_update(struct cdi_watch *w, const char *removed, int wd)
     bool *ok = NULL;
     bool update = false;
     map_itor *itor = NULL;
-    __isula_auto_free char *error = NULL;
 
     itor = map_itor_new(w->tracked);
     if (itor == NULL) {

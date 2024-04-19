@@ -40,14 +40,14 @@ struct cdi_cache_spec {
  
 void free_cdi_cache_spec(struct cdi_cache_spec *s);
 
-struct cdi_cache_spec *cdi_spec_read_spec(const char *path, int priority, char **error);
-struct cdi_cache_spec *cdi_spec_new_spec(cdi_spec *raw, const char *path, int priority, char **error);
-const char *cdi_spec_get_vendor(struct cdi_cache_spec *s);
-const char *cdi_spec_get_class(struct cdi_cache_spec *s);
-struct cdi_cache_device *cdi_spec_get_cache_device(struct cdi_cache_spec *s, const char *name);
-const char *cdi_spec_get_path(struct cdi_cache_spec *s);
-int cdi_spec_get_priority(struct cdi_cache_spec *s);
-cdi_container_edits *cdi_spec_get_edits(struct cdi_cache_spec *s);
+struct cdi_cache_spec *cdi_spec_read_spec(const char *path, int priority);
+struct cdi_cache_spec *cdi_spec_new_spec(cdi_spec *raw, const char *path, int priority);
+const char *cdi_spec_get_vendor(const struct cdi_cache_spec *s);
+const char *cdi_spec_get_class(const struct cdi_cache_spec *s);
+struct cdi_cache_device *cdi_spec_get_cache_device(const struct cdi_cache_spec *s, const char *name);
+const char *cdi_spec_get_path(const struct cdi_cache_spec *s);
+int cdi_spec_get_priority(const struct cdi_cache_spec *s);
+cdi_container_edits *cdi_spec_get_edits(const struct cdi_cache_spec *s);
 
 #ifdef __cplusplus
 }

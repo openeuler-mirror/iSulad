@@ -52,6 +52,7 @@ struct cdi_cache {
     pthread_mutex_t mutex;
     string_array *spec_dirs; // cdi-spec-dirs will scan for CDI Spec files
     map_t *specs;        // MAP_STR_PTR     specs[vendor] = common_array of cdi_cache_spec*
+    // This map holding the reference to cdi device, the devices will not released when the map is freed.
     map_t *devices;      // MAP_STR_PTR     devices[cdi_device.name] = cdi_cache_device*
     bool refresh_error_flag;
     bool auto_refresh; 
