@@ -49,6 +49,10 @@ int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2
 
 int update_devcies_for_oci_spec(oci_runtime_spec *oci_spec, host_config *hostconfig);
 
+#ifdef ENABLE_CDI
+int inject_CDI_devcies_for_oci_spec(oci_runtime_spec *oci_spec, host_config *hostconfig);
+#endif /* ENABLE_CDI */
+
 #ifdef __cplusplus
 }
 #endif

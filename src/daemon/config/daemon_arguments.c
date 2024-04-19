@@ -173,6 +173,10 @@ int service_arguments_init(struct service_arguments *args)
         goto free_out;
     }
 
+#ifdef ENABLE_CDI
+    args->json_confs->enable_cdi = false;
+#endif /* ENABLE_CDI */
+
     ret = 0;
 
 free_out:

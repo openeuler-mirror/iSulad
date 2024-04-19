@@ -63,6 +63,7 @@
 #include "runtime_api.h"
 #include "id_name_manager.h"
 #include "mailbox.h"
+#include "specs_mount.h"
 
 #ifdef ENABLE_CRI_API_V1
 static bool validate_sandbox_info(const container_sandbox_info *sandbox)
@@ -511,6 +512,14 @@ static oci_runtime_spec *generate_oci_config(host_config *host_spec, const char 
         ERROR("Failed to merge global config");
         goto error_out;
     }
+
+#ifdef ENABLE_CDI
+    ret = inject_CDI_devcies_for_oci_spec(oci_spec, host_spec);
+    if (ret != 0) {
+        ERROR("Failed to inject CDI devices");
+        goto error_out;
+    }
+#endif /* ENABLE_CDI */
 
     return oci_spec;
 

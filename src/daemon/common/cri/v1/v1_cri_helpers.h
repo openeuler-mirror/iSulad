@@ -79,6 +79,9 @@ std::string CRISandboxerConvert(const std::string &runtime);
 
 void ApplySandboxSecurityContextToHostConfig(const runtime::v1::LinuxSandboxSecurityContext &context, host_config *hc,
                                              Errors &error);
+#ifdef ENABLE_CDI
+void GenerateCDIRequestedDevices(const runtime::v1::ContainerConfig &config, host_config *hostconfig, Errors &err);
+#endif /* ENABLE_CDI */
 
 auto GetContainerStatus(service_executor_t *m_cb, const std::string &containerID, Errors &error)
 -> std::unique_ptr<runtime::v1::ContainerStatus>;
