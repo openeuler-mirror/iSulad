@@ -1757,8 +1757,10 @@ int merge_json_confs_into_global(struct service_arguments *args)
     args->json_confs->runtimes = tmp_json_confs->runtimes;
     tmp_json_confs->runtimes = NULL;
 #ifdef ENABLE_CRI_API_V1
+#ifdef ENABLE_SANDBOXER
     args->json_confs->cri_sandboxers = tmp_json_confs->cri_sandboxers;
     tmp_json_confs->cri_sandboxers = NULL;
+#endif
     args->json_confs->enable_cri_v1 = tmp_json_confs->enable_cri_v1;
     args->json_confs->enable_pod_events = tmp_json_confs->enable_pod_events;
 #endif

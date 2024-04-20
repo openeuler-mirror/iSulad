@@ -9,7 +9,7 @@ set(local_sandbox_controller_top_incs
     ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
-if (ENABLE_SANDBOXER)
+if (ENABLE_CRI_API_V1 AND ENABLE_SANDBOXER)
     add_subdirectory(sandboxer)
     list (APPEND local_sandbox_controller_top_srcs
         ${CONTROLLER_SANDBOXER_SRCS}

@@ -20,7 +20,9 @@
 #include <isula_libutils/defs.h>
 
 #include "shim_controller.h"
+#ifdef ENABLE_SANDBOXER
 #include "sandboxer_controller.h"
+#endif
 #include "isulad_config.h"
 #include "daemon_arguments.h"
 
@@ -44,10 +46,12 @@ bool ControllerManager::Init(Errors &error)
         return false;
     }
 
+#ifdef ENABLE_SANDBOXER
     // Initialize sandboxer controller
     if (!RegisterAllSandboxerControllers(error)) {
         return false;
     }
+#endif
     return true;
 }
 
@@ -75,6 +79,7 @@ auto ControllerManager::RegisterShimController(Errors &error) -> bool
     return true;
 }
 
+#ifdef ENABLE_SANDBOXER
 auto ControllerManager::RegisterAllSandboxerControllers(Errors &error) -> bool
 {
     std::map<std::string, std::string> config;
@@ -160,6 +165,7 @@ auto ControllerManager::RegisterSandboxerController(const std::string &sandboxer
     INFO("Sandboxer controller initialized successfully, sandboxer: %s", sandboxer.c_str());
     return true;
 }
+#endif
 
 auto ControllerManager::GetController(const std::string &name) -> std::shared_ptr<Controller>
 {

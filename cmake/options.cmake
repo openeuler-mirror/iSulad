@@ -51,7 +51,7 @@ if (ENABLE_CDI STREQUAL "ON")
     endif()
 endif()
 
-option(ENABLE_SANDBOXER "Enable sandbox API" ON)
+option(ENABLE_SANDBOXER "Enable sandbox API" OFF)
 if (ENABLE_SANDBOXER STREQUAL "ON")
     add_definitions(-DENABLE_SANDBOXER)
     set(ENABLE_SANDBOXER 1)

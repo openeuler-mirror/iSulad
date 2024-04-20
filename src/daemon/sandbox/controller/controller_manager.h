@@ -31,9 +31,11 @@ public:
     auto GetController(const std::string &name) -> std::shared_ptr<Controller>;
 private:
     auto RegisterShimController(Errors &error) -> bool;
+#ifdef ENABLE_SANDBOXER
     auto RegisterAllSandboxerControllers(Errors &error) -> bool;
     auto LoadSandboxerControllersConfig(std::map<std::string, std::string> &config) -> bool;
     auto RegisterSandboxerController(const std::string &sandboxer, const std::string &address, Errors &error) -> bool;
+#endif
 
 protected:
     std::map<std::string, std::shared_ptr<Controller>> m_controllers;
