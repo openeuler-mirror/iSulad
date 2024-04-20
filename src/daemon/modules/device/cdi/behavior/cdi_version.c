@@ -138,9 +138,9 @@ static struct required_version_map g_valid_spec_versions[VALID_SPEC_VERSIONS_LEN
     {CDI_V010, NULL},
     {CDI_V020, NULL},
     {CDI_V030, NULL},
-    {CDI_V040, requires_v060},
+    {CDI_V040, requires_v040},
     {CDI_V050, requires_v050},
-    {CDI_V060, requires_v040}
+    {CDI_V060, requires_v060}
 };
 
 const char *cdi_minimum_required_version(cdi_spec *spec)
@@ -166,7 +166,7 @@ const char *cdi_minimum_required_version(cdi_spec *spec)
                 min_version = g_valid_spec_versions[i].version;
             }
         }
-        if (strcmp(min_version, CDI_CURRENT_VERSION)) {
+        if (strcmp(min_version, CDI_CURRENT_VERSION) == 0) {
             break;
         }
     }

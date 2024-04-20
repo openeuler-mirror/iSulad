@@ -199,7 +199,7 @@ static int cdi_spec_init(struct cdi_cache_spec *s)
         return -1;
     }
     if (version_result) {
-        ERROR("The spec version must be at least v%s", min_version);
+        ERROR("The %s spec version must be at least v%s", s->path, min_version);
         return -1;
     }
 
