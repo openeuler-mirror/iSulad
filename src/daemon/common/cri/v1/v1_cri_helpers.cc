@@ -391,6 +391,7 @@ void GetContainerSandboxID(const std::string &containerID, std::string &realCont
     realContainerID = info->id;
 }
 
+#ifdef ENABLE_SANDBOXER
 std::string CRISandboxerConvert(const std::string &runtime)
 {
     std::string sandboxer;
@@ -429,6 +430,12 @@ out:
     (void)isulad_server_conf_unlock();
     return sandboxer;
 }
+#else
+std::string CRISandboxerConvert(const std::string &runtime)
+{
+    return DEFAULT_SANDBOXER_NAME;
+}
+#endif
 
 void ApplySandboxSecurityContextToHostConfig(const runtime::v1::LinuxSandboxSecurityContext &context, host_config *hc,
                                              Errors &error)
