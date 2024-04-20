@@ -18,6 +18,9 @@ This section contains some design documents for users who want to learn more abo
 
 - You can see how the CRI startup process is refactored in [cri_cni_refactor](./detailed/CRI/cri_cni_refactor.md).
 
+## CDI
+- You can see how the CDI is refactored in [cdi_design](./detailed/CDI/cdi_design_zh.md.md)。
+
 ## Events
 
 - You can see how the events modules are designed in [events_design](./detailed/Events/events_design.md).

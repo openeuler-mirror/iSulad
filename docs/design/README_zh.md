@@ -24,6 +24,9 @@
 
 - 查看 CRI的启动程序的重构文档： [cri_cni_refactor](./detailed/CRI/cri_cni_refactor_zh.md) 。
 
+## CDI
+- 查看 CDI 的设计文档： [cdi_design](./detailed/CDI/cdi_design_zh.md.md)。
+
 ## Events
 
 - 查看 events 模块的设计文档： [events_design](./detailed/Events/events_design_zh.md) 。
