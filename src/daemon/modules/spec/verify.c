@@ -381,14 +381,14 @@ static int verify_cpu_realtime(const sysinfo_t *sysinfo, int64_t realtime_period
 {
     int ret = 0;
 
-    if (realtime_period > 0 && !(sysinfo->cgcpuinfo.cpu_rt_period)) {
+    if (realtime_period != 0 && !(sysinfo->cgcpuinfo.cpu_rt_period)) {
         ERROR("Invalid --cpu-rt-period: Your kernel does not support cgroup rt period");
         isulad_set_error_message("Invalid --cpu-rt-period: Your kernel does not support cgroup rt period");
         ret = -1;
         goto out;
     }
 
-    if (realtime_runtime > 0 && !(sysinfo->cgcpuinfo.cpu_rt_runtime)) {
+    if (realtime_runtime != 0 && !(sysinfo->cgcpuinfo.cpu_rt_runtime)) {
         ERROR("Invalid --cpu-rt-runtime: Your kernel does not support cgroup rt runtime");
         isulad_set_error_message("Invalid --cpu-rt-period: Your kernel does not support cgroup rt runtime");
         ret = -1;
