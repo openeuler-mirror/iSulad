@@ -552,7 +552,7 @@ void CreateContainerLogSymlink(const std::string &containerID, Errors &error)
     if (symlink(realPath.c_str(), path.c_str()) != 0) {
         SYSERROR("failed to create symbolic link %s to the container log file %s for container %s", path.c_str(), realPath.c_str(),
                  containerID.c_str());
-        error.Errorf("failed to create symbolic link %s to the container log file %s for container %s: %s", path.c_str(),
+        error.Errorf("failed to create symbolic link %s to the container log file %s for container %s", path.c_str(),
                      realPath.c_str(), containerID.c_str());
     }
 }
