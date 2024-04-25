@@ -1099,6 +1099,15 @@ static int get_container_process_pid(const char *workdir)
                 util_usleep_nointerupt(100000);
                 continue;
             }
+            // If isulad does not read the container process pid, but isulad-shim reads the pid,
+            // and the container process exits, isulad-shim exits accordingly.
+            // At this time, exec should return true, because the container process has been created successfully
+            // and exec is successful, just because The process executes too fast causing isulad to not be read correctly
+            file_read_int(fname, &pid);
+            if (pid != 0) {
+                DEBUG("Process exit and isulad-shim exit");
+                return pid;
+            }
             ERROR("failed read pid from dead shim %s", workdir);
             return -1;
         }
