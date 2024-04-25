@@ -564,6 +564,247 @@ TEST_F(SpecsUnitTest, test_update_devcies_for_oci_spec)
     free(err);
 }
 
+#ifdef ENABLE_CDI
+TEST_F(SpecsUnitTest, test_defs_process_add_multiple_env)
+{
+    size_t env_len = 2;
+    char **envs = (char **)util_common_calloc_s(sizeof(char *) * env_len);
+    ASSERT_NE(envs, nullptr);
+    defs_process *dp = (defs_process *)util_common_calloc_s(sizeof(defs_process));
+    ASSERT_NE(dp, nullptr);
+    dp->env_len = 1;
+    dp->env = (char **)util_common_calloc_s(sizeof(char *) * dp->env_len);
+    ASSERT_NE(dp->env, nullptr);
+    
+    envs[0] = util_strdup_s("key0=value0");
+    envs[1] = util_strdup_s("key1=value1");
+    dp->env[0] = util_strdup_s("key0=value0_old");
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), 0);
+    ASSERT_EQ(dp->env_len, 2);
+    ASSERT_EQ(strcmp(dp->env[0], envs[0]), 0);
+    ASSERT_EQ(strcmp(dp->env[1], envs[1]), 0);
+
+    ASSERT_EQ(defs_process_add_multiple_env(dp, nullptr, env_len), 0);
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, 0), 0);
+    ASSERT_EQ(defs_process_add_multiple_env(nullptr, (const char **)envs, env_len), -1);
+
+    free(envs[0]);
+    envs[0] = util_strdup_s("=value0");
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
+    free(envs[0]);
+    envs[0] = util_strdup_s("key0=");
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
+    free(envs[0]);
+    envs[0] = util_strdup_s("key0xxxx");
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
+
+    free(dp->env[0]);
+    dp->env[0] = util_strdup_s("=value0");
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
+    free(dp->env[0]);
+    dp->env[0] = util_strdup_s("key0=");
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
+    free(dp->env[0]);
+    dp->env[0] = util_strdup_s("key0xxxx");
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
+
+    free_defs_process(dp);
+    free(envs[0]);
+    free(envs[1]);
+    free(envs);
+}
+
+TEST_F(SpecsUnitTest, test_spec_add_multiple_process_env)
+{
+    size_t env_len = 2;
+    char **envs = (char **)util_common_calloc_s(sizeof(char *) * env_len);
+    ASSERT_NE(envs, nullptr);
+    oci_runtime_spec *oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
+    ASSERT_NE(oci_spec, nullptr);
+    oci_spec->process = (defs_process *)util_common_calloc_s(sizeof(defs_process));
+    ASSERT_NE(oci_spec->process, nullptr);
+    oci_spec->process->env_len = 1;
+    oci_spec->process->env = (char **)util_common_calloc_s(sizeof(char *) * oci_spec->process->env_len);
+    ASSERT_NE(oci_spec->process->env, nullptr);
+    
+    envs[0] = util_strdup_s("key0=value0");
+    envs[1] = util_strdup_s("key1=value1");
+    oci_spec->process->env[0] = util_strdup_s("key0=value0_old");
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), 0);
+    ASSERT_EQ(oci_spec->process->env_len, 2);
+    ASSERT_EQ(strcmp(oci_spec->process->env[0], envs[0]), 0);
+    ASSERT_EQ(strcmp(oci_spec->process->env[1], envs[1]), 0);
+
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, nullptr, env_len), 0);
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, 0), 0);
+    ASSERT_EQ(spec_add_multiple_process_env(nullptr, (const char **)envs, env_len), -1);
+
+    free(envs[0]);
+    envs[0] = util_strdup_s("=value0");
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
+    free(envs[0]);
+    envs[0] = util_strdup_s("key0=");
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
+    free(envs[0]);
+    envs[0] = util_strdup_s("key0xxxx");
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
+
+    free(oci_spec->process->env[0]);
+    oci_spec->process->env[0] = util_strdup_s("=value0");
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
+    free(oci_spec->process->env[0]);
+    oci_spec->process->env[0] = util_strdup_s("key0=");
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
+    free(oci_spec->process->env[0]);
+    oci_spec->process->env[0] = util_strdup_s("key0xxxx");
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
+
+    free_oci_runtime_spec(oci_spec);
+    free(envs[0]);
+    free(envs[1]);
+    free(envs);
+}
+
+TEST_F(SpecsUnitTest, test_spec_add_device)
+{
+    defs_device *device = (defs_device *)util_common_calloc_s(sizeof(defs_device));
+    ASSERT_NE(device, nullptr);
+    oci_runtime_spec *oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
+    ASSERT_NE(oci_spec, nullptr);
+    oci_spec->linux = (oci_runtime_config_linux *)util_common_calloc_s(sizeof(oci_runtime_config_linux));
+    ASSERT_NE(oci_spec->linux, nullptr);
+    oci_spec->linux->devices_len = 1;
+    oci_spec->linux->devices = (defs_device **)util_common_calloc_s(sizeof(defs_device *) * oci_spec->linux->devices_len);
+    ASSERT_NE(oci_spec->linux->devices, nullptr);
+
+    device->path = util_strdup_s("/device/path");
+    oci_spec->linux->devices[0] = (defs_device *)util_common_calloc_s(sizeof(defs_device));
+    ASSERT_NE(oci_spec->linux->devices[0], nullptr);
+    oci_spec->linux->devices[0]->path = util_strdup_s("/device/path");
+    ASSERT_EQ(spec_add_device(oci_spec, device), 0);
+    ASSERT_EQ(oci_spec->linux->devices[0], device);
+
+    oci_spec->linux->devices[0] = nullptr;
+    oci_spec->linux->devices_len = 0;
+    ASSERT_EQ(spec_add_device(oci_spec, device), 0);
+    ASSERT_EQ(oci_spec->linux->devices_len, 1);
+    ASSERT_EQ(oci_spec->linux->devices[0], device);
+
+    ASSERT_EQ(spec_add_device(oci_spec, nullptr), -1);
+    ASSERT_EQ(spec_add_device(nullptr, device), -1);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST_F(SpecsUnitTest, test_spec_add_linux_resources_device)
+{
+    oci_runtime_spec *oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
+    ASSERT_NE(oci_spec, nullptr);
+    oci_spec->linux = (oci_runtime_config_linux *)util_common_calloc_s(sizeof(oci_runtime_config_linux));
+    ASSERT_NE(oci_spec->linux, nullptr);
+    oci_spec->linux->resources = (defs_resources *)util_common_calloc_s(sizeof(defs_resources));
+    ASSERT_NE(oci_spec->linux->resources, nullptr);
+    oci_spec->linux->resources->devices_len = 1;
+    oci_spec->linux->resources->devices = (defs_device_cgroup **)util_common_calloc_s(sizeof(defs_device_cgroup *) * oci_spec->linux->resources->devices_len);
+    ASSERT_NE(oci_spec->linux->resources->devices, nullptr);
+
+    oci_spec->linux->resources->devices[0] = (defs_device_cgroup *)util_common_calloc_s(sizeof(defs_device_cgroup));
+    ASSERT_NE(oci_spec->linux->resources->devices[0], nullptr);
+    ASSERT_EQ(spec_add_linux_resources_device(oci_spec, true, "bind", 10, 9, "rwm"), 0);
+    ASSERT_EQ(oci_spec->linux->resources->devices_len, 2);
+    ASSERT_EQ(oci_spec->linux->resources->devices[1]->allow, true);
+    ASSERT_EQ(strcmp(oci_spec->linux->resources->devices[1]->type, "bind"), 0);
+    ASSERT_EQ(oci_spec->linux->resources->devices[1]->major, 10);
+    ASSERT_EQ(oci_spec->linux->resources->devices[1]->minor, 9);
+    ASSERT_EQ(strcmp(oci_spec->linux->resources->devices[1]->access, "rwm"), 0);
+
+    ASSERT_EQ(spec_add_linux_resources_device(nullptr, true, "bind", 10, 9, "rwm"), -1);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST_F(SpecsUnitTest, test_spec_remove_mount)
+{
+    oci_runtime_spec *oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
+    ASSERT_NE(oci_spec, nullptr);
+    oci_spec->mounts_len = 2;
+    oci_spec->mounts = (defs_mount **)util_common_calloc_s(sizeof(defs_mount *) * oci_spec->mounts_len);
+    ASSERT_NE(oci_spec->mounts, nullptr);
+
+    oci_spec->mounts[0] = (defs_mount *)util_common_calloc_s(sizeof(defs_mount));
+    ASSERT_NE(oci_spec->mounts[0], nullptr);
+    oci_spec->mounts[1] = (defs_mount *)util_common_calloc_s(sizeof(defs_mount));
+    ASSERT_NE(oci_spec->mounts[1], nullptr);
+    oci_spec->mounts[0]->destination = util_strdup_s("/mount/path/0");
+    oci_spec->mounts[1]->destination = util_strdup_s("/mount/path/1");
+    spec_remove_mount(oci_spec, oci_spec->mounts[0]->destination);
+    ASSERT_EQ(oci_spec->mounts_len, 1);
+    ASSERT_EQ(strcmp(oci_spec->mounts[0]->destination, "/mount/path/1"), 0);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+TEST_F(SpecsUnitTest, test_spec_add_mount)
+{
+    defs_mount *mnt = (defs_mount *)util_common_calloc_s(sizeof(defs_mount));
+    ASSERT_NE(mnt, nullptr);
+    oci_runtime_spec *oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
+    ASSERT_NE(oci_spec, nullptr);
+    oci_spec->mounts_len = 1;
+    oci_spec->mounts = (defs_mount **)util_common_calloc_s(sizeof(defs_mount *) * oci_spec->mounts_len );
+    ASSERT_NE(oci_spec->mounts, nullptr);
+
+    oci_spec->mounts[0] = (defs_mount *)util_common_calloc_s(sizeof(defs_mount));
+    ASSERT_NE(oci_spec->mounts[0], nullptr);
+    oci_spec->mounts[0]->destination = util_strdup_s("/mount/path/0");
+    ASSERT_EQ(spec_add_mount(oci_spec, mnt), 0);
+    ASSERT_EQ(oci_spec->mounts_len, 2);
+    ASSERT_EQ(oci_spec->mounts[1], mnt);
+
+    ASSERT_EQ(spec_add_mount(nullptr, mnt), -1);
+    ASSERT_EQ(spec_add_mount(oci_spec, nullptr), -1);
+
+    free_oci_runtime_spec(oci_spec);
+}
+
+#define TEST_SPEC_ADD_HOOKS_ITEM_DEF(hooktype)                                                                                  \
+    void test_spec_add_##hooktype##_hook(void)                                                                                  \
+    {                                                                                                                           \
+        defs_hook *hook = (defs_hook *)util_common_calloc_s(sizeof(defs_hook));                                                 \
+        ASSERT_NE(hook, nullptr);                                                                                               \
+        oci_runtime_spec *oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));                        \
+        ASSERT_NE(oci_spec, nullptr);                                                                                           \
+        oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));                        \
+        ASSERT_NE(oci_spec->hooks, nullptr);                                                                                           \
+        oci_spec->hooks->hooktype##_len = 1;                                                                                    \
+        oci_spec->hooks->hooktype = (defs_hook **)util_common_calloc_s(sizeof(defs_hook *) * oci_spec->hooks->hooktype##_len);  \
+        ASSERT_NE(oci_spec->hooks->hooktype, nullptr);                                                                          \
+                                                                                                                                \
+        oci_spec->hooks->hooktype[0] = (defs_hook *)util_common_calloc_s(sizeof(defs_hook));                                    \
+        ASSERT_NE(oci_spec->hooks->hooktype[0], nullptr);                                                                       \
+        ASSERT_EQ(spec_add_##hooktype##_hook(oci_spec, hook), 0);                                                               \
+        ASSERT_EQ(oci_spec->hooks->hooktype##_len, 2);                                                                          \
+        ASSERT_EQ(oci_spec->hooks->hooktype[1], hook);                                                                          \
+                                                                                                                                \
+        ASSERT_EQ(spec_add_##hooktype##_hook(nullptr, hook), -1);                                                               \
+        ASSERT_EQ(spec_add_##hooktype##_hook(oci_spec, nullptr), -1);                                                           \
+                                                                                                                                \
+        free_oci_runtime_spec(oci_spec);                                                                                        \
+    }
+
+TEST_SPEC_ADD_HOOKS_ITEM_DEF(prestart)
+TEST_SPEC_ADD_HOOKS_ITEM_DEF(poststart)
+TEST_SPEC_ADD_HOOKS_ITEM_DEF(poststop)
+
+TEST_F(SpecsUnitTest, test_spec_add_hook)
+{
+    test_spec_add_prestart_hook();
+    test_spec_add_poststart_hook();
+    test_spec_add_poststop_hook();
+}
+
+#endif /* ENABLE_CDI */
+
 /********************************* UT for merge caps *******************************************/
 struct capabilities_lens {
     size_t bounding_len;
