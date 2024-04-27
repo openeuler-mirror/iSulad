@@ -534,6 +534,9 @@ static char *util_left_trim_space(char *str)
 {
     char *begin = str;
     char *tmp = str;
+    if (strlen(str) == 0) {
+        return str;
+    }
     while (isspace(*begin)) {
         begin++;
     }
