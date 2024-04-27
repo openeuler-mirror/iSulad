@@ -196,6 +196,7 @@ static int generate_env_map_from_file(FILE *fp, json_map_string_string *env_map)
     char *pline = NULL;
     size_t length = 0;
     char *saveptr = NULL;
+    char empty_str[1] = {'\0'};
 
     while (getline(&pline, &length, fp) != -1) {
         util_trim_newline(pline);
@@ -205,7 +206,9 @@ static int generate_env_map_from_file(FILE *fp, json_map_string_string *env_map)
         }
         key = strtok_r(pline, "=", &saveptr);
         value = strtok_r(NULL, "=", &saveptr);
-        if (key != NULL && value != NULL) {
+        // value of an env varible is allowed to be empty
+        value = value ? value : empty_str;
+        if (key != NULL) {
             key = util_trim_space(key);
             value = util_trim_space(value);
             if ((size_t)(MAX_BUFFER_SIZE - 1) - strlen(key) < strlen(value)) {
@@ -292,15 +295,14 @@ static int check_env_need_append(const oci_runtime_spec *oci_spec, const char *e
 {
     size_t i = 0;
     char *key = NULL;
-    char *value = NULL;
     char *saveptr = NULL;
 
     for (i = 0; i < oci_spec->process->env_len; i++) {
         char *tmp_env = NULL;
         tmp_env = util_strdup_s(oci_spec->process->env[i]);
         key = strtok_r(tmp_env, "=", &saveptr);
-        value = strtok_r(NULL, "=", &saveptr);
-        if (key == NULL || value == NULL) {
+        // value of an env varible is allowed to be empty
+        if (key == NULL) {
             ERROR("Bad env format");
             free(tmp_env);
             tmp_env = NULL;
