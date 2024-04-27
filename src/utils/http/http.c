@@ -478,7 +478,9 @@ int http_request(const char *url, struct http_get_options *options, long *respon
         if (options->resume) {
             curl_easy_setopt(curl_handle, CURLOPT_RESUME_FROM_LARGE, (curl_off_t)fsize);
         }
-        curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
+        if (!options->with_head) {
+            curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
+        }
         curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, pagefile);
         curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, fwrite_file);
     } else {
