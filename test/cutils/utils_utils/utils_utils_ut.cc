@@ -54,6 +54,18 @@ static int status_to_exit_code(int status)
     return exit_code;
 }
 
+TEST(utils_utils, test_util_swap_ptr)
+{
+    int val1 = 1;
+    int val2 = 2;
+    int *ptr1 = &val1;
+    int *ptr2 = &val2;
+
+    util_swap_ptr((void **)&ptr1, (void **)&ptr2);
+    ASSERT_EQ(*ptr1, val2);
+    ASSERT_EQ(*ptr2, val1);
+}
+
 TEST(utils_utils, test_util_mem_realloc)
 {
     char *old = nullptr;

@@ -21,6 +21,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/callback_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/image_api_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/service_container_api_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/cdi_operate_api_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/sandbox/controller/controller_common.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/sandbox/controller/shim/shim_controller_ut.cc
 )

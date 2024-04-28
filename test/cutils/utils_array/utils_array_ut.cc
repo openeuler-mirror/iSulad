@@ -50,6 +50,33 @@ TEST(utils_array, test_util_free_array)
     util_free_array(array);
 }
 
+TEST(utils_array, test_util_copy_array_by_len)
+{
+    char **array = nullptr;
+    char **array_copy = nullptr;
+    size_t len = 3;
+
+    array = (char **)util_common_calloc_s(4 * sizeof(char *));
+    ASSERT_NE(array, nullptr);
+    array[0] = util_strdup_s("test1");
+    array[1] = util_strdup_s("test2");
+    array[2] = util_strdup_s("test3");
+
+    array_copy = util_copy_array_by_len(array, len);
+    ASSERT_NE(array_copy, nullptr);
+    for (size_t i = 0; i < len; i++) {
+        ASSERT_EQ(strcmp(array_copy[i], array[i]), 0);
+        free(array[i]);
+        free(array_copy[i]);
+    }
+
+    ASSERT_EQ(util_copy_array_by_len(array, 0), nullptr);
+    ASSERT_EQ(util_copy_array_by_len(nullptr, len), nullptr);
+
+    free(array);
+    free(array_copy);
+}
+
 TEST(utils_array, test_util_grow_array)
 {
     char **array = nullptr;
@@ -229,6 +256,34 @@ TEST(utils_array, test_util_append_string_array)
     sarray = nullptr;
 }
 
+TEST(utils_array, test_util_copy_string_array)
+{
+    __isula_auto_string_array_t string_array *sarray_copy = nullptr;
+    __isula_auto_string_array_t string_array *sarray = (string_array *)util_common_calloc_s(sizeof(string_array));
+    ASSERT_NE(sarray, nullptr);
+    int ret;
+
+    ret = util_append_string_array(sarray, "1234567890");
+    ASSERT_EQ(ret, 0);
+    ret = util_append_string_array(sarray, "abc");
+    ASSERT_EQ(ret, 0);
+    ret = util_append_string_array(sarray, "bcd");
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(sarray->len, 3);
+
+    sarray_copy = util_copy_string_array(sarray);
+    ASSERT_NE(sarray_copy, nullptr);
+    ASSERT_EQ(sarray_copy->len, sarray->len);
+    for (size_t i = 0; i < sarray_copy->len; i++) {
+        ASSERT_EQ(strcmp(sarray_copy->items[i], sarray->items[i]), 0);
+    }
+
+    ASSERT_EQ(util_copy_string_array(nullptr), nullptr);
+    sarray->cap = 0;
+    ASSERT_EQ(util_copy_string_array(sarray), nullptr);
+    sarray->cap = sarray->len;
+}
+
 TEST(utils_array, test_util_string_array_contain)
 {
     string_array *sarray = (string_array *)util_common_calloc_s(sizeof(string_array));
@@ -298,4 +353,77 @@ TEST(utils_array, test_util_common_array_append_pointer)
 
     delete element1;
     delete element2;
+}
+
+static void common_array_free_mock(void *ptr)
+{
+    (void)ptr;
+    return;
+}
+
+TEST(utils_array, test_util_append_common_array)
+{
+    __isula_auto_common_array_t common_array *carray = nullptr;
+    int ret;
+    int value1 = 1;
+    int value2 = 2;
+    int value3 = 3;
+
+    carray = util_common_array_new(1, common_array_free_mock, util_clone_ptr);
+    ASSERT_NE(carray, nullptr);
+
+    ret = util_append_common_array(carray, &value1);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(carray->items[0], &value1);
+    ASSERT_EQ(carray->len, 1);
+
+    ret = util_append_common_array(carray, &value2);
+    ASSERT_EQ(ret, 0);
+    ret = util_append_common_array(carray, &value3);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(carray->items[1], &value2);
+    ASSERT_EQ(carray->items[2], &value3);
+    ASSERT_EQ(carray->len, 3);
+
+    carray->clone_item_cb = nullptr;
+    ASSERT_EQ(util_append_common_array(carray, &value1), -1);
+    carray->clone_item_cb = util_clone_ptr;
+    ASSERT_EQ(util_append_common_array(carray, nullptr), 0);
+}
+
+TEST(utils_array, test_util_merge_common_array)
+{
+    __isula_auto_common_array_t common_array *carray1 = nullptr;
+    __isula_auto_common_array_t common_array *carray2 = nullptr;
+    int ret;
+    int value1 = 1;
+    int value2 = 2;
+
+    carray1 = util_common_array_new(1, common_array_free_mock, util_clone_ptr);
+    ASSERT_NE(carray1, nullptr);
+    carray2 = util_common_array_new(1, common_array_free_mock, util_clone_ptr);
+    ASSERT_NE(carray2, nullptr);
+
+    ret = util_append_common_array(carray1, &value1);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(carray1->items[0], &value1);
+    ASSERT_EQ(carray1->len, 1);
+    ret = util_append_common_array(carray2, &value2);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(carray2->items[0], &value2);
+    ASSERT_EQ(carray2->len, 1);
+
+    ret = util_merge_common_array(carray1, carray2);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(carray1->items[1], &value2);
+    ASSERT_EQ(carray1->len, 2);
+
+    ASSERT_EQ(util_merge_common_array(nullptr, carray2), -1);
+    ASSERT_EQ(util_merge_common_array(carray1, nullptr), -1);
+    carray1->clone_item_cb = nullptr;
+    ASSERT_EQ(util_merge_common_array(carray1, carray2), -1);
+    carray1->clone_item_cb = util_clone_ptr;
+    carray2->clone_item_cb = nullptr;
+    ASSERT_EQ(util_merge_common_array(carray1, carray2), -1);
+    carray2->clone_item_cb = util_clone_ptr;
 }
