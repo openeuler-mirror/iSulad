@@ -1793,14 +1793,21 @@ static int merge_process_conf(oci_runtime_spec *oci_spec, const host_config *hos
         goto out;
     }
 
-    /* environment variables */
+    /* 1. merge env from container_spec: --env or --env-file */
     ret = merge_env(oci_spec, (const char **)container_spec->env, container_spec->env_len);
     if (ret != 0) {
         ERROR("Failed to merge environment variables");
         goto out;
     }
 
-    /* env target file */
+    /* 2. merge default env hostname, only if hostname not set before */
+    ret = merge_hostname_env(oci_spec);
+    if (ret != 0) {
+        ERROR("Failed to merge hostname env");
+        goto out;
+    }
+
+    /* 3. persist env from --env-target-file, only if the env not set before, system container only */
     ret = merge_env_target_file(oci_spec, host_spec->env_target_file);
     if (ret != 0) {
         ERROR("Failed to merge env target file");

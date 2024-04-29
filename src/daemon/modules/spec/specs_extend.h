@@ -50,6 +50,8 @@ int make_userns_remap(oci_runtime_spec *container, const char *user_remap);
 
 int merge_env(oci_runtime_spec *oci_spec, const char **env, size_t env_len);
 
+int merge_hostname_env(oci_runtime_spec *oci_spec);
+
 int merge_env_target_file(oci_runtime_spec *oci_spec, const char *env_target_file);
 
 char *oci_container_get_env(const oci_runtime_spec *oci_spec, const char *key);
