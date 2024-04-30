@@ -207,6 +207,7 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
     char *tag_digest_pos = NULL;
     char *name_pos = NULL;
     char *tmp_image_name = NULL;
+    char *name_end_pos = NULL;
 
     if (!util_valid_image_name(image_name)) {
         ERROR("Invalid full image name %s", image_name);
@@ -234,6 +235,11 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
         *name_pos = '\0';
         name_pos++;
         if (name != NULL) {
+            // Need to check if image name contains tag
+            name_end_pos = strchr(name_pos, ':');
+            if (name_end_pos != NULL) {
+                *name_end_pos = '\0';
+            }
             *name = util_strdup_s(name_pos);
         }
         if (host != NULL) {

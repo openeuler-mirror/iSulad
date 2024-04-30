@@ -319,6 +319,7 @@ bool util_valid_image_name(const char *name)
         }
     }
 
+    // In name check phase, image name with both tag and digest is also allowed
     if (util_reg_match(__NamePattern, copy)) {
         goto cleanup;
     }
