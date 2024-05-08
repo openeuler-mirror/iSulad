@@ -39,9 +39,6 @@
 #include "utils_timestamp.h"
 #include "mailbox.h"
 
-#define SANDBOX_READY_STATE_STR "SANDBOX_READY"
-#define SANDBOX_NOTREADY_STATE_STR "SANDBOX_NOTREADY"
-
 namespace sandbox {
 
 const std::string SHM_MOUNT_POINT = "/dev/shm";
