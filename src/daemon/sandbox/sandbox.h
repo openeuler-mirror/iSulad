@@ -156,6 +156,7 @@ private:
     auto SetupSandboxFiles(Errors &error) -> bool;
     void DoUpdateStatus(std::unique_ptr<ControllerSandboxStatus> status, Errors &error);
     void DoUpdateExitedStatus(const ControllerExitInfo &exitInfo);
+    bool DoStatusUpdateAndWaitInLoad(const std::string &sandboxID, Errors &error);
 
     auto GetMetadataJsonPath() ->  std::string;
     auto GetStatePath() -> std::string;
