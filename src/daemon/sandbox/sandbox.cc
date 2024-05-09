@@ -39,9 +39,6 @@
 #include "utils_timestamp.h"
 #include "mailbox.h"
 
-#define SANDBOX_READY_STATE_STR "SANDBOX_READY"
-#define SANDBOX_NOTREADY_STATE_STR "SANDBOX_NOTREADY"
-
 namespace sandbox {
 
 const std::string SHM_MOUNT_POINT = "/dev/shm";
@@ -371,6 +368,8 @@ void Sandbox::DoUpdateStatus(std::unique_ptr<ControllerSandboxStatus> status, Er
     m_state.exitedAt = status->exitedAt;
     if (status->state == std::string(SANDBOX_READY_STATE_STR)) {
         m_state.status = SANDBOX_STATUS_RUNNING;
+    } else {
+        m_state.status = SANDBOX_STATUS_STOPPED;
     }
 }
 
@@ -459,6 +458,24 @@ auto Sandbox::Save(Errors &error) -> bool
     return true;
 }
 
+bool Sandbox::DoStatusUpdateAndWaitInLoad(const std::string &sandboxID, Errors &error)
+{
+    if (!UpdateStatus(error)) {
+        ERROR("Failed to update status of Sandbox, id='%s'", sandboxID.c_str());
+        return false;
+    }
+
+    // Regardless of whether the sandbox is ready,
+    // Wait() is required to call to monitor whether the kuasar sandbox is ready or exits.
+    // TODO: distinguish the meaning of Wait() return value in different states of sandbox
+    if (!m_controller->Wait(shared_from_this(), sandboxID, error)) {
+        ERROR("Failed to restore wait callback");
+        return false;
+    }
+
+    return true;
+}
+
 auto Sandbox::Load(Errors &error) -> bool
 {
     if (!LoadState(error)) {
@@ -478,15 +495,11 @@ auto Sandbox::Load(Errors &error) -> bool
 
     LoadNetworkSetting();
 
-    if (!UpdateStatus(error)) {
-        ERROR("Failed to update status of Sandbox, id='%s'", m_id.c_str());
-        return false;
-    }
-
-    // TODO: distinguish the meaning of Wait() return value in different states of sandbox
-    if (!m_controller->Wait(shared_from_this(), m_id, error)) {
-        ERROR("Failed to restore wait callback");
-        return false;
+    // When the sandbox status acquisition fails or wait fails, the sandbox status is set to not ready,
+    // and the user decides whether to delete the sandbox.
+    if (!DoStatusUpdateAndWaitInLoad(m_id, error)) {
+        WriteGuard<RWMutex> lock(m_stateMutex);
+        m_state.status = SANDBOX_STATUS_STOPPED;
     }
 
     return true;

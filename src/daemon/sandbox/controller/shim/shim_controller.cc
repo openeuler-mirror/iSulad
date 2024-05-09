@@ -446,8 +446,10 @@ void ShimController::InspectResponseToSandboxStatus(container_inspect *inspect,
     sandboxStatus.id = inspect->id;
     if (inspect->state != nullptr) {
         sandboxStatus.pid = inspect->state->pid;
-        if (inspect->state->status != nullptr) {
-            sandboxStatus.state = std::string(inspect->state->status);
+        if (inspect->state->running) {
+            sandboxStatus.state = std::string(SANDBOX_READY_STATE_STR);
+        } else {
+            sandboxStatus.state = std::string(SANDBOX_NOTREADY_STATE_STR);
         }
     }
 

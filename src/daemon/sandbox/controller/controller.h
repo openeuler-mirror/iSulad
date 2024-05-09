@@ -27,6 +27,9 @@
 
 namespace sandbox {
 
+#define SANDBOX_READY_STATE_STR "SANDBOX_READY"
+#define SANDBOX_NOTREADY_STATE_STR "SANDBOX_NOTREADY"
+
 struct ControllerMountInfo {
     std::string source;
     std::string destination;
