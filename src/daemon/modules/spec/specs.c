@@ -2607,17 +2607,11 @@ int spec_module_init(void)
 static int add_env(defs_process *dp, const char *env, const char *key)
 {
     size_t i;
-    char *oci_key = NULL;
-    char *oci_value = NULL;
-    char *saveptr = NULL;
-    __isula_auto_free char *tmp_env = NULL;
  
     for (i = 0; i < dp->env_len; i++) {
-        tmp_env = util_strdup_s(dp->env[i]);
-        oci_key = strtok_r(tmp_env, "=", &saveptr);
-        oci_value = strtok_r(NULL, "=", &saveptr);
-        if (oci_key == NULL || oci_value == NULL) {
-            ERROR("Bad env format");
+        __isula_auto_free char *oci_key = NULL;
+        if (util_valid_split_env(dp->env[i], &oci_key, NULL) < 0) {
+            ERROR("Bad env format, %s", dp->env[i]);
             return -1;
         }
         if (strcmp(key, oci_key) == 0) {
@@ -2625,8 +2619,6 @@ static int add_env(defs_process *dp, const char *env, const char *key)
             dp->env[i] = util_strdup_s(env);
             return 0;
         }
-        free(tmp_env);
-        tmp_env = NULL;
     }
     if (util_mem_realloc((void **)&dp->env, (dp->env_len + 1) * sizeof(char *),
                          (void *)dp->env, dp->env_len * sizeof(char *)) != 0) {
@@ -2641,10 +2633,6 @@ static int add_env(defs_process *dp, const char *env, const char *key)
 int defs_process_add_multiple_env(defs_process *dp, const char **envs, size_t env_len)
 {
     size_t i;
-    char *key = NULL;
-    char *value = NULL;
-    char *saveptr = NULL;
-    __isula_auto_free char *tmp_env = NULL;
 
     if (envs == NULL || env_len == 0) {
         DEBUG("empty envs");
@@ -2656,18 +2644,14 @@ int defs_process_add_multiple_env(defs_process *dp, const char **envs, size_t en
     }
 
     for (i = 0; i < env_len; i++) {
-        tmp_env = util_strdup_s(envs[i]);
-        key = strtok_r(tmp_env, "=", &saveptr);
-        value = strtok_r(NULL, "=", &saveptr);
-        if (key == NULL || value == NULL) {
-            ERROR("Bad env format: %s", tmp_env);
+        __isula_auto_free char *key = NULL;
+        if (util_valid_split_env(envs[i], &key, NULL) < 0) {
+            ERROR("Bad env format: %s", envs[i]);
             return -1;
         }
         if (add_env(dp, envs[i], key) != 0) {
             return -1;
         }
-        free(tmp_env);
-        tmp_env = NULL;
     }
 
     return 0;
