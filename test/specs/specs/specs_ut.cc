@@ -593,20 +593,20 @@ TEST_F(SpecsUnitTest, test_defs_process_add_multiple_env)
     ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
     free(envs[0]);
     envs[0] = util_strdup_s("key0=");
-    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), 0);
     free(envs[0]);
     envs[0] = util_strdup_s("key0xxxx");
-    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), 0);
 
     free(dp->env[0]);
     dp->env[0] = util_strdup_s("=value0");
     ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
     free(dp->env[0]);
     dp->env[0] = util_strdup_s("key0=");
-    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), 0);
     free(dp->env[0]);
     dp->env[0] = util_strdup_s("key0xxxx");
-    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), -1);
+    ASSERT_EQ(defs_process_add_multiple_env(dp, (const char **)envs, env_len), 0);
 
     free_defs_process(dp);
     free(envs[0]);
@@ -644,20 +644,20 @@ TEST_F(SpecsUnitTest, test_spec_add_multiple_process_env)
     ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
     free(envs[0]);
     envs[0] = util_strdup_s("key0=");
-    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), 0);
     free(envs[0]);
     envs[0] = util_strdup_s("key0xxxx");
-    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), 0);
 
     free(oci_spec->process->env[0]);
     oci_spec->process->env[0] = util_strdup_s("=value0");
     ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
     free(oci_spec->process->env[0]);
     oci_spec->process->env[0] = util_strdup_s("key0=");
-    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), 0);
     free(oci_spec->process->env[0]);
     oci_spec->process->env[0] = util_strdup_s("key0xxxx");
-    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), -1);
+    ASSERT_EQ(spec_add_multiple_process_env(oci_spec, (const char **)envs, env_len), 0);
 
     free_oci_runtime_spec(oci_spec);
     free(envs[0]);
