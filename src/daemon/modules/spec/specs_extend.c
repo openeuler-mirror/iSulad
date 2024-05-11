@@ -190,41 +190,33 @@ int make_userns_remap(oci_runtime_spec *container, const char *user_remap)
 static int generate_env_map_from_file(FILE *fp, json_map_string_string *env_map)
 {
     int ret = 0;
-    char *key = NULL;
-    char *value = NULL;
-    char *pline = NULL;
+    __isula_auto_free char *pline = NULL;
     size_t length = 0;
-    char *saveptr = NULL;
-    char empty_str[1] = {'\0'};
 
     while (getline(&pline, &length, fp) != -1) {
+        __isula_auto_free char *key = NULL;
+        __isula_auto_free char *value = NULL;
         util_trim_newline(pline);
         pline = util_trim_space(pline);
         if (pline == NULL || pline[0] == '#') {
             continue;
         }
-        key = strtok_r(pline, "=", &saveptr);
-        value = strtok_r(NULL, "=", &saveptr);
-        // value of an env varible is allowed to be empty
-        value = value ? value : empty_str;
-        if (key != NULL) {
-            key = util_trim_space(key);
-            value = util_trim_space(value);
-            if ((size_t)(MAX_BUFFER_SIZE - 1) - strlen(key) < strlen(value)) {
-                ERROR("env length exceed %d bytes", MAX_BUFFER_SIZE);
-                ret = -1;
-                goto out;
-            }
-            ret = append_json_map_string_string(env_map, key, value);
-            if (ret < 0) {
-                ERROR("append env to map failed");
-                goto out;
-            }
+        if (util_valid_split_env(pline, &key, &value) < 0) {
+            // ignore invalid env
+            continue;
+        }
+        if ((size_t)(MAX_BUFFER_SIZE - 1) - strlen(key) < strlen(value)) {
+            ERROR("env length exceed %d bytes", MAX_BUFFER_SIZE);
+            return -1;
+        }
+        ret = append_json_map_string_string(env_map, key, value);
+        if (ret < 0) {
+            ERROR("append env to map failed");
+            return -1;
         }
     }
-out:
-    free(pline);
-    return ret;
+
+    return 0;
 }
 
 static json_map_string_string *parse_env_target_file(const char *env_path)
@@ -293,28 +285,17 @@ static int do_append_env(char ***env, size_t *env_len, const char *key, const ch
 static int check_env_need_append(const oci_runtime_spec *oci_spec, const char *env_key, bool *is_append)
 {
     size_t i = 0;
-    char *key = NULL;
-    char *saveptr = NULL;
 
     for (i = 0; i < oci_spec->process->env_len; i++) {
-        char *tmp_env = NULL;
-        tmp_env = util_strdup_s(oci_spec->process->env[i]);
-        key = strtok_r(tmp_env, "=", &saveptr);
-        // value of an env varible is allowed to be empty
-        if (key == NULL) {
+        __isula_auto_free char *key = NULL;
+        if (util_valid_split_env(oci_spec->process->env[i], &key, NULL) < 0) {
             ERROR("Bad env format");
-            free(tmp_env);
-            tmp_env = NULL;
             return -1;
         }
         if (strcmp(key, env_key) == 0) {
             *is_append = false;
-            free(tmp_env);
-            tmp_env = NULL;
             return 0;
         }
-        free(tmp_env);
-        tmp_env = NULL;
     }
     return 0;
 }

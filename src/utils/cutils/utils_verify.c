@@ -651,6 +651,31 @@ bool util_valid_device_cgroup_rule(const char *value)
     return util_reg_match(patten, value) == 0;
 }
 
+int util_valid_split_env(const char *env, char **key, char **value)
+{
+    __isula_auto_array_t char **arr = NULL;
+
+    arr = util_string_split_n(env, '=', 2);
+    if (arr == NULL) {
+        ERROR("Failed to split env string");
+        return -1;
+    }
+
+    if (strlen(arr[0]) == 0) {
+        ERROR("Invalid environment variable: %s", env);
+        return -1;
+    }
+
+    if (key != NULL) {
+        *key = util_strdup_s(arr[0]);
+    }
+    if (value != NULL) {
+        *value = util_strdup_s(util_array_len((const char **)arr) > 1 ? arr[1] : "");
+    }
+
+    return 0;
+}
+
 int util_valid_env(const char *env, char **dst)
 {
     int ret = 0;
