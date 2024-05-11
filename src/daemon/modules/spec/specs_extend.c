@@ -205,6 +205,8 @@ static int generate_env_map_from_file(FILE *fp, json_map_string_string *env_map)
             // ignore invalid env
             continue;
         }
+        key = util_trim_space(key);
+        value = util_trim_space(value);
         if ((size_t)(MAX_BUFFER_SIZE - 1) - strlen(key) < strlen(value)) {
             ERROR("env length exceed %d bytes", MAX_BUFFER_SIZE);
             return -1;
