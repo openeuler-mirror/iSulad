@@ -119,6 +119,8 @@ bool util_valid_positive_interger(const char *value);
 
 bool util_valid_device_cgroup_rule(const char *value);
 
+int util_valid_split_env(const char *env, char **key, char **value);
+
 int util_valid_env(const char *env, char **dst);
 
 bool util_valid_sysctl(const char *sysctl_key);
