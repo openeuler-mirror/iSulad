@@ -66,7 +66,7 @@ void util_free_network_port(struct network_port *ptr);
 
 bool util_valid_proto(const char *proto);
 
-int util_get_random_port();
+int util_get_random_port(void);
 
 static inline bool is_valid_port(const int port)
 {

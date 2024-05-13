@@ -23,7 +23,8 @@
 
 mailbox_topic_handler_t mailbox_topic_handlers[MAILBOX_TOPIC_MAX] = { 0 };
 
-static bool mailbox_topic_valid(mailbox_topic topic) {
+static bool mailbox_topic_valid(mailbox_topic topic)
+{
     return topic > MAILBOX_TOPIC_INVALID && topic < MAILBOX_TOPIC_MAX;
 }
 

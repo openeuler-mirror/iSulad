@@ -636,7 +636,8 @@ void ContainerStatusToGRPC(container_inspect *inspect,
     ConvertResourcesToStatus(inspect, contStatus);
 }
 
-std::unique_ptr<runtime::v1::ContainerStatus> GetContainerStatus(service_executor_t *m_cb, const std::string &containerID, Errors &error)
+std::unique_ptr<runtime::v1::ContainerStatus> GetContainerStatus(service_executor_t *m_cb,
+                                                                 const std::string &containerID, Errors &error)
 {
     if (m_cb == nullptr) {
         error.SetError("Invalid input arguments: empty service executor");
@@ -694,7 +695,7 @@ static int InsertCDIDevices(std::unordered_set<std::string> &fromCRI, const std:
     }
     return 0;
 }
- 
+
 void GenerateCDIRequestedDevices(const runtime::v1::ContainerConfig &config, host_config *hostconfig, Errors &err)
 {
     std::unordered_set<std::string> fromCRI;
@@ -703,13 +704,13 @@ void GenerateCDIRequestedDevices(const runtime::v1::ContainerConfig &config, hos
     __isula_auto_string_array_t string_array *devices = nullptr;
     json_map_string_string *annotations = nullptr;
     __isula_auto_free char *error = nullptr;
- 
+
     if (hostconfig == nullptr) {
         ERROR("Invalid input arguments");
         err.Errorf("Invalid input arguments");
         return;
     }
-    
+
     if (config.cdi_devices().empty() && config.annotations().empty()) {
         return;
     }
@@ -746,7 +747,7 @@ void GenerateCDIRequestedDevices(const runtime::v1::ContainerConfig &config, hos
     requested->items = nullptr;
     hostconfig->cdi_requested_devices_len = requested->len;
     requested->len = 0;
- 
+
 free_out:
     free_json_map_string_string(annotations);
 }

@@ -819,7 +819,8 @@ void PodSandboxManagerService::SetSandboxStatusNetwork(std::shared_ptr<sandbox::
 
 void PodSandboxManagerService::GetContainerStatuses(const std::string &podSandboxID,
                                                     std::vector<std::unique_ptr<runtime::v1::ContainerStatus>> &containerStatuses,
-                                                    std::vector<std::string> &errors) {
+                                                    std::vector<std::string> &errors)
+{
     auto list_response_wrapper = GetContainerListResponse(podSandboxID, errors);
     if (list_response_wrapper == nullptr) {
         return;
@@ -837,7 +838,8 @@ void PodSandboxManagerService::GetContainerStatuses(const std::string &podSandbo
     }
 }
 
-std::unique_ptr<runtime::v1::PodSandboxStatus> PodSandboxManagerService::GetPodSandboxStatus(const std::string &podSandboxID, Errors &error)
+std::unique_ptr<runtime::v1::PodSandboxStatus> PodSandboxManagerService::GetPodSandboxStatus(
+    const std::string &podSandboxID, Errors &error)
 {
     std::unique_ptr<runtime::v1::PodSandboxStatus> podStatus(new (std::nothrow) runtime::v1::PodSandboxStatus);
     if (podStatus == nullptr) {
@@ -876,7 +878,7 @@ void PodSandboxManagerService::PodSandboxStatus(const std::string &podSandboxID,
         return;
     }
 
- 
+
     auto podStatus = GetPodSandboxStatus(podSandboxID, error);
     if (error.NotEmpty()) {
         ERROR("Failed to get pod sandbox status: %s", error.GetCMessage());

@@ -90,17 +90,17 @@ char **util_copy_array_by_len(char **array, size_t len)
 {
     char **new_array = NULL;
     size_t i;
- 
+
     if (array == NULL || len == 0) {
         return NULL;
     }
- 
+
     new_array = util_smart_calloc_s(sizeof(char *), len);
     if (new_array == NULL) {
         ERROR("Out of memory");
         return NULL;
     }
- 
+
     for (i = 0; i < len; i++) {
         new_array[i] = util_strdup_s(array[i]);
     }
@@ -262,12 +262,12 @@ string_array *util_copy_string_array(string_array *sarr)
 {
     string_array *ptr = NULL;
     size_t i;
- 
+
     if (sarr == NULL) {
         ERROR("Invalid string array");
         return NULL;
     }
- 
+
     ptr = util_string_array_new(sarr->cap);
     if (ptr == NULL) {
         ERROR("Out of memory");
@@ -277,7 +277,7 @@ string_array *util_copy_string_array(string_array *sarr)
         ptr->items[i] = util_strdup_s(sarr->items[i]);
         ptr->len += 1;
     }
- 
+
     return ptr;
 }
 

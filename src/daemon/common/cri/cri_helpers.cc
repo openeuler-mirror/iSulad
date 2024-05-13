@@ -550,8 +550,8 @@ void CreateContainerLogSymlink(const std::string &containerID, Errors &error)
         WARN("Deleted previously existing symlink file: %s", path.c_str());
     }
     if (symlink(realPath.c_str(), path.c_str()) != 0) {
-        SYSERROR("failed to create symbolic link %s to the container log file %s for container %s", path.c_str(), realPath.c_str(),
-                 containerID.c_str());
+        SYSERROR("failed to create symbolic link %s to the container log file %s for container %s", path.c_str(),
+                 realPath.c_str(), containerID.c_str());
         error.Errorf("failed to create symbolic link %s to the container log file %s for container %s", path.c_str(),
                      realPath.c_str(), containerID.c_str());
     }

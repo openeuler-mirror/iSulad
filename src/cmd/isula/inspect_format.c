@@ -26,12 +26,12 @@
 
 #define PRINTF_TAB_LEN 4
 #define TOP_LEVEL_OBJ 0x10
-#define IS_TOP_LEVEL_OBJ(value) ((value)&TOP_LEVEL_OBJ)
+#define IS_TOP_LEVEL_OBJ(value) ((value) & TOP_LEVEL_OBJ)
 
 #define LAST_ELEMENT_BIT 0x0F
 #define NOT_LAST_ELEMENT 0x00
 #define LAST_ELEMENT 0x01
-#define IS_LAST_ELEMENT(value) (LAST_ELEMENT == ((value)&LAST_ELEMENT_BIT))
+#define IS_LAST_ELEMENT(value) (LAST_ELEMENT == ((value) & LAST_ELEMENT_BIT))
 
 #define YAJL_TYPEOF(json) ((json)->type)
 

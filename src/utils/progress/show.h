@@ -21,11 +21,11 @@ extern "C" {
 #endif
 
 void move_to_row(int row);
-void move_cursor_up(int lines);
+void move_cursor_up(int rows);
 void clear_row(int row);
-void clear_lines_below();
-int get_current_row();
-int get_terminal_width();
+void clear_lines_below(void);
+int get_current_row(void);
+int get_terminal_width(void);
 
 #ifdef __cplusplus
 }

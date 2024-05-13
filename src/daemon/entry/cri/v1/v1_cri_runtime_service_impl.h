@@ -73,7 +73,8 @@ public:
 
     void RemovePodSandbox(const std::string &podSandboxID, Errors &error) override;
 
-    void PodSandboxStatus(const std::string &podSandboxID, runtime::v1::PodSandboxStatusResponse *reply, Errors &error) override;
+    void PodSandboxStatus(const std::string &podSandboxID, runtime::v1::PodSandboxStatusResponse *reply,
+                          Errors &error) override;
 
     void ListPodSandbox(const runtime::v1::PodSandboxFilter &filter,
                         std::vector<std::unique_ptr<runtime::v1::PodSandbox>> &pods, Errors &error) override;

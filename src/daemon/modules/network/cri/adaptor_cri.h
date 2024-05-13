@@ -23,9 +23,9 @@ extern "C" {
 
 int adaptor_cni_init_confs(const char *conf_dir, const char **bin_paths, const size_t bin_paths_len);
 
-int adaptor_cni_update_confs();
+int adaptor_cni_update_confs(void);
 
-bool adaptor_cni_check_inited();
+bool adaptor_cni_check_inited(void);
 
 int adaptor_cni_setup(const network_api_conf *conf, network_api_result_list *result);
 

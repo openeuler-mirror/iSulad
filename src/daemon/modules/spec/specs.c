@@ -2483,7 +2483,8 @@ out:
     return ret;
 }
 
-int update_oci_ulimit(oci_runtime_spec *oci_spec, const host_config *hostconfig) {
+int update_oci_ulimit(oci_runtime_spec *oci_spec, const host_config *hostconfig)
+{
     if (oci_spec == NULL || hostconfig == NULL) {
         ERROR("Invalid arguments");
         return -1;
@@ -2660,7 +2661,7 @@ int defs_process_add_multiple_env(defs_process *dp, const char **envs, size_t en
 int spec_add_multiple_process_env(oci_runtime_spec *oci_spec, const char **envs, size_t env_len)
 {
     int ret = 0;
-    
+
     if (envs == NULL || env_len == 0) {
         DEBUG("empty envs");
         return 0;
@@ -2669,26 +2670,26 @@ int spec_add_multiple_process_env(oci_runtime_spec *oci_spec, const char **envs,
         ERROR("Invalid params");
         return -1;
     }
- 
+
     ret = make_sure_oci_spec_process(oci_spec);
     if (ret < 0) {
         ERROR("Out of memory");
         return -1;
     }
- 
+
     ret = defs_process_add_multiple_env(oci_spec->process, envs, env_len);
     if (ret < 0) {
         ERROR("Failed to add envs");
     }
- 
+
     return ret;
 }
- 
+
 int spec_add_device(oci_runtime_spec *oci_spec, defs_device *device)
 {
     int ret = 0;
     size_t i;
- 
+
     if (device == NULL) {
         return -1;
     }
@@ -2696,7 +2697,7 @@ int spec_add_device(oci_runtime_spec *oci_spec, defs_device *device)
     if (ret < 0) {
         return -1;
     }
-    
+
     for (i = 0; i < oci_spec->linux->devices_len; i++) {
         if (strcmp(oci_spec->linux->devices[i]->path, device->path) == 0) {
             free_defs_device(oci_spec->linux->devices[i]);
@@ -2712,21 +2713,21 @@ int spec_add_device(oci_runtime_spec *oci_spec, defs_device *device)
     }
     oci_spec->linux->devices[oci_spec->linux->devices_len] = device;
     oci_spec->linux->devices_len++;
- 
+
     return 0;
 }
- 
+
 int spec_add_linux_resources_device(oci_runtime_spec *oci_spec, bool allow, const char *dev_type,
                                     int64_t major, int64_t minor, const char *access)
 {
     int ret = 0;
     defs_device_cgroup *device = NULL;
- 
+
     ret = make_sure_oci_spec_linux_resources(oci_spec);
     if (ret < 0) {
         return -1;
     }
- 
+
     device = util_common_calloc_s(sizeof(*device));
     if (device == NULL) {
         ERROR("Out of memory");
@@ -2738,7 +2739,8 @@ int spec_add_linux_resources_device(oci_runtime_spec *oci_spec, bool allow, cons
     device->major = major;
     device->minor = minor;
 
-    if (util_mem_realloc((void **)&oci_spec->linux->resources->devices, (oci_spec->linux->resources->devices_len + 1) * sizeof(char *),
+    if (util_mem_realloc((void **)&oci_spec->linux->resources->devices,
+                         (oci_spec->linux->resources->devices_len + 1) * sizeof(char *),
                          (void *)oci_spec->linux->resources->devices, oci_spec->linux->resources->devices_len * sizeof(char *)) != 0) {
         ERROR("Out of memory");
         free_defs_device_cgroup(device);
@@ -2746,35 +2748,35 @@ int spec_add_linux_resources_device(oci_runtime_spec *oci_spec, bool allow, cons
     }
     oci_spec->linux->resources->devices[oci_spec->linux->resources->devices_len] = device;
     oci_spec->linux->resources->devices_len++;
- 
+
     return 0;
 }
- 
+
 void spec_remove_mount(oci_runtime_spec *oci_spec, const char *dest)
 {
     size_t i;
- 
+
     if (oci_spec == NULL || oci_spec->mounts == NULL || dest == NULL) {
         return;
     }
- 
+
     for (i = 0; i < oci_spec->mounts_len; i++) {
         if (strcmp(oci_spec->mounts[i]->destination, dest) == 0) {
             free_defs_mount(oci_spec->mounts[i]);
             (void)memcpy((void **)&oci_spec->mounts[i], (void **)&oci_spec->mounts[i + 1],
-                (oci_spec->mounts_len - i - 1) * sizeof(void *));        
+                         (oci_spec->mounts_len - i - 1) * sizeof(void *));
             oci_spec->mounts_len--;
             return;
         }
     }
 }
- 
+
 int spec_add_mount(oci_runtime_spec *oci_spec, defs_mount *mnt)
 {
     if (oci_spec == NULL || mnt == NULL) {
         return -1;
     }
-    
+
     if (util_mem_realloc((void **)&oci_spec->mounts, (oci_spec->mounts_len + 1) * sizeof(char *),
                          (void *)oci_spec->mounts, oci_spec->mounts_len * sizeof(char *)) != 0) {
         ERROR("Out of memory");
@@ -2782,10 +2784,10 @@ int spec_add_mount(oci_runtime_spec *oci_spec, defs_mount *mnt)
     }
     oci_spec->mounts[oci_spec->mounts_len] = mnt;
     oci_spec->mounts_len++;
- 
+
     return 0;
 }
- 
+
 #define SPEC_ADD_HOOKS_ITEM_DEF(hooktype)                                                                                   \
     int spec_add_##hooktype##_hook(oci_runtime_spec *oci_spec, defs_hook *hooktype##_hook)                                  \
     {                                                                                                                       \
@@ -2806,9 +2808,9 @@ int spec_add_mount(oci_runtime_spec *oci_spec, defs_mount *mnt)
         oci_spec->hooks->hooktype##_len++;                                                                                  \
         return 0;                                                                                                           \
     }
- 
-/* 
-* The OCI being used by the iSulad not supportes 
+
+/*
+* The OCI being used by the iSulad not supportes
 * createRuntime/createContainer/startContainer currently.
 */
 SPEC_ADD_HOOKS_ITEM_DEF(prestart)

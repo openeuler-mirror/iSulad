@@ -932,7 +932,8 @@ inline static int request_pack_host_device_cgroup_rules(const struct client_argu
 
 inline static int request_pack_host_blockio(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
-    return (request_pack_host_weight_devices(args, hostconfig) != 0 || request_pack_host_device_read_bps(args, hostconfig) != 0 ||
+    return (request_pack_host_weight_devices(args, hostconfig) != 0 ||
+            request_pack_host_device_read_bps(args, hostconfig) != 0 ||
             request_pack_host_device_write_bps(args, hostconfig) != 0 ||
             request_pack_host_device_read_iops(args, hostconfig) != 0 ||
             request_pack_host_device_write_iops(args, hostconfig) != 0);

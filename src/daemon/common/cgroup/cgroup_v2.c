@@ -387,7 +387,7 @@ static int get_cgroup_info_v2(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpu
     if (ret != 0) {
         return ret;
     }
-    
+
     get_cgroup_v2_pids_info(quiet, pidsinfo);
     get_cgroup_v2_files_info(quiet, filesinfo);
 
@@ -433,7 +433,7 @@ static bool oom_cb_cgroup_v2(int fd, void *cbdata)
         return CGROUP_OOM_HANDLE_CLOSE;
     }
 
-    if (((struct inotify_event *)events)->mask & ( IN_DELETE | IN_DELETE_SELF)) {
+    if (((struct inotify_event *)events)->mask & (IN_DELETE | IN_DELETE_SELF)) {
         return CGROUP_OOM_HANDLE_CLOSE;
     }
 
@@ -450,7 +450,7 @@ static bool oom_cb_cgroup_v2(int fd, void *cbdata)
         int count;
         const char *oom_str = "oom ";
         const char *oom_kill_str = "oom_kill ";
-        const int oom_len = strlen(oom_str), oom_kill_len = strlen(oom_kill_str);
+        const size_t oom_len = strlen(oom_str), oom_kill_len = strlen(oom_kill_str);
 
         if (read >= oom_kill_len + 2 && memcmp(line, oom_kill_str, oom_kill_len) == 0) {
             len = oom_kill_len;
@@ -492,7 +492,8 @@ static char *get_real_cgroup_path_v2(const char *cgroup_path)
     return util_path_join(CGROUP_MOUNTPOINT, converted_cgroup_path);
 }
 
-cgroup_oom_handler_info_t *get_cgroup_oom_handler_v2(int fd, const char *name, const char *cgroup_path, const char *exit_fifo)
+cgroup_oom_handler_info_t *get_cgroup_oom_handler_v2(int fd, const char *name, const char *cgroup_path,
+                                                     const char *exit_fifo)
 {
     __isula_auto_free char *real_cgroup_path = NULL;
     if (name == NULL || cgroup_path == NULL || exit_fifo == NULL) {

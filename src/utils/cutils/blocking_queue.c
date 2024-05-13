@@ -97,7 +97,8 @@ int blocking_queue_push(blocking_queue *queue, void *data)
     return 0;
 }
 
-int blocking_queue_pop(blocking_queue *queue, void **data) {
+int blocking_queue_pop(blocking_queue *queue, void **data)
+{
     if (queue == NULL || data == NULL) {
         ERROR("Invalid NULL arguments");
         return -1;

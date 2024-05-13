@@ -307,7 +307,8 @@ static int oom_handle_cb(int fd, uint32_t events, void *cbdata, struct epoll_des
 }
 
 /* supervisor add exit monitor */
-int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const pid_ppid_info_t *pid_info, const container_t *cont)
+int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const pid_ppid_info_t *pid_info,
+                                          const container_t *cont)
 {
     int ret = 0;
     struct supervisor_handler_data *data = NULL;

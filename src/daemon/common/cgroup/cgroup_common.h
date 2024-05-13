@@ -130,9 +130,9 @@ typedef struct _cgroup_oom_handler_info_t {
 typedef struct {
     int (*get_cgroup_version)(void);
     int (*get_cgroup_info)(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
-                            cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
-                            cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                            cgroup_files_info_t *filesinfo, bool quiet);
+                           cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
+                           cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
+                           cgroup_files_info_t *filesinfo, bool quiet);
     int (*get_cgroup_metrics)(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics);
 
     int (*get_cgroup_mnt_and_root_path)(const char *subsystem, char **mountpoint, char **root);
@@ -140,7 +140,8 @@ typedef struct {
     char *(*get_init_cgroup_path)(const char *subsystem);
     char *(*get_own_cgroup_path)(const char *subsystem);
 
-    cgroup_oom_handler_info_t *(*get_cgroup_oom_handler)(int fd, const char *name, const char *cgroup_path, const char *exit_fifo);
+    cgroup_oom_handler_info_t *(*get_cgroup_oom_handler)(int fd, const char *name, const char *cgroup_path,
+                                                         const char *exit_fifo);
 } cgroup_ops;
 
 #ifdef __cplusplus

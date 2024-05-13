@@ -772,7 +772,8 @@ static void get_cgroup_v1_blkio_info(const cgroup_layer_t *layers, const bool qu
     blkioinfo->blkio_write_iops_device = check_cgroup_v1_file_exists(mountpoint, BLKIO_WRITE_IOPS, quiet);
 }
 
-static void get_cgroup_v1_hugetlb_info(const cgroup_layer_t *layers, const bool quiet, cgroup_hugetlb_info_t *hugetlbinfo)
+static void get_cgroup_v1_hugetlb_info(const cgroup_layer_t *layers, const bool quiet,
+                                       cgroup_hugetlb_info_t *hugetlbinfo)
 {
     int nret;
     char *mountpoint = NULL;
@@ -1038,8 +1039,8 @@ static char *common_get_cgroup_path(const char *path, const char *subsystem)
 
     for (i = 0; i < util_array_len((const char **)nlist); i++) {
         const char *prefix = "name=";
-        bool find_sub = (strcmp(nlist[i], subsystem) == 0 || (strncmp(nlist[i], prefix, strlen(prefix)) == 0
-                        && strcmp(nlist[i]+strlen(prefix), subsystem) == 0));
+        bool find_sub = (strcmp(nlist[i], subsystem) == 0 || (strncmp(nlist[i], prefix, strlen(prefix)) == 0 &&
+                                                              strcmp(nlist[i] + strlen(prefix), subsystem) == 0));
         if (find_sub) {
             res = util_strdup_s(plist[i]);
             break;
@@ -1135,7 +1136,8 @@ static char *get_memory_cgroup_path_v1(const char *cgroup_path)
     return util_path_join(fpath, converted_cgroup_path);
 }
 
-static cgroup_oom_handler_info_t *get_cgroup_oom_handler_v1(int fd, const char *name, const char *cgroup_path, const char *exit_fifo)
+static cgroup_oom_handler_info_t *get_cgroup_oom_handler_v1(int fd, const char *name, const char *cgroup_path,
+                                                            const char *exit_fifo)
 {
     __isula_auto_free char *memory_cgroup_path = NULL;
     __isula_auto_free char *memory_cgroup_oom_control_path = NULL;

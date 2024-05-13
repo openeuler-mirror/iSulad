@@ -20,7 +20,8 @@
 #include "utils.h"
 
 // Once the create succeeds, the ownership is transferred to the mailbox_message.
-mailbox_message *mailbox_message_create(void *data, void (*destroy)(void *)) {
+mailbox_message *mailbox_message_create(void *data, void (*destroy)(void *))
+{
     __isula_auto_free mailbox_message *msg = NULL;
     msg = util_common_calloc_s(sizeof(mailbox_message));
     if (msg == NULL) {
@@ -40,7 +41,8 @@ mailbox_message *mailbox_message_create(void *data, void (*destroy)(void *)) {
     return isula_transfer_ptr(msg);
 }
 
-int mailbox_message_ref(mailbox_message *dest) {
+int mailbox_message_ref(mailbox_message *dest)
+{
     __isula_auto_pm_unlock pthread_mutex_t *lock = NULL;
     if (dest == NULL) {
         ERROR("Invalid mailbox_message");
@@ -63,7 +65,8 @@ int mailbox_message_ref(mailbox_message *dest) {
     return 0;
 }
 
-void mailbox_message_unref(mailbox_message *dest) {
+void mailbox_message_unref(mailbox_message *dest)
+{
     __isula_auto_pm_unlock pthread_mutex_t *lock = NULL;
     if (dest == NULL) {
         return;

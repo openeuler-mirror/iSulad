@@ -179,7 +179,7 @@ static int cdi_refresh(struct cdi_cache *c)
 {
     bool refreshed;
     int ret = 0;
-    
+
     if (c == NULL) {
         ERROR("Invalid arguments");
         return -1;
@@ -206,10 +206,10 @@ static void map_cdi_cache_specs_kvfree(void *key, void *value)
 static void map_cdi_cache_device_kvfree(void *key, void *value)
 {
     free(key);
-    /* 
+    /*
      * map_cdi_cache_device_kvfree should not be recursively free cdi_cache_device.
      * Otherwise, the function conflicts with the cdi_cache_specs free devices,
-     * triggering double free. 
+     * triggering double free.
      */
     (void)value;
 }
@@ -249,8 +249,8 @@ static bool resolve_conflict(struct cdi_scan_fn_maps *scan_fn_maps, const char *
     return true;
 }
 
-static void refresh_scan_spec_func(struct cdi_scan_fn_maps *scan_fn_maps, const char *path, 
-                                    int priority, struct cdi_cache_spec *spec)
+static void refresh_scan_spec_func(struct cdi_scan_fn_maps *scan_fn_maps, const char *path,
+                                   int priority, struct cdi_cache_spec *spec)
 {
     map_t *specs = scan_fn_maps->specs;
     map_t *devices = scan_fn_maps->devices;
@@ -375,7 +375,7 @@ static int refresh(struct cdi_cache *c)
     util_swap_ptr((void **)&c->devices, (void **)&devices);
 
     ret = c->refresh_error_flag ? -1 : 0;
-    
+
 free_out:
     map_itor_free(itor);
     map_free(specs);
@@ -443,7 +443,7 @@ static int cdi_inject_devices(struct cdi_cache *c, oci_runtime_spec *oci_spec, s
 
     (void)refresh_if_required(c, false, &ret);
 
-    for(i = 0; i < devices->len; i++) {
+    for (i = 0; i < devices->len; i++) {
         device = devices->items[i];
         d = map_search(c->devices, (void *)device);
         if (d == NULL) {
@@ -524,7 +524,7 @@ static int init_tracked(struct cdi_watch *w, string_array *dirs)
         ERROR("Out of memory");
         return -1;
     }
-    for(i = 0; i < dirs->len; i++) {
+    for (i = 0; i < dirs->len; i++) {
         if (!map_replace(w->tracked, (void *)dirs->items[i], (void *)&tmp_value)) {
             ERROR("Failed to insert tracked by dir %s", dirs->items[i]);
             goto error_out;
@@ -624,7 +624,7 @@ static int process_cdi_events(int watcher_fd, struct cdi_cache *c)
     }
 
     (void)pthread_mutex_lock(&c->mutex);
-    
+
     while (events_index < events_length) {
         cdi_event = (struct inotify_event *)(&buffer[events_index]);
         ssize_t event_size = (ssize_t)(cdi_event->len) + (ssize_t)offsetof(struct inotify_event, name);
@@ -633,8 +633,8 @@ static int process_cdi_events(int watcher_fd, struct cdi_cache *c)
         }
         events_index += event_size;
 
-        /*  
-         *  file: 
+        /*
+         *  file:
          *      Rename:  mask == IN_MOVED_TO | IN_MOVED_FROM
          *      Remove:  mask == IN_MOVED_FROM || mask == IN_DELETE
          *      Write:   mask == IN_MODIFY

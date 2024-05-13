@@ -125,7 +125,8 @@ void CRIRuntimeServiceImpl::RemovePodSandbox(const std::string &podSandboxID, Er
     m_podSandboxManager->RemovePodSandbox(podSandboxID, error);
 }
 
-void CRIRuntimeServiceImpl::PodSandboxStatus(const std::string &podSandboxID, runtime::v1::PodSandboxStatusResponse *reply, Errors &error)
+void CRIRuntimeServiceImpl::PodSandboxStatus(const std::string &podSandboxID,
+                                             runtime::v1::PodSandboxStatusResponse *reply, Errors &error)
 {
     m_podSandboxManager->PodSandboxStatus(podSandboxID, reply, error);
 }

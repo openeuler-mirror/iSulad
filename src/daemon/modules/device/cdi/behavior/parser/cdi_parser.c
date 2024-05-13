@@ -47,7 +47,7 @@ char *cdi_parser_qualified_name(const char *vendor, const char *class, const cha
     }
 
     nret = snprintf(device_name, sizeof(device_name), "%s/%s=%s",
-                        vendor, class, name);
+                    vendor, class, name);
     if (nret < 0 || (size_t)nret >= sizeof(device_name)) {
         ERROR("Device name is too long");
         return NULL;
@@ -118,7 +118,7 @@ int cdi_parser_parse_device(const char *device, char **vendor, char **class, cha
 {
     __isula_auto_array_t char **parts = NULL;
 
-    if (vendor == NULL || class == NULL || name == NULL || 
+    if (vendor == NULL || class == NULL || name == NULL ||
         device == NULL || device[0] == '/') {
         ERROR("Invalid argument");
         return -1;
@@ -214,7 +214,7 @@ int cdi_parser_validate_class_name(const char *class)
 int cdi_parser_validate_device_name(const char *name)
 {
     size_t i;
-    
+
     if (name == NULL) {
         ERROR("Invalid (empty) device name");
         return -1;

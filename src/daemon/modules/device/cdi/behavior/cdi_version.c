@@ -177,7 +177,7 @@ const char *cdi_minimum_required_version(cdi_spec *spec)
 bool cdi_is_valid_version(const char *spec_version)
 {
     int i;
-    
+
     for (i = 0; i < VALID_SPEC_VERSIONS_LEN; i++) {
         if (strcmp(g_valid_spec_versions[i].version, spec_version) == 0) {
             return true;

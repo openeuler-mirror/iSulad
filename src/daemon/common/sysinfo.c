@@ -384,8 +384,8 @@ sysinfo_t *get_sys_info(bool quiet)
     sysinfo->ncpus_conf = get_nprocs_conf();
 
     ret = common_get_cgroup_info(&sysinfo->cgmeminfo, &sysinfo->cgcpuinfo, &sysinfo->hugetlbinfo,
-                                        &sysinfo->blkioinfo, &sysinfo->cpusetinfo, &sysinfo->pidsinfo,
-                                        &sysinfo->filesinfo, quiet);
+                                 &sysinfo->blkioinfo, &sysinfo->cpusetinfo, &sysinfo->pidsinfo,
+                                 &sysinfo->filesinfo, quiet);
     if (ret != 0) {
         goto out;
     }

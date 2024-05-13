@@ -36,7 +36,7 @@ struct cni_args {
 void free_cni_args(struct cni_args *cargs);
 
 int exec_plugin_with_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs,
-                            struct cni_opt_result **ret);
+                            struct cni_opt_result **result);
 
 int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs);
 

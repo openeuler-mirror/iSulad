@@ -27,8 +27,8 @@
 #include "utils_array.h"
 #include "specs_api.h"
 
-/* 
- * The OCI being used by the iSulad not supportes 
+/*
+ * The OCI being used by the iSulad not supportes
  * createRuntime/createContainer/startContainer currently.
  */
 // PRESTART_HOOK is the name of the OCI "prestart" hook.
@@ -105,8 +105,8 @@ static int fill_device_node_info(cdi_device_node *d)
         dev_type = NULL;
     } else {
         if (strcmp(d->type, dev_type) != 0) {
-            ERROR("CDI device (%s, %s), host type mismatch (%s, %s)", 
-                d->path, d->host_path, d->type, dev_type);
+            ERROR("CDI device (%s, %s), host type mismatch (%s, %s)",
+                  d->path, d->host_path, d->type, dev_type);
             return -1;
         }
     }
@@ -168,7 +168,7 @@ static cdi_hook *clone_cdi_hook(cdi_hook *h)
         hook->env_len = h->env_len;
     }
     hook->timeout = h->timeout;
-   
+
     return hook;
 
 error_out:
@@ -280,7 +280,7 @@ static defs_device *cdi_device_node_to_oci(cdi_device_node *d)
     oci_device->file_mode = d->file_mode;
     oci_device->uid = d->uid;
     oci_device->gid = d->gid;
-    
+
     return oci_device;
 }
 
@@ -331,7 +331,7 @@ static int apply_cdi_device_nodes(cdi_container_edits *e, oci_runtime_spec *spec
                 access = "rwm";
             }
             if (spec_add_linux_resources_device(spec, true, dev->type,
-                dev->major, dev->minor, access)) {
+                                                dev->major, dev->minor, access)) {
                 dev = NULL;
                 goto error_out;
             }
@@ -391,9 +391,9 @@ static int apply_cdi_mounts(cdi_container_edits *e, oci_runtime_spec *spec)
             return -1;
         }
     }
-        
+
     qsort(spec->mounts, spec->mounts_len,
-              sizeof(defs_mount *), (int (*)(const void *, const void *))defs_mount_cmp);
+          sizeof(defs_mount *), (int (*)(const void *, const void *))defs_mount_cmp);
     return 0;
 }
 
@@ -411,8 +411,8 @@ static int apply_cdi_hooks(cdi_container_edits *e, oci_runtime_spec *spec)
         } else if (strcmp(e->hooks[i]->hook_name, POSTSTOP_HOOK)) {
             ret = spec_add_poststop_hook(spec, oci_hook);
         } else {
-            /* 
-            * The OCI being used by the iSulad not supportes 
+            /*
+            * The OCI being used by the iSulad not supportes
             * createRuntime/createContainer/startContainer currently.
             */
             ERROR("Unknown hook name %s", e->hooks[i]->hook_name);
@@ -503,19 +503,19 @@ int cdi_container_edits_validate(cdi_container_edits *e)
     static int append_##item(cdi_container_edits *e, cdi_container_edits *o, clone_common_array_item_cb cb) \
     {                                                                                                   \
         common_array e_array = {                                                                        \
-            .items = (void **)e->item,                                                                  \
-            .len = e->item##_len,                                                                       \
-            .cap = e->item##_len,                                                                       \
-            .free_item_cb = NULL,                                                                       \
-            .clone_item_cb = cb                                                                         \
-        };                                                                                              \
+                                                                                                        .items = (void **)e->item,                                                                  \
+                                                                                                        .len = e->item##_len,                                                                       \
+                                                                                                        .cap = e->item##_len,                                                                       \
+                                                                                                        .free_item_cb = NULL,                                                                       \
+                                                                                                        .clone_item_cb = cb                                                                         \
+                               };                                                                                              \
         common_array o_array = {                                                                        \
-            .items = (void **)o->item,                                                                  \
-            .len = o->item##_len,                                                                       \
-            .cap = o->item##_len,                                                                       \
-            .free_item_cb = NULL,                                                                       \
-            .clone_item_cb = cb                                                                         \
-        };                                                                                              \
+                                                                                                        .items = (void **)o->item,                                                                  \
+                                                                                                        .len = o->item##_len,                                                                       \
+                                                                                                        .cap = o->item##_len,                                                                       \
+                                                                                                        .free_item_cb = NULL,                                                                       \
+                                                                                                        .clone_item_cb = cb                                                                         \
+                               };                                                                                              \
         if (util_merge_common_array(&e_array, &o_array) != 0) {                                         \
             ERROR("Out of memory");                                                                     \
             return -1;                                                                                  \

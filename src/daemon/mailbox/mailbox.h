@@ -64,7 +64,7 @@ typedef struct {
     cri_container_message_type type;
 } cri_container_message_t;
 
-int mailbox_register_topic_handler(mailbox_topic topic, message_generator_t handle, void *context,
+int mailbox_register_topic_handler(mailbox_topic topic, message_generator_t generator, void *context,
                                    message_release_t release, bool async);
 
 void mailbox_unregister_topic_handler(mailbox_topic topic);
@@ -73,7 +73,7 @@ void mailbox_publish(mailbox_topic topic, void *data);
 
 message_subscriber *mailbox_subscribe(mailbox_topic topic);
 
-void mailbox_unsubscribe(mailbox_topic, message_subscriber *sub);
+void mailbox_unsubscribe(mailbox_topic topic, message_subscriber *sub);
 
 #ifdef __cplusplus
 }

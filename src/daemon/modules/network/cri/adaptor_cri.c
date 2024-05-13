@@ -71,7 +71,7 @@ int adaptor_cni_update_confs()
     size_t tmp_net_list_len = 0;
     size_t i;
     char message[MAX_BUFFER_SIZE] = { 0 };
-    int pos = 0;
+    size_t pos = 0;
 
     work = map_new(MAP_STR_INT, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
     if (work == NULL) {

@@ -37,7 +37,7 @@ struct cdi_cache_spec {
 };
 
 #define CDI_DEFAULT_SPEC_EXT ".json"
- 
+
 void free_cdi_cache_spec(struct cdi_cache_spec *s);
 
 struct cdi_cache_spec *cdi_spec_read_spec(const char *path, int priority);

@@ -2871,7 +2871,7 @@ static inline int set_host_ipc_shm_path(container_config_v2_common_config *v2_sp
  * 1. The user defined /dev/shm in mounts, which takes the first priority
  * 2. If sharable is set in ipc mode (or by default ipc_mode is null), the container provides shm path,
  *    in the case of sandbox API is used, the sandbox module has already provided shm path
- * 3. Use the connected container's shm path if ipc_mode is set to container:<cid>, 
+ * 3. Use the connected container's shm path if ipc_mode is set to container:<cid>,
  *    if connected containerd is a sandbox, use the sandbox's shm path
  * 4. Use /dev/shm if ipc_mode is set to host
  */
@@ -3613,7 +3613,7 @@ int inject_CDI_devcies_for_oci_spec(oci_runtime_spec *oci_spec, host_config *hos
     int ret = 0;
     string_array devices_array = { 0 };
     __isula_auto_free char *error = NULL;
-    
+
     if (oci_spec == NULL || hostconfig == NULL) {
         ERROR("Invalid params");
         return -1;

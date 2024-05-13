@@ -35,7 +35,7 @@ typedef struct progress {
 
 bool progress_status_map_udpate(progress_status_map *progress_status_map, char *key, int64_t current, int64_t total);
 
-progress_status_map *progress_status_map_new();
+progress_status_map *progress_status_map_new(void);
 
 size_t progress_status_map_size(progress_status_map *progress_status_map);
 

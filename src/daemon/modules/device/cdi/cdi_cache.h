@@ -34,7 +34,7 @@ struct cdi_cache_ops {
     // injecting CDI devices into an OCI Spec.
     // Resolver
     int (*inject_devices)(struct cdi_cache *c, oci_runtime_spec *spec, string_array *devices);
-    
+
     // refreshing the cache of CDI Specs and devices.
     // Refresher
     int (*configure)(struct cdi_cache *c, string_array *spec_dirs);
@@ -55,12 +55,12 @@ struct cdi_cache {
     // This map holding the reference to cdi device, the devices will not released when the map is freed.
     map_t *devices;      // MAP_STR_PTR     devices[cdi_device.name] = cdi_cache_device*
     bool refresh_error_flag;
-    bool auto_refresh; 
+    bool auto_refresh;
     struct cdi_watch *watch;
 };
 
 void free_cdi_cache(struct cdi_cache *c);
- 
+
 struct cdi_cache *cdi_new_cache(string_array *spec_dirs);
 struct cdi_cache_ops *cdi_get_cache_ops(void);
 
