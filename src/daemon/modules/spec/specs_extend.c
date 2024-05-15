@@ -195,17 +195,18 @@ static int generate_env_map_from_file(FILE *fp, json_map_string_string *env_map)
     char *value = NULL;
     char *pline = NULL;
     size_t length = 0;
-    char *saveptr = NULL;
     char empty_str[1] = {'\0'};
 
     while (getline(&pline, &length, fp) != -1) {
         util_trim_newline(pline);
         pline = util_trim_space(pline);
-        if (pline == NULL || pline[0] == '#') {
+        // if pline is invalid as =value, strtok_r will return value as key
+        // check if pline[0] == '=' to avoid this case
+        if (pline == NULL || pline[0] == '#' || pline[0] == '=') {
             continue;
         }
-        key = strtok_r(pline, "=", &saveptr);
-        value = strtok_r(NULL, "=", &saveptr);
+        // in case of key=value=value, value should be value=value
+        key = strtok_r(pline, "=", &value);
         // value of an env varible is allowed to be empty
         value = value ? value : empty_str;
         if (key != NULL) {
@@ -302,7 +303,9 @@ static int check_env_need_append(const oci_runtime_spec *oci_spec, const char *e
         tmp_env = util_strdup_s(oci_spec->process->env[i]);
         key = strtok_r(tmp_env, "=", &saveptr);
         // value of an env varible is allowed to be empty
-        if (key == NULL) {
+        // if tmp_env is invalid as =value, strtok_r will return value as key
+        // check if tmp_env[0] == '=' to avoid this case
+        if (key == NULL || tmp_env[0] == '=') {
             ERROR("Bad env format");
             free(tmp_env);
             tmp_env = NULL;
