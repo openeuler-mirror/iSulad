@@ -224,7 +224,7 @@ $ sudo isula rm test
 `iSulad` 能够兼容的标准规范版本如下：
 
 - 兼容 1.0.0 版本的OCI
-- 兼容 0.3.0 版本以上的CNI
+- 兼容 0.3.0-1.0.0 版本的CNI，iSulad从2.1.4版本后支持 CNI 1.0.0版本
 - 兼容 2.1.x 版本以上的lcr
 
 ## Kubernetes Support

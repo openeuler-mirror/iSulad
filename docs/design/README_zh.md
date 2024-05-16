@@ -49,6 +49,8 @@
 
 - 查看 cni operator 模块的设计文档： [cni_operator_design](./detailed/Network/cni_operator_design_zh.md) 。
 
+- 查看 cni operator 模块升级到CNI v1.0.0的设计文档： [cni_1.0.0_change](./detailed/Network/cni_1.0.0_change.md) 。
+
 - 查看 CRI adapter 模块的设计文档： [CRI_adapter_design](./detailed/Network/CRI_adapter_design_zh.md) 。
 
 - 查看 native network adapter 模块的设计文档： [native_network_adapter_design](./detailed/Network/native_network_adapter_design_zh.md) 。
