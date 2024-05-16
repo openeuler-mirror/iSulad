@@ -43,6 +43,8 @@ This section contains some design documents for users who want to learn more abo
 
 - You can see how the cni operator modules are designed in [cni_operator_design](./detailed/Network/cni_operator_design.md).
 
+- You can see how the cni operator modules update to CNI v1.0.0 in [cni_1.0.0_change](./detailed/Network/cni_1.0.0_change.md)。
+
 - You can see how the CRI adapter modules are designed in [CRI_adapter_design](./detailed/Network/CRI_adapter_design.md).
 
 - You can see how the native network adapter modules are designed in [native_network_adapter_design](./detailed/Network/native_network_adapter_design.md).

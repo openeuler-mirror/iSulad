@@ -228,7 +228,7 @@ Using [ptcr](https://gitee.com/openeuler/ptcr) as a performance test tool , it s
 The standard specification versions that `iSulad` is compatible with are as follows:
 
 - Compatible with OCI 1.0.0.
-- Compatible with CNI 0.3.0 and above.
+- Compatible with CNI 0.3.0 - 1.0.0, iSulad supports CNI 1.0.0 from 2.1.4 version.
 - Compatible with lcr 2.1.x and above.
 
 ## Kubernetes Support
