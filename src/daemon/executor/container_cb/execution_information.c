@@ -1149,7 +1149,9 @@ static int container_rename(container_t *cont, const char *new_name)
 
     if (!id_name_manager_rename(new_name, old_name)) {
         ERROR("Failed to rename %s to %s in id-name manager", old_name, new_name);
-        isulad_set_error_message("Failed to rename %s to %s in id-name manager", old_name, new_name);
+        isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
+                                 "You have to remove (or rename) that container to be able to reuse that name.",
+                                 new_name, new_name);
         ret = -1;
         goto out;
     }

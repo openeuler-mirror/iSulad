@@ -242,7 +242,7 @@ static bool try_add_name(const char *name)
     }
 
     if (!util_valid_container_name(name)) {
-        ERROR("Failed to add invalid name: %s", name);
+        ERROR("Invalid container name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-]+$ are allowed.", name);
         return false;
     }
 
@@ -262,7 +262,7 @@ static bool try_remove_name(const char *name)
     }
 
     if (!util_valid_container_name(name)) {
-        ERROR("Failed to remove invalid name: %s", name);
+        ERROR("Invalid container name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-]+$ are allowed.", name);
         return false;
     }
 
