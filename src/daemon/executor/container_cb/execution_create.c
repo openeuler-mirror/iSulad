@@ -761,8 +761,17 @@ static int maintain_container_id(const container_create_request *request, char *
 #endif
 
     if (!nret) {
-        ERROR("Failed to add entry to id name manager with new id and name");
-        isulad_set_error_message("Failed to add entry to id name manager with new id and name");
+        __isula_auto_free char *used_id = NULL;
+        used_id = container_name_index_get(name);
+        if(used_id != NULL) {
+            ERROR("Name %s is in use by container %s", name, used_id);
+            isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
+                                    "You have to remove (or rename) that container to be able to reuse that name.",
+                                    name, used_id);
+        } else {
+            ERROR("Failed to add entry to id name manager with new id and name");
+            isulad_set_error_message("Failed to add entry to id name manager with new id and name");
+        }
         ret = -1;
         goto out;
     }
@@ -775,18 +784,13 @@ static int maintain_container_id(const container_create_request *request, char *
         goto out;
     }
 
-    char *used_id = NULL;
-    used_id = container_name_index_get(name);
-    ERROR("Name %s is in use by container %s", name, used_id);
-    isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
-                             "You have to remove (or rename) that container to be able to reuse that name.",
-                             name, used_id);
-    free(used_id);
-    used_id = NULL;
-    ret = -1;
     if (!skip_id_name_manage && !id_name_manager_remove_entry(id, name)) {
         WARN("Failed to remove %s and %s from id name manager", id, name);
     }
+
+    ERROR("Failed to add %s to container name index", name);
+    isulad_set_error_message("Failed to add %s to container name index", name);
+    ret = -1;
 
 out:
     *out_id = id;
