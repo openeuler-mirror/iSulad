@@ -197,6 +197,7 @@ char *common_convert_cgroup_path(const char *cgroup_path)
     return util_strdup_s(result);
 }
 
+#ifdef ENABLE_OOM_MONITOR
 cgroup_oom_handler_info_t *common_get_cgroup_oom_handler(int fd, const char *name, const char *cgroup_path,
                                                          const char *exit_fifo)
 {
@@ -225,3 +226,4 @@ void common_free_cgroup_oom_handler_info(cgroup_oom_handler_info_t *info)
     free(info->cgroup_memory_event_path);
     free(info);
 }
+#endif

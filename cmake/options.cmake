@@ -58,6 +58,13 @@ if (ENABLE_SANDBOXER STREQUAL "ON")
     message("${Green}--  Enable sandbox API${ColourReset}")
 endif()
 
+option(ENABLE_OOM_MONITOR "Enable oom monitor" ON)
+IF (ENABLE_OOM_MONITOR STREQUAL "ON")
+    add_definitions(-DENABLE_OOM_MONITOR)
+    set(ENABLE_OOM_MONITOR 1)
+    message("${Green}--  Enable oom monitor${ColourReset}")
+endif()
+
 option(ENABLE_SYSTEMD_NOTIFY "Enable systemd notify" ON)
 if (ENABLE_SYSTEMD_NOTIFY STREQUAL "ON")
     add_definitions(-DSYSTEMD_NOTIFY)

@@ -517,9 +517,11 @@ void UpdateBaseStatusFromInspect(
         } else { // Case 3
             state = runtime::v1::CONTAINER_CREATED;
         }
+#ifdef ENABLE_OOM_MONITOR
         if (inspect->state->oom_killed == true) {
             reason = "OOMKilled";
         }
+#endif
         if (inspect->state->error != nullptr) {
             message = inspect->state->error;
         }
