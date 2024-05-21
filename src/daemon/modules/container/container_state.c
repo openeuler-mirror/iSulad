@@ -587,7 +587,9 @@ container_inspect_state *container_state_to_inspect_state(container_state_t *s)
     state->running = s->state->running;
     state->paused = s->state->paused;
     state->restarting = s->state->restarting;
+#ifdef ENABLE_OOM_MONITOR
     state->oom_killed = s->state->oom_killed;
+#endif
     state->pid = s->state->pid;
 
     state->exit_code = s->state->exit_code;

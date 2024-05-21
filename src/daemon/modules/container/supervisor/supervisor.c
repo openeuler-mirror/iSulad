@@ -42,8 +42,10 @@
 #ifdef ENABLE_CRI_API_V1
 #include "sandbox_ops.h"
 #endif
+#ifdef ENABLE_OOM_MONITOR
 #include "cgroup.h"
 #include "specs_api.h"
+#endif
 
 pthread_mutex_t g_supervisor_lock = PTHREAD_MUTEX_INITIALIZER;
 struct epoll_descr g_supervisor_descr;
@@ -286,6 +288,7 @@ static int supervisor_exit_cb(int fd, uint32_t events, void *cbdata, struct epol
     return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
+#ifdef ENABLE_OOM_MONITOR
 static int oom_handle_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
 {
     cgroup_oom_handler_info_t *oom_handler_info = (cgroup_oom_handler_info_t *)cbdata;
@@ -305,6 +308,7 @@ static int oom_handle_cb(int fd, uint32_t events, void *cbdata, struct epoll_des
 
     return EPOLL_LOOP_HANDLE_CONTINUE;
 }
+#endif
 
 /* supervisor add exit monitor */
 int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const pid_ppid_info_t *pid_info,
@@ -312,8 +316,10 @@ int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const p
 {
     int ret = 0;
     struct supervisor_handler_data *data = NULL;
+#ifdef ENABLE_OOM_MONITOR
     cgroup_oom_handler_info_t *oom_handler_info = NULL;
     __isula_auto_free char *cgroup_path = NULL;
+#endif
 
     if (fd < 0) {
         ERROR("Invalid exit fifo fd");
@@ -326,12 +332,14 @@ int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const p
         return -1;
     }
 
+#ifdef ENABLE_OOM_MONITOR
     cgroup_path = merge_container_cgroups_path(cont->common_config->id, cont->hostconfig);
     if (cgroup_path == NULL) {
         ERROR("Failed to get cgroup path");
         close(fd);
         return -1;
     }
+#endif
 
     data = util_common_calloc_s(sizeof(struct supervisor_handler_data));
     if (data == NULL) {
@@ -353,9 +361,12 @@ int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const p
     data->pid_info.start_time = pid_info->start_time;
     data->pid_info.ppid = pid_info->ppid;
     data->pid_info.pstart_time = pid_info->pstart_time;
+#ifdef ENABLE_OOM_MONITOR
     oom_handler_info = common_get_cgroup_oom_handler(fd, cont->common_config->id, cgroup_path, exit_fifo);
+#endif
 
     supervisor_handler_lock();
+#ifdef ENABLE_OOM_MONITOR
     if (oom_handler_info != NULL) {
         ret = epoll_loop_add_handler(&g_supervisor_descr, oom_handler_info->oom_event_fd, oom_handle_cb, oom_handler_info);
         if (ret != 0) {
@@ -363,6 +374,7 @@ int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const p
             goto err;
         }
     }
+#endif
 
     ret = epoll_loop_add_handler(&g_supervisor_descr, fd, supervisor_exit_cb, data);
     if (ret != 0) {
@@ -374,7 +386,9 @@ int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const p
 
 err:
     supervisor_handler_data_free(data);
+#ifdef ENABLE_OOM_MONITOR
     common_free_cgroup_oom_handler_info(oom_handler_info);
+#endif
 out:
     supervisor_handler_unlock();
     return ret;

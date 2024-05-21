@@ -20,12 +20,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef ENABLE_OOM_MONITOR
 #include <sys/eventfd.h>
+#endif
 
 #include "utils.h"
 #include "sysinfo.h"
 #include "err_msg.h"
+#ifdef ENABLE_OOM_MONITOR
 #include "events_sender_api.h"
+#endif
 
 #define CGROUP_HUGETLB_LIMIT "hugetlb.%s.limit_in_bytes"
 #define CGROUP_MOUNT_PATH_PREFIX "/sys/fs/cgroup/"
@@ -1052,6 +1056,7 @@ static char *common_get_cgroup_path(const char *path, const char *subsystem)
     return res;
 }
 
+#ifdef ENABLE_OOM_MONITOR
 static bool oom_cb_cgroup_v1(int fd, void *cbdata)
 {
     cgroup_oom_handler_info_t *info = (cgroup_oom_handler_info_t *)cbdata;
@@ -1205,6 +1210,7 @@ cleanup:
     common_free_cgroup_oom_handler_info(info);
     return NULL;
 }
+#endif
 
 char *get_init_cgroup_path_v1(const char *subsystem)
 {
@@ -1232,6 +1238,8 @@ int cgroup_v1_ops_init(cgroup_ops *ops)
     ops->get_cgroup_mnt_and_root_path = get_cgroup_mnt_and_root_path_v1;
     ops->get_init_cgroup_path = get_init_cgroup_path_v1;
     ops->get_own_cgroup_path = get_own_cgroup_v1;
+#ifdef ENABLE_OOM_MONITOR
     ops->get_cgroup_oom_handler = get_cgroup_oom_handler_v1;
+#endif
     return 0;
 }

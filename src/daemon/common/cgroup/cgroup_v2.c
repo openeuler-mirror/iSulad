@@ -17,14 +17,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#ifdef ENABLE_OOM_MONITOR
 #include <sys/inotify.h>
+#endif
 
 #include <isula_libutils/auto_cleanup.h>
 
 #include "utils.h"
 #include "path.h"
 #include "sysinfo.h"
+#ifdef ENABLE_OOM_MONITOR
 #include "events_sender_api.h"
+#endif
 
 // Cgroup V2 Item Definition
 #define CGROUP2_CPU_WEIGHT "cpu.weight"
@@ -416,6 +420,7 @@ static int get_cgroup_mnt_and_root_v2(const char *subsystem, char **mountpoint, 
     return 0;
 }
 
+#ifdef ENABLE_OOM_MONITOR
 static bool oom_cb_cgroup_v2(int fd, void *cbdata)
 {
     const size_t events_size = sizeof(struct inotify_event) + NAME_MAX + 1;
@@ -547,6 +552,7 @@ cleanup:
     common_free_cgroup_oom_handler_info(info);
     return NULL;
 }
+#endif
 
 int get_cgroup_version_v2()
 {
@@ -562,6 +568,8 @@ int cgroup_v2_ops_init(cgroup_ops *ops)
     ops->get_cgroup_info = get_cgroup_info_v2;
     ops->get_cgroup_metrics = get_cgroup_metrics_v2;
     ops->get_cgroup_mnt_and_root_path = get_cgroup_mnt_and_root_v2;
+#ifdef ENABLE_OOM_MONITOR
     ops->get_cgroup_oom_handler = get_cgroup_oom_handler_v2;
+#endif
     return 0;
 }
