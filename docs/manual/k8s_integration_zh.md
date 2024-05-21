@@ -20,6 +20,15 @@
 
    如果`hosts`没有配置，默认的`endpoint`为``unix:///var/run/isulad.sock``
 
+   `iSulad`同时支持`CRI V1alpha2`和`CRI V1`两种`CRI`接口，默认使用`CRI V1alph2`，若需使用`CRI V1`，
+   需要在`/etc/isulad/daemon.json`对`iSulad`进行相关配置，配置方式为：
+
+   ```json
+       "enable-cri-v1": true,
+   ```
+
+   若使用源码编译`iSulad`，还需在编译时增加cmake编译选项`-D ENABLE_CRI_API_V1=ON`。
+
 2. 重启`isulad`
 
    ```bash

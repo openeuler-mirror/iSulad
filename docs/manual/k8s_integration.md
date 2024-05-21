@@ -20,6 +20,15 @@
 
    if `hosts` is not configured, the default endpoint is `unix:///var/run/isulad.sock`.
 
+   `iSulad` supports both `CRI V1alpha2` and `CRI V1`, and uses `CRI V1alph2` by default.
+   If `CRI V1` is required, it can be configured in `/etc/isulad/daemon.json` to enable `CRI V1`:
+
+   ```json
+       "enable-cri-v1": true,
+   ```
+
+   If `iSulad` is compiled from source codes, `-D ENABLE_CRI_API_V1=ON` option is required in cmake.
+
 2. Restart `isulad`:
 
    ```bash
