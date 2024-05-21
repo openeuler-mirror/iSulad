@@ -28,21 +28,21 @@ void free_cdi_cache_device(struct cdi_cache_device *d)
     if (d == NULL) {
         return;
     }
- 
-    /* 
+
+    /*
      * free_cdi_cache_device should not be recursively free raw_device.
      * Otherwise, the function conflicts with the raw_spec free raw_device
-     * when cdi_cache_spec free raw_spec, triggering double free. 
+     * when cdi_cache_spec free raw_spec, triggering double free.
      */
     d->raw_device = NULL;
- 
-    /* 
+
+    /*
      * free_cdi_cache_device should not be recursively free cache_spec.
      * Otherwise, the function conflicts with the cache free specs,
-     * triggering double free. 
+     * triggering double free.
      */
     d->cache_spec = NULL;
- 
+
     free(d);
 }
 
@@ -86,7 +86,7 @@ char *cdi_device_get_qualified_name(const struct cdi_cache_device *d)
         return NULL;
     }
     return cdi_parser_qualified_name(cdi_spec_get_vendor(d->cache_spec),
-        cdi_spec_get_class(d->cache_spec), d->raw_device->name);
+                                     cdi_spec_get_class(d->cache_spec), d->raw_device->name);
 }
 
 cdi_container_edits *cdi_device_get_edits(const struct cdi_cache_device *d)

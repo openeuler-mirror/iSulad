@@ -623,7 +623,8 @@ out:
     return ret;
 }
 
-static void transform_stats_info_from_runtime(shim_client_runtime_stats *stats, struct runtime_container_resources_stats_info *info)
+static void transform_stats_info_from_runtime(shim_client_runtime_stats *stats,
+                                              struct runtime_container_resources_stats_info *info)
 {
     size_t i;
     if (stats == NULL || stats->data == NULL) {
@@ -887,7 +888,7 @@ static int shim_create(shim_create_args *args)
 
     if (get_engine_routine_log_info(&engine_log_path, &log_level) != 0) {
         ERROR("failed to get engine log path");
-        return -1; 
+        return -1;
     }
 
     nret = snprintf(fpid, sizeof(fpid), "%s/shim-pid", args->workdir);
@@ -938,7 +939,7 @@ static int shim_create(shim_create_args *args)
         //prevent the child process from having the same standard streams as the parent process
         if (isula_null_stdfds() != 0) {
             (void)dprintf(exec_err_pipe[1], "failed to set std console to /dev/null");
-            exit(EXIT_FAILURE);           
+            exit(EXIT_FAILURE);
         }
 
         if (args->fg) {
@@ -1054,7 +1055,7 @@ out:
     close(shim_stdout_pipe[0]);
     if (ret != 0) {
         show_shim_errlog(shim_stderr_pipe[0]);
-        // Since users are more concerned about runtime error information, 
+        // Since users are more concerned about runtime error information,
         // the runtime log will overwrite the shim log if it exists.
         show_runtime_errlog(args->workdir);
         if (args->timeout != NULL) {

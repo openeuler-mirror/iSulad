@@ -1015,7 +1015,8 @@ cleanup:
     return contStats;
 }
 
-std::unique_ptr<runtime::v1::ContainerStatus> ContainerManagerService::ContainerStatus(const std::string &containerID, Errors &error)
+std::unique_ptr<runtime::v1::ContainerStatus> ContainerManagerService::ContainerStatus(const std::string &containerID,
+                                                                                       Errors &error)
 {
     return CRIHelpersV1::GetContainerStatus(m_cb, containerID, error);
 }

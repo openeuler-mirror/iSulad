@@ -27,13 +27,13 @@
 
 #define DEFAULT_SPEC_DIRS_LEN   2
 static char *default_spec_dirs_items[DEFAULT_SPEC_DIRS_LEN] = {CDI_DEFAULT_STATIC_DIR, CDI_DEFAULT_DYNAMIC_DIR};
- 
+
 string_array g_default_spec_dirs = {
     .items = default_spec_dirs_items,
     .len = DEFAULT_SPEC_DIRS_LEN,
     .cap = DEFAULT_SPEC_DIRS_LEN,
 };
- 
+
 struct scan_spec_dir_cb_args {
     struct cdi_scan_fn_maps *scan_fn_maps;
     cdi_scan_spec_func scan_fn;
@@ -64,7 +64,7 @@ static bool scan_spec_dir_cb(const char *dir, const struct dirent *pdirent, void
         DEBUG("Skip dir %s", file_path);
         return true;
     }
-    
+
     if (!util_has_suffix(file_path, ".json")) {
         DEBUG("Skip file %s", file_path);
         return true;

@@ -31,9 +31,9 @@ int cgroup_ops_init(void);
 
 int common_get_cgroup_version(void);
 int common_get_cgroup_info(cgroup_mem_info_t *meminfo, cgroup_cpu_info_t *cpuinfo,
-                            cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
-                            cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
-                            cgroup_files_info_t *filesinfo, bool quiet);
+                           cgroup_hugetlb_info_t *hugetlbinfo, cgroup_blkio_info_t *blkioinfo,
+                           cgroup_cpuset_info_t *cpusetinfo, cgroup_pids_info_t *pidsinfo,
+                           cgroup_files_info_t *filesinfo, bool quiet);
 int common_get_cgroup_metrics(const char *cgroup_path, cgroup_metrics_t *cgroup_metrics);
 int common_get_cgroup_mnt_and_root_path(const char *subsystem, char **mountpoint, char **root);
 
@@ -43,7 +43,8 @@ char *common_get_own_cgroup_path(const char *subsystem);
 
 char *common_convert_cgroup_path(const char *cgroup_path);
 
-cgroup_oom_handler_info_t *common_get_cgroup_oom_handler(int fd, const char *name, const char *cgroup_path, const char *exit_fifo);
+cgroup_oom_handler_info_t *common_get_cgroup_oom_handler(int fd, const char *name, const char *cgroup_path,
+                                                         const char *exit_fifo);
 void common_free_cgroup_oom_handler_info(cgroup_oom_handler_info_t *info);
 
 #ifdef __cplusplus

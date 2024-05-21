@@ -540,8 +540,8 @@ bool util_valid_propagation_mode(const char *mode)
     if (mode == NULL) {
         return false;
     }
-    return strcmp(mode, "private") == 0 || strcmp(mode, "rprivate") == 0 || strcmp(mode, "slave") == 0 || strcmp(mode, "rslave") == 0 ||
-           strcmp(mode, "shared") == 0 || strcmp(mode, "rshared") == 0;
+    return strcmp(mode, "private") == 0 || strcmp(mode, "rprivate") == 0 || strcmp(mode, "slave") == 0 ||
+           strcmp(mode, "rslave") == 0 || strcmp(mode, "shared") == 0 || strcmp(mode, "rshared") == 0;
 }
 
 bool util_valid_mount_mode(const char *mode)

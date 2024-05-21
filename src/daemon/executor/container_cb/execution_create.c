@@ -551,7 +551,7 @@ static int merge_config_for_syscontainer(const container_create_request *request
         goto out;
     }
     if (request->rootfs != NULL && (append_json_map_string_string(container_spec->annotations, "external.rootfs", "true")
-        || append_json_map_string_string(oci_spec->annotations, "external.rootfs", "true"))) {
+                                    || append_json_map_string_string(oci_spec->annotations, "external.rootfs", "true"))) {
         ERROR("Realloc annotations failed");
         ret = -1;
         goto out;

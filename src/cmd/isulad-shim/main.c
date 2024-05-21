@@ -103,7 +103,7 @@ int main(int argc, char **argv)
     engine_log_path = getenv(SHIIM_LOG_PATH_ENV);
     if (engine_log_path == NULL) {
         dprintf(STDERR_FILENO, "empty SHIIM_LOG_PATH_ENV");
-         _exit(EXIT_FAILURE);
+        _exit(EXIT_FAILURE);
     }
 
     log_level = getenv(SHIIM_LOG_LEVEL_ENV);
@@ -149,7 +149,8 @@ int main(int argc, char **argv)
 
     // If isulad-shim is a child process of the isulad process,
     // print the log to stderr so that isulad can obtain the exit information of isulad-shim.
-    set_log_to_stderr((p->state->exec) && (p->state->isulad_stdin != NULL || p->state->isulad_stdout != NULL || p->state->isulad_stderr != NULL));
+    set_log_to_stderr((p->state->exec) && (p->state->isulad_stdin != NULL || p->state->isulad_stdout != NULL ||
+                                           p->state->isulad_stderr != NULL));
 
     /*
      * Open exit pipe

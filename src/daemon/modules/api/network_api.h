@@ -77,7 +77,7 @@ void free_network_api_result_list(network_api_result_list *ptr);
 
 void free_attach_net_conf(struct attach_net_conf *ptr);
 
-void free_network_api_conf(network_api_conf *ptr);
+void free_network_api_conf(network_api_conf *conf);
 
 bool network_module_init(const char *network_plugin, const char *cache_dir, const char *conf_dir, const char* bin_path);
 

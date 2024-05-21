@@ -129,8 +129,10 @@ private:
                              std::vector<std::string> &podSandboxIDs, Errors &error);
     void ApplySandboxLinuxOptions(const runtime::v1::LinuxPodSandboxConfig &lc, host_config *hc,
                                   container_config *custom_config, Errors &error);
-    auto GetPodSandboxStatus(const std::string &podSandboxID, Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStatus>;
-    void GetContainerStatuses(const std::string &podSandboxID, std::vector<std::unique_ptr<runtime::v1::ContainerStatus>> &containerStatuses,
+    auto GetPodSandboxStatus(const std::string &podSandboxID,
+                             Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStatus>;
+    void GetContainerStatuses(const std::string &podSandboxID,
+                              std::vector<std::unique_ptr<runtime::v1::ContainerStatus>> &containerStatuses,
                               std::vector<std::string> &errors);
 
 private:

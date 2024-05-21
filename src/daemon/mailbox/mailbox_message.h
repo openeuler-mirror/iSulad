@@ -34,9 +34,9 @@ typedef struct mailbox_message {
 
 mailbox_message *mailbox_message_create(void *ptr, void (*destroy)(void *));
 
-int mailbox_message_ref(mailbox_message *p);
+int mailbox_message_ref(mailbox_message *dest);
 
-void mailbox_message_unref(mailbox_message *p);
+void mailbox_message_unref(mailbox_message *dest);
 
 // define auto free function callback for mailbox_message
 define_auto_cleanup_callback(mailbox_message_unref, mailbox_message);

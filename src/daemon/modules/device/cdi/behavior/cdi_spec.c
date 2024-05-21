@@ -33,7 +33,7 @@ void free_cdi_cache_spec(struct cdi_cache_spec *s)
     if (s == NULL) {
         return;
     }
- 
+
     free_cdi_spec(s->raw_spec);
     s->raw_spec = NULL;
     free(s->vendor);
@@ -44,7 +44,7 @@ void free_cdi_cache_spec(struct cdi_cache_spec *s)
     s->path = NULL;
     map_free(s->devices);
     s->devices = NULL;
- 
+
     free(s);
 }
 
@@ -58,7 +58,7 @@ struct cdi_cache_spec *cdi_spec_read_spec(const char *path, int priority)
         ERROR("Failed to get clean path %s", path);
         return NULL;
     }
-    
+
     raw_spec = cdi_spec_parse_file(cleanpath, NULL, &err);
     if (raw_spec == NULL) {
         ERROR("Failed to read CDI Spec %s: %s", cleanpath, err);
@@ -106,7 +106,7 @@ struct cdi_cache_spec *cdi_spec_new_spec(cdi_spec *raw, const char *path, int pr
         ERROR("Invalid CDI Spec");
         goto error_out;
     }
-    
+
     return spec;
 
 error_out:
@@ -183,7 +183,7 @@ static int cdi_spec_init(struct cdi_cache_spec *s)
     cdi_device *d = NULL;
     size_t i;
     bool version_result = true;
-    
+
     if (!cdi_is_valid_version(s->raw_spec->cdi_version)) {
         ERROR("Failed to validate cdi spec version: %s", s->raw_spec->cdi_version);
         return -1;

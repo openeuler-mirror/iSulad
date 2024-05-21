@@ -80,7 +80,7 @@ TEST(CgroupCpuUnitTest, test_sysinfo_cgroup_controller_cpurt_mnt_path)
 {
     MOCK_SET(util_common_calloc_s, nullptr);
     ASSERT_EQ(get_sys_info(true), nullptr);
-    
+
     int ret = cgroup_ops_init();
     ASSERT_EQ(ret, 0);
 

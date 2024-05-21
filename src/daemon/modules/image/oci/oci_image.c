@@ -295,7 +295,8 @@ static bool remove_image_tmpdir_cb(const char *path_name, const struct dirent *s
         return true;
     }
 
-    if (!util_has_prefix(sub_dir->d_name, LOAD_TMPDIR_PREFIX) && !util_has_prefix(sub_dir->d_name, REGISTRY_TMPDIR_PREFIX)) {
+    if (!util_has_prefix(sub_dir->d_name, LOAD_TMPDIR_PREFIX) &&
+        !util_has_prefix(sub_dir->d_name, REGISTRY_TMPDIR_PREFIX)) {
         // only remove directory that image module created
         return true;
     }

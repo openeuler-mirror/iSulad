@@ -166,7 +166,8 @@ int rt_lcr_start(const char *name, const char *runtime, const rt_start_params_t 
         }
         isulad_set_error_message("Start container error: %s",
                                  (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
-        ERROR("Start container error: %s", (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+        ERROR("Start container error: %s", (tmpmsg != NULL &&
+                                            strcmp(tmpmsg, DEF_SUCCESS_STR) != 0) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -264,7 +265,8 @@ int rt_lcr_rm(const char *name, const char *runtime, const rt_rm_params_t *param
     if (engine_ops == NULL || engine_ops->engine_delete_op == NULL) {
         // if engine_ops is NULL, container root path may have been corrupted, try to remove by daemon
         // If user runs container with lcr but remove lcr runtime after, there might be resources remaining
-        ERROR("Failed to get engine delete operations, container %s root path may have been corrupted, try to remove by daemon", name);
+        ERROR("Failed to get engine delete operations, container %s root path may have been corrupted, try to remove by daemon",
+              name);
         if (remove_container_rootpath(name, params->rootpath) == 0) {
             ret = 0;
             goto out;

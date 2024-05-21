@@ -27,7 +27,7 @@ extern "C" {
 #define CDI_DEFAULT_DYNAMIC_DIR "/var/run/cdi"
 
 extern string_array g_default_spec_dirs;
- 
+
 struct cdi_scan_fn_maps {
     map_t *specs;
     map_t *devices;

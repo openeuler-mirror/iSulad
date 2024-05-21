@@ -22,9 +22,9 @@
 extern "C" {
 #endif
 
-int prepare_network_namespace(const char *netns_path, const bool post_prepare_network, const int pid);
+int prepare_network_namespace(const char *netns_path, const bool post_setup_network, const int pid);
 
-int remove_network_namespace(const char *netns);
+int remove_network_namespace(const char *netns_path);
 
 int create_network_namespace_file(const char *netns_path);
 

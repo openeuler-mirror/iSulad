@@ -691,7 +691,8 @@ out:
     epoll_loop_close(&descr);
 }
 
-static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, container_config *container_spec, host_config *hostconfig)
+static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, container_config *container_spec,
+                              host_config *hostconfig)
 {
     int ret;
 
@@ -2013,7 +2014,7 @@ static defs_process *make_exec_process_spec(const container_config *container_sp
 #ifdef ENABLE_CDI
         // extend step: merge env from oci_spec which comes from injected devices
         ret = defs_process_add_multiple_env(spec, (const char **)oci_spec->process->env,
-            oci_spec->process->env_len);
+                                            oci_spec->process->env_len);
         if (ret != 0) {
             ERROR("Failed to dup oci env for exec process spec");
             goto err_out;

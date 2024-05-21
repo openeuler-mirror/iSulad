@@ -293,7 +293,8 @@ static bool is_manifest_schemav1(char *media_type)
         return false;
     }
 
-    if (strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_JSON) == 0 || strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) == 0 ||
+    if (strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_JSON) == 0 ||
+        strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) == 0 ||
         strcmp(media_type, MEDIA_TYPE_APPLICATION_JSON) == 0) {
         return true;
     }

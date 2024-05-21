@@ -29,7 +29,7 @@ int cdi_operate_registry_init(char **specs_dirs, size_t specs_dirs_len)
         .len = specs_dirs_len,
         .cap = specs_dirs_len,
     };
-    
+
     return cdi_registry_init(&spec_dirs_array);
 }
 
@@ -40,7 +40,7 @@ int cdi_operate_refresh(void)
         ERROR("Failed to get registry");
         return -1;
     }
-    
+
     return registry->ops->refresh(registry->cdi_cache);
 }
 
@@ -52,13 +52,13 @@ int cdi_operate_inject_devices(oci_runtime_spec *spec, string_array *devices)
         ERROR("Invalid params");
         return -1;
     }
-    
+
     registry = cdi_get_registry();
     if (registry == NULL || registry->ops == NULL || registry->ops->inject_devices == NULL) {
         ERROR("Failed to get registry");
         return -1;
     }
-    
+
     return registry->ops->inject_devices(registry->cdi_cache, spec, devices);
 }
 

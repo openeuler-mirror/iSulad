@@ -199,7 +199,7 @@ static int add_attach_terminal_fifos(const char *in, const char *out, const char
     struct isula_linked_list *node = NULL;
 
     bool invalid = (in != NULL && !fifo_exists(in)) || (out != NULL && !fifo_exists(out)) || (err != NULL &&
-                                                                                             !fifo_exists(err));
+                                                                                              !fifo_exists(err));
     if (invalid) {
         ERROR("File %s or %s or %s does not refer to a FIFO", in, out, err);
         return -1;
@@ -371,7 +371,7 @@ static int stdout_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
 
     r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
-    if (r_count <= 0 ) {
+    if (r_count <= 0) {
         isula_epoll_remove_handler(descr, fd);
         // fd cannot be closed here, which will cause the container process to exit abnormally
         // due to terminal fd receiving the sighup signal.
@@ -417,7 +417,7 @@ static int stderr_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
     (void)memset(p->buf, 0, DEFAULT_IO_COPY_BUF);
 
     r_count = isula_file_read_nointr(fd, p->buf, DEFAULT_IO_COPY_BUF);
-    if (r_count <= 0 ) {
+    if (r_count <= 0) {
         isula_epoll_remove_handler(descr, fd);
         // fd cannot be closed here, which will cause the container process to exit abnormally
         // due to terminal fd receiving the sighup signal.
@@ -563,7 +563,7 @@ static int attach_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
     // limit the number of attach connections to MAX_ATTACH_NUM
     if (isula_linked_list_len(p->attach_fifos) >= MAX_ATTACH_NUM) {
         ERROR("The number of attach connections exceeds the limit:%d, and this connection is rejected.",
-                             MAX_ATTACH_NUM);
+              MAX_ATTACH_NUM);
         goto out;
     }
 
@@ -934,8 +934,8 @@ static void *io_epoll_loop(void *data)
 
     (void)sem_post(&p->sem_mainloop);
 
-    // th frist epoll_loop will exit in the following scenarios: 
-    // 1. Receive sync fd event 
+    // th frist epoll_loop will exit in the following scenarios:
+    // 1. Receive sync fd event
     // 2. stdin fd receive EPOLLHUP event
     // 3. stdin fd read failed
     ret = isula_epoll_loop(&descr, -1);
@@ -945,8 +945,8 @@ static void *io_epoll_loop(void *data)
         error_exit(EXIT_FAILURE);
     }
 
-    // use a timeout epoll loop to ensure complete data reception 
-    // th second epoll_loop will exit in the following scenarios: 
+    // use a timeout epoll loop to ensure complete data reception
+    // th second epoll_loop will exit in the following scenarios:
     // 1. both stdout fd and stderr fd failed to read
     // 2. no event received within 100 milliseconds
     ret = isula_epoll_loop(&descr, 100);
@@ -1408,7 +1408,7 @@ static void exec_runtime_process(process_t *p, int exec_fd)
         // the standard streams of the child process are set to /dev/null to prevent incorrect information acquisition.
         if (isula_null_stdfds() != 0) {
             (void)dprintf(exec_fd, "failed to set std console to /dev/null");
-            exit(EXIT_FAILURE);           
+            exit(EXIT_FAILURE);
         }
     }
 

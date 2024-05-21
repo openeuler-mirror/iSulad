@@ -445,7 +445,7 @@ static int tar_resource_rebase(const char *path, const char *rebase, const char 
         ERROR("Can not split path: %s", path);
         goto cleanup;
     }
- 
+
     if (realpath(srcdir, cleanpath) == NULL) {
         ERROR("Failed to get real path for %s", srcdir);
         goto cleanup;

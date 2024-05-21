@@ -40,7 +40,7 @@
 static __thread char *g_shim_errmsg = NULL;
 
 // currently, log_to_stderr is only modified in the main process
-// and there is no need to set a thread-local variable. 
+// and there is no need to set a thread-local variable.
 // if it can be modified by multiple threads in the future,
 // this variable needs to be set as a thread-local variable.
 static bool log_to_stderr = false;

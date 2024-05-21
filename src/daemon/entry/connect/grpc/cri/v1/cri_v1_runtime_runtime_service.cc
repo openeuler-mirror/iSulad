@@ -90,7 +90,8 @@ void RuntimeV1RuntimeServiceImpl::Init(std::string &podSandboxImage,
         m_enablePodEvents = enablePodEvents;
     }
 
-    m_rService = std::unique_ptr<CRIV1::CRIRuntimeService>(new CRIRuntimeServiceImpl(podSandboxImage, cb, networkPlugin, m_enablePodEvents));
+    m_rService = std::unique_ptr<CRIV1::CRIRuntimeService>(new CRIRuntimeServiceImpl(podSandboxImage, cb, networkPlugin,
+                                                                                     m_enablePodEvents));
 }
 
 void RuntimeV1RuntimeServiceImpl::Wait()
@@ -134,7 +135,7 @@ auto RuntimeV1RuntimeServiceImpl::GenerateCRIContainerEvent(const char *containe
     m_rService->PodSandboxStatus(sandboxID, statusReply, error);
     if (!error.Empty()) {
         WARN("Object: CRI, Type: Failed to status pod:%s due to %s", sandboxID.c_str(),
-              error.GetMessage().c_str());
+             error.GetMessage().c_str());
     } else {
         *(response->mutable_pod_sandbox_status()) = *(statusReply->mutable_status());
         for (auto &containerStatus : statusReply->containers_statuses()) {
