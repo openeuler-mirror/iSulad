@@ -897,9 +897,9 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
 
 child_out:
         if (ret != 0) {
-            exit(EXIT_FAILURE);
+            _exit(EXIT_FAILURE);
         }
-        exit(EXIT_SUCCESS);
+        _exit(EXIT_SUCCESS);
     }
     close(pipe_stderr[1]);
     pipe_stderr[1] = -1;
@@ -1342,9 +1342,9 @@ int archive_chroot_tar(const char *path, const char *file, const char *root_dir,
 child_out:
 
         if (ret != 0) {
-            exit(EXIT_FAILURE);
+            _exit(EXIT_FAILURE);
         } else {
-            exit(EXIT_SUCCESS);
+            _exit(EXIT_SUCCESS);
         }
     }
     close(pipe_for_read[1]);
@@ -1577,9 +1577,9 @@ int archive_chroot_untar_stream(const struct io_read_wrapper *context, const cha
 
 child_out:
         if (ret != 0) {
-            exit(EXIT_FAILURE);
+            _exit(EXIT_FAILURE);
         }
-        exit(EXIT_SUCCESS);
+        _exit(EXIT_SUCCESS);
     }
 
     close(pipe_stderr[1]);
@@ -1727,9 +1727,9 @@ child_out:
         free(tar_base_name);
 
         if (ret != 0) {
-            exit(EXIT_FAILURE);
+            _exit(EXIT_FAILURE);
         } else {
-            exit(EXIT_SUCCESS);
+            _exit(EXIT_SUCCESS);
         }
     }
 
