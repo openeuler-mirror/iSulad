@@ -244,7 +244,7 @@ static int get_proxy_env(char **proxy, const char *type)
     }
     *col_pos = '\0';
     nret = snprintf(*proxy, proxy_len, "%s:%s%s", tmp_proxy, mask_str, at_pos);
-    if (nret < 0 || nret >= proxy_len) {
+    if (nret < 0 || (size_t)nret >= proxy_len) {
         ret = -1;
         free(*proxy);
         *proxy = NULL;
