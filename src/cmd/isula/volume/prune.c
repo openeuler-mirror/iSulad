@@ -79,7 +79,7 @@ out:
 
 int cmd_volume_prune_main(int argc, const char **argv)
 {
-    int i = 0;
+    size_t i = 0;
     struct isula_libutils_log_config lconf = { 0 };
     int exit_code = 1;
     command_t cmd;
