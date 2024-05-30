@@ -72,7 +72,7 @@
 
     dev stats:
       - 357 files changed, 7886 insertions(+), 2849 deletions(-)
-      - contributors: zhongtao, jikai, haozi007, jake, liuxu, xuxuepeng, zhangxiaoyu, sailorvii, chen524, dreamloy, l00804245, yangjiaqi
+      - contributors: zhongtao, jikai, haozi007, jake, liuxu, xuxuepeng, zhangxiaoyu, sailorvii, chen524, dreamloy, yangjiaqi
 
 2023-11-07 xuepengxu release 2.1.4
     - !2238 modify the default value of EANBLE_IMAGE_LIBARAY to off * modify the default value of EANBLE_IMAGE_LIBARAY to off
