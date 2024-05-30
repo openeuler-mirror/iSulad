@@ -204,7 +204,7 @@ int native_network_add_container_list(const char *network_name, const char *cont
 1. 解析用户传入的参数
 2. 对传入的参数进行校验，包括
    - 每次只允许创建一个网络， 即最多指定一个name
-   - 若指定name，检查name长度是否超过MAX_NETWORK_NAME_LEN(128)
+   - 若指定name，检查name长度是否超过MAX_NETWORK_NAME_LEN(255)
 3. 发送请求到服务端
 
 服务端：
