@@ -204,7 +204,7 @@ Client:
 1. Parse the parameters passed in by the user.
 2. Verify the incoming parameters, including:
    - Only one network is allowed to be created at a time, that is, at most one name can be specified.
-   - If name is specified, check whether the length of name exceeds MAX_NETWORK_NAME_LEN(128).
+   - If name is specified, check whether the length of name exceeds MAX_NETWORK_NAME_LEN(255).
 3. Send the request to the server
 
 Server:
