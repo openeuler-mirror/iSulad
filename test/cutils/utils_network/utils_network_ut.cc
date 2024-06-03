@@ -344,8 +344,8 @@ TEST(utils_network, test_net_contain_ip)
 TEST(utils_network, test_validate_network_name)
 {
     ASSERT_EQ(util_validate_network_name(nullptr), false);
-    ASSERT_EQ(util_validate_network_name(std::string(128, 'a').c_str()), true);
-    ASSERT_EQ(util_validate_network_name(std::string(129, 'a').c_str()), false);
+    ASSERT_EQ(util_validate_network_name(std::string(255, 'a').c_str()), true);
+    ASSERT_EQ(util_validate_network_name(std::string(256, 'a').c_str()), false);
     ASSERT_EQ(util_validate_network_name(std::string(".abce").c_str()), false);
 }
 
