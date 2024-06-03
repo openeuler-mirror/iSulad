@@ -306,6 +306,7 @@ static void refresh_scan_spec_func(struct cdi_scan_fn_maps *scan_fn_maps, const 
             ERROR("Failed to insert device to devices by name %s", qualified);
             goto error_out;
         }
+        DEBUG("Add device %s into memory", qualified);
         free(qualified);
         qualified = NULL;
     }
@@ -445,6 +446,7 @@ static int cdi_inject_devices(struct cdi_cache *c, oci_runtime_spec *oci_spec, s
 
     for (i = 0; i < devices->len; i++) {
         device = devices->items[i];
+        DEBUG("Search cdi devices %s.", device);
         d = map_search(c->devices, (void *)device);
         if (d == NULL) {
             if (util_append_string_array(unresolved, device) != 0) {
