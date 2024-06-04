@@ -74,7 +74,7 @@ static struct attach_net_conf_list *build_attach_networks(const defs_map_string_
         return NULL;
     }
 
-    list = (struct attach_net_conf_list *)util_common_calloc_s(sizeof(struct attach_net_conf));
+    list = (struct attach_net_conf_list *)util_common_calloc_s(sizeof(struct attach_net_conf_list));
     if (list == NULL) {
         ERROR("Out of memory");
         return NULL;

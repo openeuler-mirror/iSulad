@@ -251,7 +251,7 @@ static int prune_request_to_rest(const struct isula_prune_volume_request *reques
     parser_error err = NULL;
     int ret = 0;
 
-    nrequest = util_common_calloc_s(sizeof(volume_list_volume_request));
+    nrequest = util_common_calloc_s(sizeof(volume_prune_volume_request));
     if (nrequest == NULL) {
         ERROR("Out of memory");
         return -1;
