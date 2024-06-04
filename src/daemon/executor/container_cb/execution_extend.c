@@ -990,7 +990,8 @@ out:
 
 static int update_container_unified(const char *id, const host_config *hostconfig, host_config *chostconfig)
 {
-    int i, cgroup_version;
+    int cgroup_version;
+    size_t i;
 
     if (hostconfig->unified == NULL || hostconfig->unified->len == 0) {
         return 0;
