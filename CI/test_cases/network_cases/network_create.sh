@@ -33,8 +33,9 @@ function test_network_create()
     local name1="cni1"
     local name2="cni2"
     local name3="a"
-    for i in $(seq 1 7);do
-        name3=${name3}${name3}
+    local basechar="a"
+    for i in $(seq 1 199);do
+        name3=${name3}${basechar}
     done
     local name4=${name3}b
     local invalid_name=".xx"
