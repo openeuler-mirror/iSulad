@@ -398,12 +398,12 @@ char *conf_get_sandbox_rootpath(void)
         ERROR("Get rootpath failed");
         return epath;
     }
-    if (strlen(rootpath) > (PATH_MAX - strlen(ENGINE_ROOTPATH_NAME)) - 2) {
+    if (strlen(rootpath) > (PATH_MAX - strlen(SANDBOX_ROOTPATH_NAME)) - 2) {
         ERROR("Root path is too long");
         return epath;
     }
     // rootpath + "/" + SANDBOX_ROOTPATH_NAME + "/0"
-    len = strlen(rootpath) + 1 + strlen(ENGINE_ROOTPATH_NAME) + 1;
+    len = strlen(rootpath) + 1 + strlen(SANDBOX_ROOTPATH_NAME) + 1;
     epath = util_smart_calloc_s(sizeof(char), len);
     if (epath == NULL) {
         ERROR("Out of memory");
