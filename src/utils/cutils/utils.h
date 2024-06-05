@@ -99,7 +99,12 @@ int malloc_trim(size_t pad);
 #define MAX_IMAGE_REF_LEN 384
 #define MAX_CONTAINER_NAME_LEN 1024
 #define MAX_RUNTIME_NAME_LEN 32
-#define MAX_NETWORK_NAME_LEN 255
+/* 
+ * Linux limits the length of the file name to 255,
+ * isulad will create file by name "${ISULAD_CNI_NETWORK_CONF_FILE_PRE}${network_name}.conflist"
+ * when create native network,so we limit the length of the network name to 200.
+ */
+#define MAX_NETWORK_NAME_LEN 200
 
 #define LOGIN_USERNAME_LEN 255
 #define LOGIN_PASSWORD_LEN 255
