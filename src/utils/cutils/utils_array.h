@@ -30,6 +30,7 @@ void util_free_array_by_len(char **array, size_t len);
 
 void util_free_array(char **array);
 
+// this function just copies the first len elements of array and does not automatically add NULL element in the end.
 char **util_copy_array_by_len(char **array, size_t len);
 
 int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
