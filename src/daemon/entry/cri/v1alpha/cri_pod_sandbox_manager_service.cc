@@ -655,19 +655,33 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1alpha2::PodSandbox
         }
     }
 
-    // Step 7: Setup networking for the sandbox.
-    SetupSandboxNetwork(config, response_id, inspect_data, networkOptions, stdAnnos, network_setting_json, error);
-    if (error.NotEmpty()) {
-        goto cleanup_ns;
+    // Step 7: According to the annotation and network namespace mode,
+    //         determine the order of start sandbox and setup network.
+    if (CRIHelpers::SetupNetworkFirst(stdAnnos)) {
+        // Step 7.1: Setup networking for the sandbox, and then start the sandbox container.
+        SetupSandboxNetwork(config, response_id, inspect_data, networkOptions, stdAnnos, network_setting_json, error);
+        if (error.NotEmpty()) {
+            goto cleanup_ns;
+        }
+
+        StartSandboxContainer(response_id, error);
+        if (error.NotEmpty()) {
+            goto cleanup_network;
+        }
+    } else {
+        // Step 7.2: (Default)Start the sandbox container, and then setup networking for the sandbox.
+        StartSandboxContainer(response_id, error);
+        if (error.NotEmpty()) {
+            goto cleanup_ns;
+        }
+
+        SetupSandboxNetwork(config, response_id, inspect_data, networkOptions, stdAnnos, network_setting_json, error);
+        if (error.NotEmpty()) {
+            goto cleanup_ns;
+        }
     }
 
-    // Step 8: Start the sandbox container.
-    StartSandboxContainer(response_id, error);
-    if (error.NotEmpty()) {
-        goto cleanup_network;
-    }
-
-    // Step 9: Save network settings json to disk
+    // Step 8: Save network settings json to disk
     if (namespace_is_cni(inspect_data->host_config->network_mode)) {
         Errors tmpErr;
         UpdatePodSandboxNetworkSettings(response_id, network_setting_json, tmpErr);

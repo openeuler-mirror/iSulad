@@ -49,6 +49,7 @@ public:
     static const std::string DOCKER_PULLABLE_IMAGEID_PREFIX;
     static const std::string RUNTIME_READY;
     static const std::string NETWORK_READY;
+    static const std::string NETWORK_SETUP_ANNOTATION_KEY;
     static const std::string POD_CHECKPOINT_KEY;
     static const size_t MAX_CHECKPOINT_KEY_LEN { 250 };
     static const std::string CONTAINER_TYPE_ANNOTATION_KEY;
@@ -151,6 +152,8 @@ auto GetPodSELinuxLabelOpts(const std::string &selinuxLabel, Errors &error) -> s
 auto GetlegacySeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> std::vector<iSuladOpt>;
 
 auto GetSeccompiSuladOptsByPath(const char *dstpath, Errors &error) -> std::vector<iSuladOpt>;
+
+bool SetupNetworkFirst(const std::map<std::string, std::string> &annotations);
 }; // namespace CRIHelpers
 
 #endif // DAEMON_ENTRY_CRI_CRI_HELPERS_H

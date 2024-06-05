@@ -1601,7 +1601,7 @@ static int merge_share_network_namespace(const oci_runtime_spec *oci_spec, const
     int ret = 0;
     char *ns_path = NULL;
 
-    if (host_spec->network_mode == NULL) {
+    if (host_spec->network_mode == NULL || strlen(host_spec->network_mode) == 0) {
         return 0;
     }
 
