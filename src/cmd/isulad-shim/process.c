@@ -489,7 +489,7 @@ static bool attach_fifopath_security_check(process_t *p, const char *fifopath)
         return false;
     }
 
-    if (isula_clean_path(fifopath, real_path, sizeof(real_path)) == NULL) {
+    if (realpath(fifopath, real_path) == NULL) {
         ERROR("Failed to get realpath for '%s': %d.", real_path, SHIM_SYS_ERR(errno));
         return false;
     }
