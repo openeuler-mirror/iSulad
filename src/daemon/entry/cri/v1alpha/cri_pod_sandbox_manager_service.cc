@@ -677,6 +677,9 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1alpha2::PodSandbox
 
         SetupSandboxNetwork(config, response_id, inspect_data, networkOptions, stdAnnos, network_setting_json, error);
         if (error.NotEmpty()) {
+            Errors stopError;
+            StopContainerHelper(response_id, stopError);
+            WARN("Error stop container: %s: %s", response_id.c_str(), stopError.GetCMessage());
             goto cleanup_ns;
         }
     }
