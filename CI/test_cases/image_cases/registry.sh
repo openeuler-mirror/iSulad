@@ -74,8 +74,9 @@ function isula_pull()
     isula run --rm -ti busybox echo hello 2>&1 | grep pulling
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull missing failed" && ((ret++))
 
-    isula pull docker.io/library/busybox:latest
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull docker.io/library/busybox:latest failed" && ((ret++))
+    # Unable to pull image from docker.io without agent, skip this test
+    # isula pull docker.io/library/busybox:latest
+    # [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull docker.io/library/busybox:latest failed" && ((ret++))
 
     isula pull 3laho3y3.mirror.aliyuncs.com/library/busybox
     fn_check_eq "$?" "0" "isula pull 3laho3y3.mirror.aliyuncs.com/library/busybox"
