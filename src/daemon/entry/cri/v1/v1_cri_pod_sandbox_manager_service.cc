@@ -910,6 +910,7 @@ void PodSandboxManagerService::PodSandboxStatus(const std::string &podSandboxID,
     for (auto &containerStatus : containerStatuses) {
         *(reply->add_containers_statuses()) = *containerStatus;
     }
+    reply->set_timestamp(util_get_now_time_nanos());
     return;
 }
 
