@@ -25,14 +25,14 @@ source ../helpers.sh
 function test_image_with_digest()
 {
   local ret=0
-  local image="busybox"
-  local image2="ubuntu"
-  local image_digest="busybox@sha256:5cd3db04b8be5773388576a83177aff4f40a03457a63855f4b9cbe30542b9a43"
+  local image="3laho3y3.mirror.aliyuncs.com/library/busybox"
+  local image2="3laho3y3.mirror.aliyuncs.com/library/ubuntu"
+  local image_digest="3laho3y3.mirror.aliyuncs.com/library/busybox@sha256:62ffc2ed7554e4c6d360bce40bbcf196573dd27c4ce080641a2c59867e732dee"
   local test="pull && inspect && tag image with digest test => (${FUNCNAME[@]})"
 
   msg_info "${test} starting..."
 
-  isula pull docker.io/library/${image_digest}
+  isula pull ${image_digest}
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
   
   isula tag ${image_digest} ${image}:digest_test
@@ -71,7 +71,7 @@ function test_image_with_digest()
   isula inspect -f '{{.image.repo_tags}}' ${image_digest} | grep "${image}:digest_test"
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - image digest delete error: ${image_digest}" && ((ret++))
 
-  isula pull docker.io/library/${image2}:latest
+  isula pull ${image2}:latest
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image2}" && return ${FAILURE}
 
   digest=$(isula inspect "${image2}:latest" | grep "@sha256" | awk -F"\"" '{print $2}')
