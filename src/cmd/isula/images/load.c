@@ -162,6 +162,12 @@ int cmd_load_main(int argc, const char **argv)
         g_cmd_load_args.file = file;
     }
 
+    if (util_dir_exists(g_cmd_load_args.file)) {
+        COMMAND_ERROR("Load file is a directory: %s", g_cmd_load_args.file);
+        ret = -1;
+        exit(exit_code);
+    }
+
     if (!util_file_exists(g_cmd_load_args.file)) {
         COMMAND_ERROR("File %s is not exist", g_cmd_load_args.file);
         exit(exit_code);
