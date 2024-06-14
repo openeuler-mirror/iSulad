@@ -247,7 +247,7 @@ static char *env_stringify(char *(*pargs)[2], size_t len)
     bool invalid_arg = (pargs == NULL || len == 0);
 
     if (invalid_arg) {
-        ERROR("Invalid arguments");
+        DEBUG("Empty arguments");
         return NULL;
     }
 
