@@ -100,7 +100,9 @@ public:
     {
         // Wait for the server to shutdown. Note that some other thread must be
         // responsible for shutting down the server for this call to ever return.
-        m_server->Wait();
+        if (m_server != nullptr) {
+            m_server->Wait();
+        }
 
         // Wait for stream server to shutdown
         m_criService.Wait();
@@ -109,7 +111,9 @@ public:
     void Shutdown(void)
     {
         // call CRI to shutdown stream server, shutdown cri first to notify events thread to exit
-        m_criService.Shutdown();
+        if (m_server != nullptr) {
+            m_server->Shutdown();
+        }
 
         m_server->Shutdown();
 
@@ -242,10 +246,16 @@ int grpc_server_init(const struct service_arguments *args)
 
 void grpc_server_wait(void)
 {
+    if (g_grpcserver == nullptr) {
+        return;
+    }
     g_grpcserver->Wait();
 }
 
 void grpc_server_shutdown(void)
 {
+    if (g_grpcserver == nullptr) {
+        return;
+    }
     g_grpcserver->Shutdown();
 }
