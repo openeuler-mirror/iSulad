@@ -1648,11 +1648,6 @@ static int start_daemon_threads(char **msg)
 {
     int ret = -1;
 
-    if (new_shutdown_handler()) {
-        *msg = "Create new shutdown handler thread failed";
-        goto out;
-    }
-
     if (events_module_init(msg) != 0) {
         goto out;
     }
@@ -1798,6 +1793,13 @@ int main(int argc, char **argv)
 
     if (isulad_server_init_service()) {
         msg = "Failed to init services";
+        goto failure;
+    }
+
+    // after all modules are initialized, enable the shutdown handler to
+    // prevent shutdown handler from cleaning up incompletely initialized modules.
+    if (new_shutdown_handler()) {
+        msg = "Create new shutdown handler thread failed";
         goto failure;
     }
 
