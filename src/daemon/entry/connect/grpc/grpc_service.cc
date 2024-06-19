@@ -94,14 +94,20 @@ public:
     {
         // Wait for the server to shutdown. Note that some other thread must be
         // responsible for shutting down the server for this call to ever return.
-        m_server->Wait();
+        if (m_server != nullptr) {
+            m_server->Wait();
+        }
+
         m_runtimeRuntimeService.Wait();
     }
 
     void Shutdown(void)
     {
-        m_server->Shutdown();
+        if (m_server != nullptr) {
+            m_server->Shutdown();
+        }
         m_runtimeRuntimeService.Shutdown();
+
         // Shutdown daemon, this operation should remove socket file.
         for (const auto &address : m_socketPath) {
             if (address.find(UNIX_SOCKET_PREFIX) == 0) {
@@ -241,10 +247,16 @@ int grpc_server_init(const struct service_arguments *args)
 
 void grpc_server_wait(void)
 {
+    if (g_grpcserver == nullptr) {
+        return;
+    }
     g_grpcserver->Wait();
 }
 
 void grpc_server_shutdown(void)
 {
+    if (g_grpcserver == nullptr) {
+        return;
+    }
     g_grpcserver->Shutdown();
 }
