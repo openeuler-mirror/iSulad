@@ -290,6 +290,12 @@ static int append_env_variables_to_conf(const char *env_file, isula_container_co
     int ret = 0;
     size_t file_size;
 
+    if (util_dir_exists(env_file)) {
+        COMMAND_ERROR("Env file is a directory: %s", env_file);
+        ret = -1;
+        goto out;   
+    }
+
     if (!util_file_exists(env_file)) {
         COMMAND_ERROR("env file not exists: %s", env_file);
         ret = -1;
@@ -424,6 +430,12 @@ static int append_labels_to_conf(const char *label_file, isula_container_config_
 {
     int ret = 0;
     size_t file_size;
+
+    if (util_dir_exists(label_file)) {
+        COMMAND_ERROR("Label file is a directory: %s", label_file);
+        ret = -1;
+        goto out;   
+    }
 
     if (!util_file_exists(label_file)) {
         COMMAND_ERROR("label file not exists: %s", label_file);
@@ -2135,6 +2147,13 @@ static int create_check_env_target_file(const struct client_arguments *args)
         ret = -1;
         goto out;
     }
+
+    if (util_dir_exists(env_path)) {
+        COMMAND_ERROR("Env target file is a directory: %s", env_path);
+        ret = -1;
+        goto out;   
+    }
+
     if (!util_file_exists(env_path)) {
         goto out;
     }
