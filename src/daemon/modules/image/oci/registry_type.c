@@ -62,7 +62,7 @@ void free_layer_blob(layer_blob *layer)
 
 void free_pull_desc(pull_descriptor *desc)
 {
-    int i = 0;
+    size_t i = 0;
 
     if (desc == NULL) {
         return;

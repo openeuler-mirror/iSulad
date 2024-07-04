@@ -67,7 +67,7 @@ static int log_opt_syslog_facility(const char *key, const char *value, char **pa
                                       "authpriv", "ftp",    "local0", "local1", "local2",
                                       "local3",   "local4", "local5", "local6", "local7"
                                     };
-    int i;
+    size_t i;
     size_t f_len = sizeof(facility_values) / sizeof(const char *);
 
     for (i = 0; i < f_len; i++) {
