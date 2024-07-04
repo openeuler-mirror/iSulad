@@ -111,12 +111,12 @@ public:
     void Shutdown(void)
     {
         // call CRI to shutdown stream server, shutdown cri first to notify events thread to exit
+        m_criService.Shutdown();
+
         if (m_server != nullptr) {
             m_server->Shutdown();
         }
-
-        m_server->Shutdown();
-
+    
         // Shutdown daemon, this operation should remove socket file.
         for (const auto &address : m_socketPath) {
             if (address.find(UNIX_SOCKET_PREFIX) == 0) {
