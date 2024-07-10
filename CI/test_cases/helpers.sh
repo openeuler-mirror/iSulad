@@ -52,15 +52,16 @@ function cut_output_lines() {
     return $retval
 }
 
+# use string compare to check the result
 function fn_check_eq() {
-    if [[ "$1" -ne "$2" ]];then
+    if [ "x$1" != "x$2" ];then
         echo "$3"
         TC_RET_T=$(($TC_RET_T+1))
     fi
 }
 
 function fn_check_ne() {
-    if [[ "$1" -eq "$2" ]];then
+    if [[ "x$1" == "x$2" ]];then
         echo "$3"
         TC_RET_T=$(($TC_RET_T+1))
     fi
