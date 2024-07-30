@@ -35,6 +35,8 @@ auto StringVectorToCharArray(std::vector<std::string> &strVec) -> char **;
 
 void CharArrayToStringVector(const char **src, size_t len, std::vector<std::string> &dest);
 
+auto RepeatedPtrFieldToCharArray(const google::protobuf::RepeatedPtrField<std::string> &ptrs) -> char **;
+
 }; // namespace Transform
 
 #endif // UTILS_CPPUTILS_TRANSFORM_H

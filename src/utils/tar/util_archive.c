@@ -812,13 +812,6 @@ static void close_archive_pipes_fd(int *pipes, size_t pipe_size)
     }
 }
 
-static void set_child_process_pdeathsig(void)
-{
-    if (prctl(PR_SET_PDEATHSIG, SIGKILL) < 0) {
-        SYSERROR("Failed to set child process pdeathsig");
-    }
-}
-
 int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, const struct archive_options *options,
                    const char *root_dir, char **errmsg)
 {

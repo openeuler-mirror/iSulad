@@ -89,4 +89,20 @@ void CharArrayToStringVector(const char **src, size_t len, std::vector<std::stri
     }
 }
 
+
+auto RepeatedPtrFieldToCharArray(const google::protobuf::RepeatedPtrField<std::string> &ptrs) -> char **
+{
+    size_t len = ptrs.size();
+    char **result = (char **)util_smart_calloc_s(sizeof(char *), (len + 1));
+    if (result == nullptr) {
+        return nullptr;
+    }
+    size_t i {};
+    for (const auto &it : ptrs) {
+        result[i++] = util_strdup_s(it.c_str());
+    }
+
+    return result;
+}
+
 } // namespace Transform

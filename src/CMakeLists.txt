@@ -15,6 +15,12 @@ if (ENABLE_SHIM_V2)
         )
 endif()
 
+if (ENABLE_NRI)
+    list(APPEND CHECKED_INCLUDE_DIRS
+        ${NRI_INCLUDE_DIR}
+        )
+endif()
+
 if (GRPC_CONNECTOR)
     list(APPEND CHECKED_INCLUDE_DIRS
         ${GRPC_INCLUDE_DIR}
@@ -166,6 +172,10 @@ endif()
 
 if (ENABLE_SHIM_V2)
     target_link_libraries(isulad ${LIBSHIM_V2_LIBRARY})
+endif()
+
+if (ENABLE_NRI)
+    target_link_libraries(isulad ${LIBISULA_NRI_LIBRARY})
 endif()
 
 if (ENABLE_EMBEDDED_IMAGE)

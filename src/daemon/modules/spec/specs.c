@@ -2608,7 +2608,7 @@ int spec_module_init(void)
 static int add_env(defs_process *dp, const char *env, const char *key)
 {
     size_t i;
- 
+
     for (i = 0; i < dp->env_len; i++) {
         __isula_auto_free char *oci_key = NULL;
         if (util_valid_split_env(dp->env[i], &oci_key, NULL) < 0) {
@@ -2684,7 +2684,9 @@ int spec_add_multiple_process_env(oci_runtime_spec *oci_spec, const char **envs,
 
     return ret;
 }
+#endif /* ENABLE_CDI */
 
+#if defined (ENABLE_CDI) || defined(ENABLE_NRI)
 int spec_add_device(oci_runtime_spec *oci_spec, defs_device *device)
 {
     int ret = 0;
@@ -2817,4 +2819,65 @@ SPEC_ADD_HOOKS_ITEM_DEF(prestart)
 SPEC_ADD_HOOKS_ITEM_DEF(poststart)
 SPEC_ADD_HOOKS_ITEM_DEF(poststop)
 
-#endif /* ENABLE_CDI */
+#endif /* ENABLE_CDI || ENABLE_NRI */
+
+#ifdef ENABLE_NRI
+int spec_add_linux_resources_hugepage_limit(oci_runtime_spec *oci_spec, const char *page_size, uint64_t limit)
+{
+    int ret = 0;
+    defs_resources_hugepage_limits_element *hugepage_limit = NULL;
+
+    ret = make_sure_oci_spec_linux_resources(oci_spec);
+    if (ret < 0) {
+        return -1;
+    }
+
+    hugepage_limit = util_common_calloc_s(sizeof(*hugepage_limit));
+    if (hugepage_limit == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    hugepage_limit->page_size = util_strdup_s(page_size);
+    hugepage_limit->limit = limit;
+
+    if (util_mem_realloc((void **)&oci_spec->linux->resources->hugepage_limits,
+                         (oci_spec->linux->resources->hugepage_limits_len + 1) * sizeof(defs_resources_hugepage_limits_element *),
+                         (void *)oci_spec->linux->resources->hugepage_limits,
+                         oci_spec->linux->resources->hugepage_limits_len * sizeof(defs_resources_hugepage_limits_element *)) != 0) {
+        ERROR("Out of memory");
+        free_defs_resources_hugepage_limits_element(hugepage_limit);
+        return -1;
+    }
+    oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len] = hugepage_limit;
+    oci_spec->linux->resources->hugepage_limits_len++;
+
+    return 0;
+}
+
+int spec_add_linux_resources_rlimit(oci_runtime_spec *oci_spec, const char *type, uint64_t hard, uint64_t soft)
+{
+    int ret = 0;
+    defs_process_rlimits_element *rlimit = NULL;
+
+    ret = make_sure_oci_spec_linux_resources(oci_spec);
+    if (ret < 0) {
+        return -1;
+    }
+
+    rlimit = util_common_calloc_s(sizeof(*rlimit));
+    if (rlimit == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    rlimit->type = util_strdup_s(type);
+    rlimit->hard = hard;
+    rlimit->soft = soft;
+
+    if (do_merge_one_ulimit_override(oci_spec, rlimit) != 0) {
+        ERROR("Failed to merge one nri ulimit to oci spec");
+        return -1;
+    }
+
+    return 0;
+}
+#endif /* ENABLE_NRI */

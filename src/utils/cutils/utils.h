@@ -409,6 +409,8 @@ int util_create_shm_path(const char *spath, const int64_t shm_size);
 
 int util_chown_for_shm(const char *shm_path, const char *user_remap);
 
+void set_child_process_pdeathsig(void);
+
 /**
  * retry_cnt: max count of call cb;
  * interval_us: how many us to sleep, after call cb;
