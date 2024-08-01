@@ -40,6 +40,22 @@ struct isulad_conf {
 #define DEFAULT_SANDBOXER_NAME "shim"
 char *conf_get_sandbox_rootpath(void);
 char *conf_get_sandbox_statepath(void);
+
+#ifdef ENABLE_NRI
+#define DEFAULT_SOCKET_PATH "/var/run/nri/nri.sock"
+#define DEFAULT_MUX_SOCKET_PATH "/var/run/nri/nri_mux.sock"
+#define DEFAULT_PLUGIN_PATH "/opt/nri/plugins"
+#define DEFAULT_PLUGIN_CONFIG_PATH "/etc/nri/conf.d"
+#define DEFAULT_PLUGIN_REGISTRY_TIMEOUT 5
+#define DEFAULT_PLUGIN_REQUST_TIMEOUT 2
+bool conf_get_nri_support(void);
+bool conf_get_nri_external_support(void);
+char *conf_get_nri_plugin_config_path(void);
+char *conf_get_nri_plugin_path(void);
+char *conf_get_socket_path(void);
+uint64_t conf_get_nri_plugin_registration_timeout(void);
+uint64_t conf_get_nri_plugin_requst_timeout(void);
+#endif
 #endif
 
 char *conf_get_isulad_pidfile(void);

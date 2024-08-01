@@ -113,6 +113,14 @@ if (ENABLE_SHIM_V2)
     _CHECK(LIBSHIM_V2_LIBRARY "LIBSHIM_V2_LIBRARY-NOTFOUND" "libshim_v2.so")
 endif()
 
+if (ENABLE_NRI)
+    find_path(NRI_INCLUDE_DIR nri_plugin.h)
+    _CHECK(NRI_INCLUDE_DIR "NRI_INCLUDE_DIR-NOTFOUND" "nri_plugin.h")
+    
+    find_library(LIBISULA_NRI_LIBRARY isula_nri)
+    _CHECK(LIBISULA_NRI_LIBRARY "LIBISULA_NRI_LIBRARY-NOTFOUND" "libisula_nri.so")
+endif()
+
 if (OPENSSL_VERIFY)
     find_path(OPENSSL_INCLUDE_DIR openssl/x509.h)
     _CHECK(OPENSSL_INCLUDE_DIR "OPENSSL_INCLUDE_DIR-NOTFOUND" "openssl/x509.h")

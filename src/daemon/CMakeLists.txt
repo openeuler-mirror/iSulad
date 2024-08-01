@@ -36,6 +36,15 @@ if (ENABLE_CRI_API_V1)
     list (APPEND local_daemon_incs
         ${SANDBOX_INCS}
         )
+    if (ENABLE_NRI)
+        add_subdirectory(nri)
+        list (APPEND local_daemon_srcs
+            ${NRI_SRCS}
+            )
+        list (APPEND local_daemon_incs
+            ${NRI_INCS}
+            )
+    endif()
 endif()
 
 set(DAEMON_SRCS

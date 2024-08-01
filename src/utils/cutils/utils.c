@@ -1699,3 +1699,10 @@ int util_chown_for_shm(const char *shm_path, const char *user_remap)
 
     return 0;
 }
+
+void set_child_process_pdeathsig(void)
+{
+    if (prctl(PR_SET_PDEATHSIG, SIGKILL) < 0) {
+        SYSERROR("Failed to set child process pdeathsig");
+    }
+}
