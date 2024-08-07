@@ -69,7 +69,7 @@
 #define RESOURCE_FNAME_FORMATS "%s/resources.json"
 
 // handle string from stderr output.
-typedef int(*handle_output_callback_t)(const char *output);
+typedef int(*handle_output_callback_t)(const char *output, const char *workdir);
 typedef struct {
     bool fg;
     const char *id;
@@ -757,7 +757,7 @@ static int runtime_call_simple(const char *workdir, const char *runtime, const c
         // we consider the runtime call simple succeeded,
         // even if the process exit with failure.
         if (stderr_msg != NULL && cb != NULL) {
-            ret = cb(stderr_msg);
+            ret = cb(stderr_msg, workdir);
         }
     }
 
@@ -768,17 +768,37 @@ static int runtime_call_simple(const char *workdir, const char *runtime, const c
 
 // oci runtime return -1 if the container 'does not exist'
 // if output contains 'does not exist', means nothing to kill or delete, return 0
+// util_exec_cmd return -1 if chdir failed
+// if output contains 'chdir %s failed', means state dir damaged, return 0
 // this will change the exit status of kill or delete command
-static int non_existent_output_check(const char *output)
+static int shielded_output_check(const char *output, const char *workdir)
 {
-    char *pattern = "does not exist";
+    int nret = 0;
+    const char *nonexist_pattern = "does not exist";
+    char chdir_pattern[PATH_MAX] = { 0 };
 
-    if (output == NULL) {
+    if (output == NULL || workdir == NULL) {
         return -1;
     }
 
     // container not exist, kill or delete success, return 0
-    if (util_strings_contains_word(output, pattern)) {
+    if (util_strings_contains_word(output, nonexist_pattern)) {
+        return 0;
+    }
+
+    if (sizeof(chdir_pattern) > PATH_MAX - strlen("chdir ") - strlen(" failed")) {
+        INFO("chdir_pattern is too long");
+        return -1;
+    }
+
+    nret = snprintf(chdir_pattern, sizeof(chdir_pattern), "chdir %s failed", workdir);
+    if (nret < 0 || (size_t)nret >= sizeof(chdir_pattern)) {
+        INFO("Failed to make full chdir_pattern");
+        return -1;
+    }
+
+    // if output contains 'chdir ${workdir} failed', means state dir damaged, return 0
+    if (util_strings_contains_word(output, chdir_pattern)) {
         return 0;
     }
 
@@ -786,15 +806,15 @@ static int non_existent_output_check(const char *output)
     return -1;
 }
 
-// kill success or non_existent_output_check succeed return 0, DO_RETRY_CALL will break;
+// kill success or shielded_output_check succeed return 0, DO_RETRY_CALL will break;
 // if kill failed, recheck on shim alive, if not alive, kill succeed,  still return 0;
 // else, return -1, DO_RETRY_CALL will call this again;
 static int runtime_call_kill_and_check(const char *workdir, const char *runtime, const char *id)
 {
     int ret = -1;
 
-    // kill succeed, return 0; non_existent_output_check succeed, return 0;
-    ret = runtime_call_simple(workdir, runtime, "kill", NULL, 0, id, non_existent_output_check);
+    // kill succeed, return 0; shielded_output_check succeed, return 0;
+    ret = runtime_call_simple(workdir, runtime, "kill", NULL, 0, id, shielded_output_check);
     if (ret == 0) {
         return 0;
     }
@@ -814,8 +834,8 @@ static int runtime_call_delete_force(const char *workdir, const char *runtime, c
     // if the container does not exist when force deleting it,
     // runc will report an error and isulad does not need to retry the deletion again.
     // related PR ID:d1a743674a98e23d348b29f52c43436356f56b79
-    // non_existent_output_check succeed, return 0;
-    return runtime_call_simple(workdir, runtime, "delete", opts, 1, id, non_existent_output_check);
+    // shielded_output_check succeed, return 0;
+    return runtime_call_simple(workdir, runtime, "delete", opts, 1, id, shielded_output_check);
 }
 
 #define ExitSignalOffset 128
@@ -1825,7 +1845,7 @@ static int create_resources_json_file(const char *workdir, const shim_client_cgr
 }
 
 // show std error msg, always return -1.
-static int show_stderr(const char *err)
+static int show_stderr(const char *err, const char *workdir)
 {
     isulad_set_error_message(err);
     return -1;
