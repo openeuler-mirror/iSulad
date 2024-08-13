@@ -435,6 +435,13 @@ void PodSandboxManagerService::ClearCniNetwork(const std::shared_ptr<sandbox::Sa
         return;
     }
 
+    // If the network namespace is not mounted, the network has been cleaned up
+    // and there is no need to call the cni plugin.
+    if (!util_detect_mounted(sandboxKey.c_str())) {
+        WARN("Network namespace %s not exist", sandboxKey.c_str());
+        return;
+    }
+
     const auto config = sandbox->GetSandboxConfig();
     std::map<std::string, std::string> stdAnnos;
     CRIHelpers::ProtobufAnnoMapToStd(config.annotations(), stdAnnos);
