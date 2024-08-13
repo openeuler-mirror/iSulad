@@ -46,7 +46,6 @@ public:
 
     auto GetSockpath(std::vector<std::string> &paths) -> bool;
 
-    // Stop plugins.
     auto StopPlugins() -> bool;
 
     void RemoveClosedPlugins();
@@ -58,19 +57,23 @@ public:
     auto RunPodSandbox(std::shared_ptr<const sandbox::Sandbox> sandbox, Errors &error) ->bool;
     auto StopPodSandbox(std::shared_ptr<const sandbox::Sandbox> sandbox, Errors &error) ->bool;
     auto RemovePodSandbox(std::shared_ptr<const sandbox::Sandbox> sandbox, Errors &error) ->bool;
-    auto CreateContainer(std::shared_ptr<const sandbox::Sandbox> sandbox, const std::string &conId, const runtime::v1::ContainerConfig &containerConfig, nri_container_adjustment **adjust, Errors &error) -> bool;
-    auto PostCreateContainer(const std::string &conId, Errors &error) ->bool;
-    auto UndoCreateContainer(std::shared_ptr<const sandbox::Sandbox> sandbox, const std::string &conId, Errors &error) -> bool;
-    auto StartContainer(const std::string &conId, Errors &error) ->bool;
-    auto PostStartContainer(const std::string &conId, Errors &error) ->bool;
-    auto UpdateContainer(const std::string &conId, Errors &error) ->bool;
-    auto PostUpdateContainer(const std::string &conId, Errors &error) ->bool;
-    auto StopContainer(const std::string &conId, Errors &error) ->bool;
-    auto RemoveContainer(const std::string &conId, Errors &error) ->bool;
-    auto StateChange(nri_state_change_event *evt, Errors &error) ->bool;
-    auto updateContainers(const nri_update_containers_request *req, nri_update_containers_response **resp) ->bool;
+    auto CreateContainer(std::shared_ptr<const sandbox::Sandbox> sandbox, const std::string &conId,
+                         const runtime::v1::ContainerConfig &containerConfig, nri_container_adjustment **adjust,
+                         Errors &error) -> bool;
+    auto PostCreateContainer(const std::string &conId, Errors &error) -> bool;
+    auto UndoCreateContainer(std::shared_ptr<const sandbox::Sandbox> sandbox, const std::string &conId,
+                             Errors &error) -> bool;
+    auto StartContainer(const std::string &conId, Errors &error) -> bool;
+    auto PostStartContainer(const std::string &conId, Errors &error) -> bool;
+    auto UpdateContainer(const std::string &conId, Errors &error) -> bool;
+    auto PostUpdateContainer(const std::string &conId, Errors &error) -> bool;
+    auto StopContainer(const std::string &conId, Errors &error) -> bool;
+    auto RemoveContainer(const std::string &conId, Errors &error) -> bool;
+    auto StateChange(nri_state_change_event *evt, Errors &error) -> bool;
+    auto updateContainers(const nri_update_containers_request *req, nri_update_containers_response **resp) -> bool;
 
     auto NewExternalPlugin(int fd) -> bool;
+
 private:
     NRIAdaptation() = default;
     NRIAdaptation(const NRIAdaptation &other) = delete;
@@ -86,18 +89,25 @@ private:
     auto SortPlugins() -> bool;
     void GetClosedPlugins(std::vector<std::string> &closedPlugin);
 
+    auto ApplyUpdates(const std::vector<nri_container_update *> &update, std::vector<nri_container_update *> &failed,
+                      bool getFailed, Errors &error) -> bool;
+
     auto IsSupport() -> bool;
 
-    auto ApplyUpdates(const std::vector<nri_container_update *> &update, std::vector<nri_container_update *> &failed, bool getFailed,
-                    Errors &error) -> bool;
-
-    auto NRIPodSandbox(const std::shared_ptr<const sandbox::Sandbox> &sandbox, Errors& error) -> std::unique_ptr<CStructWrapper<nri_pod_sandbox>>;
-    auto NRIContainerByConConfig(const std::shared_ptr<const sandbox::Sandbox> &sandbox, const runtime::v1::ContainerConfig &containerConfig, Errors& error) -> std::unique_ptr<CStructWrapper<nri_container>>;
-    auto NRIContainerByID(const std::string &id, Errors& error) -> std::unique_ptr<CStructWrapper<nri_container>>;
+    auto NRIPodSandbox(const std::shared_ptr<const sandbox::Sandbox> &sandbox,
+                       Errors &error) -> std::unique_ptr<CStructWrapper<nri_pod_sandbox>>;
+    auto NRIContainerByConConfig(const std::shared_ptr<const sandbox::Sandbox> &sandbox,
+                                 const runtime::v1::ContainerConfig &containerConfig, Errors &error) -> std::unique_ptr<CStructWrapper<nri_container>>;
+    auto NRIContainerByID(const std::string &id, Errors &error) -> std::unique_ptr<CStructWrapper<nri_container>>;
 
     auto GetNRIPluginConfigPath(void) -> std::string;
     auto GetNRIPluginPath(void) -> std::string;
     auto GetNRISockPath(void) -> std::string;
+
+    void PluginsStateChange(nri_state_change_event *evt);
+    bool PluginsCreateContainer(nri_create_container_request *req, const std::string &conId, pluginResult &result);
+    bool PluginsUpdateContainer(nri_update_container_request *req, const std::string &conId, pluginResult &result);
+
 private:
     RWMutex m_mutex;
     static std::atomic<NRIAdaptation *> m_instance;

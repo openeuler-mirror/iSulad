@@ -87,8 +87,11 @@ struct readonly_default_oci_spec {
 
 static struct readonly_default_oci_spec g_rdspec;
 
-static int make_sure_oci_spec_annotations(oci_runtime_spec *oci_spec)
+int make_sure_oci_spec_annotations(oci_runtime_spec *oci_spec)
 {
+    if (oci_spec == NULL) {
+        return -1;
+    }
     if (oci_spec->annotations == NULL) {
         oci_spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
         if (oci_spec->annotations == NULL) {
@@ -464,9 +467,13 @@ out:
     return ret;
 }
 
-static int make_sure_oci_spec_linux_resources_cpu(oci_runtime_spec *oci_spec)
+int make_sure_oci_spec_linux_resources_cpu(oci_runtime_spec *oci_spec)
 {
     int ret = 0;
+
+    if (oci_spec == NULL) {
+        return -1;
+    }
 
     ret = make_sure_oci_spec_linux_resources(oci_spec);
     if (ret < 0) {
@@ -589,9 +596,13 @@ out:
     return ret;
 }
 
-static int make_sure_oci_spec_linux_resources_mem(oci_runtime_spec *oci_spec)
+int make_sure_oci_spec_linux_resources_mem(oci_runtime_spec *oci_spec)
 {
     int ret = 0;
+
+    if (oci_spec == NULL) {
+        return -1;
+    }
 
     ret = make_sure_oci_spec_linux_resources(oci_spec);
     if (ret < 0) {
@@ -731,8 +742,11 @@ out:
     return ret;
 }
 
-static int make_sure_oci_spec_hooks(oci_runtime_spec *oci_spec)
+int make_sure_oci_spec_hooks(oci_runtime_spec *oci_spec)
 {
+    if (oci_spec == NULL) {
+        return -1;
+    }
     if (oci_spec->hooks == NULL) {
         oci_spec->hooks = util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
         if (oci_spec->hooks == NULL) {
@@ -2827,6 +2841,11 @@ int spec_add_linux_resources_hugepage_limit(oci_runtime_spec *oci_spec, const ch
     int ret = 0;
     defs_resources_hugepage_limits_element *hugepage_limit = NULL;
 
+    if (oci_spec == NULL || page_size == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
     ret = make_sure_oci_spec_linux_resources(oci_spec);
     if (ret < 0) {
         return -1;
@@ -2858,6 +2877,11 @@ int spec_add_linux_resources_rlimit(oci_runtime_spec *oci_spec, const char *type
 {
     int ret = 0;
     defs_process_rlimits_element *rlimit = NULL;
+
+    if (oci_spec == NULL || type == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
 
     ret = make_sure_oci_spec_linux_resources(oci_spec);
     if (ret < 0) {

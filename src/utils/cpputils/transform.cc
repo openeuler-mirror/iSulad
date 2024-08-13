@@ -97,7 +97,7 @@ auto RepeatedPtrFieldToCharArray(const google::protobuf::RepeatedPtrField<std::s
     if (result == nullptr) {
         return nullptr;
     }
-    size_t i {};
+    size_t i = 0;
     for (const auto &it : ptrs) {
         result[i++] = util_strdup_s(it.c_str());
     }
