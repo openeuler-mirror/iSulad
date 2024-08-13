@@ -848,6 +848,13 @@ auto PodSandboxManagerService::ClearCniNetwork(const std::string &realSandboxID,
         goto cleanup;
     }
 
+    // If the network namespace is not mounted, the network has been cleaned up
+    // and there is no need to call the cni plugin.
+    if (!util_detect_mounted(netnsPath.c_str())) {
+        WARN("Network namespace %s not exist", netnsPath.c_str());
+        goto cleanup;
+    }
+
     stdAnnos.insert(std::pair<std::string, std::string>(CRIHelpers::Constants::POD_SANDBOX_KEY, netnsPath));
     pluginErr.Clear();
     m_pluginManager->TearDownPod(ns, name, Network::DEFAULT_NETWORK_INTERFACE_NAME, realSandboxID, stdAnnos,
