@@ -51,14 +51,13 @@ typedef enum {
 
 bool copy_nri_mount(const nri_mount *src, nri_mount **dest);
 bool copy_nri_key_value(const nri_key_value *src, nri_key_value **dest);
-bool copy_nri_hook(const nri_hook *src, nri_hook **dest);
 bool copy_nri_posix_rlimit(const nri_posix_rlimit *src, nri_posix_rlimit **dest);
 bool copy_nri_linux_resources(const nri_linux_resources *src, nri_linux_resources **dest);
-bool copy_nri_linux_cpu(const nri_linux_cpu *src, nri_linux_cpu **dest);
 
 bool is_marked_for_removal(const char* key, char **out);
 
-bool realloc_and_copy_nri_hooks(nri_hook **targetHooks, size_t targetSize, const nri_hook **sourceHooks, size_t sourceLen);
+bool merge_nri_hooks(nri_hook **targetHooks, size_t targetSize, const nri_hook **sourceHooks,
+                     size_t sourceLen);
 
 bool init_nri_container_adjust(nri_container_adjustment **adjust);
 bool init_nri_container_update(nri_container_update **update, const char *id, uint8_t ignore_failure);

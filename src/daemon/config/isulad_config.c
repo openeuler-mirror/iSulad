@@ -456,6 +456,175 @@ out:
     (void)isulad_server_conf_unlock();
     return path;
 }
+
+#ifdef ENABLE_NRI
+bool conf_get_nri_support(void)
+{
+    bool nri_support = false;
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return false;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL) {
+        goto out;
+    }
+
+    nri_support = conf->json_confs->nri_support;
+
+out:
+    (void)isulad_server_conf_unlock();
+    return nri_support;
+}
+
+bool conf_get_nri_external_support(void)
+{
+    bool nri_external_support = false;
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return false;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL) {
+        goto out;
+    }
+
+    nri_external_support = conf->json_confs->disable_connections;
+
+out:
+    (void)isulad_server_conf_unlock();
+    return !nri_external_support;
+}
+
+char *conf_get_nri_plugin_config_path(void)
+{
+    char *path = NULL;
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->plugin_config_path == NULL) {
+        path = util_strdup_s(DEFAULT_PLUGIN_CONFIG_PATH);
+        goto out;
+    }
+
+    path = util_strdup_s(conf->json_confs->plugin_config_path);
+
+out:
+    (void)isulad_server_conf_unlock();
+    return path;
+}
+
+char *conf_get_nri_plugin_path(void)
+{
+    char *path = NULL;
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL) {
+        goto out;
+    }
+
+    if (conf->json_confs->plugin_path == NULL) {
+        path = util_strdup_s(DEFAULT_PLUGIN_PATH);
+        goto out;
+    }
+
+    path = util_strdup_s(conf->json_confs->plugin_path);
+
+out:
+    (void)isulad_server_conf_unlock();
+    return path;
+}
+
+char *conf_get_socket_path(void)
+{
+    char *path = NULL;
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL) {
+        goto out;
+    }
+
+    if (conf->json_confs->nri_socket_path == NULL) {
+        path = util_strdup_s(DEFAULT_SOCKET_PATH);
+        goto out;
+    }
+
+    path = util_strdup_s(conf->json_confs->nri_socket_path);
+
+out:
+    (void)isulad_server_conf_unlock();
+    return path;
+}
+
+uint64_t conf_get_nri_plugin_registration_timeout(void)
+{
+    uint64_t timeout = false;
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return false;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL) {
+        goto out;
+    }
+
+    if (conf->json_confs->plugin_registration_timeout == 0) {
+        timeout = DEFAULT_PLUGIN_REGISTRY_TIMEOUT;
+        goto out;
+    }
+
+    timeout = conf->json_confs->plugin_registration_timeout;
+
+out:
+    (void)isulad_server_conf_unlock();
+    return timeout;
+}
+uint64_t conf_get_nri_plugin_requst_timeout(void)
+{
+    uint64_t timeout = false;
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return false;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL) {
+        goto out;
+    }
+
+    if (conf->json_confs->plugin_requst_timeout == 0) {
+        timeout = DEFAULT_PLUGIN_REQUST_TIMEOUT;
+        goto out;
+    }
+
+    timeout = conf->json_confs->plugin_requst_timeout;
+
+out:
+    (void)isulad_server_conf_unlock();
+    return timeout;
+}
+#endif
 #endif
 
 /* conf get isulad rootdir */
@@ -1762,6 +1931,15 @@ int merge_json_confs_into_global(struct service_arguments *args)
     tmp_json_confs->cri_sandboxers = NULL;
 #endif
     args->json_confs->enable_cri_v1 = tmp_json_confs->enable_cri_v1;
+#ifdef ENABLE_NRI
+    args->json_confs->nri_support = tmp_json_confs->nri_support;
+    args->json_confs->disable_connections = tmp_json_confs->disable_connections;
+    override_string_value(&args->json_confs->plugin_config_path, &tmp_json_confs->plugin_config_path);
+    override_string_value(&args->json_confs->plugin_path, &tmp_json_confs->plugin_path);
+    args->json_confs->plugin_registration_timeout = tmp_json_confs->plugin_registration_timeout;
+    args->json_confs->plugin_requst_timeout = tmp_json_confs->plugin_requst_timeout;
+    override_string_value(&args->json_confs->nri_socket_path, &tmp_json_confs->nri_socket_path);
+#endif
     args->json_confs->enable_pod_events = tmp_json_confs->enable_pod_events;
 #endif
 

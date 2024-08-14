@@ -76,6 +76,11 @@ int spec_add_linux_resources_hugepage_limit(oci_runtime_spec *oci_spec, const ch
 int spec_add_linux_resources_rlimit(oci_runtime_spec *oci_spec, const char *type, uint64_t hard, uint64_t soft);
 #endif /* ENABLE_NRI */
 
+int make_sure_oci_spec_annotations(oci_runtime_spec *oci_spec);
+int make_sure_oci_spec_linux_resources_cpu(oci_runtime_spec *oci_spec);
+int make_sure_oci_spec_linux_resources_mem(oci_runtime_spec *oci_spec);
+int make_sure_oci_spec_hooks(oci_runtime_spec *oci_spec);
+
 #ifdef __cplusplus
 }
 #endif

@@ -37,7 +37,7 @@ std::string MarkForRemoval(const std::string &key);
 
 auto GetPluginConfig(std::string &idx, std::string &name, std::string &config) -> bool;
 
-std::string GenerateRandomExternalName(void);
+void GenerateRandomExternalName(std::string &ret);
 
 bool CheckPluginIndex(const std::string &idx);
 
