@@ -826,6 +826,7 @@ auto PodSandboxManagerService::ClearCniNetwork(const std::string &realSandboxID,
                                                /*error*/) -> int
 {
     Errors networkErr;
+    char real_path[PATH_MAX] = { 0 };
 
     bool ready = GetNetworkReady(realSandboxID, networkErr);
     if (hostNetwork || (!ready && networkErr.Empty())) {
@@ -848,10 +849,14 @@ auto PodSandboxManagerService::ClearCniNetwork(const std::string &realSandboxID,
         goto cleanup;
     }
 
+    if (realpath(netnsPath.c_str(), real_path) == NULL) {
+        ERROR("Failed to get %s realpath", netnsPath.c_str());
+    }
+
     // If the network namespace is not mounted, the network has been cleaned up
     // and there is no need to call the cni plugin.
-    if (!util_detect_mounted(netnsPath.c_str())) {
-        WARN("Network namespace %s not exist", netnsPath.c_str());
+    if (strlen(real_path) != 0 && !util_detect_mounted(real_path)) {
+        ERROR("Network namespace %s not exist", real_path);
         goto cleanup;
     }
 

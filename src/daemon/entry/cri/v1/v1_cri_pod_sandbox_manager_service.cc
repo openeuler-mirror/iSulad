@@ -424,6 +424,7 @@ cleanup_sandbox:
 
 void PodSandboxManagerService::ClearCniNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, Errors &error)
 {
+    char real_path[PATH_MAX] = { 0 };
     std::string networkMode = sandbox->GetNetMode();
     if (!namespace_is_cni(networkMode.c_str()) || !sandbox->GetNetworkReady()) {
         return;
@@ -435,10 +436,14 @@ void PodSandboxManagerService::ClearCniNetwork(const std::shared_ptr<sandbox::Sa
         return;
     }
 
+    if (realpath(sandboxKey.c_str(), real_path) == NULL) {
+        ERROR("Failed to get %s realpath", sandboxKey.c_str());
+    }
+
     // If the network namespace is not mounted, the network has been cleaned up
     // and there is no need to call the cni plugin.
-    if (!util_detect_mounted(sandboxKey.c_str())) {
-        WARN("Network namespace %s not exist", sandboxKey.c_str());
+    if (strlen(real_path) != 0 && !util_detect_mounted(real_path)) {
+        ERROR("Network namespace %s not exist", real_path);
         return;
     }
 
