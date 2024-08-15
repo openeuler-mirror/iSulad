@@ -2883,7 +2883,12 @@ int spec_add_linux_resources_rlimit(oci_runtime_spec *oci_spec, const char *type
         return -1;
     }
 
-    ret = make_sure_oci_spec_linux_resources(oci_spec);
+    ret = make_sure_oci_spec_process(oci_spec);
+    if (ret < 0) {
+        return -1;
+    }
+
+    ret = merge_ulimits_pre(oci_spec, 1);
     if (ret < 0) {
         return -1;
     }

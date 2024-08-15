@@ -63,7 +63,7 @@ struct owners {
 
 struct resultReply {
     nri_container_adjustment* adjust;
-    std::vector<nri_container_update*> update;
+    std::vector<nri_container_update *> update;
 };
 
 using resultOwners = std::map<std::string, owners>;
@@ -71,16 +71,19 @@ using resultOwners = std::map<std::string, owners>;
 class pluginResult {
 public:
     pluginResult() = default;
+    pluginResult(std::string conId);
 
-    ~pluginResult() = default;
+    virtual ~pluginResult();
 
+    auto Init() -> bool;
     auto InitByConId(std::string conId) -> bool;
     auto InitByUpdateReq(nri_update_container_request *req) -> bool;
 
     auto GetReplyUpdate() -> std::vector<nri_container_update *>;
-    auto GetReplyAdjust() -> nri_container_adjustment *;
+    auto MoveReplyAdjust() -> nri_container_adjustment *;
+    auto GetReplyResources(const std::string &id) -> const nri_linux_resources *;
 
-    auto Apply(int32_t event, nri_container_adjustment *adjust, nri_container_update **update, size_t update_len,
+    auto Apply(int32_t event, const nri_container_adjustment *adjust, nri_container_update **update, size_t update_len,
                const std::string &plugin) -> bool;
     auto Update(nri_container_update **updates, size_t update_len, const std::string &plugin) -> bool;
 
@@ -90,12 +93,12 @@ private:
 
     auto InitReply(void) -> bool;
 
-    auto Adjust(nri_container_adjustment *adjust, const std::string &plugin) -> bool;
+    auto Adjust(const nri_container_adjustment *adjust, const std::string &plugin) -> bool;
 
     auto AdjustAnnotations(json_map_string_string *annos, const std::string &plugin) -> bool;
     auto AdjustMounts(nri_mount **mounts, size_t mounts_size, const std::string &plugin) -> bool;
     auto AdjustEnv(nri_key_value **envs, size_t envs_size, const std::string &plugin) -> bool;
-    auto AdjustHooks(nri_hooks *hooks, const std::string &plugin) -> bool;
+    auto AdjustHooks(const nri_hooks *hooks, const std::string &plugin) -> bool;
     auto AdjustDevices(nri_linux_device **devices, size_t devices_size, const std::string &plugin) -> bool;
     auto AdjustResources(nri_linux_resources *resources, const std::string &plugin) -> bool;
     bool ClaimAndCopyResources(nri_linux_resources *src, std::string &id, const std::string &plugin,
@@ -107,7 +110,9 @@ private:
     std::string m_conId;
     nri_linux_resources *m_update_req;
     resultReply m_reply;
+    // update plugin -> update context
     std::map<std::string, nri_container_update *> m_updates;
+    // adjust plugin -> adjust context
     resultOwners m_owners;
 };
 

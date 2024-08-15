@@ -49,19 +49,19 @@ typedef enum {
     LAST = 12,
 } NRI_Event;
 
-bool copy_nri_mount(const nri_mount *src, nri_mount **dest);
-bool copy_nri_key_value(const nri_key_value *src, nri_key_value **dest);
-bool copy_nri_posix_rlimit(const nri_posix_rlimit *src, nri_posix_rlimit **dest);
-bool copy_nri_linux_resources(const nri_linux_resources *src, nri_linux_resources **dest);
+nri_mount *copy_nri_mount(const nri_mount *src);
+nri_posix_rlimit *copy_nri_posix_rlimit(const nri_posix_rlimit *src);
+nri_linux_resources *copy_nri_linux_resources(const nri_linux_resources *src);
+nri_key_value *copy_nri_key_value(const nri_key_value *src);
+nri_linux_device *copy_nri_device(const nri_linux_device *src);
 
 bool is_marked_for_removal(const char* key, char **out);
 
 bool merge_nri_hooks(nri_hook **targetHooks, size_t targetSize, const nri_hook **sourceHooks,
                      size_t sourceLen);
 
-bool init_nri_container_adjust(nri_container_adjustment **adjust);
-bool init_nri_container_update(nri_container_update **update, const char *id, uint8_t ignore_failure);
-bool init_nri_linux_resources(nri_linux_resources **resources);
+nri_container_update *init_nri_container_update(const char *id, const uint8_t ignore_failure);
+nri_linux_resources *init_nri_linux_resources(void);
 
 #ifdef __cplusplus
 }

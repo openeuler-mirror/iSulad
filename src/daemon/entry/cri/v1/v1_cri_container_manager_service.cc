@@ -27,6 +27,11 @@
 #include "stream_server.h"
 #include "sandbox_manager.h"
 
+#ifdef ENABLE_NRI
+#include "nri_adaption.h"
+#include "nri_helpers.h"
+#endif
+
 namespace CRIV1 {
 auto ContainerManagerService::GetContainerOrSandboxRuntime(const std::string &realID, Errors &error) -> std::string
 {
@@ -505,11 +510,24 @@ std::string ContainerManagerService::CreateContainer(const std::string &podSandb
         return response_id;
     }
 
+#ifdef ENABLE_NRI
+    Errors nriErr;
+    nri_container_adjustment *adjust = NULL;
+    if (!NRIAdaptation::GetInstance()->CreateContainer(sandbox, response_id, containerConfig, &adjust, nriErr)) {
+        ERROR("Failed to get NRI adjustment for container: %s", nriErr.GetCMessage());
+        NRIAdaptation::GetInstance()->UndoCreateContainer(sandbox, response_id, nriErr);
+        return response_id;
+    }
+#endif
+
     request = GenerateCreateContainerRequest(*sandbox, containerConfig, podSandboxConfig, error);
     if (error.NotEmpty()) {
         error.SetError("Failed to generate create container request");
         goto cleanup;
     }
+#ifdef ENABLE_NRI
+    request->adjust = adjust;
+#endif
 
     if (m_cb->container.create(request, &response) != 0) {
         if (response != nullptr && (response->errmsg != nullptr)) {
@@ -522,6 +540,12 @@ std::string ContainerManagerService::CreateContainer(const std::string &podSandb
 
     response_id = response->id;
 
+#ifdef ENABLE_NRI
+    if (!NRIAdaptation::GetInstance()->PostCreateContainer(response_id, nriErr)) {
+        ERROR("NRI post-create notification failed: %s", nriErr.GetCMessage());
+    }
+#endif
+
 cleanup:
     free_container_create_request(request);
     free_container_create_response(response);
@@ -530,6 +554,9 @@ cleanup:
 
 void ContainerManagerService::StartContainer(const std::string &containerID, Errors &error)
 {
+#ifdef ENABLE_NRI
+    Errors nriErr;
+#endif
     if (containerID.empty()) {
         error.SetError("Invalid empty container id.");
         return;
@@ -563,6 +590,14 @@ void ContainerManagerService::StartContainer(const std::string &containerID, Err
         goto cleanup;
     }
 
+#ifdef ENABLE_NRI
+    if (!NRIAdaptation::GetInstance()->StartContainer(containerID, nriErr)) {
+        ERROR("NRI container start failed: %s", nriErr.GetCMessage());
+        NRIAdaptation::GetInstance()->StopContainer(containerID, nriErr);
+        goto cleanup;
+    }
+#endif
+
     if (ret != 0) {
         if (response != nullptr && response->errmsg != nullptr) {
             error.SetError(response->errmsg);
@@ -571,6 +606,11 @@ void ContainerManagerService::StartContainer(const std::string &containerID, Err
         }
         goto cleanup;
     }
+#ifdef ENABLE_NRI
+    if (!NRIAdaptation::GetInstance()->PostStartContainer(containerID, nriErr)) {
+        ERROR("NRI PostStartContainer notification failed: %s", nriErr.GetCMessage());
+    }
+#endif
 cleanup:
     free_container_start_request(request);
     free_container_start_response(response);
@@ -578,11 +618,25 @@ cleanup:
 
 void ContainerManagerService::StopContainer(const std::string &containerID, int64_t timeout, Errors &error)
 {
+#ifdef ENABLE_NRI
+    Errors nriErr;
+#endif
     CRIHelpers::StopContainer(m_cb, containerID, timeout, error);
+#ifdef ENABLE_NRI
+    if (!NRIAdaptation::GetInstance()->StopContainer(containerID, nriErr)) {
+        ERROR("NRI StopContainer notification failed: %s", nriErr.GetCMessage());
+    }
+#endif
 }
 
 void ContainerManagerService::RemoveContainer(const std::string &containerID, Errors &error)
 {
+#ifdef ENABLE_NRI
+    Errors nriErr;
+    if (!NRIAdaptation::GetInstance()->RemoveContainer(containerID, nriErr)) {
+        ERROR("NRI RemoveContainer notification failed: %s", nriErr.GetCMessage());
+    }
+#endif
     CRIHelpers::RemoveContainer(m_cb, containerID, error);
     if (error.NotEmpty()) {
         WARN("Failed to remove container %s", containerID.c_str());
@@ -1048,6 +1102,18 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
     struct parser_context ctx {
         OPT_GEN_SIMPLIFY, 0
     };
+
+    runtime::v1::LinuxContainerResources updateRes = resources;
+#ifdef ENABLE_NRI
+    Errors nriErr;
+    runtime::v1::LinuxContainerResources adjust;
+    if (!NRIAdaptation::GetInstance()->UpdateContainer(containerID, resources, adjust, nriErr)) {
+        ERROR("NRI UpdateContainer notification failed: %s", nriErr.GetCMessage());
+        goto cleanup;
+    }
+    updateRes = adjust;
+#endif
+
     request = (container_update_request *)util_common_calloc_s(sizeof(container_update_request));
     if (request == nullptr) {
         error.SetError("Out of memory");
@@ -1061,17 +1127,17 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
         goto cleanup;
     }
 
-    hostconfig->cpu_period = resources.cpu_period();
-    hostconfig->cpu_quota = resources.cpu_quota();
-    hostconfig->cpu_shares = resources.cpu_shares();
+    hostconfig->cpu_period = updateRes.cpu_period();
+    hostconfig->cpu_quota = updateRes.cpu_quota();
+    hostconfig->cpu_shares = updateRes.cpu_shares();
 
-    if (!resources.unified().empty()) {
+    if (!updateRes.unified().empty()) {
         hostconfig->unified = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
         if (hostconfig->unified == nullptr) {
             error.SetError("Out of memory");
             goto cleanup;
         }
-        for (auto &iter : resources.unified()) {
+        for (auto &iter : updateRes.unified()) {
             if (append_json_map_string_string(hostconfig->unified, iter.first.c_str(), iter.second.c_str()) != 0) {
                 error.SetError("Failed to append string");
                 goto cleanup;
@@ -1079,30 +1145,30 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
         }
     }
 
-    hostconfig->memory = resources.memory_limit_in_bytes();
-    hostconfig->memory_swap = resources.memory_swap_limit_in_bytes();
-    if (!resources.cpuset_cpus().empty()) {
-        hostconfig->cpuset_cpus = util_strdup_s(resources.cpuset_cpus().c_str());
+    hostconfig->memory = updateRes.memory_limit_in_bytes();
+    hostconfig->memory_swap = updateRes.memory_swap_limit_in_bytes();
+    if (!updateRes.cpuset_cpus().empty()) {
+        hostconfig->cpuset_cpus = util_strdup_s(updateRes.cpuset_cpus().c_str());
     }
-    if (!resources.cpuset_mems().empty()) {
-        hostconfig->cpuset_mems = util_strdup_s(resources.cpuset_mems().c_str());
+    if (!updateRes.cpuset_mems().empty()) {
+        hostconfig->cpuset_mems = util_strdup_s(updateRes.cpuset_mems().c_str());
     }
-    if (resources.hugepage_limits_size() != 0) {
+    if (updateRes.hugepage_limits_size() != 0) {
         hostconfig->hugetlbs = (host_config_hugetlbs_element **)util_smart_calloc_s(
-                                   sizeof(host_config_hugetlbs_element *), resources.hugepage_limits_size());
+                                   sizeof(host_config_hugetlbs_element *), updateRes.hugepage_limits_size());
         if (hostconfig->hugetlbs == nullptr) {
             error.SetError("Out of memory");
             goto cleanup;
         }
-        for (int i = 0; i < resources.hugepage_limits_size(); i++) {
+        for (int i = 0; i < updateRes.hugepage_limits_size(); i++) {
             hostconfig->hugetlbs[i] =
                 (host_config_hugetlbs_element *)util_common_calloc_s(sizeof(host_config_hugetlbs_element));
             if (hostconfig->hugetlbs[i] == nullptr) {
                 error.SetError("Out of memory");
                 goto cleanup;
             }
-            hostconfig->hugetlbs[i]->page_size = util_strdup_s(resources.hugepage_limits(i).page_size().c_str());
-            hostconfig->hugetlbs[i]->limit = resources.hugepage_limits(i).limit();
+            hostconfig->hugetlbs[i]->page_size = util_strdup_s(updateRes.hugepage_limits(i).page_size().c_str());
+            hostconfig->hugetlbs[i]->limit = updateRes.hugepage_limits(i).limit();
             hostconfig->hugetlbs_len++;
         }
     }
@@ -1121,6 +1187,12 @@ void ContainerManagerService::UpdateContainerResources(const std::string &contai
             error.SetError("Failed to call update container callback");
         }
     }
+#ifdef ENABLE_NRI
+    if (!NRIAdaptation::GetInstance()->PostUpdateContainer(containerID, nriErr)) {
+        ERROR("NRI PostUpdateContainer notification failed: %s", nriErr.GetCMessage());
+        goto cleanup;
+    }
+#endif
 cleanup:
     free_container_update_request(request);
     free_container_update_response(response);

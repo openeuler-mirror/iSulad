@@ -1938,7 +1938,7 @@ int merge_json_confs_into_global(struct service_arguments *args)
     override_string_value(&args->json_confs->plugin_path, &tmp_json_confs->plugin_path);
     args->json_confs->plugin_registration_timeout = tmp_json_confs->plugin_registration_timeout;
     args->json_confs->plugin_requst_timeout = tmp_json_confs->plugin_requst_timeout;
-    override_string_value(&args->json_confs->nri_socket_path, &tmp_json_confs->nri_socket_path);
+    // Setting socket plugin path is not supported now
 #endif
     args->json_confs->enable_pod_events = tmp_json_confs->enable_pod_events;
 #endif

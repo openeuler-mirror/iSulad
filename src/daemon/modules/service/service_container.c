@@ -76,6 +76,9 @@
 #include "sandbox_ops.h"
 #include "vsock_io_handler.h"
 #endif
+#ifdef ENABLE_NRI
+#include "nri_spec.h"
+#endif
 
 #define KATA_RUNTIME "kata-runtime"
 
@@ -725,6 +728,15 @@ static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, contai
     if (ret < 0) {
         return -1;
     }
+
+#ifdef ENABLE_NRI
+    // update oci spec with nri
+    ret = update_oci_nri(oci_spec, hostconfig);
+    if (ret != 0) {
+        ERROR("Failed to update oci spec with nri");
+        return -1;
+    }
+#endif
 
     // renew_oci_config() will update process->user and share namespace after.
 

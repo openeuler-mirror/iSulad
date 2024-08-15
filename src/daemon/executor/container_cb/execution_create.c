@@ -65,6 +65,10 @@
 #include "mailbox.h"
 #include "specs_mount.h"
 
+#ifdef ENABLE_NRI
+#include "nri_spec.h"
+#endif
+
 #ifdef ENABLE_CRI_API_V1
 static bool validate_sandbox_info(const container_sandbox_info *sandbox)
 {
@@ -1465,6 +1469,14 @@ int container_create_cb(const container_create_request *request, container_creat
     skip_sandbox_key_manage = (is_sandbox_container(request->sandbox) && namespace_is_cni(host_spec->network_mode));
 #endif
 
+#ifdef ENABLE_NRI
+    if (request->adjust != NULL && nri_adjust_host_spec(request->adjust, host_spec) != 0) {
+        ERROR("Failed to adjust host spec");
+        cc = ISULAD_ERR_INPUT;
+        goto clean_container_root_dir;
+    }
+#endif
+
     if (save_container_config_before_create(id, runtime_root, host_spec, v2_spec) != 0) {
         ERROR("Failed to malloc container_config_v2_common_config");
         cc = ISULAD_ERR_INPUT;
@@ -1548,6 +1560,15 @@ int container_create_cb(const container_create_request *request, container_creat
     if (plugin_event_container_pre_create(id, oci_spec) != 0) {
         ERROR("Plugin event pre create failed");
         (void)plugin_event_container_post_remove2(id, oci_spec); /* ignore error */
+        cc = ISULAD_ERR_EXEC;
+        goto clean_netns;
+    }
+#endif
+
+#ifdef ENABLE_NRI
+    // modify oci spec by nri plugin
+    if (request->adjust != NULL && nri_adjust_oci_spec(request->adjust, oci_spec) != 0) {
+        ERROR("Failed to adjust oci spec");
         cc = ISULAD_ERR_EXEC;
         goto clean_netns;
     }

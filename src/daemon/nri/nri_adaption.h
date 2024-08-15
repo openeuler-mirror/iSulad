@@ -46,10 +46,6 @@ public:
 
     auto GetSockpath(std::vector<std::string> &paths) -> bool;
 
-    auto StopPlugins() -> bool;
-
-    void RemoveClosedPlugins();
-
     auto GetPluginByIndex(const std::string &index) -> std::shared_ptr<NRIPlugin>;
     void AddPluginByIndex(const std::string &index, std::shared_ptr<NRIPlugin> plugin);
     void RemovePluginByIndex(const std::string &index);
@@ -65,7 +61,8 @@ public:
                              Errors &error) -> bool;
     auto StartContainer(const std::string &conId, Errors &error) -> bool;
     auto PostStartContainer(const std::string &conId, Errors &error) -> bool;
-    auto UpdateContainer(const std::string &conId, Errors &error) -> bool;
+    auto UpdateContainer(const std::string &conId, const runtime::v1::LinuxContainerResources &resources,
+                         runtime::v1::LinuxContainerResources &adjust, Errors &error) -> bool;
     auto PostUpdateContainer(const std::string &conId, Errors &error) -> bool;
     auto StopContainer(const std::string &conId, Errors &error) -> bool;
     auto RemoveContainer(const std::string &conId, Errors &error) -> bool;
@@ -87,6 +84,8 @@ private:
     auto SyncPlugin() -> bool;
 
     auto SortPlugins() -> bool;
+    void RemoveClosedPlugins();
+
     void GetClosedPlugins(std::vector<std::string> &closedPlugin);
 
     auto ApplyUpdates(const std::vector<nri_container_update *> &update, std::vector<nri_container_update *> &failed,
@@ -107,18 +106,16 @@ private:
     void PluginsStateChange(nri_state_change_event *evt);
     bool PluginsCreateContainer(nri_create_container_request *req, const std::string &conId, pluginResult &result);
     bool PluginsUpdateContainer(nri_update_container_request *req, const std::string &conId, pluginResult &result);
+    bool PluginsStopContainer(nri_stop_container_request *req, const std::string &conId, pluginResult &result);
 
 private:
     RWMutex m_mutex;
     static std::atomic<NRIAdaptation *> m_instance;
     bool m_support;
     bool m_external_support;
-    std::string m_version;
     std::string m_sock_path;
     std::string m_pluginConfigPath;
     std::string m_pluginPath;
-    std::vector<std::string> m_socketPathArr;
-    std::string m_disableConnections;
     // id --> NRIPlugin map
     std::map<std::string, std::shared_ptr<NRIPlugin>> m_storeMap;
     // TODO:plugin monitor thread id??

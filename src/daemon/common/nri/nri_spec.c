@@ -176,6 +176,7 @@ static int nri_adjust_annotation(const nri_container_adjustment *adjust, oci_run
 
     free_json_map_string_string(oci_spec->annotations);
     oci_spec->annotations = cleard;
+    cleard = NULL;
     ret = 0;
 
 free_out:
@@ -330,7 +331,34 @@ static int nri_adjust_hooks(const nri_container_adjustment *adjust, oci_runtime_
     return ret;
 }
 
-static int nri_adjust_devices(const nri_container_adjustment *adjust, oci_runtime_spec *oci_spec)
+static int host_spec_add_device(host_config *spec, defs_device *device)
+{
+    size_t i;
+
+    if (device == NULL) {
+        return -1;
+    }
+
+    for (i = 0; i < spec->nri_devices_len; i++) {
+        if (strcmp(spec->nri_devices[i]->path, device->path) == 0) {
+            free_defs_device(spec->nri_devices[i]);
+            spec->nri_devices[i] = device;
+            return 0;
+        }
+    }
+
+    if (util_mem_realloc((void **)&spec->nri_devices, (spec->nri_devices_len + 1) * sizeof(defs_device *),
+                         (void *)spec->nri_devices, spec->nri_devices_len * sizeof(defs_device *)) != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    spec->nri_devices[spec->nri_devices_len] = device;
+    spec->nri_devices_len++;
+
+    return 0;
+}
+
+static int nri_adjust_oci_spec_devices(const nri_container_adjustment *adjust, oci_runtime_spec *oci_spec)
 {
     if (adjust->linux == NULL || adjust->linux->devices == NULL || adjust->linux->devices_len == 0) {
         return 0;
@@ -341,6 +369,25 @@ static int nri_adjust_devices(const nri_container_adjustment *adjust, oci_runtim
     for (i = 0; i < adjust->linux->devices_len; i++) {
         nri_linux_device *dev = adjust->linux->devices[i];
         if (spec_add_device(oci_spec, nri_device_to_oci(dev)) != 0) {
+            ERROR("Failed to add device %s", dev->path);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int nri_adjust_host_spec_devices(const nri_container_adjustment *adjust, host_config *spec)
+{
+    if (adjust->linux == NULL || adjust->linux->devices == NULL || adjust->linux->devices_len == 0) {
+        return 0;
+    }
+
+    size_t i;
+
+    for (i = 0; i < adjust->linux->devices_len; i++) {
+        nri_linux_device *dev = adjust->linux->devices[i];
+        if (host_spec_add_device(spec, nri_device_to_oci(dev)) != 0) {
             ERROR("Failed to add device %s", dev->path);
             return -1;
         }
@@ -500,7 +547,50 @@ static int nri_adjust_mounts(const nri_container_adjustment *adjust, oci_runtime
     return 0;
 }
 
-static int nri_adjust_rlimit(const nri_container_adjustment *adjust, oci_runtime_spec *oci_spec)
+static int host_spec_add_linux_resources_rlimit(host_config *spec, const char *type, uint64_t hard, uint64_t soft)
+{
+    size_t j;
+    bool exists = false;
+    host_config_nri_rlimits_element *rlimit = NULL;
+
+    if (spec == NULL || type == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    rlimit = util_common_calloc_s(sizeof(host_config_nri_rlimits_element));
+    if (rlimit == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    rlimit->type = util_strdup_s(type);
+    rlimit->hard = hard;
+    rlimit->soft = soft;
+
+    for (j = 0; j < spec->nri_rlimits_len; j++) {
+        if (spec->nri_rlimits[j]->type == NULL) {
+            ERROR("rlimit type is empty");
+            free_host_config_nri_rlimits_element(rlimit);
+            return -1;
+        }
+        if (strcmp(spec->nri_rlimits[j]->type, rlimit->type) == 0) {
+            exists = true;
+            break;
+        }
+    }
+    if (exists) {
+        /* override ulimit */
+        free_host_config_nri_rlimits_element(spec->nri_rlimits[j]);
+        spec->nri_rlimits[j] = rlimit;
+    } else {
+        spec->nri_rlimits[spec->nri_rlimits_len] = rlimit;
+        spec->nri_rlimits_len++;
+    }
+
+    return 0;
+}
+
+static int nri_adjust_oci_spec_rlimit(const nri_container_adjustment *adjust, oci_runtime_spec *oci_spec)
 {
     if (adjust->rlimits == NULL || adjust->rlimits_len == 0) {
         return 0;
@@ -514,6 +604,36 @@ static int nri_adjust_rlimit(const nri_container_adjustment *adjust, oci_runtime
             return -1;
         }
         if (spec_add_linux_resources_rlimit(oci_spec, rlimit->type, rlimit->soft, rlimit->hard) != 0) {
+            ERROR("Failed to add rlimit");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int nri_adjust_host_spec_rlimit(const nri_container_adjustment *adjust, host_config *spec)
+{
+    if (adjust->rlimits == NULL || adjust->rlimits_len == 0) {
+        return 0;
+    }
+
+    if (spec->nri_rlimits == NULL) {
+        spec->nri_rlimits = util_common_calloc_s(sizeof(host_config_nri_rlimits_element *) * adjust->rlimits_len);
+        if (spec->nri_rlimits == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+
+    size_t i;
+    for (i = 0; i < adjust->rlimits_len; i++) {
+        nri_posix_rlimit *rlimit = adjust->rlimits[i];
+        if (rlimit->type == NULL) {
+            ERROR("Invalid rlimit type");
+            return -1;
+        }
+        if (host_spec_add_linux_resources_rlimit(spec, rlimit->type, rlimit->soft, rlimit->hard) != 0) {
             ERROR("Failed to add rlimit");
             return -1;
         }
@@ -554,7 +674,7 @@ int nri_adjust_oci_spec(const nri_container_adjustment *adjust, oci_runtime_spec
         return -1;
     }
 
-    if (nri_adjust_devices(adjust, oci_spec) != 0) {
+    if (nri_adjust_oci_spec_devices(adjust, oci_spec) != 0) {
         ERROR("Failed to do nri adjust devices in oci spec");
         return -1;
     }
@@ -580,7 +700,7 @@ int nri_adjust_oci_spec(const nri_container_adjustment *adjust, oci_runtime_spec
         return -1;
     }
 
-    if (nri_adjust_rlimit(adjust, oci_spec) != 0) {
+    if (nri_adjust_oci_spec_rlimit(adjust, oci_spec) != 0) {
         ERROR("Failed to do nri adjust rlimit in oci spec");
         return -1;
     }
@@ -595,6 +715,101 @@ int nri_adjust_oci_spec(const nri_container_adjustment *adjust, oci_runtime_spec
 
     if (verify_container_settings(oci_spec, sysinfo) != 0) {
         ERROR("Failed to verify oci runtime spec settings after adjust by nri");
+        return -1;
+    }
+
+    return 0;
+}
+
+int nri_adjust_host_spec(const nri_container_adjustment *adjust, host_config *host_spec)
+{
+    if (adjust == NULL || host_spec == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    if (nri_adjust_host_spec_devices(adjust, host_spec) != 0) {
+        ERROR("Failed to do nri adjust devices in host config");
+        return -1;
+    }
+
+    if (nri_adjust_host_spec_rlimit(adjust, host_spec) != 0) {
+        ERROR("Failed to do nri adjust rlimit in host config");
+        return -1;
+    }
+
+    return 0;
+}
+
+static defs_device *copy_def_devices(const defs_device *dev)
+{
+    defs_device *tmp_dev = util_common_calloc_s(sizeof(defs_device));
+    if (tmp_dev == NULL) {
+        return NULL;
+    }
+    tmp_dev->type = util_strdup_s(dev->type);
+    tmp_dev->path = util_strdup_s(dev->path);
+    tmp_dev->file_mode = dev->file_mode;
+    tmp_dev->major = dev->major;
+    tmp_dev->minor = dev->minor;
+    tmp_dev->uid = dev->uid;
+    tmp_dev->gid = dev->gid;
+    return tmp_dev;
+}
+
+static int merge_nri_devices(oci_runtime_spec *oci_spec, host_config *host_spec)
+{
+    size_t i;
+
+    if (oci_spec == NULL || host_spec == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    for (i = 0; i < host_spec->nri_devices_len; i++) {
+        if (spec_add_device(oci_spec, copy_def_devices(host_spec->nri_devices[i])) != 0) {
+            ERROR("Failed to add device %s", host_spec->nri_devices[i]->path);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int merge_nri_ulimits(oci_runtime_spec *oci_spec, host_config *host_spec)
+{
+    size_t i;
+
+    if (oci_spec == NULL || host_spec == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    for (i = 0; i < host_spec->nri_rlimits_len; i++) {
+        host_config_nri_rlimits_element *rlimit = host_spec->nri_rlimits[i];
+        if (spec_add_linux_resources_rlimit(oci_spec, rlimit->type, rlimit->hard, rlimit->soft) != 0) {
+            ERROR("Failed to add rlimit %s", rlimit->type);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int update_oci_nri(oci_runtime_spec *oci_spec, host_config *host_spec)
+{
+    if (oci_spec == NULL || host_spec == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    if (merge_nri_devices(oci_spec, host_spec) != 0) {
+        ERROR("Failed to merge nri devices");
+        return -1;
+    }
+
+    if (merge_nri_ulimits(oci_spec, host_spec) != 0) {
+        ERROR("Failed to merge nri ulimits");
         return -1;
     }
 

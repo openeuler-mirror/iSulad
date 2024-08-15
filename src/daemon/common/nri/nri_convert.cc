@@ -20,6 +20,7 @@
 #include "path.h"
 #include "transform.h"
 #include "nri_utils.h"
+#include "cstruct_wrapper.h"
 
 static int64_t DefaultOOMScoreAdj = 0;
 
@@ -142,22 +143,28 @@ static auto NRILinuxResourcesFromCRI(const runtime::v1::LinuxContainerResources 
 
 static auto NRILinuxFromCRI(const runtime::v1::LinuxPodSandboxConfig &config, nri_linux_pod_sandbox &linux) -> bool
 {
-    if (!init_nri_linux_resources(&linux.pod_overhead)) {
-        ERROR("Failed to init nri linux overhead resources for pod");
-        return false;
-    }
-    if (!init_nri_linux_resources(&linux.pod_resources)) {
-        ERROR("Failed to init nri linux resources resources for pod");
-        return false;
-    }
-    if (config.has_overhead() && !NRILinuxResourcesFromCRI(config.overhead(), *linux.pod_overhead)) {
-        ERROR("Failed to transform overhead to nri for pod");
-        return false;
+    if (config.has_overhead()) {
+        linux.pod_overhead = init_nri_linux_resources();
+        if (linux.pod_overhead == nullptr) {
+            ERROR("Failed to init nri linux overhead resources for pod");
+            return false;
+        }
+        if (!NRILinuxResourcesFromCRI(config.overhead(), *linux.pod_overhead)) {
+            ERROR("Failed to transform overhead to nri for pod");
+            return false;
+        }
     }
 
-    if (config.has_resources() && !NRILinuxResourcesFromCRI(config.resources(), *linux.pod_resources)) {
-        ERROR("Failed to transform resources to nri for pod");
-        return false;
+    if (config.has_resources()) {
+        linux.pod_resources = init_nri_linux_resources();
+        if (linux.pod_resources == nullptr) {
+            ERROR("Failed to init nri linux resources resources for pod");
+            return false;
+        }
+        if (!NRILinuxResourcesFromCRI(config.resources(), *linux.pod_resources)) {
+            ERROR("Failed to transform resources to nri for pod");
+            return false;
+        }
     }
 
     linux.cgroup_parent = util_strdup_s(config.cgroup_parent().c_str());
@@ -507,13 +514,13 @@ auto LinuxResourcesFromNRI(const nri_linux_resources *src, runtime::v1::LinuxCon
     }
 
     if (src->cpu != nullptr) {
-        if (src->cpu->shares != NULL) {
+        if (src->cpu->shares != nullptr) {
             resources.set_cpu_shares(*src->cpu->shares);
         }
-        if (src->cpu->quota != NULL) {
+        if (src->cpu->quota != nullptr) {
             resources.set_cpu_quota(*src->cpu->quota);
         }
-        if (src->cpu->period != NULL) {
+        if (src->cpu->period != nullptr) {
             resources.set_cpu_period(*src->cpu->period);
         }
 
@@ -533,6 +540,113 @@ auto LinuxResourcesFromNRI(const nri_linux_resources *src, runtime::v1::LinuxCon
 
     if (src->unified != nullptr) {
         Transform::JsonMapToProtobufMapForString(src->unified, *resources.mutable_unified());
+    }
+
+    return true;
+}
+
+auto LinuxResourcesToNRI(const runtime::v1::LinuxContainerResources &src) -> nri_linux_resources *
+{
+    nri_linux_resources *resources = nullptr;
+
+    resources = init_nri_linux_resources();
+    if (resources == nullptr) {
+        ERROR("Failed to init nri linux resources");
+        return nullptr;
+    }
+
+    resources->cpu->shares = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
+    if (resources->cpu->shares == nullptr) {
+        ERROR("Out of memory");
+        goto error_out;
+    }
+    *(resources->cpu->shares) = src.cpu_shares();
+
+    resources->cpu->quota = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (resources->cpu->quota == nullptr) {
+        ERROR("Out of memory");
+        goto error_out;
+    }
+    *(resources->cpu->quota) = src.cpu_quota();
+
+    resources->cpu->period = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
+    if (resources->cpu->period == nullptr) {
+        ERROR("Out of memory");
+        goto error_out;
+    }
+    *(resources->cpu->period) = src.cpu_period();
+
+    resources->cpu->cpus = util_strdup_s(src.cpuset_cpus().c_str());
+    resources->cpu->mems = util_strdup_s(src.cpuset_mems().c_str());
+
+    resources->memory->limit = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (resources->memory->limit == nullptr) {
+        ERROR("Out of memory");
+        goto error_out;
+    }
+    *(resources->memory->limit) = src.memory_limit_in_bytes();
+
+    resources->hugepage_limits = (nri_hugepage_limit **)util_smart_calloc_s(sizeof(nri_hugepage_limit *),
+                                                                            src.hugepage_limits_size());
+    if (resources->hugepage_limits == nullptr) {
+        ERROR("Out of memory");
+        goto error_out;
+    }
+
+    for (int i = 0; i < src.hugepage_limits_size(); i++) {
+        resources->hugepage_limits[i] = (nri_hugepage_limit *)util_common_calloc_s(sizeof(nri_hugepage_limit));
+        if (resources->hugepage_limits[i] == nullptr) {
+            ERROR("Out of memory");
+            goto error_out;
+        }
+        resources->hugepage_limits[i]->page_size = util_strdup_s(src.hugepage_limits(i).page_size().c_str());
+        resources->hugepage_limits[i]->limit = src.hugepage_limits(i).limit();
+        resources->hugepage_limits_len++;
+    }
+
+    return resources;
+
+error_out:
+    free_nri_linux_resources(resources);
+    resources = nullptr;
+    return resources;
+}
+
+auto PodSandboxesToNRI(const std::vector<std::shared_ptr<sandbox::Sandbox>> &arrs,
+                       std::vector<nri_pod_sandbox *> &pods) -> bool
+{
+    size_t i = 0;
+    for (i = 0; i < arrs.size(); i++) {
+        nri_pod_sandbox *pod = (nri_pod_sandbox *)util_common_calloc_s(sizeof(nri_pod_sandbox));
+        if (pod == nullptr) {
+            ERROR("Out of memory");
+            return false;
+        }
+        if (!PodSandboxToNRI(arrs[i], *pod)) {
+            ERROR("Failed to transform pod to nri for pod : %s", arrs[i]->GetName().c_str());
+            return false;
+        }
+        pods.push_back(pod);
+    }
+
+    return true;
+}
+
+auto ContainersToNRI(std::vector<std::unique_ptr<runtime::v1::Container>> &containers,
+                     std::vector<nri_container *> &cons) -> bool
+{
+    size_t i = 0;
+    for (i = 0; i < containers.size(); i++) {
+        nri_container *con = (nri_container *)util_common_calloc_s(sizeof(nri_container));
+        if (con == nullptr) {
+            ERROR("Out of memory");
+            return false;
+        }
+        if (!ContainerToNRIByID(containers[i].get()->id(), *con)) {
+            ERROR("Failed to transform container to nri for container : %s", containers[i]->metadata().name().c_str());
+            return false;
+        }
+        cons.push_back(con);
     }
 
     return true;
