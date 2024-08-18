@@ -37,6 +37,9 @@
 #include "transform.h"
 #include "isulad_config.h"
 #include "mailbox.h"
+#ifdef ENABLE_NRI
+#include "nri_adaption.h"
+#endif
 
 namespace CRIV1 {
 void PodSandboxManagerService::PrepareSandboxData(const runtime::v1::PodSandboxConfig &config,
@@ -304,6 +307,9 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
     std::string network_setting_json;
     runtime::v1::PodSandboxConfig copyConfig = config;
     cri_container_message_t msg = { 0 };
+#ifdef ENABLE_NRI
+    Errors nriErr;
+#endif
 
     // Step 1: Parepare sandbox name, runtime and networkMode
     PrepareSandboxData(config, runtimeHandler, sandboxName, runtimeInfo, networkMode, error);
@@ -401,6 +407,14 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
     msg.type = CRI_CONTAINER_MESSAGE_TYPE_STARTED;
     mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &msg);
 
+#ifdef ENABLE_NRI
+    if (!NRIAdaptation::GetInstance()->RunPodSandbox(sandbox, nriErr)) {
+        ERROR("NRI RunPodSandbox failed:  %s", nriErr.GetCMessage());
+        error.Errorf("NRI RunPodSandbox failed:  %s", nriErr.GetCMessage());
+        return response_id;
+    }
+#endif
+
     return sandbox->GetId();
 
 cleanup_network:
@@ -418,6 +432,11 @@ cleanup_sandbox:
     if (error.NotEmpty()) {
         ERROR("Failed to delete sandbox: %s", sandbox->GetId().c_str());
     }
+#ifdef ENABLE_NRI
+    if (!NRIAdaptation::GetInstance()->RemovePodSandbox(sandbox, nriErr)) {
+        DEBUG("NRI RemovePodSandbox failed:  %s", nriErr.GetCMessage());
+    }
+#endif
 
     return response_id;
 }
@@ -623,7 +642,15 @@ void PodSandboxManagerService::StopPodSandbox(const std::string &podSandboxID, E
         return;
     }
 
-    sandbox->Stop(sandbox::DEFAULT_STOP_TIMEOUT, error);
+    if (!sandbox->Stop(sandbox::DEFAULT_STOP_TIMEOUT, error)) {
+        return;
+    }
+#ifdef ENABLE_NRI
+    Errors nriStopPodErr;
+    if (!NRIAdaptation::GetInstance()->StopPodSandbox(sandbox, nriStopPodErr)) {
+        ERROR("NRI sandbox stop notification failed  %s", nriStopPodErr.GetCMessage());
+    }
+#endif
 }
 
 void PodSandboxManagerService::RemoveAllContainersInSandbox(const std::string &readSandboxID,
@@ -661,6 +688,9 @@ void PodSandboxManagerService::RemovePodSandbox(const std::string &podSandboxID,
 {
     std::vector<std::string> errors;
     std::string realSandboxID;
+#ifdef ENABLE_NRI
+    Errors nriErr;
+#endif
 
     if (m_cb == nullptr || m_cb->container.remove == nullptr) {
         ERROR("Unimplemented callback");
@@ -729,6 +759,11 @@ void PodSandboxManagerService::RemovePodSandbox(const std::string &podSandboxID,
         msg.type = CRI_CONTAINER_MESSAGE_TYPE_DELETED;
         mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &msg);
     }
+#ifdef ENABLE_NRI
+    if (!NRIAdaptation::GetInstance()->RemovePodSandbox(sandbox, nriErr)) {
+        ERROR("NRI RemovePodSandbox failed:  %s", nriErr.GetCMessage());
+    }
+#endif
 }
 
 auto PodSandboxManagerService::SharesHostNetwork(const container_inspect *inspect) -> runtime::v1::NamespaceMode

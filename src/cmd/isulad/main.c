@@ -86,6 +86,9 @@
 #ifdef ENABLE_CDI
 #include "cdi_operate_api.h"
 #endif /* ENABLE_CDI */
+#ifdef ENABLE_NRI
+#include "nri_plugin_ops.h"
+#endif
 
 sem_t g_daemon_shutdown_sem;
 sem_t g_daemon_wait_shutdown_sem;
@@ -287,6 +290,11 @@ static void daemon_shutdown()
 #ifdef ENABLE_NETWORK
     network_module_exit();
     EVENT("Network module exit completed");
+#endif
+
+#ifdef ENABLE_NRI
+    nri_adaption_shutdown();
+    EVENT("nri module exit completed");
 #endif
 
     clean_residual_files();
@@ -1830,6 +1838,13 @@ int main(int argc, char **argv)
 #ifdef ENABLE_PLUGIN
     if (start_plugin_manager()) {
         ERROR("Failed to init plugin_manager");
+        goto failure;
+    }
+#endif
+
+#ifdef ENABLE_NRI
+    if (!nri_adaption_init()) {
+        ERROR("Failed to init nri adaption");
         goto failure;
     }
 #endif

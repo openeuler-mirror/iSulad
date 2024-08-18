@@ -90,4 +90,25 @@ bool CheckPluginIndex(const std::string &idx)
 
     return true;
 }
+
+void FreeNriContainerUpdateVector(std::vector<nri_container_update *> &vec)
+{
+    for (auto ptr : vec) {
+        free_nri_container_update(ptr);
+    }
+}
+
+void FreeNriContainerVector(std::vector<nri_container *> &vec)
+{
+    for (auto ptr : vec) {
+        free_nri_container(ptr);
+    }
+}
+
+void FreeNriPodVector(std::vector<nri_pod_sandbox *> &vec)
+{
+    for (auto ptr : vec) {
+        free_nri_pod_sandbox(ptr);
+    }
+}
 }// namespace NRIHelpers

@@ -25,13 +25,15 @@ extern "C" {
 #endif
 
 bool nri_adaption_init(void);
+bool nri_adaption_shutdown(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-int nri_update_containers(const nri_update_containers_request *request, nri_update_containers_response **response);
-int nri_registry_containers(const nri_register_plugin_request *request);
+int nri_update_containers(const char *plugin_id, const nri_update_containers_request *request,
+                          nri_update_containers_response **response);
+int nri_registry_containers(const char *plugin_id, const nri_register_plugin_request *request);
 
 int nri_external_plugin_connect(int fd);
 

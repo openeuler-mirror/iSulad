@@ -19,218 +19,235 @@
 
 #include "utils.h"
 
-static bool copy_nri_hugepage_limit(const nri_hugepage_limit* src, nri_hugepage_limit** dest)
+static nri_hugepage_limit*copy_nri_hugepage_limit(const nri_hugepage_limit *src)
 {
-    if (src == NULL || dest == NULL) {
+    nri_hugepage_limit *dest = NULL;
+    if (src == NULL) {
         ERROR("Invalid input arguments");
         return false;
     }
 
-    *dest = (nri_hugepage_limit *)util_common_calloc_s(sizeof(nri_hugepage_limit));
-    if (*dest == NULL) {
-        ERROR("Out of memory");
-        return false;
-    }
-
-    (*dest)->limit = src->limit;
-    (*dest)->page_size = util_strdup_s(src->page_size);
-    return true;
-}
-
-static bool copy_nri_hook(const nri_hook *src, nri_hook **dest)
-{
-    if (src == NULL || dest == NULL) {
-        ERROR("Invalid input arguments");
-        return false;
-    }
-
-    *dest = (nri_hook *)util_common_calloc_s(sizeof(nri_hook));
+    dest = (nri_hugepage_limit *)util_common_calloc_s(sizeof(nri_hugepage_limit));
     if (dest == NULL) {
         ERROR("Out of memory");
         return false;
     }
-    (*dest)->args = util_copy_array_by_len(src->args, src->args_len);
-    (*dest)->args_len = src->args_len;
-    (*dest)->env = util_copy_array_by_len(src->env, src->env_len);
-    (*dest)->env_len = src->env_len;
-    (*dest)->path = util_strdup_s(src->path);
-    return true;
+
+    dest->limit = src->limit;
+    dest->page_size = util_strdup_s(src->page_size);
+    return dest;
 }
 
-static bool copy_nri_linux_device_cgroup(const nri_linux_device_cgroup *src, nri_linux_device_cgroup **dest)
+static nri_hook *copy_nri_hook(const nri_hook *src)
 {
-    if (src == NULL || dest == NULL) {
+    nri_hook *dest = NULL;
+    if (src == NULL) {
         ERROR("Invalid input arguments");
         return false;
     }
 
-    *dest = (nri_linux_device_cgroup *)util_common_calloc_s(sizeof(nri_linux_device_cgroup));
+    dest = (nri_hook *)util_common_calloc_s(sizeof(nri_hook));
     if (dest == NULL) {
         ERROR("Out of memory");
         return false;
     }
-    (*dest)->allow = src->allow;
-    (*dest)->type = util_strdup_s(src->type);
-    (*dest)->major = (int64_t *)util_common_calloc_s(sizeof(int64_t));
-    if ((*dest)->major == NULL) {
-        ERROR("Out of memory");
-        return false;
-    }
-    (*dest)->minor = (int64_t *)util_common_calloc_s(sizeof(int64_t));
-    if ((*dest)->minor == NULL) {
-        ERROR("Out of memory");
-        return false;
-    }
-    (*dest)->access = util_strdup_s(src->access);
-    return true;
+    dest->args = util_copy_array_by_len(src->args, src->args_len);
+    dest->args_len = src->args_len;
+    dest->env = util_copy_array_by_len(src->env, src->env_len);
+    dest->env_len = src->env_len;
+    dest->path = util_strdup_s(src->path);
+    return dest;
 }
 
-static bool copy_nri_linux_cpu(const nri_linux_cpu *src, nri_linux_cpu **dest)
+static nri_linux_device_cgroup *copy_nri_linux_device_cgroup(const nri_linux_device_cgroup *src)
 {
-    if (src == NULL || dest == NULL) {
+    nri_linux_device_cgroup *dest = NULL;
+    if (src == NULL) {
         ERROR("Invalid input arguments");
         return false;
     }
 
-    (*dest) = (nri_linux_cpu *)util_common_calloc_s(sizeof(nri_linux_cpu));
-    if ((*dest) == NULL) {
+    dest = (nri_linux_device_cgroup *)util_common_calloc_s(sizeof(nri_linux_device_cgroup));
+    if (dest == NULL) {
         ERROR("Out of memory");
         return false;
     }
-    (*dest)->cpus = util_strdup_s(src->cpus);
-    (*dest)->mems = util_strdup_s(src->mems);
+    dest->allow = src->allow;
+    dest->type = util_strdup_s(src->type);
+    dest->major = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (dest->major == NULL) {
+        ERROR("Out of memory");
+        goto free_out;
+    }
+    dest->minor = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (dest->minor == NULL) {
+        ERROR("Out of memory");
+        goto free_out;
+    }
+    dest->access = util_strdup_s(src->access);
+    return dest;
+free_out:
+    free_nri_linux_device_cgroup(dest);
+    return NULL;
+}
+
+static nri_linux_cpu *copy_nri_linux_cpu(const nri_linux_cpu *src)
+{
+    nri_linux_cpu *dest = NULL;
+    if (src == NULL) {
+        ERROR("Invalid input arguments");
+        return false;
+    }
+
+    dest = (nri_linux_cpu *)util_common_calloc_s(sizeof(nri_linux_cpu));
+    if (dest == NULL) {
+        ERROR("Out of memory");
+        return false;
+    }
+    dest->cpus = util_strdup_s(src->cpus);
+    dest->mems = util_strdup_s(src->mems);
     if (src->period != NULL) {
-        (*dest)->period = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
-        if ((*dest)->period == NULL) {
+        dest->period = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
+        if (dest->period == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->period = *src->period;
+        *dest->period = *src->period;
     }
 
     if (src->quota != NULL) {
-        (*dest)->quota = (int64_t *)util_common_calloc_s(sizeof(int64_t));
-        if ((*dest)->quota == NULL) {
+        dest->quota = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+        if (dest->quota == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->quota = *src->quota;
+        *dest->quota = *src->quota;
     }
 
     if (src->realtime_period != NULL) {
-        (*dest)->realtime_period = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
-        if ((*dest)->realtime_period == NULL) {
+        dest->realtime_period = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
+        if (dest->realtime_period == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->realtime_period = *src->realtime_period;
+        *dest->realtime_period = *src->realtime_period;
     }
 
     if (src->realtime_runtime != NULL) {
-        (*dest)->realtime_runtime = (int64_t *)util_common_calloc_s(sizeof(int64_t));
-        if ((*dest)->realtime_runtime == NULL) {
+        dest->realtime_runtime = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+        if (dest->realtime_runtime == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->realtime_runtime = *src->realtime_runtime;
+        *dest->realtime_runtime = *src->realtime_runtime;
     }
 
     if (src->shares != NULL) {
-        (*dest)->shares = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
-        if ((*dest)->shares == NULL) {
+        dest->shares = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
+        if (dest->shares == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->shares = *src->shares;
+        *dest->shares = *src->shares;
     }
 
-    return true;
+    return dest;
+
+free_out:
+    free_nri_linux_cpu(dest);
+    return NULL;
 }
 
-static bool copy_nri_linux_memory(const nri_linux_memory *src, nri_linux_memory **dest)
+static nri_linux_memory *copy_nri_linux_memory(const nri_linux_memory *src)
 {
-    if (src == NULL || dest == NULL) {
+    nri_linux_memory *dest = NULL;
+    if (src == NULL) {
         ERROR("Invalid input arguments");
         return false;
     }
-    *dest = (nri_linux_memory *)util_common_calloc_s(sizeof(nri_linux_memory));
+    
+    dest = (nri_linux_memory *)util_common_calloc_s(sizeof(nri_linux_memory));
     if (dest == NULL) {
         ERROR("Out of memory");
         return false;
     }
     if (src->limit != NULL) {
-        (*dest)->limit = (int64_t *)util_common_calloc_s(sizeof(int64_t));
-        if ((*dest)->limit == NULL) {
+        dest->limit = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+        if (dest->limit == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->limit = *src->limit;
+        *dest->limit = *src->limit;
     }
 
     if (src->reservation != NULL) {
-        (*dest)->reservation = (int64_t *)util_common_calloc_s(sizeof(int64_t));
-        if ((*dest)->reservation == NULL) {
+        dest->reservation = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+        if (dest->reservation == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->reservation = *src->reservation;
+        *dest->reservation = *src->reservation;
     }
 
     if (src->swap != NULL) {
-        (*dest)->swap = (int64_t *)util_common_calloc_s(sizeof(int64_t));
-        if ((*dest)->swap == NULL) {
+        dest->swap = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+        if (dest->swap == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->swap = *src->swap;
+        *dest->swap = *src->swap;
     }
 
     if (src->kernel != NULL) {
-        (*dest)->kernel = (int64_t *)util_common_calloc_s(sizeof(int64_t));
-        if ((*dest)->kernel == NULL) {
+        dest->kernel = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+        if (dest->kernel == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->kernel = *src->kernel;
+        *dest->kernel = *src->kernel;
     }
 
 
     if (src->kernel_tcp != NULL) {
-        (*dest)->kernel_tcp = (int64_t *)util_common_calloc_s(sizeof(int64_t));
-        if ((*dest)->kernel_tcp == NULL) {
+        dest->kernel_tcp = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+        if (dest->kernel_tcp == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->kernel_tcp = *src->kernel_tcp;
+        *dest->kernel_tcp = *src->kernel_tcp;
     }
 
     if (src->swappiness != NULL) {
-        (*dest)->swappiness = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
-        if ((*dest)->swappiness == NULL) {
+        dest->swappiness = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
+        if (dest->swappiness == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->swappiness = *src->swappiness;
+        *dest->swappiness = *src->swappiness;
     }
 
     if (src->disable_oom_killer != NULL) {
-        (*dest)->disable_oom_killer = (uint8_t *)util_common_calloc_s(sizeof(uint8_t));
-        if ((*dest)->disable_oom_killer == NULL) {
+        dest->disable_oom_killer = (uint8_t *)util_common_calloc_s(sizeof(uint8_t));
+        if (dest->disable_oom_killer == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->disable_oom_killer = *src->disable_oom_killer;
+        *dest->disable_oom_killer = *src->disable_oom_killer;
     }
 
     if (src->use_hierarchy != NULL) {
-        (*dest)->use_hierarchy = (uint8_t *)util_common_calloc_s(sizeof(uint8_t));
-        if ((*dest)->use_hierarchy == NULL) {
+        dest->use_hierarchy = (uint8_t *)util_common_calloc_s(sizeof(uint8_t));
+        if (dest->use_hierarchy == NULL) {
             ERROR("Out of memory");
-            return false;
+            goto free_out;
         }
-        *(*dest)->use_hierarchy = *src->use_hierarchy;
+        *dest->use_hierarchy = *src->use_hierarchy;
     }
-    return true;
+    return dest;
+
+free_out:
+    free_nri_linux_memory(dest);
+    return NULL;
 }
 
 bool is_marked_for_removal(const char* key, char **out)
@@ -241,7 +258,7 @@ bool is_marked_for_removal(const char* key, char **out)
     }
 
     if (!util_has_prefix(key, "-")) {
-        *out = (char*)key;
+        *out = util_strdup_s(key);
         return false;
     }
 
@@ -254,94 +271,153 @@ bool is_marked_for_removal(const char* key, char **out)
     return true;
 }
 
-bool copy_nri_mount(const nri_mount *src, nri_mount **dest)
+nri_mount *copy_nri_mount(const nri_mount *src)
 {
-    if (src == NULL || dest == NULL) {
+    nri_mount *dest = NULL;
+    if (src == NULL) {
         ERROR("Invalid input arguments");
         return false;
     }
-    *dest = (nri_mount *)util_common_calloc_s(sizeof(nri_mount));
+
+    dest = (nri_mount *)util_common_calloc_s(sizeof(nri_mount));
     if (dest == NULL) {
         ERROR("Out of memory");
         return false;
     }
-    (*dest)->destination = util_strdup_s(src->destination);
-    (*dest)->options = util_copy_array_by_len(src->options, src->options_len);
-    (*dest)->options_len = src->options_len;
-    (*dest)->source = util_strdup_s(src->source);
-    (*dest)->type = util_strdup_s(src->type);
-    return true;
+    dest->destination = util_strdup_s(src->destination);
+    dest->options = util_copy_array_by_len(src->options, src->options_len);
+    dest->options_len = src->options_len;
+    dest->source = util_strdup_s(src->source);
+    dest->type = util_strdup_s(src->type);
+    return dest;
 }
 
-bool copy_nri_key_value(const nri_key_value *src, nri_key_value **dest)
+nri_linux_device *copy_nri_device(const nri_linux_device *src)
 {
-    if (src == NULL || dest == NULL) {
+    nri_linux_device *dest = NULL;
+
+    if (src == NULL) {
         ERROR("Invalid input arguments");
         return false;
     }
-    *dest = (nri_key_value *)util_common_calloc_s(sizeof(nri_key_value));
+    
+    dest = (nri_linux_device *)util_common_calloc_s(sizeof(nri_linux_device));
     if (dest == NULL) {
         ERROR("Out of memory");
         return false;
     }
-    (*dest)->key = util_strdup_s(src->key);
-    (*dest)->value = util_strdup_s(src->value);
-    return true;
+    if (src->file_mode != NULL) {
+        dest->file_mode = (uint32_t *)util_common_calloc_s(sizeof(uint32_t));
+        if (dest->file_mode == NULL) {
+            ERROR("Out of memory");
+            goto free_out;
+        }
+        *dest->file_mode = *src->file_mode;
+    }
+
+    if (src->uid != NULL) {
+        dest->uid = (uint32_t *)util_common_calloc_s(sizeof(uint32_t));
+        if (dest->uid == NULL) {
+            ERROR("Out of memory");
+            goto free_out;
+        }
+        *dest->uid = *src->uid;
+    }
+
+    if (src->gid != NULL) {
+        dest->gid = (uint32_t *)util_common_calloc_s(sizeof(uint32_t));
+        if (dest->gid == NULL) {
+            ERROR("Out of memory");
+            goto free_out;
+        }
+        *dest->gid = *src->gid;
+    }
+
+    dest->major = src->major;
+    dest->minor = src->minor;
+    dest->path = util_strdup_s(src->path);
+    dest->type = util_strdup_s(src->type);
+
+    return dest;
+free_out:
+    free_nri_linux_device(dest);
+    return NULL;
 }
 
-bool copy_nri_posix_rlimit(const nri_posix_rlimit *src, nri_posix_rlimit **dest)
+nri_key_value *copy_nri_key_value(const nri_key_value *src)
 {
-    if (src == NULL || dest == NULL) {
+    nri_key_value *dest = NULL;
+    if (src == NULL) {
         ERROR("Invalid input arguments");
         return false;
     }
-    *dest = (nri_posix_rlimit *)util_common_calloc_s(sizeof(nri_posix_rlimit));
+    dest = (nri_key_value *)util_common_calloc_s(sizeof(nri_key_value));
     if (dest == NULL) {
         ERROR("Out of memory");
         return false;
     }
-    (*dest)->hard = src->hard;
-    (*dest)->soft = src->soft;
-    (*dest)->type = util_strdup_s(src->type);
-    return true;
+    dest->key = util_strdup_s(src->key);
+    dest->value = util_strdup_s(src->value);
+    return dest;
 }
 
-bool copy_nri_linux_resources(const nri_linux_resources *src, nri_linux_resources **dest)
+nri_posix_rlimit *copy_nri_posix_rlimit(const nri_posix_rlimit *src)
 {
-    if (src == NULL || dest == NULL) {
+    nri_posix_rlimit *dest = NULL;
+    if (src == NULL) {
+        ERROR("Invalid input arguments");
+        return false;
+    }
+    dest = (nri_posix_rlimit *)util_common_calloc_s(sizeof(nri_posix_rlimit));
+    if (dest == NULL) {
+        ERROR("Out of memory");
+        return false;
+    }
+    dest->hard = src->hard;
+    dest->soft = src->soft;
+    dest->type = util_strdup_s(src->type);
+    return dest;
+}
+
+nri_linux_resources *copy_nri_linux_resources(const nri_linux_resources *src)
+{
+    nri_linux_resources *dest = NULL;
+    if (src == NULL) {
         ERROR("Invalid input arguments");
         return false;
     }
 
-    *dest = (nri_linux_resources *)util_common_calloc_s(sizeof(nri_linux_resources));
-    if (*dest == NULL) {
+    dest = (nri_linux_resources *)util_common_calloc_s(sizeof(nri_linux_resources));
+    if (dest == NULL) {
         ERROR("Out of memory");
         return false;
     }
 
-    if (!init_nri_linux_resources(dest)) {
-        ERROR("Failed to init dest nri linux resources");
-        goto free_out;
+    if (src->cpu != NULL) {
+        dest->cpu = copy_nri_linux_cpu(src->cpu);
+        if (dest->cpu == NULL) {
+            ERROR("Failed to copy nri_linux_cpu");
+            goto free_out;
+        }
     }
 
-    if (!copy_nri_linux_cpu(src->cpu, &(*dest)->cpu)) {
-        ERROR("Failed to copy nri_linux_cpu");
-        goto free_out;
+    if (src->memory != NULL) {
+        dest->memory = copy_nri_linux_memory(src->memory);
+        if (dest->memory == NULL) {
+            ERROR("Failed to copy nri_linux_memory");
+            goto free_out;
+        }
     }
 
-    if (!copy_nri_linux_memory(src->memory, &(*dest)->memory)) {
-        ERROR("Failed to copy nri_linux_memory");
-        goto free_out;
-    }
-
-    (*dest)->blockio_class = util_strdup_s(src->blockio_class);
-    (*dest)->rdt_class = util_strdup_s(src->rdt_class);
+    dest->blockio_class = util_strdup_s(src->blockio_class);
+    dest->rdt_class = util_strdup_s(src->rdt_class);
 
     if (src->hugepage_limits_len > 0) {
-        (*dest)->hugepage_limits = (nri_hugepage_limit**)util_smart_calloc_s(sizeof(nri_hugepage_limit*),
+        dest->hugepage_limits = (nri_hugepage_limit**)util_smart_calloc_s(sizeof(nri_hugepage_limit*),
                                                                              src->hugepage_limits_len);
-        for (size_t i = 0; i < src->hugepage_limits_len; ++i) {
-            if (!copy_nri_hugepage_limit(src->hugepage_limits[i], &((*dest)->hugepage_limits[i]))) {
+        for (size_t i = 0; i < src->hugepage_limits_len; i++) {
+            dest->hugepage_limits[i] = copy_nri_hugepage_limit(src->hugepage_limits[i]);
+            if (dest->hugepage_limits[i] == NULL) {
                 ERROR("Failed to copy nri_hugepage_limit");
                 goto free_out;
             }
@@ -349,25 +425,26 @@ bool copy_nri_linux_resources(const nri_linux_resources *src, nri_linux_resource
     }
 
     if (src->devices_len > 0) {
-        (*dest)->devices = (nri_linux_device_cgroup**)util_smart_calloc_s(sizeof(nri_linux_device_cgroup*), src->devices_len);
-        for (size_t i = 0; i < src->devices_len; ++i) {
-            if (!copy_nri_linux_device_cgroup(src->devices[i], &((*dest)->devices[i]))) {
+        dest->devices = (nri_linux_device_cgroup**)util_smart_calloc_s(sizeof(nri_linux_device_cgroup*), src->devices_len);
+        for (size_t i = 0; i < src->devices_len; i++) {
+            dest->devices[i] = copy_nri_linux_device_cgroup(src->devices[i]);
+            if (dest->devices[i] == NULL) {
                 ERROR("Failed to copy nri_linux_device_cgroup");
                 goto free_out;
             }
         }
     }
 
-    if (dup_json_map_string_string(src->unified, (*dest)->unified)) {
+    if (dup_json_map_string_string(src->unified, dest->unified)) {
         ERROR("Failed to copy json_map_string_string");
         goto free_out;
     }
 
-    return true;
+    return dest;
 
 free_out:
-    free_nri_linux_resources(*dest);
-    return false;
+    free_nri_linux_resources(dest);
+    return NULL;
 }
 
 bool merge_nri_hooks(nri_hook **targetHooks, size_t targetSize, const nri_hook **sourceHooks,
@@ -381,140 +458,67 @@ bool merge_nri_hooks(nri_hook **targetHooks, size_t targetSize, const nri_hook *
         return false;
     }
 
-    if (util_mem_realloc((void**)&targetHooks, newSize, (void**)&targetHooks, oldSize) != 0) {
+    if (util_mem_realloc((void**)&targetHooks, newSize, targetHooks, oldSize) != 0) {
         ERROR("Failed to realloc and assign hook array");
         return false;
     }
 
     for (size_t i = 0; i < sourceLen; i++) {
-        if (!copy_nri_hook(sourceHooks[i], &targetHooks[targetSize++])) {
+        targetHooks[targetSize] = copy_nri_hook(sourceHooks[i]);
+        if (targetHooks[targetSize] == NULL) {
             ERROR("Failed to copy hook");
             return false;
         }
+        targetSize++;
     }
 
     return true;
 }
 
-bool init_nri_container_adjust(nri_container_adjustment **adjust)
+nri_container_update *init_nri_container_update(const char *id, const uint8_t ignore_failure)
 {
-    if (adjust == NULL) {
+    nri_container_update *update = NULL;
+    if (id == NULL) {
         ERROR("Invalid input arguments");
         return false;
     }
 
-    *adjust = (nri_container_adjustment *)util_common_calloc_s(sizeof(nri_container_adjustment));
-    if (*adjust == NULL) {
+    update = (nri_container_update *)util_common_calloc_s(sizeof(nri_container_update));
+    if (update == NULL) {
         ERROR("Out of memory");
         return false;
     }
 
-    (*adjust)->annotations = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
-    if ((*adjust)->annotations == NULL) {
-        goto free_out;
-    }
+    update->container_id = util_strdup_s(id);
 
-    (*adjust)->env = (nri_key_value **)util_common_calloc_s(sizeof(nri_key_value *));
-    if ((*adjust)->env == NULL) {
-        goto free_out;
-    }
-    (*adjust)->env_len = 0;
-
-    (*adjust)->hooks = (nri_hooks *)util_common_calloc_s(sizeof(nri_hooks));
-    if ((*adjust)->hooks == NULL) {
-        goto free_out;
-    }
-
-    (*adjust)->linux = (nri_linux_container_adjustment *)util_common_calloc_s(sizeof(nri_linux_container_adjustment));
-    if ((*adjust)->linux == NULL) {
-        goto free_out;
-    }
-
-    (*adjust)->linux->resources = (nri_linux_resources *)util_common_calloc_s(sizeof(nri_linux_resources));
-    if ((*adjust)->linux->resources == NULL) {
-        ERROR("Out of memory");
-        return false;
-    }
-
-    (*adjust)->mounts = (nri_mount **)util_common_calloc_s(sizeof(nri_mount *));
-    if ((*adjust)->mounts == NULL) {
-        goto free_out;
-    }
-    (*adjust)->mounts_len = 0;
-
-    (*adjust)->rlimits = (nri_posix_rlimit **)util_common_calloc_s(sizeof(nri_posix_rlimit *));
-    if ((*adjust)->rlimits == NULL) {
-        goto free_out;
-    }
-    (*adjust)->rlimits_len = 0;
-
-    return true;
-
-free_out:
-    ERROR("Out of memory");
-    free_nri_container_adjustment(*adjust);
-    return false;
+    update->ignore_failure = ignore_failure;
+    return update;
 }
 
-bool init_nri_container_update(nri_container_update **update, const char *id, uint8_t ignore_failure)
+nri_linux_resources *init_nri_linux_resources()
 {
-    if (update == NULL || id == NULL) {
-        ERROR("Invalid input arguments");
-        return false;
-    }
+    nri_linux_resources *resources = NULL;
 
-    *update = (nri_container_update *)util_common_calloc_s(sizeof(nri_container_update));
-    if (*update == NULL) {
-        ERROR("Out of memory");
-        return false;
-    }
-
-    (*update)->container_id = util_strdup_s(id);
-    (*update)->linux = (nri_linux_container_update *)util_common_calloc_s(sizeof(nri_linux_container_update));
-    if ((*update)->linux == NULL) {
-        goto free_out;
-    }
-
-    (*update)->ignore_failure = ignore_failure;
-    return true;
-
-free_out:
-    ERROR("Out of memory");
-    free_nri_container_update(*update);
-    return false;
-}
-
-bool init_nri_linux_resources(nri_linux_resources **resources)
-{
+    resources = (nri_linux_resources *)util_common_calloc_s(sizeof(nri_linux_resources));
     if (resources == NULL) {
-        ERROR("Invalid input arguments");
-        return false;
-    }
-
-    *resources = (nri_linux_resources *)util_common_calloc_s(sizeof(nri_linux_resources));
-    if (*resources == NULL) {
         ERROR("Out of memory");
         return false;
     }
 
-    (*resources)->cpu = (nri_linux_cpu *)util_common_calloc_s(sizeof(nri_linux_cpu));
-    if ((*resources)->cpu == NULL) {
+    resources->cpu = (nri_linux_cpu *)util_common_calloc_s(sizeof(nri_linux_cpu));
+    if (resources->cpu == NULL) {
         goto free_out;
     }
 
-    (*resources)->memory = (nri_linux_memory *)util_common_calloc_s(sizeof(nri_linux_memory));
-    if ((*resources)->memory == NULL) {
+    resources->memory = (nri_linux_memory *)util_common_calloc_s(sizeof(nri_linux_memory));
+    if (resources->memory == NULL) {
         goto free_out;
     }
 
-    (*resources)->unified = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
-    if ((*resources)->unified == NULL) {
-        goto free_out;
-    }
-    return true;
+    return resources;
 
 free_out:
     ERROR("Out of memory");
-    free_nri_linux_resources(*resources);
-    return false;
+    free_nri_linux_resources(resources);
+    return NULL;
 }

@@ -41,6 +41,10 @@ void GenerateRandomExternalName(std::string &ret);
 
 bool CheckPluginIndex(const std::string &idx);
 
+void FreeNriContainerUpdateVector(std::vector<nri_container_update *> &vec);
+void FreeNriContainerVector(std::vector<nri_container *> &vec);
+void FreeNriPodVector(std::vector<nri_pod_sandbox *> &vec);
+
 template <typename T>
 void freeArray(T ** &arr, int size)
 {
