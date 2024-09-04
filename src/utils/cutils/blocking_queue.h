@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-#define BLOCKING_QUEUE_NO_TIMEOUT -1
+#define BLOCKING_QUEUE_NO_TIMEOUT (-1)
 
 typedef struct blocking_node {
     void *data;

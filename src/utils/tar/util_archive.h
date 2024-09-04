@@ -53,9 +53,8 @@ int archive_chroot_tar(const char *path, const char *file, const char *root_dir,
 
 int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, const char *src_base,
                               const char *dst_base, const char *root_dir, struct io_read_wrapper *content);
-int archive_chroot_untar_stream(const struct io_read_wrapper *content, const char *chroot_dir,
-                                const char *untar_dir, const char *src_base, const char *dst_base,
-                                const char *root_dir, char **errmsg);
+int archive_chroot_untar_stream(const struct io_read_wrapper *context, const char *chroot_dir, const char *untar_dir,
+                                const char *src_base, const char *dst_base, const char *root_dir, char **errmsg);
 
 int archive_copy_oci_tar_split_and_ret_size(int src_fd, const char *dist_file, int64_t *ret_size);
 

@@ -17,7 +17,6 @@
 #define UTILS_CUTILS_UTILS_STRING_H
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <sys/types.h>
 
 #ifdef __cplusplus
@@ -48,7 +47,7 @@ char **util_string_split(const char *src_str, char _sep);
 // note that every delimiter bytes  is considered to be a single delimiter
 char **util_string_split_multi(const char *src_str, char delim);
 
-char **util_string_split_n(const char *src_str, char delim, size_t n);
+char **util_string_split_n(const char *src, char sep, size_t n);
 
 const char *util_str_skip_str(const char *str, const char *skip);
 

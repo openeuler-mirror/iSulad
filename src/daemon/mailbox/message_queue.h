@@ -16,16 +16,16 @@
 #ifndef DAEMON_MESSAGE_MESSAGE_QUEUE_H
 #define DAEMON_MESSAGE_MESSAGE_QUEUE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <pthread.h>
 
 #include "blocking_queue.h"
 #include "mailbox_message.h"
 #include "map.h"
 #include "message_subscriber.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct message_queue {
     blocking_queue *messages;

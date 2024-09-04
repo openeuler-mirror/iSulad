@@ -16,13 +16,12 @@
 #ifndef UTILS_CUTILS_UTILS_CAP_H
 #define UTILS_CUTILS_UTILS_CAP_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <linux/capability.h>
 
 bool util_valid_cap(const char *cap);
 

@@ -30,6 +30,8 @@
 #include "utils.h"
 #include "error.h"
 
+// The shim v2 header file needs to be modified to 
+// use extern "C" to wrap external functions.
 extern "C" {
 #include <shim_v2.h>
 }
