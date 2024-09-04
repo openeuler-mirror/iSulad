@@ -16,7 +16,6 @@
 #ifndef DAEMON_NRI_PLUGIN_NRI_ADAPTION_H
 #define DAEMON_NRI_PLUGIN_NRI_ADAPTION_H
 
-// #include "read_write_lock.h"
 #include <isula_libutils/nri_update_containers_request.h>
 #include <isula_libutils/nri_update_containers_response.h>
 

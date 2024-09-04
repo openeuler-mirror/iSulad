@@ -15,15 +15,15 @@
 #ifndef DAEMON_COMMON_SYSINFO_H
 #define DAEMON_COMMON_SYSINFO_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <isula_libutils/auto_cleanup.h>
 
 #include "cgroup.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
     // Number of processors currently online (i.e., available).

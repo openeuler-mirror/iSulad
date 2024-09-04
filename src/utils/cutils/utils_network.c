@@ -801,6 +801,8 @@ static bool is_invalid_char(char c)
             return true;
         case ' ':
             return true;
+        default:
+            return false;
     }
     return false;
 }

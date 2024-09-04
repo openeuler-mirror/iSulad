@@ -19,6 +19,10 @@
 #include "blocking_queue.h"
 #include "mailbox_message.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     blocking_queue *queue;
 } message_subscriber;
@@ -37,5 +41,9 @@ int message_subscriber_pop(message_subscriber *sub, mailbox_message **msg);
 define_auto_cleanup_callback(message_subscriber_destroy, message_subscriber);
 // define auto free macro for blocking queue
 #define __isula_auto_subscriber auto_cleanup_tag(message_subscriber_destroy)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

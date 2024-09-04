@@ -26,7 +26,7 @@ extern "C" {
 int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode);
 
 // Decompress
-int util_gzip_d(const char *srcfile, const FILE *destfp);
+int util_gzip_d(const char *srcfile, const FILE *dstfp);
 
 /*
  * compress file.

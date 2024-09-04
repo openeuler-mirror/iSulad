@@ -109,8 +109,7 @@ auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, s
         return nullptr;
     }
 
-    sandbox = std::shared_ptr<Sandbox>(new Sandbox(id, m_rootdir, m_statedir, name, info, netMode, netNsPath,
-                                                   sandboxConfig, image));
+    sandbox = std::make_shared<Sandbox>(id, m_rootdir, m_statedir, name, info, netMode, netNsPath, sandboxConfig, image);
     if (sandbox == nullptr) {
         ERROR("Failed to malloc for sandbox: %s", name.c_str());
         error.Errorf("Failed to malloc for sandbox: %s", name.c_str());
@@ -452,7 +451,7 @@ auto SandboxManager::LoadSandbox(std::string &id) -> std::shared_ptr<Sandbox>
         return nullptr;
     }
 
-    sandbox = std::shared_ptr<Sandbox>(new Sandbox(id, m_rootdir, m_statedir));
+    sandbox = std::make_shared<Sandbox>(id, m_rootdir, m_statedir);
     if (sandbox == nullptr) {
         ERROR("Failed to malloc for sandboxes: %s", id.c_str());
         return nullptr;

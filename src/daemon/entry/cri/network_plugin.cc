@@ -198,7 +198,7 @@ void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std
 
     if (networkPluginName.empty()) {
         DEBUG("network plugin name empty");
-        *result = std::shared_ptr<NetworkPlugin>(new (std::nothrow) NoopNetworkPlugin);
+        *result = std::make_shared<NoopNetworkPlugin>();
         if (*result == nullptr) {
             ERROR("Out of memory");
             return;
