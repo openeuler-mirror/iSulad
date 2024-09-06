@@ -687,7 +687,7 @@ void ContainerManagerService::ListContainersToGRPC(container_list_response *resp
             CRIHelpersV1Alpha::ContainerStatusToRuntime(Container_Status(response->containers[i]->status));
         container->set_state(state);
 
-        pods.push_back(move(container));
+        pods.push_back(std::move(container));
     }
 }
 

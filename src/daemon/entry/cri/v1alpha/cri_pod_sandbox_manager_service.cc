@@ -1573,7 +1573,7 @@ void PodSandboxManagerService::PodSandboxStatsToGRPC(const std::string &id, cons
         return;
     }
 
-    podStats = move(podStatsPtr);
+    podStats = std::move(podStatsPtr);
     return;
 }
 
@@ -1733,7 +1733,7 @@ void PodSandboxManagerService::ListPodSandboxStats(const runtime::v1alpha2::PodS
             continue;
         }
 
-        podsStats.push_back(move(podStats));
+        podsStats.push_back(std::move(podStats));
     }
 }
 
