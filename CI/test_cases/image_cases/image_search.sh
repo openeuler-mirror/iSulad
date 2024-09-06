@@ -77,7 +77,7 @@ function test_image_search()
 declare -i ans=0
 
 # unable to pull image from docker.io without agent, skip this test
-# registry API v1 is not implemented in https://3laho3y3.mirror.aliyuncs.com and isula search cannot be tested
+# registry API v1 is not implemented in https://hub.oepkgs.net and isula search cannot be tested
 # test_image_search || ((ans++))
 
 show_result ${ans} "${curr_path}/${0}"

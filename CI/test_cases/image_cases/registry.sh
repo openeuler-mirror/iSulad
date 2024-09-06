@@ -78,8 +78,8 @@ function isula_pull()
     # isula pull docker.io/library/busybox:latest
     # [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull docker.io/library/busybox:latest failed" && ((ret++))
 
-    isula pull 3laho3y3.mirror.aliyuncs.com/library/busybox
-    fn_check_eq "$?" "0" "isula pull 3laho3y3.mirror.aliyuncs.com/library/busybox"
+    isula pull hub.oepkgs.net/library/busybox
+    fn_check_eq "$?" "0" "isula pull hub.oepkgs.net/library/busybox"
 
     rm -f /etc/isulad/daemon.json.bak
     cp /etc/isulad/daemon.json /etc/isulad/daemon.json.bak
@@ -98,7 +98,7 @@ function isula_pull()
     cp /etc/isulad/daemon.json.bak /etc/isulad/daemon.json
     rm -f /etc/isulad/daemon.json.bak
 
-    isula rmi 3laho3y3.mirror.aliyuncs.com/library/busybox
+    isula rmi hub.oepkgs.net/library/busybox
 
     check_valgrind_log
     fn_check_eq "$?" "0" "stop isulad with check valgrind"
@@ -109,12 +109,12 @@ function isula_pull()
 
 function isula_login()
 {
-    isula login -u test -p test 3laho3y3.mirror.aliyuncs.com
-    fn_check_eq "$?" "0" "isula login -u test -p test 3laho3y3.mirror.aliyuncs.com"
+    isula login -u isulaci -p iSula123 hub.oepkgs.net
+    fn_check_eq "$?" "0" "isula login -u isulaci -p iSula123 hub.oepkgs.net"
 
     # double login for memory leak check
-    isula login -u test -p test 3laho3y3.mirror.aliyuncs.com
-    fn_check_eq "$?" "0" "isula login -u test -p test 3laho3y3.mirror.aliyuncs.com"
+    isula login -u isulaci -p iSula123 hub.oepkgs.net
+    fn_check_eq "$?" "0" "isula login -u isulaci -p iSula123 hub.oepkgs.net"
 
     # use username/password to pull busybox for memmory leak check
     isula pull busybox
@@ -123,12 +123,12 @@ function isula_login()
 
 function isula_logout()
 {
-    isula logout 3laho3y3.mirror.aliyuncs.com
-    fn_check_eq "$?" "0" "isula logout 3laho3y3.mirror.aliyuncs.com"
+    isula logout hub.oepkgs.net
+    fn_check_eq "$?" "0" "isula logout hub.oepkgs.net"
 
     # double logout for memory leak check
-    isula logout 3laho3y3.mirror.aliyuncs.com
-    fn_check_eq "$?" "0" "isula logout 3laho3y3.mirror.aliyuncs.com"
+    isula logout hub.oepkgs.net
+    fn_check_eq "$?" "0" "isula logout hub.oepkgs.net"
 }
 
 function do_test_t()

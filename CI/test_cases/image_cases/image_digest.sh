@@ -25,9 +25,9 @@ source ../helpers.sh
 function test_image_with_digest()
 {
   local ret=0
-  local image="3laho3y3.mirror.aliyuncs.com/library/busybox"
-  local image2="3laho3y3.mirror.aliyuncs.com/library/ubuntu"
-  local image_digest="3laho3y3.mirror.aliyuncs.com/library/busybox@sha256:62ffc2ed7554e4c6d360bce40bbcf196573dd27c4ce080641a2c59867e732dee"
+  local image="hub.oepkgs.net/library/busybox"
+  local image2="hub.oepkgs.net/library/ubuntu"
+  local image_digest="hub.oepkgs.net/library/busybox@sha256:6066ca124f8c2686b7ae71aa1d6583b28c6dc3df3bdc386f2c89b92162c597d9"
   local test="pull && inspect && tag image with digest test => (${FUNCNAME[@]})"
 
   msg_info "${test} starting..."
