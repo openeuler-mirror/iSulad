@@ -1227,7 +1227,7 @@ auto PodSandboxManagerService::PodSandboxStats(const std::string &podSandboxID,
                                                Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStats>
 {
     Errors tmpErr;
-    cgroup_metrics_t cgroupMetrics { 0 };
+    cgroup_metrics_t cgroupMetrics {{ 0 }};
     std::vector<Network::NetworkInterfaceStats> netMetrics;
     std::map<std::string, std::string> annotations;
     std::unique_ptr<runtime::v1::PodSandboxStats> podStats { nullptr };
