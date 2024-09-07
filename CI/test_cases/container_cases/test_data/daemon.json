@@ -24,6 +24,7 @@
         "overlay2.override_kernel_check=true"
     ],
     "registry-mirrors": [
+        "https://docker.chenby.cn",
          "https://hub.oepkgs.net"
     ],
     "insecure-registries": [
