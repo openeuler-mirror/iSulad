@@ -536,7 +536,7 @@ auto PodSandboxManagerService::GetContainerListResponse(const std::string &readS
     if (CRIHelpers::FiltersAddLabel(list_request->filters, CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY,
                                     readSandboxID) != 0) {
         std::string tmp_errmsg = "Failed to add label in sandbox" + readSandboxID;
-        ERROR(%s, tmp_errmsg.c_str());
+        ERROR("%s", tmp_errmsg.c_str());
         errors.push_back(tmp_errmsg);
         return nullptr;
     }
@@ -551,7 +551,7 @@ auto PodSandboxManagerService::GetContainerListResponse(const std::string &readS
     }
     if (ret != 0) {
         if (list_response != nullptr && list_response->errmsg != nullptr) {
-            ERROR(%s, list_response->errmsg);
+            ERROR("%s", list_response->errmsg);
             errors.push_back(list_response->errmsg);
         } else {
             ERROR("Failed to call list container callback");
