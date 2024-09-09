@@ -25,7 +25,8 @@ source ../helpers.sh
 test_log=$(mktemp /tmp/additional_gids_test_XXX)
 
 USERNAME="user"
-USER_UID="1000"
+# Do not use 1000 as the test gid because "ubuntu:x:1000:" already exists in the ubuntu image
+USER_UID="1002"
 USER_GID="$USER_UID"
 ADDITIONAL_GID="1001"
 ADDITIONAL_GROUP="additional"
