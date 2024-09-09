@@ -95,7 +95,7 @@ cmake -DLIB_INSTALL_DIR=${restbuilddir}/lib -DCMAKE_INSTALL_PREFIX=${restbuilddi
 make -j $(nproc)
 make install
 sed -i 's/"log-driver": "stdout"/"log-driver": "file"/g' ${restbuilddir}/etc/isulad/daemon.json
-sed -i "/registry-mirrors/a\        \"https://hub.oepkgs.net\",\\n \"https://docker.chenby.cn\"" ${builddir}/etc/isulad/daemon.json
+sed -i "/registry-mirrors/a\        \"https://hub.oepkgs.net\",\\n \"https://docker.chenby.cn\"" ${restbuilddir}/etc/isulad/daemon.json
 
 #build grpc version
 cd $ISULAD_COPY_PATH
