@@ -26,7 +26,7 @@ test_data_path=$(realpath $curr_path/test_data)
 function test_oom_monitor()
 {
     local ret=0
-    local ubuntu_image="ubuntu"
+    local ubuntu_image="isulad/ubuntu"
     local test="container oom monitor test => (${FUNCNAME[@]})"
     containername="oommonitor"
 
@@ -35,7 +35,7 @@ function test_oom_monitor()
     isula pull ${ubuntu_image}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${ubuntu_image}" && return ${FAILURE}
 
-    isula images | grep ubuntu
+    isula images | grep ${ubuntu_image}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${ubuntu_image}" && ((ret++))
 
     # use more than 10m memory limit, otherwise it might fail to run
