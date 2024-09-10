@@ -28,6 +28,7 @@ function test_image_load()
 {
   local ret=0
   local test="isula load image test => (${FUNCNAME[@]})"
+  local ubuntu_image="isulad/ubuntu"
 
   msg_info "${test} starting..."
 
@@ -61,7 +62,7 @@ function test_image_load()
   isula load -i $mult_image
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - load image failed: ${mult_image}" && ((ret++))
 
-  ubuntu_id=`isula inspect -f '{{.image.id}}' ubuntu`
+  ubuntu_id=`isula inspect -f '{{.image.id}}' ${ubuntu_image}`
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image: ubuntu" && ((ret++))
 
   busybox_id=`isula inspect -f '{{.image.id}}' busybox`
@@ -83,11 +84,12 @@ function test_concurrent_load()
 {
   local ret=0
   local test="isula load image test => (${FUNCNAME[@]})"
+  local ubuntu_image="isulad/ubuntu"
 
   msg_info "${test} starting..."
 
   # clean exist image
-  ubuntu_id=`isula inspect -f '{{.image.id}}' ubuntu`
+  ubuntu_id=`isula inspect -f '{{.image.id}}' ${ubuntu_image}`
   busybox_id=`isula inspect -f '{{.image.id}}' busybox`
   isula rmi $ubuntu_id $busybox_id
 
@@ -105,7 +107,7 @@ function test_concurrent_load()
 
   tail -n 50 /var/lib/isulad/isulad.log
 
-  ubuntu_id=`isula inspect -f '{{.image.id}}' ubuntu`
+  ubuntu_id=`isula inspect -f '{{.image.id}}' ${ubuntu_image}`
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to inspect image: ubuntu" && ((ret++))
 
   top_layer_id=$(isula inspect -f '{{.image.top_layer}}' ${ubuntu_id})

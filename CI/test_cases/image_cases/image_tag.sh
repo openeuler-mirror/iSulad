@@ -23,7 +23,7 @@ declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
 image_busybox="busybox"
-image_hello="hello-world"
+image_hello="isulad/hello-world"
 
 function test_tag_image()
 {

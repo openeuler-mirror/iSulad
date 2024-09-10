@@ -26,7 +26,7 @@ test="exec_runc_test => (${FUNCNAME[@]})"
 function exec_runc_test()
 {
     local ret=0
-    local image="ubuntu"
+    local image="isulad/ubuntu"
     local container_name="test_busybox"
 
     isula pull ${image}

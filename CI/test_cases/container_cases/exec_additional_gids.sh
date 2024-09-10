@@ -38,13 +38,14 @@ function additional_gids_test()
 {
     local ret=0
     local runtime=$1
+    local ubuntu_image="isulad/ubuntu"
     test="exec additional gids test => test_exec_additional_gids => $runtime"
 
     msg_info "${test} starting..."
 
     isula rm -f `isula ps -a -q`
 
-    isula run -tid --runtime $runtime -n $cont_name ubuntu bash
+    isula run -tid --runtime $runtime -n $cont_name ${ubuntu_image} bash
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container" && ((ret++))
 
     isula exec $cont_name bash -c "groupadd --gid $USER_GID $USERNAME \
