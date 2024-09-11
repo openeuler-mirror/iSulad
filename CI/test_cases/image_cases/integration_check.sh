@@ -55,7 +55,7 @@ function test_image_info()
   ucid=$(isula create ${uimage})
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container failed" && ((ret++))
 
-  isula run -tid --name checker alpine
+  isula run -tid --name checker isulad/alpine
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container failed" && ((ret++))
 
   tmp_fname=$(echo -n "/var/run/isulad/storage" | sha256sum | awk '{print $1}')
