@@ -28,7 +28,7 @@ function test_image_load()
 {
   local ret=0
   local test="isula load image test => (${FUNCNAME[@]})"
-  local ubuntu_image="isulad/ubuntu"
+  local ubuntu_image="ubuntu"
 
   msg_info "${test} starting..."
 
@@ -84,7 +84,7 @@ function test_concurrent_load()
 {
   local ret=0
   local test="isula load image test => (${FUNCNAME[@]})"
-  local ubuntu_image="isulad/ubuntu"
+  local ubuntu_image="ubuntu"
 
   msg_info "${test} starting..."
 
