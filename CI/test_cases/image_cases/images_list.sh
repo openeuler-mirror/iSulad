@@ -25,7 +25,7 @@ source ../helpers.sh
 function test_image_list()
 {
   local ret=0
-  local image="hello-world"
+  local image="isulad/hello-world"
   local image_busybox="busybox"
   local INVALID_IMAGE="k~k"
   local test="list images info test => (${FUNCNAME[@]})"

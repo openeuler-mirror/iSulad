@@ -87,7 +87,7 @@ function daemon_disable_selinux()
 function test_isulad_selinux_file_label()
 {
   local ret=0
-  local image="centos"
+  local image="isulad/centos"
   local test="isulad selinux file label test => (${FUNCNAME[@]})"
 
   msg_info "${test} starting..."
@@ -144,7 +144,7 @@ function test_isulad_selinux_file_label()
 function test_isulad_selinux_process_label()
 {
   local ret=0
-  local image="centos"
+  local image="isulad/centos"
   local test="isulad selinux process label test => (${FUNCNAME[@]})"
 
   msg_info "${test} starting..."
@@ -172,7 +172,7 @@ function test_isulad_selinux_process_label()
 function test_isulad_selinux_mount_mode()
 {
   local ret=0
-  local image="centos"
+  local image="isulad/centos"
   local test="isulad selinux mount mode test => (${FUNCNAME[@]})"
 
   msg_info "${test} starting..."
