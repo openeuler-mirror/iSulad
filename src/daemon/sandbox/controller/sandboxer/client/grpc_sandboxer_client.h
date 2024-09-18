@@ -48,11 +48,11 @@ public:
 
     auto Platform(const std::string &sandboxId, ControllerPlatformInfo &platformInfo, Errors &error) -> bool;
 
-    auto Prepare(const std::string &sandboxId, const ControllerPrepareParams &params, std::string &bundle,
-                 Errors &error) -> bool;
+    auto Prepare(containerd::types::Sandbox &apiSandbox,
+                 std::vector<std::string> &fields, Errors &error) -> bool;
 
-    auto Purge(const std::string &sandboxId, const std::string &containerId,
-               const std::string &execId, Errors &error) -> bool;
+    auto Purge(containerd::types::Sandbox &apiSandbox,
+               std::vector<std::string> &fields, Errors &error) -> bool;
 
     auto UpdateResources(const std::string &sandboxId, const ControllerUpdateResourcesParams &params,
                          Errors &error) -> bool;
@@ -72,11 +72,11 @@ private:
                            const ControllerCreateParams &params) -> bool;
     void StartResponseToSandboxInfo(const containerd::services::sandbox::v1::ControllerStartResponse &response,
                                     ControllerSandboxInfo &sandboxInfo);
-    auto InitPrepareRequest(containerd::services::sandbox::v1::PrepareRequest &request,
-                            const std::string &sandboxId, const ControllerPrepareParams &params) -> bool;
-    auto InitUpdateResourcesRequest(containerd::services::sandbox::v1::UpdateResourcesRequest &request,
-                                    const std::string &sandboxId,
-                                    const ControllerUpdateResourcesParams &params) -> bool;
+    void InitUpdateRequest(containerd::services::sandbox::v1::ControllerUpdateRequest &request,
+                            containerd::types::Sandbox &apiSandbox, std::vector<std::string> &fields);
+    // auto InitUpdateResourcesRequest(containerd::services::sandbox::v1::UpdateResourcesRequest &request,
+    //                                 const std::string &sandboxId,
+    //                                 const ControllerUpdateResourcesParams &params) -> bool;
     void PlatformResponseToPlatformInfo(const containerd::services::sandbox::v1::ControllerPlatformResponse &response,
                                         ControllerPlatformInfo &platformInfo);
     void StatusResponseToSandboxStatus(const containerd::services::sandbox::v1::ControllerStatusResponse &response,

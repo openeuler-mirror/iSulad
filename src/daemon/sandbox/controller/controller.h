@@ -24,6 +24,7 @@
 
 #include "errors.h"
 #include "api_v1.pb.h"
+#include "sandbox.pb.h"
 
 namespace sandbox {
 
@@ -65,6 +66,7 @@ struct ControllerSandboxInfo {
     uint32_t pid;
     uint64_t createdAt;
     std::string taskAddress;
+    std::string version;
     google::protobuf::Map<std::string, std::string> labels;
 };
 
@@ -78,6 +80,7 @@ struct ControllerSandboxStatus {
     uint32_t pid;
     std::string state;
     std::string taskAddress;
+    std::string version;
     google::protobuf::Map<std::string, std::string> info;
     uint64_t createdAt;
     uint64_t exitedAt;
@@ -123,11 +126,10 @@ public:
                         Errors &error) = 0;
     virtual std::unique_ptr<ControllerSandboxInfo> Start(const std::string &sandboxId, Errors &error) = 0 ;
     virtual std::unique_ptr<ControllerPlatformInfo> Platform(const std::string &sandboxId, Errors &error) = 0;
-    virtual std::string Prepare(const std::string &sandboxId,
-                                const ControllerPrepareParams &params,
-                                Errors &error) = 0;
-    virtual bool Purge(const std::string &sandboxId, const std::string &containerId,
-                       const std::string &execId, Errors &error) = 0;
+    virtual bool Prepare(containerd::types::Sandbox &apiSandbox,
+                         std::vector<std::string> &fields, Errors &error) = 0;
+    virtual bool Purge(containerd::types::Sandbox &apiSandbox,
+                       std::vector<std::string> &fields, Errors &error) = 0;
     virtual bool UpdateResources(const std::string &sandboxId,
                                  const ControllerUpdateResourcesParams &params,
                                  Errors &error) = 0;

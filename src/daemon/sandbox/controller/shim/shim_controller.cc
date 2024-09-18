@@ -340,15 +340,14 @@ std::unique_ptr<ControllerPlatformInfo> ShimController::Platform(const std::stri
     return nullptr;
 }
 
-std::string ShimController::Prepare(const std::string &sandboxId,
-                                    const ControllerPrepareParams &params,
-                                    Errors &error)
+bool ShimController::Prepare(containerd::types::Sandbox &apiSandbox,
+                             std::vector<std::string> &fields, Errors &error)
 {
-    return std::string("");
+    return true;
 }
 
-bool ShimController::Purge(const std::string &sandboxId, const std::string &containerId,
-                           const std::string &execId, Errors &error)
+bool ShimController::Purge(containerd::types::Sandbox &apiSandbox,
+                           std::vector<std::string> &fields, Errors &error)
 {
     return true;
 }

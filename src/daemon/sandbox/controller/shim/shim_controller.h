@@ -45,11 +45,10 @@ public:
                 Errors &error) override;
     std::unique_ptr<ControllerSandboxInfo> Start(const std::string &sandboxId, Errors &error) override;
     std::unique_ptr<ControllerPlatformInfo> Platform(const std::string &sandboxId, Errors &error) override;
-    std::string Prepare(const std::string &sandboxId,
-                        const ControllerPrepareParams &params,
-                        Errors &error) override;
-    bool Purge(const std::string &sandboxId, const std::string &containerId,
-               const std::string &execId, Errors &error) override;
+    bool Prepare(containerd::types::Sandbox &apiSandbox, std::vector<std::string> &fields,
+                 Errors &error) override;
+    bool Purge(containerd::types::Sandbox &apiSandbox, std::vector<std::string> &fields,
+               Errors &error) override;
     bool UpdateResources(const std::string &sandboxId,
                          const ControllerUpdateResourcesParams &params,
                          Errors &error) override;

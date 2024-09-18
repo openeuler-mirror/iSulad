@@ -74,6 +74,7 @@ auto SandboxerClient::InitCreateRequest(containerd::services::sandbox::v1::Contr
         }
     }
     request.set_netns_path(params.netNSPath);
+    // The arg sandbox is useless for now
     return true;
 }
 
@@ -117,7 +118,8 @@ void SandboxerClient::StartResponseToSandboxInfo(const containerd::services::san
     sandboxInfo.id = response.sandbox_id();
     sandboxInfo.pid = response.pid();
     sandboxInfo.createdAt = TimestampToNanos(response.created_at());
-    sandboxInfo.taskAddress = response.task_address();
+    sandboxInfo.taskAddress = response.address();
+    sandboxInfo.version = response.version();
     sandboxInfo.labels = response.labels();
 }
 
@@ -144,53 +146,27 @@ auto SandboxerClient::Start(const std::string &sandboxId, ControllerSandboxInfo 
     return true;
 }
 
-auto SandboxerClient::InitPrepareRequest(containerd::services::sandbox::v1::PrepareRequest &request,
-                                         const std::string &sandboxId, const ControllerPrepareParams &params) -> bool
+void SandboxerClient::InitUpdateRequest(containerd::services::sandbox::v1::ControllerUpdateRequest &request,
+                                         containerd::types::Sandbox &apiSandbox,
+                                         std::vector<std::string> &fields)
 {
-    if (params.spec == nullptr) {
-        ERROR("Sandboxer controller prepare request failed, spec is null");
-        return false;
-    }
-    request.mutable_spec()->set_value(*(params.spec));
-    request.set_sandboxer(m_sandboxer);
-    request.set_sandbox_id(sandboxId);
-    request.set_container_id(params.containerId);
-    request.set_exec_id(params.execId);
-    for (const auto &entry : params.rootfs) {
-        if (entry != nullptr) {
-            Mount* mount = request.add_rootfs();
-            InitMountInfo(*mount, *entry);
-        }
-    }
-    if (params.streamInfo != nullptr) {
-        request.set_stdin(params.streamInfo->stdin);
-        request.set_stdout(params.streamInfo->stdout);
-        request.set_stderr(params.streamInfo->stderr);
-        request.set_terminal(params.streamInfo->terminal);
-    } else {
-        request.set_stdin("");
-        request.set_stdout("");
-        request.set_stderr("");
-        request.set_terminal(false);
-    }
-
-    return true;
+    request.set_sandbox_id(apiSandbox.sandbox_id());
+    request.set_sandboxer(apiSandbox.sandboxer());
+    *(request.mutable_sandbox()) = apiSandbox;
+    *(request.mutable_fields()) = {fields.begin(), fields.end()};
 }
 
-auto SandboxerClient::Prepare(const std::string &sandboxId, const ControllerPrepareParams &params, std::string &bundle,
-                              Errors &error) -> bool
+auto SandboxerClient::Prepare(containerd::types::Sandbox &apiSandbox,
+                              std::vector<std::string> &fields, Errors &error) -> bool
 {
     grpc::ClientContext context;
-    containerd::services::sandbox::v1::PrepareRequest request;
-    containerd::services::sandbox::v1::PrepareResponse response;
+    containerd::services::sandbox::v1::ControllerUpdateRequest request;
+    containerd::services::sandbox::v1::ControllerUpdateResponse response;
     grpc::Status status;
 
-    if (!InitPrepareRequest(request, sandboxId, params)) {
-        error.SetError("Failed to init prepare request for sandboxer prepare request, sandbox id: " + sandboxId);
-        return false;
-    }
+    InitUpdateRequest(request, apiSandbox, fields);
 
-    status = m_stub->Prepare(&context, request, &response);
+    status = m_stub->Update(&context, request, &response);
     if (!status.ok()) {
         error.SetError(status.error_message());
         ERROR("Sandboxer controller prepare request failed, error_code: %d: %s", status.error_code(),
@@ -198,25 +174,20 @@ auto SandboxerClient::Prepare(const std::string &sandboxId, const ControllerPrep
         return false;
     }
 
-    bundle = response.bundle();
-
     return true;
 }
 
-auto SandboxerClient::Purge(const std::string &sandboxId, const std::string &containerId,
-                            const std::string &execId, Errors &error) -> bool
+auto SandboxerClient::Purge(containerd::types::Sandbox &apiSandbox,
+                              std::vector<std::string> &fields, Errors &error) -> bool
 {
     grpc::ClientContext context;
-    containerd::services::sandbox::v1::PurgeRequest request;
-    containerd::services::sandbox::v1::PurgeResponse response;
+    containerd::services::sandbox::v1::ControllerUpdateRequest request;
+    containerd::services::sandbox::v1::ControllerUpdateResponse response;
     grpc::Status status;
 
-    request.set_sandboxer(m_sandboxer);
-    request.set_sandbox_id(sandboxId);
-    request.set_container_id(containerId);
-    request.set_exec_id(execId);
+    InitUpdateRequest(request, apiSandbox, fields);
 
-    status = m_stub->Purge(&context, request, &response);
+    status = m_stub->Update(&context, request, &response);
     if (!status.ok()) {
         error.SetError(status.error_message());
         ERROR("Sandboxer controller purge request failed, error_code: %d: %s", status.error_code(),
@@ -227,44 +198,9 @@ auto SandboxerClient::Purge(const std::string &sandboxId, const std::string &con
     return true;
 }
 
-auto SandboxerClient::InitUpdateResourcesRequest(containerd::services::sandbox::v1::UpdateResourcesRequest &request,
-                                                 const std::string &sandboxId,
-                                                 const ControllerUpdateResourcesParams &params) -> bool
-{
-    if (params.resources == nullptr) {
-        ERROR("Sandboxer controller update resources request failed, resources is null");
-        return false;
-    }
-    request.mutable_resources()->set_value(*(params.resources));
-    request.set_sandboxer(m_sandboxer);
-    request.set_sandbox_id(sandboxId);
-    request.set_container_id(params.containerId);
-    request.mutable_annotations()->insert(params.annotations.begin(), params.annotations.end());
-    return true;
-}
-
 auto SandboxerClient::UpdateResources(const std::string &sandboxId, const ControllerUpdateResourcesParams &params,
                                       Errors &error) -> bool
 {
-    grpc::ClientContext context;
-    containerd::services::sandbox::v1::UpdateResourcesRequest request;
-    containerd::services::sandbox::v1::UpdateResourcesResponse response;
-    grpc::Status status;
-
-    if (!InitUpdateResourcesRequest(request, sandboxId, params)) {
-        error.SetError("Failed to init update-resources request for sandboxer update-resources request, sandbox id: " +
-                       sandboxId);
-        return false;
-    }
-
-    status = m_stub->UpdateResources(&context, request, &response);
-    if (!status.ok()) {
-        error.SetError(status.error_message());
-        ERROR("Sandboxer controller update resources request failed, error_code: %d: %s", status.error_code(),
-              status.error_message().c_str());
-        return false;
-    }
-
     return true;
 }
 
@@ -331,7 +267,8 @@ void SandboxerClient::StatusResponseToSandboxStatus(const containerd::services::
     sandboxStatus.id = response.sandbox_id();
     sandboxStatus.pid = response.pid();
     sandboxStatus.state = response.state();
-    sandboxStatus.taskAddress = response.task_address();
+    sandboxStatus.taskAddress = response.address();
+    sandboxStatus.version = response.version();
     sandboxStatus.info.insert(response.info().begin(), response.info().end());
     sandboxStatus.createdAt = TimestampToNanos(response.created_at());
     sandboxStatus.exitedAt = TimestampToNanos(response.exited_at());

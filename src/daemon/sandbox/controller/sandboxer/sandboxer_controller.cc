@@ -61,21 +61,18 @@ std::unique_ptr<ControllerPlatformInfo> SandboxerController::Platform(const std:
     return platformInfo;
 }
 
-std::string SandboxerController::Prepare(const std::string &sandboxId,
-                                         const ControllerPrepareParams &params,
-                                         Errors &error)
+bool SandboxerController::Prepare(containerd::types::Sandbox &apiSandbox,
+                                  std::vector<std::string> &fields,
+                                  Errors &error)
 {
-    std::string bundle;
-    if (!m_client->Prepare(sandboxId, params, bundle, error)) {
-        return "";
-    }
-    return bundle;
+    return m_client->Prepare(apiSandbox, fields, error);
 }
 
-bool SandboxerController::Purge(const std::string &sandboxId, const std::string &containerId,
-                                const std::string &execId, Errors &error)
+bool SandboxerController::Purge(containerd::types::Sandbox &apiSandbox,
+                                std::vector<std::string> &fields,
+                                Errors &error)
 {
-    return m_client->Purge(sandboxId, containerId, execId, error);
+    return m_client->Purge(apiSandbox, fields, error);
 }
 
 bool SandboxerController::UpdateResources(const std::string &sandboxId,

@@ -30,12 +30,14 @@
 #include "controller_manager.h"
 #include "cstruct_wrapper.h"
 #include "read_write_lock.h"
+#include "sandbox_task.h"
 
 namespace sandbox {
 
 const std::string SANDBOX_METADATA_JSON = "sandbox_metadata.json";
 const std::string SANDBOX_STATE_JSON = "sandbox_state.json";
 const std::string NETWORK_SETTINGS_JSON = "network_settings.json";
+const std::string SANDBOX_TASKS_JSON = "sandbox_tasks.json";
 
 // Keep consistent with the default values set in containerd and cri-o.
 const uint32_t DEFAULT_STOP_TIMEOUT = 10;
@@ -138,6 +140,15 @@ public:
     auto Remove(Errors &error) -> bool;
     void Status(runtime::v1::PodSandboxStatus &status);
 
+    // for sandbox api update
+    void LoadSandboxTasks();
+    auto SaveSandboxTasks() -> bool;
+    auto AddSandboxTasks(sandbox_task *task) -> bool;
+    auto GetAnySandboxTasks() -> std::string;
+    void DeleteSandboxTasks(const char *containerId);
+    auto AddSandboxTasksProcess(const char *containerId, sandbox_process *processes) -> bool;
+    void DeleteSandboxTasksProcess(const char *containerId, const char *execId);
+
 private:
     auto SaveState(Errors &error) -> bool;
     auto SaveMetadata(Errors &error) -> bool;
@@ -161,6 +172,7 @@ private:
     auto GetMetadataJsonPath() ->  std::string;
     auto GetStatePath() -> std::string;
     auto GetNetworkSettingsPath() -> std::string;
+    auto GetTasksJsonPath() -> std::string;
 
     void FillSandboxState(sandbox_state *state);
     void FillSandboxMetadata(sandbox_metadata* metadata, Errors &error);
@@ -177,6 +189,12 @@ private:
 
     void updateSelinuxLabels(std::string &selinuxLabels);
 
+    auto AddTaskById(const char *task_id, sandbox_task *task) -> bool;
+    auto ReadSandboxTasksJson() -> sandbox_tasks *;
+    auto WriteSandboxTasksJson(std::string &tasks_json) -> bool;
+    auto DeleteSandboxTasksJson() -> bool;
+    void AddSandboxTasksByArray(sandbox_tasks *tasksArray);
+
 private:
     // Since the cri module will operate concurrently on the sandbox instance,
     // use m_mutex to ensure the correctness of the sandbox instance
@@ -191,6 +209,7 @@ private:
     std::string m_rootdir;
     std::string m_statedir;
     std::string m_taskAddress;
+    uint32_t m_version;
     StatsInfo m_statsInfo;
     // Store network information in the sandbox, which is convenient for the cri module to obtain
     // and update the network settings of the pause container in the shim-controller.
@@ -211,6 +230,11 @@ private:
     // vsock ports
     std::mutex m_vsockPortsMutex;
     std::set<uint32_t> m_vsockPorts;
+
+    // use m_tasksMutex to ensure the correctness of the tasks
+    RWMutex m_tasksMutex;
+    // for sandbox api update, containerId --> tasks
+    std::map<std::string, std::shared_ptr<SandboxTask>> m_tasks;
 };
 
 } // namespace sandbox

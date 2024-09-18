@@ -31,6 +31,7 @@ import "google/protobuf/timestamp.proto";
 import "sandbox/types/sandbox.proto";
 import "sandbox/types/mount.proto";
 import "sandbox/types/platform.proto";
+import "sandbox/types/metrics.proto";
 
 option go_package = "github.com/containerd/containerd/api/services/sandbox/v1;sandbox";
 
@@ -89,21 +90,22 @@ service Controller {
 	rpc Create(ControllerCreateRequest) returns (ControllerCreateResponse);
 	rpc Start(ControllerStartRequest) returns (ControllerStartResponse);
 	rpc Platform(ControllerPlatformRequest) returns (ControllerPlatformResponse);
-	rpc Prepare(PrepareRequest) returns (PrepareResponse);
-	rpc Purge(PurgeRequest) returns (PurgeResponse);
-	rpc UpdateResources(UpdateResourcesRequest) returns (UpdateResourcesResponse);
 	rpc Stop(ControllerStopRequest) returns (ControllerStopResponse);
 	rpc Wait(ControllerWaitRequest) returns (ControllerWaitResponse);
 	rpc Status(ControllerStatusRequest) returns (ControllerStatusResponse);
 	rpc Shutdown(ControllerShutdownRequest) returns (ControllerShutdownResponse);
+	rpc Metrics(ControllerMetricsRequest) returns (ControllerMetricsResponse);
+	rpc Update(ControllerUpdateRequest) returns (ControllerUpdateResponse);
 }
 
 message ControllerCreateRequest {
-	string sandboxer = 1;
-	string sandbox_id = 2;
-	repeated containerd.types.Mount rootfs = 3;
-	google.protobuf.Any options = 4;
-	string netns_path = 5;
+	string sandbox_id = 1;
+	repeated containerd.types.Mount rootfs = 2;
+	google.protobuf.Any options = 3;
+	string netns_path = 4;
+	map<string, string> annotations = 5;
+	containerd.types.Sandbox sandbox = 6;
+	string sandboxer = 10;
 }
 
 message ControllerCreateResponse {
@@ -111,8 +113,8 @@ message ControllerCreateResponse {
 }
 
 message ControllerStartRequest {
-	string sandboxer = 1;
-	string sandbox_id = 2;
+	string sandbox_id = 1;
+	string sandboxer = 10;
 }
 
 message ControllerStartResponse {
@@ -120,12 +122,16 @@ message ControllerStartResponse {
 	uint32 pid = 2;
 	google.protobuf.Timestamp created_at = 3;
 	map<string, string> labels = 4;
-	string task_address = 5;
+	// Address of the sandbox for containerd to connect,
+	// for calling Task or other APIs serving in the sandbox.
+	// it is in the form of ttrpc+unix://path/to/uds or grpc+vsock://<vsock cid>:<port>.
+	string address = 5;
+	uint32 version = 6;
 }
 
 message ControllerPlatformRequest {
-	string sandboxer = 1;
-	string sandbox_id = 2;
+	string sandbox_id = 1;
+	string sandboxer = 10;
 }
 
 message ControllerPlatformResponse {
@@ -133,16 +139,16 @@ message ControllerPlatformResponse {
 }
 
 message ControllerStopRequest {
-	string sandboxer = 1;
-	string sandbox_id = 2;
-	uint32 timeout_secs = 3;
+	string sandbox_id = 1;
+	uint32 timeout_secs = 2;
+	string sandboxer = 10;
 }
 
 message ControllerStopResponse {}
 
 message ControllerWaitRequest {
-	string sandboxer = 1;
-	string sandbox_id = 2;
+	string sandbox_id = 1;
+	string sandboxer = 10;
 }
 
 message ControllerWaitResponse {
@@ -151,61 +157,48 @@ message ControllerWaitResponse {
 }
 
 message ControllerStatusRequest {
-	string sandboxer = 1;
-	string sandbox_id = 2;
-	bool verbose = 3;
+	string sandbox_id = 1;
+	bool verbose = 2;
+	string sandboxer = 10;
 }
 
 message ControllerStatusResponse {
 	string sandbox_id = 1;
 	uint32 pid = 2;
 	string state = 3;
-	string task_address = 4;
-	map<string, string> info = 5;
-	google.protobuf.Timestamp created_at = 6;
-	google.protobuf.Timestamp exited_at = 7;
-	google.protobuf.Any extra = 8;
+	map<string, string> info = 4;
+	google.protobuf.Timestamp created_at = 5;
+	google.protobuf.Timestamp exited_at = 6;
+	google.protobuf.Any extra = 7;
+	// Address of the sandbox for containerd to connect,
+	// for calling Task or other APIs serving in the sandbox.
+	// it is in the form of ttrpc+unix://path/to/uds or grpc+vsock://<vsock cid>:<port>.
+	string address = 8;
+	uint32 version = 9;
 }
 
 message ControllerShutdownRequest {
-	string sandboxer = 1;
-	string sandbox_id = 2;
+	string sandbox_id = 1;
+	string sandboxer = 10;
 }
 
 message ControllerShutdownResponse {}
 
-message PrepareRequest {
-	string sandboxer = 1;
-	string sandbox_id = 2;
-	string container_id = 3;
-	string exec_id = 4;
-	google.protobuf.Any spec = 5;
-	repeated containerd.types.Mount rootfs = 6;
-	string stdin = 7;
-	string stdout = 8;
-	string stderr = 9;
-	bool terminal = 10;
+message ControllerMetricsRequest {
+	string sandbox_id = 1;
+	string sandboxer = 10;
 }
 
-message PrepareResponse {
-	string bundle = 1;
+message ControllerMetricsResponse {
+	types.Metric metrics = 1;
 }
 
-message PurgeRequest {
-	string sandboxer = 1;
-	string sandbox_id = 2;
-	string container_id = 3;
-	string exec_id = 4;
+message ControllerUpdateRequest {
+	string sandbox_id = 1;
+	string sandboxer = 2;
+	containerd.types.Sandbox sandbox = 3;
+	repeated string fields = 4;
 }
 
-message PurgeResponse {}
-
-message UpdateResourcesRequest {
-	string sandboxer = 1;
-	string sandbox_id = 2;
-	string container_id = 3;
-	google.protobuf.Any resources = 4;
-	map<string, string> annotations = 5;
+message ControllerUpdateResponse {
 }
-
-message UpdateResourcesResponse {}
