@@ -41,7 +41,7 @@ function additional_gids_test()
 
     isula rm -f `isula ps -a -q`
 
-    isula run -tid -n $cont_name ubuntu bash
+    isula run -tid -n $cont_name isulad/ubuntu bash
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container" && ((ret++))
 
     isula exec $cont_name bash -c "groupadd --gid $USER_GID $USERNAME \
