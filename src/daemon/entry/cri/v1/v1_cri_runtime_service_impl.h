@@ -104,7 +104,7 @@ protected:
 private:
     std::string m_podSandboxImage;
     std::shared_ptr<Network::PluginManager> m_pluginManager { nullptr };
-    bool m_enablePodEvents;
+    [[maybe_unused]] bool m_enablePodEvents;
 };
 } // namespace CRIV1
 #endif // DAEMON_ENTRY_CRI_V1_CRI_RUNTIME_SERVICE_IMPL_H

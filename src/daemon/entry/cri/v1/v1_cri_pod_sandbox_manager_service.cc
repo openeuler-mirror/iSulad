@@ -536,7 +536,7 @@ auto PodSandboxManagerService::GetContainerListResponse(const std::string &readS
     if (CRIHelpers::FiltersAddLabel(list_request->filters, CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY,
                                     readSandboxID) != 0) {
         std::string tmp_errmsg = "Failed to add label in sandbox" + readSandboxID;
-        ERROR(tmp_errmsg.c_str());
+        ERROR("%s", tmp_errmsg.c_str());
         errors.push_back(tmp_errmsg);
         return nullptr;
     }
@@ -551,7 +551,7 @@ auto PodSandboxManagerService::GetContainerListResponse(const std::string &readS
     }
     if (ret != 0) {
         if (list_response != nullptr && list_response->errmsg != nullptr) {
-            ERROR(list_response->errmsg);
+            ERROR("%s", list_response->errmsg);
             errors.push_back(list_response->errmsg);
         } else {
             ERROR("Failed to call list container callback");
@@ -1218,7 +1218,7 @@ void PodSandboxManagerService::PodSandboxStatsToGRPC(const std::string &id, cons
         return;
     }
 
-    podStats = move(podStatsPtr);
+    podStats = std::move(podStatsPtr);
     return;
 }
 
@@ -1227,7 +1227,7 @@ auto PodSandboxManagerService::PodSandboxStats(const std::string &podSandboxID,
                                                Errors &error) -> std::unique_ptr<runtime::v1::PodSandboxStats>
 {
     Errors tmpErr;
-    cgroup_metrics_t cgroupMetrics { 0 };
+    cgroup_metrics_t cgroupMetrics {{ 0 }};
     std::vector<Network::NetworkInterfaceStats> netMetrics;
     std::map<std::string, std::string> annotations;
     std::unique_ptr<runtime::v1::PodSandboxStats> podStats { nullptr };
@@ -1368,7 +1368,7 @@ void PodSandboxManagerService::ListPodSandboxStats(const runtime::v1::PodSandbox
             continue;
         }
 
-        podsStats.push_back(move(podStats));
+        podsStats.push_back(std::move(podStats));
     }
 }
 

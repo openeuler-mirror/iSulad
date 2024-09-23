@@ -17,6 +17,8 @@
 #include "errors.h"
 #include "url.h"
 
+url::URLDatum cri_stream_server_url(void);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,8 +28,6 @@ void cri_stream_server_init(Errors &err);
 void cri_stream_server_wait(void);
 
 void cri_stream_server_shutdown(void);
-
-url::URLDatum cri_stream_server_url(void);
 
 #ifdef __cplusplus
 }

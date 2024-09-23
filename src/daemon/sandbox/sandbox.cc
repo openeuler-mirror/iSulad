@@ -847,7 +847,7 @@ auto Sandbox::SaveState(Errors &error) -> bool
 
     nret = util_atomic_write_file(path.c_str(), stateJson.c_str(), stateJson.length(), CONFIG_FILE_MODE, false);
     if (nret != 0) {
-        SYSERROR("Failed to write file %s");
+        SYSERROR("Failed to write file %s", path.c_str());
         error.Errorf("Failed to write file %s", path.c_str());
         return false;
     }

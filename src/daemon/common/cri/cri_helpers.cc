@@ -525,8 +525,8 @@ void RemoveContainerLogSymlink(const std::string &containerID, Errors &error)
     if (!path.empty()) {
         // Only remove the symlink when container log path is specified.
         if (util_path_remove(path.c_str()) != 0 && errno != ENOENT) {
-            SYSERROR("Failed to remove container %s log symlink %s.", containerID.c_str(), path);
-            error.Errorf("Failed to remove container %s log symlink %s.", containerID.c_str(), path);
+            SYSERROR("Failed to remove container %s log symlink %s.", containerID.c_str(), path.c_str());
+            error.Errorf("Failed to remove container %s log symlink %s.", containerID.c_str(), path.c_str());
         }
     }
 }

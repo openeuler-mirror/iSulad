@@ -1573,7 +1573,7 @@ void PodSandboxManagerService::PodSandboxStatsToGRPC(const std::string &id, cons
         return;
     }
 
-    podStats = move(podStatsPtr);
+    podStats = std::move(podStatsPtr);
     return;
 }
 
@@ -1583,7 +1583,7 @@ auto PodSandboxManagerService::PodSandboxStats(const std::string &podSandboxID,
 {
     Errors tmpErr;
     container_inspect *inspectData { nullptr };
-    cgroup_metrics_t cgroupMetrics { 0 };
+    cgroup_metrics_t cgroupMetrics {{ 0 }};
     std::vector<Network::NetworkInterfaceStats> netMetrics;
     std::map<std::string, std::string> annotations;
     std::unique_ptr<runtime::v1alpha2::PodSandboxStats> podStats { nullptr };
@@ -1733,7 +1733,7 @@ void PodSandboxManagerService::ListPodSandboxStats(const runtime::v1alpha2::PodS
             continue;
         }
 
-        podsStats.push_back(move(podStats));
+        podsStats.push_back(std::move(podStats));
     }
 }
 
