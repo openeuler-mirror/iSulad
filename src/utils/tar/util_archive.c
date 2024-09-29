@@ -219,7 +219,7 @@ static int make_safedir_is_noexec(const char *flock_path, const char *dstdir, ch
     }
 
     if (realpath(isulad_tmpdir_env, cleanpath) == NULL) {
-        ERROR("Failed to get real path for %s", isula_tmpdir);
+        SYSERROR("Failed to get real path for %s", isulad_tmpdir_env);
         return -1;
     }
 
