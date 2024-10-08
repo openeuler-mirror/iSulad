@@ -37,7 +37,7 @@
 
 - 查看 image store 模块的设计文档： [image_store_design](./detailed/Image/image_store_design_zh.md) 。
 
-- 查看 layer store 模块的设计文档 [layer_store_degisn](./detailed/Image/layer_store_degisn_zh.md) 。
+- 查看 layer store 模块的设计文档： [layer_store_degisn](./detailed/Image/layer_store_degisn_zh.md) 。
 
 - 查看 registry 模块的设计文档： [registry_degisn](./detailed/Image/registry_degisn_zh.md) 。
 
