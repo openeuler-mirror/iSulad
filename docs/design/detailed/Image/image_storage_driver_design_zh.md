@@ -116,7 +116,7 @@ int graphdriver_cleanup(void)
 
 ## 3.1 Driver 初始化
 
-Driver 初始化初始化流程：
+Driver 初始化流程：
 
 ![driver_init](https://images.gitee.com/uploads/images/2020/0327/103821_1d31a134_5226885.png)
 Overlay 模块初始化流程：
