@@ -584,6 +584,11 @@ static int container_start_cb(const container_start_request *request, container_
 
     if (container_is_running(cont->state)) {
         INFO("Container is already running");
+        if (container_is_paused(cont->state)) {
+            cc = ISULAD_ERR_EXEC;
+            ERROR("cannot start a paused container, try unpause instead");
+            isulad_set_error_message("cannot start a paused container, try unpause instead");
+        }
         goto pack_response;
     }
 
