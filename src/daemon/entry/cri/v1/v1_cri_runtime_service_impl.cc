@@ -24,7 +24,6 @@ CRIRuntimeServiceImpl::CRIRuntimeServiceImpl(const std::string &podSandboxImage,
     , m_containerManager(new ContainerManagerService(cb))
     , m_podSandboxManager(new PodSandboxManagerService(podSandboxImage, cb, pluginManager, enablePodEvents))
     , m_runtimeManager(new RuntimeManagerService(cb, pluginManager))
-    , m_enablePodEvents(enablePodEvents)
 {
 }
 
