@@ -149,7 +149,7 @@ void ImageManagerServiceImpl::list_images_to_grpc(im_list_response *response,
 
         imagetool_image_summary *element = list_images->images[i];
         conv_image_to_grpc(element, image);
-        images.push_back(move(image));
+        images.push_back(std::move(image));
     }
 }
 
