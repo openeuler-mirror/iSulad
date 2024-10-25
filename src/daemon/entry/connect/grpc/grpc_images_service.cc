@@ -691,6 +691,9 @@ Status ImagesServiceImpl::PullImage(ServerContext *context, const PullImageReque
     stream.writer = (void *)writer;
 
     ret = cb->image.pull(image_req, &stream, &image_res);
+    if (image_res->errmsg != NULL) {
+        errmsg = image_res->errmsg;
+    }
     free_image_pull_image_request(image_req);
     free_image_pull_image_response(image_res);
     if (ret == 0) {
