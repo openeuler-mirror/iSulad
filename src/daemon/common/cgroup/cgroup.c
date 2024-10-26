@@ -36,6 +36,10 @@
 #define CGROUP_SUPER_MAGIC 0x27e0eb
 #endif
 
+#ifndef CGROUP2_SUPER_MAGIC
+#define CGROUP2_SUPER_MAGIC 0x63677270
+#endif
+
 static cgroup_ops g_cgroup_ops;
 
 static int get_cgroup_version_for_init(void)
