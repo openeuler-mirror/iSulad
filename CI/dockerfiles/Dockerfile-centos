@@ -24,6 +24,11 @@
 FROM	centos:7.6.1810
 MAINTAINER LiFeng <lifeng68@huawei.com>
 
+RUN sed -i 's/mirror.centos.org/archive.kernel.org\/centos-vault/g' /etc/yum.repos.d/*.repo
+RUN sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
+RUN sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+RUN echo "sslverify=false" | tee -a /etc/yum.conf
+
 # Install dependency package
 RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y fakesystemd systemd && \
 	yum update -y && \
@@ -112,6 +117,9 @@ RUN git config --global http.sslverify false
 
 # install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+RUN mkdir -p /root/.cargo/
+RUN touch ${HOME}/.cargo/config
 
 # configure rust
 RUN echo "[source.crates-io]" >> ${HOME}/.cargo/config && \
@@ -286,7 +294,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
         make install && \
         ldconfig
 
-RUN dnf install -y ncurses-devel && dnf clean all
+RUN yum install -y ncurses-devel && yum clean all
 
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]

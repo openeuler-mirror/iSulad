@@ -40,6 +40,8 @@ $ cd iSulad/docs/build_docs/guide/script
 $ sudo ./install_iSulad_on_Centos_7.sh
 ```
 
+若需要在centos容器中编译iSulad，可参照iSulad编译可使用的镜像dockerfile[Dockerfile-ubuntu](../../CI/dockerfiles/Dockerfile-ubuntu)。
+
 ### Ubuntu
 
 我们同样在代码仓中提供了在Ubuntu上自动化安装的脚本: [install_iSulad_on_Ubuntu_20_04_LTS](./guide/script/install_iSulad_on_Ubuntu_20_04_LTS.sh)，您只需要执行这个脚本就可以自动编译安装iSulad以及其依赖的组件。
@@ -50,6 +52,8 @@ $ cd iSulad/docs/build_docs/guide/script
 $ sudo chmod +x ./install_iSulad_on_Ubuntu_20_04_LTS.sh
 $ sudo ./install_iSulad_on_Ubuntu_20_04_LTS.sh
 ```
+
+若需要在ubuntu容器中编译iSulad，可参照iSulad编译可使用的镜像dockerfile[Dockerfile-centos](../../CI/dockerfiles/)。
 
 ## 构建指南
 
