@@ -81,10 +81,22 @@ struct cni_opt_result *cni_get_network_list_cached_result(const struct cni_netwo
     return result;
 }
 
-cni_cached_info *cni_get_network_list_cached_info(const char *network, const struct runtime_conf *rc)
+cni_cached_info *cni_get_network_list_cached_info(const char *network, const char *cni_version, const struct runtime_conf *rc)
 {
+    bool greater = false;
     if (network == NULL) {
         ERROR("Empty network");
+        return NULL;
+    }
+
+    if (util_version_greater_than_or_equal_to(cni_version, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
+        ERROR("Invalid cni version %s", cni_version);
+        return NULL;
+    }
+
+    // CACHE was added in CNI spec version 0.4.0 and higher
+    if (!greater) {
+        WARN("result version: %s is too old, do not save this cache", cni_version);
         return NULL;
     }
 

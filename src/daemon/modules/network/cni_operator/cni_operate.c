@@ -731,13 +731,13 @@ static int update_runtime_conf_cni_args_by_cached(cni_cached_info *info, struct 
     return 0;
 }
 
-static int get_configs_from_cached(const char *network, struct runtime_conf *rc, char **conf_list)
+static int get_configs_from_cached(const char *network, const char *cni_version, struct runtime_conf *rc, char **conf_list)
 {
     int ret = 0;
     size_t i;
     cni_cached_info *info = NULL;
 
-    info = cni_get_network_list_cached_info(network, rc);
+    info = cni_get_network_list_cached_info(network, cni_version, rc);
     if (info == NULL) {
         return 0;
     }
@@ -857,7 +857,7 @@ int check_network_plane(const struct cni_manager *manager, const struct cni_netw
         goto out;
     }
 
-    ret = get_configs_from_cached(list->list->name, rc, NULL);
+    ret = get_configs_from_cached(list->list->name, list->list->cni_version, rc, NULL);
     if (ret != 0) {
         ERROR("Get cached info failed");
         ret = -1;
@@ -901,7 +901,7 @@ int detach_network_plane(const struct cni_manager *manager, const struct cni_net
         goto out;
     }
 
-    ret = get_configs_from_cached(list->list->name, rc, NULL);
+    ret = get_configs_from_cached(list->list->name, list->list->cni_version, rc, NULL);
     if (ret != 0) {
         ERROR("Get cached info failed");
         ret = -1;

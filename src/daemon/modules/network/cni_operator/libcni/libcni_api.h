@@ -75,7 +75,7 @@ bool cni_module_init(const char *cache_dir, const char * const *paths, size_t pa
 struct cni_opt_result *cni_get_network_list_cached_result(const struct cni_network_list_conf *list,
                                                           const struct runtime_conf *rc);
 
-cni_cached_info *cni_get_network_list_cached_info(const char *network, const struct runtime_conf *rc);
+cni_cached_info *cni_get_network_list_cached_info(const char *network, const char *cni_version, const struct runtime_conf *rc);
 
 int cni_add_network_list(const struct cni_network_list_conf *list, const struct runtime_conf *rc,
                          struct cni_opt_result **pret);
