@@ -485,7 +485,9 @@ static int start_io_copy_thread(int sync_fd, bool detach, struct io_copy_arg *co
         return -1;
     }
 
-    sem_wait(&thread_arg.wait_sem);
+    while(sem_wait(&thread_arg.wait_sem) == -1 && errno == EINTR) {
+        continue;
+    }
     sem_destroy(&thread_arg.wait_sem);
     return 0;
 }

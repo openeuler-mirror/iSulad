@@ -145,7 +145,9 @@ int AttachServe::ExecuteStreamCommand(SessionData *lwsCtx, void *request)
         WsWriteStdoutToClient(lwsCtx, message.c_str(), message.length());
     } else {
         // wait io copy thread complete
-        (void)sem_wait(&attachSem);
+        while(sem_wait(&attachSem) == -1 && errno == EINTR) {
+            continue;
+        }
     }
 
     (void)sem_destroy(&attachSem);

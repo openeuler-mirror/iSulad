@@ -380,7 +380,9 @@ static int local_cmd_exec(struct client_arguments *args, uint32_t *exit_code)
     ret = client_exec(args, command_fifos, exit_code);
     if (ret == 0 &&
         (args->custom_conf.attach_stdin || args->custom_conf.attach_stdout || args->custom_conf.attach_stderr)) {
-        sem_wait(&g_command_waitexit_sem);
+        while(sem_wait(&g_command_waitexit_sem) == -1 && errno == EINTR) {
+            continue;
+        }
     }
 out:
     delete_command_fifo(command_fifos);

@@ -259,7 +259,9 @@ int start_client_console_thread(struct command_fifo_config *console_fifos, bool 
         return -1;
     }
 
-    sem_wait(console_fifos->wait_open);
+    while(sem_wait(console_fifos->wait_open) == -1 && errno == EINTR) {
+        continue;
+    }
 
     return 0;
 }
