@@ -1237,7 +1237,9 @@ int process_io_start(process_t *p, pthread_t *tid_epoll)
     if (ret != SHIM_OK) {
         return SHIM_SYS_ERR(errno);
     }
-    (void)sem_wait(&p->sem_mainloop);
+    while(sem_wait(&p->sem_mainloop) == -1 && errno == EINTR) {
+        continue;
+    }
     (void)sem_destroy(&p->sem_mainloop);
 
     return SHIM_OK;

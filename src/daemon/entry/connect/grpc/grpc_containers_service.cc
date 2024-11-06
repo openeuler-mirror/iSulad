@@ -306,7 +306,9 @@ Status ContainerServiceImpl::RemoteStart(ServerContext *context,
     // close pipe 1 first, make sure io copy thread exit
     close(read_pipe_fd[1]);
     if (container_req->attach_stderr && ret == 0) {
-        (void)sem_wait(&sem);
+        while(sem_wait(&sem) == -1 && errno == EINTR) {
+            continue;
+        }
     }
     (void)sem_destroy(&sem);
     close(read_pipe_fd[0]);
@@ -656,7 +658,9 @@ Status ContainerServiceImpl::Attach(ServerContext *context, ServerReaderWriter<A
     close(pipefd[1]);
     // Waiting sem, make sure the sem is posted always in attach callback.
     if (container_req->attach_stderr && ret == 0) {
-        (void)sem_wait(&sem_stderr);
+        while(sem_wait(&sem_stderr) == -1 && errno == EINTR) {
+            continue;
+        }
     }
     (void)sem_destroy(&sem_stderr);
     close(pipefd[0]);
