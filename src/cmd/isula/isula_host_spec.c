@@ -1729,6 +1729,11 @@ int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigs
 #ifdef ENABLE_NATIVE_NETWORK
     dstconfig->port_bindings = srcconfig->port_bindings;
 #endif
+
+#ifdef ENABLE_NO_PIVOT_ROOT
+    dstconfig->no_pivot_root = srcconfig->no_pivot_root;
+#endif
+
     *hostconfigstr = host_config_generate_json(dstconfig, &ctx, &err);
 #ifdef ENABLE_NATIVE_NETWORK
     dstconfig->port_bindings = NULL;

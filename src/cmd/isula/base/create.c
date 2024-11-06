@@ -1292,6 +1292,10 @@ static isula_host_config_t *request_pack_host_config(const struct client_argumen
     hostconfig->publish_all = args->custom_conf.publish_all;
 #endif
 
+#ifdef ENABLE_NO_PIVOT_ROOT
+    hostconfig->no_pivot_root = args->custom_conf.no_pivot_root;
+#endif
+
     return hostconfig;
 
 error_out:
@@ -1750,6 +1754,9 @@ int cmd_create_main(int argc, const char **argv)
         COMMON_OPTIONS(g_cmd_create_args)
 #ifdef ENABLE_NATIVE_NETWORK
         CREATE_NETWORK_OPTIONS(g_cmd_create_args)
+#endif
+#ifdef ENABLE_NO_PIVOT_ROOT
+        NO_PIVOT_ROOT_OPTIONS(g_cmd_create_args)
 #endif
     };
 

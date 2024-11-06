@@ -743,6 +743,23 @@ static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, contai
     return 0;
 }
 
+static bool pack_no_pivot_root(const container_t *cont)
+{
+    size_t i = 0;
+    bool ret = false;
+
+    ret = cont->hostconfig->no_pivot_root;
+    if (cont->common_config->config->annotations != NULL) {
+        for (i = 0; i < cont->common_config->config->annotations->len; i++) {
+            if (strcmp(cont->common_config->config->annotations->keys[i], "ISULAD_RAMDISK") == 0) {
+                ret = true;
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
 static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm, pid_ppid_info_t *pid_info)
 {
     int ret = 0;
@@ -906,6 +923,9 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     create_params.exit_fifo = exit_fifo;
     create_params.tty = tty;
     create_params.open_stdin = open_stdin;
+#ifdef ENABLE_NO_PIVOT_ROOT
+    create_params.no_pivot_root = pack_no_pivot_root(cont);
+#endif
 #ifdef ENABLE_CRI_API_V1
     if (cont->common_config->sandbox_info != NULL) {
         create_params.task_addr = cont->common_config->sandbox_info->task_address;

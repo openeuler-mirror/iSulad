@@ -1298,6 +1298,12 @@ static void get_runtime_cmd(process_t *p, const char *log_path, const char *pid_
         params[i++] = "create";
         params[i++] = "--bundle";
         params[i++] = p->bundle;
+#ifdef ENABLE_NO_PIVOT_ROOT
+        if (getenv("ISULAD_RAMDISK") != NULL || p->state->no_pivot_root) {
+            params[i++] = "--no-pivot";
+        }
+#endif
+
     }
     params[i++] = "--pid-file";
     params[i++] = pid_path;

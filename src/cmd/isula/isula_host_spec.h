@@ -163,6 +163,10 @@ typedef struct isula_host_config {
     bool publish_all;
     defs_map_string_object_port_bindings *port_bindings;
 #endif
+
+#ifdef ENABLE_NO_PIVOT_ROOT
+    bool no_pivot_root;
+#endif
 } isula_host_config_t;
 
 int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigstr);
