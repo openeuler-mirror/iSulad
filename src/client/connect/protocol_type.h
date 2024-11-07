@@ -204,6 +204,7 @@ struct isula_container_summary_info {
     char *id;
     char *image;
     char *command;
+    char *ports;
     char *name;
     Container_Status status;
     uint32_t exit_code;

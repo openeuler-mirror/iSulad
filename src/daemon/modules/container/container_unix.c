@@ -20,6 +20,7 @@
 #include <isula_libutils/container_config_v2.h>
 #include <isula_libutils/host_config.h>
 #include <isula_libutils/json_common.h>
+#include <isula_libutils/auto_cleanup.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -1253,7 +1254,7 @@ char *container_get_command(const container_t *cont)
     if (cont->common_config->path != NULL) {
         nret = util_array_append(&args, cont->common_config->path);
         if (nret < 0) {
-            ERROR("Appned string failed");
+            ERROR("Append string failed");
             goto cleanup;
         }
     }
@@ -1268,7 +1269,7 @@ char *container_get_command(const container_t *cont)
         nret = util_array_append(&args, arg);
         free(arg);
         if (nret < 0) {
-            ERROR("Appned string failed");
+            ERROR("Append string failed");
             goto cleanup;
         }
     }
@@ -1278,6 +1279,57 @@ char *container_get_command(const container_t *cont)
 cleanup:
     util_free_array(args);
     return cmd;
+}
+
+/* container get ports */
+char *container_get_ports(const container_t *cont)
+{
+    int nret;
+    size_t i, j, ports_num = 0;
+     __isula_auto_array_t char **args = NULL;
+    char *ports = NULL;
+
+    if (cont == NULL || cont->hostconfig == NULL || cont->hostconfig->port_bindings == NULL) {
+        return NULL;
+    }
+
+    for (i = 0; cont->hostconfig->port_bindings->keys != NULL && i < cont->hostconfig->port_bindings->len; i++) {
+        for (j = 0; j < cont->hostconfig->port_bindings->values[i]->element->host_len; j++) {
+            __isula_auto_free char *arg = NULL;
+            char *host_ip = cont->hostconfig->port_bindings->values[i]->element->host[j]->host_ip;
+            if (host_ip == NULL) {
+                host_ip = "0.0.0.0";
+            }
+            char *host_port = cont->hostconfig->port_bindings->values[i]->element->host[j]->host_port;
+            if (host_port == NULL) {
+                host_port = "";
+            }
+            char *cont_port_type = cont->hostconfig->port_bindings->keys[i];
+            if (cont_port_type == NULL) {
+                cont_port_type = "";
+            }
+            size_t total_len = strlen(host_ip) + strlen(host_port) + strlen(cont_port_type) + 4; // 4 for ":->" and null terminator
+            arg = util_common_calloc_s(total_len);
+            if (arg == NULL) {
+                ERROR("Out of memory");
+                return ports;
+            }
+            nret = snprintf(arg, total_len, "%s:%s->%s", host_ip, host_port, cont_port_type);
+            if (nret < 0 || (size_t)nret >= total_len) {
+                ERROR("Failed to print string");
+                return ports;
+            }
+            nret = util_array_append(&args, arg);
+            if (nret < 0) {
+                ERROR("Append string failed");
+                return ports;
+            }
+            ports_num++;
+        }
+    }
+    ports = util_string_join(", ", (const char **)args, ports_num);
+
+    return ports;
 }
 
 /* container get image */

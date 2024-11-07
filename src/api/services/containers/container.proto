@@ -65,6 +65,7 @@ message Container {
 	string name = 16;
 	string health_state = 17;
 	int64 created = 18;
+	string ports = 19;
 }
 
 message Container_info {

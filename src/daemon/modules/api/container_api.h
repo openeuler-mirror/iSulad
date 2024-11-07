@@ -185,6 +185,8 @@ int container_v2_spec_merge_container_spec(container_config_v2_common_config *v2
 
 char *container_get_command(const container_t *cont);
 
+char *container_get_ports(const container_t *cont);
+
 char *container_get_image(const container_t *cont);
 
 int container_exit_on_next(container_t *cont);

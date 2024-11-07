@@ -1241,6 +1241,8 @@ private:
                                                     util_strdup_s("none");
         response->container_summary[index]->command = !in.command().empty() ? util_strdup_s(in.command().c_str()) :
                                                       util_strdup_s("-");
+        response->container_summary[index]->ports = !in.ports().empty() ? util_strdup_s(in.ports().c_str()) :
+                                                      nullptr;
         const char *starttime = !in.startat().empty() ? in.startat().c_str() : "-";
         response->container_summary[index]->startat = util_strdup_s(starttime);
 
