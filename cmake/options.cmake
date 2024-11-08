@@ -168,6 +168,13 @@ if (ENABLE_NATIVE_NETWORK OR ENABLE_GRPC)
     set(ENABLE_NETWORK 1)
 endif()
 
+option(ENABLE_NO_PIVOT_ROOT "Enable no pivot root" ON)
+if (ENABLE_NO_PIVOT_ROOT STREQUAL "ON")
+    add_definitions(-DENABLE_NO_PIVOT_ROOT)
+    set(ENABLE_NO_PIVOT_ROOT 1)
+    message("${Green}--  Enable no pivot root${ColourReset}")
+endif()
+
 option(ENABLE_PLUGIN "enable plugin module" OFF)
 if (ENABLE_PLUGIN STREQUAL "ON")
 	add_definitions(-DENABLE_PLUGIN=1)

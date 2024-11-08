@@ -39,6 +39,17 @@ extern "C" {
 #define USERNS_OPT(cmdargs)
 #endif
 
+#ifdef ENABLE_NO_PIVOT_ROOT
+#define NO_PIVOT_ROOT_OPTIONS(cmdargs)          \
+    { CMD_OPT_TYPE_BOOL,                        \
+        false,                                  \
+        "no-pivot",                        \
+        0,                                      \
+        &(cmdargs).custom_conf.no_pivot_root,   \
+        "disable use of pivot-root (oci runtime only)", \
+        NULL },
+#endif
+
 #define CREATE_OPTIONS(cmdargs)                                                                                                                                   \
     {                                                                                                                                                             \
         CMD_OPT_TYPE_BOOL,                                                                                                                                        \

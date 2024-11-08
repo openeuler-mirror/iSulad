@@ -151,6 +151,9 @@ int cmd_run_main(int argc, const char **argv)
 #ifdef ENABLE_NATIVE_NETWORK
         CREATE_NETWORK_OPTIONS(g_cmd_run_args)
 #endif
+#ifdef ENABLE_NO_PIVOT_ROOT
+        NO_PIVOT_ROOT_OPTIONS(g_cmd_run_args)
+#endif
     };
     isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_run_desc,

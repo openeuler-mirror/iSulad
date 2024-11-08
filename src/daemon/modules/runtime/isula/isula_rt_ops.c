@@ -1209,6 +1209,9 @@ int rt_isula_create(const char *id, const char *runtime, const rt_create_params_
     p.runtime_args_len = runtime_args_len;
     p.attach_socket = attach_socket;
     p.systemd_cgroup = conf_get_systemd_cgroup();
+#ifdef ENABLE_NO_PIVOT_ROOT
+    p.no_pivot_root = params->no_pivot_root;
+#endif
     copy_process(&p, config->process);
     copy_annotations(&p, config->annotations);
 

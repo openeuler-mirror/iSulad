@@ -237,6 +237,10 @@ struct custom_configs {
     /* publish a container's port to the host */
     char **publish;
 #endif
+
+#ifdef ENABLE_NO_PIVOT_ROOT
+    bool no_pivot_root;
+#endif
 };
 
 struct args_cgroup_resources {
