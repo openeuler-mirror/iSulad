@@ -121,6 +121,9 @@ void ContainerListService::FillResponseTogRPC(void *containerRes, containers::Li
         if (response->containers[i]->command != nullptr) {
             container->set_command(response->containers[i]->command);
         }
+        if (response->containers[i]->ports != nullptr) {
+            container->set_ports(response->containers[i]->ports);
+        }
         container->set_exit_code(response->containers[i]->exit_code);
         container->set_restartcount(response->containers[i]->restartcount);
         if (response->containers[i]->startat != nullptr) {

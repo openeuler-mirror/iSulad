@@ -609,6 +609,8 @@ static int fill_container_info(container_container *container_info, const contai
 
     container_info->status = (int)container_state_judge_status(cont_state);
 
+    container_info->ports = container_get_ports(cont);
+
     container_info->command = container_get_command(cont);
     image = container_get_image(cont);
     container_info->image = image ? image : util_strdup_s("none");

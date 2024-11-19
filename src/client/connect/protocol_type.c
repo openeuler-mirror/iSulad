@@ -531,6 +531,10 @@ void isula_list_response_free(struct isula_list_response *response)
                 free(response->container_summary[i]->command);
                 response->container_summary[i]->command = NULL;
             }
+            if (response->container_summary[i]->ports != NULL) {
+                free(response->container_summary[i]->ports);
+                response->container_summary[i]->ports = NULL;
+            }
             if (response->container_summary[i]->startat != NULL) {
                 free(response->container_summary[i]->startat);
                 response->container_summary[i]->startat = NULL;
