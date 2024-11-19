@@ -618,25 +618,11 @@ cleanup:
 
 void ContainerManagerService::StopContainer(const std::string &containerID, int64_t timeout, Errors &error)
 {
-#ifdef ENABLE_NRI
-    Errors nriErr;
-#endif
     CRIHelpers::StopContainer(m_cb, containerID, timeout, error);
-#ifdef ENABLE_NRI
-    if (!NRIAdaptation::GetInstance()->StopContainer(containerID, nriErr)) {
-        ERROR("NRI StopContainer notification failed: %s", nriErr.GetCMessage());
-    }
-#endif
 }
 
 void ContainerManagerService::RemoveContainer(const std::string &containerID, Errors &error)
 {
-#ifdef ENABLE_NRI
-    Errors nriErr;
-    if (!NRIAdaptation::GetInstance()->RemoveContainer(containerID, nriErr)) {
-        ERROR("NRI RemoveContainer notification failed: %s", nriErr.GetCMessage());
-    }
-#endif
     CRIHelpers::RemoveContainer(m_cb, containerID, error);
     if (error.NotEmpty()) {
         WARN("Failed to remove container %s", containerID.c_str());
