@@ -84,7 +84,9 @@ typedef struct _rt_create_params_t {
     bool tty;
     bool open_stdin;
     const char *task_addr;
+#ifdef ENABLE_NO_PIVOT_ROOT
     bool no_pivot_root;
+#endif
 } rt_create_params_t;
 
 typedef struct _rt_start_params_t {
