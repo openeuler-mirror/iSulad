@@ -743,6 +743,7 @@ static int do_oci_spec_update(const char *id, oci_runtime_spec *oci_spec, contai
     return 0;
 }
 
+#ifdef ENABLE_NO_PIVOT_ROOT
 static bool pack_no_pivot_root(const container_t *cont)
 {
     size_t i = 0;
@@ -759,6 +760,7 @@ static bool pack_no_pivot_root(const container_t *cont)
     }
     return ret;
 }
+#endif
 
 static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm, pid_ppid_info_t *pid_info)
 {
