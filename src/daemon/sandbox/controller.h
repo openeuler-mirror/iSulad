@@ -22,14 +22,18 @@
 #include <grpc++/grpc++.h>
 #include <stdint.h>
 
+#include <isula_libutils/sandbox_sandbox.h>
+
 #include "errors.h"
 #include "api_v1.pb.h"
-#include "sandbox.pb.h"
+#include "utils_array.h"
 
 namespace sandbox {
 
 #define SANDBOX_READY_STATE_STR "SANDBOX_READY"
 #define SANDBOX_NOTREADY_STATE_STR "SANDBOX_NOTREADY"
+
+const std::string SHIM_CONTROLLER_NAME = "shim";
 
 struct ControllerMountInfo {
     std::string source;
@@ -66,7 +70,7 @@ struct ControllerSandboxInfo {
     uint32_t pid;
     uint64_t createdAt;
     std::string taskAddress;
-    std::string version;
+    uint32_t version;
     google::protobuf::Map<std::string, std::string> labels;
 };
 
@@ -80,7 +84,7 @@ struct ControllerSandboxStatus {
     uint32_t pid;
     std::string state;
     std::string taskAddress;
-    std::string version;
+    uint32_t version;
     google::protobuf::Map<std::string, std::string> info;
     uint64_t createdAt;
     uint64_t exitedAt;
@@ -95,20 +99,6 @@ struct ControllerStreamInfo {
     bool terminal;
 };
 
-struct ControllerPrepareParams {
-    std::string containerId;
-    std::string execId;
-    std::unique_ptr<std::string> spec;
-    std::vector<std::unique_ptr<ControllerMountInfo>> rootfs;
-    std::unique_ptr<ControllerStreamInfo> streamInfo;
-};
-
-struct ControllerUpdateResourcesParams {
-    std::string containerId;
-    std::unique_ptr<std::string> resources;
-    google::protobuf::Map<std::string, std::string> &annotations;
-};
-
 class SandboxStatusCallback {
 public:
     virtual void OnSandboxReady() = 0;
@@ -120,19 +110,13 @@ class Controller {
 public:
     virtual ~Controller() {};
     virtual bool Init(Errors &error) = 0;
-    virtual void Destroy() = 0;
     virtual bool Create(const std::string &sandboxId,
                         const ControllerCreateParams &params,
                         Errors &error) = 0;
     virtual std::unique_ptr<ControllerSandboxInfo> Start(const std::string &sandboxId, Errors &error) = 0 ;
     virtual std::unique_ptr<ControllerPlatformInfo> Platform(const std::string &sandboxId, Errors &error) = 0;
-    virtual bool Prepare(containerd::types::Sandbox &apiSandbox,
-                         std::vector<std::string> &fields, Errors &error) = 0;
-    virtual bool Purge(containerd::types::Sandbox &apiSandbox,
-                       std::vector<std::string> &fields, Errors &error) = 0;
-    virtual bool UpdateResources(const std::string &sandboxId,
-                                 const ControllerUpdateResourcesParams &params,
-                                 Errors &error) = 0;
+    virtual bool Update(sandbox_sandbox *apiSandbox,
+                        string_array *fields, Errors &error) = 0;
     virtual bool Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) = 0;
     virtual bool Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error) = 0;
     virtual std::unique_ptr<ControllerSandboxStatus> Status(const std::string &sandboxId, bool verbose, Errors &error) = 0;

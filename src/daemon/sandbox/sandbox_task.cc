@@ -91,8 +91,11 @@ void SandboxTask::DeleteSandboxTasksProcess(const char *execId)
         return;
     }
     free_sandbox_process(m_task->processes[idx]);
-    (void)memcpy((void **)&m_task->processes[idx], (void **)&m_task->processes[idx + 1],
-                 (m_task->processes_len - idx - 1) * sizeof(void *));
+    m_task->processes[idx] = nullptr;
+    if (idx != (int)m_task->processes_len - 1) {
+        (void)memcpy((void **)&m_task->processes[idx], (void **)&m_task->processes[idx + 1],
+            (m_task->processes_len - idx - 1) * sizeof(void *));
+    }
     m_task->processes_len--;
 }
 

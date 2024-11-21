@@ -21,8 +21,13 @@
 
 #include <isula_libutils/auto_cleanup.h>
 #include <isula_libutils/log.h>
+#include <isula_libutils/sandbox_metadata.h>
 
 #include "sandbox.h"
+#ifdef ENABLE_SANDBOXER
+#include "sandboxer_sandbox.h"
+#endif
+#include "shim_sandbox.h"
 #include "isulad_config.h"
 #include "utils_verify.h"
 #include "utils_file.h"
@@ -109,7 +114,15 @@ auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, s
         return nullptr;
     }
 
-    sandbox = std::make_shared<Sandbox>(id, m_rootdir, m_statedir, name, info, netMode, netNsPath, sandboxConfig, image);
+#ifdef ENABLE_SANDBOXER
+    if (info.sandboxer == SHIM_CONTROLLER_NAME) {
+        sandbox = std::make_shared<ShimSandbox>(id, m_rootdir, m_statedir, name, info, netMode, netNsPath, sandboxConfig, image);
+    } else {
+        sandbox = std::make_shared<SandboxerSandbox>(id, m_rootdir, m_statedir, name, info, netMode, netNsPath, sandboxConfig, image);
+    }
+#else
+    sandbox = std::make_shared<ShimSandbox>(id, m_rootdir, m_statedir, name, info, netMode, netNsPath, sandboxConfig, image);
+#endif
     if (sandbox == nullptr) {
         ERROR("Failed to malloc for sandbox: %s", name.c_str());
         error.Errorf("Failed to malloc for sandbox: %s", name.c_str());
@@ -442,6 +455,25 @@ bool SandboxManager::ListAllSandboxdir(std::vector<std::string> &allSubdir)
     return true;
 }
 
+#ifdef ENABLE_SANDBOXER
+static auto IsShimSandbox(const std::string &id, const std::string &rootdir) -> bool
+{
+    __isula_auto_free parser_error err = NULL;
+    const std::string path = rootdir + "/" + id + "/" + SANDBOX_METADATA_JSON;
+    sandbox_metadata *metadata = NULL;
+
+    metadata = sandbox_metadata_parse_file(path.c_str(), NULL, &err);
+    if (metadata == NULL) {
+        return false;
+    }
+
+    bool ret = (strcmp(metadata->runtime_info->sandboxer, SHIM_CONTROLLER_NAME.c_str()) == 0);
+
+    free_sandbox_metadata(metadata);
+    return ret;
+}
+#endif
+
 auto SandboxManager::LoadSandbox(std::string &id) -> std::shared_ptr<Sandbox>
 {
     std::shared_ptr<Sandbox> sandbox = nullptr;
@@ -451,7 +483,15 @@ auto SandboxManager::LoadSandbox(std::string &id) -> std::shared_ptr<Sandbox>
         return nullptr;
     }
 
-    sandbox = std::make_shared<Sandbox>(id, m_rootdir, m_statedir);
+#ifdef ENABLE_SANDBOXER
+    if (IsShimSandbox(id, m_rootdir)) {
+        sandbox = std::make_shared<ShimSandbox>(id, m_rootdir, m_statedir);
+    } else {
+        sandbox = std::make_shared<SandboxerSandbox>(id, m_rootdir, m_statedir);
+    }
+#else
+    sandbox = std::make_shared<ShimSandbox>(id, m_rootdir, m_statedir);
+#endif
     if (sandbox == nullptr) {
         ERROR("Failed to malloc for sandboxes: %s", id.c_str());
         return nullptr;

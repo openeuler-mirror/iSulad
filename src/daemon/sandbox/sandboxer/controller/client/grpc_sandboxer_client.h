@@ -20,15 +20,10 @@
 #include <memory>
 #include <future>
 
-#include "sandbox/types/mount.pb.h"
-#include "sandbox.pb.h"
-#include "sandbox.grpc.pb.h"
-#include "controller.h"
-#include "grpc_async_wait_call.h"
-#include "grpc_sandboxer_monitor.h"
+#include <isula_sandbox_api.h>
 
-using containerd::types::Mount;
-using google::protobuf::Timestamp;
+#include "controller.h"
+#include "utils_array.h"
 
 namespace sandbox {
 
@@ -38,24 +33,13 @@ public:
 
     ~SandboxerClient() = default;
 
-    void Init(Errors &error);
-
-    void Destroy();
-
     auto Create(const std::string &sandboxId, const ControllerCreateParams &params, Errors &error) -> bool;
 
     auto Start(const std::string &sandboxId, ControllerSandboxInfo &sandboxInfo, Errors &error) -> bool;
 
     auto Platform(const std::string &sandboxId, ControllerPlatformInfo &platformInfo, Errors &error) -> bool;
 
-    auto Prepare(containerd::types::Sandbox &apiSandbox,
-                 std::vector<std::string> &fields, Errors &error) -> bool;
-
-    auto Purge(containerd::types::Sandbox &apiSandbox,
-               std::vector<std::string> &fields, Errors &error) -> bool;
-
-    auto UpdateResources(const std::string &sandboxId, const ControllerUpdateResourcesParams &params,
-                         Errors &error) -> bool;
+    auto Update(sandbox_sandbox *apiSandbox, string_array *fields, Errors &error) -> bool;
 
     auto Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) -> bool;
 
@@ -66,27 +50,23 @@ public:
     auto Shutdown(const std::string &sandboxId, Errors &error) -> bool;
 
 private:
-    void InitMountInfo(Mount &mount, const ControllerMountInfo &mountInfo);
-    auto InitCreateRequest(containerd::services::sandbox::v1::ControllerCreateRequest &request,
+    auto InitMountInfo(sandbox_mount &m, const ControllerMountInfo &mountInfo) -> int;
+    auto InitCreateRequest(sandbox_create_request &request,
                            const std::string &sandboxId,
                            const ControllerCreateParams &params) -> bool;
-    void StartResponseToSandboxInfo(const containerd::services::sandbox::v1::ControllerStartResponse &response,
+    void StartResponseToSandboxInfo(sandbox_start_response &response,
                                     ControllerSandboxInfo &sandboxInfo);
-    void InitUpdateRequest(containerd::services::sandbox::v1::ControllerUpdateRequest &request,
-                            containerd::types::Sandbox &apiSandbox, std::vector<std::string> &fields);
-    // auto InitUpdateResourcesRequest(containerd::services::sandbox::v1::UpdateResourcesRequest &request,
-    //                                 const std::string &sandboxId,
-    //                                 const ControllerUpdateResourcesParams &params) -> bool;
-    void PlatformResponseToPlatformInfo(const containerd::services::sandbox::v1::ControllerPlatformResponse &response,
+    void InitUpdateRequest(sandbox_update_request &request,
+                           sandbox_sandbox *apiSandbox, string_array *fields);
+
+    void PlatformResponseToPlatformInfo(sandbox_platform_response &response,
                                         ControllerPlatformInfo &platformInfo);
-    void StatusResponseToSandboxStatus(const containerd::services::sandbox::v1::ControllerStatusResponse &response,
+    void StatusResponseToSandboxStatus(sandbox_status_response &response,
                                        ControllerSandboxStatus &sandboxStatus);
 protected:
     std::string m_sandboxer;
     std::string m_address;
-    std::shared_ptr<grpc::Channel> m_channel;
-    std::unique_ptr<containerd::services::sandbox::v1::Controller::StubInterface> m_stub;
-    std::unique_ptr<SandboxerClientMonitor> m_monitor;
+    ControllerHandle_t m_controller_handle;
 };
 
 } // namespace

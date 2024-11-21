@@ -31,19 +31,12 @@ public:
     SandboxerController(const std::string &sandboxer, const std::string &address);
     virtual ~SandboxerController();
     bool Init(Errors &error) override;
-    void Destroy() override;
     bool Create(const std::string &sandboxId,
                 const ControllerCreateParams &params,
                 Errors &error) override;
     std::unique_ptr<ControllerSandboxInfo> Start(const std::string &sandboxId, Errors &error) override;
     std::unique_ptr<ControllerPlatformInfo> Platform(const std::string &sandboxId, Errors &error) override;
-    bool Prepare(containerd::types::Sandbox &apiSandbox, std::vector<std::string> &fields,
-                 Errors &error) override;
-    bool Purge(containerd::types::Sandbox &apiSandbox, std::vector<std::string> &fields,
-               Errors &error) override;
-    bool UpdateResources(const std::string &sandboxId,
-                         const ControllerUpdateResourcesParams &params,
-                         Errors &error) override;
+    bool Update(sandbox_sandbox *apiSandbox, string_array *fields, Errors &error) override;
     bool Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) override;
     bool Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error) override;
     std::unique_ptr<ControllerSandboxStatus> Status(const std::string &sandboxId, bool verbose, Errors &error) override;

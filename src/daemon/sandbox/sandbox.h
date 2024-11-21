@@ -141,13 +141,13 @@ public:
     void Status(runtime::v1::PodSandboxStatus &status);
 
     // for sandbox api update
-    void LoadSandboxTasks();
-    auto SaveSandboxTasks() -> bool;
-    auto AddSandboxTasks(sandbox_task *task) -> bool;
-    auto GetAnySandboxTasks() -> std::string;
-    void DeleteSandboxTasks(const char *containerId);
-    auto AddSandboxTasksProcess(const char *containerId, sandbox_process *processes) -> bool;
-    void DeleteSandboxTasksProcess(const char *containerId, const char *execId);
+    virtual void LoadSandboxTasks() = 0;
+    virtual auto SaveSandboxTasks() -> bool = 0;
+    virtual auto AddSandboxTasks(sandbox_task *task) -> bool = 0;
+    virtual auto GetAnySandboxTasks() -> std::string = 0;
+    virtual void DeleteSandboxTasks(const char *containerId) = 0;
+    virtual auto AddSandboxTasksProcess(const char *containerId, sandbox_process *processes) -> bool = 0;
+    virtual void DeleteSandboxTasksProcess(const char *containerId, const char *execId) = 0;
 
 private:
     auto SaveState(Errors &error) -> bool;
@@ -172,7 +172,6 @@ private:
     auto GetMetadataJsonPath() ->  std::string;
     auto GetStatePath() -> std::string;
     auto GetNetworkSettingsPath() -> std::string;
-    auto GetTasksJsonPath() -> std::string;
 
     void FillSandboxState(sandbox_state *state);
     void FillSandboxMetadata(sandbox_metadata* metadata, Errors &error);
@@ -188,12 +187,6 @@ private:
     auto isValidMetadata(std::unique_ptr<CStructWrapper<sandbox_metadata>> &metadata) -> bool;
 
     void updateSelinuxLabels(std::string &selinuxLabels);
-
-    auto AddTaskById(const char *task_id, sandbox_task *task) -> bool;
-    auto ReadSandboxTasksJson() -> sandbox_tasks *;
-    auto WriteSandboxTasksJson(std::string &tasks_json) -> bool;
-    auto DeleteSandboxTasksJson() -> bool;
-    void AddSandboxTasksByArray(sandbox_tasks *tasksArray);
 
 private:
     // Since the cri module will operate concurrently on the sandbox instance,
@@ -230,11 +223,6 @@ private:
     // vsock ports
     std::mutex m_vsockPortsMutex;
     std::set<uint32_t> m_vsockPorts;
-
-    // use m_tasksMutex to ensure the correctness of the tasks
-    RWMutex m_tasksMutex;
-    // for sandbox api update, containerId --> tasks
-    std::map<std::string, std::shared_ptr<SandboxTask>> m_tasks;
 };
 
 } // namespace sandbox

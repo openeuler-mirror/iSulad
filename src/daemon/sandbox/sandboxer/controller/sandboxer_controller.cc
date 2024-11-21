@@ -27,13 +27,7 @@ SandboxerController::~SandboxerController() {}
 
 bool SandboxerController::Init(Errors &error)
 {
-    m_client->Init(error);
     return true;
-}
-
-void SandboxerController::Destroy()
-{
-    m_client->Destroy();
 }
 
 bool SandboxerController::Create(const std::string &sandboxId,
@@ -61,25 +55,10 @@ std::unique_ptr<ControllerPlatformInfo> SandboxerController::Platform(const std:
     return platformInfo;
 }
 
-bool SandboxerController::Prepare(containerd::types::Sandbox &apiSandbox,
-                                  std::vector<std::string> &fields,
-                                  Errors &error)
+bool SandboxerController::Update(sandbox_sandbox *apiSandbox,
+                                 string_array *fields, Errors &error)
 {
-    return m_client->Prepare(apiSandbox, fields, error);
-}
-
-bool SandboxerController::Purge(containerd::types::Sandbox &apiSandbox,
-                                std::vector<std::string> &fields,
-                                Errors &error)
-{
-    return m_client->Purge(apiSandbox, fields, error);
-}
-
-bool SandboxerController::UpdateResources(const std::string &sandboxId,
-                                          const ControllerUpdateResourcesParams &params,
-                                          Errors &error)
-{
-    return m_client->UpdateResources(sandboxId, params, error);
+    return m_client->Update(apiSandbox, fields, error);
 }
 
 bool SandboxerController::Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error)

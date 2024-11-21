@@ -397,7 +397,7 @@ std::string CRISandboxerConvert(const std::string &runtime)
     std::string sandboxer;
     defs_map_string_object_sandboxer *criSandboxerList = nullptr;
 
-    if (runtime.empty() || runtime == DEFAULT_SANDBOXER_NAME) {
+    if (runtime.empty()) {
         return DEFAULT_SANDBOXER_NAME;
     }
 
@@ -412,6 +412,7 @@ std::string CRISandboxerConvert(const std::string &runtime)
         goto out;
     }
 
+    sandboxer = DEFAULT_SANDBOXER_NAME;
     criSandboxerList = args->json_confs->cri_sandboxers;
     for (size_t i = 0; i < criSandboxerList->len; i++) {
         if (criSandboxerList->keys[i] == nullptr || criSandboxerList->values[i] == nullptr ||
