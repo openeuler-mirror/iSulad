@@ -15,12 +15,16 @@
 
 #include "nri_convert.h"
 
+#include <sys/stat.h>
+#include <sys/sysmacros.h>
+
 #include "container_api.h"
 #include "v1_cri_helpers.h"
 #include "path.h"
 #include "transform.h"
 #include "nri_utils.h"
 #include "cstruct_wrapper.h"
+#include "specs_api.h"
 
 static int64_t DefaultOOMScoreAdj = 0;
 
@@ -385,6 +389,462 @@ error_out:
     return false;
 }
 
+static int ConvertDevice(const char *host_path, const char *container_path, const char *permissions,
+                         nri_linux_device &device, nri_linux_device_cgroup &deviceCgroup)
+{
+    int ret = 0;
+    struct stat st;
+    const char *dev_type = NULL;
+    unsigned int file_mode = 0;
+
+    if (host_path == NULL) {
+        return -1;
+    }
+
+    ret = stat(host_path, &st);
+    if (ret < 0) {
+        ERROR("device %s no exists", host_path);
+        return -1;
+    }
+
+    file_mode = st.st_mode & 0777;
+
+    /* check device type first */
+    if (S_ISBLK(st.st_mode)) {
+        file_mode |= S_IFBLK;
+        dev_type = "b";
+    } else if (S_ISCHR(st.st_mode)) {
+        file_mode |= S_IFCHR;
+        dev_type = "c";
+    } else {
+        ERROR("Cannot determine the device number for device %s", host_path);
+        return -1;
+    }
+
+    /* fill spec dev */
+    device.major = (int64_t)major(st.st_rdev);
+    device.minor = (int64_t)minor(st.st_rdev);
+    device.uid = (uint32_t *)util_common_calloc_s(sizeof(uint32_t*));
+    if (device.uid == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    *(device.uid) = st.st_uid;
+    device.gid = (uint32_t *)util_common_calloc_s(sizeof(uint32_t*));
+    if (device.gid == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    *(device.gid) = st.st_gid;
+    device.file_mode = (uint32_t *)util_common_calloc_s(sizeof(uint32_t));
+    if (device.file_mode == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    *(device.file_mode) = (int)file_mode;
+    device.type = util_strdup_s(dev_type);
+    device.path = util_strdup_s(container_path);
+
+    /* fill spec cgroup dev */
+    deviceCgroup.allow = true;
+    deviceCgroup.access = util_strdup_s(permissions);
+    deviceCgroup.type = util_strdup_s(dev_type);
+    deviceCgroup.major = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (deviceCgroup.major == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    *(deviceCgroup.major) = (int64_t)major(st.st_rdev);
+    deviceCgroup.minor = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (deviceCgroup.minor == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    *(deviceCgroup.minor) = (int64_t)minor(st.st_rdev);
+
+    return 0;
+}
+
+static int ConvertHostConfigDevices(const host_config_devices_element *dev_map, nri_linux_device &device,
+                                    nri_linux_device_cgroup &deviceCgroup)
+{
+    return ConvertDevice(dev_map->path_on_host, dev_map->path_in_container,
+                         dev_map->cgroup_permissions, device, deviceCgroup);
+}
+
+static int ConLinuxDeviceToNRI(const host_config *config, nri_container &con)
+{
+    size_t i;
+
+    if (config->devices_len == 0 && config->nri_devices_len == 0) {
+        return 0;
+    }
+    con.linux->devices = (nri_linux_device **)util_smart_calloc_s(sizeof(nri_linux_device *),
+                                                                  config->devices_len + config->nri_devices_len);
+    if (con.linux->devices == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    con.linux->resources->devices = (nri_linux_device_cgroup **)util_smart_calloc_s(sizeof(nri_linux_device_cgroup *),
+                                                                                    config->devices_len);
+    if (con.linux->resources->devices == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < config->devices_len; i++) {
+        nri_linux_device *device = (nri_linux_device *)util_common_calloc_s(sizeof(nri_linux_device));
+        if (device == nullptr) {
+            ERROR("Out of memory");
+            return -1;
+        }
+
+        nri_linux_device_cgroup *deviceCgroup = (nri_linux_device_cgroup *)util_common_calloc_s(sizeof(
+                                                                                                    nri_linux_device_cgroup));
+        if (deviceCgroup == nullptr) {
+            ERROR("Out of memory");
+            free_nri_linux_device(device);
+            return -1;
+        }
+
+        if (ConvertHostConfigDevices(config->devices[i], *device, *deviceCgroup) != 0) {
+            ERROR("Failed to convert host config devices");
+            free_nri_linux_device(device);
+            free_nri_linux_device_cgroup(deviceCgroup);
+            return -1;
+        }
+
+        con.linux->devices[i] = device;
+        con.linux->resources->devices[i] = deviceCgroup;
+        con.linux->devices_len++;
+        con.linux->resources->devices_len++;
+    }
+
+    for (i = 0; i < config->nri_devices_len; i++) {
+        nri_linux_device *device = (nri_linux_device *)util_common_calloc_s(sizeof(nri_linux_device));
+        if (device == nullptr) {
+            ERROR("Out of memory");
+            return -1;
+        }
+
+        device->file_mode = (uint32_t *)util_common_calloc_s(sizeof(uint32_t));
+        if (device->file_mode == nullptr) {
+            ERROR("Out of memory");
+            free_nri_linux_device(device);
+            return -1;
+        }
+        *(device->file_mode) = config->nri_devices[i]->file_mode;
+
+        device->path = util_strdup_s(config->nri_devices[i]->path);
+        device->type = util_strdup_s(config->nri_devices[i]->type);
+        device->major = config->nri_devices[i]->major;
+        device->minor = config->nri_devices[i]->minor;
+
+        device->uid = (uint32_t *)util_common_calloc_s(sizeof(uint32_t));
+        if (device->uid == nullptr) {
+            ERROR("Out of memory");
+            free_nri_linux_device(device);
+            return -1;
+        }
+        *(device->uid) = config->nri_devices[i]->uid;
+
+        device->gid = (uint32_t *)util_common_calloc_s(sizeof(uint32_t));
+        if (device->gid == nullptr) {
+            ERROR("Out of memory");
+            free_nri_linux_device(device);
+            return -1;
+        }
+        *(device->gid) = config->nri_devices[i]->gid;
+        con.linux->devices[i + config->devices_len] = device;
+        con.linux->devices_len++;
+    }
+
+    return 0;
+}
+
+static int ConvertCRIV1Devices(const ::runtime::v1::Device &dev_map, nri_linux_device &device,
+                               nri_linux_device_cgroup &deviceCgroup)
+{
+    return ConvertDevice(dev_map.host_path().c_str(), dev_map.container_path().c_str(),
+                         dev_map.permissions().c_str(), device, deviceCgroup);
+}
+
+static bool ConLinuxResourcesCpuToNRI(const host_config *config, nri_linux_cpu &cpu)
+{
+    cpu.shares = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
+    if (cpu.shares == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+    *(cpu.shares) = config->cpu_shares;
+
+    cpu.quota = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (cpu.quota == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+    *(cpu.quota) = config->cpu_quota;
+
+    cpu.period = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
+    if (cpu.period == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+    *(cpu.period) = config->cpu_period;
+
+    cpu.cpus = util_strdup_s(config->cpuset_cpus);
+    cpu.mems = util_strdup_s(config->cpuset_mems);
+
+    return true;
+}
+
+static bool ConLinuxResourcesMemoryToNRI(const host_config *config, nri_linux_memory &memory)
+{
+    memory.limit = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (memory.limit == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+    *(memory.limit) = config->memory;
+
+    memory.reservation = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (memory.reservation == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+
+    *(memory.reservation) = config->memory_reservation;
+
+    memory.swap = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (memory.swap == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+    *(memory.swap) = config->memory_swap;
+
+    memory.kernel = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (memory.kernel == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+    *(memory.kernel) = config->kernel_memory;
+
+    // isulad has not set kernel_tcp
+    memory.kernel_tcp = nullptr;
+
+    if (config->memory_swappiness != nullptr) {
+        memory.swappiness = (uint64_t *)util_common_calloc_s(sizeof(uint64_t));
+        if (memory.swappiness == nullptr) {
+            ERROR("Out of memory");
+            return false;
+        }
+        *(memory.swappiness) = *(config->memory_swappiness);
+    }
+
+    memory.disable_oom_killer = (uint8_t *)util_common_calloc_s(sizeof(uint8_t));
+    if (memory.disable_oom_killer == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+    *(memory.disable_oom_killer) = config->oom_kill_disable;
+
+    // isulad has not set use_hierarchy
+    memory.use_hierarchy = (uint8_t *)util_common_calloc_s(sizeof(uint8_t));
+    if (memory.use_hierarchy == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+    *(memory.use_hierarchy) = false;
+    return true;
+}
+
+auto ConLinuxResourcesToNRI(const host_config *config) -> nri_linux_resources *
+{
+    nri_linux_resources *resources = nullptr;
+    size_t i;
+
+    resources = init_nri_linux_resources();
+    if (resources == nullptr) {
+        ERROR("Failed to init nri linux resources");
+        return nullptr;
+    }
+
+    if (!ConLinuxResourcesCpuToNRI(config, *resources->cpu)) {
+        ERROR("Failed to transform cpu to nri");
+        goto error_out;
+    }
+
+    if (!ConLinuxResourcesMemoryToNRI(config, *resources->memory)) {
+        ERROR("Failed to transform memory to nri");
+        goto error_out;
+    }
+
+    resources->hugepage_limits = (nri_hugepage_limit **)util_smart_calloc_s(sizeof(nri_hugepage_limit *),
+                                                                            config->hugetlbs_len);
+    if (resources->hugepage_limits == nullptr) {
+        ERROR("Out of memory");
+        goto error_out;
+    }
+
+    for (i = 0; i < config->hugetlbs_len; i++) {
+        resources->hugepage_limits[i] = (nri_hugepage_limit *)util_common_calloc_s(sizeof(nri_hugepage_limit));
+        if (resources->hugepage_limits[i] == nullptr) {
+            ERROR("Out of memory");
+            goto error_out;
+        }
+        resources->hugepage_limits[i]->page_size = util_strdup_s(config->hugetlbs[i]->page_size);
+        resources->hugepage_limits[i]->limit = config->hugetlbs[i]->limit;
+        resources->hugepage_limits_len++;
+    }
+
+    // resources.blockio_class is not support
+    // resources.rdt_class is not support
+    // They are not standard fields in oci spec
+
+    if (dup_json_map_string_string(config->unified, resources->unified) != 0) {
+        ERROR("Failed to copy unified map");
+        goto error_out;
+    }
+
+    // resources.devices is set in ConLinuxDeviceToNRI
+
+    return resources;
+
+error_out:
+    free_nri_linux_resources(resources);
+    resources = nullptr;
+    return resources;
+}
+
+static bool ConLinuxToNRI(const char *id, const host_config *config, nri_container &con)
+{
+    con.linux = (nri_linux_container *)util_common_calloc_s(sizeof(nri_linux_container));
+    if (con.linux == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+
+    con.linux->resources = ConLinuxResourcesToNRI(config);
+    if (con.linux->resources == nullptr) {
+        ERROR("Failed to transform resources to nri for con : %s", id);
+        return false;
+    }
+
+    if (ConLinuxDeviceToNRI(config, con) != 0) {
+        ERROR("Failed to transform devices to nri for con : %s", id);
+        return false;
+    }
+
+    con.linux->oom_score_adj = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+    if (con.linux->oom_score_adj == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+
+    *(con.linux->oom_score_adj) = config->oom_score_adj;
+
+    con.linux->cgroups_path = merge_container_cgroups_path(id, config);
+    if (con.linux->cgroups_path == NULL) {
+        WARN("nri container cgroups path is NULL");
+    }
+    return true;
+}
+
+static int ConConfigLinuxDeviceToNRI(const runtime::v1::ContainerConfig &containerConfig, nri_container &con)
+{
+    int i;
+    int conConfigDevicesSize = containerConfig.devices_size();
+
+    if (conConfigDevicesSize == 0) {
+        return 0;
+    }
+    con.linux->devices = (nri_linux_device **)util_smart_calloc_s(sizeof(nri_linux_device *), conConfigDevicesSize);
+    if (con.linux->devices == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (con.linux->resources == nullptr) {
+        con.linux->resources = init_nri_linux_resources();
+        if (con.linux->resources == nullptr) {
+            ERROR("Failed to init nri linux resources");
+            return -1;
+        }
+    }
+
+    con.linux->resources->devices = (nri_linux_device_cgroup **)util_smart_calloc_s(sizeof(nri_linux_device_cgroup *),
+                                                                                    conConfigDevicesSize);
+    if (con.linux->resources->devices == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < conConfigDevicesSize; i++) {
+        nri_linux_device *device = (nri_linux_device *)util_common_calloc_s(sizeof(nri_linux_device));
+        if (device == nullptr) {
+            ERROR("Out of memory");
+            return -1;
+        }
+
+        nri_linux_device_cgroup *deviceCgroup = (nri_linux_device_cgroup *)util_common_calloc_s(sizeof(
+                                                                                                    nri_linux_device_cgroup));
+        if (deviceCgroup == nullptr) {
+            ERROR("Out of memory");
+            free_nri_linux_device(device);
+            return -1;
+        }
+
+        if (ConvertCRIV1Devices(containerConfig.devices(i), *device, *deviceCgroup) != 0) {
+            ERROR("Failed to convert CRI v1 devices");
+            free_nri_linux_device(device);
+            free_nri_linux_device_cgroup(deviceCgroup);
+            return -1;
+        }
+
+        con.linux->devices[i] = device;
+        con.linux->resources->devices[i] = deviceCgroup;
+        con.linux->devices_len++;
+        con.linux->resources->devices_len++;
+    }
+
+    return 0;
+}
+
+static bool ConConfigLinuxToNRI(const runtime::v1::ContainerConfig &containerConfig, nri_container &con)
+{
+    const char *name = containerConfig.metadata().name().c_str();
+    con.linux = (nri_linux_container *)util_common_calloc_s(sizeof(nri_linux_container));
+    if (con.linux == nullptr) {
+        ERROR("Out of memory");
+        return false;
+    }
+
+    if (containerConfig.has_linux() && containerConfig.linux().has_resources()) {
+        con.linux->resources = LinuxResourcesToNRI(containerConfig.linux().resources());
+        if (con.linux->resources == nullptr) {
+            ERROR("Failed to transform resources to nri for con : %s", name);
+            return false;
+        }
+
+        con.linux->oom_score_adj = (int64_t *)util_common_calloc_s(sizeof(int64_t));
+        if (con.linux->oom_score_adj == nullptr) {
+            ERROR("Out of memory");
+            return false;
+        }
+        *(con.linux->oom_score_adj) = containerConfig.linux().resources().oom_score_adj();
+    }
+
+    if (ConConfigLinuxDeviceToNRI(containerConfig, con) != 0) {
+        ERROR("Failed to convert devices to nri for con : %s", name);
+        return false;
+    }
+
+    // ContainerToNRIByConfig is called when CreateContainer, and cannot get pid at this time
+    con.linux->cgroups_path = NULL;
+    return true;
+}
+
 // container info is incomplete because container in excution is not created
 auto ContainerToNRIByConConfig(const runtime::v1::ContainerConfig &containerConfig, nri_container &con) -> bool
 {
@@ -394,6 +854,9 @@ auto ContainerToNRIByConConfig(const runtime::v1::ContainerConfig &containerConf
     }
 
     Errors tmpError;
+
+    // ContainerToNRIByConfig is called when CreateConatiner, and the status is 0(CONTAINER_UNKNOWN) at this time
+    con.state = 0;
 
     con.labels = Transform::ProtobufMapToJsonMapForString(containerConfig.labels(), tmpError);
     if (con.labels == nullptr) {
@@ -426,9 +889,18 @@ auto ContainerToNRIByConConfig(const runtime::v1::ContainerConfig &containerConf
         ERROR("Failed to transform mounts to nri for con : %s", con.name);
         return false;
     }
-    return true;
 
-    // todo: can not get container hooks and pid from containerConfig
+    if (!ConConfigLinuxToNRI(containerConfig, con)) {
+        ERROR("Failed to convert conatiner linux info to nri for con : %s", con.name);
+        return false;
+    }
+
+    // todo: CRI module can not get container hooks from containerConfig
+    // ContainerToNRIByConfig is called when CreateConatiner, and cannot get pid at this time
+
+    // rlimit not support in containerd
+
+    return true;
 }
 
 // container info is incomplete because container in excution is not created
@@ -483,6 +955,11 @@ auto ContainerToNRIByID(const std::string &id, nri_container &con) -> bool
 
     if (!MountPointsElementToNRI(cont->common_config->mount_points, con)) {
         ERROR("Failed to transform mounts to nri for con : %s", con.name);
+        goto out;
+    }
+
+    if (!ConLinuxToNRI(cont->common_config->id, cont->hostconfig, con)) {
+        ERROR("Failed to transform conatiner linux info to nri for con : %s", con.name);
         goto out;
     }
 
@@ -644,6 +1121,7 @@ auto ContainersToNRI(std::vector<std::unique_ptr<runtime::v1::Container>> &conta
         }
         if (!ContainerToNRIByID(containers[i].get()->id(), *con)) {
             ERROR("Failed to transform container to nri for container : %s", containers[i]->metadata().name().c_str());
+            free_nri_container(con);
             return false;
         }
         cons.push_back(con);
