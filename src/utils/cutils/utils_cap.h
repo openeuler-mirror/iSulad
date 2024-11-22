@@ -18,6 +18,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <linux/capability.h>
 
 #ifdef __cplusplus
 extern "C" {
