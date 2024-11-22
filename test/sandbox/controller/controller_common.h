@@ -16,6 +16,8 @@
 #ifndef _ISULAD_TEST_SANDBOX_CONTROLLER_CONTROLLER_COMMON_H
 #define _ISULAD_TEST_SANDBOX_CONTROLLER_CONTROLLER_COMMON_H
 #include "controller.h"
+#include "cstruct_wrapper.h"
+#include "utils_array.h"
 
 const std::string DUMMY_SANDBOX_ID = "604db93a33ec4c7787e4f369338f5887";
 const std::string DUMMY_CONTAINER_ID = "504db93a32ec4c9789e4d369a38f3889";
@@ -24,6 +26,8 @@ const uint64_t SECOND_TO_NANOS = 1000000000;
 const uint64_t DUMMY_CREATE_AT = 1588 * SECOND_TO_NANOS + 1588;
 const uint64_t DUMMY_EXITED_AT = 1688 * SECOND_TO_NANOS + 1588;
 const std::string DUMMY_TASK_ADDRESS = "vsock://18982:1";
+const std::string DUMMY_SANDBOXER = "vmm";
+const std::string DUMMY_SANDBOX_EXTENSIONS_TASKS = "extensions.tasks";
 
 std::unique_ptr<sandbox::ControllerMountInfo> CreateTestMountInfo();
 
@@ -31,9 +35,8 @@ std::unique_ptr<sandbox::ControllerCreateParams> CreateTestCreateParams();
 
 std::unique_ptr<sandbox::ControllerStreamInfo> CreateTestStreamInfo();
 
-std::unique_ptr<sandbox::ControllerPrepareParams> CreateTestPrepareParams();
+std::unique_ptr<CStructWrapper<sandbox_sandbox>> CreateTestUpdateApiSandbox();
 
-std::unique_ptr<sandbox::ControllerUpdateResourcesParams> CreateTestUpdateResourcesParams(
-    google::protobuf::Map<std::string, std::string> &annotations);
+std::unique_ptr<CStructWrapper<string_array>> CreateTestFields();
 
 #endif // _ISULAD_TEST_SANDBOX_CONTROLLER_CONTROLLER_COMMON_H

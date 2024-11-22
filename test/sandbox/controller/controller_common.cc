@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #include "controller_common.h"
+#include "utils.h"
 
 std::unique_ptr<sandbox::ControllerMountInfo> CreateTestMountInfo()
 {
@@ -43,24 +44,40 @@ std::unique_ptr<sandbox::ControllerStreamInfo> CreateTestStreamInfo()
     return streamInfo;
 }
 
-std::unique_ptr<sandbox::ControllerPrepareParams> CreateTestPrepareParams()
+std::unique_ptr<CStructWrapper<sandbox_sandbox>> CreateTestUpdateApiSandbox()
 {
-    std::unique_ptr<sandbox::ControllerPrepareParams> params(new sandbox::ControllerPrepareParams());
-    params->containerId = DUMMY_CONTAINER_ID;
-    params->execId = DUMMY_EXEC_ID;
-    params->spec = std::unique_ptr<std::string>(new std::string("{spec: test}"));
-    params->rootfs.push_back(std::move(CreateTestMountInfo()));
-    params->rootfs.push_back(std::move(CreateTestMountInfo()));
-    params->streamInfo = CreateTestStreamInfo();
-    return params;
+    sandbox_sandbox *apiSandbox = nullptr;
+
+    auto apiSandbox_wrapper = makeUniquePtrCStructWrapper<sandbox_sandbox>(free_sandbox_sandbox);
+    if (apiSandbox_wrapper == nullptr) {
+        return nullptr;
+    }
+    apiSandbox = apiSandbox_wrapper->get();
+
+    apiSandbox->sandbox_id = util_strdup_s(DUMMY_SANDBOX_ID.c_str());
+    apiSandbox->sandboxer = util_strdup_s(DUMMY_SANDBOXER.c_str());
+
+    return apiSandbox_wrapper;
 }
 
-std::unique_ptr<sandbox::ControllerUpdateResourcesParams> CreateTestUpdateResourcesParams(
-    google::protobuf::Map<std::string, std::string> &annotations)
+std::unique_ptr<CStructWrapper<string_array>> CreateTestFields()
 {
-    std::unique_ptr<std::string> resources(new std::string("{cpu: 12}"));
-    std::unique_ptr<sandbox::ControllerUpdateResourcesParams> params(
-        new sandbox::ControllerUpdateResourcesParams{DUMMY_SANDBOX_ID, std::move(resources), annotations}
-    );
-    return params;
+    size_t fields_len = 1;
+    string_array *fields = nullptr;
+
+    auto fields_wrapper = makeUniquePtrCStructWrapper<string_array>(util_free_string_array);
+    if (fields_wrapper == nullptr) {
+        return nullptr;
+    }
+    fields = fields_wrapper->get();
+
+    fields = util_string_array_new(fields_len);
+    if (fields == nullptr) {
+        return nullptr;
+    }
+    if (util_append_string_array(fields, DUMMY_SANDBOX_EXTENSIONS_TASKS.c_str())) {
+        return nullptr;
+    }
+
+    return fields_wrapper;
 }

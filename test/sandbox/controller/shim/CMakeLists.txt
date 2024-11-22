@@ -14,7 +14,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/daemon_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/isulad_config.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/shim/shim_controller.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/shim/controller/shim_controller.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cpputils/errors.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cpputils/cxxutils.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/sha256/sha256.c
@@ -41,8 +41,9 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/shim
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/shim
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/shim/controller
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cpputils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/sandbox/controller

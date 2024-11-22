@@ -14,7 +14,6 @@
  ******************************************************************************/
 
 #include "grpc_sandboxer_client_mock.h"
-#include "controller_stub_mock.h"
 
 static std::shared_ptr<SandboxerClientMock> g_sandboxer_client_mock = NULL;
 
@@ -22,24 +21,6 @@ SandboxerClient::SandboxerClient(const std::string &sandboxer, const std::string
 {
     m_sandboxer = sandboxer;
     m_address = address;
-    m_channel = grpc::CreateChannel(m_address, grpc::InsecureChannelCredentials());
-    m_stub = NewDummyControllerStub();
-}
-
-void SandboxerClient::Init(Errors &error)
-{
-    if (g_sandboxer_client_mock == NULL) {
-        return;
-    }
-    g_sandboxer_client_mock->Init(error);
-}
-
-void SandboxerClient::Destroy()
-{
-    if (g_sandboxer_client_mock == NULL) {
-        return;
-    }
-    return g_sandboxer_client_mock->Destroy();
 }
 
 auto SandboxerClient::Create(const std::string &sandboxId, const ControllerCreateParams &params, Errors &error) -> bool
@@ -67,31 +48,12 @@ auto SandboxerClient::Platform(const std::string &sandboxId, ControllerPlatformI
     return g_sandboxer_client_mock->Platform(sandboxId, platformInfo, error);
 }
 
-auto SandboxerClient::Prepare(const std::string &sandboxId, const ControllerPrepareParams &params, std::string &bundle,
-                              Errors &error) -> bool
+auto SandboxerClient::Update(sandbox_sandbox *apiSandbox, string_array *fields, Errors &error) -> bool
 {
     if (g_sandboxer_client_mock == NULL) {
         return true;
     }
-    return g_sandboxer_client_mock->Prepare(sandboxId, params, bundle, error);
-}
-
-auto SandboxerClient::Purge(const std::string &sandboxId, const std::string &containerId,
-                            const std::string &execId, Errors &error) -> bool
-{
-    if (g_sandboxer_client_mock == NULL) {
-        return true;
-    }
-    return g_sandboxer_client_mock->Purge(sandboxId, containerId, execId, error);
-}
-
-auto SandboxerClient::UpdateResources(const std::string &sandboxId, const ControllerUpdateResourcesParams &params,
-                                      Errors &error) -> bool
-{
-    if (g_sandboxer_client_mock == NULL) {
-        return true;
-    }
-    return g_sandboxer_client_mock->UpdateResources(sandboxId, params, error);
+    return g_sandboxer_client_mock->Update(apiSandbox, fields, error);
 }
 
 auto SandboxerClient::Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) -> bool

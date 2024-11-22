@@ -8,26 +8,35 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: xuxuepeng
- * Create: 2023-07-31
- * Description: provide grpc sandboxer client monitor mock
+ * Author: jikai
+ * Create: 2023-10-20
+ * Description: provide sandbox manager mock
  ******************************************************************************/
 
-#ifndef _ISULAD_TEST_MOCKS_GRPC_SANDBOXER_MONITOR_MOCK_H
-#define _ISULAD_TEST_MOCKS_GRPC_SANDBOXER_MONITOR_MOCK_H
+#ifndef _ISULAD_TEST_MOCKS_SANDBOX_MANAGER_MOCK_H
+#define _ISULAD_TEST_MOCKS_SANDBOX_MANAGER_MOCK_H
 
 #include <gmock/gmock.h>
-#include "grpc_sandboxer_monitor.h"
+#include <memory>
 
-using namespace sandbox;
+#include "sandbox.h"
+#include "sandbox_manager.h"
 
-class SandboxerClientMonitorMock {
+namespace sandbox {
+
+class MockSandboxManager {
 public:
-    MOCK_METHOD1(Monitor, bool(SandboxerAsyncWaitCall *call));
-    MOCK_METHOD0(Start, void());
-    MOCK_METHOD0(Stop, void());
+    MockSandboxManager() = default;
+    virtual ~MockSandboxManager() = default;
+
+    MOCK_METHOD0(GetInstance, SandboxManager *());
+
+    MOCK_METHOD1(GetSandbox, std::shared_ptr<Sandbox>(const std::string &idOrName));
+    
 };
 
-void MockSandboxerMonitor_SetMock(std::shared_ptr<SandboxerClientMonitorMock> mock);
+void MockSandboxManager_SetMock(std::shared_ptr<MockSandboxManager> mock);
 
-#endif // _ISULAD_TEST_MOCKS_GRPC_SANDBOXER_MONITOR_MOCK_H
+}
+
+#endif
