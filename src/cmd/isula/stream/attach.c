@@ -282,7 +282,9 @@ static int container_wait_thread(struct client_arguments *args, uint32_t *exit_c
         (void)sem_destroy(&sem_started);
         return -1;
     }
-    (void)sem_wait(&sem_started);
+    while(sem_wait(&sem_started) == -1 && errno == EINTR) {
+        continue;
+    }
     (void)sem_destroy(&sem_started);
     return 0;
 }
@@ -362,7 +364,9 @@ static int client_attach(struct client_arguments *args, uint32_t *exit_code)
     }
 
 #ifndef GRPC_CONNECTOR
-    sem_wait(&g_attach_waitexit_sem);
+    while(sem_wait(&g_attach_waitexit_sem) == -1 && errno == EINTR) {
+        continue;
+    }
 #endif
 
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {

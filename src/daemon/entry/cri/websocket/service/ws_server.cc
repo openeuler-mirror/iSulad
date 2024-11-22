@@ -315,7 +315,10 @@ void WebsocketServer::CloseWsSession(int socketID)
             close(session->pipes.at(1));
             session->pipes.at(1) = -1;
         }
-        (void)sem_wait(session->syncCloseSem);
+
+        while(sem_wait(session->syncCloseSem) == -1 && errno == EINTR) {
+            continue;
+        }
         (void)sem_destroy(session->syncCloseSem);
         delete session->syncCloseSem;
         session->syncCloseSem = nullptr;

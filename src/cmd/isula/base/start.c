@@ -193,7 +193,9 @@ out:
 void client_wait_fifo_exit(const struct client_arguments *args)
 {
     if (args->custom_conf.attach_stdin || args->custom_conf.attach_stdout || args->custom_conf.attach_stderr) {
-        sem_wait(&g_console_waitexit_sem);
+        while(sem_wait(&g_console_waitexit_sem) == -1 && errno == EINTR) {
+            continue;
+        }
     }
 }
 

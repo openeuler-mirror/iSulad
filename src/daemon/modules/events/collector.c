@@ -929,7 +929,9 @@ int add_monitor_client(char *name, const types_timestamp_t *since, const types_t
         goto sem_free;
     }
 
-    sem_wait(&context_info->context_sem);
+    while(sem_wait(&context_info->context_sem) == -1 && errno == EINTR) {
+        continue;
+    }
 
 sem_free:
     sem_destroy(&context_info->context_sem);
@@ -999,7 +1001,9 @@ static int start_monitored()
         goto out;
     }
 
-    sem_wait(msync.monitord_sem);
+    while(sem_wait(msync.monitord_sem) == -1 && errno == EINTR) {
+        continue;
+    }
     sem_destroy(msync.monitord_sem);
     if (monitored_exitcode) {
         isulad_set_error_message("Monitored start failed");

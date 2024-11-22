@@ -1619,7 +1619,9 @@ static void *do_shutdown_handler(void *arg)
 
     prctl(PR_SET_NAME, "Shutdown");
 
-    sem_wait(&g_daemon_shutdown_sem);
+    while(sem_wait(&g_daemon_shutdown_sem) == -1 && errno == EINTR) {
+        continue;
+    }
 
     daemon_shutdown();
 
@@ -1829,7 +1831,9 @@ int main(int argc, char **argv)
 
     server_common_start();
 
-    sem_wait(&g_daemon_wait_shutdown_sem);
+    while(sem_wait(&g_daemon_wait_shutdown_sem) == -1 && errno == EINTR) {
+        continue;
+    }
 
     DAEMON_CLEAR_ERRMSG();
     return 0;
