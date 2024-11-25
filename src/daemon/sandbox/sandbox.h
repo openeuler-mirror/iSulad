@@ -30,12 +30,14 @@
 #include "controller_manager.h"
 #include "cstruct_wrapper.h"
 #include "read_write_lock.h"
+#include "sandbox_task.h"
 
 namespace sandbox {
 
 const std::string SANDBOX_METADATA_JSON = "sandbox_metadata.json";
 const std::string SANDBOX_STATE_JSON = "sandbox_state.json";
 const std::string NETWORK_SETTINGS_JSON = "network_settings.json";
+const std::string SANDBOX_TASKS_JSON = "sandbox_tasks.json";
 
 // Keep consistent with the default values set in containerd and cri-o.
 const uint32_t DEFAULT_STOP_TIMEOUT = 10;
@@ -138,6 +140,15 @@ public:
     auto Remove(Errors &error) -> bool;
     void Status(runtime::v1::PodSandboxStatus &status);
 
+    // for sandbox api update
+    virtual void LoadSandboxTasks() = 0;
+    virtual auto SaveSandboxTasks() -> bool = 0;
+    virtual auto AddSandboxTasks(sandbox_task *task) -> bool = 0;
+    virtual auto GetAnySandboxTasks() -> std::string = 0;
+    virtual void DeleteSandboxTasks(const char *containerId) = 0;
+    virtual auto AddSandboxTasksProcess(const char *containerId, sandbox_process *processes) -> bool = 0;
+    virtual void DeleteSandboxTasksProcess(const char *containerId, const char *execId) = 0;
+
 private:
     auto SaveState(Errors &error) -> bool;
     auto SaveMetadata(Errors &error) -> bool;
@@ -191,6 +202,7 @@ private:
     std::string m_rootdir;
     std::string m_statedir;
     std::string m_taskAddress;
+    uint32_t m_version;
     StatsInfo m_statsInfo;
     // Store network information in the sandbox, which is convenient for the cri module to obtain
     // and update the network settings of the pause container in the shim-controller.

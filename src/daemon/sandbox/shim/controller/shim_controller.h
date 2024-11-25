@@ -32,27 +32,18 @@
 
 namespace sandbox {
 
-const std::string SHIM_CONTROLLER_NAME = "shim";
-
 class ShimController : public Controller {
 public:
     ShimController(const std::string &sandboxer);
     virtual ~ShimController();
     bool Init(Errors &error) override;
-    void Destroy() override;
     bool Create(const std::string &sandboxId,
                 const ControllerCreateParams &params,
                 Errors &error) override;
     std::unique_ptr<ControllerSandboxInfo> Start(const std::string &sandboxId, Errors &error) override;
     std::unique_ptr<ControllerPlatformInfo> Platform(const std::string &sandboxId, Errors &error) override;
-    std::string Prepare(const std::string &sandboxId,
-                        const ControllerPrepareParams &params,
-                        Errors &error) override;
-    bool Purge(const std::string &sandboxId, const std::string &containerId,
-               const std::string &execId, Errors &error) override;
-    bool UpdateResources(const std::string &sandboxId,
-                         const ControllerUpdateResourcesParams &params,
-                         Errors &error) override;
+    bool Update(sandbox_sandbox *apiSandbox,
+                string_array *fields, Errors &error) override;
     bool Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error) override;
     bool Wait(std::shared_ptr<SandboxStatusCallback> cb, const std::string &sandboxId, Errors &error) override;
     std::unique_ptr<ControllerSandboxStatus> Status(const std::string &sandboxId, bool verbose, Errors &error) override;

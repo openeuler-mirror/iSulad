@@ -494,6 +494,7 @@ auto Sandbox::Load(Errors &error) -> bool
     }
 
     LoadNetworkSetting();
+    LoadSandboxTasks();
 
     // When the sandbox status acquisition fails or wait fails, the sandbox status is set to not ready,
     // and the user decides whether to delete the sandbox.
@@ -698,6 +699,7 @@ auto Sandbox::Start(Errors &error) -> bool
     m_state.pid = info->pid;
     m_state.createdAt = info->createdAt;
     m_taskAddress = info->taskAddress;
+    m_version = info->version;
     m_state.status = SANDBOX_STATUS_RUNNING;
 
     if (!SaveState(error)) {
@@ -814,7 +816,7 @@ void Sandbox::Status(runtime::v1::PodSandboxStatus &status)
 
 auto Sandbox::GenerateSandboxStateJson(sandbox_state *state) -> std::string
 {
-    __isula_auto_free parser_error error;
+    __isula_auto_free parser_error error = NULL;
     std::string ret;
     __isula_auto_free char *state_json = NULL;
     state_json = sandbox_state_generate_json(state, NULL, &(error));
@@ -874,7 +876,7 @@ auto Sandbox::SaveNetworkSetting(Errors &error) -> bool
 
 auto Sandbox::GenerateSandboxMetadataJson(sandbox_metadata *metadata) -> std::string
 {
-    __isula_auto_free parser_error error;
+    __isula_auto_free parser_error error = NULL;
     std::string ret;
     __isula_auto_free char *metadata_json = NULL;
     metadata_json = sandbox_metadata_generate_json(metadata, NULL, &(error));

@@ -57,9 +57,6 @@ bool ControllerManager::Init(Errors &error)
 
 bool ControllerManager::Cleanup(Errors &error)
 {
-    for (auto &it : m_controllers) {
-        it.second->Destroy();
-    }
     return true;
 }
 

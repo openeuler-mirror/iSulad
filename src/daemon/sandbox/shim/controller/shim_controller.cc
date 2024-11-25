@@ -45,8 +45,6 @@ bool ShimController::Init(Errors &error)
     return true;
 }
 
-void ShimController::Destroy() {}
-
 void ShimController::ApplySandboxLinuxOptions(const runtime::v1::LinuxPodSandboxConfig &lc, host_config *hc,
                                               container_config *custom_config, Errors &error)
 {
@@ -340,22 +338,8 @@ std::unique_ptr<ControllerPlatformInfo> ShimController::Platform(const std::stri
     return nullptr;
 }
 
-std::string ShimController::Prepare(const std::string &sandboxId,
-                                    const ControllerPrepareParams &params,
-                                    Errors &error)
-{
-    return std::string("");
-}
-
-bool ShimController::Purge(const std::string &sandboxId, const std::string &containerId,
-                           const std::string &execId, Errors &error)
-{
-    return true;
-}
-
-bool ShimController::UpdateResources(const std::string &sandboxId,
-                                     const ControllerUpdateResourcesParams &params,
-                                     Errors &error)
+bool ShimController::Update(sandbox_sandbox *apiSandbox,
+                            string_array *fields, Errors &error)
 {
     return true;
 }

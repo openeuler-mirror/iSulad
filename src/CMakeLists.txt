@@ -200,6 +200,10 @@ else()
     set_target_properties(isulad PROPERTIES LINKER_LANGUAGE "C")
 endif()
 
+if (ENABLE_SANDBOXER)
+    target_link_libraries(isulad isula_sandbox)
+endif()
+
 target_link_libraries(isulad libisulad_tools libhttpclient -ldl)
 if (ANDROID OR MUSL)
     target_link_libraries(isulad ${LIBSSL_LIBRARY} ${LIBYAJL_LIBRARY})
