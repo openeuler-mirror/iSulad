@@ -2779,8 +2779,11 @@ void spec_remove_mount(oci_runtime_spec *oci_spec, const char *dest)
     for (i = 0; i < oci_spec->mounts_len; i++) {
         if (strcmp(oci_spec->mounts[i]->destination, dest) == 0) {
             free_defs_mount(oci_spec->mounts[i]);
-            (void)memcpy((void **)&oci_spec->mounts[i], (void **)&oci_spec->mounts[i + 1],
-                         (oci_spec->mounts_len - i - 1) * sizeof(void *));
+            oci_spec->mounts[i] = NULL;
+            if (i != oci_spec->mounts_len - 1) {
+                (void)memcpy((void **)&oci_spec->mounts[i], (void **)&oci_spec->mounts[i + 1],
+                        (oci_spec->mounts_len - i - 1) * sizeof(void *));
+            }
             oci_spec->mounts_len--;
             return;
         }
