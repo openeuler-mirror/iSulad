@@ -4,14 +4,12 @@ SET(EXE controller_manager_ut)
 
 add_executable(${EXE}
     ${grpc_sandbox_type_srcs}
-    ${CMAKE_BINARY_DIR}/grpc/src/api/services/sandbox/sandbox.pb.cc
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1/api_v1.pb.cc
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/gogo.pb.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cpputils/errors.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/sandboxer/sandboxer_controller.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/controller_manager.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/sandboxer/controller/sandboxer_controller.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller_manager.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/grpc_sandboxer_client_mock.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/controller_stub_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/isulad_config_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/shim_controller_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/sandbox/controller/controller_common.cc
@@ -25,10 +23,11 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/entry/cri
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/executor
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/sandboxer
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/sandboxer/client
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/controller/shim
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/sandboxer
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/sandboxer/controller
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/sandboxer/controller/client
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/sandbox/shim/controller
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map

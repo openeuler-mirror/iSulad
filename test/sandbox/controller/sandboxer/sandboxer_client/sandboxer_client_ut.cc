@@ -13,21 +13,16 @@
  * Description: Sandboxer client UT
  ******************************************************************************/
 
+#include <isula_libutils/json_common.h>
+
 #include "gtest/gtest.h"
-#include "controller_stub_mock.h"
 #include "grpc_sandboxer_client.h"
+#include "grpc_sandboxer_client_mock.h"
+#include "rust_sandbox_api_mock.h"
+#include "sandbox_manager_mock.h"
 #include "controller_common.h"
 #include "controller.h"
-
-class SandboxerClientWrapper : public sandbox::SandboxerClient {
-public:
-    SandboxerClientWrapper(const std::string &sandboxer, const std::string &address) : SandboxerClient(sandboxer, address)
-    {
-        m_stub = NewDummyControllerStub();
-    }
-
-    ~SandboxerClientWrapper() = default;
-};
+#include "utils.h"
 
 class ControllerSandboxerClientTest : public testing::Test {
 protected:
@@ -35,78 +30,38 @@ protected:
     {
         m_sandboxer = "sandboxer";
         m_address = "/tmp/sandboxer.sock";
+        ControllerHandle_t handle_ptr = (ControllerHandle_t)(0x1); // just not nullptr
 
-        m_sandboxerClient = std::make_shared<SandboxerClientWrapper>(m_sandboxer, m_address);
-        m_stub = std::make_shared<MockControllerStub>();
-        MockControllerStub_SetMock(m_stub);
+        m_sandboxManagerMock = std::make_shared<MockSandboxManager>();
+        MockSandboxManager_SetMock(m_sandboxManagerMock);
+        m_rustSandboxApiMock = std::make_shared<RustSandboxApiMock>();
+        RustSandboxApiMock_SetMock(m_rustSandboxApiMock);
+
+        EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_build_controller).Times(1).WillOnce(testing::DoAll(testing::Return(handle_ptr)));
+        m_sandboxerClient = std::make_shared<SandboxerClient>(m_sandboxer, m_address);
     }
 
     void TearDown() override
     {
-        MockControllerStub_SetMock(nullptr);
+        MockSandboxManager_SetMock(nullptr);
+        RustSandboxApiMock_SetMock(nullptr);
     }
 
     std::string m_sandboxer;
     std::string m_address;
-
-    std::shared_ptr<MockControllerStub> m_stub;
-    std::shared_ptr<SandboxerClientWrapper> m_sandboxerClient;
+    std::shared_ptr<SandboxerClient> m_sandboxerClient;
+    std::shared_ptr<MockSandboxManager> m_sandboxManagerMock = nullptr;
+    std::shared_ptr<RustSandboxApiMock> m_rustSandboxApiMock = nullptr;
 };
-
-static std::unique_ptr<containerd::services::sandbox::v1::ControllerStartResponse> CreateTestGrpcStartResponse()
-{
-    std::unique_ptr<containerd::services::sandbox::v1::ControllerStartResponse> response(
-        new containerd::services::sandbox::v1::ControllerStartResponse());
-    response->set_sandbox_id(DUMMY_SANDBOX_ID);
-    response->set_pid(1);
-    response->mutable_created_at()->set_seconds(DUMMY_CREATE_AT / SECOND_TO_NANOS);
-    response->mutable_created_at()->set_nanos(DUMMY_CREATE_AT % SECOND_TO_NANOS);
-    response->mutable_labels()->insert({"label1", "value1"});
-    return response;
-}
-
-// Create platform response for test.
-static std::unique_ptr<containerd::services::sandbox::v1::ControllerPlatformResponse> CreateTestPlatformResponse()
-{
-    std::unique_ptr<containerd::services::sandbox::v1::ControllerPlatformResponse> response(
-        new containerd::services::sandbox::v1::ControllerPlatformResponse()
-    );
-    response->mutable_platform()->set_os("linux");
-    response->mutable_platform()->set_architecture("amd64");
-    response->mutable_platform()->set_variant("ubuntu");
-    return response;
-}
-
-// Create status response for test
-static std::unique_ptr<containerd::services::sandbox::v1::ControllerStatusResponse> CreateTestStatusResponse()
-{
-    std::unique_ptr<containerd::services::sandbox::v1::ControllerStatusResponse> response(
-        new containerd::services::sandbox::v1::ControllerStatusResponse()
-    );
-    response->set_sandbox_id(DUMMY_SANDBOX_ID);
-    response->set_state("running");
-    response->set_pid(1);
-    response->set_task_address(DUMMY_TASK_ADDRESS);
-    response->mutable_created_at()->set_seconds(DUMMY_CREATE_AT / SECOND_TO_NANOS);
-    response->mutable_created_at()->set_nanos(DUMMY_CREATE_AT % SECOND_TO_NANOS);
-    response->mutable_exited_at()->set_seconds(DUMMY_CREATE_AT / SECOND_TO_NANOS);
-    response->mutable_exited_at()->set_nanos(DUMMY_CREATE_AT % SECOND_TO_NANOS);
-    response->mutable_info()->insert({"info1", "value1"});
-    response->mutable_extra()->set_value("{extra: test}");
-    return response;
-}
 
 /************* Unit tests for Create *************/
 TEST_F(ControllerSandboxerClientTest, CreateTestSucceed)
 {
     Errors err;
     std::unique_ptr<sandbox::ControllerCreateParams> params = CreateTestCreateParams();
-    // Fake a grpc create response.
-    containerd::services::sandbox::v1::ControllerCreateResponse response;
-    response.set_sandbox_id(DUMMY_SANDBOX_ID);
-    // Set response to return sandbox_id, and return OK for stub_->Create().
-    EXPECT_CALL(*m_stub, Create).Times(1).WillOnce(testing::DoAll(testing::SetArgPointee<2>(response),
-                                                                  testing::Return(grpc::Status::OK)));
+
+    // Set response to return sandbox_id, and return OK for sandbox_api_create().
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_create).Times(1).WillOnce(testing::DoAll(testing::Return(0)));
     EXPECT_TRUE(m_sandboxerClient->Create(DUMMY_SANDBOX_ID, *params, err));
     EXPECT_TRUE(err.Empty());
 }
@@ -117,7 +72,7 @@ TEST_F(ControllerSandboxerClientTest, CreateTestNullConfig)
     std::unique_ptr<sandbox::ControllerCreateParams> params(new sandbox::ControllerCreateParams());
     params->config = nullptr;
     // Stub should not be called
-    EXPECT_CALL(*m_stub, Create).Times(0);
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_create).Times(0);
     EXPECT_FALSE(m_sandboxerClient->Create(DUMMY_SANDBOX_ID, *params, err));
     EXPECT_FALSE(err.Empty());
     EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("Failed to init create request for sandboxer create request"));
@@ -128,13 +83,9 @@ TEST_F(ControllerSandboxerClientTest, CreateTestNullMount)
     Errors err;
     std::unique_ptr<sandbox::ControllerCreateParams> params = CreateTestCreateParams();
     params->mounts.push_back(nullptr);
-    containerd::services::sandbox::v1::ControllerCreateRequest request;
     // Save request to check mount size.
-    EXPECT_CALL(*m_stub, Create).Times(1).WillOnce(testing::DoAll(testing::SaveArg<1>(&request),
-                                                                  testing::Return(grpc::Status::OK)));
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_create).Times(1).WillOnce(testing::DoAll(testing::Return(0)));
     EXPECT_TRUE(m_sandboxerClient->Create(DUMMY_SANDBOX_ID, *params, err));
-    // The nullptr pushed in params should not be counted.
-    EXPECT_EQ(request.rootfs_size(), 1);
     EXPECT_TRUE(err.Empty());
 }
 
@@ -142,22 +93,65 @@ TEST_F(ControllerSandboxerClientTest, CreateTestStatusNotOK)
 {
     Errors err;
     std::unique_ptr<sandbox::ControllerCreateParams> params = CreateTestCreateParams();
-    // Fake a grpc create response.
-    containerd::services::sandbox::v1::ControllerCreateResponse response;
-    response.set_sandbox_id(DUMMY_SANDBOX_ID);
-    EXPECT_CALL(*m_stub, Create).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
+
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_create).Times(1).WillOnce(testing::Return(-1));
     EXPECT_FALSE(m_sandboxerClient->Create(DUMMY_SANDBOX_ID, *params, err));
-    EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("gRPC Abort"));
 }
 
 /************* Unit tests for Start *************/
+static std::unique_ptr<CStructWrapper<json_map_string_string>> GetMockLabels()
+{
+    json_map_string_string *labels = nullptr;
+    size_t len = 1;
+
+    auto labels_wrapper = makeUniquePtrCStructWrapper<json_map_string_string>(free_json_map_string_string);
+    if (labels_wrapper == nullptr) {
+        return nullptr;
+    }
+    labels = labels_wrapper->get();
+
+    labels->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
+    if (labels->keys == nullptr) {
+        return nullptr;
+    }
+    labels->keys[0] = util_strdup_s("label1");
+    labels->values = (char **)util_smart_calloc_s(sizeof(char *), len);
+    if (labels->values == nullptr) {
+        return nullptr;
+    }
+    labels->values[0] = util_strdup_s("value1");
+    labels->len = len;
+
+    return labels_wrapper;
+}
+
+static std::unique_ptr<CStructWrapper<sandbox_start_response>> GetMockSandboxStartResponse()
+{
+    sandbox_start_response *reponse = nullptr;
+
+    auto reponse_wrapper = makeUniquePtrCStructWrapper<sandbox_start_response>(free_sandbox_start_response);
+    if (reponse_wrapper == nullptr) {
+        return nullptr;
+    }
+    reponse = reponse_wrapper->get();
+
+    reponse->sandbox_id = util_strdup_s(DUMMY_SANDBOX_ID.c_str());
+    reponse->pid = 1;
+    reponse->created_at = DUMMY_CREATE_AT;
+    reponse->address = util_strdup_s(DUMMY_TASK_ADDRESS.c_str());
+    reponse->version = 0;
+    reponse->labels = GetMockLabels()->move();
+
+    return reponse_wrapper;
+}
+
 TEST_F(ControllerSandboxerClientTest, StartTestSucceed)
 {
     Errors err;
     sandbox::ControllerSandboxInfo sandboxInfo;
-    std::unique_ptr<containerd::services::sandbox::v1::ControllerStartResponse> response = CreateTestGrpcStartResponse();
-    EXPECT_CALL(*m_stub, Start).Times(1).WillOnce(testing::DoAll(testing::SetArgPointee<2>(*response),
-                                                                 testing::Return(grpc::Status::OK)));
+
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_start).Times(1).WillOnce(testing::DoAll(testing::SetArgPointee<2>(*(GetMockSandboxStartResponse()->move())),
+                                                                 testing::Return(0)));
     EXPECT_TRUE(m_sandboxerClient->Start(DUMMY_SANDBOX_ID, sandboxInfo, err));
     EXPECT_TRUE(err.Empty());
     EXPECT_EQ(sandboxInfo.id, DUMMY_SANDBOX_ID);
@@ -171,128 +165,55 @@ TEST_F(ControllerSandboxerClientTest, StartTestStatusNotOK)
 {
     Errors err;
     sandbox::ControllerSandboxInfo sandboxInfo;
-    EXPECT_CALL(*m_stub, Start).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_start).Times(1).WillOnce(testing::Return(-1));
     EXPECT_FALSE(m_sandboxerClient->Start(DUMMY_SANDBOX_ID, sandboxInfo, err));
-    EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("gRPC Abort"));
 }
 
-/************* Unit tests for Prepare *************/
-TEST_F(ControllerSandboxerClientTest, PrepareTestSucceed)
+/************* Unit tests for Update *************/
+TEST_F(ControllerSandboxerClientTest, UpdateTestSucceed)
 {
     Errors err;
-    std::string bundle;
-    std::unique_ptr<sandbox::ControllerPrepareParams> params = CreateTestPrepareParams();
-    // Fake a grpc prepare response.
-    containerd::services::sandbox::v1::PrepareResponse response;
-    response.set_bundle("/tmp/bundle");
-    // Set response to return bundle, and return OK for stub_->Prepare().
-    EXPECT_CALL(*m_stub, Prepare).Times(1).WillOnce(testing::DoAll(testing::SetArgPointee<2>(response),
-                                                                   testing::Return(grpc::Status::OK)));
-    EXPECT_TRUE(m_sandboxerClient->Prepare(DUMMY_SANDBOX_ID, *params, bundle, err));
-    EXPECT_TRUE(err.Empty());
-    EXPECT_EQ(bundle, "/tmp/bundle");
-}
-
-TEST_F(ControllerSandboxerClientTest, PrepareTestNullSpec)
-{
-    Errors err;
-    std::string bundle;
-    std::unique_ptr<sandbox::ControllerPrepareParams> params = CreateTestPrepareParams();
-    params->spec = nullptr;
-    // Stub should not be called
-    EXPECT_CALL(*m_stub, Prepare).Times(0);
-    EXPECT_FALSE(m_sandboxerClient->Prepare(DUMMY_SANDBOX_ID, *params, bundle, err));
-    EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("Failed to init prepare request for sandboxer prepare request"));
-}
-
-TEST_F(ControllerSandboxerClientTest, PrepareTestNullMount)
-{
-    Errors err;
-    std::string bundle;
-    std::unique_ptr<sandbox::ControllerPrepareParams> params = CreateTestPrepareParams();
-    params->rootfs.push_back(nullptr);
-    containerd::services::sandbox::v1::PrepareRequest request;
-    // Save request to check mount size.
-    EXPECT_CALL(*m_stub, Prepare).Times(1).WillOnce(testing::DoAll(testing::SaveArg<1>(&request),
-                                                                   testing::Return(grpc::Status::OK)));
-    EXPECT_TRUE(m_sandboxerClient->Prepare(DUMMY_SANDBOX_ID, *params, bundle, err));
-    // The nullptr pushed in params should not be counted.
-    EXPECT_EQ(request.rootfs_size(), 2);
+    auto apiSandbox = CreateTestUpdateApiSandbox();
+    auto fields = CreateTestFields();
+    // Set response to return bundle, and return OK for sandbox_api_update().
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_update).Times(1).WillOnce(testing::DoAll(testing::Return(0)));
+    EXPECT_TRUE(m_sandboxerClient->Update(apiSandbox->get(), fields->get(), err));
     EXPECT_TRUE(err.Empty());
 }
 
-TEST_F(ControllerSandboxerClientTest, PrepareTestStatusNotOK)
+TEST_F(ControllerSandboxerClientTest, UpdateTestStatusNotOK)
 {
     Errors err;
-    std::string bundle;
-    std::unique_ptr<sandbox::ControllerPrepareParams> params = CreateTestPrepareParams();
-    EXPECT_CALL(*m_stub, Prepare).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
-    EXPECT_FALSE(m_sandboxerClient->Prepare(DUMMY_SANDBOX_ID, *params, bundle, err));
-    EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("gRPC Abort"));
-}
-
-/************* Unit tests for Purge *************/
-TEST_F(ControllerSandboxerClientTest, PurgeTestSucceed)
-{
-    Errors err;
-    // Set response to return OK for stub_->Purge().
-    EXPECT_CALL(*m_stub, Purge).Times(1).WillOnce(testing::Return(grpc::Status::OK));
-    EXPECT_TRUE(m_sandboxerClient->Purge(DUMMY_SANDBOX_ID, DUMMY_CONTAINER_ID, DUMMY_EXEC_ID, err));
-    EXPECT_TRUE(err.Empty());
-}
-
-TEST_F(ControllerSandboxerClientTest, PurgeTestStatusNotOK)
-{
-    Errors err;
-    EXPECT_CALL(*m_stub, Purge).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
-    EXPECT_FALSE(m_sandboxerClient->Purge(DUMMY_SANDBOX_ID, DUMMY_CONTAINER_ID, DUMMY_EXEC_ID, err));
-    EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("gRPC Abort"));
-}
-
-/************* Unit tests for UpdateResources *************/
-TEST_F(ControllerSandboxerClientTest, UpdateResourcesTestSucceed)
-{
-    Errors err;
-    google::protobuf::Map<std::string, std::string> annotations;
-    std::unique_ptr<sandbox::ControllerUpdateResourcesParams> params = CreateTestUpdateResourcesParams(annotations);
-    // Set response to return OK for stub_->UpdateResources().
-    EXPECT_CALL(*m_stub, UpdateResources).Times(1).WillOnce(testing::Return(grpc::Status::OK));
-    EXPECT_TRUE(m_sandboxerClient->UpdateResources(DUMMY_SANDBOX_ID, *params, err));
-    EXPECT_TRUE(err.Empty());
-}
-
-TEST_F(ControllerSandboxerClientTest, UpdateResourcesTestNullResources)
-{
-    Errors err;
-    google::protobuf::Map<std::string, std::string> annotations;
-    std::unique_ptr<sandbox::ControllerUpdateResourcesParams> params = CreateTestUpdateResourcesParams(annotations);
-    params->resources = nullptr;
-    // Stub should not be called
-    EXPECT_CALL(*m_stub, UpdateResources).Times(0);
-    EXPECT_FALSE(m_sandboxerClient->UpdateResources(DUMMY_SANDBOX_ID, *params, err));
-    EXPECT_THAT(err.GetCMessage(),
-                testing::HasSubstr("Failed to init update-resources request for sandboxer update-resources request"));
-}
-
-TEST_F(ControllerSandboxerClientTest, UpdateResourcesTestStatusNotOK)
-{
-    Errors err;
-    google::protobuf::Map<std::string, std::string> annotations;
-    std::unique_ptr<sandbox::ControllerUpdateResourcesParams> params = CreateTestUpdateResourcesParams(annotations);
-    EXPECT_CALL(*m_stub, UpdateResources).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED,
-                                                                                         "gRPC Abort")));
-    EXPECT_FALSE(m_sandboxerClient->UpdateResources(DUMMY_SANDBOX_ID, *params, err));
-    EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("gRPC Abort"));
+    auto apiSandbox = CreateTestUpdateApiSandbox();
+    auto fields = CreateTestFields();
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_update).Times(1).WillOnce(testing::Return(-1));
+    EXPECT_FALSE(m_sandboxerClient->Update(apiSandbox->get(), fields->get(), err));
 }
 
 /************* Unit tests for Platform *************/
+static std::unique_ptr<CStructWrapper<sandbox_platform_response>> GetMockSandboxPlatformResponse()
+{
+    sandbox_platform_response *reponse = nullptr;
+
+    auto reponse_wrapper = makeUniquePtrCStructWrapper<sandbox_platform_response>(free_sandbox_platform_response);
+    if (reponse_wrapper == nullptr) {
+        return nullptr;
+    }
+    reponse = reponse_wrapper->get();
+
+    reponse->os = util_strdup_s("linux");
+    reponse->architecture = util_strdup_s("amd64");
+    reponse->variant = util_strdup_s("ubuntu");
+
+    return reponse_wrapper;
+}
+
 TEST_F(ControllerSandboxerClientTest, PlatformTestSucceed)
 {
     Errors err;
     sandbox::ControllerPlatformInfo platformInfo;
-    std::unique_ptr<containerd::services::sandbox::v1::ControllerPlatformResponse> response = CreateTestPlatformResponse();
-    EXPECT_CALL(*m_stub, Platform).Times(1).WillOnce(testing::DoAll(testing::SetArgPointee<2>(*response),
-                                                                    testing::Return(grpc::Status::OK)));
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_platform).Times(1).WillOnce(testing::DoAll(testing::SetArgPointee<2>(*(GetMockSandboxPlatformResponse()->move())),
+                                                                    testing::Return(0)));
     EXPECT_TRUE(m_sandboxerClient->Platform(DUMMY_SANDBOX_ID, platformInfo, err));
     EXPECT_TRUE(err.Empty());
     EXPECT_EQ(platformInfo.os, "linux");
@@ -304,18 +225,16 @@ TEST_F(ControllerSandboxerClientTest, PlatformTestStatusNotOK)
 {
     Errors err;
     sandbox::ControllerPlatformInfo platformInfo;
-    EXPECT_CALL(*m_stub, Platform).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED,
-                                                                                  "gRPC Abort")));
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_platform).Times(1).WillOnce(testing::Return(-1));
     EXPECT_FALSE(m_sandboxerClient->Platform(DUMMY_SANDBOX_ID, platformInfo, err));
-    EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("gRPC Abort"));
 }
 
 /************* Unit tests for Stop *************/
 TEST_F(ControllerSandboxerClientTest, StopTestSucceed)
 {
     Errors err;
-    // Set response to return OK for stub_->Stop().
-    EXPECT_CALL(*m_stub, Stop).Times(1).WillOnce(testing::Return(grpc::Status::OK));
+    // Set response to return OK for sandbox_api_stop().
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_stop).Times(1).WillOnce(testing::Return(0));
     EXPECT_TRUE(m_sandboxerClient->Stop(DUMMY_SANDBOX_ID, 0, err));
     EXPECT_TRUE(err.Empty());
 }
@@ -323,19 +242,49 @@ TEST_F(ControllerSandboxerClientTest, StopTestSucceed)
 TEST_F(ControllerSandboxerClientTest, StopTestStatusNotOK)
 {
     Errors err;
-    EXPECT_CALL(*m_stub, Stop).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_stop).Times(1).WillOnce(testing::Return(-1));
     EXPECT_FALSE(m_sandboxerClient->Stop(DUMMY_SANDBOX_ID, 0, err));
-    EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("gRPC Abort"));
 }
 
 /************* Unit tests for Status *************/
+static std::unique_ptr<CStructWrapper<sandbox_status_response>> GetMockSandboxStatusResponse()
+{
+    sandbox_status_response *reponse = nullptr;
+
+    auto reponse_wrapper = makeUniquePtrCStructWrapper<sandbox_status_response>(free_sandbox_status_response);
+    if (reponse_wrapper == nullptr) {
+        return nullptr;
+    }
+    reponse = reponse_wrapper->get();
+
+    reponse->sandbox_id = util_strdup_s(DUMMY_SANDBOX_ID.c_str());
+    reponse->pid = 1;
+    reponse->state = util_strdup_s("running");
+    reponse->info = GetMockLabels()->move();
+    if (reponse->info == nullptr) {
+        return nullptr;
+    }
+    reponse->created_at = DUMMY_CREATE_AT;
+    reponse->exited_at = DUMMY_CREATE_AT;
+    reponse->extra = (defs_any *)util_common_calloc_s(sizeof(defs_any));
+    if (reponse->extra == nullptr) {
+        return nullptr;
+    }
+    reponse->extra->value = (uint8_t*)util_strdup_s("{extra: test}");
+    reponse->extra->value_len = 13;
+    reponse->address = util_strdup_s(DUMMY_TASK_ADDRESS.c_str());
+    reponse->version = 0;
+
+    return reponse_wrapper;
+}
+
 TEST_F(ControllerSandboxerClientTest, StatusTestSucceed)
 {
     Errors err;
     sandbox::ControllerSandboxStatus sandboxStatus;
-    std::unique_ptr<containerd::services::sandbox::v1::ControllerStatusResponse> response = CreateTestStatusResponse();
-    EXPECT_CALL(*m_stub, Status).Times(1).WillOnce(testing::DoAll(testing::SetArgPointee<2>(*response),
-                                                                  testing::Return(grpc::Status::OK)));
+
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_status).Times(1).WillOnce(testing::DoAll(testing::SetArgPointee<2>(*(GetMockSandboxStatusResponse()->move())),
+                                                                  testing::Return(0)));
     EXPECT_TRUE(m_sandboxerClient->Status(DUMMY_SANDBOX_ID, false, sandboxStatus, err));
     EXPECT_TRUE(err.Empty());
     EXPECT_EQ(sandboxStatus.id, DUMMY_SANDBOX_ID);
@@ -345,7 +294,7 @@ TEST_F(ControllerSandboxerClientTest, StatusTestSucceed)
     EXPECT_EQ(sandboxStatus.createdAt, DUMMY_CREATE_AT);
     EXPECT_EQ(sandboxStatus.exitedAt, DUMMY_CREATE_AT);
     EXPECT_EQ(sandboxStatus.info.size(), 1);
-    EXPECT_EQ(sandboxStatus.info["info1"], "value1");
+    EXPECT_EQ(sandboxStatus.info["label1"], "value1");
     EXPECT_EQ(sandboxStatus.extra, "{extra: test}");
 }
 
@@ -353,17 +302,16 @@ TEST_F(ControllerSandboxerClientTest, StatusTestStatusNotOK)
 {
     Errors err;
     sandbox::ControllerSandboxStatus sandboxStatus;
-    EXPECT_CALL(*m_stub, Status).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED, "gRPC Abort")));
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_status).Times(1).WillOnce(testing::Return(-1));
     EXPECT_FALSE(m_sandboxerClient->Status(DUMMY_SANDBOX_ID, false, sandboxStatus, err));
-    EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("gRPC Abort"));
 }
 
 /************* Unit tests for Shutdown *************/
 TEST_F(ControllerSandboxerClientTest, ShutdownTestSucceed)
 {
     Errors err;
-    // Set response to return OK for stub_->Shutdown().
-    EXPECT_CALL(*m_stub, Shutdown).Times(1).WillOnce(testing::Return(grpc::Status::OK));
+    // Set response to return OK for sandbox_api_shutdown().
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_shutdown).Times(1).WillOnce(testing::Return(0));
     EXPECT_TRUE(m_sandboxerClient->Shutdown(DUMMY_SANDBOX_ID, err));
     EXPECT_TRUE(err.Empty());
 }
@@ -371,8 +319,6 @@ TEST_F(ControllerSandboxerClientTest, ShutdownTestSucceed)
 TEST_F(ControllerSandboxerClientTest, ShutdownTestStatusNotOK)
 {
     Errors err;
-    EXPECT_CALL(*m_stub, Shutdown).Times(1).WillOnce(testing::Return(grpc::Status(grpc::StatusCode::ABORTED,
-                                                                                  "gRPC Abort")));
+    EXPECT_CALL(*m_rustSandboxApiMock, sandbox_api_shutdown).Times(1).WillOnce(testing::Return(-1));
     EXPECT_FALSE(m_sandboxerClient->Shutdown(DUMMY_SANDBOX_ID, err));
-    EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("gRPC Abort"));
 }

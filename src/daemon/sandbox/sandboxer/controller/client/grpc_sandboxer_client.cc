@@ -92,7 +92,6 @@ auto SandboxerClient::InitCreateRequest(sandbox_create_request &request,
     (void)memcpy(request.options->value, encoded.c_str(), encoded.size());
     request.options->value_len = encoded.size();
     request.netns_path = util_strdup_s(params.netNSPath.c_str());
-    sandbox_mount **mounts = NULL;
     size_t mounts_len = params.mounts.size();
     if (mounts_len > 0) {
         request.rootfs = (sandbox_mount**)util_common_calloc_s(mounts_len * sizeof(sandbox_mount *));
@@ -112,7 +111,7 @@ auto SandboxerClient::InitCreateRequest(sandbox_create_request &request,
                     free(m);
                     return false;
                 }
-                mounts[request.rootfs_len++] = m;
+                request.rootfs[request.rootfs_len++] = m;
                 m = NULL;
             }
         }

@@ -39,13 +39,6 @@ bool ShimController::Init(Errors &error)
     return true;
 }
 
-void ShimController::Destroy()
-{
-    if (g_shim_controller_mock != nullptr) {
-        g_shim_controller_mock->Destroy();
-    }
-}
-
 bool ShimController::Create(const std::string &sandboxId,
                             const ControllerCreateParams &params,
                             Errors &error)
@@ -72,33 +65,10 @@ std::unique_ptr<ControllerPlatformInfo> ShimController::Platform(const std::stri
     return nullptr;
 }
 
-std::string ShimController::Prepare(const std::string &sandboxId,
-                                    const ControllerPrepareParams &params,
-                                    Errors &error)
+bool ShimController::Update(sandbox_sandbox *apiSandbox,
+                            string_array *fields, Errors &error)
 {
-    if (g_shim_controller_mock != nullptr) {
-        return g_shim_controller_mock->Prepare(sandboxId, params, error);
-    }
-    return "";
-}
-
-bool ShimController::Purge(const std::string &sandboxId, const std::string &containerId,
-                           const std::string &execId, Errors &error)
-{
-    if (g_shim_controller_mock != nullptr) {
-        return g_shim_controller_mock->Purge(sandboxId, containerId, execId, error);
-    }
-    return true;
-}
-
-bool ShimController::UpdateResources(const std::string &sandboxId,
-                                     const ControllerUpdateResourcesParams &params,
-                                     Errors &error)
-{
-    if (g_shim_controller_mock != nullptr) {
-        return g_shim_controller_mock->UpdateResources(sandboxId, params, error);
-    }
-    return true;
+    return g_shim_controller_mock->Update(apiSandbox, fields, error);
 }
 
 bool ShimController::Stop(const std::string &sandboxId, uint32_t timeoutSecs, Errors &error)

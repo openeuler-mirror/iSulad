@@ -10,23 +10,23 @@
  * See the Mulan PSL v2 for more details.
  * Author: jikai
  * Create: 2023-10-20
- * Description: provide shim controller mock
+ * Description: provide sandboxer controller mock
  ******************************************************************************/
 
-#ifndef _ISULAD_TEST_MOCKS_SHIM_CONTROLLER_MOCK_H
-#define _ISULAD_TEST_MOCKS_SHIM_CONTROLLER_MOCK_H
+#ifndef _ISULAD_TEST_MOCKS_SANDBOXER_CONTROLLER_MOCK_H
+#define _ISULAD_TEST_MOCKS_SANDBOXER_CONTROLLER_MOCK_H
 
 #include <gmock/gmock.h>
 #include <memory>
 
-#include "shim_controller.h"
+#include "sandboxer_controller.h"
 
 namespace sandbox {
 
-class MockShimController {
+class MockSandboxerController {
 public:
-    MockShimController() = default;
-    virtual ~MockShimController() = default;
+    MockSandboxerController() = default;
+    virtual ~MockSandboxerController() = default;
 
     MOCK_METHOD1(Init, bool(Errors &error));
     MOCK_METHOD3(Create, bool(const std::string &sandboxId,
@@ -45,7 +45,7 @@ public:
                                              Errors &error));
 };
 
-void MockShimController_SetMock(std::shared_ptr<MockShimController> mock);
+void MockSandboxerController_SetMock(std::shared_ptr<MockSandboxerController> mock);
 
 }
 

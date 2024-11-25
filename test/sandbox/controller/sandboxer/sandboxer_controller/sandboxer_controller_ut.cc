@@ -27,8 +27,6 @@ protected:
         m_contoller = std::move(std::unique_ptr<SandboxerController>(new SandboxerController(m_sandboxer, m_address)));
         m_sandboxerClientMock = std::make_shared<SandboxerClientMock>();
         MockSandboxerClient_SetMock(m_sandboxerClientMock);
-        EXPECT_CALL(*m_sandboxerClientMock, Init).Times(1);
-        m_contoller->Init(err);
     }
 
     void TearDown() override
@@ -119,61 +117,27 @@ TEST_F(SandboxerControllerTest, PlatformTestFailed)
     EXPECT_EQ(ret, nullptr);
 }
 
-/************* Unit tests for Prepare *************/
-TEST_F(SandboxerControllerTest, PrepareTestSucceed)
+/************* Unit tests for Update *************/
+TEST_F(SandboxerControllerTest, UpdateTestSucceed)
 {
     Errors err;
-    std::string bundle = "/tmp/bundle";
-    // Set response to return sandbox_id, and return OK for stub_->Prepare().
-    EXPECT_CALL(*m_sandboxerClientMock, Prepare).Times(1).WillOnce(testing::DoAll(testing::SetArgReferee<2>(bundle),
-                                                                                  testing::Return(true)));
-    std::string ret = m_contoller->Prepare(DUMMY_SANDBOX_ID, *CreateTestPrepareParams(), err);
-    EXPECT_EQ(ret, bundle);
+    auto apiSandbox = CreateTestUpdateApiSandbox();
+    auto fields = CreateTestFields();
+
+    // return OK for stub_->Update().
+    EXPECT_CALL(*m_sandboxerClientMock, Update).Times(1).WillOnce(testing::DoAll(testing::Return(true)));
+    EXPECT_TRUE(m_contoller->Update(apiSandbox->get(), fields->get(), err));
 }
 
-TEST_F(SandboxerControllerTest, PrepareTestFailed)
+TEST_F(SandboxerControllerTest, UpdateTestFailed)
 {
     Errors err;
-    // Set response to return sandbox_id, and return OK for stub_->Prepare().
-    EXPECT_CALL(*m_sandboxerClientMock, Prepare).Times(1).WillOnce(testing::Return(false));
-    std::string ret = m_contoller->Prepare(DUMMY_SANDBOX_ID, *CreateTestPrepareParams(), err);
-    EXPECT_EQ(ret, "");
-}
+    auto apiSandbox = CreateTestUpdateApiSandbox();
+    auto fields = CreateTestFields();
 
-/************* Unit tests for Purge *************/
-TEST_F(SandboxerControllerTest, PurgeTestSucceed)
-{
-    Errors err;
-    // Set response to return sandbox_id, and return OK for stub_->Purge().
-    EXPECT_CALL(*m_sandboxerClientMock, Purge).Times(1).WillOnce(testing::Return(true));
-    EXPECT_TRUE(m_contoller->Purge(DUMMY_SANDBOX_ID, DUMMY_CONTAINER_ID, DUMMY_EXEC_ID, err));
-}
-
-TEST_F(SandboxerControllerTest, PurgeTestFailed)
-{
-    Errors err;
-    // Set response to return sandbox_id, and return OK for stub_->Purge().
-    EXPECT_CALL(*m_sandboxerClientMock, Purge).Times(1).WillOnce(testing::Return(false));
-    EXPECT_FALSE(m_contoller->Purge(DUMMY_SANDBOX_ID, DUMMY_CONTAINER_ID, DUMMY_EXEC_ID, err));
-}
-
-/************* Unit tests for UpdateResources *************/
-TEST_F(SandboxerControllerTest, UpdateResourcesTestSucceed)
-{
-    Errors err;
-    google::protobuf::Map<std::string, std::string> annotations;
-    // Set response to return sandbox_id, and return OK for stub_->UpdateResources().
-    EXPECT_CALL(*m_sandboxerClientMock, UpdateResources).Times(1).WillOnce(testing::Return(true));
-    EXPECT_TRUE(m_contoller->UpdateResources(DUMMY_SANDBOX_ID, *CreateTestUpdateResourcesParams(annotations), err));
-}
-
-TEST_F(SandboxerControllerTest, UpdateResourcesTestFailed)
-{
-    Errors err;
-    google::protobuf::Map<std::string, std::string> annotations;
-    // Set response to return sandbox_id, and return OK for stub_->UpdateResources().
-    EXPECT_CALL(*m_sandboxerClientMock, UpdateResources).Times(1).WillOnce(testing::Return(false));
-    EXPECT_FALSE(m_contoller->UpdateResources(DUMMY_SANDBOX_ID, *CreateTestUpdateResourcesParams(annotations), err));
+    // return OK for stub_->Update().
+    EXPECT_CALL(*m_sandboxerClientMock, Update).Times(1).WillOnce(testing::Return(false));
+    EXPECT_FALSE(m_contoller->Update(apiSandbox->get(), fields->get(), err)); 
 }
 
 /************* Unit tests for Stop *************/
