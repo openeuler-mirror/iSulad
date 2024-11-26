@@ -56,6 +56,7 @@
 #include "utils_file.h"
 #include "console.h"
 #include "shim_constants.h"
+#include "runtime_common.h"
 
 #define SHIM_BINARY "isulad-shim"
 #define RESIZE_FIFO_NAME "resize_fifo"
@@ -1393,14 +1394,6 @@ int rt_isula_rm(const char *id, const char *runtime, const rt_rm_params_t *param
     return 0;
 }
 
-static bool fg_exec(const rt_exec_params_t *params)
-{
-    if (params->console_fifos[0] != NULL || params->console_fifos[1] != NULL || params->console_fifos[2] != NULL) {
-        return true;
-    }
-    return false;
-}
-
 static char *try_generate_random_id()
 {
     char *id = NULL;
@@ -1536,7 +1529,7 @@ int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *p
         }
     }
 
-    args.fg = fg_exec(params);
+    args.fg = rt_fg_exec(params);
     args.id = id;
     args.workdir = workdir;
     args.bundle = bundle;
