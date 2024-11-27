@@ -141,13 +141,14 @@ public:
     void Status(runtime::v1::PodSandboxStatus &status);
 
     // for sandbox api update
-    virtual void LoadSandboxTasks() = 0;
-    virtual auto SaveSandboxTasks() -> bool = 0;
-    virtual auto AddSandboxTasks(sandbox_task *task) -> bool = 0;
-    virtual auto GetAnySandboxTasks() -> std::string = 0;
-    virtual void DeleteSandboxTasks(const char *containerId) = 0;
-    virtual auto AddSandboxTasksProcess(const char *containerId, sandbox_process *processes) -> bool = 0;
-    virtual void DeleteSandboxTasksProcess(const char *containerId, const char *execId) = 0;
+    virtual void LoadSandboxTasks();
+    virtual auto PrepareContainer(const char *containerId, const char *baseFs,
+                                  const oci_runtime_spec *ociSpec,
+                                  const char *consoleFifos[]) -> int;
+    virtual auto PrepareExec(const char *containerId, const char *execId,
+                             defs_process *processSpec, const char *consoleFifos[]) -> int;
+    virtual auto PurgeContainer(const char *containerId) -> int;
+    virtual auto PurgeExec(const char *containerId, const char *execId) -> int;
 
 private:
     auto SaveState(Errors &error) -> bool;

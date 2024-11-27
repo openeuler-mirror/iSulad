@@ -27,7 +27,6 @@
 #ifdef ENABLE_SANDBOXER
 #include "sandboxer_sandbox.h"
 #endif
-#include "shim_sandbox.h"
 #include "isulad_config.h"
 #include "utils_verify.h"
 #include "utils_file.h"
@@ -116,12 +115,12 @@ auto SandboxManager::CreateSandbox(const std::string &name, RuntimeInfo &info, s
 
 #ifdef ENABLE_SANDBOXER
     if (info.sandboxer == SHIM_CONTROLLER_NAME) {
-        sandbox = std::make_shared<ShimSandbox>(id, m_rootdir, m_statedir, name, info, netMode, netNsPath, sandboxConfig, image);
+        sandbox = std::make_shared<Sandbox>(id, m_rootdir, m_statedir, name, info, netMode, netNsPath, sandboxConfig, image);
     } else {
         sandbox = std::make_shared<SandboxerSandbox>(id, m_rootdir, m_statedir, name, info, netMode, netNsPath, sandboxConfig, image);
     }
 #else
-    sandbox = std::make_shared<ShimSandbox>(id, m_rootdir, m_statedir, name, info, netMode, netNsPath, sandboxConfig, image);
+    sandbox = std::make_shared<Sandbox>(id, m_rootdir, m_statedir, name, info, netMode, netNsPath, sandboxConfig, image);
 #endif
     if (sandbox == nullptr) {
         ERROR("Failed to malloc for sandbox: %s", name.c_str());
@@ -485,12 +484,12 @@ auto SandboxManager::LoadSandbox(std::string &id) -> std::shared_ptr<Sandbox>
 
 #ifdef ENABLE_SANDBOXER
     if (IsShimSandbox(id, m_rootdir)) {
-        sandbox = std::make_shared<ShimSandbox>(id, m_rootdir, m_statedir);
+        sandbox = std::make_shared<Sandbox>(id, m_rootdir, m_statedir);
     } else {
         sandbox = std::make_shared<SandboxerSandbox>(id, m_rootdir, m_statedir);
     }
 #else
-    sandbox = std::make_shared<ShimSandbox>(id, m_rootdir, m_statedir);
+    sandbox = std::make_shared<Sandbox>(id, m_rootdir, m_statedir);
 #endif
     if (sandbox == nullptr) {
         ERROR("Failed to malloc for sandboxes: %s", id.c_str());

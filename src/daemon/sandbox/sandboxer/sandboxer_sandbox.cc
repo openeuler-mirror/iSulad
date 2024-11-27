@@ -23,12 +23,20 @@
 
 #include <isula_libutils/log.h>
 #include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/sandbox_sandbox.h>
+#include <isula_libutils/defs_process.h>
 
 #include "utils_file.h"
 #include "utils.h"
 #include "cxxutils.h"
+#include "utils_timestamp.h"
+#include "utils_array.h"
 
 namespace sandbox {
+
+const std::string SANDBOX_EXTENSIONS_TASKS = "extensions.tasks";
+const std::string SANDBOX_TASKS_KEY = "tasks";
+const std::string SANDBOX_TASKS_TYPEURL = "github.com/containerd/containerd/Tasks";
 
 SandboxerSandbox::SandboxerSandbox(const std::string id, const std::string &rootdir, const std::string &statedir, const std::string name,
                  const RuntimeInfo info, std::string netMode, std::string netNsPath, const runtime::v1::PodSandboxConfig sandboxConfig,
@@ -249,6 +257,399 @@ void SandboxerSandbox::DeleteSandboxTasksProcess(const char *containerId, const 
         return;
     }
     iter->second->DeleteSandboxTasksProcess(execId);
+}
+
+static oci_runtime_spec *clone_oci_runtime_spec(const oci_runtime_spec *oci_spec)
+{
+    __isula_auto_free char *json_str = nullptr;
+    __isula_auto_free parser_error err = nullptr;
+    oci_runtime_spec *ret = nullptr;
+
+    json_str = oci_runtime_spec_generate_json(oci_spec, nullptr, &err);
+    if (json_str == nullptr) {
+        ERROR("Failed to generate spec json: %s", err);
+        return nullptr;
+    }
+    ret = oci_runtime_spec_parse_data(json_str, nullptr, &err);
+    if (ret == nullptr) {
+        ERROR("Failed to generate spec: %s", err);
+    }
+    return ret;
+}
+
+static defs_process *clone_defs_process(defs_process *process_spec)
+{
+    __isula_auto_free char *json_str = nullptr;
+    __isula_auto_free parser_error err = nullptr;
+    defs_process *ret = nullptr;
+
+    json_str = defs_process_generate_json(process_spec, nullptr, &err);
+    if (json_str == nullptr) {
+        ERROR("Failed to generate process spec json: %s", err);
+        return nullptr;
+    }
+    ret = defs_process_parse_data(json_str, nullptr, &err);
+    if (ret == nullptr) {
+        ERROR("Failed to generate process spec: %s", err);
+    }
+    return ret;
+}
+
+auto SandboxerSandbox::GenerateCtrlRootfs(sandbox_task *task, const char *baseFs) -> int
+{
+    size_t len = 1;
+    if (nullptr == baseFs) {
+        ERROR("Container %s has no base fs", task->task_id);
+        return -1;
+    }
+
+    // TODO: rootfs's options left to be configured
+    task->rootfs = (sandbox_mount **)util_smart_calloc_s(sizeof(sandbox_mount *), len);
+    if (task->rootfs == nullptr) {
+        ERROR("Out of memory.");
+        return -1;
+    }
+    task->rootfs[0] = (sandbox_mount *)util_common_calloc_s(sizeof(sandbox_mount));
+    if (task->rootfs[0] == nullptr) {
+        ERROR("Out of memory.");
+        return -1;
+    }
+    task->rootfs_len = len;
+    task->rootfs[0]->type = util_strdup_s(MOUNT_TYPE_BIND);
+    task->rootfs[0]->source = util_strdup_s(baseFs);
+
+    return 0;
+}
+
+auto SandboxerSandbox::InitSandboxRuntime() -> sandbox_sandbox_runtime *
+{
+    sandbox_sandbox_runtime *runtime = nullptr;
+
+    auto runtime_wrapper = makeUniquePtrCStructWrapper<sandbox_sandbox_runtime>(free_sandbox_sandbox_runtime);
+    if (runtime_wrapper == nullptr) {
+        ERROR("Out of memory");
+        return nullptr;
+    }
+    runtime = runtime_wrapper->get();
+    runtime->name = util_strdup_s(GetRuntime().c_str());
+    // Just ignore options for now
+
+    return runtime_wrapper->move();
+}
+
+auto SandboxerSandbox::InitSandboxLabels() -> json_map_string_string *
+{
+    json_map_string_string *labels = nullptr;
+
+    auto labels_wrapper = makeUniquePtrCStructWrapper<json_map_string_string>(free_json_map_string_string);
+    if (labels_wrapper == nullptr) {
+        ERROR("Out of memory");
+        return nullptr;
+    }
+    labels = labels_wrapper->get();
+    if (append_json_map_string_string(labels, "name", GetName().c_str()) != 0) {
+        ERROR("Out of memory");
+        return nullptr;
+    }
+    
+    return labels_wrapper->move();
+}
+
+auto SandboxerSandbox::InitSandboxExtensions() -> defs_map_string_object_any *
+{
+    defs_map_string_object_any *extensions = nullptr;
+    size_t len = 1;
+    std::string task_json;
+
+    auto extensions_wrapper = makeUniquePtrCStructWrapper<defs_map_string_object_any>(free_defs_map_string_object_any);
+    if (extensions_wrapper == nullptr) {
+        ERROR("Out of memory");
+        return nullptr;
+    }
+    extensions = extensions_wrapper->get();
+
+    extensions->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
+    if (extensions->keys == nullptr) {
+        ERROR("Out of memory.");
+        return nullptr;
+    }
+    extensions->values = (defs_map_string_object_any_element **)
+        util_smart_calloc_s(sizeof(defs_map_string_object_any_element *), len);
+    if (extensions->values == nullptr) {
+        ERROR("Out of memory.");
+        free(extensions->keys);
+        extensions->keys = nullptr;
+        return nullptr;
+    }
+    extensions->len = len;
+
+    extensions->values[0] = (defs_map_string_object_any_element *)
+        util_common_calloc_s(sizeof(defs_map_string_object_any_element));
+    if (extensions->values[0] == nullptr) {
+        ERROR("Out of memory.");
+        return nullptr;
+    }
+    extensions->values[0]->element = (defs_any *)util_common_calloc_s(sizeof(defs_any));
+    if (extensions->values[0]->element == nullptr) {
+        ERROR("Out of memory.");
+        return nullptr;
+    }
+
+    extensions->keys[0] = util_strdup_s(SANDBOX_TASKS_KEY.c_str());
+    task_json = GetAnySandboxTasks();
+    if (task_json.empty()) {
+        ERROR("Failed to get any sandbox tasks");
+        return nullptr;
+    }
+    DEBUG("Get any sandbox tasks %s", task_json.c_str());
+    extensions->values[0]->element->type_url = util_strdup_s(SANDBOX_TASKS_TYPEURL.c_str());
+    extensions->values[0]->element->value = reinterpret_cast<uint8_t *>(util_strdup_s(task_json.c_str()));
+    extensions->values[0]->element->value_len = strlen(task_json.c_str());
+    
+    return extensions_wrapper->move();
+}
+
+auto SandboxerSandbox::InitApiSandbox(sandbox_sandbox *apiSandbox) -> int
+{
+    apiSandbox->sandbox_id = util_strdup_s(GetId().c_str());
+    apiSandbox->runtime = InitSandboxRuntime();
+    if (apiSandbox->runtime == nullptr) {
+        ERROR("Failed to init sandbox runtime");
+        return -1;
+    }
+    // Just ignore spec
+    apiSandbox->labels = InitSandboxLabels();
+    if (apiSandbox->labels == nullptr) {
+        ERROR("Failed to init sandbox runtime");
+        return -1;
+    }
+    apiSandbox->created_at = GetCreatedAt();
+    apiSandbox->updated_at = util_get_now_time_nanos();
+    apiSandbox->extensions = InitSandboxExtensions();
+    if (apiSandbox->extensions == nullptr) {
+        ERROR("Failed to init sandbox runtime");
+        return -1;
+    }
+    apiSandbox->sandboxer = util_strdup_s(GetSandboxer().c_str());
+
+    return 0;
+}
+
+auto SandboxerSandbox::DoSandboxUpdate(sandbox_sandbox *apiSandbox) -> int
+{
+    Errors err;
+    size_t fields_len = 1;
+    __isula_auto_string_array_t string_array *fields = nullptr;
+
+    fields = util_string_array_new(fields_len);
+    if (fields == nullptr) {
+        ERROR("Out of memory.");
+        return -1;
+    }
+    if (util_append_string_array(fields, SANDBOX_EXTENSIONS_TASKS.c_str())) {
+        ERROR("Out of memory.");
+        return -1;
+    }
+
+    auto controller = sandbox::ControllerManager::GetInstance()->GetController(GetSandboxer());
+    if (nullptr == controller) {
+        ERROR("Invalid sandboxer name: %s", GetSandboxer().c_str());
+        return -1;
+    }
+
+    if (!controller->Update(apiSandbox, fields, err)) {
+        ERROR("Failed to update in container controller update: %s", err.GetCMessage());
+        return -1;
+    }
+
+    return 0;
+}
+
+auto SandboxerSandbox::PrepareContainer(const char *containerId, const char *baseFs,
+                                        const oci_runtime_spec *ociSpec,
+                                        const char *consoleFifos[]) -> int
+{
+    sandbox_task *task = nullptr;
+    sandbox_sandbox *apiSandbox = nullptr;
+
+    INFO("Prepare container for sandbox");
+
+    if (nullptr == consoleFifos) {
+        ERROR("Invlaid parameter: consoleFifos");
+        return -1;
+    }
+
+    auto apiSandbox_wrapper = makeUniquePtrCStructWrapper<sandbox_sandbox>(free_sandbox_sandbox);
+    if (apiSandbox_wrapper == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    apiSandbox = apiSandbox_wrapper->get();
+    auto task_wrapper = makeUniquePtrCStructWrapper<sandbox_task>(free_sandbox_task);
+    if (task_wrapper == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    task = task_wrapper->get();
+
+    task->task_id = util_strdup_s(containerId);
+    task->spec = clone_oci_runtime_spec(ociSpec);
+    if (task->spec == nullptr) {
+        ERROR("Out of memory.");
+        return -1;
+    }
+    if (GenerateCtrlRootfs(task, baseFs) != 0) {
+        ERROR("Invalid rootfs");
+        return -1;
+    }
+    task->stdin = util_strdup_s((nullptr == consoleFifos[0]) ? "" : consoleFifos[0]);
+    task->stdout = util_strdup_s((nullptr == consoleFifos[1]) ? "" : consoleFifos[1]);
+    task->stderr = util_strdup_s((nullptr == consoleFifos[2]) ? "" : consoleFifos[2]);
+
+    if (!AddSandboxTasks(task)) {
+        ERROR("Failed to add sandbox %s task.", containerId);
+        return -1;
+    }
+    task = task_wrapper->move();
+    if (InitApiSandbox(apiSandbox) != 0) {
+        ERROR("Failed to init %s api sandbox.", containerId);
+        goto del_out;
+    }
+    if (DoSandboxUpdate(apiSandbox) != 0) {
+        ERROR("Failed to update %s api sandbox.", containerId);
+        goto del_out;
+    }
+    if (!SaveSandboxTasks()) {
+        ERROR("Failed to Save %s sandbox tasks.", containerId);
+        (void)PurgeContainer(containerId);
+        return -1;
+    }
+    return 0;
+
+del_out:
+    DeleteSandboxTasks(containerId);
+    return -1;
+}   
+
+auto SandboxerSandbox::PrepareExec(const char *containerId, const char *execId,
+                                   defs_process *processSpec, const char *consoleFifos[]) -> int
+{
+    sandbox_process *process = nullptr;
+    sandbox_sandbox *apiSandbox = nullptr;
+
+    INFO("Prepare exec for container in sandbox");
+
+    if (nullptr == consoleFifos) {
+        ERROR("Invlaid parameter: consoleFifos");
+        return -1;
+    }
+
+    auto apiSandbox_wrapper = makeUniquePtrCStructWrapper<sandbox_sandbox>(free_sandbox_sandbox);
+    if (apiSandbox_wrapper == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    apiSandbox = apiSandbox_wrapper->get();
+    auto process_wrapper = makeUniquePtrCStructWrapper<sandbox_process>(free_sandbox_process);
+    if (process_wrapper == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    process = process_wrapper->get();
+
+    process->exec_id = util_strdup_s(execId);
+    process->spec = clone_defs_process(processSpec);
+    if (process->spec == nullptr) {
+        ERROR("Out of memory.");
+        return -1;
+    }
+    process->stdin = util_strdup_s((nullptr == consoleFifos[0]) ? "" : consoleFifos[0]);
+    process->stdout = util_strdup_s((nullptr == consoleFifos[1]) ? "" : consoleFifos[1]);
+    process->stderr = util_strdup_s((nullptr == consoleFifos[2]) ? "" : consoleFifos[2]);
+
+    if (!AddSandboxTasksProcess(containerId, process)) {
+        ERROR("Failed to add sandbox %s process.", containerId);
+        return -1;
+    }
+    process = process_wrapper->move();
+    if (InitApiSandbox(apiSandbox) != 0) {
+        ERROR("Failed to init %s api sandbox.", containerId);
+        goto del_out;
+    }
+    if (DoSandboxUpdate(apiSandbox) != 0) {
+        ERROR("Failed to init %s api sandbox.", containerId);
+        goto del_out;
+    }
+    if (!SaveSandboxTasks()) {
+        ERROR("Failed to Save %s sandbox tasks.", containerId);
+        (void)PurgeExec(containerId, execId);
+        return -1;
+    }
+    return 0;
+
+del_out:
+    DeleteSandboxTasksProcess(containerId, execId);
+    return -1;
+}   
+
+auto SandboxerSandbox::PurgeContainer(const char *containerId) -> int
+{
+    sandbox_sandbox *apiSandbox = nullptr;
+
+    INFO("Purge container for sandbox");
+
+    auto apiSandbox_wrapper = makeUniquePtrCStructWrapper<sandbox_sandbox>(free_sandbox_sandbox);
+    if (apiSandbox_wrapper == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    apiSandbox = apiSandbox_wrapper->get();
+
+    DeleteSandboxTasks(containerId);
+
+    if (InitApiSandbox(apiSandbox) != 0) {
+        ERROR("Failed to init %s api sandbox.", containerId);
+        return -1;
+    }
+    if (DoSandboxUpdate(apiSandbox) != 0) {
+        ERROR("Failed to update %s api sandbox.", containerId);
+        return -1;
+    }
+    if (!SaveSandboxTasks()) {
+        ERROR("Failed to Save %s sandbox tasks.", containerId);
+        return -1;
+    }
+    return 0;
+}
+
+auto SandboxerSandbox::PurgeExec(const char *containerId, const char *execId) -> int
+{
+    sandbox_sandbox *apiSandbox = nullptr;
+
+    INFO("Purge exec for container in sandbox");
+
+    auto apiSandbox_wrapper = makeUniquePtrCStructWrapper<sandbox_sandbox>(free_sandbox_sandbox);
+    if (apiSandbox_wrapper == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    apiSandbox = apiSandbox_wrapper->get();
+
+    DeleteSandboxTasksProcess(containerId, execId);
+
+    if (InitApiSandbox(apiSandbox) != 0) {
+        ERROR("Failed to init %s api sandbox.", execId);
+        return -1;
+    }
+    if (DoSandboxUpdate(apiSandbox) != 0) {
+        ERROR("Failed to update %s api sandbox.", execId);
+        return -1;
+    }
+    if (!SaveSandboxTasks()) {
+        ERROR("Failed to Save %s sandbox tasks.", containerId);
+        return -1;
+    }
+    return 0;
 }
 
 }
