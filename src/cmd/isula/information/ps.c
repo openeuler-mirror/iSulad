@@ -332,7 +332,7 @@ static void print_basic_container_info_item(const struct isula_container_summary
     } else if (strcmp(name, "Created") == 0) {
         print_created_field(in->created, length->created_length);
     } else if (strcmp(name, "Ports") == 0) {
-        const char *ports = (in->ports != NULL ? in->ports : "N/A");
+        const char *ports = (in->ports != NULL ? in->ports : "     ");
         printf("%-*s", (int)length->ports_length, ports);
     }
 }
