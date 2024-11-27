@@ -786,8 +786,8 @@ static int shielded_output_check(const char *output, const char *workdir)
         return 0;
     }
 
-    if (sizeof(chdir_pattern) > PATH_MAX - strlen("chdir ") - strlen(" failed")) {
-        INFO("chdir_pattern is too long");
+    if (strlen(workdir) > PATH_MAX - strlen("chdir ") - strlen(" failed")) {
+        INFO("workdir is too long");
         return -1;
     }
 
