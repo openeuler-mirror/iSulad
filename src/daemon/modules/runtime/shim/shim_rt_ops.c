@@ -36,6 +36,7 @@
 #include "shim_rt_monitor.h"
 #include "supervisor.h"
 #include "isulad_config.h"
+#include "runtime_common.h"
 
 #define EXIT_SIGNAL_OFFSET_X 128
 
@@ -589,7 +590,8 @@ int rt_shim_exec(const char *id, const char *runtime, const rt_exec_params_t *pa
         goto out;
     }
 
-    if (shim_v2_wait(id, params->suffix, exit_code) != 0) {
+    if (rt_fg_exec(params) &&
+        shim_v2_wait(id, params->suffix, exit_code) != 0) {
         ERROR("%s: failed to wait exec process", id);
         ret = -1;
         goto out;
