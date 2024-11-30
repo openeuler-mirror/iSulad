@@ -58,6 +58,15 @@ public:
     MOCK_METHOD2(Stop, bool(uint32_t timeoutSecs, Errors &error));
     MOCK_METHOD1(Remove, bool(Errors &error));
     MOCK_METHOD1(Status, void(runtime::v1::PodSandboxStatus &status));
+
+    MOCK_METHOD0(LoadSandboxTasks, void());
+    MOCK_METHOD4(PrepareContainer, int(const char *containerId, const char *baseFs,
+                                       const oci_runtime_spec *ociSpec,
+                                       const char *consoleFifos[]));
+    MOCK_METHOD4(PrepareExec, int(const char *containerId, const char *execId,
+                                  defs_process *processSpec, const char *consoleFifos[]));
+    MOCK_METHOD1(PurgeContainer, int(const char *containerId));
+    MOCK_METHOD2(PurgeExec, int(const char *containerId, const char *execId));
 };
 
 void MockSandbox_SetMock(MockSandbox *mock);

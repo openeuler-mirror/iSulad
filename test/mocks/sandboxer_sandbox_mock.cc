@@ -33,40 +33,39 @@ void MockSandboxerSandbox_SetMock(MockSandboxerSandbox *mock)
 
 void SandboxerSandbox::LoadSandboxTasks() {}
 
-auto SandboxerSandbox::SaveSandboxTasks() -> bool
+auto SandboxerSandbox::PrepareContainer(const char *containerId, const char *baseFs,
+                               const oci_runtime_spec *ociSpec,
+                               const char *consoleFifos[]) -> int
 {
     if (g_sandboxer_sandbox_mock != nullptr) {
-        return g_sandboxer_sandbox_mock->SaveSandboxTasks();
+        return g_sandboxer_sandbox_mock->PrepareContainer(containerId, baseFs, ociSpec, consoleFifos);
     }
-    return true;
-}
+    return 0;
+}   
 
-auto SandboxerSandbox::AddSandboxTasks(sandbox_task *task) -> bool
+auto SandboxerSandbox::PrepareExec(const char *containerId, const char *execId,
+                          defs_process *processSpec, const char *consoleFifos[]) -> int
 {
     if (g_sandboxer_sandbox_mock != nullptr) {
-        return g_sandboxer_sandbox_mock->AddSandboxTasks(task);
+        return g_sandboxer_sandbox_mock->PrepareExec(containerId, execId, processSpec, consoleFifos);
     }
-    return true;
-}
+    return 0;
+}   
 
-auto SandboxerSandbox::GetAnySandboxTasks() -> std::string
+auto SandboxerSandbox::PurgeContainer(const char *containerId) -> int
 {
     if (g_sandboxer_sandbox_mock != nullptr) {
-        return g_sandboxer_sandbox_mock->GetAnySandboxTasks();
+        return g_sandboxer_sandbox_mock->PurgeContainer(containerId);
     }
-    return std::string("Nothing for sandboxer.");
+    return 0;
 }
 
-void SandboxerSandbox::DeleteSandboxTasks(const char *containerId) {}
-
-auto SandboxerSandbox::AddSandboxTasksProcess(const char *containerId, sandbox_process *processes) -> bool
+auto SandboxerSandbox::PurgeExec(const char *containerId, const char *execId) -> int
 {
     if (g_sandboxer_sandbox_mock != nullptr) {
-        return g_sandboxer_sandbox_mock->AddSandboxTasksProcess(containerId, processes);
+        return g_sandboxer_sandbox_mock->PurgeExec(containerId, execId);
     }
-   return true;
+    return 0;
 }
-
-void SandboxerSandbox::DeleteSandboxTasksProcess(const char *containerId, const char *execId) {}
 
 }

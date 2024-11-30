@@ -28,12 +28,13 @@ public:
     virtual ~MockSandboxerSandbox() = default;
 
     MOCK_METHOD0(LoadSandboxTasks, void());
-    MOCK_METHOD0(SaveSandboxTasks, bool());
-    MOCK_METHOD1(AddSandboxTasks, bool(sandbox_task *task));
-    MOCK_METHOD0(GetAnySandboxTasks, std::string());
-    MOCK_METHOD1(DeleteSandboxTasks, void(const char *containerId));
-    MOCK_METHOD2(AddSandboxTasksProcess, bool(const char *containerId, sandbox_process *processes));
-    MOCK_METHOD2(DeleteSandboxTasksProcess, void(const char *containerId, const char *execId));
+    MOCK_METHOD4(PrepareContainer, int(const char *containerId, const char *baseFs,
+                                       const oci_runtime_spec *ociSpec,
+                                       const char *consoleFifos[]));
+    MOCK_METHOD4(PrepareExec, int(const char *containerId, const char *execId,
+                                  defs_process *processSpec, const char *consoleFifos[]));
+    MOCK_METHOD1(PurgeContainer, int(const char *containerId));
+    MOCK_METHOD2(PurgeExec, int(const char *containerId, const char *execId));
 };
 
 void MockSandboxerSandbox_SetMock(MockSandboxerSandbox *mock);
