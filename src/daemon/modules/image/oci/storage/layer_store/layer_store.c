@@ -19,6 +19,11 @@
 #include <stdio.h>
 #include <limits.h>
 #include <dirent.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+
 #include <isula_libutils/container_inspect.h>
 #include <isula_libutils/storage_layer.h>
 #include <isula_libutils/storage_mount_point.h>
@@ -26,10 +31,6 @@
 #include <isula_libutils/log.h>
 #include <isula_libutils/storage_entry.h>
 #include <isula_libutils/go_crc64.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
 
 #include "util_archive.h"
 #include "storage.h"
@@ -1709,7 +1710,7 @@ static int load_layers_from_json_files()
     }
 
     ret = 0;
-    goto unlock_out;
+
 unlock_out:
     layer_store_unlock();
     return ret;

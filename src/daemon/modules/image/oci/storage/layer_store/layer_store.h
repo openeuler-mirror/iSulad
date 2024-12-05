@@ -16,10 +16,11 @@
 #define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_LAYER_STORE_H
 
 #include <stdint.h>
-#include <isula_libutils/imagetool_fs_info.h>
-#include <isula_libutils/json_common.h>
 #include <stdbool.h>
 #include <stddef.h>
+
+#include <isula_libutils/imagetool_fs_info.h>
+#include <isula_libutils/json_common.h>
 
 #include "storage.h"
 #include "io_wrapper.h"

@@ -15,16 +15,17 @@
 
 #include "layer.h"
 
-#include <isula_libutils/json_common.h>
-#include <isula_libutils/storage_layer.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/storage_layer.h>
+#include <isula_libutils/storage_mount_point.h>
+#include <isula_libutils/log.h>
+
 #include "constants.h"
-#include "isula_libutils/storage_mount_point.h"
 #include "util_atomic.h"
 #include "utils.h"
-#include "isula_libutils/log.h"
 #include "utils_file.h"
 
 void free_layer_t(layer_t *ptr)
