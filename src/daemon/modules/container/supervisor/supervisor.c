@@ -328,7 +328,6 @@ int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const p
 
     if (pid_info == NULL || cont == NULL || cont->common_config == NULL) {
         ERROR("Invalid input arguments");
-        close(fd);
         return -1;
     }
 
@@ -336,7 +335,6 @@ int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const p
     cgroup_path = merge_container_cgroups_path(cont->common_config->id, cont->hostconfig);
     if (cgroup_path == NULL) {
         ERROR("Failed to get cgroup path");
-        close(fd);
         return -1;
     }
 #endif
@@ -344,7 +342,6 @@ int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const p
     data = util_common_calloc_s(sizeof(struct supervisor_handler_data));
     if (data == NULL) {
         ERROR("Memory out");
-        close(fd);
         return -1;
     }
 
@@ -385,6 +382,7 @@ int container_supervisor_add_exit_monitor(int fd, const char *exit_fifo, const p
     goto out;
 
 err:
+    data->fd = -1;
     supervisor_handler_data_free(data);
 #ifdef ENABLE_OOM_MONITOR
     common_free_cgroup_oom_handler_info(oom_handler_info);

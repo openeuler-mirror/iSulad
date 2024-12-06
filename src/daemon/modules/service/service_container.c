@@ -283,7 +283,6 @@ static int do_post_start_on_success(container_t *cont, int exit_fifo_fd,
 {
     int ret = 0;
 
-    // exit_fifo_fd was closed in container_supervisor_add_exit_monitor
     if (container_supervisor_add_exit_monitor(exit_fifo_fd, exit_fifo, pid_info, cont)) {
         ERROR("Failed to add exit monitor to supervisor");
         ret = -1;
@@ -936,7 +935,11 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
 
     if (runtime_create(id, runtime, &create_params) != 0) {
         ret = -1;
+#ifdef ENABLE_CRI_API_V1
+        goto clean_prepare_container;
+#else
         goto close_exit_fd;
+#endif
     }
 
     start_params.rootpath = cont->root_path;
@@ -959,19 +962,33 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         if (do_post_start_on_success(cont, exit_fifo_fd, exit_fifo, pid_info) != 0) {
             ERROR("Failed to do post start on runtime start success");
             ret = -1;
-            goto clean_resources;
+#ifdef ENABLE_CRI_API_V1
+            goto clean_prepare_container;
+#else
+            goto close_exit_fd;
+#endif
         }
     } else {
         // wait monitor cleanup cgroup and processes finished
         wait_exit_fifo(id, exit_fifo_fd);
+#ifdef ENABLE_CRI_API_V1
+        goto clean_prepare_container;
+#else
         goto close_exit_fd;
+#endif
     }
     goto out;
 
+#ifdef ENABLE_CRI_API_V1
+clean_prepare_container:
+    if (cont->common_config->sandbox_info != NULL &&
+        sandbox_purge_container(cont->common_config) != 0) {
+        ERROR("Failed to remove container %s from sandbox", id);
+    }
+#endif
+
 close_exit_fd:
     close(exit_fifo_fd);
-
-clean_resources:
     clean_resources_on_failure(cont, engine_log_path, loglevel);
 
 out:
