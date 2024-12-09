@@ -269,12 +269,21 @@ TEST_F(StorageImagesCompatibilityUnitTest, test_load_v1_image)
     EXPECT_CALL(m_storage_mock, FreeLayerList(_)).WillRepeatedly(Invoke(invokeFreeLayerList));
     opts.storage_root = strdup(store_real_path);
     opts.driver_name = strdup("overlay");
+
+    std::string converted_image_id { "597fa49c3dbc5dd1e84120dd1906b65223afd479a7e094c085b580060c0fccec" };
+    ASSERT_FALSE(image_store_exists(converted_image_id.c_str())); // before init must false
+    ASSERT_EQ(image_store_delete(converted_image_id.c_str()), -1); // before init must false
+
     ASSERT_EQ(image_store_init(&opts), 0);
+    // init twice will go to errror branch "Image store has already been initialized"
+    ASSERT_EQ(image_store_init(&opts), -1);
     free(opts.storage_root);
     free(opts.driver_name);
-    std::string converted_image_id { "597fa49c3dbc5dd1e84120dd1906b65223afd479a7e094c085b580060c0fccec" };
     ASSERT_TRUE(image_store_exists(converted_image_id.c_str()));
+    const char* null_id = NULL;
+    ASSERT_FALSE(image_store_exists(null_id));
     ASSERT_EQ(image_store_delete(converted_image_id.c_str()), 0);
+    ASSERT_EQ(image_store_delete(null_id), -1);
 }
 
 class StorageImagesUnitTest : public testing::Test {
@@ -320,6 +329,8 @@ protected:
 
 TEST_F(StorageImagesUnitTest, test_images_load)
 {
+    const char* null_id = NULL;
+    ASSERT_EQ(image_store_get_image(null_id), nullptr);
     auto image = image_store_get_image(ids.at(0).c_str());
     ASSERT_NE(image, nullptr);
 
@@ -345,10 +356,16 @@ TEST_F(StorageImagesUnitTest, test_images_load)
 
     char **names { nullptr };
     size_t names_len { 0 };
+
+    ASSERT_EQ(image_store_big_data_names(null_id, &names, &names_len), -1);
     ASSERT_EQ(image_store_big_data_names(ids.at(0).c_str(), &names, &names_len), 0);
     ASSERT_EQ(names_len, 2);
     ASSERT_STREQ(names[0], "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10");
     ASSERT_STREQ(names[1], "manifest");
+
+    const char* null_name = NULL;
+    ASSERT_EQ(image_store_big_data_size(null_id, names[0]), -1);
+    ASSERT_EQ(image_store_big_data_size(ids.at(0).c_str(), null_name), -1);
 
     ASSERT_EQ(image_store_big_data_size(ids.at(0).c_str(), names[0]), 2235);
     ASSERT_EQ(image_store_big_data_size(ids.at(0).c_str(), names[1]), 741);
@@ -418,7 +435,11 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     std::cout << buffer << std::endl;
 
     std::string key = "sha256:" + std::string(created_image);
+    const char* null_key = NULL;
     ASSERT_EQ(image_store_set_big_data(created_image, key.c_str(), buffer.c_str()), 0);
+    ASSERT_EQ(image_store_set_big_data(created_image, null_key, buffer.c_str()), -1);
+    const char* null_id = NULL;
+    ASSERT_EQ(image_store_set_big_data(null_id, key.c_str(), buffer.c_str()), -1);
 
     std::string img_store_path = std::string(store_real_path) + "/overlay-images/";
     ASSERT_TRUE(dirExists((img_store_path + id).c_str()));
@@ -440,10 +461,13 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     std::cout << "manifest :" << std::endl;
     std::cout << manifest_content << std::endl;
 
+    ASSERT_EQ(image_store_big_data(null_id, "manifest"), nullptr);
+    ASSERT_EQ(image_store_big_data(id.c_str(), null_key), nullptr);
     char *data = image_store_big_data(id.c_str(), "manifest");
     ASSERT_STREQ(data, manifest_content.c_str());
     free(data);
 
+    ASSERT_EQ(image_store_get_image(null_id), nullptr);
     auto image = image_store_get_image(id.c_str());
     ASSERT_NE(image, nullptr);
     ASSERT_NE(image->created, nullptr);
@@ -476,16 +500,19 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     free_imagetool_image(image);
 
     char *toplayer = nullptr;
+    ASSERT_EQ(image_store_top_layer(null_id), nullptr);
     ASSERT_STREQ((toplayer = image_store_top_layer(id.c_str())),
                  "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
     free(toplayer);
 
+    ASSERT_EQ(image_store_set_image_size(null_id, 1000), -1);
     ASSERT_EQ(image_store_set_image_size(id.c_str(), 1000), 0);
 
     image = image_store_get_image(id.c_str());
     ASSERT_EQ(image->size, 1000);
     free_imagetool_image(image);
 
+    ASSERT_EQ(image_store_add_name(null_id, "isula.org/library/test:latest"), -1);
     ASSERT_EQ(image_store_add_name(id.c_str(), "isula.org/library/test:latest"), 0);
     image = image_store_get_image(id.c_str());
     ASSERT_EQ(image->repo_tags_len, 2);
@@ -497,6 +524,9 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     img_names = (char **)util_common_calloc_s(2 * sizeof(char *));
     img_names[0] = util_strdup_s("busybox:latest");
     img_names[1] = util_strdup_s("centos:3.0");
+    size_t names_len = 0;
+    ASSERT_EQ(image_store_set_names(null_id, (const char **)img_names, 2), -1);
+    ASSERT_EQ(image_store_set_names(id.c_str(), (const char **)img_names, names_len), -1);
     ASSERT_EQ(image_store_set_names(id.c_str(), (const char **)img_names, 2), 0);
     image = image_store_get_image(id.c_str());
     ASSERT_EQ(image->repo_tags_len, 2);
@@ -505,13 +535,17 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     util_free_array_by_len(img_names, 2);
     free_imagetool_image(image);
 
+    ASSERT_EQ(image_store_set_metadata(null_id, "{metadata}"), -1);
     ASSERT_EQ(image_store_set_metadata(id.c_str(), "{metadata}"), 0);
     char *manifest_val = nullptr;
+
+    ASSERT_EQ(image_store_metadata(null_id), nullptr);
     ASSERT_STREQ((manifest_val = image_store_metadata(id.c_str())), "{metadata}");
     free(manifest_val);
 
     free(created_image);
 
+    ASSERT_EQ(image_store_delete(null_id), -1);
     ASSERT_EQ(image_store_delete(id.c_str()), 0);
     ASSERT_EQ(image_store_get_image(id.c_str()), nullptr);
     ASSERT_FALSE(dirExists((img_store_path + id).c_str()));
@@ -530,6 +564,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     std::cout << cp_command << std::endl;
     ASSERT_EQ(system(cp_command.c_str()), 0);
 
+    ASSERT_EQ(image_store_big_data_digest(random_id, null_key), nullptr);
     char *digest = image_store_big_data_digest(random_id, "manifest");
     ASSERT_STREQ(digest, "sha256:fdb7b1fccaaa535cb8211a194dd6314acc643f3a36d1a7d2b79c299a9173fa7e");
     free(digest);
@@ -547,6 +582,8 @@ TEST_F(StorageImagesUnitTest, test_image_store_lookup)
     std::string truncatedId { "e4db68de4ff27" };
     std::string incorrectId { "4db68de4ff27" };
 
+    const char* null_id = NULL;
+    ASSERT_EQ(image_store_lookup(null_id), nullptr);
     char *value = nullptr;
     ASSERT_STREQ((value = image_store_lookup(name.c_str())), id.c_str());
     free(value);
@@ -563,6 +600,8 @@ TEST_F(StorageImagesUnitTest, test_image_store_exists)
     std::string truncatedId { "398" };
     std::string incorrectId { "ff67da98ab8540d713209" };
 
+    const char* null_id = NULL;
+    ASSERT_FALSE(image_store_exists(null_id));
     ASSERT_TRUE(image_store_exists(name.c_str()));
     ASSERT_TRUE(image_store_exists(truncatedId.c_str()));
     ASSERT_FALSE(image_store_exists(incorrectId.c_str()));
@@ -584,6 +623,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_metadata)
 TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
 {
     imagetool_images_list *images_list = nullptr;
+    ASSERT_EQ(image_store_get_all_images(images_list), -1);
 
     images_list = (imagetool_images_list *)util_common_calloc_s(sizeof(imagetool_images_list));
     ASSERT_NE(images_list, nullptr);
@@ -613,7 +653,12 @@ TEST_F(StorageImagesUnitTest, test_image_store_get_something)
 
     ASSERT_EQ(image_store_get_images_number(), 2);
     ASSERT_EQ(image_store_get_fs_info(fs_info), 0);
+    imagetool_fs_info *null_fs_info = nullptr;
+    ASSERT_EQ(image_store_get_fs_info(null_fs_info), -1);
+
     ASSERT_EQ(image_store_get_names(ids.at(0).c_str(), &names, &names_len), 0);
+    const char* null_id = NULL;
+    ASSERT_EQ(image_store_get_names(null_id, &names, &names_len), -1);
     ASSERT_EQ(names_len, 1);
     ASSERT_STREQ(names[0], "imagehub.isulad.com/official/centos:latest");
 
@@ -632,7 +677,9 @@ TEST_F(StorageImagesUnitTest, test_image_store_delete)
         ASSERT_FALSE(image_store_exists(elem.c_str()));
         ASSERT_FALSE(dirExists((std::string(store_real_path) + "/overlay-images/" + elem).c_str()));
     }
-
+    const char* null_id = NULL;
+    ASSERT_FALSE(image_store_exists(null_id));
+    ASSERT_EQ(image_store_delete(null_id), -1);
     Restore();
 }
 
@@ -646,6 +693,8 @@ TEST_F(StorageImagesUnitTest, test_image_store_remove_single_name)
     }
 
     ASSERT_EQ(image_store_add_name(ids.at(0).c_str(), "imagehub.isulad.com/official/busybox:latest"), 0);
+    const char* null_id = NULL;
+    ASSERT_EQ(image_store_add_name(null_id, "imagehub.isulad.com/official/busybox:latest"), -1);
 
     Restore();
 }
