@@ -18,11 +18,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-#include <isula_libutils/http_parser.h>
-#include <isula_libutils/json_common.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <strings.h>
+
+#include <isula_libutils/http_parser.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_image_index.h>
+#include <isula_libutils/registry_manifest_list.h>
 
 #include "registry_type.h"
 #include "isula_libutils/log.h"
@@ -31,8 +34,6 @@
 #include "utils.h"
 #include "parser.h"
 #include "mediatype.h"
-#include "isula_libutils/oci_image_index.h"
-#include "isula_libutils/registry_manifest_list.h"
 #include "auths.h"
 #include "err_msg.h"
 #include "sha256.h"
@@ -60,7 +61,6 @@ static void set_body_null_if_exist(char *message)
 static int parse_http_header(char *resp_buf, size_t buf_size, struct parsed_http_message *message)
 {
     char *real_message = NULL;
-    int ret = 0;
 
     if (resp_buf == NULL || message == NULL) {
         ERROR("Invalid NULL param");
@@ -70,8 +70,7 @@ static int parse_http_header(char *resp_buf, size_t buf_size, struct parsed_http
     real_message = strstr(resp_buf, "HTTP/1.1");
     if (real_message == NULL) {
         ERROR("Failed to parse response, the response do not have HTTP/1.1");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     set_body_null_if_exist(real_message);
@@ -79,13 +78,10 @@ static int parse_http_header(char *resp_buf, size_t buf_size, struct parsed_http
     ret = parse_http(real_message, strlen(real_message), message, HTTP_RESPONSE);
     if (ret != 0) {
         ERROR("Failed to parse response: %s", real_message);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-out:
-
-    return ret;
+    return 0;
 }
 
 static int parse_challenges(pull_descriptor *desc, char *schema, char *params)
@@ -225,7 +221,6 @@ static void free_parsed_http_message(struct parsed_http_message **message)
     (*message)->body = NULL;
     free(*message);
     *message = NULL;
-    return;
 }
 
 static struct parsed_http_message *get_parsed_message(char *http_head)
@@ -386,7 +381,7 @@ static int registry_ping(pull_descriptor *desc)
     ret = registry_pingv2(desc, "https");
     if (ret == 0) {
         desc->protocol = util_strdup_s("https");
-        goto out;
+        return ret;
     }
 
     if (desc->insecure_registry) {
@@ -396,14 +391,12 @@ static int registry_ping(pull_descriptor *desc)
         ret = registry_pingv2(desc, "http");
         if (ret != 0) {
             ERROR("ping %s with http failed", desc->host);
-            goto out;
+            return ret;
         }
         desc->protocol = util_strdup_s("http");
     } else {
         ERROR("ping %s with https failed", desc->host);
     }
-
-out:
 
     return ret;
 }
@@ -552,7 +545,6 @@ static int parse_manifest_head(char *http_head, char **content_type, char **dige
     }
 
 out:
-
     if (ret != 0) {
         free(*content_type);
         *content_type = NULL;
@@ -584,18 +576,15 @@ static int append_manifests_accepts(char ***custom_headers)
         sret = snprintf(accept, MAX_ACCEPT_LEN, "Accept: %s", mediatypes[i]);
         if (sret < 0 || (size_t)sret >= MAX_ACCEPT_LEN) {
             ERROR("Failed to sprintf accept media type %s", mediatypes[i]);
-            ret = -1;
-            goto out;
+            return -1;
         }
 
         ret = util_array_append(custom_headers, accept);
         if (ret != 0) {
             ERROR("append accepts failed");
-            goto out;
+            return ret;
         }
     }
-
-out:
 
     return ret;
 }
@@ -703,7 +692,6 @@ static int fetch_manifest_list(pull_descriptor *desc, char *file, char **content
     }
 
 out:
-
     free(http_head);
     http_head = NULL;
     util_free_array(custom_headers);
@@ -727,7 +715,6 @@ static void try_log_resp_body(char *path, char *file)
         ERROR("Get %s response message body: %s", path, body);
     }
     free(body);
-    return;
 }
 
 static int fetch_data(pull_descriptor *desc, char *path, char *file, char *content_type, char *digest)
@@ -1009,24 +996,21 @@ static int fetch_manifest_data(pull_descriptor *desc, char *file, char **content
             ERROR("select manifest failed, manifests:%s", manifest_text);
             free(manifest_text);
             manifest_text = NULL;
-            goto out;
+            return ret;
         }
 
         sret = snprintf(path, sizeof(path), "/v2/%s/manifests/%s", desc->name, *digest);
         if (sret < 0 || (size_t)sret >= sizeof(path)) {
             ERROR("Failed to sprintf path for manifest");
-            ret = -1;
-            goto out;
+            return -1;
         }
 
         ret = fetch_data(desc, path, file, *content_type, *digest);
         if (ret != 0) {
             ERROR("registry: Get %s failed", path);
-            goto out;
+            return ret;
         }
     }
-
-out:
 
     return ret;
 }
@@ -1096,19 +1080,16 @@ int fetch_config(pull_descriptor *desc)
     sret = snprintf(path, sizeof(path), "/v2/%s/blobs/%s", desc->name, desc->config.digest);
     if (sret < 0 || (size_t)sret >= sizeof(path)) {
         ERROR("Failed to sprintf path for config");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     ret = fetch_data(desc, path, file, desc->config.media_type, desc->config.digest);
     if (ret != 0) {
         ERROR("registry: Get %s failed", path);
-        goto out;
+       return ret;
     }
 
     desc->config.file = util_strdup_s(file);
-
-out:
 
     return ret;
 }
@@ -1141,17 +1122,14 @@ int fetch_layer(pull_descriptor *desc, size_t index)
     sret = snprintf(path, sizeof(path), "/v2/%s/blobs/%s", desc->name, layer->digest);
     if (sret < 0 || (size_t)sret >= sizeof(path)) {
         ERROR("Failed to sprintf path for layer %zu, name %s, digest %s", index, desc->name, layer->digest);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     ret = fetch_data(desc, path, file, layer->media_type, layer->digest);
     if (ret != 0) {
         ERROR("registry: Get %s failed", path);
-        goto out;
+        return ret;
     }
-
-out:
 
     return ret;
 }
@@ -1185,7 +1163,6 @@ int parse_login(char *http_head, char *host)
     }
 
 out:
-
     free_parsed_http_message(&message);
 
     return ret;
@@ -1230,7 +1207,6 @@ int login_to_registry(pull_descriptor *desc)
         goto out;
     }
 out:
-
     free(resp_buffer);
     resp_buffer = NULL;
 

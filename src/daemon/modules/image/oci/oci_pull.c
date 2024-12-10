@@ -105,7 +105,7 @@ static int pull_image(const im_pull_request *request, progress_status_map *progr
     options = (registry_pull_options *)util_common_calloc_s(sizeof(registry_pull_options));
     if (options == NULL) {
         ERROR("Out of memory");
-        goto out;
+        return ret;
     }
 
     if (request->auth != NULL) {

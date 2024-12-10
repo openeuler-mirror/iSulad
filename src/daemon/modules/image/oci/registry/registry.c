@@ -20,13 +20,21 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
+#include <pthread.h>
+#include <stdlib.h>
+
 #include <isula_libutils/docker_image_rootfs.h>
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/oci_image_content_descriptor.h>
 #include <isula_libutils/oci_image_manifest.h>
 #include <isula_libutils/oci_image_spec.h>
-#include <pthread.h>
-#include <stdlib.h>
+#include <isula_libutils/registry_manifest_schema2.h>
+#include <isula_libutils/registry_manifest_schema1.h>
+#include <isula_libutils/docker_image_config_v2.h>
+#include <isula_libutils/image_manifest_v1_compatibility.h>
+#ifdef ENABLE_IMAGE_SEARCH
+#include <isula_libutils/image_search_image.h>
+#endif
 
 #include "mediatype.h"
 #include "isula_libutils/log.h"
@@ -35,13 +43,6 @@
 #include "registry_apiv1.h"
 #include "certs.h"
 #include "auths.h"
-#include "isula_libutils/registry_manifest_schema2.h"
-#include "isula_libutils/registry_manifest_schema1.h"
-#include "isula_libutils/docker_image_config_v2.h"
-#include "isula_libutils/image_manifest_v1_compatibility.h"
-#ifdef ENABLE_IMAGE_SEARCH
-#include "isula_libutils/image_search_image.h"
-#endif
 #include "sha256.h"
 #include "map.h"
 #include "linked_list.h"
@@ -536,7 +537,6 @@ static char *calc_chain_id(char *parent_chain_id, char *diff_id)
     full_digest = util_full_digest(digest);
 
 out:
-
     free(digest);
     digest = NULL;
 
@@ -797,7 +797,6 @@ static int set_config(pull_descriptor *desc, char *image_id)
     }
 
 out:
-
     free(config_str);
     config_str = NULL;
 
@@ -812,16 +811,14 @@ static int set_loaded_time(pull_descriptor *desc, char *image_id)
     if (!util_get_now_time_stamp(&now)) {
         ret = -1;
         ERROR("get now time stamp failed");
-        goto out;
+        return ret;
     }
 
     ret = storage_img_set_loaded_time(image_id, &now);
     if (ret != 0) {
         ERROR("set loaded time failed");
-        goto out;
+        return ret;
     }
-
-out:
 
     return ret;
 }
@@ -984,7 +981,6 @@ static int parse_docker_config(pull_descriptor *desc)
     desc->config.create_time = util_to_timestamp_from_str(config->created);
 
 out:
-
     free_docker_image_config_v2(config);
     config = NULL;
     free(err);
@@ -1084,16 +1080,14 @@ static int fetch_and_parse_config(pull_descriptor *desc)
     ret = fetch_config(desc);
     if (ret != 0) {
         ERROR("fetch config failed");
-        goto out;
+        return ret;
     }
 
     ret = parse_config(desc);
     if (ret != 0) {
         ERROR("parse config failed");
-        goto out;
+        return ret;
     }
-
-out:
 
     return ret;
 }
@@ -1110,16 +1104,14 @@ static int fetch_and_parse_manifest(pull_descriptor *desc)
     ret = fetch_manifest(desc);
     if (ret != 0) {
         ERROR("fetch manifest failed");
-        goto out;
+        return ret;
     }
 
     ret = parse_manifest(desc);
     if (ret != 0) {
         ERROR("parse manifest failed");
-        goto out;
+        return ret;
     }
-
-out:
 
     return ret;
 }
@@ -2116,6 +2108,26 @@ static void cached_layers_kvfree(void *key, void *value)
     return;
 }
 
+static void free_registry_global(registry_global *registry)
+{
+    if (registry == NULL) {
+        return;
+    }
+
+    if (registry->cond_inited) {
+        pthread_cond_destroy(&registry->cond);
+    }
+    if (registry->mutex_inited) {
+        pthread_mutex_destroy(&registry->mutex);
+    }
+    if (registry->image_mutex_inited) {
+        pthread_mutex_destroy(&registry->image_mutex);
+    }
+    map_free(registry->cached_layers);
+    registry->cached_layers = NULL;
+    free(registry);
+}
+
 int registry_init(char *auths_dir, char *certs_dir)
 {
     int ret = 0;
@@ -2160,18 +2172,7 @@ int registry_init(char *auths_dir, char *certs_dir)
 out:
 
     if (ret != 0) {
-        if (g_shared->cond_inited) {
-            pthread_cond_destroy(&g_shared->cond);
-        }
-        if (g_shared->mutex_inited) {
-            pthread_mutex_destroy(&g_shared->mutex);
-        }
-        if (g_shared->image_mutex_inited) {
-            pthread_mutex_destroy(&g_shared->image_mutex);
-        }
-        map_free(g_shared->cached_layers);
-        g_shared->cached_layers = NULL;
-        free(g_shared);
+        free_registry_global(g_shared);
         g_shared = NULL;
     }
 
@@ -2221,7 +2222,6 @@ int registry_login(registry_login_options *options)
     }
 
 out:
-
     free_pull_desc(desc);
     desc = NULL;
 

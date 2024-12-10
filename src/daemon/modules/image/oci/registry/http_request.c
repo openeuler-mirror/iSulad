@@ -16,9 +16,6 @@
 #define _GNU_SOURCE /* See feature_test_macros(7) */
 #include "http_request.h"
 #include <curl/curl.h>
-#include <isula_libutils/json_common.h>
-#include <isula_libutils/log.h>
-#include <isula_libutils/registry_token.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -26,6 +23,10 @@
 #include <string.h>
 #include <strings.h>
 #include <time.h>
+
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/registry_token.h>
 
 #include "buffer.h"
 #include "certs.h"
@@ -128,7 +129,6 @@ static int setup_ssl_config(pull_descriptor *desc, struct http_get_options *opti
     options->ssl_verify_host = !desc->skip_tls_verify;
 
 out:
-
     free(host);
     host = NULL;
 
@@ -437,16 +437,14 @@ static int setup_common_options(pull_descriptor *desc, struct http_get_options *
     if (ret != 0) {
         ERROR("Failed setup ssl config");
         isulad_try_set_error_message("setup ssl config failed");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     if (custom_headers != NULL) {
         options->custom_headers = util_str_array_dup(custom_headers, util_array_len(custom_headers));
         if (options->custom_headers == NULL) {
             ERROR("dup headers failed");
-            ret = -1;
-            goto out;
+            return -1;
         }
     }
 
@@ -454,14 +452,10 @@ static int setup_common_options(pull_descriptor *desc, struct http_get_options *
     if (ret != 0) {
         ERROR("setup auth challenges failed");
         isulad_try_set_error_message("setup auth challenges failed");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     options->debug = false;
-
-out:
-
     return ret;
 }
 
@@ -478,21 +472,16 @@ static int setup_get_token_options(pull_descriptor *desc, struct http_get_option
     ret = setup_ssl_config(desc, options, url);
     if (ret != 0) {
         ERROR("Failed setup ssl config");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     ret = setup_auth_basic(desc, &options->custom_headers);
     if (ret != 0) {
         ERROR("dup headers failed");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     options->debug = false;
-
-out:
-
     return ret;
 }
 
@@ -526,7 +515,6 @@ static int http_request_buf_options(pull_descriptor *desc, struct http_get_optio
 
     *output = util_strdup_s(output_buffer->contents);
 out:
-
     buffer_free(output_buffer);
 
     return ret;
