@@ -121,36 +121,31 @@ static inline void driver_unlock()
 
 int graphdriver_init(const struct storage_module_init_options *opts)
 {
-    int ret = 0;
     size_t i = 0;
     char driver_home[PATH_MAX] = { 0 };
 
     if (opts == NULL || opts->storage_root == NULL || opts->driver_name == NULL) {
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     int nret = snprintf(driver_home, PATH_MAX, "%s/%s", opts->storage_root, opts->driver_name);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Sprintf graph driver path failed");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     for (i = 0; i < g_numdrivers; i++) {
         if (strcmp(opts->driver_name, g_drivers[i].name) == 0) {
             if (pthread_rwlock_init(&(g_drivers[i].rwlock), NULL) != 0) {
                 ERROR("Failed to init driver rwlock");
-                ret = -1;
-                goto out;
+                return -1;
             }
 #ifdef ENABLE_REMOTE_LAYER_STORE
             g_drivers[i].enable_remote_layer = opts->enable_remote_layer;
 #endif
             if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)opts->driver_opts,
                                        opts->driver_opts_len) != 0) {
-                ret = -1;
-                goto out;
+                return -1;
             }
             g_graphdriver = &g_drivers[i];
             break;
@@ -159,12 +154,10 @@ int graphdriver_init(const struct storage_module_init_options *opts)
 
     if (i == g_numdrivers) {
         ERROR("unsupported driver %s", opts->driver_name);
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-out:
-    return ret;
+    return 0;
 }
 
 int graphdriver_create_rw(const char *id, const char *parent, struct driver_create_opts *create_opts)

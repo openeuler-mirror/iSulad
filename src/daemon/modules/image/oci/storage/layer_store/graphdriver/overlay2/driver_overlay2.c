@@ -64,6 +64,9 @@ struct io_read_wrapper;
 
 #define QUOTA_SIZE_OPTION "overlay2.size"
 #define QUOTA_BASESIZE_OPTIONS "overlay2.basesize"
+#define OVERRIDE_KERNELCHECK_OPTIONS "overlay2.override_kernel_check"
+#define SKIP_MOUNT_HOME_OPTIONS "overlay2.skip_mount_home"
+#define MOUNT_OPTIONS "overlay2.mountopt"
 // MAX_LAYER_ID_LENGTH represents the number of random characters which can be used to create the unique link identifer
 // for every layer. If this value is too long then the page size limit for the mount command may be exceeded.
 // The idLength should be selected such that following equation is true (512 is a buffer for label metadata).
@@ -150,7 +153,7 @@ static int overlay2_parse_options(struct graphdriver *driver, const char **optio
                 goto out;
             }
             overlay_opts->default_quota = converted;
-        } else if (strcasecmp(dup, "overlay2.override_kernel_check") == 0) {
+        } else if (strcasecmp(dup, OVERRIDE_KERNELCHECK_OPTIONS) == 0) {
             bool converted_bool = 0;
             ret = util_str_to_bool(val, &converted_bool);
             if (ret != 0) {
@@ -160,7 +163,7 @@ static int overlay2_parse_options(struct graphdriver *driver, const char **optio
                 goto out;
             }
             overlay_opts->override_kernelcheck = converted_bool;
-        } else if (strcasecmp(dup, "overlay2.skip_mount_home") == 0) {
+        } else if (strcasecmp(dup, SKIP_MOUNT_HOME_OPTIONS) == 0) {
             bool converted_bool = 0;
             ret = util_str_to_bool(val, &converted_bool);
             if (ret != 0) {
@@ -170,7 +173,7 @@ static int overlay2_parse_options(struct graphdriver *driver, const char **optio
                 goto out;
             }
             overlay_opts->skip_mount_home = converted_bool;
-        } else if (strcasecmp(dup, "overlay2.mountopt") == 0) {
+        } else if (strcasecmp(dup, MOUNT_OPTIONS) == 0) {
             overlay_opts->mount_options = util_strdup_s(val);
         } else {
             ERROR("Overlay2: unknown option: '%s'", dup);
@@ -693,6 +696,10 @@ static char *get_lower(const char *parent, const char *driver_home)
         goto out;
     }
 
+    /*
+     * lower format: "l/5697636c0104156cb2bd94be25", so "/" and "\0" must be
+     * counted in the size for snprintf.
+     */
     lower_len = strlen(OVERLAY_LINK_DIR) + 1 + strlen(parent_link) + 1;
 
     parent_lower_file = util_path_join(parent_dir, OVERLAY_LAYER_LOWER);
@@ -707,6 +714,11 @@ static char *get_lower(const char *parent, const char *driver_home)
             ERROR("parent lower %s too large", parent_link_file);
             goto out;
         }
+        /*
+         * with parent link, the lower format will be like
+         * "l/5697636c0104156cb2bd94be25:l/df53b618a57bb50a61755b5623",
+         * so ":" must be counted.
+         */
         lower_len = lower_len + strlen(parent_lowers) + 1;
     }
 
@@ -911,7 +923,7 @@ static int do_create_remote_ro(const char *id, const char *parent, const struct 
 #ifdef ENABLE_USERNS_REMAP
     if (set_file_owner_for_userns_remap(layer_dir, userns_remap) != 0) {
         ERROR("Unable to change directory %s owner for user remap.", layer_dir);
-        goto out;
+        goto err_out;
     }
 #endif
 
@@ -977,7 +989,7 @@ static int do_create(const char *id, const char *parent, const struct graphdrive
     if (set_file_owner_for_userns_remap(layer_dir, userns_remap) != 0) {
         ERROR("Unable to change directory %s owner for user remap.", layer_dir);
         ret = -1;
-        goto out;
+        goto err_out;
     }
 #endif
 
@@ -1790,7 +1802,7 @@ out:
     return ret;
 }
 
-bool is_valid_layer_link(const char *link_id, const struct graphdriver *driver)
+static bool is_valid_layer_link(const char *link_id, const struct graphdriver *driver)
 {
     bool valid = false;
     char *link_dir = NULL;
