@@ -2,6 +2,7 @@
 | ------ | ---------------------------------------------- |
 | Date   | 2020-05-28                                     |
 | Email  | [wangfengtu@huawei.com](wangfengtu@huawei.com) |
+| Update  | 钟涛 2024/12/10 新增约束限制以及流程图 |
 
 # 1.方案目标
 
@@ -69,6 +70,45 @@ void free_registry_login_options(registry_login_options *options);
 # 4.详细设计
 
 ##  **Registry模块** 
+
+### 流程图
+![driver_init](../../../images/pull_detail.svg)
+
+pull涉及多个线程（图中蓝色的方框为线程），只有fetch_layer时存在多线程同时拉取的情况，各个线程之间的顺序由condition与complete变量保障，已在上图中标记。
+
+g_shared->mutex保护多个下载线程操作g_shared->cached_layers的并发性以及操作condition与complete变量的原子性。
+
+### 支持限制
+拉取容器镜像支持的Media Types类型如下：
+
+1.支持的manifest Media Types类型。
+
+  (1) Docker规范镜像格式。
+  - Image Manifest Version 2, Schema 1
+  - application/vnd.docker.distribution.manifest.v1+json
+  - application/vnd.docker.distribution.manifest.v1+prettyjws
+  - Image Manifest Version 2, Schema 2
+  - application/vnd.docker.distribution.manifest.v2+json
+  - application/vnd.docker.distribution.manifest.list.v2+json
+
+  (2) OCI规范镜像格式。
+  application/vnd.oci.image.manifest.v1+json
+
+2.支持的layer Media Types类型。
+
+  (1) Docker规范镜像格式。
+  - Image Manifest Version 2, Schema 1
+  - application/vnd.docker.image.rootfs.diff.tar.gzip
+  - Image Manifest Version 2, Schema 2
+  - application/vnd.docker.image.rootfs.diff.tar.gzip
+  - application/vnd.docker.image.rootfs.foreign.diff.tar.gzip
+
+  (2) OCI规范镜像格式。
+  - application/vnd.oci.image.layer.v1.tar+gzip
+  - application/vnd.oci.image.layer.v1.tar
+  - application/vnd.oci.image.layer.nondistributable.v1.tar
+  - application/vnd.oci.image.layer.nondistributable.v1.tar+gzip
+### 详细步骤
 
 Registry模块调用registry apiv2模块下载镜像相关文件，并进行解压/合法性校验后调store的接口注册成镜像，并对Manager模块提供调用接口。
 
@@ -388,3 +428,4 @@ libcurl提供了实现请求的原子命令，该模块需要基于libcurl提供
 
 4、自定义消息头信息
 
+**注意**: iSulad目前仅支持从遵循HTTP 1.1协议的镜像仓库拉取镜像，尚不支持从遵循HTTP 2.0协议的镜像仓库拉取。
