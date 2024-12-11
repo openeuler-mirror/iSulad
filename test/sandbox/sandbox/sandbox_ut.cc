@@ -16,7 +16,6 @@
 #include <gtest/gtest.h>
 
 #include "sandbox.h"
-#include "shim_sandbox.h"
 
 namespace sandbox {
 
@@ -41,7 +40,7 @@ TEST_F(SandboxTest, TestDefaultGetters)
     std::string name = "test";
     RuntimeInfo info = {"runc", "shim", "kuasar"};
 
-    auto sandbox = new ShimSandbox(id, rootdir, statedir, name, info);
+    auto sandbox = new Sandbox(id, rootdir, statedir, name, info);
     ASSERT_NE(sandbox, nullptr);
 
     ASSERT_EQ(sandbox->IsReady(), false);
@@ -67,7 +66,7 @@ TEST_F(SandboxTest, TestGettersAndSetters)
     std::string statedir = "/test2/statedir";
     std::string mode = "host";
 
-    auto sandbox = new ShimSandbox(id, rootdir, statedir);
+    auto sandbox = new Sandbox(id, rootdir, statedir);
     ASSERT_NE(sandbox, nullptr);
 
     sandbox->SetNetMode(mode);

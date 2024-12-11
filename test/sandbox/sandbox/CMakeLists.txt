@@ -16,7 +16,6 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/sandbox_task.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller_manager.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/sandboxer/controller/sandboxer_controller.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/shim/shim_sandbox.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/id_name_manager.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/isulad_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/sandbox/controller/controller_common.cc

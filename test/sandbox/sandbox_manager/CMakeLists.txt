@@ -12,7 +12,6 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cpputils/read_write_lock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cpputils/transform.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/sandbox_mock.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/shim_sandbox_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/sandboxer_sandbox_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/sandbox_manager.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/id_name_manager.c

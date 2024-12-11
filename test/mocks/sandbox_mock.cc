@@ -221,4 +221,30 @@ bool Sandbox::Remove(Errors &error)
     }
     return true;
 }
+
+void Sandbox::LoadSandboxTasks() {}
+
+auto Sandbox::PrepareContainer(const char *containerId, const char *baseFs,
+                               const oci_runtime_spec *ociSpec,
+                               const char *consoleFifos[]) -> int
+{
+    return 0;
+}   
+
+auto Sandbox::PrepareExec(const char *containerId, const char *execId,
+                          defs_process *processSpec, const char *consoleFifos[]) -> int
+{
+    return 0;
+}   
+
+auto Sandbox::PurgeContainer(const char *containerId) -> int
+{
+    return 0;
+}
+
+auto Sandbox::PurgeExec(const char *containerId, const char *execId) -> int
+{
+    return 0;
+}
+
 }

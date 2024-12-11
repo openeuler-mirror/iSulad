@@ -33,23 +33,38 @@ public:
             const runtime::v1::PodSandboxConfig sandboxConfig = runtime::v1::PodSandboxConfig::default_instance(),
             const std::string image = "");
     virtual ~SandboxerSandbox() = default;
-
-    // for sandbox api update
-    auto GetTasksJsonPath() -> std::string;
+    
     void LoadSandboxTasks() override;
-    auto SaveSandboxTasks() -> bool override;
-    auto AddSandboxTasks(sandbox_task *task) -> bool override;
-    auto GetAnySandboxTasks() -> std::string override;
-    void DeleteSandboxTasks(const char *containerId) override;
-    auto AddSandboxTasksProcess(const char *containerId, sandbox_process *processes) -> bool override;
-    void DeleteSandboxTasksProcess(const char *containerId, const char *execId) override;
+
+    auto PrepareContainer(const char *containerId, const char *baseFs,
+                          const oci_runtime_spec *ociSpec,
+                          const char *consoleFifos[]) -> int override;
+    auto PrepareExec(const char *containerId, const char *execId,
+                     defs_process *processSpec, const char *consoleFifos[]) -> int override;
+    auto PurgeContainer(const char *containerId) -> int override;
+    auto PurgeExec(const char *containerId, const char *execId) -> int override;
 
 private:
+    auto GetTasksJsonPath() -> std::string;
+    auto SaveSandboxTasks() -> bool;
+    auto AddSandboxTasks(sandbox_task *task) -> bool;
+    auto GetAnySandboxTasks() -> std::string;
+    void DeleteSandboxTasks(const char *containerId);
+    auto AddSandboxTasksProcess(const char *containerId, sandbox_process *processes) -> bool;
+    void DeleteSandboxTasksProcess(const char *containerId, const char *execId);
+
     auto AddTaskById(const char *task_id, sandbox_task *task) -> bool;
     auto ReadSandboxTasksJson() -> sandbox_tasks *;
     auto WriteSandboxTasksJson(std::string &tasks_json) -> bool;
     auto DeleteSandboxTasksJson() -> bool;
     void AddSandboxTasksByArray(sandbox_tasks *tasksArray);
+
+    auto GenerateCtrlRootfs(sandbox_task *task, const char *baseFs) -> int;
+    auto InitSandboxRuntime() -> sandbox_sandbox_runtime *;
+    auto InitSandboxLabels() -> json_map_string_string *;
+    auto InitSandboxExtensions() -> defs_map_string_object_any *;
+    auto InitApiSandbox(sandbox_sandbox *apiSandbox) -> int;
+    auto DoSandboxUpdate(sandbox_sandbox *apiSandbox) -> int;
 
 private:
     // use m_tasksMutex to ensure the correctness of the tasks
