@@ -46,6 +46,10 @@ using ::testing::AtLeast;
 using ::testing::Invoke;
 using ::testing::_;
 
+extern "C" {
+    void strip_host_prefix(char **name);
+}
+
 std::string GetDirectory()
 {
     char abs_path[PATH_MAX] { 0x00 };
@@ -299,11 +303,13 @@ protected:
         ASSERT_EQ(image_store_init(&opts), 0);
         free(opts.storage_root);
         free(opts.driver_name);
+        MockIsuladConf_SetMock(&m_isulad_conf);
     }
 
     void TearDown() override
     {
         image_store_free();
+        MockIsuladConf_SetMock(nullptr);
     }
 
     void BackUp()
@@ -325,6 +331,7 @@ protected:
     std::vector<std::string> ids { "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
         "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b" };
     char store_real_path[PATH_MAX] = { 0x00 };
+    NiceMock<MockIsuladConf> m_isulad_conf;
 };
 
 TEST_F(StorageImagesUnitTest, test_images_load)
@@ -714,3 +721,47 @@ TEST_F(StorageImagesUnitTest, test_image_store_remove_multi_name)
 
     Restore();
 }
+
+static isulad_daemon_constants *g_test_isulad_daemon_constants = NULL;
+
+isulad_daemon_constants *invoke_get_isulad_daemon_constants(void)
+{
+    g_test_isulad_daemon_constants = (isulad_daemon_constants *)util_common_calloc_s(sizeof(isulad_daemon_constants));
+    if (g_test_isulad_daemon_constants == NULL) {
+        return NULL;
+    }
+    g_test_isulad_daemon_constants->default_host = util_strdup_s("docker.io");
+
+    return g_test_isulad_daemon_constants;
+}
+
+TEST_F(StorageImagesUnitTest, test_strip_host_prefix)
+{
+    char *name = util_strdup_s("docker.io/test_image");
+    std::string test_name = "test_image";
+    std::string test_name_origin = "docker.io/test_image";
+    char *null_name = NULL;
+
+    strip_host_prefix(&name);
+    ASSERT_STREQ(name, test_name_origin.c_str());
+
+    EXPECT_CALL(m_isulad_conf, GetIsuladDaemonConstants()).WillRepeatedly(Invoke(invoke_get_isulad_daemon_constants));
+    
+    strip_host_prefix(&name);
+    ASSERT_STREQ(name, test_name.c_str());
+
+    strip_host_prefix(&null_name);
+    ASSERT_EQ(null_name, nullptr);
+
+    free(name);
+    free_isulad_daemon_constants(g_test_isulad_daemon_constants);
+}
+
+#ifdef ENABLE_REMOTE_LAYER_STORE
+TEST_F(StorageImagesUnitTest, test_remote_layer_common)
+{
+    ASSERT_EQ(remote_append_image_by_directory_with_lock(NULL), -1);
+    ASSERT_EQ(remote_remove_image_from_memory_with_lock(NULL), -1);
+    ASSERT_EQ(remote_image_get_top_layer_from_json(NULL), nullptr);
+}
+#endif

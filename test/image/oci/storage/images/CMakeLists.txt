@@ -2,6 +2,8 @@ project(iSulad_UT)
 
 SET(EXE storage_images_ut)
 
+add_definitions(-DUNIT_TEST=ON)
+
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_regex.c
