@@ -1609,10 +1609,17 @@ defs_map_string_object *dup_map_string_empty_object(defs_map_string_object *src)
     }
 
     dst->keys = util_smart_calloc_s(sizeof(char *), src->len);
-    dst->values = util_smart_calloc_s(sizeof(defs_map_string_object_element *), src->len);
-    if (dst->keys == NULL || dst->values == NULL) {
+    if (dst->keys == NULL) {
         ERROR("Out of memory");
         ret = -1;
+        goto out;
+    }
+    dst->values = util_smart_calloc_s(sizeof(defs_map_string_object_element *), src->len);
+    if (dst->values == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        free(dst->keys);
+        dst->keys = NULL;
         goto out;
     }
 

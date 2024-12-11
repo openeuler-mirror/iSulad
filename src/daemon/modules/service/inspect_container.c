@@ -629,6 +629,8 @@ static int do_transform_cni_to_map(container_network_settings *settings)
         util_smart_calloc_s(sizeof(defs_map_string_object_port_bindings_element *), settings->cni_ports_len);
     if (result->values == NULL) {
         ERROR("Out of memory");
+        free(result->keys);
+        result->keys = NULL;
         ret = -1;
         goto out;
     }
