@@ -19,31 +19,32 @@
 #include <stdio.h>
 #include <string.h>
 #include <sha256.h>
-#include <isula_libutils/storage_image.h>
-#include <isula_libutils/imagetool_images_list.h>
-#include <isula_libutils/json_common.h>
-#include <isula_libutils/auto_cleanup.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdlib.h>
 
+#include <isula_libutils/defs.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/storage_image.h>
+#include <isula_libutils/imagetool_images_list.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/imagetool_image.h>
+#include <isula_libutils/imagetool_image_summary.h>
+#include <isula_libutils/registry_manifest_schema1.h>
+#include <isula_libutils/registry_manifest_schema2.h>
+#include <isula_libutils/oci_image_manifest.h>
+#include <isula_libutils/image_manifest_v1_compatibility.h>
+
 #include "utils.h"
 #include "utils_file.h"
 #include "utils_images.h"
-#include "isula_libutils/log.h"
 #include "constants.h"
 #include "utils_array.h"
 #include "utils_string.h"
 #include "utils_regex.h"
-#include "isula_libutils/defs.h"
 #include "map.h"
 #include "utils_convert.h"
-#include "isula_libutils/imagetool_image.h"
-#include "isula_libutils/imagetool_image_summary.h"
-#include "isula_libutils/registry_manifest_schema1.h"
-#include "isula_libutils/registry_manifest_schema2.h"
-#include "isula_libutils/oci_image_manifest.h"
-#include "isula_libutils/image_manifest_v1_compatibility.h"
 #include "registry_type.h"
 #include "mediatype.h"
 #include "storage.h"
@@ -1359,8 +1360,7 @@ int image_store_set_big_data(const char *id, const char *key, const char *data)
 
     if (!image_store_lock(EXCLUSIVE)) {
         ERROR("Failed to lock image store with exclusive lock, not allowed to change image big data assignments");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     img = lookup(id);
@@ -1646,8 +1646,7 @@ int image_store_get_names(const char *id, char ***names, size_t *names_len)
 
     if (!image_store_lock(SHARED)) {
         ERROR("Failed to lock image store with shared lock, not allowed to get image names assignments");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     img = lookup(id);
