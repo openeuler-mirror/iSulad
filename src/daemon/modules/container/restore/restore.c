@@ -95,6 +95,7 @@ static int restore_supervisor(const container_t *cont)
 
     if (container_supervisor_add_exit_monitor(exit_fifo_fd, exit_fifo, &pid_info, cont)) {
         ERROR("Failed to add exit monitor to supervisor");
+        close(exit_fifo_fd);
         ret = -1;
         goto out;
     }
