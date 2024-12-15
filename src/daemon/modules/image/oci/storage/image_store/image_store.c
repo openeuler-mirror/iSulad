@@ -36,6 +36,8 @@
 #include <isula_libutils/oci_image_manifest.h>
 #include <isula_libutils/image_manifest_v1_compatibility.h>
 
+#include <isula_libutils/utils_macro.h>
+
 #include "utils.h"
 #include "utils_file.h"
 #include "utils_images.h"
@@ -3003,7 +3005,7 @@ static int do_append_image(storage_image *im)
     return 0;
 }
 
-static void strip_host_prefix(char **name)
+STATIC void strip_host_prefix(char **name)
 {
     char *new_image_name = NULL;
 
