@@ -1213,6 +1213,8 @@ static int generate_network_element(const char **bridges, const size_t len, defs
                                                                                            defs_map_string_object_networks_element *), len);
     if (networks->values == NULL) {
         ERROR("Out of memory ");
+        free(networks->keys);
+        networks->keys = NULL;
         return -1;
     }
 
