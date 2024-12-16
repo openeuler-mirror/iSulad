@@ -218,6 +218,12 @@ typedef enum { WAIT_CONDITION_STOPPED = 0, WAIT_CONDITION_REMOVED = 1 } wait_con
 #define CRI_CONTAINER_TYPE_LABEL_KEY "cri.isulad.type"
 #define CRI_CONTAINER_TYPE_LABEL_SANDBOX "podsandbox"
 
+#ifdef ENABLE_REMOTE_IMAGE
+// Note: Currently, remote image is used only in confidentail container, so the image is supposed to be encrypted
+#define SANDBOX_IMAGE_TYPE_REMOTE "remote"
+#define IMAGE_NAME_COCO "[Encrypted]"
+#endif
+
 #ifdef __cplusplus
 }
 #endif

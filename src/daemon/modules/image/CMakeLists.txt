@@ -33,6 +33,16 @@ if (ENABLE_EMBEDDED_IMAGE)
         )
 endif()
 
+if (ENABLE_REMOTE_IMAGE)
+    add_subdirectory(remote)
+    list(APPEND local_image_srcs
+        ${REMOTE_SRCS}
+        )
+    list(APPEND local_image_incs
+        ${REMOTE_INCS}
+        )
+endif()
+
 set(IMAGE_SRCS
     ${local_image_srcs}
     PARENT_SCOPE

@@ -468,11 +468,17 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
     // But pull image interface is only in CRI image service, and it can't be called in shim controller,
     // so we pull image in CRI pod service.
     const std::string &image = m_podSandboxImage;
-    if (!EnsureSandboxImageExists(image, runtimeInfo.sandboxer, error)) {
-        ERROR("Failed to pull sandbox image %s: %s", image.c_str(), error.NotEmpty() ? error.GetCMessage() : "");
-        error.Errorf("Failed to pull sandbox image %s: %s", image.c_str(), error.NotEmpty() ? error.GetCMessage() : "");
-        return response_id;
+#ifdef ENABLE_REMOTE_IMAGE
+    if (CRIHelpersV1::GetCRISandboxerImageType(runtimeInfo.sandboxer) != std::string(SANDBOX_IMAGE_TYPE_REMOTE)) {
+#endif
+        if (!EnsureSandboxImageExists(image, runtimeInfo.sandboxer, error)) {
+            ERROR("Failed to pull sandbox image %s: %s", image.c_str(), error.NotEmpty() ? error.GetCMessage() : "");
+            error.Errorf("Failed to pull sandbox image %s: %s", image.c_str(), error.NotEmpty() ? error.GetCMessage() : "");
+            return response_id;
+        }
+#ifdef ENABLE_REMOTE_IMAGE
     }
+#endif
 
     // Step 3: Prepare sandbox checkpoint
     PrepareSandboxCheckpoint(config, jsonCheckpoint, error);

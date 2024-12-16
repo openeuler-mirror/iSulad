@@ -41,6 +41,9 @@ extern "C" {
 #define IMAGE_TYPE_OCI "oci"
 #define IMAGE_TYPE_EMBEDDED "embedded"
 #define IMAGE_TYPE_EXTERNAL "external"
+#ifdef ENABLE_REMOTE_IMAGE
+#define IMAGE_TYPE_REMOTE SANDBOX_IMAGE_TYPE_REMOTE
+#endif
 
 typedef struct {
     char *image;

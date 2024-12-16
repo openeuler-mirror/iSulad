@@ -325,10 +325,32 @@ void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_co
 }
 
 #ifdef ENABLE_SANDBOXER
+static defs_map_string_object_sandboxer_element *GetCRISandboxer(
+    const std::string &runtime, struct service_arguments *args)
+{
+    defs_map_string_object_sandboxer_element *criSandboxer = nullptr;
+    defs_map_string_object_sandboxer *criSandboxerList = nullptr;
+
+    criSandboxerList = args->json_confs->cri_sandboxers;
+    for (size_t i = 0; i < criSandboxerList->len; i++) {
+        if (criSandboxerList->keys[i] == nullptr || criSandboxerList->values[i] == nullptr ||
+            criSandboxerList->values[i]->name == nullptr) {
+            WARN("CRI runtimes key or value is null");
+            continue;
+        }
+
+        if (runtime == std::string(criSandboxerList->keys[i])) {
+            criSandboxer = criSandboxerList->values[i];
+            break; 
+        }
+    }
+    return criSandboxer;
+}
+
 std::string CRISandboxerConvert(const std::string &runtime)
 {
     std::string sandboxer;
-    defs_map_string_object_sandboxer *criSandboxerList = nullptr;
+    defs_map_string_object_sandboxer_element *criSandboxer = nullptr;
 
     if (runtime.empty()) {
         return DEFAULT_SANDBOXER_NAME;
@@ -346,24 +368,47 @@ std::string CRISandboxerConvert(const std::string &runtime)
     }
 
     sandboxer = DEFAULT_SANDBOXER_NAME;
-    criSandboxerList = args->json_confs->cri_sandboxers;
-    for (size_t i = 0; i < criSandboxerList->len; i++) {
-        if (criSandboxerList->keys[i] == nullptr || criSandboxerList->values[i] == nullptr ||
-            criSandboxerList->values[i]->name == nullptr) {
-            WARN("CRI runtimes key or value is null");
-            continue;
-        }
-
-        if (runtime == std::string(criSandboxerList->keys[i])) {
-            sandboxer = std::string(criSandboxerList->values[i]->name);
-            break;
-        }
+    criSandboxer = GetCRISandboxer(runtime, args);
+    if (criSandboxer != nullptr) {
+        sandboxer = std::string(criSandboxer->name);
     }
 
 out:
     (void)isulad_server_conf_unlock();
     return sandboxer;
 }
+
+#ifdef ENABLE_REMOTE_IMAGE
+std::string GetCRISandboxerImageType(const std::string &runtime)
+{
+    std::string imageType = "";
+    defs_map_string_object_sandboxer_element *criSandboxer = nullptr;
+
+    if (runtime.empty()) {
+        return imageType;
+    }
+
+    if (isulad_server_conf_rdlock()) {
+        ERROR("Lock isulad server conf failed");
+        return imageType;
+    }
+
+    struct service_arguments *args = conf_get_server_conf();
+    if (args == nullptr || args->json_confs == nullptr || args->json_confs->cri_sandboxers == nullptr) {
+        ERROR("Cannot get cri sandboxer list");
+        goto out;
+    }
+
+    criSandboxer = GetCRISandboxer(runtime, args);
+    if (criSandboxer != nullptr && criSandboxer->image_type != nullptr) {
+        imageType = std::string(criSandboxer->image_type);
+    }
+
+out:
+    (void)isulad_server_conf_unlock();
+    return imageType;
+}
+#endif
 #else
 std::string CRISandboxerConvert(const std::string &runtime)
 {
