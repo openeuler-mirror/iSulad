@@ -18,11 +18,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-#include <isula_libutils/http_parser.h>
-#include <isula_libutils/json_common.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <strings.h>
+
+#include <isula_libutils/http_parser.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_image_index.h>
+#include <isula_libutils/registry_manifest_list.h>
+#include <isula_libutils/imagetool_search_result.h>
 
 #include "registry_type.h"
 #include "isula_libutils/log.h"
@@ -31,9 +35,6 @@
 #include "utils.h"
 #include "parser.h"
 #include "mediatype.h"
-#include "isula_libutils/oci_image_index.h"
-#include "isula_libutils/registry_manifest_list.h"
-#include "isula_libutils/imagetool_search_result.h"
 #include "auths.h"
 #include "err_msg.h"
 #include "sha256.h"
