@@ -196,7 +196,6 @@ auto PodSandboxToNRI(const std::shared_ptr<const sandbox::Sandbox> &sandbox, nri
         pod._namespace = util_strdup_s(sandbox->GetSandboxConfig().metadata().namespace_().c_str());
     }
 
-
     pod.labels = Transform::ProtobufMapToJsonMapForString(sandbox->GetSandboxConfig().labels(), tmpError);
     if (pod.labels == nullptr) {
         ERROR("Failed to transform labels to nri for pod : %s, : %s", pod.name, tmpError.GetMessage().c_str());
@@ -971,9 +970,11 @@ auto ContainerToNRIByID(const std::string &id, nri_container &con) -> bool
         goto out;
     }
 
-    con.pod_sandbox_id = util_strdup_s(cont->common_config->sandbox_info->id);
-    ret = true;
+    if (cont->common_config->sandbox_info!= nullptr && cont->common_config->sandbox_info->id != nullptr) {
+        con.pod_sandbox_id = util_strdup_s(cont->common_config->sandbox_info->id);
+    }
 
+    ret = true;
 out:
     container_unref(cont);
     return ret;

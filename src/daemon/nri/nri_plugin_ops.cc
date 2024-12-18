@@ -42,22 +42,20 @@ bool nri_adaption_init(void)
 {
     Errors error;
 
-    if (!conf_get_nri_support()) {
-        return true;
-    }
+    if (conf_get_nri_support()) {
+        nri_runtime_callbacks callbacks;
+        callbacks.register_plugin = nri_registry_containers;
+        callbacks.update_containers =  nri_update_containers;
+        if (nri_runtime_service_init(callbacks) != 0) {
+            ERROR("Failed to init runtime service\n");
+            return false;
+        }
 
-    nri_runtime_callbacks callbacks;
-    callbacks.register_plugin = nri_registry_containers;
-    callbacks.update_containers =  nri_update_containers;
-    if (nri_runtime_service_init(callbacks) != 0) {
-        ERROR("Failed to init runtime service\n");
-        return false;
-    }
-
-    if (conf_get_nri_external_support()) {
-        if (!start_external_listener()) {
-            ERROR("Failed to start external listener\n");
-            goto clean_out;
+        if (conf_get_nri_external_support()) {
+            if (!start_external_listener()) {
+                ERROR("Failed to start external listener\n");
+                goto clean_out;
+            }
         }
     }
 
