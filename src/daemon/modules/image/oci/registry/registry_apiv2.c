@@ -61,6 +61,7 @@ static void set_body_null_if_exist(char *message)
 static int parse_http_header(char *resp_buf, size_t buf_size, struct parsed_http_message *message)
 {
     char *real_message = NULL;
+    int ret = 0;
 
     if (resp_buf == NULL || message == NULL) {
         ERROR("Invalid NULL param");
