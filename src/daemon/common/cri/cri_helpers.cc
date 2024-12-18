@@ -32,10 +32,6 @@
 #include "isulad_config.h"
 #include "sha256.h"
 
-#ifdef ENABLE_NRI
-#include "nri_adaption.h"
-#endif
-
 namespace CRIHelpers {
 const std::string Constants::POD_NETWORK_ANNOTATION_KEY { "network.alpha.kubernetes.io/network" };
 const std::string Constants::CONTAINER_TYPE_LABEL_KEY { "cri.isulad.type" };
@@ -664,13 +660,6 @@ void RemoveContainerHelper(service_executor_t *cb, const std::string &containerI
         goto cleanup;
     }
 
-#ifdef ENABLE_NRI
-    if (!NRIAdaptation::GetInstance()->RemoveContainer(containerID, error)) {
-        ERROR("NRI RemoveContainer notification failed: %s", error.GetCMessage());
-    }
-    error.Clear();
-#endif
-
     if (cb->container.remove(request, &response) != 0) {
         if (response != nullptr && response->errmsg != nullptr) {
             error.SetError(response->errmsg);
@@ -729,13 +718,6 @@ void StopContainerHelper(service_executor_t *cb, const std::string &containerID,
         ERROR("Failed to stop sandbox %s: %s", containerID.c_str(), msg.c_str());
         error.SetError(msg);
     }
-
-#ifdef ENABLE_NRI
-    if (!NRIAdaptation::GetInstance()->StopContainer(containerID, error)) {
-        ERROR("NRI StopContainer notification failed: %s", error.GetCMessage());
-    }
-    error.Clear();
-#endif
 
     free_container_stop_request(request);
     free_container_stop_response(response);
