@@ -148,5 +148,6 @@ target_link_libraries(${LAYER_EXE}
     ${LIBTAR_LIBRARY}
     -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz -lcap)
 
+set_target_properties(${LAYER_EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,map_new -Wl,--wrap,map_insert -Wl,--wrap,map_search -Wl,--wrap,util_common_calloc_s -Wl,--wrap,util_smart_calloc_s") 
 add_test(NAME ${LAYER_EXE} COMMAND ${LAYER_EXE} --gtest_output=xml:${LAYER_EXE}-Results.xml)
 set_tests_properties(${LAYER_EXE} PROPERTIES TIMEOUT 120)

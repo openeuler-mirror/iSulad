@@ -29,6 +29,8 @@
 #include "storage.h"
 #include "layer.h"
 #include "driver_quota_mock.h"
+#include "map.h"
+#include "mock.h"
 
 using ::testing::Args;
 using ::testing::ByRef;
@@ -40,6 +42,95 @@ using ::testing::NotNull;
 using ::testing::AtLeast;
 using ::testing::Invoke;
 using ::testing::_;
+
+static int g_map_search_count = 0;
+static int g_map_search_match = 1;
+static int g_map_new_count = 0;
+static int g_map_new_match = 1;
+static int g_map_insert_count = 0;
+static int g_map_insert_match = 1;
+
+extern "C" {
+    DECLARE_WRAPPER_V(map_new, map_t *, (map_type_t kvtype, map_cmp_func comparator, map_kvfree_func kvfree));
+    DEFINE_WRAPPER_V(map_new, map_t *, (map_type_t kvtype, map_cmp_func comparator, map_kvfree_func kvfree), (kvtype, comparator, kvfree));
+    DECLARE_WRAPPER_V(map_insert, bool, (map_t *map, void *key, void *value));
+    DEFINE_WRAPPER_V(map_insert, bool, (map_t *map, void *key, void *value), (map, key, value));
+    DECLARE_WRAPPER_V(map_search, void *, (const map_t *map, void *key));
+    DEFINE_WRAPPER_V(map_search, void *, (const map_t *map, void *key), (map, key));
+
+    DECLARE_WRAPPER_V(util_smart_calloc_s, void *, (size_t size, size_t len));
+    DEFINE_WRAPPER_V(util_smart_calloc_s, void *, (size_t size, size_t len), (size, len));
+    DECLARE_WRAPPER_V(util_common_calloc_s, void *, (size_t size));
+    DEFINE_WRAPPER_V(util_common_calloc_s, void *, (size_t size), (size));
+}
+
+/*
+* Repeatedly calling the function executes the wrapper function and original function in the following order:
+* wrapper function; original function, wrapper function; original function, original function, wrapper function;...
+* Similar to regular queues (1 means wrapper, 0 means original): 1; 0 1; 0 0 1; 0 0 0 1; ...
+* It's used to MOCK a function that repeat permutation.
+* If you want a regular queue, the variables needs to be assigned back to the initial value.
+*/
+static map_t *map_new_return_null(map_type_t kvtype, map_cmp_func comparator, map_kvfree_func kvfree)
+{
+    g_map_new_count++;
+    if (g_map_new_count == g_map_new_match) {
+        g_map_new_match++;
+        g_map_new_count = 0;
+        return nullptr;
+    } else {
+        return __real_map_new(kvtype, comparator, kvfree);
+    }
+}
+
+/*
+* Repeatedly calling the function executes the wrapper function and original function in the following order:
+* wrapper function; original function, wrapper function; original function, original function, wrapper function;...
+* Similar to regular queues (1 means wrapper, 0 means original): 1; 0 1; 0 0 1; 0 0 0 1; ...
+* It's used to MOCK a function that repeat permutation.
+* If you want a regular queue, the variables needs to be assigned back to the initial value.
+*/
+static bool map_insert_return_false(map_t *map, void *key, void *value)
+{
+    g_map_insert_count++;
+    if (g_map_insert_count == g_map_insert_match) {
+        g_map_insert_match++;
+        g_map_insert_count = 0;
+        return false;
+    } else {
+        return __real_map_insert(map, key, value);
+    }
+}
+
+/*
+* Repeatedly calling the function executes the wrapper function and original function in the following order:
+* wrapper function; original function, wrapper function; original function, original function, wrapper function;...
+* Similar to regular queues (1 means wrapper, 0 means original): 1; 0 1; 0 0 1; 0 0 0 1; ...
+* It's used to MOCK a function that repeat permutation.
+* If you want a regular queue, the variables needs to be assigned back to the initial value.
+*/
+void *map_search_fail(const map_t *map, void *key)
+{
+    g_map_search_count++;
+    if (g_map_search_count == g_map_search_match) {
+        g_map_search_match++;
+        g_map_search_count = 0;
+        return nullptr;
+    } else {
+        return __real_map_search(map, key);
+    }
+
+}
+
+void *util_common_calloc_s_fail(size_t size)
+{
+    return nullptr;
+}
+
+void *util_smart_calloc_s_fail(size_t size, size_t len)
+{
+    return nullptr;
+}
 
 std::string GetDirectory()
 {
@@ -178,6 +269,7 @@ protected:
         std::string isulad_dir = "/tmp/isulad/";
         mkdir(isulad_dir.c_str(), 0755);
         std::string root_dir = isulad_dir + "data";
+        mkdir(root_dir.c_str(), 0755);
         std::string run_dir = isulad_dir + "data/run";
         std::string data_dir = GetDirectory() + "/data";
 
@@ -194,12 +286,40 @@ protected:
         opts.storage_root = strdup(real_path);
         ASSERT_STRNE(util_clean_path(run_dir.c_str(), real_run_path, sizeof(real_run_path)), nullptr);
         opts.storage_run_root = strdup(real_run_path);
-        opts.driver_name = strdup("overlay");
         opts.driver_opts = static_cast<char **>(util_smart_calloc_s(sizeof(char *), 1));
         opts.driver_opts[0] = strdup("overlay2.skip_mount_home=true");
         opts.driver_opts_len = 1;
-
+#ifdef ENABLE_REMOTE_LAYER_STORE
+        opts.enable_remote_layer = true;
+#endif
         EXPECT_CALL(m_driver_quota_mock, QuotaCtl(_, _, _, _)).WillRepeatedly(Invoke(invokeQuotaCtl));
+
+        opts.driver_name = NULL;
+        ASSERT_EQ(layer_store_init(&opts), -1);
+
+        char over_path_max_driver_name[5000] { 0x00 }; // PATH_MAX = 4096
+        std::memset(over_path_max_driver_name, 'a', 4999);
+        over_path_max_driver_name[4999]= '\0';
+        opts.driver_name = over_path_max_driver_name;
+        ASSERT_EQ(layer_store_init(&opts), -1);
+
+        opts.driver_name = strdup("overlay");
+        MOCK_SET_V(map_new, map_new_return_null);
+        g_map_new_count = 0;
+        g_map_new_match = 1;
+        ASSERT_EQ(layer_store_init(&opts), -1);
+        ASSERT_EQ(layer_store_init(&opts), -1);
+        ASSERT_EQ(layer_store_init(&opts), -1);
+        ASSERT_EQ(layer_store_init(&opts), -1);
+        MOCK_CLEAR(map_new);
+
+        MOCK_SET_V(map_insert, map_insert_return_false);
+        g_map_insert_count = 0;
+        g_map_insert_match = 1;
+        ASSERT_EQ(layer_store_init(&opts), -1);
+        ASSERT_EQ(layer_store_init(&opts), -1);
+        MOCK_CLEAR(map_insert);
+
         ASSERT_EQ(layer_store_init(&opts), 0);
 
         free(opts.storage_root);
@@ -238,6 +358,13 @@ TEST_F(StorageLayersUnitTest, test_layers_load)
     struct layer_list *layer_list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
     ASSERT_NE(layer_list, nullptr);
 
+    ASSERT_EQ(layer_store_list(NULL), -1);
+    MOCK_SET_V(util_smart_calloc_s, util_smart_calloc_s_fail);
+    ASSERT_EQ(layer_store_list(layer_list), -1);
+    MOCK_CLEAR(util_smart_calloc_s);
+    MOCK_SET_V(util_common_calloc_s, util_common_calloc_s_fail);
+    ASSERT_EQ(layer_store_list(layer_list), -1);
+    MOCK_CLEAR(util_common_calloc_s);
     ASSERT_EQ(layer_store_list(layer_list), 0);
     ASSERT_EQ(layer_list->layers_len, 2);
 
@@ -315,6 +442,18 @@ TEST_F(StorageLayersUnitTest, test_layer_store_by_compress_digest)
     std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
     struct layer_list *layer_list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
 
+    MOCK_SET_V(util_smart_calloc_s, util_smart_calloc_s_fail);
+    ASSERT_EQ(layer_store_by_compress_digest(compress.c_str(), layer_list), -1);
+    MOCK_CLEAR(util_smart_calloc_s);
+    MOCK_SET_V(util_common_calloc_s, util_common_calloc_s_fail);
+    ASSERT_EQ(layer_store_by_compress_digest(compress.c_str(), layer_list), -1);
+    MOCK_CLEAR(util_common_calloc_s);
+    MOCK_SET_V(map_search, map_search_fail);
+    g_map_search_count = 0;
+    g_map_search_match = 1;
+    ASSERT_EQ(layer_store_by_compress_digest(compress.c_str(), layer_list), -1);
+    MOCK_CLEAR(map_search);
+
     ASSERT_EQ(layer_store_by_compress_digest(compress.c_str(), layer_list), 0);
     ASSERT_EQ(layer_list->layers_len, 1);
 
@@ -324,3 +463,26 @@ TEST_F(StorageLayersUnitTest, test_layer_store_by_compress_digest)
 
     free_layer_list(layer_list);
 }
+
+#ifdef ENABLE_REMOTE_LAYER_STORE
+TEST_F(StorageLayersUnitTest, test_remote_layer_common)
+{
+    ASSERT_EQ(remote_layer_remove_memory_stores_with_lock(NULL), -1);
+    char arr[] = "random_id";
+    const char *random_id = arr;
+    MOCK_SET_V(map_search, map_search_fail);
+    g_map_search_count = 0;
+    g_map_search_match = 1;
+    ASSERT_EQ(remote_layer_remove_memory_stores_with_lock(random_id), 0);
+    MOCK_CLEAR(map_search);
+
+    ASSERT_EQ(remote_load_one_layer(NULL), -1);
+    MOCK_SET_V(map_search, map_search_fail);
+    g_map_search_count = 0;
+    g_map_search_match = 1;
+    ASSERT_EQ(remote_load_one_layer(random_id), -1);
+    MOCK_CLEAR(map_search);
+
+    ASSERT_EQ(remote_load_one_layer(random_id), -1);
+}
+#endif
