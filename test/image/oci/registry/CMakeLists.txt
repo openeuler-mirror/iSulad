@@ -71,5 +71,6 @@ target_include_directories(${EXE} PUBLIC
     )
 
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz libhttpclient)
+set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,map_new -Wl,--wrap,util_common_calloc_s -Wl,--wrap,pthread_mutex_init -Wl,--wrap,pthread_cond_init")
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
 set_tests_properties(${EXE} PROPERTIES TIMEOUT 120)
