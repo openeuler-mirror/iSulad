@@ -27,6 +27,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <curl/curl.h>
+#include <pthread.h>
 
 #include "utils.h"
 #include "utils_array.h"
@@ -45,6 +46,8 @@
 #include "auths.h"
 #include "oci_image_mock.h"
 #include "isulad_config_mock.h"
+#include "map.h"
+#include "mock.h"
 
 using ::testing::Args;
 using ::testing::ByRef;
@@ -55,6 +58,55 @@ using ::testing::Return;
 using ::testing::NotNull;
 using ::testing::AtLeast;
 using ::testing::Invoke;
+
+static int g_pthread_mutex_init_count = 0;
+static int g_pthread_mutex_init_match = 1;
+
+extern "C" {
+    DECLARE_WRAPPER_V(map_new, map_t *, (map_type_t kvtype, map_cmp_func comparator, map_kvfree_func kvfree));
+    DEFINE_WRAPPER_V(map_new, map_t *, (map_type_t kvtype, map_cmp_func comparator, map_kvfree_func kvfree), (kvtype, comparator, kvfree));
+    DECLARE_WRAPPER_V(pthread_mutex_init, int, (pthread_mutex_t *__mutex,const pthread_mutexattr_t *__mutexattr));
+    DEFINE_WRAPPER_V(pthread_mutex_init, int, (pthread_mutex_t *__mutex,const pthread_mutexattr_t *__mutexattr), (__mutex, __mutexattr));
+    DECLARE_WRAPPER_V(pthread_cond_init, int, (pthread_cond_t *__restrict __cond,const pthread_condattr_t *__restrict __cond_attr));
+    DEFINE_WRAPPER_V(pthread_cond_init, int, (pthread_cond_t *__restrict __cond,const pthread_condattr_t *__restrict __cond_attr), (__cond, __cond_attr));
+    DECLARE_WRAPPER_V(util_common_calloc_s, void *, (size_t size));
+    DEFINE_WRAPPER_V(util_common_calloc_s, void *, (size_t size), (size));
+}
+
+/*
+*Repeatedly calling the function executes the wrapper function and original function in the following order:
+*wrapper function; original function, wrapper function; original function, original function, wrapper function;...
+*Similar to regular queues (1 means wrapper, 0 means original): 1; 0 1; 0 0 1; 0 0 0 1; ...
+*It's used to MOCK a function that repeat permutation.
+*If you want a regular queue, the variables needs to be assigned back to the initial value.
+*/
+// extern int pthread_mutex_init (pthread_mutex_t *__mutex,const pthread_mutexattr_t *__mutexattr)
+static int failed_pthread_mutex_init(pthread_mutex_t *__mutex,const pthread_mutexattr_t *__mutexattr)
+{
+    g_pthread_mutex_init_count++;
+    if (g_pthread_mutex_init_count == g_pthread_mutex_init_match) {
+        g_pthread_mutex_init_match++;
+        g_pthread_mutex_init_count = 0;
+        return -1;
+    } else {
+        return __real_pthread_mutex_init(__mutex, __mutexattr);
+    }
+}
+
+void *util_common_calloc_s_fail(size_t size)
+{
+    return nullptr;
+}
+
+static int failed_pthread_cond_init(pthread_cond_t *__restrict __cond,const pthread_condattr_t *__restrict __cond_attr)
+{
+    return -1;
+}
+
+static map_t *map_new_return_null(map_type_t kvtype, map_cmp_func comparator, map_kvfree_func kvfree)
+{
+    return nullptr;
+}
 
 std::string get_dir()
 {
@@ -655,6 +707,25 @@ TEST_F(RegistryUnitTest, test_pull_v1_image)
     ASSERT_EQ(util_mkdir_p(mirror_dir.c_str(), 0700), 0);
     ASSERT_EQ(create_certs(mirror_dir), 0);
     ASSERT_EQ(init_log(), 0);
+
+    // test utile common calloc fail
+    MOCK_SET_V(util_common_calloc_s, util_common_calloc_s_fail);
+    ASSERT_EQ(registry_init((char *)auths_dir.c_str(), (char *)certs_dir.c_str()), -1);
+    MOCK_CLEAR(util_common_calloc_s);
+    // test pthread mutex init fail
+    MOCK_SET_V(pthread_mutex_init, failed_pthread_mutex_init);
+    g_pthread_mutex_init_count = 0;
+    g_pthread_mutex_init_match = 1;
+    ASSERT_EQ(registry_init((char *)auths_dir.c_str(), (char *)certs_dir.c_str()), -1);
+    ASSERT_EQ(registry_init((char *)auths_dir.c_str(), (char *)certs_dir.c_str()), -1);
+    MOCK_CLEAR(pthread_mutex_init);
+    MOCK_SET_V(pthread_cond_init, failed_pthread_cond_init);
+    ASSERT_EQ(registry_init((char *)auths_dir.c_str(), (char *)certs_dir.c_str()), -1);
+    MOCK_CLEAR(pthread_cond_init);
+    MOCK_SET_V(map_new, map_new_return_null);
+    ASSERT_EQ(registry_init((char *)auths_dir.c_str(), (char *)certs_dir.c_str()), -1);
+    MOCK_CLEAR(map_new);
+
     ASSERT_EQ(registry_init((char *)auths_dir.c_str(), (char *)certs_dir.c_str()), 0);
 
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -665,6 +736,30 @@ TEST_F(RegistryUnitTest, test_pull_v1_image)
     ASSERT_EQ(registry_pull(&options), 0);
 
     ASSERT_EQ(registry_pull(&options), 0);
+
+    // test empty options
+    ASSERT_EQ(registry_pull(nullptr), -1);
+
+    // test utile common calloc fail
+    MOCK_SET_V(util_common_calloc_s, util_common_calloc_s_fail);
+    ASSERT_EQ(registry_pull(&options), -1);
+    MOCK_CLEAR(util_common_calloc_s);
+
+    options.dest_image_name = nullptr;
+    ASSERT_EQ(registry_pull(&options), -1);
+    options.dest_image_name = (char *)"quay.io/coreos/etcd:v3.3.17-arm64";
+
+    options.image_name = nullptr;
+    ASSERT_EQ(registry_pull(&options), -1);
+    options.image_name = (char *)"quay.io/coreos/etcd:v3.3.17-arm64";
+
+    // test pthread mutex init fail
+    MOCK_SET_V(pthread_mutex_init, failed_pthread_mutex_init);
+    g_pthread_mutex_init_count = 0;
+    g_pthread_mutex_init_match = 1;
+    ASSERT_EQ(registry_pull(&options), -1);
+    ASSERT_EQ(registry_pull(&options), -1);
+    MOCK_CLEAR(pthread_mutex_init);
 }
 
 TEST_F(RegistryUnitTest, test_login)
@@ -690,6 +785,21 @@ TEST_F(RegistryUnitTest, test_login)
     options.auth.username = (char *)"test3";
     options.auth.password = (char *)"test3";
     ASSERT_EQ(registry_login(&options), 0);
+
+    // test empty options
+    ASSERT_EQ(registry_login(nullptr), -1);
+
+    // test utile common calloc fail
+    MOCK_SET_V(util_common_calloc_s, util_common_calloc_s_fail);
+    ASSERT_EQ(registry_login(&options), -1);
+    MOCK_CLEAR(util_common_calloc_s);
+
+    // test pthread mutex init fail
+    MOCK_SET_V(pthread_mutex_init, failed_pthread_mutex_init);
+    g_pthread_mutex_init_count = 0;
+    g_pthread_mutex_init_match = 1;
+    ASSERT_EQ(registry_login(&options), -1);
+    MOCK_CLEAR(pthread_mutex_init);
 }
 
 TEST_F(RegistryUnitTest, test_logout)
@@ -698,6 +808,9 @@ TEST_F(RegistryUnitTest, test_logout)
     std::string auths_file = get_dir() + "/auths/" + AUTH_FILE_NAME;
 
     ASSERT_EQ(registry_logout((char *)"test2.com"), 0);
+
+    // test empty host
+    ASSERT_EQ(registry_logout(nullptr), -1);
 
     auth_data = util_read_text_file(auths_file.c_str());
     ASSERT_NE(strstr(auth_data, "hub-mirror.c.163.com"), nullptr);
@@ -836,6 +949,16 @@ TEST_F(RegistryUnitTest, test_search_image)
     ASSERT_EQ(result->results[0]->is_trusted, false);
     ASSERT_EQ(result->results[0]->is_automated, false);
     ASSERT_EQ(result->results[0]->is_official, true);
+
+    // test Invalid NULL param
+    options->search_name = nullptr;
+    ASSERT_EQ(registry_search(options, &result), -1);
+    options->search_name = util_strdup_s("index.docker.io/busybox");
+
+    // test utile common calloc fail
+    MOCK_SET_V(util_common_calloc_s, util_common_calloc_s_fail);
+    ASSERT_EQ(registry_search(options, &result), -1);
+    MOCK_CLEAR(util_common_calloc_s);
 
     free_imagetool_search_result(result);
 
