@@ -1442,7 +1442,8 @@ static void normalized_host_arch(char **host_arch, struct utsname uts)
         { "armhf", "arm" },
         { "armel", "arm" },
         { "mips64le", "mips64le" },
-        { "mips64el", "mips64le" }
+        { "mips64el", "mips64le" },
+        { "loongarch64", "loong64" }
     };
     size_t i = 0;
 
