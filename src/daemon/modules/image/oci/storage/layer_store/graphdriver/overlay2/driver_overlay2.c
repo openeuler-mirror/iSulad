@@ -26,6 +26,8 @@
 #include <stdio.h>
 #include <strings.h>
 
+#include <isula_libutils/utils_macro.h>
+
 #include "isula_libutils/log.h"
 #ifdef ENABLE_USERNS_REMAP
 #include "isulad_config.h"
@@ -828,7 +830,7 @@ out:
     return ret;
 }
 
-static int set_layer_quota(const char *dir, const json_map_string_string *opts, const struct graphdriver *driver)
+STATIC int set_layer_quota(const char *dir, const json_map_string_string *opts, const struct graphdriver *driver)
 {
     int ret = 0;
     size_t i = 0;
@@ -875,7 +877,7 @@ out:
 }
 
 #ifdef ENABLE_REMOTE_LAYER_STORE
-static int do_create_remote_ro(const char *id, const char *parent, const struct graphdriver *driver,
+STATIC int do_create_remote_ro(const char *id, const char *parent, const struct graphdriver *driver,
                                const struct driver_create_opts *create_opts)
 {
     int ret = -1;
@@ -1021,7 +1023,7 @@ out:
     return ret;
 }
 
-static int append_default_quota_opts(struct driver_create_opts *ori_opts, uint64_t quota)
+STATIC int append_default_quota_opts(struct driver_create_opts *ori_opts, uint64_t quota)
 {
     int ret = 0;
     int nret = 0;
@@ -1362,7 +1364,7 @@ out:
     return ret;
 }
 
-static char *get_mount_opt_data_with_custom_option(size_t cur_size, const char *cur_opts,
+STATIC char *get_mount_opt_data_with_custom_option(size_t cur_size, const char *cur_opts,
                                                    const struct driver_mount_opts *mount_opts)
 {
     int nret = 0;
@@ -1405,7 +1407,7 @@ out:
     return mount_data;
 }
 
-static char *get_mount_opt_data_with_driver_option(size_t cur_size, const char *cur_opts, const char *mount_opts)
+STATIC char *get_mount_opt_data_with_driver_option(size_t cur_size, const char *cur_opts, const char *mount_opts)
 {
     int nret = 0;
     char *mount_data = NULL;
@@ -1523,7 +1525,7 @@ out:
     return mount_data;
 }
 
-static char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, const struct graphdriver *driver,
+STATIC char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, const struct graphdriver *driver,
                                     const struct driver_mount_opts *mount_opts)
 {
     int nret = 0;
@@ -1663,7 +1665,7 @@ out:
     return ret;
 }
 
-static int rel_mount(const char *driver_home, const char *id, const char *mount_data)
+STATIC int rel_mount(const char *driver_home, const char *id, const char *mount_data)
 {
     int ret = 0;
     char *mount_target = NULL;
@@ -2151,7 +2153,7 @@ out:
     return ret;
 }
 
-static int check_lower_valid(const char *driver_home, const char *lower)
+STATIC int check_lower_valid(const char *driver_home, const char *lower)
 {
     int ret = 0;
     char *abs_path = NULL;

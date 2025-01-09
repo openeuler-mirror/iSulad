@@ -5,6 +5,8 @@ add_subdirectory(devmapper)
 # storage_driver_ut
 SET(DRIVER_EXE storage_driver_ut)
 
+add_definitions(-DUNIT_TEST=ON)
+
 add_executable(${DRIVER_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_regex.c
