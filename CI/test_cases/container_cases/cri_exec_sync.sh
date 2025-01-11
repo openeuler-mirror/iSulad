@@ -33,17 +33,8 @@ function do_pre()
 
     msg_info "${test} starting..."
 
-    cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
-    sed -i "s#\"pod-sandbox-image\": \"\"#\"pod-sandbox-image\": \"mirrorgooglecontainers/pause-amd64:3.0\"#g" /etc/isulad/daemon.json
-
-    check_valgrind_log
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop isulad" && return ${FAILURE}
-
-    start_isulad_with_valgrind
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start isulad" && return ${FAILURE}
-
-    isula load -i ${pause_img_path}/pause.tar
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to load pause image" && return ${FAILURE}
+    init_cri_conf $1
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to init cri conf: ${1}" && return ${FAILURE}
 
     crictl pull ${image}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
@@ -116,10 +107,10 @@ function tear_down()
 
 function do_post()
 {
-    cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
-    
-    check_valgrind_log
-    start_isulad_with_valgrind
+    local ret=0
+    restore_cri_conf
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to restore cri conf" && ((ret++))
+    return $ret
 }
 
 function do_test_t()
@@ -142,13 +133,20 @@ function do_test_t()
 
 declare -i ans=0
 
-do_pre || ((ans++))
-
-for element in ${RUNTIME_LIST[@]};
+for version in ${CRI_LIST[@]};
 do
-    do_test_t $element || ((ans++))
-done
+    test="test_cri_exec_sync_fun, use cri version => (${version})"
+    msg_info "${test} starting..."
 
-do_post
+    do_pre $version || ((ans++))
+
+    for element in ${RUNTIME_LIST[@]};
+    do
+        do_test_t $element || ((ans++))
+    done
+
+    do_post || ((ans++))
+    msg_info "${test} finished with return ${ans}..."
+done
 
 show_result ${ans} "${curr_path}/${0}"

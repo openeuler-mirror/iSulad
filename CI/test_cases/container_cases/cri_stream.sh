@@ -39,17 +39,8 @@ function do_pre()
 
     msg_info "${test} starting..."
 
-    cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
-    sed -i "s#\"pod-sandbox-image\": \"\"#\"pod-sandbox-image\": \"mirrorgooglecontainers/pause-amd64:3.0\"#g" /etc/isulad/daemon.json
-
-    check_valgrind_log
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop isulad" && return ${FAILURE}
-
-    start_isulad_without_valgrind
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start isulad" && return ${FAILURE}
-
-    isula load -i ${pause_img_path}/pause.tar
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to load pause image" && return ${FAILURE}
+    init_cri_conf $1 "without_valgrind"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to init cri conf: ${1}" && return ${FAILURE}
 
     crictl pull ${image}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
@@ -130,13 +121,12 @@ function test_cri_attach
     local test="test_cri_attach => (${FUNCNAME[@]})"
     msg_info "${test} starting..."
 
-    nohup cricli attach -i ${cid} &
+    nohup cricli attach -ti ${cid} &
     pid=$!
     sleep 2
 
     ps -T -p $(cat /var/run/isulad.pid) | grep IoCopy
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - residual IO copy thread in CRI attach operation" && ((ret++))
-
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - attach failed, no IOCopy thread" && ((ret++))
 
     kill -9 $pid
     sleep 2
@@ -169,10 +159,10 @@ function tear_down()
 
 function do_post()
 {
-    cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
-    
-    stop_isulad_without_valgrind
-    start_isulad_with_valgrind
+    local ret=0
+    restore_cri_conf "without_valgrind"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to restore cri conf" && ((ret++))
+    return $ret
 }
 
 function do_test_t()
@@ -198,13 +188,20 @@ function do_test_t()
 
 declare -i ans=0
 
-do_pre || ((ans++))
-
-for element in ${RUNTIME_LIST[@]};
+for version in ${CRI_LIST[@]};
 do
-    do_test_t $element || ((ans++))
-done
+    test="test_cri_stream_fun, use cri version => (${version})"
+    msg_info "${test} starting..."
 
-do_post
+    do_pre $version || ((ans++))
+
+    for element in ${RUNTIME_LIST[@]};
+    do
+        do_test_t $element || ((ans++))
+    done
+
+    do_post || ((ans++))
+    msg_info "${test} finished with return ${ans}..."
+done
 
 show_result ${ans} "${curr_path}/${0}"

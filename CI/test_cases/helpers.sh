@@ -31,6 +31,8 @@ RUNTIME_LIST=(lcr runc)
 
 DEFAULT_RUNTIME=runc
 
+CRI_LIST=(v1alpha v1)
+
 testcase_data="/tmp/testcases_data"
 
 enable_native_network=0
@@ -319,6 +321,67 @@ function do_pretest() {
     isula network ls
     enable_native_network=$?
     msg_info "#####################"
+}
+
+function init_cri_conf() {
+    local ret=0
+    check_valgrind_log
+    if [ $? -ne 0 ]; then
+        echo "stop isulad failed"
+        ret=$(($ret+1))
+    fi
+
+    cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
+    if [ "x$1" == "xv1" ]; then
+        echo "use cri v1"
+        sed -i '/"pod-sandbox-image": ""/i "enable-cri-v1": true,' /etc/isulad/daemon.json
+    fi
+    sed -i "s#\"pod-sandbox-image\": \"\"#\"pod-sandbox-image\": \"mirrorgooglecontainers/pause-amd64:3.0\"#g" /etc/isulad/daemon.json
+
+    if [ "x$2" == "xwithout_valgrind" ]; then
+        start_isulad_without_valgrind
+    else
+        echo "start with valgrind"
+        start_isulad_with_valgrind   
+    fi
+    if [ $? -ne 0 ]; then
+        echo "start failed"
+        ret=$(($ret+1))
+    fi
+
+    isula load -i ${pause_img_path}/pause.tar
+    if [ $? -ne 0 ]; then
+        msg_err "Failed to load pause image"
+        ret=$(($ret + 1))
+        return $ret
+    fi
+
+    return $ret
+}
+
+function restore_cri_conf() {
+    local ret=0
+
+    if [ "x$1" == "xwithout_valgrind" ]; then
+        stop_isulad_without_valgrind
+    else
+        echo "stop with valgrind"
+        check_valgrind_log
+    fi
+    if [ $? -ne 0 ]; then
+        echo "stop isulad failed"
+        ret=$(($ret+1))
+    fi
+
+    cp /etc/isulad/daemon.bak /etc/isulad/daemon.json
+
+    start_isulad_with_valgrind
+    if [ $? -ne 0 ]; then
+        echo "start failed"
+        ret=$(($ret+1))
+    fi
+
+    return $ret
 }
 
 do_pretest
