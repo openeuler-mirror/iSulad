@@ -40,6 +40,20 @@ using ::testing::Invoke;
 using ::testing::_;
 using ::testing::FLAGS_gmock_catch_leaked_mocks;
 
+extern "C" {
+    int set_layer_quota(const char *dir, const json_map_string_string *opts, const struct graphdriver *driver);
+    int do_create_remote_ro(const char *id, const char *parent, const struct graphdriver *driver,
+                               const struct driver_create_opts *create_opts);
+    int append_default_quota_opts(struct driver_create_opts *ori_opts, uint64_t quota);
+    char *get_mount_opt_data_with_custom_option(size_t cur_size, const char *cur_opts,
+                                                   const struct driver_mount_opts *mount_opts);
+    char *get_mount_opt_data_with_driver_option(size_t cur_size, const char *cur_opts, const char *mount_opts);
+    char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, const struct graphdriver *driver,
+                                    const struct driver_mount_opts *mount_opts);
+    int rel_mount(const char *driver_home, const char *id, const char *mount_data);
+    int check_lower_valid(const char *driver_home, const char *lower);
+}
+
 std::string GetDirectory()
 {
     char abs_path[PATH_MAX] { 0x00 };
@@ -121,7 +135,7 @@ protected:
     void SetUp() override
     {
         MockDriverQuota_SetMock(&m_driver_quota_mock);
-        std::string isulad_dir { "/tmp/isulad/" };
+        std::string isulad_dir = "/opt/isulad_storege_driver_ut/";
         mkdir(isulad_dir.c_str(), 0755);
         std::string root_dir = isulad_dir + "data";
         std::string run_dir = isulad_dir + "data/run";
@@ -146,15 +160,15 @@ protected:
 
         struct storage_module_init_options *opts = (struct storage_module_init_options *)util_common_calloc_s(sizeof(
                                                                                                                   struct storage_module_init_options));
-        opts->storage_root = strdup(root_dir.c_str());
-        opts->storage_run_root = strdup(run_dir.c_str());
-        opts->driver_name = strdup("overlay");
+        opts->storage_root = util_strdup_s(root_dir.c_str());
+        opts->storage_run_root = util_strdup_s(run_dir.c_str());
+        opts->driver_name = util_strdup_s("overlay");
         opts->driver_opts = (char **)util_common_calloc_s(5 * sizeof(char *));
-        opts->driver_opts[0] = strdup("overlay2.basesize=128M");
-        opts->driver_opts[1] = strdup("overlay2.override_kernel_check=true");
-        opts->driver_opts[2] = strdup("overlay2.skip_mount_home=false");
-        opts->driver_opts[3] = strdup("overlay2.mountopt=rw");
-        opts->driver_opts[4] = strdup("overlay2.skip_mount_home=true");
+        opts->driver_opts[0] = util_strdup_s("overlay2.basesize=128M");
+        opts->driver_opts[1] = util_strdup_s("overlay2.override_kernel_check=true");
+        opts->driver_opts[2] = util_strdup_s("overlay2.skip_mount_home=false");
+        opts->driver_opts[3] = util_strdup_s("overlay2.mountopt=rw");
+        opts->driver_opts[4] = util_strdup_s("overlay2.skip_mount_home=true");
         opts->driver_opts_len = 4;
 
         EXPECT_CALL(m_driver_quota_mock, QuotaCtl(_, _, _, _)).WillRepeatedly(Invoke(invokeQuotaCtl));
@@ -173,7 +187,7 @@ protected:
         if (support_overlay) {
             ASSERT_EQ(graphdriver_cleanup(), 0);
         }
-        std::string rm_command = "rm -rf /tmp/isulad/";
+        std::string rm_command = "rm -rf /opt/isulad_storege_driver_ut/";
         ASSERT_EQ(system(rm_command.c_str()), 0);
     }
 
@@ -195,6 +209,134 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_layer_exists)
     ASSERT_FALSE(graphdriver_layer_exists(incorrectId.c_str()));
 }
 
+TEST_F(StorageDriverUnitTest, test_set_layer_quota)
+{
+    if (!support_overlay) {
+        return;
+    }
+
+    struct driver_create_opts *create_opts = (struct driver_create_opts *)util_common_calloc_s(sizeof(struct driver_create_opts));
+    ASSERT_NE(create_opts, nullptr);
+    create_opts->storage_opt = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
+    ASSERT_NE(create_opts->storage_opt, nullptr);
+    create_opts->storage_opt->keys = (char **)util_common_calloc_s(sizeof(char *));
+    create_opts->storage_opt->values = (char **)util_common_calloc_s(sizeof(char *));
+    create_opts->storage_opt->keys[0] = util_strdup_s("size");
+    create_opts->storage_opt->values[0] = util_strdup_s("");
+    create_opts->storage_opt->len = 1;
+    ASSERT_EQ(set_layer_quota("/opt/isulad_storege_driver_ut/", create_opts->storage_opt, nullptr), -1);
+    create_opts->storage_opt->keys[0] = util_strdup_s("notsize");
+    ASSERT_EQ(set_layer_quota("/opt/isulad_storege_driver_ut/", create_opts->storage_opt, nullptr), -1);
+    free_driver_create_opts(create_opts);
+}
+
+#ifdef ENABLE_REMOTE_LAYER_STORE
+TEST_F(StorageDriverUnitTest, test_do_create_remote_ro)
+{
+    if (!support_overlay) {
+        return;
+    }
+
+    struct graphdriver *graph_driver = (struct graphdriver *)util_common_calloc_s(sizeof(struct graphdriver));
+    ASSERT_NE(graph_driver, nullptr);
+    graph_driver->home = nullptr;
+    ASSERT_EQ(do_create_remote_ro(nullptr, nullptr, graph_driver, nullptr), -1);
+    graph_driver->home = "driver_home";
+    ASSERT_EQ(do_create_remote_ro(nullptr, nullptr, graph_driver, nullptr), -1);
+    free(graph_driver);
+}
+#endif
+
+TEST_F(StorageDriverUnitTest, test_append_default_quota_opts)
+{
+    if (!support_overlay) {
+        return;
+    }
+
+    struct driver_create_opts *create_opts = (struct driver_create_opts *)util_common_calloc_s(sizeof(struct driver_create_opts));
+    ASSERT_NE(create_opts, nullptr);
+    create_opts->storage_opt = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
+    ASSERT_NE(create_opts->storage_opt, nullptr);
+    create_opts->storage_opt->keys = (char **)util_common_calloc_s(sizeof(char *));
+    create_opts->storage_opt->values = (char **)util_common_calloc_s(sizeof(char *));
+    create_opts->storage_opt->keys[0] = util_strdup_s("size");
+    create_opts->storage_opt->values[0] = util_strdup_s("128M");
+    create_opts->storage_opt->len = 1;
+    ASSERT_EQ(append_default_quota_opts(nullptr, 0), 0);
+    ASSERT_EQ(append_default_quota_opts(create_opts, 134217728), 0); // 134217728 = 128*1024*1024
+    free_driver_create_opts(create_opts);
+}
+
+TEST_F(StorageDriverUnitTest, test_get_mount_opt_data_with_custom_option)
+{
+    if (!support_overlay) {
+        return;
+    }
+
+    struct driver_mount_opts * mount_opts = (struct driver_mount_opts *)util_common_calloc_s(sizeof(struct driver_mount_opts));
+    ASSERT_NE(mount_opts, nullptr);
+    mount_opts->options = (char **)util_common_calloc_s(1 * sizeof(char *));
+    mount_opts->options[0] = util_strdup_s("ro");
+    mount_opts->options_len = 1;
+    size_t cur_size = 0;
+    const char *cur_opts = "cur_opts";
+    ASSERT_EQ(get_mount_opt_data_with_custom_option(cur_size, cur_opts, mount_opts), nullptr);
+    free_driver_mount_opts(mount_opts);
+}
+
+TEST_F(StorageDriverUnitTest, test_get_mount_opt_data_with_driver_option)
+{
+    if (!support_overlay) {
+        return;
+    }
+    struct driver_mount_opts * mount_opts = (struct driver_mount_opts *)util_common_calloc_s(sizeof(struct driver_mount_opts));
+    ASSERT_NE(mount_opts, nullptr);
+    mount_opts->options = (char **)util_common_calloc_s(1 * sizeof(char *));
+    mount_opts->options[0] = util_strdup_s("ro");
+    size_t cur_size = 0;
+    const char *cur_opts = "cur_opts";
+    ASSERT_EQ(get_mount_opt_data_with_driver_option(cur_size, cur_opts, mount_opts->options[0]), nullptr);
+    free_driver_mount_opts(mount_opts);
+}
+
+TEST_F(StorageDriverUnitTest, test_get_rel_mount_opt_data)
+{
+    if (!support_overlay) {
+        return;
+    }
+    std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
+    struct driver_mount_opts * mount_opts = (struct driver_mount_opts *)util_common_calloc_s(sizeof(struct driver_mount_opts));
+    ASSERT_NE(mount_opts, nullptr);
+    mount_opts->options = (char **)util_common_calloc_s(1 * sizeof(char *));
+    mount_opts->options[0] = util_strdup_s("ro");
+    mount_opts->options_len = 1;
+    const char *rel_lower_dir = "rel_lower_dir";
+    std::string res { "ro,lowerdir=rel_lower_dir,upperdir=9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63/diff,workdir=9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63/work" };
+    ASSERT_EQ(get_rel_mount_opt_data(id.c_str(), rel_lower_dir, nullptr, mount_opts), res);
+    free_driver_mount_opts(mount_opts);
+}
+
+TEST_F(StorageDriverUnitTest, test_rel_mount)
+{
+    if (!support_overlay) {
+        return;
+    }
+    const char *mount_data = "mount_data";
+    const char *driver_home = nullptr;
+    std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
+    ASSERT_EQ(rel_mount(driver_home, id.c_str(), mount_data),-1);
+}
+
+TEST_F(StorageDriverUnitTest, test_check_lower_valid)
+{
+    if (!support_overlay) {
+        return;
+    }
+    const char *lower = "lower";
+    const char *driver_home = nullptr;
+    ASSERT_EQ(check_lower_valid(driver_home, lower), -1);
+}
+
 TEST_F(StorageDriverUnitTest, test_graphdriver_create_rw)
 {
     if (!support_overlay) {
@@ -202,17 +344,15 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_create_rw)
     }
 
     std::string id { "eb29745b8228e1e97c01b1d5c2554a319c00a94d8dd5746a3904222ad65a13f8" };
-    struct driver_create_opts *create_opts;
-
-    create_opts = (struct driver_create_opts *)util_common_calloc_s(sizeof(struct driver_create_opts));
+    struct driver_create_opts *create_opts = (struct driver_create_opts *)util_common_calloc_s(sizeof(struct driver_create_opts));
     ASSERT_NE(create_opts, nullptr);
 
     create_opts->storage_opt = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
     ASSERT_NE(create_opts->storage_opt, nullptr);
     create_opts->storage_opt->keys = (char **)util_common_calloc_s(sizeof(char *));
     create_opts->storage_opt->values = (char **)util_common_calloc_s(sizeof(char *));
-    create_opts->storage_opt->keys[0] = strdup("size");
-    create_opts->storage_opt->values[0] = strdup("128M");
+    create_opts->storage_opt->keys[0] = util_strdup_s("size");
+    create_opts->storage_opt->values[0] = util_strdup_s("128M");
     create_opts->storage_opt->len = 1;
 
     EXPECT_CALL(m_driver_quota_mock, IOCtl(_, _)).WillRepeatedly(Invoke(invokeIOCtl));
@@ -231,7 +371,7 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_mount_layer)
     }
 
     std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
-    std::string merged_dir = "/tmp/isulad/data/overlay/" + id + "/merged";
+    std::string merged_dir = "/opt/isulad_storege_driver_ut/data/overlay/" + id + "/merged";
     struct driver_mount_opts *mount_opts = nullptr;
     char* mount_dir = nullptr;
 
@@ -248,7 +388,7 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_mount_layer)
     mount_opts = (struct driver_mount_opts *)util_common_calloc_s(sizeof(struct driver_mount_opts));
     ASSERT_NE(mount_opts, nullptr);
     mount_opts->options = (char **)util_common_calloc_s(1 * sizeof(char *));
-    mount_opts->options[0] = strdup("ro");
+    mount_opts->options[0] = util_strdup_s("ro");
     mount_opts->options_len = 1;
 
     FLAGS_gmock_catch_leaked_mocks = false;
