@@ -779,11 +779,37 @@ int rt_shim_listpids(const char *id, const char *runtime, const rt_listpids_para
     return 0;
 }
 
+static void transform_stats_info_from_runtime(struct Stats *stats,
+                                              struct runtime_container_resources_stats_info *info)
+{
+    if (info == NULL) {
+        return;
+    }
+    info->pids_current = stats->pids_current;
+    info->cpu_use_nanos = stats->cpu_use_nanos;
+    info->cpu_system_use = stats->cpu_system_use;
+    info->mem_used = stats->mem_used;
+    info->mem_limit = stats->mem_limit;
+    info->rss_bytes = stats->rss_bytes;
+    info->inactive_file_total = stats->inactive_file_total;
+    info->page_faults = stats->page_faults;
+    info->major_page_faults = stats->major_page_faults;
+    info->swap_used = stats->swap_used;
+    info->swap_limit = stats->swap_limit;
+    info->blkio_read = stats->blkio_read;
+    info->blkio_write = stats->blkio_write;
+}
+
 int rt_shim_resources_stats(const char *id, const char *runtime, const rt_stats_params_t *params,
                             struct runtime_container_resources_stats_info *rs_stats)
 {
-    ERROR("rt_shim_resources_stats not impl");
-    return -1;
+    struct Stats ss = { 0 };
+    if (shim_v2_stats(id, &ss) != 0) {
+        ERROR("rt_shim_stats failed");
+        return -1;
+    }
+    transform_stats_info_from_runtime(&ss, rs_stats);
+    return 0;
 }
 
 int rt_shim_resize(const char *id, const char *runtime, const rt_resize_params_t *params)
