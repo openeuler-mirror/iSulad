@@ -138,6 +138,7 @@ protected:
         std::string isulad_dir = "/opt/isulad_storege_driver_ut/";
         mkdir(isulad_dir.c_str(), 0755);
         std::string root_dir = isulad_dir + "data";
+        mkdir(root_dir.c_str(), 0755);
         std::string run_dir = isulad_dir + "data/run";
         std::string data_dir = GetDirectory() + "/data";
 
