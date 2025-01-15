@@ -100,6 +100,7 @@ Sandbox::Sandbox(const std::string id, const std::string &rootdir, const std::st
     const uint64_t defaultCreatedAt { 1 };
     m_state.createdAt = defaultCreatedAt;
     m_image = image;
+    m_state.pid = -1;
 }
 
 auto Sandbox::IsReady() -> bool
