@@ -152,6 +152,7 @@ cd lib-shim-v2
 tar xf lib-shim-v2-*
 dname=$(tar -tf lib-shim-v2-*.tar.gz | head -1)
 cd $dname
+git apply ../0*
 mkdir .cargo
 cat >> ./.cargo/config << EOF
 [source.crates-io]
