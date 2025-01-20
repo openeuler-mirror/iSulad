@@ -149,6 +149,7 @@ cd ~
 rm -rf lib-shim-v2
 git clone https://gitee.com/src-openeuler/lib-shim-v2.git
 cd lib-shim-v2
+git checkout openEuler-22.03-LTS-SP1
 tar xf lib-shim-v2-*
 dname=$(tar -tf lib-shim-v2-*.tar.gz | head -1)
 cd $dname
