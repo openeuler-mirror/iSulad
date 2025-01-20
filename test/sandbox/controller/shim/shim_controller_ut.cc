@@ -41,6 +41,9 @@ protected:
     void TearDown() override
     {
         m_contoller.reset(nullptr);
+        MockCallback_SetMock(nullptr);
+        MockServiceContainerApi_SetMock(nullptr);
+        MockImageApi_SetMock(nullptr);
     }
 
     std::string m_sandboxer = "shim";

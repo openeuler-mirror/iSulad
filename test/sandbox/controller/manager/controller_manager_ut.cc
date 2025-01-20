@@ -16,12 +16,13 @@
 #include <memory>
 #include "gtest/gtest.h"
 #include "sandboxer_controller.h"
-#include "grpc_sandboxer_client_mock.h"
 #include "controller_manager.h"
 #include "controller_common.h"
 #include "utils.h"
 #include "isulad_config_mock.h"
 #include "shim_controller.h"
+#include "controller.h"
+#include "grpc_sandboxer_client_mock.h"
 
 class ControllerManagerWrapper : public sandbox::ControllerManager {
 public:
@@ -81,7 +82,7 @@ TEST_F(ControllerManagerTest, InitTestSucceed)
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(1).WillOnce(testing::Return(args));
     EXPECT_TRUE(ControllerManagerWrapper::GetInstance()->Init(err));
     EXPECT_TRUE(err.Empty());
-    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(SHIM_CONTROLLER_NAME), nullptr);
+    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(sandbox::SHIM_CONTROLLER_NAME), nullptr);
     EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController("vmm"), nullptr);
     FreeDummyServerconf(args);
 }
@@ -96,7 +97,7 @@ TEST_F(ControllerManagerTest, InitTestSucceedWithEmptyConfig)
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(1).WillOnce(testing::Return(args));
     EXPECT_TRUE(ControllerManagerWrapper::GetInstance()->Init(err));
     EXPECT_TRUE(err.Empty());
-    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(SHIM_CONTROLLER_NAME), nullptr);
+    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(sandbox::SHIM_CONTROLLER_NAME), nullptr);
     EXPECT_EQ(ControllerManagerWrapper::GetInstance()->GetController("vmm"), nullptr);
     FreeDummyServerconf(args);
 }
@@ -111,7 +112,7 @@ TEST_F(ControllerManagerTest, InitTestFailedWithEmptySandboxerConfig)
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(1).WillOnce(testing::Return(args));
     EXPECT_FALSE(ControllerManagerWrapper::GetInstance()->Init(err));
     EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("Failed to load sandboxer controllers config"));
-    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(SHIM_CONTROLLER_NAME), nullptr);
+    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(sandbox::SHIM_CONTROLLER_NAME), nullptr);
     EXPECT_EQ(ControllerManagerWrapper::GetInstance()->GetController("vmm"), nullptr);
     FreeDummyServerconf(args);
 }
@@ -126,7 +127,7 @@ TEST_F(ControllerManagerTest, InitTestSucceedWithNullConfig)
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(1).WillOnce(testing::Return(args));
     EXPECT_TRUE(ControllerManagerWrapper::GetInstance()->Init(err));
     EXPECT_TRUE(err.Empty());
-    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(SHIM_CONTROLLER_NAME), nullptr);
+    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(sandbox::SHIM_CONTROLLER_NAME), nullptr);
     EXPECT_EQ(ControllerManagerWrapper::GetInstance()->GetController("vmm"), nullptr);
     FreeDummyServerconf(args);
 }
@@ -142,7 +143,7 @@ TEST_F(ControllerManagerTest, InitTestFailedWithDupShimConfig)
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(1).WillOnce(testing::Return(args));
     EXPECT_FALSE(ControllerManagerWrapper::GetInstance()->Init(err));
     EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("Sandboxer controller already registered, sandboxer:"));
-    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(SHIM_CONTROLLER_NAME), nullptr);
+    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(sandbox::SHIM_CONTROLLER_NAME), nullptr);
     FreeDummyServerconf(args);
 }
 
@@ -191,7 +192,7 @@ TEST_F(ControllerManagerTest, InitTestFailedWithDupInit)
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(2).WillRepeatedly(testing::Return(args));
     EXPECT_TRUE(ControllerManagerWrapper::GetInstance()->Init(err));
     EXPECT_TRUE(err.Empty());
-    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(SHIM_CONTROLLER_NAME), nullptr);
+    EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController(sandbox::SHIM_CONTROLLER_NAME), nullptr);
     EXPECT_NE(ControllerManagerWrapper::GetInstance()->GetController("vmm"), nullptr);
     EXPECT_FALSE(ControllerManagerWrapper::GetInstance()->Init(err));
     EXPECT_THAT(err.GetCMessage(), testing::HasSubstr("Sandboxer controller already registered,"));
@@ -211,6 +212,6 @@ TEST_F(ControllerManagerTest, InitTestFailedWithNullConf)
 TEST_F(ControllerManagerTest, FindControllerTestFailedBeforeInit)
 {
     Errors err;
-    EXPECT_EQ(ControllerManagerWrapper::GetInstance()->GetController(SHIM_CONTROLLER_NAME), nullptr);
+    EXPECT_EQ(ControllerManagerWrapper::GetInstance()->GetController(sandbox::SHIM_CONTROLLER_NAME), nullptr);
     EXPECT_EQ(ControllerManagerWrapper::GetInstance()->GetController("vmm"), nullptr);
 }

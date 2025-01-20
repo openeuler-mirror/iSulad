@@ -154,7 +154,9 @@ TEST_F(SandboxManagerTest, TestCreateSandbox)
         "{\"cri-sandboxers\": {\"kuasar\": {\"name\": \"vmm\",\"address\": \"/run/vmm-sandboxer.sock\"}}}";
     struct service_arguments *args = CreateDummyServerConf(daemonConfig);
     ASSERT_NE(args, nullptr);
+#ifdef ENABLE_SANDBOXER
     EXPECT_CALL(*isuladConfMock, ConfGetServerConf()).Times(1).WillOnce(testing::Return(args));
+#endif
     EXPECT_TRUE(ControllerManager::GetInstance()->Init(error));
     EXPECT_TRUE(error.Empty());
 
