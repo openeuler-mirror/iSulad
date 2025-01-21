@@ -32,6 +32,7 @@ protected:
     void TearDown() override
     {
         m_contoller.reset(nullptr);
+        MockSandboxerClient_SetMock(nullptr);
     }
 
     std::string m_sandboxer = "sandboxer";

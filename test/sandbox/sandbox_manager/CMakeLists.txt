@@ -4,8 +4,18 @@ SET(EXE sandbox_manager_ut)
 
 aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/sandbox/sandbox/types sandbox_type_srcs)
 
+if(ENABLE_SANDBOXER)
+    set(sandboxer_srcs
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/sandboxer/controller/sandboxer_controller.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/grpc_sandboxer_client_mock.cc
+        )
+else()
+    set(sandboxer_srcs "")
+endif()
+
 add_executable(${EXE}
     ${sandbox_type_srcs}
+    ${sandboxer_srcs}
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1/api_v1.pb.cc
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/gogo.pb.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cpputils/errors.cc
@@ -19,8 +29,6 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/daemon_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller_manager.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/grpc_sandboxer_client_mock.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/sandboxer_controller_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/shim_controller_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/sandbox_manager_ut.cc)
 
