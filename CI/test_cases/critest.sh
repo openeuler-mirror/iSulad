@@ -62,8 +62,9 @@ function restore_selinux_environment() {
 
 function pre_test() {
     # build critest
-    local VERSION="v1.22.0"
+    local VERSION="v1.25.0"
 
+    rm -rf cri-tools
     git clone https://gitee.com/duguhaotian/cri-tools.git
     go version
     cd cri-tools
@@ -75,15 +76,8 @@ function pre_test() {
     critest --version
 
     # config pause
-    cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
-    sed -i "s#\"pod-sandbox-image\": \"\"#\"pod-sandbox-image\": \"mirrorgooglecontainers/pause-amd64:3.0\"#g" /etc/isulad/daemon.json
-
-    isula load -i ${pause_img_path}/pause.tar
-    if [ $? -ne 0 ]; then
-        msg_err "Failed to load pause image"
-        TC_RET_T=$(($TC_RET_T + 1))
-        return $TC_RET_T
-    fi
+    init_cri_conf $1
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to init cri conf: ${1}" && return ${FAILURE}
 
     # config cni
     init_cni_conf $data_path
@@ -107,7 +101,9 @@ function post_test() {
     restore_selinux_environment
     rm -rf ./cri-tools
     rm /usr/local/bin/critest
-    cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
+
+    restore_cri_conf
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to restore cri conf"  && ((ret++))
 
     # clear env
     isula rm -f `isula ps -qa`
@@ -117,10 +113,8 @@ function post_test() {
     do
         isula pull ${image}
     done
-    
-    stop_isulad_without_valgrind
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - memory leak" && return ${FAILURE}
-    start_isulad_with_valgrind
+
+    return ${ret}
 }
 
 function test_critest() {
@@ -158,12 +152,32 @@ function do_test_t() {
     return $ret
 }
 
+function do_critest_test_t()
+{
+    local cri_version=$1
+    local ret=0
+    local test="do_critest_test_t => (${cri_version})"
+    msg_info "${test} starting..."
+
+    pre_test $cri_version || (ret++)
+
+    do_test_t || ((ret++))
+
+    post_test || (ret++)
+
+    msg_info "${test} finished with return ${ret}..."
+
+    return $ret
+}
+
 declare -i ans=0
 
-pre_test || (ans++)
-
-do_test_t || ((ans++))
-
-post_test || (ans++)
+for version in ${CRI_LIST[@]};
+do
+    do_critest_test_t $version
+    if [ $? -ne 0 ];then
+        let "ans=$ans + 1"
+    fi
+done
 
 show_result ${ans} "${curr_path}/${0}"

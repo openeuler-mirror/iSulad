@@ -28,24 +28,21 @@ function do_pre()
 {
   sed -i "s#seccomp_localhost_ref#${data_path}/seccomp_localhost.json#g" ${data_path}/container-config-seccomp-localhost.json
 
-  cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
-  sed -i "s#\"pod-sandbox-image\": \"\"#\"pod-sandbox-image\": \"mirrorgooglecontainers/pause-amd64:3.0\"#g" /etc/isulad/daemon.json
-
-  check_valgrind_log
-  start_isulad_with_valgrind
-
-  isula load -i ${pause_img_path}/pause.tar
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to load pause" && return ${FAILURE}
-
+  init_cri_conf $1 "without_valgrind"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to init cri conf: ${1}" && return ${FAILURE}
+  
   isula pull busybox
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull busybox" && return ${FAILURE}
+
+  return 0
 }
 
 function do_post()
 {
-    cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
-    check_valgrind_log
-    start_isulad_with_valgrind
+    local ret=0
+    restore_cri_conf "without_valgrind"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to restore cri conf" && ((ret++))
+    return $ret
 }
 
 function test_cri_seccomp()
@@ -82,7 +79,7 @@ function test_cri_seccomp()
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - chmod should fail as it's blocked by seccomp" && ((ret++))
   fi
 
-  isula rm -f `isula ps -a -q`
+  crictl rmp -f $(crictl pods -q)
 
   msg_info "${test} finished with return ${ret}..."
   return ${ret}
@@ -90,13 +87,20 @@ function test_cri_seccomp()
 
 declare -i ans=0
 
-do_pre
+for version in ${CRI_LIST[@]};
+do
+    test="test_cri_test_fun, use cri version => (${version})"
+    msg_info "${test} starting..."
 
-test_cri_seccomp "default" || ((ans++))
-test_cri_seccomp "unconfined" || ((ans++))
-test_cri_seccomp "localhost" || ((ans++))
+    do_pre $version || ((ans++))
 
-do_post
+    test_cri_seccomp "default" || ((ans++))
+    test_cri_seccomp "unconfined" || ((ans++))
+    test_cri_seccomp "localhost" || ((ans++))
+
+    do_post || ((ans++))
+    msg_info "${test} finished with return ${ans}..."
+done
 
 show_result ${ans} "${curr_path}/${0}"
 

@@ -12,8 +12,8 @@ source ../helpers.sh
 
 function do_pre()
 {
-    cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
-    sed -i "s#\"pod-sandbox-image\": \"\"#\"pod-sandbox-image\": \"mirrorgooglecontainers/pause-amd64:3.0\"#g" /etc/isulad/daemon.json
+    init_cri_conf $1
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to init cri conf: ${1}" && return ${FAILURE}
 
     init_cni_conf $data_path
     if [ $? -ne 0 ]; then
@@ -21,21 +21,14 @@ function do_pre()
         TC_RET_T=$(($TC_RET_T+1))
         return $TC_RET_T
     fi
-
-    isula load -i ${pause_img_path}/pause.tar
-    if [ $? -ne 0 ]; then
-        msg_err "Failed to load pause image"
-        TC_RET_T=$(($TC_RET_T+1))
-        return $TC_RET_T
-    fi
-
 }
 
 function do_post()
 {
-    cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
-    check_valgrind_log
-    start_isulad_with_valgrind
+    local ret=0
+    restore_cri_conf
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to restore cri conf" && ((ret++))
+    return $ret
 }
 
 function do_test()
@@ -104,21 +97,29 @@ function do_test()
 }
 
 
-ret=0
+ans=0
 
-do_pre
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
-
-for element in ${RUNTIME_LIST[@]};
+for version in ${CRI_LIST[@]};
 do
-    do_test $element
+    test="test_cri_default_namespace_fun, use cri version => (${version})"
+    msg_info "${test} starting..."
+
+    do_pre $version || ((ans++))
     if [ $? -ne 0 ];then
-        let "ret=$ret + 1"
+        let "ans=$ans + 1"
     fi
+
+    for element in ${RUNTIME_LIST[@]};
+    do
+        do_test $element
+        if [ $? -ne 0 ];then
+            let "ans=$ans + 1"
+        fi
+    done
+
+    do_post || ((ans++))
+
+    msg_info "${test} finished with return ${ans}..."
 done
 
-do_post
-
-show_result $ret "cni base test"
+show_result $ans "cni base test"
