@@ -46,6 +46,7 @@
 #include "cgroup.h"
 #include "specs_api.h"
 #endif
+#include "runtime_api.h"
 
 pthread_mutex_t g_supervisor_lock = PTHREAD_MUTEX_INITIALIZER;
 struct epoll_descr g_supervisor_descr;
@@ -177,6 +178,17 @@ static void *clean_resources_thread(void *arg)
     char *runtime = data->runtime;
     unsigned long long start_time = data->pid_info.start_time;
     pid_t pid = data->pid_info.pid;
+    rt_detect_process_params_t detect_params = {
+        .pid = pid,
+        .start_time = start_time,
+    };
+    rt_kill_params_t kill_params = {
+        .signal = SIGKILL,
+        .stop_signal = SIGKILL,
+        .pid = pid,
+        .start_time = start_time
+    };
+
     int retry_count = 0;
     int max_retry = 10;
 #ifdef ENABLE_CRI_API_V1
@@ -192,7 +204,7 @@ static void *clean_resources_thread(void *arg)
     prctl(PR_SET_NAME, "Clean resource");
 
 retry:
-    if (false == util_process_alive(pid, start_time)) {
+    if (runtime_detect_process(name, runtime, &detect_params) < 0) {
         ret = clean_container_resource(name, runtime, pid);
         // clean_container_resource failed, do not log error message,
         // just add to gc to retry clean resource.
@@ -200,7 +212,7 @@ retry:
             ERROR("Failed to clean resources of container %s", name);
         }
     } else {
-        ret = kill(pid, SIGKILL);
+        ret = runtime_kill(name, runtime, &kill_params);
         if (ret < 0 && errno != ESRCH) {
             ERROR("Can not kill process (pid=%d) with SIGKILL for container %s", pid, name);
         }
@@ -212,6 +224,7 @@ retry:
         }
 
         // get info of init process in container for debug problem of container
+        // but for shim-v2, this might be a misleading debug info
         proc_t *c_proc = util_get_process_proc_info(pid);
         if (c_proc != NULL) {
             ERROR("Container %s into GC with process state: {cmd: %s, state: %c, pid: %d}", name, c_proc->cmd, c_proc->state,

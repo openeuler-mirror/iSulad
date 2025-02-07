@@ -1513,6 +1513,7 @@ out:
 
 static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint32_t stop_signal, uint32_t signal)
 {
+    // for shim-v2, here is a ppid, which is always 0
     if (util_process_alive(pid, start_time) == false) {
         if (signal == stop_signal || signal == SIGKILL) {
             WARN("Process %d is not alive", pid);

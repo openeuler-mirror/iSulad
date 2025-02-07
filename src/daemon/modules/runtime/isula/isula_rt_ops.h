@@ -48,6 +48,9 @@ int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resi
 int rt_isula_kill(const char *id, const char *runtime, const rt_kill_params_t *params);
 int rt_isula_rebuild_config(const char *name, const char *runtime, const rt_rebuild_config_params_t *params);
 
+int rt_isula_read_pid_ppid_info(const char *name, const char *runtime, const rt_read_pid_ppid_info_params_t *params,
+                                pid_ppid_info_t *pid_info);
+int rt_isula_detect_process(const char *name, const char *runtime, const rt_detect_process_params_t *params);
 #ifdef __cplusplus
 }
 #endif

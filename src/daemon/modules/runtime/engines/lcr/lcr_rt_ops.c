@@ -941,3 +941,14 @@ out:
     free_oci_runtime_spec(oci_spec);
     return ret;
 }
+
+int rt_lcr_read_pid_ppid_info(const char *name, const char *runtime, const rt_read_pid_ppid_info_params_t *params,
+                              pid_ppid_info_t *pid_info)
+{
+    return util_read_pid_ppid_info(params->pid, pid_info);
+}
+
+int rt_lcr_detect_process(const char *name, const char *runtime, const rt_detect_process_params_t *params)
+{
+    return util_process_alive(params->pid, params->start_time) ? 0 : -1;
+}
