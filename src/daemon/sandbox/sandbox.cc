@@ -494,7 +494,9 @@ auto Sandbox::Load(Errors &error) -> bool
     }
 
     LoadNetworkSetting();
+#ifdef ENABLE_SANDBOXER
     LoadSandboxTasks();
+#endif
 
     // When the sandbox status acquisition fails or wait fails, the sandbox status is set to not ready,
     // and the user decides whether to delete the sandbox.
@@ -583,9 +585,11 @@ void Sandbox::CleanupSandboxDirs()
         ERROR("Failed to delete sandbox's root directory %s", m_rootdir.c_str());
     }
 
+#ifdef ENABLE_SANDBOXER
     if (util_recursive_rmdir(m_statedir.c_str(), 0) != 0) {
-        ERROR("Failed to delete sandbox's state directory %s", m_rootdir.c_str());
+        ERROR("Failed to delete sandbox's state directory %s", m_statedir.c_str());
     }
+#endif
 }
 
 void Sandbox::PrepareSandboxDirs(Errors &error)
@@ -615,12 +619,14 @@ void Sandbox::PrepareSandboxDirs(Errors &error)
         goto out;
     }
 
+#ifdef ENABLE_SANDBOXER
     nret = util_mkdir_p(m_statedir.c_str(), TEMP_DIRECTORY_MODE);
     if (nret < 0) {
         error.Errorf("Unable to create sandbox state directory %s.", m_statedir.c_str());
         ERROR("Unable to create sandbox state directory %s.", m_statedir.c_str());
         goto out;
     }
+#endif
 
     umask(mask);
     return;
@@ -1119,6 +1125,7 @@ void Sandbox::FillSandboxMetadata(sandbox_metadata* metadata, Errors &error)
     metadata->sandbox_config_json = util_strdup_s(jsonStr.c_str());
 }
 
+#ifdef ENABLE_SANDBOXER
 void Sandbox::LoadSandboxTasks()
 {
 }
@@ -1145,5 +1152,6 @@ auto Sandbox::PurgeExec(const char *containerId, const char *execId) -> int
 {
     return 0;
 }
+#endif
 
 }
