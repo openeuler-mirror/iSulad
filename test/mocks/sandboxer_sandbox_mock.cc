@@ -13,6 +13,8 @@
  * Description: provide sandbox mock
  ******************************************************************************/
 
+#ifdef ENABLE_SANDBOXER
+
 #include <gmock/gmock.h>
 #include "sandboxer_sandbox_mock.h"
 
@@ -69,3 +71,4 @@ auto SandboxerSandbox::PurgeExec(const char *containerId, const char *execId) ->
 }
 
 }
+#endif

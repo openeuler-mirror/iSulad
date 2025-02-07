@@ -16,6 +16,8 @@
 #ifndef _ISULAD_TEST_MOCKS_SANDBOXER_SANDBOX_MOCK_H
 #define _ISULAD_TEST_MOCKS_SANDBOXER_SANDBOX_MOCK_H
 
+#ifdef ENABLE_SANDBOXER
+
 #include <gmock/gmock.h>
 #include "sandbox_mock.h"
 #include "sandboxer_sandbox.h"
@@ -40,5 +42,6 @@ public:
 void MockSandboxerSandbox_SetMock(MockSandboxerSandbox *mock);
 
 }
+#endif
 
 #endif
