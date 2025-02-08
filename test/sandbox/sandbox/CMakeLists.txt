@@ -29,7 +29,6 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cpputils/transform.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cpputils/cxxutils.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/sandbox.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/sandbox_task.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller_manager.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/id_name_manager.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/isulad_config.c

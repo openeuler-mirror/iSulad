@@ -780,6 +780,9 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     oci_runtime_spec *oci_spec = NULL;
     rt_create_params_t create_params = { 0 };
     rt_start_params_t start_params = { 0 };
+#ifdef ENABLE_SANDBOXER
+    int prepare_container_ret = -1;
+#endif
 
     nret = snprintf(bundle, sizeof(bundle), "%s/%s", cont->root_path, id);
     if (nret < 0 || (size_t)nret >= sizeof(bundle)) {
@@ -904,7 +907,7 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     }
 #endif
 
-#ifdef ENABLE_CRI_API_V1
+#ifdef ENABLE_SANDBOXER
     if (cont->common_config->sandbox_info != NULL &&
         sandbox_prepare_container(cont->common_config,
                                   oci_spec, console_fifos, tty) != 0) {
@@ -912,6 +915,7 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         ret = -1;
         goto close_exit_fd;
     }
+    prepare_container_ret = 0;
 #endif
 
     create_params.bundle = bundle;
@@ -935,11 +939,7 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
 
     if (runtime_create(id, runtime, &create_params) != 0) {
         ret = -1;
-#ifdef ENABLE_CRI_API_V1
-        goto clean_prepare_container;
-#else
         goto close_exit_fd;
-#endif
     }
 
     start_params.rootpath = cont->root_path;
@@ -962,32 +962,25 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         if (do_post_start_on_success(cont, exit_fifo_fd, exit_fifo, pid_info) != 0) {
             ERROR("Failed to do post start on runtime start success");
             ret = -1;
-#ifdef ENABLE_CRI_API_V1
-            goto clean_prepare_container;
-#else
             goto close_exit_fd;
-#endif
         }
     } else {
         // wait monitor cleanup cgroup and processes finished
         wait_exit_fifo(id, exit_fifo_fd);
-#ifdef ENABLE_CRI_API_V1
-        goto clean_prepare_container;
-#else
         goto close_exit_fd;
-#endif
     }
     goto out;
 
-#ifdef ENABLE_CRI_API_V1
-clean_prepare_container:
-    if (cont->common_config->sandbox_info != NULL &&
-        sandbox_purge_container(cont->common_config) != 0) {
-        ERROR("Failed to remove container %s from sandbox", id);
+close_exit_fd:
+#ifdef ENABLE_SANDBOXER
+    if (prepare_container_ret == 0) {
+        if (cont->common_config->sandbox_info != NULL &&
+            sandbox_purge_container(cont->common_config) != 0) {
+            ERROR("Failed to remove container %s from sandbox", id);
+        }
     }
 #endif
 
-close_exit_fd:
     close(exit_fifo_fd);
     clean_resources_on_failure(cont, engine_log_path, loglevel);
 
@@ -1690,7 +1683,7 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
         }
     }
 
-#ifdef ENABLE_CRI_API_V1
+#ifdef ENABLE_SANDBOXER
     if (cont->common_config->sandbox_info != NULL &&
         sandbox_purge_container(cont->common_config) != 0) {
         ERROR("Failed to remove container %s from sandbox", id);
@@ -2160,7 +2153,7 @@ static int do_exec_container(const container_t *cont, const char *runtime, char 
         goto out;
     }
 
-#ifdef ENABLE_CRI_API_V1
+#ifdef ENABLE_SANDBOXER
     if (cont->common_config->sandbox_info != NULL &&
         sandbox_prepare_exec(cont->common_config, request->suffix,
                              process_spec, (const char **)console_fifos, request->tty) != 0) {
@@ -2284,7 +2277,7 @@ static void exec_container_end(container_exec_response *response, const containe
                                const char *exec_id, uint32_t cc,
                                int exit_code, int sync_fd, pthread_t thread_id)
 {
-#ifdef ENABLE_CRI_API_V1
+#ifdef ENABLE_SANDBOXER
     if (cont->common_config->sandbox_info != NULL &&
         sandbox_purge_exec(cont->common_config, exec_id) != 0) {
         ERROR("Failed to purge container for exec %s", exec_id);

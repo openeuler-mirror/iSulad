@@ -23,6 +23,9 @@
 #include <isula_libutils/container_network_settings.h>
 #include <isula_libutils/sandbox_state.h>
 #include <isula_libutils/sandbox_metadata.h>
+#ifdef ENABLE_SANDBOXER
+#include <isula_libutils/oci_runtime_spec.h>
+#endif
 
 #include "api_v1.grpc.pb.h"
 #include "errors.h"
@@ -30,7 +33,6 @@
 #include "controller_manager.h"
 #include "cstruct_wrapper.h"
 #include "read_write_lock.h"
-#include "sandbox_task.h"
 
 namespace sandbox {
 
@@ -140,6 +142,7 @@ public:
     auto Remove(Errors &error) -> bool;
     void Status(runtime::v1::PodSandboxStatus &status);
 
+#ifdef ENABLE_SANDBOXER
     // for sandbox api update
     virtual void LoadSandboxTasks();
     virtual auto PrepareContainer(const char *containerId, const char *baseFs,
@@ -149,6 +152,7 @@ public:
                              defs_process *processSpec, const char *consoleFifos[]) -> int;
     virtual auto PurgeContainer(const char *containerId) -> int;
     virtual auto PurgeExec(const char *containerId, const char *execId) -> int;
+#endif
 
 private:
     auto SaveState(Errors &error) -> bool;

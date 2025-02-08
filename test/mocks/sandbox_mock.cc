@@ -222,6 +222,7 @@ bool Sandbox::Remove(Errors &error)
     return true;
 }
 
+#ifdef ENABLE_SANDBOXER
 void Sandbox::LoadSandboxTasks() {}
 
 auto Sandbox::PrepareContainer(const char *containerId, const char *baseFs,
@@ -246,5 +247,6 @@ auto Sandbox::PurgeExec(const char *containerId, const char *execId) -> int
 {
     return 0;
 }
+#endif
 
 }

@@ -25,6 +25,7 @@
 #include "namespace.h"
 #include "utils.h"
 
+#ifdef ENABLE_SANDBOXER
 static inline bool validate_sandbox_info(const container_sandbox_info *sandbox)
 {
     return (sandbox != NULL && sandbox->sandboxer != NULL &&
@@ -110,6 +111,7 @@ int sandbox_purge_exec(const container_config_v2_common_config *config, const ch
 
     return sandbox->PurgeExec(config->id, exec_id);
 }
+#endif /* ENABLE_SANDBOXER */
 
 int sandbox_on_sandbox_exit(const char *sandbox_id, int exit_code)
 {

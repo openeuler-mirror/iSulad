@@ -59,6 +59,7 @@ public:
     MOCK_METHOD1(Remove, bool(Errors &error));
     MOCK_METHOD1(Status, void(runtime::v1::PodSandboxStatus &status));
 
+#ifdef ENABLE_SANDBOXER
     MOCK_METHOD0(LoadSandboxTasks, void());
     MOCK_METHOD4(PrepareContainer, int(const char *containerId, const char *baseFs,
                                        const oci_runtime_spec *ociSpec,
@@ -67,6 +68,7 @@ public:
                                   defs_process *processSpec, const char *consoleFifos[]));
     MOCK_METHOD1(PurgeContainer, int(const char *containerId));
     MOCK_METHOD2(PurgeExec, int(const char *containerId, const char *execId));
+#endif
 };
 
 void MockSandbox_SetMock(MockSandbox *mock);

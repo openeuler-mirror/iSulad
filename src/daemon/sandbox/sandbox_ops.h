@@ -24,6 +24,7 @@
 extern "C" {
 #endif
 
+#ifdef ENABLE_SANDBOXER
 int sandbox_prepare_container(const container_config_v2_common_config *config,
                               const oci_runtime_spec *oci_spec,
                               const char *console_fifos[], bool tty);
@@ -35,6 +36,7 @@ int sandbox_prepare_exec(const container_config_v2_common_config *config,
 int sandbox_purge_container(const container_config_v2_common_config *config);
 
 int sandbox_purge_exec(const container_config_v2_common_config *config, const char *exec_id);
+#endif
 
 int sandbox_on_sandbox_exit(const char *sandbox_id, int exit_code);
 
