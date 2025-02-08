@@ -890,20 +890,24 @@ auto Sandbox::GenerateSandboxMetadataJson(sandbox_metadata *metadata) -> std::st
 
 auto Sandbox::SaveMetadata(Errors &error) -> bool
 {
-    sandbox_metadata_runtime_info info = { 0 };
-    sandbox_metadata metadata = { 0 };
     int nret = -1;
     const std::string path = GetMetadataJsonPath();
     std::string metadataJson;
 
-    metadata.runtime_info = &info;
+    sandbox_metadata *metadata = static_cast<sandbox_metadata *>(util_common_calloc_s(sizeof(sandbox_metadata)));
+    if (metadata == nullptr) {
+        error.SetError("Out of memory");
+        return false;
+    }
 
-    FillSandboxMetadata(&metadata, error);
+    auto metadataWarpper = std::unique_ptr<CStructWrapper<sandbox_metadata>>(new CStructWrapper<sandbox_metadata>(metadata, free_sandbox_metadata));
+
+    FillSandboxMetadata(metadata, error);
     if (!error.Empty()) {
         return false;
     }
 
-    metadataJson = GenerateSandboxMetadataJson(&metadata);
+    metadataJson = GenerateSandboxMetadataJson(metadata);
     if (metadataJson.length() == 0) {
         error.Errorf("Failed to get sandbox metadata json for sandbox: '%s'", m_id.c_str());
         return false;
@@ -1102,11 +1106,23 @@ auto Sandbox::GetNetworkSettingsPath() -> std::string
 void Sandbox::FillSandboxMetadata(sandbox_metadata* metadata, Errors &error)
 {
     std::string jsonStr;
+    sandbox_metadata_runtime_info *info = nullptr;
+
     metadata->id = util_strdup_s(m_id.c_str());
     metadata->name = util_strdup_s(m_name.c_str());
+
+    info = static_cast<sandbox_metadata_runtime_info *>(util_common_calloc_s(sizeof(sandbox_metadata_runtime_info)));
+    if (info == NULL) {
+        error.SetError("Out of memory");
+        ERROR("Out of memory");
+        return;
+    }
+
+    metadata->runtime_info = info;
     metadata->runtime_info->runtime = util_strdup_s(m_runtimeInfo.runtime.c_str());
     metadata->runtime_info->sandboxer = util_strdup_s(m_runtimeInfo.sandboxer.c_str());
     metadata->runtime_info->runtime_handler = util_strdup_s(m_runtimeInfo.runtimeHandler.c_str());
+
     metadata->net_mode = util_strdup_s(m_netMode.c_str());
     metadata->network_ready = m_networkReady;
     metadata->task_address = util_strdup_s(m_taskAddress.c_str());
