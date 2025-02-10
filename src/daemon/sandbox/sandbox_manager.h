@@ -62,7 +62,6 @@ private:
     void NameIndexAdd(const std::string &name, const std::string &id);
     void NameIndexRemove(const std::string &name);
     auto NameIndexGet(const std::string &name) -> std::string;
-    auto NameIndexGetAll(void) -> std::map<std::string, std::string>;
 
     auto IDNameManagerRemoveEntry(const std::string &id, const std::string &name) -> bool;
     auto IDNameManagerNewEntry(std::string &id, const std::string &name) -> bool;

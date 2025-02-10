@@ -33,33 +33,6 @@
 #endif
 
 namespace CRIV1 {
-auto ContainerManagerService::GetContainerOrSandboxRuntime(const std::string &realID, Errors &error) -> std::string
-{
-    std::string runtime;
-    if (m_cb == nullptr || m_cb->container.get_runtime == nullptr) {
-        error.SetError("Unimplemented callback");
-        return runtime;
-    }
-    container_get_runtime_response *response { nullptr };
-
-    if (m_cb->container.get_runtime(realID.c_str(), &response) != 0) {
-        if (response != nullptr && response->errmsg != nullptr) {
-            error.SetError(response->errmsg);
-        } else {
-            error.SetError("Failed to call get id callback");
-        }
-        goto cleanup;
-    }
-
-    if (response->runtime != nullptr) {
-        runtime = response->runtime;
-    }
-
-cleanup:
-    free_container_get_runtime_response(response);
-    return runtime;
-}
-
 auto ContainerManagerService::PackCreateContainerHostConfigDevices(
     const runtime::v1::ContainerConfig &containerConfig, host_config *hostconfig, Errors &error) -> int
 {

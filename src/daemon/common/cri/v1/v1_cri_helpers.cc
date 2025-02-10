@@ -57,27 +57,6 @@ auto ContainerStatusToRuntime(Container_Status status) -> runtime::v1::Container
     }
 }
 
-auto CheckpointToSandbox(const std::string &id, const CRI::PodSandboxCheckpoint &checkpoint)
--> std::unique_ptr<runtime::v1::PodSandbox>
-{
-    std::unique_ptr<runtime::v1::PodSandbox> result(new (std::nothrow) runtime::v1::PodSandbox);
-    if (result == nullptr) {
-        return nullptr;
-    }
-    runtime::v1::PodSandboxMetadata *metadata = new (std::nothrow) runtime::v1::PodSandboxMetadata;
-    if (metadata == nullptr) {
-        return nullptr;
-    }
-
-    metadata->set_name(checkpoint.GetName());
-    metadata->set_namespace_(checkpoint.GetNamespace());
-    result->set_allocated_metadata(metadata);
-    result->set_id(id);
-    result->set_state(runtime::v1::SANDBOX_NOTREADY);
-
-    return result;
-}
-
 void UpdateCreateConfig(container_config *createConfig, host_config *hc,
                         const runtime::v1::ContainerConfig &config, const std::string &podSandboxID,
                         Errors &error)
@@ -197,24 +176,6 @@ auto GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::v1::K
         vect.push_back(elem.key() + "=" + elem.value());
     });
     return vect;
-}
-
-auto ValidateCheckpointKey(const std::string &key, Errors &error) -> bool
-{
-    const std::string PATTERN { "^([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]$" };
-
-    if (key.empty()) {
-        goto err_out;
-    }
-
-    if (key.size() <= CRIHelpers::Constants::MAX_CHECKPOINT_KEY_LEN &&
-        util_reg_match(PATTERN.c_str(), key.c_str()) == 0) {
-        return true;
-    }
-
-err_out:
-    error.Errorf("invalid key: %s", key.c_str());
-    return false;
 }
 
 auto ToIsuladContainerStatus(const runtime::v1::ContainerStateValue &state) -> std::string
@@ -361,34 +322,6 @@ void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_co
         hostconfig->security_opt_len++;
     }
 
-}
-void GetContainerSandboxID(const std::string &containerID, std::string &realContainerID, std::string &sandboxID,
-                           Errors &error)
-{
-    std::string PodID;
-    container_inspect *info = CRIHelpers::InspectContainer(containerID, error, false);
-    if (error.NotEmpty()) {
-        error.Errorf("Failed to inspect container %s: %s", containerID.c_str(), error.GetCMessage());
-        return;
-    }
-
-    // TODO: Refactor after adding the ability to use sandbox manager for sandboxid query
-    if (info->config != nullptr && info->config->labels != nullptr) {
-        for (size_t j = 0; j < info->config->labels->len; j++) {
-            if (strcmp(info->config->labels->keys[j], CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str()) == 0
-                && strcmp(info->config->labels->values[j], "") != 0) {
-                PodID = info->config->labels->values[j];
-                break;
-            }
-        }
-    }
-
-    if (PodID.empty()) {
-        error.Errorf("Failed to get sandbox id for container %s", containerID.c_str());
-    } else {
-        sandboxID = PodID;
-    }
-    realContainerID = info->id;
 }
 
 #ifdef ENABLE_SANDBOXER

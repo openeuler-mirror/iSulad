@@ -491,17 +491,6 @@ void PodSandboxManagerService::ClearCniNetwork(const std::shared_ptr<sandbox::Sa
     }
 }
 
-auto PodSandboxManagerService::GetSandboxKey(const container_inspect *inspect_data) -> std::string
-{
-    if (inspect_data == nullptr || inspect_data->network_settings == nullptr ||
-        inspect_data->network_settings->sandbox_key == nullptr) {
-        ERROR("Inspect data does not have network settings");
-        return std::string("");
-    }
-
-    return std::string(inspect_data->network_settings->sandbox_key);
-}
-
 auto PodSandboxManagerService::GetContainerListResponse(const std::string &readSandboxID,
                                                         std::vector<std::string> &errors) -> std::unique_ptr<CStructWrapper<container_list_response>>
 {
@@ -589,21 +578,6 @@ auto PodSandboxManagerService::StopAllContainersInSandbox(const std::string &rea
     return ret;
 }
 
-auto PodSandboxManagerService::GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool
-{
-    std::lock_guard<std::mutex> lockGuard(m_networkReadyLock);
-
-    bool ready { false };
-    auto iter = m_networkReady.find(podSandboxID);
-    if (iter != m_networkReady.end()) {
-        ready = iter->second;
-    } else {
-        error.Errorf("Do not find network: %s", podSandboxID.c_str());
-    }
-
-    return ready;
-}
-
 void PodSandboxManagerService::StopPodSandbox(const std::string &podSandboxID, Errors &error)
 {
     if (m_cb == nullptr || m_cb->container.stop == nullptr) {
@@ -671,16 +645,6 @@ void PodSandboxManagerService::RemoveAllContainersInSandbox(const std::string &r
             ERROR("Error remove container: %s: %s", list_response->containers[i]->id, rmError.GetCMessage());
             errors.push_back(rmError.GetMessage());
         }
-    }
-}
-
-void PodSandboxManagerService::ClearNetworkReady(const std::string &podSandboxID)
-{
-    std::lock_guard<std::mutex> lockGuard(m_networkReadyLock);
-
-    auto iter = m_networkReady.find(podSandboxID);
-    if (iter != m_networkReady.end()) {
-        m_networkReady.erase(iter);
     }
 }
 
@@ -764,33 +728,6 @@ void PodSandboxManagerService::RemovePodSandbox(const std::string &podSandboxID,
         ERROR("NRI RemovePodSandbox failed:  %s", nriErr.GetCMessage());
     }
 #endif
-}
-
-auto PodSandboxManagerService::SharesHostNetwork(const container_inspect *inspect) -> runtime::v1::NamespaceMode
-{
-    if (inspect != nullptr && inspect->host_config != nullptr && (inspect->host_config->network_mode != nullptr) &&
-        std::string(inspect->host_config->network_mode) == CRI::Constants::namespaceModeHost) {
-        return runtime::v1::NamespaceMode::NODE;
-    }
-    return runtime::v1::NamespaceMode::POD;
-}
-
-auto PodSandboxManagerService::SharesHostPid(const container_inspect *inspect) -> runtime::v1::NamespaceMode
-{
-    if (inspect != nullptr && inspect->host_config != nullptr && (inspect->host_config->pid_mode != nullptr) &&
-        std::string(inspect->host_config->pid_mode) == CRI::Constants::namespaceModeHost) {
-        return runtime::v1::NamespaceMode::NODE;
-    }
-    return runtime::v1::NamespaceMode::CONTAINER;
-}
-
-auto PodSandboxManagerService::SharesHostIpc(const container_inspect *inspect) -> runtime::v1::NamespaceMode
-{
-    if (inspect != nullptr && inspect->host_config != nullptr && (inspect->host_config->ipc_mode != nullptr) &&
-        std::string(inspect->host_config->ipc_mode) == CRI::Constants::namespaceModeHost) {
-        return runtime::v1::NamespaceMode::NODE;
-    }
-    return runtime::v1::NamespaceMode::POD;
 }
 
 void PodSandboxManagerService::GetIPs(std::shared_ptr<sandbox::Sandbox> sandbox, std::vector<std::string> &ips)

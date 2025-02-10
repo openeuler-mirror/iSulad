@@ -73,7 +73,6 @@ public:
     void Attach(const runtime::v1::AttachRequest &req, runtime::v1::AttachResponse *resp, Errors &error);
 
 private:
-    auto GetContainerOrSandboxRuntime(const std::string &realID, Errors &error) -> std::string;
     auto GenerateCreateContainerRequest(sandbox::Sandbox &sandbox,
                                         const runtime::v1::ContainerConfig &containerConfig,
                                         const runtime::v1::PodSandboxConfig &podSandboxConfig,

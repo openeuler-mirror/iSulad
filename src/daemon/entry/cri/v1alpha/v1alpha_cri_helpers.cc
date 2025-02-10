@@ -53,27 +53,6 @@ auto ContainerStatusToRuntime(Container_Status status) -> runtime::v1alpha2::Con
     }
 }
 
-auto CheckpointToSandbox(const std::string &id, const CRI::PodSandboxCheckpoint &checkpoint)
--> std::unique_ptr<runtime::v1alpha2::PodSandbox>
-{
-    std::unique_ptr<runtime::v1alpha2::PodSandbox> result(new (std::nothrow) runtime::v1alpha2::PodSandbox);
-    if (result == nullptr) {
-        return nullptr;
-    }
-    runtime::v1alpha2::PodSandboxMetadata *metadata = new (std::nothrow) runtime::v1alpha2::PodSandboxMetadata;
-    if (metadata == nullptr) {
-        return nullptr;
-    }
-
-    metadata->set_name(checkpoint.GetName());
-    metadata->set_namespace_(checkpoint.GetNamespace());
-    result->set_allocated_metadata(metadata);
-    result->set_id(id);
-    result->set_state(runtime::v1alpha2::SANDBOX_NOTREADY);
-
-    return result;
-}
-
 void UpdateCreateConfig(container_config *createConfig, host_config *hc,
                         const runtime::v1alpha2::ContainerConfig &config, const std::string &podSandboxID,
                         Errors &error)

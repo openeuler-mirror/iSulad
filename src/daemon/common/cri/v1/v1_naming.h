@@ -26,9 +26,6 @@ std::string MakeSandboxName(const runtime::v1::PodSandboxMetadata &metadata);
 std::string MakeContainerName(const runtime::v1::PodSandboxConfig &s,
                               const runtime::v1::ContainerConfig &c);
 
-void ParseSandboxName(const google::protobuf::Map<std::string, std::string> &annotations,
-                      runtime::v1::PodSandboxMetadata &metadata, Errors &err);
-
 void ParseContainerName(const google::protobuf::Map<std::string, std::string> &annotations,
                         runtime::v1::ContainerMetadata *metadata, Errors &err);
 } // namespace CRINamingV1

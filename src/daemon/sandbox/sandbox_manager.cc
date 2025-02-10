@@ -405,12 +405,6 @@ auto SandboxManager::NameIndexGet(const std::string &name) -> std::string
     return std::string();
 }
 
-auto SandboxManager::NameIndexGetAll(void) -> std::map<std::string, std::string>
-{
-    ReadGuard<RWMutex> lock(m_indexRWMutex);
-    return m_nameIndexMap;
-}
-
 auto SandboxManager::GetSandboxRootpath() -> std::string
 {
     __isula_auto_free char *root_path = NULL;

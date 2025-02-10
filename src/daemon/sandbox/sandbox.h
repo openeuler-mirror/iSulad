@@ -108,7 +108,6 @@ public:
     auto GetCreatedAt() -> uint64_t;
     auto GetPid() -> uint32_t;
     auto GetTaskAddress() const -> const std::string &;
-    auto GetImage() -> const std::string &;
     void SetNetMode(const std::string &mode);
     void SetController(std::shared_ptr<Controller> controller);
     void AddAnnotations(const std::string &key, const std::string &value);
