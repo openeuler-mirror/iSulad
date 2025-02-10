@@ -86,6 +86,9 @@ private:
     void UpdateSandboxConfig(runtime::v1::PodSandboxConfig &config, std::string &jsonCheckpoint, Errors &error);
     void SetupSandboxFiles(const std::string &resolvPath, const runtime::v1::PodSandboxConfig &config,
                            Errors &error);
+    void GenerateNetworkSetting(std::string &sandboxKey, std::string &network_setting_json, Errors &error);
+    void StartPodSandboxAndSetupNetowrk(std::shared_ptr<sandbox::Sandbox> sandbox, std::string &sandboxKey, std::string &sandboxName, std::string &networkMode, Errors &error);
+    void SetupNetowrkAndStartPodSandbox(std::shared_ptr<sandbox::Sandbox> sandbox, std::string &sandboxName, std::string &networkMode, Errors &error);
     void SetupSandboxNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, std::string &network_settings_json,
                              Errors &error);
     void ClearCniNetwork(const std::shared_ptr<sandbox::Sandbox> sandbox, Errors &error);
