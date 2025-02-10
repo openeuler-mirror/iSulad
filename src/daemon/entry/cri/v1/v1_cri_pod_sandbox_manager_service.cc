@@ -19,6 +19,7 @@
 #include <isula_libutils/host_config.h>
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/container_network_settings.h>
 #include <algorithm>
 
 #include "checkpoint_handler.h"
@@ -273,12 +274,6 @@ void PodSandboxManagerService::SetupSandboxNetwork(const std::shared_ptr<sandbox
     std::map<std::string, std::string> networkOptions;
     networkOptions["UID"] = config.metadata().uid();
 
-    if (prepare_network_namespace(sandboxKey.c_str(), false, 0) != 0) {
-        error.Errorf("Failed to prepare network namespace: %s", sandboxKey.c_str());
-        ERROR("Failed to prepare network namespace: %s", sandboxKey.c_str());
-        return;
-    }
-
     // Setup networking for the sandbox.
     m_pluginManager->SetUpPod(config.metadata().namespace_(), config.metadata().name(),
                               Network::DEFAULT_NETWORK_INTERFACE_NAME, sandbox->GetId(), stdAnnos, networkOptions,
@@ -295,6 +290,180 @@ void PodSandboxManagerService::SetupSandboxNetwork(const std::shared_ptr<sandbox
     DEBUG("set %s ready", sandbox->GetId().c_str());
 }
 
+void PodSandboxManagerService::GenerateNetworkSetting(std::string &sandboxKey, std::string &network_setting_json, Errors &error)
+{
+    container_network_settings *settings = NULL;
+    __isula_auto_free char *jerr = NULL;
+    __isula_auto_free char *setting_json { nullptr };
+
+    settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
+    if (settings == NULL) {
+        ERROR("Out of memory");
+        error.Errorf("Out of memory");
+        return;
+    }
+
+    auto settingsWarpper = std::unique_ptr<CStructWrapper<container_network_settings>>(new CStructWrapper<container_network_settings>(settings, free_container_network_settings));
+
+    settings->sandbox_key = util_strdup_s(sandboxKey.c_str());
+    if (settings->sandbox_key == NULL) {
+        ERROR("Failed to set sandbox key for network setting");
+        error.Errorf("Failed to set sandbox key for network setting");
+        return;
+    }
+
+    setting_json = container_network_settings_generate_json(settings, nullptr, &jerr);
+    if (setting_json == nullptr) {
+        error.Errorf("Get network settings json err:%s", jerr);
+    }
+
+    network_setting_json = std::string(setting_json);
+}
+
+void PodSandboxManagerService::StartPodSandboxAndSetupNetowrk(std::shared_ptr<sandbox::Sandbox> sandbox, std::string &sandboxKey, std::string &sandboxName, std::string &networkMode, Errors &error)
+{
+    cri_container_message_t msg = { 0 };
+    std::string network_setting_json;
+
+    // Step 7.2.1: Call sandbox create.
+    sandbox->Create(error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to create sandbox: %s", sandboxName.c_str());
+        return;
+    }
+
+    msg.container_id = sandbox->GetId().c_str();
+    msg.sandbox_id = sandbox->GetId().c_str();
+    msg.type = CRI_CONTAINER_MESSAGE_TYPE_CREATED;
+    mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &msg);
+
+    // Step 7.2.2: Save network settings json to disk
+    // Update network settings before start sandbox since sandbox container will use the sandbox key
+    if (namespace_is_cni(networkMode.c_str())) {
+        GenerateNetworkSetting(sandboxKey, network_setting_json, error);
+        // If saving network settings failed, ignore error
+        if (error.NotEmpty()) {
+            ERROR("Failed to generate networksetting :%s", error.GetCMessage());
+            return;
+        }        
+
+        sandbox->UpdateNetworkSettings(network_setting_json, error);
+        // If saving network settings failed, ignore error
+        if (error.NotEmpty()) {
+            ERROR("%s", error.GetCMessage());
+            return;
+        }
+    }
+
+    // Step 7.2.3: Call sandbox start.
+    sandbox->Start(error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to start sandbox: %s", sandboxName.c_str());
+        return;
+    }
+
+    // Step 7.2.4:Setup networking for the sandbox.
+    SetupSandboxNetwork(sandbox, network_setting_json, error);
+    if (error.NotEmpty()) {
+        goto stop_sandbox;
+    }
+
+    // Step 7.2.5:update Network settings after setup network to update ip info.
+    if (namespace_is_cni(networkMode.c_str())) {
+        Errors tmpErr;
+        sandbox->UpdateNetworkSettings(network_setting_json, tmpErr);
+        // If saving network settings failed, ignore error
+        if (tmpErr.NotEmpty()) {
+            WARN("%s", tmpErr.GetCMessage());
+        }
+    }
+
+    // Step 7.2.6: Save sandbox to disk
+    sandbox->Save(error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to save sandbox, %s", sandboxName.c_str());
+        goto cleanup_network;
+    }
+    return;
+
+cleanup_network:
+    if (namespace_is_cni(sandbox->GetNetMode().c_str())) {
+        Errors clearErr;
+        ClearCniNetwork(sandbox, clearErr);
+        if (clearErr.NotEmpty()) {
+            ERROR("Failed to clean cni network: %s", clearErr.GetCMessage());
+        }
+    }
+
+stop_sandbox:
+    Errors stopError;
+    CRIHelpers::StopContainerHelper(m_cb, sandbox->GetId(), 0, stopError);
+    WARN("Error stop container: %s: %s", sandbox->GetId().c_str(), stopError.GetCMessage());
+}
+
+void PodSandboxManagerService::SetupNetowrkAndStartPodSandbox(std::shared_ptr<sandbox::Sandbox> sandbox, std::string &sandboxName, std::string &networkMode, Errors &error)
+{
+    cri_container_message_t msg = { 0 };
+    std::string network_setting_json;
+
+    // Step 7.1.1: Setup networking for the sandbox.
+    // Setup sandbox network before create sandbox since the remote create might fail for sandbox
+    SetupSandboxNetwork(sandbox, network_setting_json, error);
+    if (error.NotEmpty()) {
+        return;
+    }
+
+    // Step 7.1.2: Save sandbox to disk
+    sandbox->Save(error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to save sandbox, %s", sandboxName.c_str());
+        goto cleanup_network;
+    }
+
+    // Step 7.1.3: Call sandbox create.
+    sandbox->Create(error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to create sandbox: %s", sandboxName.c_str());
+        goto cleanup_network;
+    }
+
+    msg.container_id = sandbox->GetId().c_str();
+    msg.sandbox_id = sandbox->GetId().c_str();
+    msg.type = CRI_CONTAINER_MESSAGE_TYPE_CREATED;
+    mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &msg);
+
+    // Step 7.1.4: Save network settings json to disk
+    // Update network settings before start sandbox since sandbox container will use the sandbox key
+    if (namespace_is_cni(networkMode.c_str())) {
+        Errors tmpErr;
+        sandbox->UpdateNetworkSettings(network_setting_json, tmpErr);
+        // If saving network settings failed, ignore error
+        if (tmpErr.NotEmpty()) {
+            WARN("%s", tmpErr.GetCMessage());
+        }
+    }
+
+    // Step 7.1.5: Call sandbox start.
+    sandbox->Start(error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to start sandbox: %s", sandboxName.c_str());
+        // If start failed, sandbox should be NotReady, we cleanup network, but delete sandbox in remove
+        goto cleanup_network;
+    }
+
+    return;
+
+cleanup_network:
+    if (namespace_is_cni(sandbox->GetNetMode().c_str())) {
+        Errors clearErr;
+        ClearCniNetwork(sandbox, clearErr);
+        if (clearErr.NotEmpty()) {
+            ERROR("Failed to clean cni network: %s", clearErr.GetCMessage());
+            return;
+        }
+    }
+}
+
 auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig &config,
                                              const std::string &runtimeHandler, Errors &error) -> std::string
 {
@@ -304,9 +473,10 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
     std::string networkMode;
     std::string sandboxKey;
     std::string jsonCheckpoint;
-    std::string network_setting_json;
     runtime::v1::PodSandboxConfig copyConfig = config;
+    std::map<std::string, std::string> stdAnnos;
     cri_container_message_t msg = { 0 };
+    std::shared_ptr<sandbox::Sandbox> sandbox;
 #ifdef ENABLE_NRI
     Errors nriErr;
 #endif
@@ -340,68 +510,42 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
         return response_id;
     }
 
-    // Step 5: Prepare sandboxKey
+    // Step 5: Prepare sandboxKey and mount ns namespace
     if (namespace_is_cni(networkMode.c_str())) {
         // cleanup sandboxKey file in DeleteSandbox
         PrepareSandboxKey(sandboxKey, error);
         if (error.NotEmpty()) {
             return response_id;
         }
+        if (prepare_network_namespace(sandboxKey.c_str(), false, 0) != 0) {
+            error.Errorf("Failed to prepare network namespace: %s", sandboxKey.c_str());
+            ERROR("Failed to prepare network namespace: %s", sandboxKey.c_str());
+            goto clean_ns;
+        }
     }
 
     // Step 6: Create sandbox instance
-    auto sandbox = sandbox::SandboxManager::GetInstance()->CreateSandbox(sandboxName, runtimeInfo, sandboxKey,
+    sandbox = sandbox::SandboxManager::GetInstance()->CreateSandbox(sandboxName, runtimeInfo, sandboxKey,
                                                                          networkMode, copyConfig, image, error);
     if (error.NotEmpty()) {
-        if (namespace_is_cni(networkMode.c_str())) {
-            (void)remove_network_namespace_file(sandboxKey.c_str());
-        }
-        return response_id;
+        goto clean_ns;
     }
 
-    // Step 7: Setup networking for the sandbox.
-    // Setup sandbox network before create sandbox since the remote create might fail for sandbox
-    SetupSandboxNetwork(sandbox, network_setting_json, error);
+    CRIHelpers::ProtobufAnnoMapToStd(sandbox->GetSandboxConfig().annotations(), stdAnnos);
+    // Step 7: According to the annotation and network namespace mode,
+    //         determine the order of start sandbox and setup network.
+    // tips: clean sandbox and network in sub function.
+    if (CRIHelpers::SetupNetworkFirst(stdAnnos)) {
+        // Step 7.1: Setup networking for the sandbox, and then start the sandbox container.
+        SetupNetowrkAndStartPodSandbox(sandbox, sandboxName, networkMode, error);
+    } else {
+        // Step 7.2: (Default)Start the sandbox container, and then setup networking for the sandbox.
+        // why: Some kata multi-network plane plugins (such as configuring vfio device pass-through) 
+        // need to be called after the pod is already running.
+        StartPodSandboxAndSetupNetowrk(sandbox, sandboxKey, sandboxName, networkMode, error);
+    }
     if (error.NotEmpty()) {
-        goto cleanup_sandbox;
-    }
-
-    // Step 8: Save sandbox to disk
-    sandbox->Save(error);
-    if (error.NotEmpty()) {
-        ERROR("Failed to save sandbox, %s", sandboxName.c_str());
-        goto cleanup_network;
-    }
-
-    // Step 9: Call sandbox create.
-    sandbox->Create(error);
-    if (error.NotEmpty()) {
-        ERROR("Failed to create sandbox: %s", sandboxName.c_str());
-        goto cleanup_network;
-    }
-
-    msg.container_id = sandbox->GetId().c_str();
-    msg.sandbox_id = sandbox->GetId().c_str();
-    msg.type = CRI_CONTAINER_MESSAGE_TYPE_CREATED;
-    mailbox_publish(MAILBOX_TOPIC_CRI_CONTAINER, &msg);
-
-    // Step 10: Save network settings json to disk
-    // Update network settings before start sandbox since sandbox container will use the sandbox key
-    if (namespace_is_cni(networkMode.c_str())) {
-        Errors tmpErr;
-        sandbox->UpdateNetworkSettings(network_setting_json, tmpErr);
-        // If saving network settings failed, ignore error
-        if (tmpErr.NotEmpty()) {
-            WARN("%s", tmpErr.GetCMessage());
-        }
-    }
-
-    // Step 11: Call sandbox start.
-    sandbox->Start(error);
-    if (error.NotEmpty()) {
-        ERROR("Failed to start sandbox: %s", sandboxName.c_str());
-        // If start failed, sandbox should be NotReady, we cleanup network and delete sandbox in remove
-        return response_id;
+        goto clean_ns;
     }
 
     msg.type = CRI_CONTAINER_MESSAGE_TYPE_STARTED;
@@ -416,28 +560,14 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
 #endif
 
     return sandbox->GetId();
-
-cleanup_network:
-    if (namespace_is_cni(sandbox->GetNetMode().c_str())) {
-        Errors clearErr;
-        ClearCniNetwork(sandbox, clearErr);
-        if (clearErr.NotEmpty()) {
-            ERROR("Failed to clean cni network: %s", clearErr.GetCMessage());
-            return response_id;
+clean_ns:
+    if (namespace_is_cni(networkMode.c_str())) {
+        // umount netns when prepare runp failed
+        if (remove_network_namespace(sandboxKey.c_str()) != 0) {
+            SYSERROR("Failed to umount directory %s", sandboxKey.c_str());
         }
+        (void)remove_network_namespace_file(sandboxKey.c_str());
     }
-
-cleanup_sandbox:
-    sandbox::SandboxManager::GetInstance()->DeleteSandbox(sandbox->GetId(), error);
-    if (error.NotEmpty()) {
-        ERROR("Failed to delete sandbox: %s", sandbox->GetId().c_str());
-    }
-#ifdef ENABLE_NRI
-    if (!NRIAdaptation::GetInstance()->RemovePodSandbox(sandbox, nriErr)) {
-        DEBUG("NRI RemovePodSandbox failed:  %s", nriErr.GetCMessage());
-    }
-#endif
-
     return response_id;
 }
 
