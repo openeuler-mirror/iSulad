@@ -93,12 +93,7 @@ private:
     auto GetContainerListResponse(const std::string &readSandboxID,
                                   std::vector<std::string> &errors) -> std::unique_ptr<CStructWrapper<container_list_response>>;
     auto StopAllContainersInSandbox(const std::string &readSandboxID, Errors &error) -> int;
-    auto GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool;
     void RemoveAllContainersInSandbox(const std::string &readSandboxID, std::vector<std::string> &errors);
-    void ClearNetworkReady(const std::string &podSandboxID);
-    auto SharesHostNetwork(const container_inspect *inspect) -> runtime::v1::NamespaceMode;
-    auto SharesHostPid(const container_inspect *inspect) -> runtime::v1::NamespaceMode;
-    auto SharesHostIpc(const container_inspect *inspect) -> runtime::v1::NamespaceMode;
     void SetSandboxStatusNetwork(std::shared_ptr<sandbox::Sandbox> sandbox,
                                  std::unique_ptr<runtime::v1::PodSandboxStatus> &podStatus);
     void GetIPs(std::shared_ptr<sandbox::Sandbox> sandbox, std::vector<std::string> &ips);
@@ -108,7 +103,6 @@ private:
     auto GetAvailableBytes(const uint64_t &memoryLimit, const uint64_t &workingSetBytes) -> uint64_t;
     void GetPodSandboxCgroupMetrics(const std::string &cgroupParent, cgroup_metrics_t &cgroupMetrics,
                                     Errors &error);
-    auto GetSandboxKey(const container_inspect *inspect_data) -> std::string;
     void GetPodSandboxNetworkMetrics(const std::string &netnsPath,
                                      std::map<std::string, std::string> &annotations,
                                      std::vector<Network::NetworkInterfaceStats> &netMetrics, Errors &error);
@@ -138,7 +132,6 @@ private:
 private:
     std::string m_podSandboxImage;
     std::mutex m_networkReadyLock;
-    std::map<std::string, bool> m_networkReady;
     service_executor_t *m_cb { nullptr };
     std::shared_ptr<Network::PluginManager> m_pluginManager { nullptr };
     bool m_enablePodEvents;

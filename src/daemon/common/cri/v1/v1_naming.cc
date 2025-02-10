@@ -44,36 +44,6 @@ std::string MakeSandboxName(const runtime::v1::PodSandboxMetadata &metadata)
     return sname;
 }
 
-void ParseSandboxName(const google::protobuf::Map<std::string, std::string> &annotations,
-                      runtime::v1::PodSandboxMetadata &metadata, Errors &err)
-{
-    if (annotations.count(CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY) == 0) {
-        err.Errorf("annotation don't contains the sandbox name, failed to parse it");
-        return;
-    }
-
-    if (annotations.count(CRIHelpers::Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY) == 0) {
-        err.Errorf("annotation don't contains the sandbox namespace, failed to parse it");
-        return;
-    }
-
-    if (annotations.count(CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY) == 0) {
-        err.Errorf("annotation don't contains the sandbox uid, failed to parse it");
-        return;
-    }
-
-    if (annotations.count(CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY) == 0) {
-        err.Errorf("annotation don't contains the sandbox attempt, failed to parse it");
-        return;
-    }
-
-    metadata.set_name(annotations.at(CRIHelpers::Constants::SANDBOX_NAME_ANNOTATION_KEY));
-    metadata.set_namespace_(annotations.at(CRIHelpers::Constants::SANDBOX_NAMESPACE_ANNOTATION_KEY));
-    metadata.set_uid(annotations.at(CRIHelpers::Constants::SANDBOX_UID_ANNOTATION_KEY));
-    auto sandboxAttempt = annotations.at(CRIHelpers::Constants::SANDBOX_ATTEMPT_ANNOTATION_KEY);
-    metadata.set_attempt(static_cast<google::protobuf::uint32>(std::stoul(sandboxAttempt)));
-}
-
 std::string MakeContainerName(const runtime::v1::PodSandboxConfig &s, const runtime::v1::ContainerConfig &c)
 {
     std::string sname;

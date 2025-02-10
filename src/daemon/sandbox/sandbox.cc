@@ -210,11 +210,6 @@ auto Sandbox::GetPid() -> uint32_t
     return m_state.pid;
 }
 
-auto Sandbox::GetImage() -> const std::string &
-{
-    return m_image;
-}
-
 void Sandbox::DoUpdateExitedStatus(const ControllerExitInfo &exitInfo)
 {
     WriteGuard<RWMutex> lock(m_stateMutex);

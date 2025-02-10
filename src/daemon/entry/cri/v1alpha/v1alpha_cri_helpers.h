@@ -40,9 +40,6 @@ struct commonSecurityContext {
 
 auto ContainerStatusToRuntime(Container_Status status) -> runtime::v1alpha2::ContainerState;
 
-auto CheckpointToSandbox(const std::string &id, const CRI::PodSandboxCheckpoint &checkpoint)
--> std::unique_ptr<runtime::v1alpha2::PodSandbox>;
-
 void UpdateCreateConfig(container_config *createConfig, host_config *hc,
                         const runtime::v1alpha2::ContainerConfig &config, const std::string &podSandboxID,
                         Errors &error);

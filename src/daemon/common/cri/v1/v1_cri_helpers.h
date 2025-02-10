@@ -42,9 +42,6 @@ struct commonSecurityContext {
 
 auto ContainerStatusToRuntime(Container_Status status) -> runtime::v1::ContainerState;
 
-auto CheckpointToSandbox(const std::string &id, const CRI::PodSandboxCheckpoint &checkpoint)
--> std::unique_ptr<runtime::v1::PodSandbox>;
-
 void UpdateCreateConfig(container_config *createConfig, host_config *hc,
                         const runtime::v1::ContainerConfig &config, const std::string &podSandboxID,
                         Errors &error);
@@ -54,8 +51,6 @@ void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1:
 
 auto GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::v1::KeyValue> &envs)
 -> std::vector<std::string>;
-
-auto ValidateCheckpointKey(const std::string &key, Errors &error) -> bool;
 
 auto ToIsuladContainerStatus(const runtime::v1::ContainerStateValue &state) -> std::string;
 
@@ -71,9 +66,6 @@ auto GetSecurityOpts(const commonSecurityContext &context, const char &separator
 -> std::vector<std::string>;
 
 void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_config *hostconfig, Errors &error);
-
-void GetContainerSandboxID(const std::string &containerID, std::string &realContainerID, std::string &sandboxID,
-                           Errors &error);
 
 std::string CRISandboxerConvert(const std::string &runtime);
 
