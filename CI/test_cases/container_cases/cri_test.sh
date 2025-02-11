@@ -45,6 +45,83 @@ function do_post()
     return $ret
 }
 
+function test_cri_info()
+{
+  local ret=0
+  local image="busybox"
+  local test="cri info test => (${FUNCNAME[@]})"
+
+  msg_info "${test} starting..."
+
+  crictl info
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to get cri info" && ((ret++))
+
+  msg_info "${test} finished with return ${ret}..."
+  return ${ret}
+}
+
+function test_cri_list()
+{
+  local ret=0
+  local image="busybox"
+  local test="cri list test => (${FUNCNAME[@]})"
+
+  msg_info "${test} starting..."
+
+  sid=$(crictl runp ${data_path}/sandbox-config.json)
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run sandbox" && ((ret++))
+
+  cid=$(crictl create $sid ${data_path}/container-config.json ${data_path}/sandbox-config.json)
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create container" && ((ret++))
+
+  crictl start $cid
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start container" && ((ret++))
+
+  crictl pods | grep "^${sid:0:5}"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to list cri pod" && ((ret++))
+
+  crictl ps -a | grep "^${cid:0:5}"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to list cri container" && ((ret++))
+
+  stop_isulad_without_valgrind
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
+
+  start_isulad_without_valgrind
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
+
+  crictl ps -a | grep "^${cid:0:5}"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to list cri container after restart" && ((ret++))
+
+  crictl pods | grep "^${sid:0:5}"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to list cri pod after restart" && ((ret++))
+
+  crictl rmp -f $(crictl pods -q)
+
+  msg_info "${test} finished with return ${ret}..."
+  return ${ret}
+}
+
+function test_cri_images()
+{
+  local ret=0
+  local image="busybox"
+  local test="cri images test => (${FUNCNAME[@]})"
+
+  msg_info "${test} starting..."
+
+  crictl pull $image
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image" && ((ret++))
+
+  crictl images | grep $image
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to list cri images" && ((ret++))
+
+  crictl rmi $image
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image" && ((ret++))
+
+  msg_info "${test} finished with return ${ret}..."
+  return ${ret}
+}
+
 function test_cri_seccomp()
 {
   local ret=0
@@ -97,6 +174,9 @@ do
     test_cri_seccomp "default" || ((ans++))
     test_cri_seccomp "unconfined" || ((ans++))
     test_cri_seccomp "localhost" || ((ans++))
+    test_cri_info || ((ans++))
+    test_cri_list || ((ans++))
+    test_cri_images || ((ans++))
 
     do_post || ((ans++))
     msg_info "${test} finished with return ${ans}..."
