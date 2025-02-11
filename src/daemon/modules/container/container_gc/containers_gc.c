@@ -461,15 +461,16 @@ static void gc_container_process(struct linked_list *it)
     unsigned long long start_time = 0;
     char *runtime = NULL;
     char *id = NULL;
-    container_garbage_config_gc_containers_element *gc_cont = NULL;
+    container_garbage_config_gc_containers_element *gc_cont = (container_garbage_config_gc_containers_element *)it->elem;
     rt_detect_process_params_t detect_params = {
         .pid = gc_cont->pid,
         .start_time = gc_cont->start_time,
     };
 
-    gc_cont = (container_garbage_config_gc_containers_element *)it->elem;
     id = gc_cont->id;
     runtime = gc_cont->runtime;
+    pid = gc_cont->pid;
+    start_time = gc_cont->start_time;
 
     if (runtime_detect_process(id, runtime, &detect_params) < 0) {
         ret = clean_container_resource(id, runtime, pid);
