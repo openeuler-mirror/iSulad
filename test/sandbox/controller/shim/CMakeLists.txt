@@ -28,6 +28,7 @@ add_executable(${EXE}
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/cri
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/cri/v1
@@ -52,6 +53,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1
 )
 
+set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,isula_common_calloc_s")
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
 target_link_libraries(${EXE} -Wl,--as-needed ${ISULAD_ABSL_USED_TARGETS})
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)

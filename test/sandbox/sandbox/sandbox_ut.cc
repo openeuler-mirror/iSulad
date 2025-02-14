@@ -14,8 +14,22 @@
  */
 
 #include <gtest/gtest.h>
-
+#include <fstream>
 #include "sandbox.h"
+#include "sandbox_ops.h"
+#include "mock.h"
+#include "utils_file.h"
+
+extern "C" {
+    DECLARE_WRAPPER(util_file_exists, bool, (const char * path));
+    DEFINE_WRAPPER(util_file_exists, bool, (const char * path), (path));
+    DECLARE_WRAPPER(mount, int, (const char *__special_file, const char *__dir,
+		  const char *__fstype, unsigned long int __rwflag,
+		  const void *__data));
+    DEFINE_WRAPPER(mount, int, (const char *__special_file, const char *__dir,
+		  const char *__fstype, unsigned long int __rwflag,
+		  const void *__data), (__special_file, __dir, __fstype, __rwflag, __data));
+}
 
 namespace sandbox {
 
@@ -39,8 +53,10 @@ TEST_F(SandboxTest, TestDefaultGetters)
     std::string sandbox_statedir = statedir + "/" + id;
     std::string name = "test";
     RuntimeInfo info = {"runc", "shim", "kuasar"};
+    std::shared_ptr<runtime::v1::PodSandboxConfig> pod_config = std::make_shared<runtime::v1::PodSandboxConfig>();
+    pod_config->set_hostname("test");
 
-    auto sandbox = new Sandbox(id, rootdir, statedir, name, info);
+    auto sandbox = std::unique_ptr<Sandbox>(new Sandbox(id, rootdir, statedir, name, info));
     ASSERT_NE(sandbox, nullptr);
 
     ASSERT_EQ(sandbox->IsReady(), false);
@@ -57,6 +73,8 @@ TEST_F(SandboxTest, TestDefaultGetters)
     ASSERT_EQ(sandbox->GetStatsInfo().cpuUseNanos, 0);
     ASSERT_EQ(sandbox->GetNetworkReady(), false);
     ASSERT_STREQ(sandbox->GetNetMode().c_str(), DEFAULT_NETMODE.c_str());
+    sandbox->SetSandboxConfig(*pod_config);
+    ASSERT_STREQ(sandbox->GetMutableSandboxConfig()->hostname().c_str(), pod_config->hostname().c_str());
 }
 
 TEST_F(SandboxTest, TestGettersAndSetters)
@@ -66,7 +84,7 @@ TEST_F(SandboxTest, TestGettersAndSetters)
     std::string statedir = "/test2/statedir";
     std::string mode = "host";
 
-    auto sandbox = new Sandbox(id, rootdir, statedir);
+    auto sandbox = std::unique_ptr<Sandbox>(new Sandbox(id, rootdir, statedir));
     ASSERT_NE(sandbox, nullptr);
 
     sandbox->SetNetMode(mode);
@@ -91,6 +109,46 @@ TEST_F(SandboxTest, TestGettersAndSetters)
 
     sandbox->SetNetworkReady(true);
     EXPECT_TRUE(sandbox->GetNetworkReady());
+}
+
+TEST_F(SandboxTest, TestCreateDefaultResolveConf)
+{
+    std::string id = "34567890";
+    std::string rootdir = "/tmp/test3/rootdir";
+    std::string statedir = "/tmp/test3/statedir";
+    std::string name = "test";
+    RuntimeInfo info = {"runc", "shim", "kuasar"};
+    std::string host_nework = "host";
+    Errors error;
+
+    auto sandbox = std::unique_ptr<Sandbox>(new Sandbox(id, rootdir, statedir, name, info, host_nework));
+    ASSERT_NE(sandbox, nullptr);
+    MOCK_SET(util_file_exists, false);
+    MOCK_SET(mount, 0);
+    sandbox->PrepareSandboxDirs(error);
+    ASSERT_TRUE(error.Empty());
+    MOCK_CLEAR(util_file_exists);
+    MOCK_CLEAR(mount);
+    const std::string RESOLVE_CONF = "\nnameserver 8.8.8.8\nnameserver 8.8.4.4\n";
+    std::string RESOLVE_PATH = rootdir + "/" + id + "/resolv.conf";
+    ASSERT_TRUE(util_file_exists(RESOLVE_PATH.c_str()));
+    std::ifstream f(RESOLVE_PATH);
+    std::string line;
+    std::string content = "";
+    while (std::getline(f, line)) {
+        content += line;
+        content +="\n";
+    }
+    f.close();
+    ASSERT_STREQ(RESOLVE_CONF.c_str(), content.c_str());
+    sandbox->CleanupSandboxDirs();
+    ASSERT_FALSE(util_file_exists(RESOLVE_PATH.c_str()));
+}
+
+TEST_F(SandboxTest, TestSandboxOpsOnExitFailed)
+{
+    ASSERT_EQ(sandbox_on_sandbox_exit(nullptr, 0), -1);
+    ASSERT_EQ(sandbox_on_sandbox_exit("12345678", 0), -1);
 }
 
 }

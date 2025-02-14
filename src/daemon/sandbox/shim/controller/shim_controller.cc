@@ -289,6 +289,11 @@ bool ShimController::Create(const std::string &sandboxId,
 
 std::unique_ptr<ControllerSandboxInfo> ShimController::Start(const std::string &sandboxId, Errors &error)
 {
+    if (m_cb == nullptr || m_cb->container.start == nullptr) {
+        ERROR("Unimplemented callback");
+        error.SetError("Unimplemented callback");
+        return nullptr;
+    }
     std::unique_ptr<ControllerSandboxInfo> sandboxInfo(new ControllerSandboxInfo());
     auto requestWrapper = makeUniquePtrCStructWrapper<container_start_request>(free_container_start_request);
     if (requestWrapper == nullptr) {

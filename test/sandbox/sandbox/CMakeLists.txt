@@ -29,7 +29,9 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cpputils/transform.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cpputils/cxxutils.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/sandbox.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/sandbox_ops.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/controller_manager.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox/sandbox_manager.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/id_name_manager.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/isulad_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/sandbox/controller/controller_common.cc
@@ -43,6 +45,7 @@ target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
     ${sandbox_dir}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/entry/cri
@@ -54,10 +57,12 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/sandbox
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cpputils
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri
     ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri/v1
 )
 
+set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_file_exists -Wl,--wrap,mount")
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} libutils_ut -lgrpc -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
 target_link_libraries(${EXE} -Wl,--as-needed ${ISULAD_ABSL_USED_TARGETS})
 add_test(NAME ${EXE} COMMAND ${EXE} --gtest_output=xml:${EXE}-Results.xml)
