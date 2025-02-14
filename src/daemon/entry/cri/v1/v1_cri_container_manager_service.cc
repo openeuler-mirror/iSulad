@@ -486,7 +486,7 @@ std::string ContainerManagerService::CreateContainer(const std::string &podSandb
     // verify whether the sandbox is ready
     if (!sandbox->IsReady()) {
         error.Errorf("Failed to generate sandbox_info because the sandbox %s is not ready", sandbox->GetId().c_str());
-        return nullptr;
+        return response_id;
     }
 
 #ifdef ENABLE_NRI
