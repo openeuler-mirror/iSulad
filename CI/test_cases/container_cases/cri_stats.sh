@@ -66,6 +66,8 @@ function test_cri_stats()
 
     crictl stats $cid
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to get cri stats" && ((ret++))
+
+    crictl rmp -f $(crictl pods -q)
     
     msg_info "${test} finished with return ${ret}..."
     return ${ret}
