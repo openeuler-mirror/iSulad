@@ -21,6 +21,12 @@
 #include "image_api_mock.h"
 #include "service_container_api_mock.h"
 #include "shim_controller.h"
+#include "mock.h"
+
+extern "C" {
+    DECLARE_WRAPPER(isula_common_calloc_s, void *, (size_t size));
+    DEFINE_WRAPPER(isula_common_calloc_s, void *, (size_t size), (size));
+}
 
 class ShimControllerTest : public testing::Test {
 protected:
@@ -76,6 +82,32 @@ TEST_F(ShimControllerTest, CreateTestFailed)
     EXPECT_FALSE(m_contoller->Create(DUMMY_SANDBOX_ID, *params, err));
 }
 
+TEST_F(ShimControllerTest, CreateTestContainerCallbackNullPtrError)
+{
+    Errors err;
+    std::unique_ptr<sandbox::ControllerCreateParams> params = CreateTestCreateParams();
+    // shim controller create needs linux config.
+    (void)params->config->mutable_linux();
+    (void)params->config->mutable_linux()->mutable_resources();
+    auto callback = get_service_executor();
+    auto tmp_create = callback->container.create;
+    callback->container.create = nullptr;
+    EXPECT_FALSE(m_contoller->Create(DUMMY_SANDBOX_ID, *params, err));
+    callback->container.create = tmp_create;
+}
+
+TEST_F(ShimControllerTest, CreateTestContainerCallocError)
+{
+    Errors err;
+    std::unique_ptr<sandbox::ControllerCreateParams> params = CreateTestCreateParams();
+    // shim controller create needs linux config.
+    (void)params->config->mutable_linux();
+    (void)params->config->mutable_linux()->mutable_resources();
+    MOCK_SET(isula_common_calloc_s, nullptr);
+    EXPECT_FALSE(m_contoller->Create(DUMMY_SANDBOX_ID, *params, err));
+    MOCK_CLEAR(isula_common_calloc_s);
+}
+
 /************* Unit tests for Start *************/
 TEST_F(ShimControllerTest, StartTestSucceed)
 {
@@ -99,13 +131,30 @@ TEST_F(ShimControllerTest, StartTestSucceed)
     EXPECT_EQ(ret->pid, 1234);
 }
 
-/************* Unit tests for Start *************/
 TEST_F(ShimControllerTest, StartTestFailed)
 {
     Errors err;
     EXPECT_CALL(*m_containerCallbackMock, ContainerStart).Times(1).WillOnce(testing::Return(1));
     std::unique_ptr<sandbox::ControllerSandboxInfo> ret = m_contoller->Start(DUMMY_SANDBOX_ID, err);
     EXPECT_EQ(ret, nullptr);
+}
+
+TEST_F(ShimControllerTest, StartTestContainerCallbackNullPtrError)
+{
+    Errors err;
+    auto callback = get_service_executor();
+    auto tmp_start = callback->container.start;
+    callback->container.start = nullptr;
+    EXPECT_FALSE(m_contoller->Start(DUMMY_SANDBOX_ID, err));
+    callback->container.start = tmp_start;
+}
+
+TEST_F(ShimControllerTest, StartTestContainerCallocError)
+{
+    Errors err;
+    MOCK_SET(isula_common_calloc_s, nullptr);
+    EXPECT_FALSE(m_contoller->Start(DUMMY_SANDBOX_ID, err));
+    MOCK_CLEAR(isula_common_calloc_s);
 }
 
 /************* Unit tests for Stop *************/
@@ -121,6 +170,24 @@ TEST_F(ShimControllerTest, StopTestFailed)
     Errors err;
     EXPECT_CALL(*m_containerCallbackMock, ContainerStop).Times(1).WillOnce(testing::Return(1));
     EXPECT_FALSE(m_contoller->Stop(DUMMY_SANDBOX_ID, 0, err));
+}
+
+TEST_F(ShimControllerTest, StopTestContainerCallbackNullPtrError)
+{
+    Errors err;
+    auto callback = get_service_executor();
+    auto tmp_stop = callback->container.stop;
+    callback->container.stop = nullptr;
+    EXPECT_FALSE(m_contoller->Stop(DUMMY_SANDBOX_ID, 0, err));
+    callback->container.stop = tmp_stop;
+}
+
+TEST_F(ShimControllerTest, StopTestContainerCallocError)
+{
+    Errors err;
+    MOCK_SET(isula_common_calloc_s, nullptr);
+    EXPECT_FALSE(m_contoller->Stop(DUMMY_SANDBOX_ID, 0, err));
+    MOCK_CLEAR(isula_common_calloc_s);
 }
 
 /************* Unit tests for Status *************/
@@ -166,4 +233,58 @@ TEST_F(ShimControllerTest, ShutdownTestFailed)
     Errors err;
     EXPECT_CALL(*m_containerCallbackMock, ContainerRemove).Times(1).WillOnce(testing::Return(1));
     EXPECT_FALSE(m_contoller->Shutdown(DUMMY_SANDBOX_ID, err));
+}
+
+TEST_F(ShimControllerTest, ShutdownTestContainerCallbackNullPtrError)
+{
+    Errors err;
+    auto callback = get_service_executor();
+    auto tmp_remove = callback->container.remove;
+    callback->container.remove = nullptr;
+    EXPECT_FALSE(m_contoller->Shutdown(DUMMY_SANDBOX_ID, err));
+    callback->container.remove = tmp_remove;
+}
+
+TEST_F(ShimControllerTest, ShutdownTestContainerCallocError)
+{
+    Errors err;
+    MOCK_SET(isula_common_calloc_s, nullptr);
+    EXPECT_FALSE(m_contoller->Shutdown(DUMMY_SANDBOX_ID, err));
+    MOCK_CLEAR(isula_common_calloc_s);
+}
+
+/*********** Unit tests for Platform ***********/
+TEST_F(ShimControllerTest, PlatformTestSucceed)
+{
+    Errors err;
+    // Not support yet
+    std::unique_ptr<sandbox::ControllerPlatformInfo> ret = m_contoller->Platform(DUMMY_SANDBOX_ID, err);
+    EXPECT_EQ(ret, nullptr);
+}
+
+/*********** Unit tests for Update ***********/
+TEST_F(ShimControllerTest, UpdateTestSucceed)
+{
+    Errors err;
+    // Shim Controller update is always true
+    EXPECT_TRUE(m_contoller->Update(nullptr, nullptr, err));
+}
+
+/*********** Unit tests for UpdateNetworkSettings ***********/
+TEST_F(ShimControllerTest, UpdateNetworkSettingsTestCallbackNullPtrError)
+{
+    Errors err;
+    auto callback = get_service_executor();
+    auto tmp_update_network_settings = callback->container.update_network_settings;
+    callback->container.update_network_settings = nullptr;
+    EXPECT_FALSE(m_contoller->UpdateNetworkSettings(DUMMY_SANDBOX_ID, "networkSettings", err));
+    callback->container.update_network_settings = tmp_update_network_settings;
+}
+
+TEST_F(ShimControllerTest, UpdateNetworkSettingsTestContainerCallocError)
+{
+    Errors err;
+    MOCK_SET(isula_common_calloc_s, nullptr);
+    EXPECT_FALSE(m_contoller->UpdateNetworkSettings(DUMMY_SANDBOX_ID, "networkSettings", err));
+    MOCK_CLEAR(isula_common_calloc_s);
 }

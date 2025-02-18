@@ -118,6 +118,7 @@ public:
     auto UpdateStatsInfo(const StatsInfo &info) -> StatsInfo;
     void SetNetworkReady(bool ready);
     void SetNetworkMode(const std::string &networkMode);
+    void SetSandboxConfig(const runtime::v1::PodSandboxConfig &config);
     auto FindAvailableVsockPort(uint32_t &port) -> bool;
     void ReleaseVsockPort(uint32_t port);
     auto CleanupSandboxFiles(Errors &error) -> bool;
@@ -162,7 +163,6 @@ private:
     auto LoadMetadata(Errors &error) -> bool;
     void LoadNetworkSetting();
 
-    void SetSandboxConfig(const runtime::v1::PodSandboxConfig &config);
     void SetNetworkSettings(const std::string &settings, Errors &error);
     auto CreateHostname(bool shareHost, Errors &error) -> bool;
     auto CreateHosts(bool shareHost, Errors &error) -> bool;
