@@ -69,6 +69,10 @@ void AddSecurityOptsToHostConfig(std::vector<std::string> &securityOpts, host_co
 
 std::string CRISandboxerConvert(const std::string &runtime);
 
+#ifdef ENABLE_REMOTE_IMAGE
+std::string GetCRISandboxerImageType(const std::string &runtime);
+#endif
+
 void ApplySandboxSecurityContextToHostConfig(const runtime::v1::LinuxSandboxSecurityContext &context, host_config *hc,
                                              Errors &error);
 #ifdef ENABLE_CDI

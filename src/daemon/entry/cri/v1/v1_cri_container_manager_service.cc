@@ -371,6 +371,11 @@ auto ContainerManagerService::GenerateSandboxInfo(
     }
 
     sandbox_info->sandboxer = util_strdup_s(sandbox.GetSandboxer().c_str());
+#ifdef ENABLE_REMOTE_IMAGE
+    sandbox_info->image_type = util_strdup_s(
+        CRIHelpersV1::GetCRISandboxerImageType(sandbox.GetSandboxer()).c_str()
+    );
+#endif
     sandbox_info->id = util_strdup_s(sandbox.GetId().c_str());
     sandbox_info->pid = sandbox.GetPid();
     sandbox_info->task_address = util_strdup_s(sandbox.GetTaskAddress().c_str());

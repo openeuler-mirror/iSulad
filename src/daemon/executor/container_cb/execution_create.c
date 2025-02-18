@@ -1016,6 +1016,18 @@ static int get_request_container_info(const container_create_request *request, c
 
 static int get_request_image_info(const container_create_request *request, char **image_type, char **image_name)
 {
+#ifdef ENABLE_REMOTE_IMAGE
+    if (is_container_in_sandbox(request->sandbox) &&
+        strcmp(request->sandbox->image_type, IMAGE_TYPE_REMOTE) == 0) {
+        /*
+         * Note: Currently, remote image type and coco image type 
+         * are considered to be the same type.
+         */ 
+        *image_type = util_strdup_s(IMAGE_TYPE_REMOTE);
+        *image_name = util_strdup_s(IMAGE_NAME_COCO);
+        return 0;
+    }
+#endif
     *image_type = im_get_image_type(request->image, request->rootfs);
     if (*image_type == NULL) {
         return -1;

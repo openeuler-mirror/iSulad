@@ -125,6 +125,10 @@ struct bim_type {
 #include "oci_image.h"
 #endif
 
+#ifdef ENABLE_REMOTE_IMAGE
+#include "remote_image.h"
+#endif
+
 #ifdef ENABLE_EMBEDDED_IMAGE
 #include "embedded_image.h"
 #include "db_all.h"
@@ -243,6 +247,45 @@ static const struct bim_ops g_ext_ops = {
 #endif
 };
 
+#ifdef ENABLE_REMOTE_IMAGE
+/* remote */
+static const struct bim_ops g_remote_ops = {
+    .init = NULL,
+    .clean_resource = NULL,
+    .detect = NULL,
+
+    .prepare_rf = remote_prepare_rf,
+    .mount_rf = remote_mount_rf,
+    .umount_rf = remote_umount_rf,
+    .delete_rf = remote_delete_rf,
+    .delete_broken_rf = remote_delete_broken_rf,
+    .export_rf = NULL,
+    .get_dir_rf = NULL,
+
+    .merge_conf = remote_merge_conf_rf,
+    .get_user_conf = remote_get_user_conf,
+
+    .list_ims = NULL,
+    .get_image_count = NULL,
+    .rm_image = remote_rmi,
+    .inspect_image = NULL,
+    .resolve_image_name = remote_resolve_image_name,
+    .container_fs_usage = remote_container_filesystem_usage,
+    .get_filesystem_info = remote_get_filesystem_info,
+    .image_status = NULL,
+    .load_image = NULL,
+    .pull_image = NULL,
+    .login = NULL,
+    .logout = NULL,
+    .tag_image = NULL,
+    .import = NULL,
+    .image_summary = NULL,
+#ifdef ENABLE_IMAGE_SEARCH
+    .search_image = NULL,
+#endif
+};
+#endif
+
 static const struct bim_type g_bims[] = {
 #ifdef ENABLE_OCI_IMAGE
     {
@@ -253,6 +296,9 @@ static const struct bim_type g_bims[] = {
     { .image_type = IMAGE_TYPE_EXTERNAL, .ops = &g_ext_ops },
 #ifdef ENABLE_EMBEDDED_IMAGE
     { .image_type = IMAGE_TYPE_EMBEDDED, .ops = &g_embedded_ops },
+#endif
+#ifdef ENABLE_REMOTE_IMAGE
+    { .image_type = IMAGE_TYPE_REMOTE, .ops = &g_remote_ops },
 #endif
 };
 

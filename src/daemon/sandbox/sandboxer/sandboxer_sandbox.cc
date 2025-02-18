@@ -31,6 +31,8 @@
 #include "cxxutils.h"
 #include "utils_timestamp.h"
 #include "utils_array.h"
+#include "constants.h"
+#include "v1_cri_helpers.h"
 
 namespace sandbox {
 
@@ -297,6 +299,12 @@ static defs_process *clone_defs_process(defs_process *process_spec)
 
 auto SandboxerSandbox::GenerateCtrlRootfs(sandbox_task *task, const char *baseFs) -> int
 {
+#ifdef ENABLE_REMOTE_IMAGE
+    // do not mount image to vm for remote or confidential containers
+    if (CRIHelpersV1::GetCRISandboxerImageType(GetSandboxer()) == std::string(SANDBOX_IMAGE_TYPE_REMOTE)) {
+        return 0;
+    }
+#endif
     size_t len = 1;
     if (nullptr == baseFs) {
         ERROR("Container %s has no base fs", task->task_id);
@@ -573,7 +581,7 @@ auto SandboxerSandbox::PrepareExec(const char *containerId, const char *execId,
     }
     process = process_wrapper->move();
     if (InitApiSandbox(apiSandbox) != 0) {
-        ERROR("Failed to init %s api sandbox.", containerId);
+        ERROR("Failed to update %s api sandbox.", containerId);
         goto del_out;
     }
     if (DoSandboxUpdate(apiSandbox) != 0) {
