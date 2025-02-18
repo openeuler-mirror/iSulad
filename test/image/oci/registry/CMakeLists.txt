@@ -2,7 +2,16 @@ project(iSulad_UT)
 
 SET(EXE registry_images_ut)
 
+if(ENABLE_IMAGE_SEARCH)
+    set(search_srcs
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/registry_apiv1.c
+        )
+else()
+    set(search_srcs "")
+endif()
+
 add_executable(${EXE}
+    ${search_srcs}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_regex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_verify.c
@@ -34,7 +43,6 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/remote_layer_support/ro_symlink_maintain.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/registry.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/registry_apiv2.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/registry_apiv1.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/http_request.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/certs.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/auths.c
