@@ -395,57 +395,6 @@ int invokeHttpRequestLogin(const char *url, struct http_get_options *options, lo
     return 0;
 }
 
-int invokeHttpRequestSearch(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
-{
-#define RETRY_TIMES 3
-#define SEARCH_TEST_NOT_FOUND 2
-#define SEARCH_TEST_SERVER_ERROR 5
-#define SEARCH_TEST_RETRY_SUCCESS 8
-    std::string file;
-    char *data = nullptr;
-    Buffer *output_buffer = (Buffer *)options->output;
-    static int search_count = 0;
-
-    ERROR("url is %s", url);
-    ERROR("search_count is %d", search_count);
-
-    std::string data_path = get_dir() + "/data/oci/";
-    if (strcmp(url, "https://index.docker.io/v1/_ping") == 0) {
-        file = data_path + "ping_v1_head";
-    } else if (util_has_prefix(url, "https://index.docker.io/v1/search?q=busybox")) {
-        search_count++;
-        // test not find
-        if (search_count >= SEARCH_TEST_NOT_FOUND && search_count < SEARCH_TEST_NOT_FOUND + RETRY_TIMES) {
-            file = data_path + "search_result_404";
-        }
-        // test server error and restry
-        else if ((search_count >= SEARCH_TEST_SERVER_ERROR && search_count < SEARCH_TEST_SERVER_ERROR + RETRY_TIMES) ||
-                 (search_count == SEARCH_TEST_RETRY_SUCCESS)) {
-            file = data_path + "search_server_error";
-        } else {
-            file = data_path + "search_result";
-        }
-    } else {
-        ERROR("%s not match failed", url);
-        return -1;
-    }
-
-    data = util_read_text_file(file.c_str());
-    if (data == nullptr) {
-        ERROR("read file %s failed", file.c_str());
-        return -1;
-    }
-
-    if (options->outputtype == HTTP_REQUEST_STRBUF) {
-        free(output_buffer->contents);
-        output_buffer->contents = util_strdup_s(data);
-    }
-    free(data);
-
-    return 0;
-}
-
-
 int invokeStorageImgCreate(const char *id, const char *parent_id, const char *metadata,
                            struct storage_img_create_options *opts)
 {
@@ -921,6 +870,57 @@ TEST_F(RegistryUnitTest, test_cleanup)
     ASSERT_EQ(remove_certs(mirror_dir), 0);
 }
 
+#ifdef ENABLE_IMAGE_SEARCH
+int invokeHttpRequestSearch(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
+{
+#define RETRY_TIMES 3
+#define SEARCH_TEST_NOT_FOUND 2
+#define SEARCH_TEST_SERVER_ERROR 5
+#define SEARCH_TEST_RETRY_SUCCESS 8
+    std::string file;
+    char *data = nullptr;
+    Buffer *output_buffer = (Buffer *)options->output;
+    static int search_count = 0;
+
+    ERROR("url is %s", url);
+    ERROR("search_count is %d", search_count);
+
+    std::string data_path = get_dir() + "/data/oci/";
+    if (strcmp(url, "https://index.docker.io/v1/_ping") == 0) {
+        file = data_path + "ping_v1_head";
+    } else if (util_has_prefix(url, "https://index.docker.io/v1/search?q=busybox")) {
+        search_count++;
+        // test not find
+        if (search_count >= SEARCH_TEST_NOT_FOUND && search_count < SEARCH_TEST_NOT_FOUND + RETRY_TIMES) {
+            file = data_path + "search_result_404";
+        }
+        // test server error and restry
+        else if ((search_count >= SEARCH_TEST_SERVER_ERROR && search_count < SEARCH_TEST_SERVER_ERROR + RETRY_TIMES) ||
+                 (search_count == SEARCH_TEST_RETRY_SUCCESS)) {
+            file = data_path + "search_server_error";
+        } else {
+            file = data_path + "search_result";
+        }
+    } else {
+        ERROR("%s not match failed", url);
+        return -1;
+    }
+
+    data = util_read_text_file(file.c_str());
+    if (data == nullptr) {
+        ERROR("read file %s failed", file.c_str());
+        return -1;
+    }
+
+    if (options->outputtype == HTTP_REQUEST_STRBUF) {
+        free(output_buffer->contents);
+        output_buffer->contents = util_strdup_s(data);
+    }
+    free(data);
+
+    return 0;
+}
+
 TEST_F(RegistryUnitTest, test_search_image)
 {
     registry_search_options *options = nullptr;
@@ -971,3 +971,4 @@ TEST_F(RegistryUnitTest, test_search_image)
 
     free_registry_search_options(options);
 }
+#endif
