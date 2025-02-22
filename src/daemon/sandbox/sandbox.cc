@@ -431,7 +431,11 @@ auto Sandbox::UpdateStatsInfo(const StatsInfo &info) -> StatsInfo
 
 void Sandbox::SetNetworkReady(bool ready)
 {
+    Errors tmp_error;
     m_networkReady = ready;
+    if (!SaveState(tmp_error)) {
+        ERROR("Failed to save sandbox state, %s for %s", m_id.c_str(), tmp_error.GetMessage().c_str());
+    }
 }
 
 auto Sandbox::Save(Errors &error) -> bool
@@ -504,6 +508,8 @@ auto Sandbox::Load(Errors &error) -> bool
     return true;
 }
 
+// no need to save state after recovery
+// when restarting isulad, the status will be updated again and wait sandbox
 void Sandbox::OnSandboxReady()
 {
     WriteGuard<RWMutex> lock(m_stateMutex);
@@ -514,6 +520,8 @@ void Sandbox::OnSandboxReady()
     m_state.status = SANDBOX_STATUS_RUNNING;
 }
 
+// no need to save intermediate state
+// when restarting isulad, the status will be updated again and wait sandbox
 void Sandbox::OnSandboxPending()
 {
     WriteGuard<RWMutex> lock(m_stateMutex);
@@ -842,6 +850,7 @@ auto Sandbox::SaveState(Errors &error) -> bool
     state.pid = m_state.pid;
     state.status = m_state.status;
     state.updated_at = m_state.updatedAt;
+    state.network_ready = m_networkReady;
 
     stateJson = GenerateSandboxStateJson(&state);
     if (stateJson.length() == 0) {
@@ -953,6 +962,7 @@ auto Sandbox::LoadState(Errors &error) -> bool
     m_state.createdAt = state->get()->created_at;
     m_state.updatedAt = state->get()->updated_at;
     m_state.status = (SandboxStatus)state->get()->status;
+    m_networkReady = state->get()->network_ready;
 
     return true;
 }
@@ -1005,7 +1015,6 @@ auto Sandbox::LoadMetadata(Errors &error) -> bool
     m_runtimeInfo.sandboxer = std::string(metadata->get()->runtime_info->sandboxer);
     m_runtimeInfo.runtimeHandler = std::string(metadata->get()->runtime_info->runtime_handler);
     m_netMode = std::string(metadata->get()->net_mode);
-    m_networkReady = metadata->get()->network_ready;
     m_taskAddress = std::string(metadata->get()->task_address);
     m_netNsPath = std::string(metadata->get()->net_ns_path);
 
@@ -1125,7 +1134,6 @@ void Sandbox::FillSandboxMetadata(sandbox_metadata* metadata, Errors &error)
     metadata->runtime_info->runtime_handler = util_strdup_s(m_runtimeInfo.runtimeHandler.c_str());
 
     metadata->net_mode = util_strdup_s(m_netMode.c_str());
-    metadata->network_ready = m_networkReady;
     metadata->task_address = util_strdup_s(m_taskAddress.c_str());
     metadata->net_ns_path = util_strdup_s(m_netNsPath.c_str());
 
