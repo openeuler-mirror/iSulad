@@ -324,12 +324,14 @@ void PodSandboxManagerService::StartPodSandboxAndSetupNetowrk(std::shared_ptr<sa
 {
     cri_container_message_t msg = { 0 };
     std::string network_setting_json;
+    Errors stopError;
 
     // Step 8.2.1: Call sandbox create.
     sandbox->Create(error);
     if (error.NotEmpty()) {
         ERROR("Failed to create sandbox: %s", sandboxName.c_str());
-        return;
+        // clean_sandbox to be consisent with CRI v1alpha
+        goto cleanup_sandbox;
     }
 
     msg.container_id = sandbox->GetId().c_str();
@@ -380,15 +382,21 @@ void PodSandboxManagerService::StartPodSandboxAndSetupNetowrk(std::shared_ptr<sa
 
     return;
 stop_sandbox:
-    Errors stopError;
     CRIHelpers::StopContainerHelper(m_cb, sandbox->GetId(), 0, stopError);
     WARN("Error stop container: %s: %s", sandbox->GetId().c_str(), stopError.GetCMessage());
+    return;
+cleanup_sandbox:
+   sandbox::SandboxManager::GetInstance()->DeleteSandbox(sandbox->GetId(), error);
+   if (error.NotEmpty()) {
+    WARN("Error remove container: %s: %s", sandbox->GetId().c_str(), error.GetCMessage());
+   }
 }
 
 void PodSandboxManagerService::SetupNetowrkAndStartPodSandbox(std::shared_ptr<sandbox::Sandbox> sandbox, std::string &sandboxName, std::string &networkMode, Errors &error)
 {
     cri_container_message_t msg = { 0 };
     std::string network_setting_json;
+    bool clean_sandbox = true;
 
     // Step 8.1.1: Setup networking for the sandbox.
     // Setup sandbox network before create sandbox since the remote create might fail for sandbox
@@ -404,6 +412,8 @@ void PodSandboxManagerService::SetupNetowrkAndStartPodSandbox(std::shared_ptr<sa
         goto cleanup_network;
     }
 
+    // clean_sandbox is false, no need to clean sandbox to be consisent with CRI v1alpha
+    clean_sandbox = false;
     msg.container_id = sandbox->GetId().c_str();
     msg.sandbox_id = sandbox->GetId().c_str();
     msg.type = CRI_CONTAINER_MESSAGE_TYPE_CREATED;
@@ -438,6 +448,13 @@ cleanup_network:
             return;
         }
     }
+    if (clean_sandbox) {
+        sandbox::SandboxManager::GetInstance()->DeleteSandbox(sandbox->GetId(), error);
+        if (error.NotEmpty()) {
+            WARN("Error remove sanbox: %s: %s", sandbox->GetId().c_str(), error.GetCMessage());
+        }
+    }
+
 }
 
 auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig &config,
@@ -517,6 +534,10 @@ auto PodSandboxManagerService::RunPodSandbox(const runtime::v1::PodSandboxConfig
     sandbox->Save(error);
     if (error.NotEmpty()) {
         ERROR("Failed to save sandbox, %s", sandboxName.c_str());
+        sandbox::SandboxManager::GetInstance()->DeleteSandbox(sandbox->GetId(), error);
+        if (error.NotEmpty()) {
+            WARN("Error remove sanbox: %s: %s", sandbox->GetId().c_str(), error.GetCMessage());
+        }
         goto clean_ns;
     }
 
