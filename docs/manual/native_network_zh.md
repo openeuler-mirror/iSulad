@@ -290,5 +290,7 @@ isula run [OPTIONS] ROOTFS|IMAGE [COMMAND] [ARG...]
 | - | - |
 | --expose | 暴露容器端口 |
 | --net, --network | 加入网络 |
-| -p, --publish | 将主机端口映射到容器端口，格式为`<hostport>:<container port>` |
+| -p, --publish | 将主机端口映射到容器端口，格式为`<hostport>:<container port>`. --publish/-p需要指定--network/--net |
 | -P, --publish-all | 将所有的exposed端口映射到主机上的随机端口 |
+
+**注意：当使用 --network/--net 参数将容器加入 bridge 网络时，--publish/-p 参数才会生效并按指定的端口映射规则工作。在其他网络模式下，如 host 或 none 等，--publish/-p 参数将被忽略，无法实现预期的端口映射功能。**

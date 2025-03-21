@@ -1495,6 +1495,22 @@ int client_create(struct client_arguments *args)
 #ifdef ENABLE_NATIVE_NETWORK
     // parse --publish param to custom map
     if (args->custom_conf.publish != NULL) {
+        // When network mode type is host, none, or container, --publish/-p is invalid.
+        // Docker prompts for host, intercepts container, and does nothing for none.
+        // We prompt for host and none, and intercept container.
+        if (args->custom_conf.share_ns[NAMESPACE_NET] == NULL) {
+            COMMAND_ERROR("Invalid --publish/-p: --publish/-p requires --network/--net to be specified");
+            ret = EINVALIDARGS;
+            goto out;
+        } else if (strcmp(args->custom_conf.share_ns[NAMESPACE_NET], SHARE_NAMESPACE_HOST) == 0
+                    || strcmp(args->custom_conf.share_ns[NAMESPACE_NET], SHARE_NAMESPACE_NONE) == 0) {
+            COMMAND_ERROR("WARNING: Published ports are discarded when using host or none network mode");
+        } else if (strncmp(args->custom_conf.share_ns[NAMESPACE_NET], SHARE_NAMESPACE_PREFIX, strlen(SHARE_NAMESPACE_PREFIX)) == 0) {
+            COMMAND_ERROR("Conflict options: --publish/-p and the container type network mode");
+            ret = EINVALIDARGS;
+            goto out;
+        }
+
         ret = util_parse_port_specs((const char **)args->custom_conf.publish, &expose_m, &port_binding_m);
         if (ret != 0) {
             COMMAND_ERROR("Invalid --publish or -p params value");

@@ -291,6 +291,7 @@ Show only network-related parameters.
 | - | - |
 | --expose | Expose a port or a range of ports |
 | --net, --network | Connect a container to a network |
-| -p, --publish | Publish a container's port(s) to host with format `<hostport>:<container port>` |
+| -p, --publish | Publish a container's port(s) to host with format `<hostport>:<container port>`. --publish/-p requires --network/--net to be specified. |
 | -P, --publish-all | Publish all exposed ports to random ports |
 
+**Note: The --publish/-p parameter is only applicable when the --network/--net parameter is set to the bridge network mode. In other modes like host or none, this parameter will be disregarded, and port mapping as configured will not be realized.**
