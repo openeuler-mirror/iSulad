@@ -20,7 +20,6 @@
 #include <mutex>
 #include <google/protobuf/map.h>
 
-#include "read_write_lock.h"
 #include "sandbox_task.h"
 #include "sandbox.h"
 
@@ -45,6 +44,9 @@ public:
     auto PurgeExec(const char *containerId, const char *execId) -> int override;
 
 private:
+    auto DoPurgeContainer(const char *containerId) -> int;
+    auto DoPurgeExec(const char *containerId, const char *execId) -> int;
+
     auto GetTasksJsonPath() -> std::string;
     auto SaveSandboxTasks() -> bool;
     auto AddSandboxTasks(sandbox_task *task) -> bool;
@@ -67,8 +69,8 @@ private:
     auto DoSandboxUpdate(sandbox_sandbox *apiSandbox) -> int;
 
 private:
-    // use m_tasksMutex to ensure the correctness of the tasks
-    RWMutex m_tasksMutex;
+    // use m_tasksMutex to ensure the correctness of the tasks and task json file when the external interface accesses them.
+    std::mutex m_tasksMutex;
     // for sandbox api update, containerId --> tasks
     std::map<std::string, std::shared_ptr<SandboxTask>> m_tasks;
 };
