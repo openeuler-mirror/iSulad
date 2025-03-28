@@ -26,6 +26,7 @@
 #include <isula_libutils/cni_anno_port_mappings.h>
 #include <isula_libutils/cni_ip_ranges_array.h>
 #include <isula_libutils/cni_bandwidth_entry.h>
+#include <isula_libutils/auto_cleanup.h>
 #include "cri_helpers.h"
 #include "cxxutils.h"
 #include "utils.h"
@@ -531,7 +532,7 @@ auto CniNetworkPlugin::GetNetworkSettingsJson(const std::string &podSandboxID, c
 {
     std::string json;
     parser_error jerr { nullptr };
-    std::unique_ptr<char> setting_json;
+    __isula_auto_free char *setting_json = nullptr;
 
     if (result == nullptr) {
         ERROR("Invalid input param, no network result to set");
@@ -557,13 +558,13 @@ auto CniNetworkPlugin::GetNetworkSettingsJson(const std::string &podSandboxID, c
         goto out;
     }
 
-    setting_json = std::unique_ptr<char>(container_network_settings_generate_json(network_settings, nullptr, &jerr));
+    setting_json = container_network_settings_generate_json(network_settings, nullptr, &jerr);
     if (setting_json == nullptr) {
         err.Errorf("Get network settings json err:%s", jerr);
         goto out;
     }
 
-    json = setting_json.get();
+    json = std::string(setting_json);
 
 out:
     free(jerr);
