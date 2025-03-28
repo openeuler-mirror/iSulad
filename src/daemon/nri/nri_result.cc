@@ -600,6 +600,13 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
 {
     size_t i;
     if (src->memory != nullptr) {
+        if (dest->memory == nullptr) {
+            dest->memory = (nri_linux_memory *)util_common_calloc_s(sizeof(nri_linux_memory));
+            if (dest->memory == nullptr) {
+                ERROR("Out of memory");
+                return false;
+            }
+        }
         if (src->memory->limit != nullptr) {
             auto memLimit = m_owners[id].memLimit;
             if (!memLimit.empty()) {
@@ -607,7 +614,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].memLimit = plugin;
-            *dest->memory->limit = *src->memory->limit;
+            dest->memory->limit = NRIHelpers::copy_pointer(src->memory->limit);
+            if (dest->memory->limit == nullptr) {
+                ERROR("Failed to copy memory limit to reply adjust");
+                return false;
+            }
         }
 
         if (src->memory->reservation != nullptr) {
@@ -618,7 +629,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].memReservation = plugin;
-            *dest->memory->reservation = *src->memory->reservation;
+            dest->memory->reservation = NRIHelpers::copy_pointer(src->memory->reservation);
+            if (dest->memory->reservation == nullptr) {
+                ERROR("Failed to copy memory reservation to reply adjust");
+                return false;
+            }
         }
 
         if (src->memory->swap != nullptr) {
@@ -629,7 +644,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].memSwapLimit = plugin;
-            *dest->memory->swap = *src->memory->swap;
+            dest->memory->swap = NRIHelpers::copy_pointer(src->memory->swap);
+            if (dest->memory->swap == nullptr) {
+                ERROR("Failed to copy memory swap to reply adjust");
+                return false;
+            }
         }
 
         if (src->memory->kernel != nullptr) {
@@ -640,7 +659,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].memKernelLimit = plugin;
-            *dest->memory->kernel = *src->memory->kernel;
+            dest->memory->kernel = NRIHelpers::copy_pointer(src->memory->kernel);
+            if (dest->memory->kernel == nullptr) {
+                ERROR("Failed to copy memory kernel to reply adjust");
+                return false;
+            }
         }
 
         if (src->memory->kernel_tcp != nullptr) {
@@ -651,7 +674,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].memTCPLimit = plugin;
-            *dest->memory->kernel_tcp = *src->memory->kernel_tcp;
+            dest->memory->kernel_tcp = NRIHelpers::copy_pointer(src->memory->kernel_tcp);
+            if (dest->memory->kernel_tcp == nullptr) {
+                ERROR("Failed to copy memory kernel tcp to reply adjust");
+                return false;
+            }
         }
 
         if (src->memory->swappiness != nullptr) {
@@ -662,7 +689,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].memSwappiness = plugin;
-            *dest->memory->swappiness = *src->memory->swappiness;
+            dest->memory->swappiness = NRIHelpers::copy_pointer(src->memory->swappiness);
+            if (dest->memory->swappiness == nullptr) {
+                ERROR("Failed to copy memory swappiness to reply adjust");
+                return false;
+            }
         }
 
         if (src->memory->disable_oom_killer != nullptr) {
@@ -673,7 +704,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].memDisableOomKiller = plugin;
-            *dest->memory->disable_oom_killer = *src->memory->disable_oom_killer;
+            dest->memory->disable_oom_killer = NRIHelpers::copy_pointer(src->memory->disable_oom_killer);
+            if (dest->memory->disable_oom_killer == nullptr) {
+                ERROR("Failed to copy memory disable_oom_killer to reply adjust");
+                return false;
+            }
         }
 
         if (src->memory->use_hierarchy != nullptr) {
@@ -684,11 +719,22 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].memUseHierarchy = plugin;
-            *dest->memory->use_hierarchy = *src->memory->use_hierarchy;
+            dest->memory->use_hierarchy = NRIHelpers::copy_pointer(src->memory->use_hierarchy);
+            if (dest->memory->use_hierarchy == nullptr) {
+                ERROR("Failed to copy memory use_hierarchy to reply adjust");
+                return false;
+            }
         }
     }
 
     if (src->cpu != nullptr) {
+        if (dest->cpu == nullptr) {
+            dest->cpu = (nri_linux_cpu *)util_common_calloc_s(sizeof(nri_linux_cpu));
+            if (dest->cpu == nullptr) {
+                ERROR("Out of memory");
+                return false;
+            }
+        }
         if (src->cpu->shares != nullptr) {
             auto cpuShares = m_owners[id].cpuShares;
             if (!cpuShares.empty()) {
@@ -696,7 +742,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].cpuShares = plugin;
-            *dest->cpu->shares = *src->cpu->shares;
+            dest->cpu->shares = NRIHelpers::copy_pointer(src->cpu->shares);
+            if (dest->cpu->shares == nullptr) {
+                ERROR("Failed to copy cpu shares to reply adjust");
+                return false;
+                }
         }
 
         if (src->cpu->quota != nullptr) {
@@ -706,7 +756,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].cpuQuota = plugin;
-            *dest->cpu->quota = *src->cpu->quota;
+            dest->cpu->quota = NRIHelpers::copy_pointer(src->cpu->quota);
+            if (dest->cpu->quota == nullptr) {
+                ERROR("Failed to copy cpu quota to reply adjust");
+                return false;
+            }
         }
 
         if (src->cpu->period != nullptr) {
@@ -716,7 +770,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].cpuPeriod = plugin;
-            *dest->cpu->period = *src->cpu->period;
+            dest->cpu->period = NRIHelpers::copy_pointer(src->cpu->period);
+            if (dest->cpu->period == nullptr) {
+                ERROR("Failed to copy cpu period to reply adjust");
+                return false;
+            }
         }
 
         if (src->cpu->realtime_runtime != nullptr) {
@@ -727,7 +785,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].cpuRealtimePeriod = plugin;
-            *dest->cpu->realtime_runtime = *src->cpu->realtime_runtime;
+            dest->cpu->realtime_runtime = NRIHelpers::copy_pointer(src->cpu->realtime_runtime);
+            if (dest->cpu->realtime_runtime == nullptr) {
+                ERROR("Failed to copy cpu realtime_runtime to reply adjust");
+                return false;
+            }
         }
 
         if (src->cpu->realtime_period != nullptr) {
@@ -738,7 +800,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].cpuRealtimePeriod = plugin;
-            *dest->cpu->realtime_period = *src->cpu->realtime_period;
+            dest->cpu->realtime_period = NRIHelpers::copy_pointer(src->cpu->realtime_period);
+            if (dest->cpu->realtime_period == nullptr) {
+                ERROR("Failed to copy cpu realtime_period to reply adjust");
+                return false;
+            }
         }
 
         if (src->cpu->cpus != nullptr) {
@@ -748,7 +814,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].cpusetCpus = plugin;
-            *dest->cpu->cpus = *src->cpu->cpus;
+            dest->cpu->cpus = NRIHelpers::copy_pointer(src->cpu->cpus);
+            if (dest->cpu->cpus == nullptr) {
+                ERROR("Failed to copy cpu cpus to reply adjust");
+                return false;
+            }
         }
 
         if (src->cpu->mems != nullptr) {
@@ -758,7 +828,11 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].cpusetMems = plugin;
-            *dest->cpu->mems = *src->cpu->mems;
+            dest->cpu->mems = NRIHelpers::copy_pointer(src->cpu->mems);
+            if (dest->cpu->mems == nullptr) {
+                ERROR("Failed to copy cpu mems to reply adjust");
+                return false;
+            }
         }
     }
 
@@ -890,7 +964,7 @@ auto pluginResult::Update(nri_container_update **updates, size_t update_len, con
             return false;
         }
 
-        if (!UpdateResources(reply, updates[i], plugin)) {
+        if (!UpdateResources(reply, updates[i], plugin) && !updates[i]->ignore_failure) {
             ERROR("Failed to update container resources in plugin result");
             return false;
         }
@@ -947,6 +1021,7 @@ auto pluginResult::UpdateResources(nri_container_update *reply, nri_container_up
     std::string id = u->container_id;
     nri_linux_resources *resources;
 
+    // operate on a copy: we won't touch anything on (ignored) failures
     if (m_conId == id) {
         resources = copy_nri_linux_resources(m_update_req);
         if (resources == nullptr) {
@@ -967,6 +1042,7 @@ auto pluginResult::UpdateResources(nri_container_update *reply, nri_container_up
     }
 
     // update reply from copy on success
+    free_nri_linux_resources(reply->linux->resources);
     reply->linux->resources = copy_nri_linux_resources(resources);
     if (reply->linux->resources == nullptr) {
         ERROR("Failed to copy resources's nri linux resources to reply");

@@ -31,6 +31,7 @@
 #include <isula_libutils/host_config.h>
 
 #include "errors.h"
+#include "utils.h"
 
 namespace NRIHelpers {
 std::string MarkForRemoval(const std::string &key);
@@ -61,6 +62,20 @@ void freeArray(T ** &arr, int size)
 
     free(arr);
     arr = NULL;
+}
+
+template <typename T>
+T* copy_pointer(T* value)
+{
+    if (value == nullptr) {
+        return nullptr;
+    }
+    T* result = (T *)util_common_calloc_s(sizeof(T));
+    if (result == nullptr) {
+        return nullptr;
+    }
+    *result = *value;
+    return result;
 }
 }; // namespace NRIHelpers
 
