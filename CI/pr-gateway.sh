@@ -37,6 +37,7 @@ rm -rf lxc
 git clone https://gitee.com/src-openeuler/lxc.git
 pushd lxc
 rm -rf lxc-5.0.2
+git config --global --add safe.directory $(pwd)/lxc-5.0.2
 ./apply-patches || exit 1
 pushd lxc-5.0.2
 mkdir -p build
