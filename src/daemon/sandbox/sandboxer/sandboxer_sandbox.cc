@@ -73,7 +73,6 @@ auto SandboxerSandbox::ReadSandboxTasksJson() -> sandbox_tasks *
     __isula_auto_free parser_error err = nullptr;
     sandbox_tasks *tasksArray = nullptr;
 
-    ReadGuard<RWMutex> lock(m_tasksMutex);
     tasksArray = sandbox_tasks_parse_file(path.c_str(), nullptr, &err);
     if (tasksArray == nullptr) {
         WARN("Failed to read %s tasks json: %s", path.c_str(), err);
@@ -86,7 +85,6 @@ auto SandboxerSandbox::WriteSandboxTasksJson(std::string &tasks_json) -> bool
     int nret = 0;
     const std::string path = GetTasksJsonPath();
 
-    WriteGuard<RWMutex> lock(m_tasksMutex);
     nret = util_atomic_write_file(path.c_str(), tasks_json.c_str(), tasks_json.size(), CONFIG_FILE_MODE, false);
     if (nret != 0) {
         SYSERROR("Failed to write file %s", path.c_str());
@@ -99,7 +97,6 @@ auto SandboxerSandbox::DeleteSandboxTasksJson() -> bool
     int get_err = 0;
     const std::string path = GetTasksJsonPath();
 
-    WriteGuard<RWMutex> lock(m_tasksMutex);
     if (util_fileself_exists(path.c_str()) &&
         !util_force_remove_file(path.c_str(), &get_err)) {
         errno = get_err;
@@ -114,7 +111,6 @@ void SandboxerSandbox::AddSandboxTasksByArray(sandbox_tasks *tasksArray)
 {
     size_t i;
 
-    WriteGuard<RWMutex> lock(m_tasksMutex);
     for (i = 0; i < tasksArray->tasks_len; i++) {
         if (!AddTaskById(tasksArray->tasks[i]->task_id, tasksArray->tasks[i])) {
             return;
@@ -127,6 +123,8 @@ void SandboxerSandbox::AddSandboxTasksByArray(sandbox_tasks *tasksArray)
 void SandboxerSandbox::LoadSandboxTasks()
 {
     sandbox_tasks *tasksArray = nullptr;
+
+    std::lock_guard<std::mutex> lockGuard(m_tasksMutex);
 
     tasksArray = ReadSandboxTasksJson();
     if (tasksArray == nullptr) {
@@ -164,8 +162,6 @@ auto SandboxerSandbox::AddSandboxTasks(sandbox_task *task) -> bool
         return false;
     }
 
-    WriteGuard<RWMutex> lock(m_tasksMutex);
-
     return AddTaskById(task->task_id, task);
 }
 
@@ -181,19 +177,8 @@ auto SandboxerSandbox::GetAnySandboxTasks() -> std::string
         SYSERROR("Out of memory.");
         return std::string("");
     }
-
-    ReadGuard<RWMutex> lock(m_tasksMutex);
+    
     for (auto const& [_, val] : m_tasks) {
-        /* 
-         * We ignore that the processes are modified 
-         * when we generate tasks json string. 
-         * Because no matter whether a process is deleted or added, 
-         * the Update of sandbox api will be called eventually.
-         * 
-         * And we ignore that the task is freed after we do GetTask().
-         * Because the only way to free task is DeleteSandboxTasks()
-         * which needs write lock of m_tasksMutex.
-        */ 
         tasksArray.tasks[i] = val->GetTask();
         i++;
     }
@@ -218,7 +203,6 @@ void SandboxerSandbox::DeleteSandboxTasks(const char *containerId)
 
     std::string taskId = std::string(containerId);
 
-    WriteGuard<RWMutex> lock(m_tasksMutex);
     auto iter = m_tasks.find(taskId);
     if (iter == m_tasks.end()) {
         return;
@@ -235,7 +219,6 @@ auto SandboxerSandbox::AddSandboxTasksProcess(const char *containerId, sandbox_p
 
     std::string taskId = std::string(containerId);
 
-    ReadGuard<RWMutex> lock(m_tasksMutex);
     auto iter = m_tasks.find(taskId);
     if (iter == m_tasks.end()) {
         SYSERROR("Failed to find container %s", containerId);
@@ -253,7 +236,6 @@ void SandboxerSandbox::DeleteSandboxTasksProcess(const char *containerId, const 
 
     std::string taskId = std::string(containerId);
 
-    ReadGuard<RWMutex> lock(m_tasksMutex);
     auto iter = m_tasks.find(taskId);
     if (iter == m_tasks.end()) {
         return;
@@ -481,6 +463,7 @@ auto SandboxerSandbox::PrepareContainer(const char *containerId, const char *bas
     sandbox_sandbox *apiSandbox = nullptr;
 
     INFO("Prepare container for sandbox");
+    std::lock_guard<std::mutex> lockGuard(m_tasksMutex);
 
     if (nullptr == consoleFifos) {
         ERROR("Invlaid parameter: consoleFifos");
@@ -529,7 +512,7 @@ auto SandboxerSandbox::PrepareContainer(const char *containerId, const char *bas
     }
     if (!SaveSandboxTasks()) {
         ERROR("Failed to Save %s sandbox tasks.", containerId);
-        (void)PurgeContainer(containerId);
+        (void)DoPurgeContainer(containerId);
         return -1;
     }
     return 0;
@@ -546,6 +529,7 @@ auto SandboxerSandbox::PrepareExec(const char *containerId, const char *execId,
     sandbox_sandbox *apiSandbox = nullptr;
 
     INFO("Prepare exec for container in sandbox");
+    std::lock_guard<std::mutex> lockGuard(m_tasksMutex);
 
     if (nullptr == consoleFifos) {
         ERROR("Invlaid parameter: consoleFifos");
@@ -590,7 +574,7 @@ auto SandboxerSandbox::PrepareExec(const char *containerId, const char *execId,
     }
     if (!SaveSandboxTasks()) {
         ERROR("Failed to Save %s sandbox tasks.", containerId);
-        (void)PurgeExec(containerId, execId);
+        (void)DoPurgeExec(containerId, execId);
         return -1;
     }
     return 0;
@@ -600,7 +584,7 @@ del_out:
     return -1;
 }   
 
-auto SandboxerSandbox::PurgeContainer(const char *containerId) -> int
+auto SandboxerSandbox::DoPurgeContainer(const char *containerId) -> int
 {
     sandbox_sandbox *apiSandbox = nullptr;
 
@@ -630,7 +614,13 @@ auto SandboxerSandbox::PurgeContainer(const char *containerId) -> int
     return 0;
 }
 
-auto SandboxerSandbox::PurgeExec(const char *containerId, const char *execId) -> int
+auto SandboxerSandbox::PurgeContainer(const char *containerId) -> int
+{
+    std::lock_guard<std::mutex> lockGuard(m_tasksMutex);
+    return DoPurgeContainer(containerId);
+}
+
+auto SandboxerSandbox::DoPurgeExec(const char *containerId, const char *execId) -> int
 {
     sandbox_sandbox *apiSandbox = nullptr;
 
@@ -658,6 +648,12 @@ auto SandboxerSandbox::PurgeExec(const char *containerId, const char *execId) ->
         return -1;
     }
     return 0;
+}
+
+auto SandboxerSandbox::PurgeExec(const char *containerId, const char *execId) -> int
+{
+    std::lock_guard<std::mutex> lockGuard(m_tasksMutex);
+    return DoPurgeExec(containerId, execId);
 }
 
 }
