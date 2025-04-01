@@ -595,6 +595,11 @@ auto pluginResult::AdjustResources(nri_linux_resources *resources, const std::st
     return ClaimAndCopyResources(resources, id, plugin, reply);
 }
 
+// a specific resource of a container can only be modified by one plugin. 
+// If multiple plugins attempt to modify the same parameter of the same container,
+// the function will immediately return an error.
+// As a result:
+// No need to free memory before reassigning the resource variable
 bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &id, const std::string &plugin,
                                          nri_linux_resources *dest)
 {
@@ -706,7 +711,7 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
             m_owners[id].memDisableOomKiller = plugin;
             dest->memory->disable_oom_killer = NRIHelpers::copy_pointer(src->memory->disable_oom_killer);
             if (dest->memory->disable_oom_killer == nullptr) {
-                ERROR("Failed to copy memory disable_oom_killer to reply adjust");
+                ERROR("Failed to copy memory disable oom killer to reply adjust");
                 return false;
             }
         }
@@ -721,7 +726,7 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
             m_owners[id].memUseHierarchy = plugin;
             dest->memory->use_hierarchy = NRIHelpers::copy_pointer(src->memory->use_hierarchy);
             if (dest->memory->use_hierarchy == nullptr) {
-                ERROR("Failed to copy memory use_hierarchy to reply adjust");
+                ERROR("Failed to copy memory use hierarchy to reply adjust");
                 return false;
             }
         }
@@ -787,7 +792,7 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
             m_owners[id].cpuRealtimePeriod = plugin;
             dest->cpu->realtime_runtime = NRIHelpers::copy_pointer(src->cpu->realtime_runtime);
             if (dest->cpu->realtime_runtime == nullptr) {
-                ERROR("Failed to copy cpu realtime_runtime to reply adjust");
+                ERROR("Failed to copy cpu realtime runtime to reply adjust");
                 return false;
             }
         }
@@ -802,7 +807,7 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
             m_owners[id].cpuRealtimePeriod = plugin;
             dest->cpu->realtime_period = NRIHelpers::copy_pointer(src->cpu->realtime_period);
             if (dest->cpu->realtime_period == nullptr) {
-                ERROR("Failed to copy cpu realtime_period to reply adjust");
+                ERROR("Failed to copy cpu realtime period to reply adjust");
                 return false;
             }
         }
@@ -814,7 +819,7 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].cpusetCpus = plugin;
-            dest->cpu->cpus = NRIHelpers::copy_pointer(src->cpu->cpus);
+            dest->cpu->cpus = util_strdup_s(src->cpu->cpus);
             if (dest->cpu->cpus == nullptr) {
                 ERROR("Failed to copy cpu cpus to reply adjust");
                 return false;
@@ -828,7 +833,7 @@ bool pluginResult::ClaimAndCopyResources(nri_linux_resources *src, std::string &
                 return false;
             }
             m_owners[id].cpusetMems = plugin;
-            dest->cpu->mems = NRIHelpers::copy_pointer(src->cpu->mems);
+            dest->cpu->mems = util_strdup_s(src->cpu->mems);
             if (dest->cpu->mems == nullptr) {
                 ERROR("Failed to copy cpu mems to reply adjust");
                 return false;
@@ -964,7 +969,7 @@ auto pluginResult::Update(nri_container_update **updates, size_t update_len, con
             return false;
         }
 
-        if (!UpdateResources(reply, updates[i], plugin) && !updates[i]->ignore_failure) {
+        if (!UpdateResources(reply, updates[i], plugin) && !static_cast<bool>(updates[i]->ignore_failure)) {
             ERROR("Failed to update container resources in plugin result");
             return false;
         }

@@ -432,6 +432,14 @@ static void nri_adjust_cpu_memory(nri_linux_resources *resource, oci_runtime_spe
     if (resource->cpu->realtime_period != NULL) {
         oci_spec->linux->resources->cpu->realtime_period = *resource->cpu->realtime_period;
     }
+    if (resource->cpu->cpus != NULL) {
+        free(oci_spec->linux->resources->cpu->cpus);
+        oci_spec->linux->resources->cpu->cpus = util_strdup_s(resource->cpu->cpus);
+    }
+    if (resource->cpu->mems != NULL) {
+        free(oci_spec->linux->resources->cpu->mems);
+        oci_spec->linux->resources->cpu->mems = util_strdup_s(resource->cpu->mems);
+    }
 }
 
 static void nri_adjust_memory_resource(nri_linux_resources *resource, oci_runtime_spec *oci_spec)

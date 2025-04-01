@@ -64,6 +64,7 @@ void freeArray(T ** &arr, int size)
     arr = NULL;
 }
 
+// copy_pointer function can only be used to copy scalar types, not compound types.
 template <typename T>
 T* copy_pointer(T* value)
 {

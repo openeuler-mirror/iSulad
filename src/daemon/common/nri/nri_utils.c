@@ -19,18 +19,18 @@
 
 #include "utils.h"
 
-static nri_hugepage_limit*copy_nri_hugepage_limit(const nri_hugepage_limit *src)
+static nri_hugepage_limit *copy_nri_hugepage_limit(const nri_hugepage_limit *src)
 {
     nri_hugepage_limit *dest = NULL;
     if (src == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
 
     dest = (nri_hugepage_limit *)util_common_calloc_s(sizeof(nri_hugepage_limit));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
 
     dest->limit = src->limit;
@@ -43,13 +43,13 @@ static nri_hook *copy_nri_hook(const nri_hook *src)
     nri_hook *dest = NULL;
     if (src == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
 
     dest = (nri_hook *)util_common_calloc_s(sizeof(nri_hook));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
     dest->args = util_copy_array_by_len(src->args, src->args_len);
     dest->args_len = src->args_len;
@@ -64,13 +64,13 @@ static nri_linux_device_cgroup *copy_nri_linux_device_cgroup(const nri_linux_dev
     nri_linux_device_cgroup *dest = NULL;
     if (src == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
 
     dest = (nri_linux_device_cgroup *)util_common_calloc_s(sizeof(nri_linux_device_cgroup));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
     dest->allow = src->allow;
     dest->type = util_strdup_s(src->type);
@@ -96,13 +96,13 @@ static nri_linux_cpu *copy_nri_linux_cpu(const nri_linux_cpu *src)
     nri_linux_cpu *dest = NULL;
     if (src == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
 
     dest = (nri_linux_cpu *)util_common_calloc_s(sizeof(nri_linux_cpu));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
     dest->cpus = util_strdup_s(src->cpus);
     dest->mems = util_strdup_s(src->mems);
@@ -163,13 +163,13 @@ static nri_linux_memory *copy_nri_linux_memory(const nri_linux_memory *src)
     nri_linux_memory *dest = NULL;
     if (src == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
     
     dest = (nri_linux_memory *)util_common_calloc_s(sizeof(nri_linux_memory));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
     if (src->limit != NULL) {
         dest->limit = (int64_t *)util_common_calloc_s(sizeof(int64_t));
@@ -276,13 +276,13 @@ nri_mount *copy_nri_mount(const nri_mount *src)
     nri_mount *dest = NULL;
     if (src == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
 
     dest = (nri_mount *)util_common_calloc_s(sizeof(nri_mount));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
     dest->destination = util_strdup_s(src->destination);
     dest->options = util_copy_array_by_len(src->options, src->options_len);
@@ -298,13 +298,13 @@ nri_linux_device *copy_nri_device(const nri_linux_device *src)
 
     if (src == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
     
     dest = (nri_linux_device *)util_common_calloc_s(sizeof(nri_linux_device));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
     if (src->file_mode != NULL) {
         dest->file_mode = (uint32_t *)util_common_calloc_s(sizeof(uint32_t));
@@ -349,12 +349,12 @@ nri_key_value *copy_nri_key_value(const nri_key_value *src)
     nri_key_value *dest = NULL;
     if (src == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
     dest = (nri_key_value *)util_common_calloc_s(sizeof(nri_key_value));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
     dest->key = util_strdup_s(src->key);
     dest->value = util_strdup_s(src->value);
@@ -366,12 +366,12 @@ nri_posix_rlimit *copy_nri_posix_rlimit(const nri_posix_rlimit *src)
     nri_posix_rlimit *dest = NULL;
     if (src == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
     dest = (nri_posix_rlimit *)util_common_calloc_s(sizeof(nri_posix_rlimit));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
     dest->hard = src->hard;
     dest->soft = src->soft;
@@ -384,13 +384,13 @@ nri_linux_resources *copy_nri_linux_resources(const nri_linux_resources *src)
     nri_linux_resources *dest = NULL;
     if (src == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
 
     dest = (nri_linux_resources *)util_common_calloc_s(sizeof(nri_linux_resources));
     if (dest == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
 
     if (src->cpu != NULL) {
@@ -480,13 +480,13 @@ nri_container_update *init_nri_container_update(const char *id, const uint8_t ig
     nri_container_update *update = NULL;
     if (id == NULL) {
         ERROR("Invalid input arguments");
-        return false;
+        return NULL;
     }
 
     update = (nri_container_update *)util_common_calloc_s(sizeof(nri_container_update));
     if (update == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
 
     update->container_id = util_strdup_s(id);
@@ -502,7 +502,7 @@ nri_linux_resources *init_nri_linux_resources()
     resources = (nri_linux_resources *)util_common_calloc_s(sizeof(nri_linux_resources));
     if (resources == NULL) {
         ERROR("Out of memory");
-        return false;
+        return NULL;
     }
 
     resources->cpu = (nri_linux_cpu *)util_common_calloc_s(sizeof(nri_linux_cpu));
