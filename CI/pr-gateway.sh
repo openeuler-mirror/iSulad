@@ -33,19 +33,6 @@ pip3 install meson ninja
 
 cd ~
 
-rm -rf lxc
-git clone https://gitee.com/src-openeuler/lxc.git
-pushd lxc
-rm -rf lxc-5.0.2
-git config --global --add safe.directory $(pwd)/lxc-5.0.2
-./apply-patches || exit 1
-pushd lxc-5.0.2
-mkdir -p build
-meson setup -Dtests=true -Dprefix=/usr build || exit 1
-meson install -C build || exit 1
-popd
-popd
-
 ldconfig
 rm -rf lcr
 git clone https://gitee.com/openeuler/lcr.git
@@ -55,7 +42,7 @@ rm -rf build
 mkdir build
 pushd build
 # disable lcr first
-cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DENABLE_LIBLCR=OFF ../ || exit 1
+cmake -DDEBUG=ON -DCMAKE_SKIP_RPATH=TRUE -DENABLE_LIBLCR=OFF -DENABLE_UT=ON ../ || exit 1
 make -j $(nproc) || exit 1
 make install
 popd
