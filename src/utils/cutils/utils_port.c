@@ -925,6 +925,18 @@ bool util_new_network_port(const char *proto, const char *port, struct network_p
         goto out;
     }
 
+    if (proto == NULL) {
+        ERROR("Invalid proto");
+        ret = false;
+        goto out;
+    }
+
+    if (!util_valid_proto(proto)) {
+        ERROR("Invalid proto: %s", proto);
+        ret = false;
+        goto out;
+    }
+
     if (work->start == work->end) {
         ret = sprintf(buff, "%zu/%s", work->start, proto) > 0;
     } else {
