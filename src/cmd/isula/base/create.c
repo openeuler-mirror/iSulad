@@ -1496,8 +1496,8 @@ int client_create(struct client_arguments *args)
     // parse --publish param to custom map
     if (args->custom_conf.publish != NULL) {
         // When network mode type is host, none, or container, --publish/-p is invalid.
-        // Docker prompts for host, intercepts container, and does nothing for none.
-        // We prompt for host and none, and intercept container.
+        // Docker prompts for host, intercepts container, and does nothing for none.
+        // We prompt for host and none, and intercept container.
         if (args->custom_conf.share_ns[NAMESPACE_NET] == NULL) {
             COMMAND_ERROR("Invalid --publish/-p: --publish/-p requires --network/--net to be specified");
             ret = EINVALIDARGS;
