@@ -428,11 +428,13 @@ static int registry_request(pull_descriptor *desc, char *path, char **custom_hea
         goto out;
     }
 
-    headers = util_str_array_dup((const char **)custom_headers, util_array_len((const char **)custom_headers));
-    if (ret != 0) {
-        ERROR("duplicate custom headers failed");
-        ret = -1;
-        goto out;
+    if (custom_headers != NULL) {
+        headers = util_str_array_dup((const char **)custom_headers, util_array_len((const char **)custom_headers));
+        if (headers == NULL) {
+            ERROR("duplicate custom headers failed");
+            ret = -1;
+            goto out;
+        }
     }
 
     ret = util_array_append(&headers, DOCKER_API_VERSION_HEADER);
