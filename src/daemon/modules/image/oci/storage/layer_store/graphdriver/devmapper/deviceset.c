@@ -1654,7 +1654,7 @@ static int cancel_deferred_removal(struct device_set *devset, const char *hash)
                 continue;
             }
             ERROR("devmapper: cancel deferred remove for dm:%s failed, err:%s", dm_name, dev_strerror(nret));
-            ret = -1;
+            ret = nret;
         }
         goto out;
     }

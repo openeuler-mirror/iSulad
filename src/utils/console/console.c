@@ -510,7 +510,7 @@ int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper
 
     if (sync_fd >= 0) {
         ts[i].sync_fd = sync_fd;
-        epoll_loop_add_handler(&descr, ts[i].sync_fd, console_cb_stdio_copy, &ts[i]);
+        ret = epoll_loop_add_handler(&descr, ts[i].sync_fd, console_cb_stdio_copy, &ts[i]);
         if (ret) {
             ERROR("Add handler for syncfd failed");
             goto err_out;
