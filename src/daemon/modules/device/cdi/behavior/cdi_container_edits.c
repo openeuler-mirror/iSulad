@@ -404,11 +404,11 @@ static int apply_cdi_hooks(cdi_container_edits *e, oci_runtime_spec *spec)
 
     for (i = 0; i < e->hooks_len; i++) {
         defs_hook *oci_hook = cdi_hook_to_oci(e->hooks[i]);
-        if (strcmp(e->hooks[i]->hook_name, PRESTART_HOOK)) {
+        if (strcmp(e->hooks[i]->hook_name, PRESTART_HOOK) == 0) {
             ret = spec_add_prestart_hook(spec, oci_hook);
-        } else if (strcmp(e->hooks[i]->hook_name, POSTSTART_HOOK)) {
+        } else if (strcmp(e->hooks[i]->hook_name, POSTSTART_HOOK) == 0) {
             ret = spec_add_poststart_hook(spec, oci_hook);
-        } else if (strcmp(e->hooks[i]->hook_name, POSTSTOP_HOOK)) {
+        } else if (strcmp(e->hooks[i]->hook_name, POSTSTOP_HOOK) == 0) {
             ret = spec_add_poststop_hook(spec, oci_hook);
         } else {
             /*
