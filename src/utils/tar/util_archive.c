@@ -900,7 +900,10 @@ child_out:
     ret = util_wait_for_pid(pid);
     if (ret != 0) {
         SYSERROR("Wait archive_untar_handler failed");
-        fcntl(pipe_stderr[0], F_SETFL, O_NONBLOCK);
+        if (fcntl(pipe_stderr[0], F_SETFL, O_NONBLOCK) == -1) {
+            SYSERROR("Failed to set non-blocking mode on stderr pipe");
+        }
+
         if (util_read_nointr(pipe_stderr[0], errbuf, BUFSIZ) < 0) {
             ERROR("read error message from child failed");
         }
@@ -1346,7 +1349,10 @@ child_out:
     ret = util_wait_for_pid(pid);
     if (ret != 0) {
         ERROR("tar failed");
-        fcntl(pipe_for_read[0], F_SETFL, O_NONBLOCK);
+        if (fcntl(pipe_for_read[0], F_SETFL, O_NONBLOCK) == -1) {
+            SYSERROR("Failed to set non-blocking mode on stderr pipe");
+        }
+
         if (util_read_nointr(pipe_for_read[0], errbuf, BUFSIZ) < 0) {
             ERROR("read error message from child failed");
         }
