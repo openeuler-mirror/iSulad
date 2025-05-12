@@ -1187,10 +1187,12 @@ out:
     }
     free(manifest_fpath);
     free(digest);
-    for (i = 0; i < manifest_len; i++) {
-        free_image_manifest_items_element(manifest[i]);
+    if (manifest != NULL && manifest_len > 0) {
+        for (i = 0; i < manifest_len; i++) {
+            free_image_manifest_items_element(manifest[i]);
+        }
+        free(manifest);
     }
-    free(manifest);
 
     do_free_load_image(im);
 

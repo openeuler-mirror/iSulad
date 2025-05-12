@@ -223,16 +223,18 @@ static int client_copy_to_container(const struct client_arguments *args, const c
         COMMAND_ERROR("Unimplemented copy to container operation");
         return -1;
     }
-    config = get_connect_config(args);
-
-    ret = client_get_root_dir(ops, &config, &root_dir);
-    if (ret != 0) {
-        return -1;
-    }
 
     response = util_common_calloc_s(sizeof(struct isula_copy_to_container_response));
     if (response == NULL) {
         ERROR("Event: Out of memory");
+        return -1;
+    }
+
+    config = get_connect_config(args);
+
+    ret = client_get_root_dir(ops, &config, &root_dir);
+    if (ret != 0) {
+        ERROR("Failed to get isulad root dir");
         ret = -1;
         goto out;
     }

@@ -672,7 +672,7 @@ static int update_runtime_conf_portmappings_by_cached(cni_cached_info *info, str
     if (info->port_mappings_len == 0) {
         return 0;
     }
-    tmp_ports = util_smart_calloc_s(sizeof(struct cni_port_mapping), info->port_mappings_len);
+    tmp_ports = util_smart_calloc_s(sizeof(struct cni_port_mapping *), info->port_mappings_len);
     if (tmp_ports == NULL) {
         ERROR("Out of memory");
         return -1;
