@@ -151,4 +151,28 @@ TEST_F(SandboxTest, TestSandboxOpsOnExitFailed)
     ASSERT_EQ(sandbox_on_sandbox_exit("12345678", 0), -1);
 }
 
+TEST_F(SandboxTest, TestFindAvailableVsockPortAndReleaseVsockPort)
+{
+    uint32_t port1 = 0;
+    uint32_t port2 = 0;
+
+    std::string id = "23456789";
+    std::string rootdir = "/test2/rootdir";
+    std::string statedir = "/test2/statedir";
+
+    auto sandbox = std::unique_ptr<Sandbox>(new Sandbox(id, rootdir, statedir));
+    ASSERT_NE(sandbox, nullptr);
+    EXPECT_TRUE(sandbox->FindAvailableVsockPort(port1));
+    ASSERT_EQ(port1, 2000);
+    EXPECT_TRUE(sandbox->FindAvailableVsockPort(port2));
+    ASSERT_EQ(port2, 2001);
+
+    sandbox->ReleaseVsockPort(port1);
+    sandbox->ReleaseVsockPort(port2);
+
+    port1 = 0;
+
+    EXPECT_TRUE(sandbox->FindAvailableVsockPort(port1));
+    ASSERT_EQ(port1, 2000);
+}
 }
