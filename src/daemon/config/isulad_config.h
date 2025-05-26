@@ -29,7 +29,7 @@
 extern "C" {
 #endif
 
-#define DEFAULT_RUNTIME_NAME "lcr"
+#define DEFAULT_RUNTIME_NAME "runc"
 
 struct isulad_conf {
     pthread_rwlock_t isulad_conf_rwlock;

@@ -353,7 +353,7 @@ static void print_extern_container_info_item(const struct isula_container_summar
         util_time_format_duration(in->finishat, finishat_duration, sizeof(finishat_duration));
         printf("%-*s", (int)length->finishat_length, in->finishat ? finishat_duration : "-");
     } else if (strcmp(name, "Runtime") == 0) {
-        printf("%-*s", (int)length->runtime_length, in->runtime ? in->runtime : "lcr");
+        printf("%-*s", (int)length->runtime_length, in->runtime ? in->runtime : "runc");
     } else if (strcmp(name, "Names") == 0) {
         printf("%-*s", (int)length->name_length, in->name ? in->name : "-");
     } else if (strcmp(name, "State") == 0) {

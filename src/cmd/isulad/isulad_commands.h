@@ -328,7 +328,7 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
     },                                                                                                            \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false, "default-runtime", 0, &(cmdargs)->json_confs->default_runtime,                                       \
-      "Default container runtime (default lcr)", NULL                                                             \
+      "Default container runtime (default runc)", NULL                                                             \
     },                                                                                                            \
     { CMD_OPT_TYPE_CALLBACK,                                                                                      \
       false, "cpu-rt-period", 0, &(cmdargs)->json_confs->cpu_rt_period,                                           \
