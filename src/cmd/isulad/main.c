@@ -1743,12 +1743,12 @@ static int pre_init_daemon(int argc, char **argv)
         ERROR("Failed to become a daemon");
         goto out;
     }
-
+#ifdef ENABLE_LCR
     if (runtime_init() != 0) {
         ERROR("Failed to init runtime");
         goto out;
     }
-
+#endif
     /*
      * change the current working dir to root.
      */

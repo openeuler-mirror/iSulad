@@ -17,16 +17,19 @@
 #include <stdbool.h>
 
 #include "runtime_api.h"
+#ifdef ENABLE_LCR
 #include "engine.h"
+#include "lcr_rt_ops.h"
+#endif
 #include "isulad_config.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "lcr_rt_ops.h"
 #include "isula_rt_ops.h"
 #ifdef ENABLE_SHIM_V2
 #include "shim_rt_ops.h"
 #endif
 
+#ifdef ENABLE_LCR
 static const struct rt_ops g_lcr_rt_ops = {
     .detect = rt_lcr_detect,
     .rt_create = rt_lcr_create,
@@ -49,6 +52,7 @@ static const struct rt_ops g_lcr_rt_ops = {
     .rt_read_pid_ppid_info = rt_lcr_read_pid_ppid_info,
     .rt_detect_process = rt_lcr_detect_process,
 };
+#endif
 
 static const struct rt_ops g_isula_rt_ops = {
     .detect = rt_isula_detect,
@@ -99,7 +103,9 @@ static const struct rt_ops g_shim_rt_ops = {
 #endif
 
 static const struct rt_ops *g_rt_ops[] = {
+#ifdef ENABLE_LCR
     &g_lcr_rt_ops,
+#endif
 #ifdef ENABLE_SHIM_V2
     &g_shim_rt_ops,
 #endif
@@ -578,7 +584,11 @@ int runtime_detect_process(const char *name, const char *runtime, const rt_detec
 
 bool is_default_runtime(const char *name)
 {
+#ifdef ENABLE_LCR
     const char *runtimes[] = { "lcr", "runc", "kata-runtime" };
+#else
+    const char *runtimes[] = { "runc", "kata-runtime" };
+#endif
     int i = 0;
 
     for (; i < sizeof(runtimes) / sizeof(runtimes[0]); ++i) {
