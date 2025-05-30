@@ -5,6 +5,7 @@
 %global enable_shimv2 1
 %global is_embedded 1
 %global cpp_std 17
+%global enable_lcr 1
 
 Name:      iSulad
 Version:   %{_version}
@@ -86,6 +87,9 @@ cd build
 %if 0%{?enable_criv1}
     -DENABLE_CRI_API_V1=ON \
     -DENABLE_SANDBOXER=ON \
+%endif
+%if 0%{?enable_lcr}
+    -DENABLE_LCR=ON \
 %endif
 %if 0%{?enable_shimv2}
     -DENABLE_SHIM_V2=ON \

@@ -62,6 +62,13 @@ if (ENABLE_SANDBOXER STREQUAL "ON")
     endif()
 endif()
 
+option(ENABLE_LCR "Enable LCR runtime" ON)
+if (ENABLE_LCR STREQUAL "ON")
+    add_definitions(-DENABLE_LCR)
+    set(ENABLE_LCR 1)
+    message("${Green}--  Enable LCR runtime${ColourReset}")
+endif()
+
 option(ENABLE_REMOTE_IMAGE "Enable remote image" OFF)
 if (ENABLE_REMOTE_IMAGE STREQUAL "ON")
     if (ENABLE_SANDBOXER)
