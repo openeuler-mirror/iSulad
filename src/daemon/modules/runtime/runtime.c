@@ -615,10 +615,11 @@ bool is_default_runtime(const char *name)
 
 int runtime_init(void)
 {
+#ifdef ENABLE_LCR
     if (engines_global_init()) {
         ERROR("Init engines global failed");
         return -1;
     }
-
+#endif
     return 0;
 }
