@@ -88,8 +88,8 @@ cd build
     -DENABLE_CRI_API_V1=ON \
     -DENABLE_SANDBOXER=ON \
 %endif
-%if 0%{?enable_lcr}
-    -DENABLE_LCR=ON \
+%if "%{?enable_lcr}" == "0"
+    -DENABLE_LCR=OFF \
 %endif
 %if 0%{?enable_shimv2}
     -DENABLE_SHIM_V2=ON \
