@@ -17,7 +17,6 @@
 
 #include <isula_libutils/log.h>
 
-#include "utils.h"
 #include "isulad_config.h"
 
 namespace NRIHelpers {

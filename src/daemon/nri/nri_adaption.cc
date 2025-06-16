@@ -145,7 +145,7 @@ auto NRIAdaptation::ApplyUpdates(const std::vector<nri_container_update *> &upda
 
         if (error.NotEmpty()) {
             ERROR("Failed to update container: %s resources: %s", u->container_id, error.GetCMessage());
-            if (!u->ignore_failure && getFailed) {
+            if (!static_cast<bool>(u->ignore_failure) && getFailed) {
                 failed.push_back(u);
             }
             continue;
