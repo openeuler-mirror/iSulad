@@ -51,10 +51,10 @@ function test_network_dnsname()
     isula network create ${net1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network create ${net1} failed" && return ${FAILURE}
 
-    isula run -tid --net ${net1} -n ${cont1} busybox sh
+    isula run -tid --net ${net1} -n ${cont1} isulad/busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont1} failed" && return ${FAILURE}
 
-    isula run -tid --net ${net1} -n ${cont2} busybox sh
+    isula run -tid --net ${net1} -n ${cont2} isulad/busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont2} failed" && return ${FAILURE}
 
     IP1=$(isula inspect -f {{.NetworkSettings.Networks.${net1}.IPAddress}} ${cont1})
@@ -85,10 +85,10 @@ function test_network_dnsname()
     isula network create ${net2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network create ${net2} failed" && return ${FAILURE}
 
-    isula run -tid --net ${net2} -n ${cont1} busybox sh
+    isula run -tid --net ${net2} -n ${cont1} isulad/busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont1} failed" && return ${FAILURE}
 
-    isula run -tid --net ${net2} -n ${cont2} busybox sh
+    isula run -tid --net ${net2} -n ${cont2} isulad/busybox sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont2} failed" && return ${FAILURE}
 
     IP1=$(isula inspect -f {{.NetworkSettings.Networks.${net2}.IPAddress}} ${cont1})
