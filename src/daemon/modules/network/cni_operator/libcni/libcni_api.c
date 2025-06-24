@@ -611,8 +611,13 @@ int cni_add_network_list(const struct cni_network_list_conf *list, const struct 
         }
     }
 
-    if (*pret != NULL &&
-        util_version_greater_than_or_equal_to((*pret)->cniversion, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
+    if (*pret == NULL) {
+        // If no result is returned, we do not need to cache it
+        WARN("No result returned from CNI ADD plugin");
+        return 0;
+    }
+
+    if (util_version_greater_than_or_equal_to((*pret)->cniversion, SUPPORT_CACHE_AND_CHECK_VERSION, &greater) != 0) {
         return 0;
     }
 

@@ -1980,15 +1980,11 @@ public:
                 ERROR("Invalid json: %s", err);
                 free(err);
                 CopyFromContainerFinish(ctx, &response->errmsg);
-                delete ctx->reader;
-                delete ctx;
                 return -1;
             }
             free(err);
         } else {
             CopyFromContainerFinish(ctx, &response->errmsg);
-            delete ctx->reader;
-            delete ctx;
             return -1;
         }
         // Ignore the first reader which is used for transform metadata
