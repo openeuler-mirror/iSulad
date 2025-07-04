@@ -35,6 +35,10 @@ static void *mount_netns(void *mnt_netns)
 {
     int nret = 0;
     int *ecode = (int *)malloc(sizeof(int));
+    if (ecode == NULL) {
+        ERROR("Failed to allocate memory for ecode");
+        goto err_out;
+    }
     char fullpath[PATH_MAX] = { 0 };
 
     bool use_proc_ns = ((struct mount_netns *)mnt_netns)->use_proc_ns;

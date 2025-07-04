@@ -778,6 +778,8 @@ static int get_configs_from_cached(const char *network, const char *cni_version,
         info->ip_ranges_len = 0;
         tmp_ip_ranges->subitem_lens = info->ip_ranges_item_lens;
         info->ip_ranges_item_lens = NULL;
+        free(rc->ip_ranges);
+        rc->ip_ranges = tmp_ip_ranges;
     }
 
     // step 2.4: update aliases

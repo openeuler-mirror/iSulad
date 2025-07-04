@@ -603,13 +603,15 @@ static int copy_id_map(storage_rootfs *c, const struct storage_rootfs_options *r
     if (rootfs_opts->id_mapping_opts.gid_map_len != 0) {
         if (rootfs_opts->id_mapping_opts.gid_map_len >= SIZE_MAX / sizeof(storage_rootfs_gidmap_element *)) {
             ERROR("Too many id map");
-            return -1;
+            ret = -1;
+            goto out;
         }
         gid_map = (storage_rootfs_gidmap_element **)util_common_calloc_s(sizeof(storage_rootfs_gidmap_element *) *
                                                                          rootfs_opts->id_mapping_opts.gid_map_len);
         if (gid_map == NULL) {
             ERROR("Out of memory");
-            return -1;
+            ret = -1;
+            goto out;
         }
 
         for (i = 0; i < rootfs_opts->id_mapping_opts.gid_map_len; i++) {
