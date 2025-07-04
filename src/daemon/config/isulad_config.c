@@ -599,7 +599,7 @@ out:
     (void)isulad_server_conf_unlock();
     return timeout;
 }
-uint64_t conf_get_nri_plugin_requst_timeout(void)
+uint64_t conf_get_nri_plugin_request_timeout(void)
 {
     uint64_t timeout = false;
     struct service_arguments *conf = NULL;
@@ -613,12 +613,12 @@ uint64_t conf_get_nri_plugin_requst_timeout(void)
         goto out;
     }
 
-    if (conf->json_confs->plugin_requst_timeout == 0) {
-        timeout = DEFAULT_PLUGIN_REQUST_TIMEOUT;
+    if (conf->json_confs->plugin_request_timeout == 0) {
+        timeout = DEFAULT_PLUGIN_REQUEST_TIMEOUT;
         goto out;
     }
 
-    timeout = conf->json_confs->plugin_requst_timeout;
+    timeout = conf->json_confs->plugin_request_timeout;
 
 out:
     (void)isulad_server_conf_unlock();
@@ -1937,7 +1937,7 @@ int merge_json_confs_into_global(struct service_arguments *args)
     override_string_value(&args->json_confs->plugin_config_path, &tmp_json_confs->plugin_config_path);
     override_string_value(&args->json_confs->plugin_path, &tmp_json_confs->plugin_path);
     args->json_confs->plugin_registration_timeout = tmp_json_confs->plugin_registration_timeout;
-    args->json_confs->plugin_requst_timeout = tmp_json_confs->plugin_requst_timeout;
+    args->json_confs->plugin_request_timeout = tmp_json_confs->plugin_request_timeout;
     // Setting socket plugin path is not supported now
 #endif
     args->json_confs->enable_pod_events = tmp_json_confs->enable_pod_events;

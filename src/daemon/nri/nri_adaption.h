@@ -123,7 +123,7 @@ private:
     // todo: if Singleton?
     std::unique_ptr<CRIV1::ContainerManagerService> m_containerManager;
     int64_t m_plugin_registration_timeout;
-    int64_t m_plugin_requst_timeout;
+    int64_t m_plugin_request_timeout;
 };
 
 #endif // DAEMON_NRI_PLUGIN_NRI_ADAPTION_H

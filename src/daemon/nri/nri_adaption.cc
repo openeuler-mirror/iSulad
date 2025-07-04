@@ -69,7 +69,7 @@ auto NRIAdaptation::Init(Errors &error) -> bool
     m_pluginConfigPath = GetNRIPluginConfigPath();
     m_pluginPath = GetNRIPluginPath();
     m_plugin_registration_timeout = conf_get_nri_plugin_registration_timeout();
-    m_plugin_requst_timeout = conf_get_nri_plugin_requst_timeout();
+    m_plugin_request_timeout = conf_get_nri_plugin_request_timeout();
     m_sock_path = GetNRISockPath();
 
     if (!StartPlugin()) {
@@ -183,7 +183,7 @@ auto NRIAdaptation::NewExternalPlugin(int fd) -> bool
 
     AddPluginByIndex(plugin_name, plugin);
 
-    if (!plugin->Start(m_plugin_registration_timeout, m_plugin_requst_timeout)) {
+    if (!plugin->Start(m_plugin_registration_timeout, m_plugin_request_timeout)) {
         ERROR("Failed to start plugin ready for conn fd %d", fd);
         RemovePluginByIndex(plugin_name);
         return false;
@@ -884,7 +884,7 @@ auto NRIAdaptation::StartPlugin() -> bool
 
         AddPluginByIndex(index, plugin);
 
-        if (!plugin->Start(m_plugin_registration_timeout, m_plugin_requst_timeout)) {
+        if (!plugin->Start(m_plugin_registration_timeout, m_plugin_request_timeout)) {
             ERROR("Failed to start plugin %s ready", plugin->GetName().c_str());
             RemovePluginByIndex(index);
             (void)plugin->shutdown();
