@@ -71,7 +71,7 @@ using resultOwners = std::map<std::string, owners>;
 class pluginResult {
 public:
     pluginResult() = default;
-    pluginResult(std::string conId);
+    explicit pluginResult(std::string conId);
 
     virtual ~pluginResult();
 

@@ -29,7 +29,7 @@ namespace sandbox {
 
 class SandboxTask : public std::enable_shared_from_this<SandboxTask> {
 public:
-    SandboxTask(sandbox_task *task);
+    explicit SandboxTask(sandbox_task *task);
     ~SandboxTask();
 
     auto GetTask() -> sandbox_task *;

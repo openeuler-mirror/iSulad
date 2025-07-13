@@ -30,8 +30,8 @@
 
 namespace sandbox {
 
-SandboxerClient::SandboxerClient(const std::string &sandboxer, const std::string &address):
-    m_sandboxer(sandboxer), m_address(address)
+SandboxerClient::SandboxerClient(const std::string &sandboxer, const std::string &address)
+    : m_sandboxer(sandboxer), m_address(address)
 {
     std::string unixPrefix(UNIX_SOCKET_PREFIX);
 
