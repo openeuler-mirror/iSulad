@@ -18,7 +18,7 @@
 #include "callback.h"
 #include "utils.h"
 
-typedef ssize_t (*AttachWriter)(void *context, const void *data, size_t len);
+using AttachWriter = ssize_t (*)(void *context, const void *data, size_t len);
 struct AttachContext {
     SessionData *lwsCtx;
     sem_t *sem;

@@ -34,7 +34,7 @@ namespace sandbox {
 
 class ShimController : public Controller {
 public:
-    ShimController(const std::string &sandboxer);
+    explicit ShimController(const std::string &sandboxer);
     virtual ~ShimController();
     bool Init(Errors &error) override;
     bool Create(const std::string &sandboxId,
