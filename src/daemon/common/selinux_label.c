@@ -560,7 +560,10 @@ static void update_process_and_mount_label_range(char **process_label, char **fi
     if (context_range_get(scon) != NULL) {
         char mcs[MCS_MAX_LEN] = { 0x00 };
 
-        uniq_mcs(1024, mcs, MCS_MAX_LEN);
+        if (uniq_mcs(1024, mcs, MCS_MAX_LEN) != 0) {
+            context_free(scon);
+            return;
+        }
         context_range_set(scon, mcs);
         free(*process_label);
         *process_label = util_strdup_s(context_str(scon));
