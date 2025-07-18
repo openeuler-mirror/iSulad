@@ -378,7 +378,7 @@ static int stdout_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
         return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
-    shim_write_container_log_file(p->terminal, STDID_OUT, p->buf, r_count);
+    shim_write_container_log(p->terminal, STDID_OUT, p->buf, r_count);
 
     if (p->isulad_io->out != -1) {
         w_count = isula_file_total_write_nointr(p->isulad_io->out, p->buf, r_count);
@@ -424,7 +424,7 @@ static int stderr_cb(int fd, uint32_t events, void *cbdata, isula_epoll_descr_t 
         return EPOLL_LOOP_HANDLE_CONTINUE;
     }
 
-    shim_write_container_log_file(p->terminal, STDID_ERR, p->buf, r_count);
+    shim_write_container_log(p->terminal, STDID_ERR, p->buf, r_count);
 
     if (p->isulad_io->err != -1) {
         w_count = isula_file_total_write_nointr(p->isulad_io->err, p->buf, r_count);
@@ -968,7 +968,7 @@ static void adapt_for_isulad_stdin(process_t *p)
     }
 }
 
-static int terminal_init(log_terminal **terminal, shim_client_process_state *p_state)
+static int terminal_init(log_terminal **terminal, shim_client_process_state *p_state, char *id)
 {
     log_terminal *log_term = NULL;
 
@@ -1000,6 +1000,11 @@ static int terminal_init(log_terminal **terminal, shim_client_process_state *p_s
 
     if (p_state->log_maxsize > log_term->log_maxsize) {
         log_term->log_maxsize = (uint64_t)p_state->log_maxsize;
+    }
+
+    if (p_state->syslog_driver) {
+        shim_init_syslog(id, p_state->syslog_tag, p_state->syslog_facility);
+        log_term->syslog = true;
     }
 
     if (log_term->log_path != NULL) {
@@ -1167,7 +1172,7 @@ process_t *new_process(char *id, char *bundle, char *runtime_cmd)
         goto failure;
     }
 
-    ret = terminal_init(&(p->terminal), p_state);
+    ret = terminal_init(&(p->terminal), p_state, id);
     if (ret != SHIM_OK) {
         goto failure;
     }
@@ -1672,8 +1677,8 @@ int process_signal_handle_routine(process_t *p, const pthread_t tid_epoll, const
 
     if (!p->state->exec) {
         // if log did not contain "/n", print remaind container log when exit isulad-shim
-        shim_write_container_log_file(p->terminal, STDID_OUT, NULL, 0);
-        shim_write_container_log_file(p->terminal, STDID_ERR, NULL, 0);
+        shim_write_container_log(p->terminal, STDID_OUT, NULL, 0);
+        shim_write_container_log(p->terminal, STDID_ERR, NULL, 0);
     }
 
     if (ret == SHIM_ERR_TIMEOUT) {

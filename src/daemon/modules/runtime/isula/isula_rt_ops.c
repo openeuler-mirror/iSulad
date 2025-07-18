@@ -102,26 +102,71 @@ static void copy_process(shim_client_process_state *p, defs_process *dp)
     p->rlimits_len = dp->rlimits_len;
 }
 
+typedef void (*anno_type_parse_handler)(shim_client_process_state *, char *);
+
+struct anno_parse_handler {
+    const char *type;
+    anno_type_parse_handler handler;
+};
+
+static void handle_log_config_key_file(shim_client_process_state *p, char *value)
+{
+    p->log_path = value;
+}
+
+static void handle_log_config_rotate(shim_client_process_state *p, char *value)
+{
+    int tmaxfile = 0;
+    if (util_safe_int(value, &tmaxfile) == 0 && tmaxfile > 0) {
+        p->log_maxfile = tmaxfile;
+    }
+}
+
+static void handle_log_config_key_size(shim_client_process_state *p, char *value)
+{
+    int64_t tmaxsize = 0;
+    if (util_parse_byte_size_string(value, &tmaxsize) == 0 && tmaxsize > 0) {
+        p->log_maxsize = tmaxsize;
+    }
+}
+
+static void handle_log_config_key_driver(shim_client_process_state *p, char *value)
+{
+    if (strcmp(value, CONTAINER_LOG_CONFIG_SYSLOG_DRIVER) == 0) {
+        p->syslog_driver = true;
+    }
+}
+
+static void handle_log_config_syslog_tag(shim_client_process_state *p, char *value)
+{
+    p->syslog_tag = value;
+}
+
+static void handle_log_config_syslog_facility(shim_client_process_state *p, char *value)
+{
+    p->syslog_facility = value;
+}
+
 static void copy_annotations(shim_client_process_state *p, json_map_string_string *anno)
 {
-    size_t i;
+    size_t i, j;
     if (anno == NULL) {
         return;
     }
+    struct anno_parse_handler anno_parse_handle_table[] = {
+        { CONTAINER_LOG_CONFIG_KEY_FILE, handle_log_config_key_file },
+        { CONTAINER_LOG_CONFIG_KEY_ROTATE, handle_log_config_rotate },
+        { CONTAINER_LOG_CONFIG_KEY_SIZE, handle_log_config_key_size },
+        { CONTAINER_LOG_CONFIG_KEY_DRIVER, handle_log_config_key_driver },
+        { CONTAINER_LOG_CONFIG_KEY_SYSLOG_TAG, handle_log_config_syslog_tag },
+        { CONTAINER_LOG_CONFIG_KEY_SYSLOG_FACILITY, handle_log_config_syslog_facility },
+    };
+    size_t table_size = sizeof(anno_parse_handle_table) / sizeof(struct anno_parse_handler);
     for (i = 0; i < anno->len; i++) {
-        if (strcmp(anno->keys[i], CONTAINER_LOG_CONFIG_KEY_FILE) == 0) {
-            p->log_path = anno->values[i];
-        } else if (strcmp(anno->keys[i], CONTAINER_LOG_CONFIG_KEY_ROTATE) == 0) {
-            int tmaxfile = 0;
-            if (util_safe_int(anno->values[i], &tmaxfile) == 0 && tmaxfile > 0) {
-                p->log_maxfile = tmaxfile;
-            }
-            continue;
-        }
-        if (strcmp(anno->keys[i], CONTAINER_LOG_CONFIG_KEY_SIZE) == 0) {
-            int64_t tmaxsize = 0;
-            if (util_parse_byte_size_string(anno->values[i], &tmaxsize) == 0 && tmaxsize > 0) {
-                p->log_maxsize = tmaxsize;
+        for (j = 0; j < table_size; j++) {
+            if (strcmp(anno->keys[i], anno_parse_handle_table[j].type) == 0) {
+                anno_parse_handle_table[j].handler(p, anno->values[i]);
+                break;
             }
         }
     }

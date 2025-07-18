@@ -27,6 +27,7 @@ extern "C" {
 #endif
 
 typedef struct {
+    bool syslog;
     uint64_t log_maxsize;
     char *log_path;
     int fd;
@@ -34,10 +35,14 @@ typedef struct {
     pthread_rwlock_t log_terminal_rwlock;
 } log_terminal;
 
+void shim_write_container_log(log_terminal *terminal, int type, char *buf, int read_count);
+
 void shim_write_container_log_file(log_terminal *terminal, int type, char *buf,
                                    int read_count);
 
 int shim_create_container_log_file(log_terminal *terminal);
+
+void shim_init_syslog(const char *name, const char *tag, const char *facility);
 
 #ifdef __cplusplus
 }

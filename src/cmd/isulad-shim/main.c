@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <sys/prctl.h>
 #include <stdlib.h>
+#include <syslog.h> 
 #include <isula_libutils/shim_client_process_state.h>
 #include <isula_libutils/utils_convert.h>
 #include <isula_libutils/utils_memory.h>
@@ -197,6 +198,11 @@ int main(int argc, char **argv)
     released_timeout_exit();
 
     ret = process_signal_handle_routine(p, tid_epoll, timeout);
+
+    if (p->terminal->syslog) {
+        closelog();
+	}
+
     if (ret == SHIM_ERR) {
         error_exit(EXIT_FAILURE);
     }

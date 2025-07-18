@@ -26,11 +26,14 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+#include <syslog.h> 
 
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/logger_json_file.h>
 #include <isula_libutils/utils_memory.h>
 #include <isula_libutils/utils_file.h>
+#include <isula_libutils/utils_string.h>
+#include <isula_libutils/auto_cleanup.h>
 
 #include "common.h"
 #include "process.h"
@@ -358,4 +361,73 @@ int shim_create_container_log_file(log_terminal *terminal)
     }
 
     return SHIM_OK;
+}
+
+void shim_write_container_log(log_terminal *terminal, int type, char *buf, int read_count)
+{
+    if (terminal == NULL) {
+        return;
+    }
+    if (terminal->syslog) {
+        syslog(LOG_INFO, "%s", buf);
+        return;
+    }
+
+    shim_write_container_log_file(terminal, type, buf, read_count);
+}
+
+static int parse_facility(const char *facility)
+{
+#define FACILITIES_LEN 20
+	const char *facility_keys[FACILITIES_LEN] = {
+		"kern", "user", "mail", "daemon", "auth",
+		"syslog", "lpr", "news", "uucp", "cron", "authpriv", "ftp",
+		"local0", "local1", "local2", "local3", "local4", "local5", "local6", "local7"
+	};
+	const int facilities[FACILITIES_LEN] = {
+		LOG_KERN, LOG_USER, LOG_MAIL, LOG_DAEMON, LOG_AUTH, LOG_SYSLOG,
+		LOG_LPR, LOG_NEWS, LOG_UUCP, LOG_CRON, LOG_AUTHPRIV, LOG_FTP,
+		LOG_LOCAL0, LOG_LOCAL1, LOG_LOCAL2, LOG_LOCAL3, LOG_LOCAL4,
+		LOG_LOCAL5, LOG_LOCAL6, LOG_LOCAL7
+	};
+	int i = 0;
+
+	if (facility == NULL) {
+		return -1;
+	}
+
+	for (; i < FACILITIES_LEN; i++) {
+		if (strcmp(facility, facility_keys[i]) == 0) {
+			return facilities[i];
+		}
+	}
+
+	return -1;
+}
+
+void shim_init_syslog(const char *name, const char *tag, const char *facility)
+{
+// same shot id size as lxc container
+#define SHORT_ID_LEN 15
+    __isula_auto_free char *short_id = NULL;
+    const char *syslog_tag = NULL;
+    int facility_num = -1;
+
+    if (tag != NULL) {
+        syslog_tag = tag;
+    }
+
+    if (tag == NULL && name != NULL) {
+        short_id = isula_sub_string(name, 0, SHORT_ID_LEN);
+        if (short_id == NULL) {
+            return;
+        }
+        syslog_tag = short_id;
+    }
+
+    facility_num = parse_facility(facility);
+    if (facility_num <= 0) {
+        facility_num = LOG_DAEMON;
+    }
+    openlog(syslog_tag, LOG_PID, facility_num);
 }
