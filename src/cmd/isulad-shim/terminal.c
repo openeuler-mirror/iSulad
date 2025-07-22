@@ -34,6 +34,7 @@
 #include <isula_libutils/utils_file.h>
 #include <isula_libutils/utils_string.h>
 #include <isula_libutils/auto_cleanup.h>
+#include <isula_libutils/log.h>
 
 #include "common.h"
 #include "process.h"
@@ -407,22 +408,24 @@ static int parse_facility(const char *facility)
 
 void shim_init_syslog(const char *name, const char *tag, const char *facility)
 {
-// same shot id size as lxc container
+// same short id size as lxc container
 #define SHORT_ID_LEN 15
-    __isula_auto_free char *short_id = NULL;
     const char *syslog_tag = NULL;
     int facility_num = -1;
 
     if (tag != NULL) {
         syslog_tag = tag;
+    } else{
+        // If syslog_tag needs to be set to syslog ident, 
+        // it must be consistent with the life cycle of the isulad-shim process. 
+        // The process exits and the memory is freed.
+        // Otherwise, the tag will not be set normally. 
+        syslog_tag = isula_sub_string(name, 0, SHORT_ID_LEN);
     }
-
-    if (tag == NULL && name != NULL) {
-        short_id = isula_sub_string(name, 0, SHORT_ID_LEN);
-        if (short_id == NULL) {
-            return;
-        }
-        syslog_tag = short_id;
+    // When empty, it only affects the tag of the syslog log. 
+    // It is consistent with lxc and does not report an error.
+    if (syslog_tag == NULL) {
+        ERROR("Empty syslog tag for :%s", name);
     }
 
     facility_num = parse_facility(facility);
