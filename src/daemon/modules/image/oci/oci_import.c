@@ -377,6 +377,7 @@ static int register_image(import_desc *desc)
     }
 
 out:
+    free(pre_top_layer);
     if (desc->layer_of_hold_refs != NULL && storage_dec_hold_refs(desc->layer_of_hold_refs) != 0) {
         ERROR("decrease hold refs failed for layer %s", desc->layer_of_hold_refs);
     } else {

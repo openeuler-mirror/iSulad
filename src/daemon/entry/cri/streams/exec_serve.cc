@@ -47,6 +47,7 @@ void *ExecServe::SetContainerStreamRequest(StreamRequest *grequest, const std::s
         m_request->argv = (char **)util_smart_calloc_s(sizeof(char *), grequest->streamCmds.size());
         if (m_request->argv == nullptr) {
             ERROR("Out of memory!");
+            free_container_exec_request(m_request);
             return nullptr;
         }
         size_t i;
