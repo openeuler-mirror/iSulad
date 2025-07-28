@@ -185,6 +185,8 @@ void signal_routine(int sig)
         case SIGALRM:
             ERROR("runtime timeout");
             shim_set_error_message("runtime timeout");
+            // kill all child process when call runtime timeout
+            kill(0, SIGKILL);
             error_exit(EXIT_FAILURE);
         default:
             break;
