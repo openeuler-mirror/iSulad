@@ -730,6 +730,10 @@ void isula_stats_response_free(struct isula_stats_response *response)
         for (i = 0; i < response->container_num; i++) {
             free(response->container_stats[i].id);
             response->container_stats[i].id = NULL;
+            free(response->container_stats[i].name);
+            response->container_stats[i].name = NULL;
+            free(response->container_stats[i].status);
+            response->container_stats[i].status = NULL;
         }
         free(response->container_stats);
         response->container_stats = NULL;
