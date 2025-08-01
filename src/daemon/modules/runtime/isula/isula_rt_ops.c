@@ -1847,11 +1847,11 @@ static int to_engine_resources(const host_config *hostconfig, shim_client_cgroup
         // in the case, period will be set to the default value of 100000(0.1s).
         uint64_t period = (uint64_t)(100 * Time_Milli / Time_Micro);
         // set quota = period * n, in order to let container process fully occupy n cpus.
-        if ((hostconfig->nano_cpus / 1e9)  > (INT64_MAX / (int64_t)period)) {
+        if ((hostconfig->nano_cpus / SECOND_TO_NANOS)  > (INT64_MAX / (int64_t)period)) {
             ERROR("Overflow of quota");
             return -1;
         }
-        int64_t quota = hostconfig->nano_cpus * (int64_t)period / 1e9;
+        int64_t quota = hostconfig->nano_cpus * (int64_t)period / SECOND_TO_NANOS;
         cr->cpu->period = period;
         cr->cpu->quota = quota;
     }
