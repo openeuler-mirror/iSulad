@@ -34,6 +34,7 @@
 #include "err_msg.h"
 #include "runtime_api.h"
 #include "utils_file.h"
+#include "runtime_common.h"
 
 #define LCR_CONFIG_FILE "config"
 
@@ -685,11 +686,7 @@ static void to_engine_resources(const host_config *hostconfig, struct engine_cgr
 
     if (hostconfig->nano_cpus > 0) {
         period = (uint64_t)(100 * Time_Milli / Time_Micro);
-        if ((hostconfig->nano_cpus / 1e9) > (INT64_MAX / (int64_t)period)) {
-            ERROR("Overflow of quota");
-            return -1;
-        }
-        quota = hostconfig->nano_cpus * (int64_t)period / 1e9;
+        quota = hostconfig->nano_cpus * (int64_t)period / SECOND_TO_NANOS;
         cr->cpu_period = period;
         cr->cpu_quota = quota;
     }

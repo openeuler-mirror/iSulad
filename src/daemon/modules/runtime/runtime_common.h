@@ -18,9 +18,12 @@
 
 #include "runtime_api.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define SECOND_TO_NANOS 1000000000ULL
 
 static inline bool rt_fg_exec(const rt_exec_params_t *params)
 {
