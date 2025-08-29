@@ -1,12 +1,12 @@
 prefix=@CMAKE_INSTALL_PREFIX@
-libdir=@CMAKE_INSTALL_PREFIX@/lib
-localstatedir=@CMAKE_INSTALL_PREFIX@/var
-includedir=@CMAKE_INSTALL_PREFIX@/include
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+localstatedir=@CMAKE_INSTALL_FULL_LOCALSTATEDIR@
+includedir=${prefix}/include
 
 Name: libisula_client
 Description: light-weighted container client library
 Version: @ISULAD_VERSION@
-URL: iSulad
-Libs: -L@CMAKE_INSTALL_PREFIX@/lib -lisula_client
-Cflags: -I@CMAKE_INSTALL_PREFIX@/include
+URL: https://gitee.com/openeuler/iSulad
+Libs: -L${libdir} -lisula_client
+Cflags: -I${includedir}
 
