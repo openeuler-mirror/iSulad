@@ -1,5 +1,7 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 2.8...4.0)
 project (isulad)
+
+include(GNUInstallDirs)
 
 include(cmake/helper.cmake)
 
@@ -28,12 +30,6 @@ if (NOT ISULAD_STATE_PATH)
 add_definitions(-DISULAD_STATE_PATH="/var/run/isulad")
 endif()
 
-if (LIB_INSTALL_DIR)
-  set(LIB_INSTALL_DIR_DEFAULT ${LIB_INSTALL_DIR})
-else()
-  set(LIB_INSTALL_DIR_DEFAULT "lib")
-endif()
-
 # check depends library and headers
 message("---------------Check libraries and headers-----------------------")
 include(cmake/checker.cmake)
@@ -49,6 +45,7 @@ configure_file(
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/isulad.pc.in"
     "${CMAKE_BINARY_DIR}/conf/isulad.pc"
+    @ONLY
 )
 
 # parse .proto files
@@ -92,7 +89,7 @@ ENDIF(ENABLE_FUZZ AND (NOT ENABLE_UT))
 
 # install all files
 install(FILES ${CMAKE_BINARY_DIR}/conf/isulad.pc
-  DESTINATION ${LIB_INSTALL_DIR_DEFAULT}/pkgconfig PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
 if (EANBLE_IMAGE_LIBARAY)
     install(FILES src/daemon/modules/api/image_api.h
         DESTINATION include/isulad)
