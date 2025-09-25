@@ -31,6 +31,12 @@ function test_multiplex_layers_image_load()
 
   msg_info "${test} starting..."
 
+  check_valgrind_log
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
+
+  start_isulad_with_valgrind
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
+
   # remove all images related to busybox
   isula rmi `isula images | grep busybox | awk '{print $3}'`
 
