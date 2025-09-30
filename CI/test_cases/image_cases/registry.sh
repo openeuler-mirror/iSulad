@@ -74,8 +74,9 @@ function isula_pull()
     isula run --rm -ti busybox echo hello 2>&1 | grep pulling
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull missing failed" && ((ret++))
 
-    isula pull hub.c.163.com/public/centos:6.7-tools
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull hub.c.163.com/public/centos:6.7-tools failed" && ((ret++))
+    # Unable to pull image from hub.c.163.com without agent, skip this test
+    #isula pull hub.c.163.com/public/centos:6.7-tools
+    #[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull hub.c.163.com/public/centos:6.7-tools failed" && ((ret++))
 
     # Unable to pull image from docker.io without agent, skip this test
     # isula pull docker.io/library/busybox:latest
