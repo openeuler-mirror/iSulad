@@ -27,7 +27,7 @@ function test_image_with_digest()
   local ret=0
   local image="hub.oepkgs.net/library/busybox"
   local image2="isulad/ubuntu"
-  local image_digest="hub.oepkgs.net/library/busybox@sha256:6066ca124f8c2686b7ae71aa1d6583b28c6dc3df3bdc386f2c89b92162c597d9"
+  local image_digest="hub.oepkgs.net/library/busybox@sha256:778b91a888553a031c19f6aa97dc9f28773bb8f46e0bc7c3bda7c26fb4c2a761"
   local test="pull && inspect && tag image with digest test => (${FUNCNAME[@]})"
 
   msg_info "${test} starting..."
