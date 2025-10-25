@@ -33,10 +33,10 @@ elif [ "x$subcmd" == "xget" ];then
     set +x
     while true
     do
-        if [ -e $resultfail ];then
+        if ls /tmp | grep $resultfail;then
             exit 1
         fi
-        if [ -e $resultpass ];then
+        if ls /tmp | grep $resultpass;then
             exit 0
         fi
         sleep 2
