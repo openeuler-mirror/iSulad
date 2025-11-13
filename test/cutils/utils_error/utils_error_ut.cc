@@ -20,7 +20,7 @@ TEST(utils_error, test_errno_to_error_message)
 {
     const char *ret = nullptr;
     std::string internal_err = "Server internal error";
-    std::string unknow_err = "Unknown error";
+    std::string unknown_err = "Unknown error";
 
     ret = errno_to_error_message(ISULAD_SUCCESS);
     ASSERT_EQ(strcmp(ret, DEF_SUCCESS_STR), 0);
@@ -29,7 +29,7 @@ TEST(utils_error, test_errno_to_error_message)
     ASSERT_EQ(strcmp(ret, internal_err.c_str()), 0);
 
     ret = errno_to_error_message(ISULAD_ERR_UNKNOWN);
-    ASSERT_EQ(strcmp(ret, unknow_err.c_str()), 0);
+    ASSERT_EQ(strcmp(ret, unknown_err.c_str()), 0);
 }
 
 TEST(utils_error, test_format_errorf)
