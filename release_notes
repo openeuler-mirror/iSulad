@@ -1,3 +1,772 @@
+2025-11-28 root release 2.1.6
+    - add omitted macro definition
+    - add SA_RESTART to signal handle
+    - !2526 [feature]add no pivot root support
+    - !2524 bugfix for sem_wait call when errno is EINTR
+    - !2525 cni:change error info
+    - !2523 update centos build script
+    - !2522 move CGROUP2_SUPER_MAGIC define to cgroup.c
+    - !2521 pull failure shows error reason
+    - !2520 fix unqualified call to "std::move"
+    - !2518 remove meaningless code
+    - !2517 containers in paused state are not allowed to start
+    - !2508 【轻量级 PR】：update docs/design/README_zh.md.
+    - !2512 【轻量级 PR】：update docs/design/detailed/Image/image_storage_driver_design_zh.md.
+    - !2514 bugfix for log in make_safedir_is_noexec
+    - !2513 upgrade isulad compilation script install_iSulad_on_Ubuntu_20_04_LTS
+    - !2440 followlocation only not with head
+    - !2493 ignore chdir failed errmsg when kill and delete
+    - !2500 Fix clang build error
+    - !2509 modify the image name: isulad/ubuntu to ubuntu
+    - !2507 modify alpine image source to isulad/alpine
+    - !2506 only use the openeuler mirror registry in ci
+    - !2505 do not use 1000 as the test gid to prevent conflicts with existing gids in the image
+    - !2504 bugfix for ci make and install shell
+    - !2503 change image digest ci test for registry change
+    - !2501 add a new registry to prevent missing mirrors
+    - !2498 change pull registry to hub.oepkgs.net
+    - !2497 code improve for codecheck
+    - !2490 add nri design doc
+    - !2496 [nri] impl for nri plugin and adaption
+    - !2495 get realpath before ns mountpoint verification
+    - !2492 [nri] add convert and utils impl for nri
+    - !2494 skip calling cni plugin cleanup when network namespace is not mounted
+    - !2491 [NRI] add nri head file and common func
+    - !2487 fix bug in ci test
+    - !2483 bugfix for m_criService shutdown
+    - !2482 bugfix for null pointer reference
+    - !2479 move shutdown handle after init module
+    - !2478 bugfix:change cni log info
+    - !2476 bugfix for file param verify
+    - !2475 add timestamp in PodSandboxStatu response
+    - !2472 modify default registry mirrors in ci test
+    - !2471 skip test rely on docker.io
+    - !2470 bugfix for start sandbox before setup network by default
+    - !2469 Revert "use isula_clean_path rather than realpath"
+    - !2468 start sandbox before setup network by default
+    - !2467 use isula_clean_path rather than realpath
+    - !2466 bugfix:adapt network name max len
+    - !2465 fix false engine rootpath reference
+    - !2464 bugfix:add note
+    - !2463 bugfix:malloc right type size
+    - !2458 fix error log for verify_cpu_realtime and code improve
+    - !2462 bugfix:cni network name UT
+    - !2461 cdi:add debug info
+    - !2459 bugfix: change max network name len
+    - !2460 del useless info
+    - !2456 change fork process exit mode
+    - !2455 add enable cri v1 in k8s integration
+    - !2454 isolate oom monitor codes
+    - !2450 code improve
+    - !2453 modify the user error log to be the same as before
+    - !2451 docs:update cni doc
+    - !2452 testcase:close cdi testcase
+    - !2433 cdi:test case and gateway
+    - !2448 trim key/value for env
+    - !2446 cdi:allow env variable has an empty value
+    - !2447 fix bug for invalid env write
+    - !2444 set the sandbox status to not ready under abnormal circumstances and fix shim controller set incorrect sandbox status state
+    - !2443 bugfix for hostname env: set only once
+    - !2435 Fix 'Failed to execute image pull' on 'name:tag@digest' type image name, making isulad's rules for image name resolution consistent with docker's
+    - !2439 allow env variable has an empty value
+    - !2436 cdi:add UT
+    - !2437 remove extra %s in CreateContainerLogSymlink
+    - !2434 bugfix of background execution exec error command
+    - !2432 bugfix for setting cpu-rt to a negative value when env not supports cpu-rt
+    - !2431 bugfix: cdi version check
+    - !2429 cdi:design doc
+    - !2430 isolate sandboxer code by using macro
+    - !2428 bugfix:fix cni_operate_ut ut
+    - !2427 cdi:invoke cdi operate when init isulad and create container
+    - !2425 cdi:support modules version/spec/spec_dirs/device/container_edits/parser
+    - !2426 change default subscribe timeout to 5min
+    - !2422 cdi:support module cache
+    - !2424 remove default systemd-cgroup and enable-cri-v1 value in daemon.json
+    - !2423 do not umount shmpath for sandbox container
+    - !2414 cdi:support modules operate/registry/annotations
+    - !2419 Fix memory leak in set_connected_container_shm_path
+    - !2408 modify some grpc status codes of cri in case of error
+    - !2418 empty pointer check in lcr_rt_ops
+    - !2409 bugfix for shim timeout exit error log changes and bugfix for the pre-created pipe was not closed when the pipe creation failed
+    - !2416 Use user defined shm for CRI request
+    - !2415 add debug msg info in image_load.sh
+    - !2411 ensure sandbox can be removed if sandbox container removed
+    - !2412 init enable_pod_events as false
+    - !2410 remove container root path in rt_lcr_rm if lcr runtime missing
+    - !2406 distinguish between runtime and runtime_cmd in isulad-shim
+    - !2388 cdi:support CDI
+    - !2404 add modify for cgroup v2 ci test
+    - !2405 add usage restrictions for CRI 1.29 update
+    - !2403 oom monitor in manual cases
+    - !2402 aadd cri 1.29 update design doc
+    - !2400 set oomkilled in cri
+    - !2398 fix message queue concurrent bug
+    - !2399 specify runtime as runc for oom test CI
+    - !2397 fix cpurt init bug for systemd-cgroup
+    - !2387 Add support for Get Container Events
+    - !2396 fix run ubuntu container bug in inspect.sh
+    - !2395 add cgroup v2 doc
+    - !2390 monitor cgroup oom killed event and update to cri of container
+    - !2394 bugfix for cpurt.sh
+    - !2393 fix sandbox container bool value uninitialized
+    - !2392 use supervisor to notify sandbox exit event
+    - !2368 cgroup v2 does not support isulad setting cpu_rt options
+    - !2374 [refactor] refactor cgroup module
+    - !2389 move systemd_cgroup CI test to manual cases
+    - !2346 add support for systemd cgroup driver
+    - !2347 add swap usage in cri
+    - !2373 Replace http-parser dependency with lcr
+    - !2380 add benchmark/result for perf test in cri
+    - !2386 动态分配内存时指定的数据类型错误
+    - !2383 bugfix for wrong goto branch
+    - !2381 get the realpath of the host path for archive when cp
+    - !2378 bugfix for the concurrency competition between the reuse layer and the creation layer
+    - !2377 add more detailed log information for load sandbox
+    - !2370 sleep some time in ServiceWorkThread to prevent the CPU from being occupied all the time
+    - !2348 add cpu usage nano cores for sandbox
+    - !2371 Allow iSulad to pull/load image with symlink * Allow iSulad to pull/load image with symlink
+    - !2372 restore name for rename failed
+    - !2336 open run container with dev volume testcase
+    - !2369 bug fix for device/cgroup/ulimt oci update
+    - !2367 update annotations in container spec for system container
+    - !2365 skip timeout ut for now
+    - !2360 module only deletes the temporary files it creates
+    - !2358 do not cleanup if the directory does not exist
+    - !2356 bugfix for mount point remains under special circumstances
+    - !2353 fix compile error with protobuf 25.1 and grpc 1.60.x
+    - !2352 code improve for sandbox.cc
+    - !2341 Release v2.1.5 * Release v2.1.5
+    - !2342 move sandbox_state.json to /var/lib * move sandbox_state.json to /var/lib
+    - !2325 refactor isulad-shim log
+    - !2339 codecheck fix * codecheck fix
+    - !2335 extract common methods & use string instead of char *
+    - !2338 improve code Merge pull request !2338 from zhongtao/improve
+    - !2337 bugfix:ignore some unsupported file types when archiving
+    - !2332 update api_v1.proto of cri to 1.29 * update api_v1.proto of cri to 1.29
+    - !2330 set the subprocess standard console to /dev/null * set the subprocess standard console to /dev/null
+    - !2333 iSulad: restart isuald when upgrade active isulad
+    - !2327 add cri 1.29 api change docs
+    - !2331 add exec workdir support for oci runtime
+    - !2329 modify mount /dev directory for lxc 5.X * modify mount /dev directory for lxc 5.X
+    - !2324 fix stopp removes cont error & remove inspect error log
+    - !2313 use lxc 5.X in CI testcase * use lxc 5.X in CI testcase
+    - !2323 bugfix for resort_image_names
+    - !2321 verify name and digest consistency and code improve for oci_rmi Merge pull request !2321 from zhongtao/fixci
+    - !2320 improve CI test * improve CI test
+    - !2316 improve code of pull
+    - !2314 bugfix:del redundant code
+    - !2317 remove /var/* in coverage and fix build/test remove
+    - !2310 verify the mount dir first and then create tmpdir
+    - !2312 Add Huawei Cloud CodeArts compilation script * 将codecheck_compile.sh 移动到tools下 * 新增华为云codeArs编译脚本
+    - !2300 Maintaining a uniform code style * update src/cmd/command_parser.c.
+    - !2308 Remove unused header file * Fix compiling failure in image oci UT
+    - !2306 modify the default value of ISULAD_TMPDIR to /var/lib/isulad and prevent the parent dir from being bind mounted to the subdir
+    - !2273 Acquire system info in on demand
+    - !2303 use a timeout epoll loop to ensure complete data reception * use a timeout epoll loop to ensure complete data reception
+    - !2304 remove build and test in coverage * remove build and test in coverage
+    - !2298 bugfix for hook_ignore_poststart_error run in oci runtime * bugfix for hook_ignore_poststart_error run in oci runtime
+    - !2296 modify attach socket name
+    - !2295 keep the service status unchanged after iSulad service upgrade * keep the service status unchanged after iSulad service upgrade and
+    - !2292 bugfix for run.sh and add build notify msg for ENABLE_GRPC_REMOTE_CONNECT * bugfix for run.sh and add build notify msg for ENABLE_GRPC_REMOTE_CONNECT
+    - !2291 improve ut for devicemapper
+    - !2289 check protobuf and grpc version in cmake for cri v1 * check protobuf and grpc version in cmake for cri v1
+    - !2288 move variable declaration out of loop
+    - !2268 bugfix for the bliko zero value exception when executing the stats command on the oci container * bugfix for the bliko zero value exception when executing the stats com…
+    - !2281 save sandbox to disk after network ready
+    - !2284 remove embedded image support in readme
+    - !2280 fix the problem of abnormal branches not waiting for child processes
+    - !2283 modify the container runtime when running embedded.sh
+    - !2279 modify create_network.sh for default runtime changed
+    - !2276 bugfix for integration_check.sh * bugfix for integration_check.sh
+    - !2277 remove shim v2 format error log * remove shim v2 format error log
+    - !2270 add ut for devicemapper
+    - !2275 bugfix for rt_lcr_rebuild_config * bugfix for rt_lcr_rebuild_config
+    - !2272 modify daemon json default runtime to runc Merge pull request !2272 from zhongtao/default_runtime
+    - !2255 Fix cpusets offline issue * Fix cpusets offline issue
+    - !2230 format code * format code tools/static_check.sh
+    - !2267 improve code of pull progress Merge pull request !2267 from haozi007/work
+    - !2084 增加image pull 时进度条显示的设计 * Refine document by the implementation. * Refine a word. * Add progress bard proposal.
+    - !2170 增加isula image pull进度显示 * Refine some issues. * Address comment * Address comments * 1. Address comments. * Address comments * Address comments * Address comments * Address comments * Address comments * Address comments * Address comments * Address comments * Address comments * Address test issue * Address test compile issue * Address compile issue * Fix compile issue * Address comments * Address comments * Address comments. * Address issuse * Address many issues. * Fix some minor issuses. * Address comments. * Refine as Haozi's comments * Fix some issues by Haozi's comments. * Refine formats. * Add process bar show for pull functions.
+    - !2260 bugfix for rebuild config * bugfix for rebuild config
+    - !2261 bugfix of update restart policy for auto remove container
+    - !2253 bugfix for runc container exec * bugfix for runc container exec
+    - !2254 lcr container with a damaged config file will rebuild the config during restore * lcr container with a damaged config file will rebuild the config during restore
+    - !2252 Add compatibility info between iSulad and k8s
+    - !2251 open ENABLE_GRPC_REMOTE_CONNECT in CI * open ENABLE_GRPC_REMOTE_CONNECT in CI
+    - !2248 improve event logs
+    - !2250 Remove PERFMON, BPF, CHECKPOINT_RESTORE Merge pull request !2250 from xuxuepeng/master
+    - !2247 compatibility for manage pods which created by old iSulad
+    - !2232 add runc attach implement Merge pull request !2232 from zhongtao/runc_attach_change
+    - !2246 support gcov of CI
+    - !2245 fix utils_verify_ut failure when remote grpc function is turned off * fix utils_verify_ut failure when remote grpc function is turned off
+    - !2243 Refactor capbilities specs * Refactor capbilities specs
+    - !2233 add runc append function design doc * add runc append function design doc
+    - !2244 Save task address of shim v2 * Save task address of shim v2
+    - !2242 disable grpc remote connect by default * disable grpc remote connect by default
+    - !2236 Add Readonly/Masked Path and RunAsGroup support for cri
+    - !2241 network:support version opt Merge pull request !2241 from liuxu/bugfix-dnsname
+    - !2231 sandbox:del m_containers and m_containersMutex
+    - !2226 Upgrade to 2.1.4 * Update to 2.1.4
+    - !2238 modify the default value of EANBLE_IMAGE_LIBARAY to off * modify the default value of EANBLE_IMAGE_LIBARAY to off
+    - !2237 delete the disabled reload configuration in isulad.service
+    - !2235 [CI] change base ci test image to fedora
+    - !2234 network:update dnsname verison * network:update dnsname verison
+    - !2229 Fix critest fail for symlink volume * Fix critest fail for symlink
+    - !2227 doc:update the cni plugins version * doc:update the cni plugins version
+    - !2228 bugfix:'for' loop initial declarations are only allowed in C99 mode * bugfix:'for' loop initial declarations are only allowed in C99 mode
+    - !2225 bugfix:fix typos and header file reference * bugfix:fix typos and header file reference
+    - !2208 network:libcni upgrades v1.0.0
+    - !2224 still use lxc 4.0.3 in CI tests * still use lxc 4.0.3 in CI tests
+    - !2223 [Sandbox API]: update doc of shim controller design * [Sandbox API]: update doc of controller design
+    - !2221 add create gpu container manual * add create gpu container manual
+    - !2222 [Sandbox API]: update pod stats in cri_api_v1 * [Sandbox API]: Update pod stats in cri_api_v1
+    - !2206 [Sandbox API]: add shim controller for cri-api-v1
+    - !2217 [Sandbox API]: Fix sandbox dir not existed issue in SetupSandboxNetwork * [Sandbox API]: Fix sandbox dir not existed issue
+    - !2218 install meson in CI * install meson in CI
+    - !2216 use lxc master branch * use lxc master branch
+    - !2210 document optimization:libcni upgrades v1.0.0 * document optimization:libcni upgrades v1.0.0
+    - !2207 [refactor] update possible changed resources for oci spec
+    - !2215 network:bugfix memory leak * network:bugfix memory leak
+    - !2211 network:auto free for libcni * network:auto free for libcni
+    - !2212 bugfix for rt_isula_exec_resize * bugfix for rt_isula_exec_resize
+    - !2209 add runc listpid implement
+    - !2205 bugfix for add --root option Merge pull request !2205 from zhongtao/fix
+    - !2204 [refactor] eliminate duplicate code * [refactor] use common utils from libisula to eliminate duplicate code
+    - !2203 add --root option when calling runc
+    - !2067 add podsanbox cri interface design doc * add podsanbox cri interface design doc
+    - !2200 remove same code and replace to isula-libutils
+    - !2202 use __isula_auto_prw_unlock to improve code * use __isula_auto_prw_unlock to improve code
+    - !2201 Add m_calls mutex in controller monitor * Add m_calls mutex in controller monitor
+    - !2066 add sandbox module design doc * add sandbox module design doc
+    - !2199 Add retry function for bigdata_stream_runc * !2195 Add retry function for bigdata_stream_runc
+    - !2198 allow tls_mode not set * Allow tls_mode not set in grpc context from client
+    - !2197 add config for enable cri v1
+    - !2196 find libisulad_shim_libutils.a from libisula.pc * find libisulad_shim_libutils.a from libisula.pc
+    - !2194 [CI] do not use tty to run docker run
+    - !2193 [CI] fix relative path of file
+    - !2192 【CI】new docker container do not need change resolv
+    - !2191 [CI] support build isulad on many linux distros
+    - !2190 [refactor] adapt new library for libisulad-shim utils
+    - !2189 Limit the response size of ExecSync * !2129 Limit the response size of ExecSync
+    - !2187 update docs/design/detailed/Image/remote_ro_design.md. * update docs/design/detailed/Image/remote_ro_design.md.
+    - !2186 update docs/design/detailed/Image/image_storage_driver_design_zh.md. * update docs/design/detailed/Image/image_storage_driver_design_zh.md.
+    - !2184 update docs/build_docs/guide/build_guide_riscv_zh.md. * update docs/build_docs/guide/build_guide_riscv_zh.md.
+    - !2188 Support both C++11 and C++17 * Support both C++11 and C++17
+    - !2185 sync from stable branch Merge pull request !2185 from haozi007/fixbug
+    - !2183 Fix code inspection and add macro isolation
+    - !2180 fix execlp not enough args * fix execlp not enough args
+    - !2182 Add mutex for container list in sandbox * Add mutex for container list in sandbox
+    - !2173 remove unneccessary strerror
+    - !2176 [Sandbox API]Add vsock support for exec
+    - !2171 Fix nullptr in src/daemon/entry * !2160 Fix nullptr in src/daemon/entry
+    - !2168 fix code bug * fix code bug
+    - !2163 add bind mount file lock * add bind mount file lock
+    - !2162 Fix rename issue for id manager Merge pull request !2162 from xuxuepeng/master
+    - !2158 Use crictl v1.22.0 for ci * Use crictl v1.22.0 for ci
+    - !2156 Fix sandbox error logging * Fix sandbox error logging
+    - !2155 Use reference in loop in listpodsandbox * Use reference in loop in listpodsandbox
+    - !2152 Update to version 2.1.3 * Update to version 2.1.3
+    - !2150 CI: use old lxc for master branch
+    - !2142 improve by code check of cpp
+    - !2148 Fix null-ptr and buffer overflow issues
+    - !2147 archive fork process set pdeathsig * archive fork process set pdeathsig
+    - !2146 do clean code * do clean code
+    - !2144 [Sandbox API] Clear cni network and sandbox files on abnormal exit * Clear CNI network and sandbox files on abnormal exit
+    - !2140 [Sandbox API] Remove network ns file while removing sandbox * Remove network ns file while removing sandbox
+    - !2139 [Sandbox API] Fix error that empty network json leads to failed pod restore * Fix error that empty network json leads to failed pod restore
+    - !2138 [Sandbox API] Fix list pod sandbox filtered by partial id error * [Sandbox API]: fix pod list filtered by partial id error
+    - !2133 [improve] use return error to replace abort
+    - !2134 [Sandbox API] Fix error thar shim sanboxer cannot be removed * [Sandbox API]: fix shim controller issue
+    - !2131 [Sandbox API]Fix id-nama-manager cleanup for container creation * Fix id-nama-manager cleanup for container creation
+    - !2128 sync from stable
+    - !2120 [Sandbox API]Add shim v2 wait support for container * Add shim v2 wait support for container
+    - !2125 ensure argument of interface is not null
+    - !2121 【sandbox API】Fix issues of container management for sandbox * Fix issues of container management for sandbox
+    - !2122 fix memory leak
+    - !2114 add verify for snprintf and fix some codecheck error * add verify for snprintf and fix some codecheck error
+    - !2115 Update struct ControllerStartResponse of sandbox api * Remove status function call in Sandbox::Start
+    - !2113 Container lifecycle management support for sandbox api * Container lifecycle management support for sandbox api
+    - !2107 [Sandbox API] add init step for refactor and bugfix
+    - !2108 [Sandbox API] refactor v1 ListPodSandboxes using sandbox api * [Sandbox API] refactor v1 ListPodSandboxes using sandbox api
+    - !2109 improve coding
+    - !2110 modify the help information of health-timeout * modify the help information of health-timeout
+    - !2105 [Sandbox API] refactor v1 PodSandboxStatus using sandbox api
+    - !2104 Added restrictions on container health checks
+    - !2102 [Sandbox API] refactor v1 removePodSandbox using sandbox api * [Sandbox API] refactor v1 removePodSandbox using sandbox api
+    - !2101 link libcap for storage_layers_ut and storage_driver_ut * link libcap for storage_layers_ut and storage_driver_ut
+    - !2094 [Sandbox API] refactor stopPodSandbox
+    - !2093 [Sandbox API]add sandbox life cycle
+    - !2099 bugfix for im_search_images
+    - !2097 bugfix for implicit_digest
+    - !2096 fix loading of nsswitch based config inside chroot under glibc * fix loading of nsswitch based config inside chroot under glibc
+    - !2092 Add Sandboxer Monitor for Sandbox API
+    - !2091 [Sandbox API] add sandbox create Merge pull request !2091 from zhongtao/create
+    - !2086 [Sandbox API] refactor v1 runpodsandbox using sandbox api Merge pull request !2086 from zhangxiaoyu/master_dev
+    - !2087 [Sandbox API]  add sandbox restore
+    - !2080 apply id name manager function
+    - !2085 clean cni/native network resource * clean cni/native network resource
+    - !2082 Add sandboxer controller and controller manager * Add sandboxer controller and controller manager
+    - !2081 Fix make script for unit test * Fix PR gate issue
+    - !2065 add sandbox head file * add sandbox head file
+    - !2077 Add sandbox proto files and grpc sandboxer client * Add grpc sandboxer client and UT * Add sandbox protobuf files
+    - !2076 Add interface for sandbox controller module * Add interface for sandbox controller module
+    - !2075 [CRI] refactor stream server bugfix
+    - !2073 [debug] improve debug message for gc containers * [debug] improve debug message for gc containers
+    - !2072 fix gcc 12 compile failed * fix gcc 12 compile failed
+    - !2069 [CRI] refactor manager of stream server codes
+    - !2071 remove unused val * remove unused val
+    - !2070 recover critest test and fix bigdata_stream_runc * recover critest test and fix bigdata_stream_runc
+    - !2068 fix mcs_delete bug * fix mcs_delete bug
+    - !2064 disable critest temporary * disable critest temporary
+    - !2063 disable the exec timeout function for kata runtime * disable the exec timeout function for kata runtime
+    - !2058 [CRI] support cri v1 api and v1alpha api Merge pull request !2058 from haozi007/refactor
+    - !2061 fix CI fail * fix CI fail
+    - !2060 fix some doc error * fix some doc error
+    - !2059 ignore the return value of critest * ignore the return value of critest and save critest result
+    - !2057 critest do not use valgrind * critest do not use valgrind
+    - !2056 add critest test * add critest test
+    - !2055 adapt lcr code refactor * adapt lcr code refactor
+    - !2053 optimize scripts * optimize scripts
+    - !2051 fix some codecheck Merge pull request !2051 from zhongtao/codecheck
+    - !2027 refactor rt_isula_exec and shim log Merge pull request !2027 from zhongtao/refactor
+    - !2045 return non-zero if copy invalid Merge pull request !2045 from zhangxiaoyu/master
+    - !1912 增加system prune一键清理命令和功能 * Proposal to add isula system prune command.
+    - !2043 fix CI of ipc ns * fix CI of ipc ns
+    - !2041 fix lose ipc shm mount point Merge pull request !2041 from haozi007/fixbug
+    - !2028 [CRI] move cni init into cri server Merge pull request !2028 from haozi007/fixbug
+    - !2039 [RO] refactor remote ro code * [RO] refactor remote ro code
+    - !2040 fix image_digest.sh * fix image_digest.sh
+    - !2038 fix inspect image by digest Merge pull request !2038 from zhongtao/digest
+    - !2036 archive reader close if copy to container failed Merge pull request !2036 from zhangxiaoyu/master
+    - !2032 fix some code check error and sync code Merge pull request !2032 from zhongtao/codecheck
+    - !2035 archive reader close if copy to container failed * archive reader close if copy to container failed
+    - !2033 fix layer imcomplete cause isulad core Merge pull request !2033 from zhangxiaoyu/master
+    - !2031 fix layer imcomplete cause isulad core * add load layer testcase * fix layer imcomplete cause isulad core
+    - !2030 fix fd leak for shim_create Merge pull request !2030 from zhongtao/fix_exit
+    - !2024 don't cleanup when remote ro is enabled Merge pull request !2024 from DriedYellowPeach/fix_cleanup
+    - !1896 add time usage check for cni caller * add time usage check for cni caller
+    - !2025 Revert the changes in util_smart_calloc_s Merge pull request !2025 from xuxuepeng/fix_hugetbls
+    - !2020 ensure define in local and use correctly type Merge pull request !2020 from haozi007/new
+    - !2023 fix forget to set return value Merge pull request !2023 from DriedYellowPeach/new_master
+    - !2022 fix hugetlbs malloc length Merge pull request !2022 from zhangxiaoyu/master
+    - !2016 distinguishing exit codes between shim and container processes Merge pull request !2016 from zhongtao/shim_return_write
+    - !2019 fix top layer memory leak and not unlock on image_store and rename a function
+    - !2017 fix memory leak and array access out of range Merge pull request !2017 from DriedYellowPeach/fix_leak
+    - !2015 reinforce omit health_check.sh Merge pull request !2015 from zhongtao/strem_fix
+    - !2014 reinforce cri_stream.sh and health_check.sh Merge pull request !2014 from zhongtao/strem_fix
+    - !2012 restore execSync return value Merge pull request !2012 from zhongtao/fix_exec
+    - !2010 recheck delete command exit status Merge pull request !2010 from zhongtao/retry
+    - !2008 ensure isulad_io not NULL before close fd Merge pull request !2008 from zhongtao/fix_shim
+    - !2007 fix health_check.sh Merge pull request !2007 from zhongtao/fix_ci
+    - !2004 restore ping head Merge pull request !2004 from zhongtao/fix_registry
+    - !2001 convert files from CRLF to LF Merge pull request !2001 from zhangxiaoyu/master
+    - !2000 update to v2.1.2 Merge pull request !2000 from zhangxiaoyu/master
+    - !1996 add some ci for runc Merge pull request !1996 from zhongtao/runc_ci
+    - !1995 add try_generate_exec_id func for health check Merge pull request !1995 from zhongtao/fix
+    - !1993 fix remote_layer_ut error Merge pull request !1993 from DriedYellowPeach/fix_secwarning
+    - !1991 split remote grpc code by macro Merge pull request !1991 from zhangxiaoyu/master
+    - !1992 add some shim ut Merge pull request !1992 from zhongtao/runc_ut
+    - !1990 Fix free for container info Merge pull request !1990 from xuxuepeng/fix-cpu-usage
+    - !1989 Fix memory leak for container info Merge pull request !1989 from xuxuepeng/fix-cpu-usage
+    - !1988 Fix UT failure for execution_extend Merge pull request !1988 from xuxuepeng/fix-cpu-usage
+    - !1984 fix security warning Merge pull request !1984 from DriedYellowPeach/fix_secwarning
+    - !1983 Add support for usage_nano_cores in stats Merge pull request !1983 from xuxuepeng/fix-cpu-usage
+    - !1985 fix security warning Merge pull request !1985 from zhongtao/warning
+    - !1980 convert struct lcr start/exec request Merge pull request !1980 from zhangxiaoyu/master
+    - !1977 [CRI] Add support for saving and displaying resource related info in CRI  1.25
+    - !1973 fix setting of memory-swap-limit and unified resources Merge pull request !1973 from zhangxiaoyu/master
+    - !1965 update runc doc Merge pull request !1965 from zhongtao/runc_doc
+    - !1962 change isulad-shim epoll struct Merge pull request !1962 from zhongtao/epoll_change
+    - !1976 bugfix last element of array should be null Merge pull request !1976 from DriedYellowPeach/fix_array
+    - !1975 remove unused headers Merge pull request !1975 from DriedYellowPeach/fix_header
+    - !1971 fix network store check podsandbox Merge pull request !1971 from zhangxiaoyu/master
+    - !1972 clean isulad shim compile relies Merge pull request !1972 from zhongtao/shim_remove_utils
+    - !1970 修复ubuntu下isula pull 阿里源失败 Merge pull request !1970 from xingleigao/master
+    - !1964 fix workingset bytes and add memory info for runc runtime Merge pull request !1964 from zhangxiaoyu/master
+    - !1961 skip add podsandbox to network store
+    - !1960 ut for remote layer store
+    - !1963 if write return EAGAIN maybe should wait a moment Merge pull request !1963 from haozi007/write_eagain_with_sleep
+    - !1948 add PodSandboxStats and ListSandboxStats
+    - !1959 free timeout when shim_create finished Merge pull request !1959 from zhongtao/leak
+    - !1957 add some ci test for exec and log Merge pull request !1957 from zhongtao/ci_add
+    - !1956 remove unused func Merge pull request !1956 from zhongtao/remove
+    - !1953 if the exit code in the response of execSync is not zero, an error will be returned in cri Merge pull request !1953 from zhongtao/exit_code
+    - !1951 isulad-shim: fix log loss bug Merge pull request !1951 from zhongtao/log_runc
+    - !1950 add effective and permitted type of cap to oci spec Merge pull request !1950 from zhongtao/cap
+    - !1949 move archive code into util archive Merge pull request !1949 from haozi007/master
+    - !1939 add functions of getting cgroup v1 metrics Merge pull request !1939 from zhangxiaoyu/master
+    - !1940 add files_limit to oci spec Merge pull request !1940 from zhongtao/fileslimit
+    - !1935 clean container process after execSync timeout exit
+    - !1937 CI: ensure load liblcr.so before check opened fd in isulad Merge pull request !1937 from haozi007/master
+    - !1936 CI: show leak fd in log Merge pull request !1936 from haozi007/master
+    - !1934 add env-hookspec to test hook env Merge pull request !1934 from zhangxiaoyu/master
+    - !1932 add hook env test Merge pull request !1932 from zhangxiaoyu/master
+    - !1933 support setting pod to privilege Merge pull request !1933 from zhongtao/privilege
+    - !1930 support to config selinux label in cri
+    - !1929 refactor sysinfo/cgroup use util functions and bugfix for cgroup
+    - !1926 split cgroup from sysinfo Merge pull request !1926 from zhangxiaoyu/master
+    - !1927 clean code for some cri code Merge pull request !1927 from zhongtao/selinux
+    - !1925 containers in same sandbox should have same process labels Merge pull request !1925 from zhongtao/selinux
+    - !1924 cri_stream test without using valgrind and restore the runc test Merge pull request !1924 from zhongtao/runc_ci
+    - !1922 fix inspect data memleak Merge pull request !1922 from zhangxiaoyu/master
+    - !1921 temporary remove runc ci Merge pull request !1921 from zhongtao/runc_ci
+    - !1919 skip cri_stream test for runc Merge pull request !1919 from zhongtao/ci_fix
+    - !1918 when create container in container, runc not support to mount /dev Merge pull request !1918 from zhongtao/ci_fix
+    - !1879 【runc】add ci for runc Merge pull request !1879 from zhongtao/runc_ci
+    - !1915 bugfix when refresh working don't allow pull or load image
+    - !1877 add runc doc Merge pull request !1877 from zhongtao/runcdoc
+    - !1916 fix isula_rt_ops_ut bugs Merge pull request !1916 from zhongtao/runc_ut
+    - !1906 refactor remote ro code Merge pull request !1906 from DriedYellowPeach/master
+    - !1878 【runc】add ut for runc
+    - !1913 fix util_getgrent_r overflow
+    - !1910 modify the return value of the util_waitpid_with_timeout to status Merge pull request !1910 from zhongtao/errno
+    - !1908 更新一个打印级别问题 Merge pull request !1908 from sailorvii/master
+    - !1841 add new doc for support remote ro directory Merge pull request !1841 from DriedYellowPeach/doc
+    - !1903 bugfix can't delete layers under dir overlay-layer
+    - !1902 bug fix remote ro add/remove remote image twice
+    - !1901 use CURLOPT_XFERINFOFUNCTION instead of deprecated CURLOPT_PROGRESSFUNCTION since curl 7.32.0 Merge pull request !1901 from zhangxiaoyu/master
+    - !1897 use auto free to proc_t Merge pull request !1897 from zhongtao/notify
+    - !1899 modifying cpurt file permissions Merge pull request !1899 from ger202/master
+    - !1895 close remote ro when compile with ut for now Merge pull request !1895 from DriedYellowPeach/fix_ut
+    - !1894 change goto branch Merge pull request !1894 from zhongtao/err
+    - !1890 adapt to repo of openeuler url changed Merge pull request !1890 from haozi007/fixbug
+    - !1888 fix compile error when not enable remote ro Merge pull request !1888 from DriedYellowPeach/fix_compile
+    - !1872 【runc支持】allow the paused container to be stopped Merge pull request !1872 from zhongtao/pause
+    - !1875 修复runc NOTIFY_SOCKET环境变量设置问题 Merge pull request !1875 from sailorvii/master
+    - !1885 change sleep() to usleep() to avoid lossing of accuracy Merge pull request !1885 from zhongtao/sleep
+    - !1884 add ci for remote ro Merge pull request !1884 from DriedYellowPeach/master
+    - !1874 [feature] remote ro Merge pull request !1874 from DriedYellowPeach/remote_ro
+    - !1836 support isula update when runtime is runc Merge pull request !1836 from zhongtao/update
+    - !1881 fix CRI SetupPod and TearDownPod deadlock Merge pull request !1881 from zhangxiaoyu/master
+    - !1873 fix read member error from struct Merge pull request !1873 from haozi007/new
+    - !1869 add cgroup cpu ut Merge pull request !1869 from ger202/master
+    - !1871 [CRI Update to 1.25] Add Memory Info Merge pull request !1871 from ilyakuksenok/test_meminfo_fix
+    - Update-CRI
+    - unlock m_podsLock if new failed
+    - !1862 cleancode for read/write and add crictl timeout and sync for CI Merge pull request !1862 from zhangxiaoyu/master
+    - !1863 修改docs/design/detailed/Network/native_network_design_zh.md错误的文件链接 Merge pull request !1863 from sailorvii/master
+    - !1852 isulad-shim support execSync with timeout Merge pull request !1852 from zhongtao/timeout2
+    - !1856 [image] support pull image with digest
+    - !1858 add retry for read/write Merge pull request !1858 from zhangxiaoyu/master
+    - !1854 fix selinux_label_ut timeout and add timeout for all ut Merge pull request !1854 from zhangxiaoyu/master
+    - !1851 fix cpu-rt disable after reboot machine Merge pull request !1851 from haozi007/fixbug
+    - !1848 Bugfix in isulad_config and executor Merge pull request !1848 from xuxuepeng/bug-fix
+    - !1849 fix cpu-rt CI Merge pull request !1849 from ger202/master
+    - !1846 fix cpu-rt CI Merge pull request !1846 from ger202/master
+    - !1844 fix isula cpu-rt CI
+    - !1833 add CRI ContainerStats Service Merge pull request !1833 from zhangxiaoyu/master
+    - !1839 fix inspect.sh failed Merge pull request !1839 from zhangxiaoyu/master_dev
+    - !1834 fix design typo Merge pull request !1834 from kenneth/master
+    - !1837 fix cpu rt review comments
+    - !1829 Add macro in protoc.cmake Merge pull request !1829 from xuxuepeng/protoc_macro
+    - !1817 add ContainerStats Merge pull request !1817 from ilyakuksenok/container_stats
+    - !1824 modify dependence lcr to libisula Merge pull request !1824 from zhangxiaoyu/master
+    - !1821 update to v2.1.1 Merge pull request !1821 from zhangxiaoyu/master
+    - !1801 ensure that the task_console_accept thread ends before destroying the io_thread Merge pull request !1801 from zhongtao/io_thread
+    - !1816 ensure isula exec inherits the config of create Merge pull request !1816 from zhongtao/rlimit
+    - !1815 enable dnsname and cleancode for native network Merge pull request !1815 from zhangxiaoyu/master
+    - !1809 refresh cmake messages
+    - !1807 Refresh-api.proto-cri-1.25
+    - !1804 add info log when isulad shutdown Merge pull request !1804 from zhangxiaoyu/master_dev
+    - !1802 fix cpu-rt CI Merge pull request !1802 from ger202/master
+    - !1799 add cpu-rt ut Merge pull request !1799 from ger202/master
+    - !1800 fix code style and add network ut
+    - !1795 add omitted musl adaption code
+    - !1797 do not report error message in ignore situation Merge pull request !1797 from haozi007/fixbug
+    - !1796 cleancode for util network and add ut
+    - !1790 remove residual dir if exec failed with runc and add CI
+    - !1788 add void parameter for function try_wait_all_child Merge pull request !1788 from zhangxiaoyu/master
+    - !1787 remove clean_module_fill_ctx for libisulad_img.so Merge pull request !1787 from zhangxiaoyu/master
+    - !1784 move the delete fifo dir function to the out branch Merge pull request !1784 from zhongtao/isulad_fifo
+    - !1777 Websockets in kubectl research * Add more description and diagrams * Add some more HTTP/2 related info * Remove possible regressions. * fix issues * add initial websockets description
+    - !1782 ensure hostconfig is not null. Merge pull request !1782 from zhongtao/isulad_fifo
+    - !1781 Delete client fifo dir on isulad to prevent file residue
+    - !1776 fix isula fifo dir residue bug
+    - !1771 recheck kill command exit status
+    - !1770 When run options rm is set, delete the stoped container's fifo directory. Merge pull request !1770 from zhongtao/autorm
+    - !1767 isulad shim wait for all child process Merge pull request !1767 from DriedYellowPeach/master
+    - !1766 change free method to util_free_array method Merge pull request !1766 from zhongtao/search_fix
+    - !1765 fix omit memory leak for search Merge pull request !1765 from zhongtao/search_fix
+    - !1758 add ut for search
+    - !1760 check file system ro before merge network for syscontainer Merge pull request !1760 from zhangxiaoyu/master
+    - !1763 fix memory leak for search Merge pull request !1763 from zhongtao/search_ci
+    - !1761 fix leftover devicemapper mnt dir * fix leftover devicemapper mnt dir
+    - !1751 deleting broken rootfs Merge pull request !1751 from DriedYellowPeach/master
+    - !1759 add comma for image_search.sh * add comma for image_search.sh
+    - !1755 add param check and customize delimiter for isula search. * add param check for parse_single_template_string and add customize del…
+    - !1754 add ci for isula search * add ci for isula search
+    - !1752 add adaption code for musl
+    - !1753 bugfix for isula search * bugfix for search
+    - !1747 refactor runtime check and fix a bug in shim v2 runtime conversion * refactor runtime check and fix a bug in shim v2 runtime conversion
+    - !1750 add cri 1.25 interface change docs * add cri 1.25 interface change docs
+    - !1739 set inspect_container timeout
+    - !1746 fix additional gids for exec user Merge pull request !1746 from zhangxiaoyu/master
+    - !1742 retry call runtime ops
+    - !1744 update logo of iSulad
+    - !1735 Remove chmod 751 permission for dirs by engine when user-remap enabled.
+    - !1736 [docs] add different with other engins
+    - !1722 关于CRI版本升级后新增的CRI字段
+    - !1733 add primary group to additional groups
+    - !1732 change print message of network_list.sh
+    - !1731 fix error in image.c for isula search
+    - !1667 Add isula search API
+    - !1724 【轻量级 PR】：fix typo in update.c
+    - !1728 fix storage layer and driver ut failed in container
+    - !1723 handle security warning for cleanup module
+    - !1725 remove unknown option wno-maybe-uninitialized
+    - !1713 Add state check document
+    - !1718 sync patches from stable
+    - !1715 make cleanup CI to restart isulad at the end
+    - !1714 add CI test for cleanup module
+    - !1711 fix memory leak for not unref container in oci_rootfs_clean
+    - !1710 cleanup_leftover内存泄漏
+    - !1703 bugfix for websocket receive data too long
+    - !1700 cleanup the leftover created after abnormal exit of isulad
+    - !1702 [improve] debug information for console io
+    - !1694 Add isula search document
+    - !1689 Add extern C for header files
+    - !1695 delete syncCloseSem when close all wssession
+    - !1692 remove mnt point if add device mapper device failed
+    - !1687 add extern C for mainloop header
+    - !1679 isula usage一致性优化
+    - !1684 dec device info ref in grow device fs
+    - !1681 make sure kill pid not negative
+    - !1677 add isula create --rm option
+    - !1680 add setup bridge network document
+    - !1636 improve log before started log server
+    - !1662 docs: add guid detail
+    - !1661 run storage layers ut with non-root
+    - !1657 use epoll loop for wait_exit_fifo
+    - !1655 use epoll instead of select for wait_exit_fifo
+    - !1654  docs:add rootless english docs
+    - !1653 add rootless doc
+    - !1652 add design doc of layer store
+    - !1645 fix maybe uwait use after free
+    - !1647 refactoring version and info service
+    - !1646 refactoring gPRC resize service
+    - !1643 docs：change image to mermaid
+    - !1642 doc add health_check and restart_manager design
+    - !1641 Add english docs for Network
+    - !1640 Add english docs for Events and Image
+    - !1639 Add english doc for Runtime, Security and Volume
+    - !1638 Add english docs for Container and CRI
+    - !1637 Add README doc for manual and design
+    - !1635 Add README doc for build_docs
+    - !1632 add volume unit test
+    - !1633 add detailed doc for isulad runtime
+    - !1634 Modify some function parameters of the volume module to const char*
+    - !1631 doc add design doc for restore
+    - !1630 modify local volume design docs
+    - !1628 document optimization: Content optimization and add English version
+    - !1629 add events design docs
+    - !1627 add gc and supervisor design doc
+    - !1626 添加一个依赖解决脚本编译grpc错误
+    - !1624 Modify timezone CI test
+    - !1623 add hostname env for container
+    - !1621 add timezone CI test
+    - !1620  add isula search research docs
+    - !1619 calculate timezone by tm_gmtoff
+    - !1617 fix timezone error
+    - !1615 add isulad args
+    - !1612 remove unused includes
+    - !1610 document optimization:document classfication
+    - !1607  [REST]: Add rest volume prune api
+    - !1604  [REST]: Add rest volume rm api
+    - !1606 [clang-analyzer] sync code fix from stable
+    - !1603 cleancode about rest register container
+    - !1602  [REST]: Add rest volume ls api
+    - !1592 document optimization:modify README.
+    - !1599 [codecheck] cleancode about big function and magic number
+    - !1600 【codecheck】handle some warnings about magic number and style
+    - !1598 the right brace should take a single line
+    - !1597 [codecheck] improve code
+    - !1564 format codes of isulad
+    - !1596 copy cri-tools bin from build directory
+    - !1595 update CI crictl tools version
+    - !1582 doc add build and install guide using rpm
+    - !1587 add debug info and remove unuse head file
+    - !1585 use existing micro OPENSSL_IS_BORINGSSL
+    - !1584 fix snprintf hostname failed
+    - !1583 add ENABLE_BORINGSSL to support android with openssl
+    - !1580 check snprintf return value
+    - !1570 update seccomp profile interface of cri
+    - !1576 do clean path and check if file exist
+    - !1574 remove unused header and clear err_msg after attach network module
+    - !1572 change default umask to 0022
+    - !1567 exec_request_to_rest forget to handle suffix
+    - !1565 Add read and execute permissions for libhttpclient.so and libisulad_tools.so for other users
+    - !1563 add fuzz dict
+    - !1561 remove unused include files of quota and net util
+    - !1559 use newest runc to run testcase of master branch
+    - !1557 ensure read string must have space store null char
+    - !1556 revert fifo modification
+    - !1537 refactor gRPC top/stat/update/export container management operation service
+    - !1554 set dup_option null after free
+    - !1548 stop health check monitor before stopping container
+    - !1549 fix a memory free err in normalized_host_variant
+    - !1547 fix cri attach when stdout and stderr are false
+    - !1545 Add a Provides in SPEC
+    - !1544 install pidof for testcase
+    - !1541 tolerate arch unspecified seccomp profiles
+    - !1540 支持cgroupns 选项
+    - !1531 create a log file for shim v2 and remove 10,229 device from the default config
+    - !1542 do not report error if not return
+    - !1532 make a modification on stdout and stderr fifo creation to support shimv2
+    - !1539 fix cpu-quota out of range when update to -1
+    - !1536 don't mount shareable dirs if user set mount for dev shm
+    - !1535 add check testcase for HOME env of container
+    - !1529 use only TLS v1.2 or later
+    - !1527 do not use tmpfile()
+    - !1521 refactor gRPC exec/rename/list/inspect container management operation service
+    - !1519 add rest stats api
+    - !1517 stop health check monitor before stopping container
+    - !1515 Add rest resize api
+    - !1516 fix check for used by container
+    - !1514 micro refactor: image name check
+    - !1513 make sure threads to be either joined or detached
+    - !1511 micro-refactor codes From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1510 Strengthen sandbox log positioning From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1505 refactor fuzz From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1508 Delete extra space or tab indent in CI directory From: @linuxkernelAnalyse Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1507 Correct Misspelled Word 'requst' To 'request' From: @driedyellowpeach Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1506 modify native network docs From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1504 Delete extra space or tab indent From: @linuxkernelAnalyse Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @jingwoo
+    - !1503 remove indirect dependencies From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1501 initializer fd_set using FD_ZERO From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1496 wait fifo if runtime start failed From: @zh_xiaoyu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1497 fix isula load --tag take no effect From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1493 refactor huge method - setup_ipc_dirs From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1494 fix use after free From: @songbuhuang Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1492 Refactoring the remaining container lifecycle management operations services From: @jingwoo Reviewed-by: @zh_xiaoyu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1488 support set groups From: @wangfengtu Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1491 refactor grpc start and stop service From: @leizhongkai Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1486 [v2.0.14]可能的double free （src/cmd/isula/information/ps.c:856) From: @songbuhuang Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1487 refactor gRPC create service From: @leizhongkai Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1484 gc considers stored monitor pid From: @vegbir Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1482 fix misuse of BUFSIZ From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1480 increase websocket lws_lookup size From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1477 use util_smart_calloc_t to prevent overflow From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1472 fix inspect -f error when bionic From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1469 set the name of each container and image operation thread for restful version From: @jingwoo Reviewed-by: @wangfengtu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1468 set the name of each container and image operation thread From: @jingwoo Reviewed-by: @wangfengtu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1466 fix shm size set invalid when reboot From: @zh_xiaoyu Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1465 fix isulad-shim coredump when remove ioc fd node From: @zh_xiaoyu Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1401 function refactor (util_normalized_host_os_arch) From: @chengzrz Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1461 add null terminal at end of gr mem list From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1460 fix memory leak of remove layer From: @duguhaotian Reviewed-by: @zh_xiaoyu, @jingwoo Signed-off-by: @jingwoo
+    - !1458 do not fail if gr is NULL From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1457 do not fail if pw is not NULL From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1456 bugfix for double free and use after free From: @zh_xiaoyu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @jingwoo, @duguhaotian
+    - !1452 fix invalid convert and format From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1449 remove check parameter label_opts in init_label From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1450 update seccomp to Linux 5.10 syscall list From: @vegbir Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1447 remove static of strlncat From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1444 【安全】add check to arguments From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1443 add pointer parameters NULL check From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1442 fix different type convert From: @duguhaotian Reviewed-by: @jingwoo, @zh_xiaoyu Signed-off-by: @jingwoo
+    - !1439 improve fuzz test From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1438 Add fuzz test for parser of pw gr obj From: @chegJH Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1436 fix install error when android From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1434 do not mkdir of isulad if no controller found From: @wangfengtu Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1430 add invalid gid and uid From: @duguhaotian Reviewed-by: @wangfengtu, @jingwoo Signed-off-by: @jingwoo
+    - !1428 修复 portMappings 空值产生的错误 From: @v6543210 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1427 add x permission when create directory From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1424 fix pwgr issues From: @chegJH Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @jingwoo
+    - !1423 fix parse volume failed From: @zh_xiaoyu Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @jingwoo
+    - !1415 refactor devmapper_parse_options function From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1420 support lxc_contexts configurable From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1421 can't delete container console fifo dir in /run/isula/ on removing the container From: @firstadream Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1418 add check result argument ut From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1417 允许bridge模式下创建系统容器 From: @firstadream Reviewed-by: @duguhaotian, @zh_xiaoyu Signed-off-by: @duguhaotian
+    - !1416 refactor util_getgrent_r and util_getpwent_r From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1414 refactor parse_volume function From: @jingwoo Reviewed-by: @wangfengtu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1412 fix ut bug and arguments check From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1406 adapt to openssl 3.0 From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1404 Adapt bionic libc, increase testcase coverage From: @chegJH Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1378 Adopt bionic libc, parser for passwd and group ojbect From: @chegJH Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1399 add isula import restful mode From: @chengzrz Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1397 support isula wait even if it's not oci image From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1394 refactor mount parse in spec module From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1393 cleancode: http request From: @zh_xiaoyu Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @jingwoo
+    - !1391 add native network detail From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1390 增加riscv64的seccomp信息 From: @chenhongji Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1387 【CRI】ignore portmapping config with invalid hostport From: @duguhaotian Reviewed-by: @jingwoo Signed-off-by: @jingwoo
+    - !1388 set default sig handler for sigchld From: @duguhaotian Reviewed-by: @wangfengtu, @jingwoo Signed-off-by: @jingwoo
+    - !1373 fix restful iSulad no response for signal 15 and 2 From: @duguhaotian Reviewed-by: @wangfengtu, @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1383 add isula tag restful mode From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1382 add errno infomation when archive failed From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1380 fix no status of health check when restfull From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1377 fix wrong use of DST(Daylight Saving Time) and timezone From: @wangfengtu Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1375 run cri stream test without valgrind From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1374 make static link libhttpclient.a work From: @firstadream Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1372 fix cricli command not found From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1370 fix cricli command not found in CI test From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1369 update performance data use ptcr tool From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1362 fix cri attach coredump From: @zh_xiaoyu Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1365 adapt to the enabled selinux host environment From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1366 fix fedora Dockerfile errors From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1357 Add restful interface isula pull/login/logout. From: @firstadream Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1364 using /user/sbin/init as init process in CI environment From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1363 support multi-linux distribution CI environment From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1356 support isula attach when restfull From: @wangfengtu Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1359 fix user take no effect when restfull From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1355 fix openssl-verify invalid disable metadata From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1352 fix podSandbox management operation failure From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1351 Refactored CRI module to remove over-engineering From: @jingwoo Reviewed-by: @duguhaotian, @wangfengtu Signed-off-by: @duguhaotian
+    - !1349 remove temporary file only when write file failed From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1347 remove temporary file if write atomic file failed From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1345 support rename subcommand in restful mode From: @duguhaotian Reviewed-by: @wangfengtu, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1343 Modify error message thrown when User defined network is default network for disambiguation From: @chengzrz Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1335 fix bugs of userns-remap and add -DENABLE_USERNS_REMAP From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1341 remove unnecessary wrong message From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1339 fix uid/gid error when load image From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1337 enlarge rest buffer limit to support --security-opt From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1333 optimize remove container process From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1332 [network] fix invalid check for empty ip ranges From: @duguhaotian Reviewed-by: @jingxiaolu, @jingwoo, @wangfengtu Signed-off-by: @jingxiaolu
+    - !1331 fixbug restful interface isula pause/unpause From: @xiaochaowang Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1329 add api change item for pull template From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1322 delete isulad engine param From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1327 support default network setting From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1325 add -DSYSCONFDIR_PREFIX as prefix when read config From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1319 add restful interface isula export From: @xiaochaowang Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1324 fix lose default hostname error From: @duguhaotian Reviewed-by: @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1323 fix exec --workdir take no effect when restfull From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1320 do not fail even if no cgroup controller found when cgroupv2 From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1318  fix coding irregularities From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1317 fix coding irregularities of entry module From: @jingwoo Reviewed-by: @wangfengtu, @duguhaotian Signed-off-by: @duguhaotian
+    - !1316 fix coding irregularities of core module From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1315 remove redundant code From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1282 clean the gRPC client module code From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1313 let isulad root path configable when userns-remap From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1310  Refactor procedure of setting default value for network namespace mode From: @chengzrz Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1307 add restful interface  isula info From: @xiaochaowang Reviewed-by: @duguhaotian, @jingwoo Signed-off-by: @duguhaotian
+    - !1306 continue pulling even if no Docker-Distribution-Api-Version found From: @wangfengtu Reviewed-by: @jingwoo, @duguhaotian Signed-off-by: @duguhaotian
+    - !1303 disable image related command if disable oci and disable embedded From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1301 support change CLIENT_RUNDIR when compile From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1300 fix lose regexec for android From: @duguhaotian Reviewed-by: @wangfengtu, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1296 support regexec on android From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1294 adapt android compile From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1292 use unify regexec From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1291 Fix the third party license relative path error From: @smartsyoung Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1287 remove unnecessary arguments From: @duguhaotian Reviewed-by: @jingwoo, @jingxiaolu Signed-off-by: @jingxiaolu
+    - !1289 print error when dlsym failed From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1286 do not timeout when use restfull to connect to daemon From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !1284 compliance: modify licensing compliance issues in repository Merge pull request !1284 from SmartsYoung/master
+    - !1165 iSulad: Added the ability to display n last created containers Merge pull request !1165 from lauk/master
+    - !1281 fix utils module encoding problem Merge pull request !1281 from JingWoo/My2022
+    - !1280 fix cmd/isulad-shim module encoding problem Merge pull request !1280 from JingWoo/My2022
+    - !1277 引入gvisor支持 Merge pull request !1277 from Tiamo0/master
+    - !1279 support devicemapper ci testcases Merge pull request !1279 from haozi007/master
+    - !1275 fix compile error of isula-transform Merge pull request !1275 from wangfengtu/isula-transform
+    - !1270 refactor build system of iSulad Merge pull request !1270 from haozi007/refactor
+    - !1274 Add test design doc for CRI modification feature Merge pull request !1274 from czrz/master
+    - !1271 fix compile error with grpc 1.41.x Merge pull request !1271 from zhangxiaoyu/master
+    - !1265 improve CI build step Merge pull request !1265 from haozi007/work
+
+    dev stats:
+      - 1212 files changed, 98507 insertions(+), 16927 deletions(-)
+      - contributors: zhongtao, haozi007, zhangxiaoyu, jikai, WangFengTu, liuxu, Neil.wrz, xuxuepeng, wujing, jake, songbuhuang, chengzrz, yanying, sailorvii, xuepengxu, chegJH, ilya.kuksenok, SmartsYoung, ger202, leizhongkai, root, shijiaqi1, wangyu, 武积超, William Dean, Xuepeng Xu, chen524, liyanshui, vegbir, wangxiaochao, yanshui.li, 5233693, Beans, ChenHongJi, DriedYellowPeach, Ikko Ashimine, Luo Yifan, Mig Yang, Neil, Song Zhang, along, czrz, dreamloy, huj13k4n9, ilyakuksenok, l00804245, lauk001, tiamo0, xinglei, yangjiaqi, zhushy, 许红强
+
 2024-01-09 xuepengxu release 2.1.5
     - !2342 move sandbox_state.json to /var/lib * move sandbox_state.json to /var/lib
     - !2325 refactor isulad-shim log
