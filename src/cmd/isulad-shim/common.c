@@ -440,3 +440,57 @@ void free_shim_fifos_fd(struct shim_fifos_fd *item)
     }
     free(item);
 }
+
+#ifdef ENABLE_NO_PIVOT_ROOT
+/*
+ * looking at fs/proc_namespace.c, it appears we can
+ * actually expect the rootfs entry to very specifically contain
+ * " - rootfs rootfs "
+ * IIUC, so long as we've chrooted so that rootfs is not our root,
+ * the rootfs entry should always be skipped in mountinfo contents.
+ */
+bool detect_ramfs_rootfs(void)
+{
+	__isula_auto_free char *line = NULL;
+	FILE *f = NULL;
+	size_t len = 0;
+    bool ret = false;
+
+    f = isula_fopen("/proc/self/mountinfo", "r");
+    if (f == NULL) {
+        ERROR("Failed opening /proc/self/mountinfo");
+        goto out;
+    }
+
+	while (getline(&line, &len, f) != -1) {
+		int i;
+		char *p, *p2;
+
+		for (p = line, i = 0; p && i < 4; i++) {
+            p = strchr(p + 1, ' ');
+        }
+		if (!p) {
+            continue;
+        }
+
+		p2 = strchr(p + 1, ' ');
+		if (!p2) {
+            continue;
+        }
+		*p2 = '\0';
+		if (strcmp(p + 1, "/") == 0) {
+			/* This is '/'. Is it the ramfs? */
+			p = strchr(p2 + 1, '-');
+			if (p && strncmp(p, "- rootfs rootfs ", 16) == 0) {
+                ret = true;
+                goto out;
+            }
+		}
+	}
+out:
+    if (f != NULL) {
+        fclose(f);
+    }
+	return ret;
+}
+#endif

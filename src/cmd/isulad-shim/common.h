@@ -125,6 +125,10 @@ struct isula_linked_list *get_attach_fifo_item(int fd, struct isula_linked_list 
 
 void free_shim_fifos_fd(struct shim_fifos_fd *item);
 
+#ifdef ENABLE_NO_PIVOT_ROOT
+bool detect_ramfs_rootfs(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

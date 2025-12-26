@@ -1304,7 +1304,7 @@ static void get_runtime_cmd(process_t *p, const char *log_path, const char *pid_
         params[i++] = "--bundle";
         params[i++] = p->bundle;
 #ifdef ENABLE_NO_PIVOT_ROOT
-        if (getenv("ISULAD_RAMDISK") != NULL || p->state->no_pivot_root) {
+        if (detect_ramfs_rootfs() || getenv("ISULAD_RAMDISK") != NULL || p->state->no_pivot_root) {
             params[i++] = "--no-pivot";
         }
 #endif
