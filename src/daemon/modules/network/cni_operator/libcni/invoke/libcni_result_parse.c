@@ -317,9 +317,12 @@ struct cni_opt_result *copy_result_from_current(const cni_result_curr *curr_resu
     }
 
     /* copy dns */
-    value->my_dns = convert_curr_dns(curr_result->dns);
-    if (value->my_dns == NULL) {
-        goto free_out;
+    /* in the CNI specification version spec-v1.0.0, the dns field is optional, so it is not mandatory to include the dns field here */
+    if (curr_result -> dns != NULL){
+        value->my_dns = convert_curr_dns(curr_result->dns);
+        if (value->my_dns == NULL) {
+            goto free_out;
+        }
     }
 
     return value;
