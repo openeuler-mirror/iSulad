@@ -1,6 +1,9 @@
 # set common FLAGS
 set(CMAKE_C_FLAGS "-fPIC -fstack-protector-all -D_FORTIFY_SOURCE=2 -O2 -Wall -fPIE")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
+# The following syntax is Makefile syntax, which Ninja does not support.
+if(CMAKE_GENERATOR STREQUAL "Unix Makefiles")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
+endif()
 
 if (GRPC_CONNECTOR)
     include(CheckCXXCompilerFlag)
@@ -13,7 +16,10 @@ if (GRPC_CONNECTOR)
         set(CMAKE_CXX_VERSION "-std=c++11")
     endif()
     set(CMAKE_CXX_FLAGS "-fPIC ${CMAKE_CXX_VERSION} -fstack-protector-all -D_FORTIFY_SOURCE=2 -O2 -Wall -Wno-error=deprecated-declarations")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
+    # The following syntax is Makefile syntax, which Ninja does not support.
+    if(CMAKE_GENERATOR STREQUAL "Unix Makefiles")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
+    endif()
 endif()
 set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-E -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -Wtrampolines -shared -pthread")
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,-E -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -Wtrampolines -pie -rdynamic")
