@@ -1,6 +1,12 @@
 cmake_minimum_required (VERSION 2.8...4.0)
 project (isulad)
 
+# the CMAKE_INSTALL_SYSCONFDIR defined by the GNUInstallDirs module uses the relative path etc by default, to prevent an incorrect setting of the iSulad configuration file location, the conf_prefix is set here
+set(conf_prefix "/etc")
+if (CMAKE_INSTALL_SYSCONFDIR)
+    set(conf_prefix ${CMAKE_INSTALL_SYSCONFDIR})
+endif()
+
 include(GNUInstallDirs)
 
 include(cmake/helper.cmake)
@@ -96,11 +102,6 @@ if (EANBLE_IMAGE_LIBARAY)
 endif()
 
 # install config files
-set(conf_prefix "/etc")
-if (CMAKE_INSTALL_SYSCONFDIR)
-    set(conf_prefix ${CMAKE_INSTALL_SYSCONFDIR})
-endif()
-
 if (ANDROID)
     install(FILES src/contrib/config/container_contexts
         DESTINATION ${conf_prefix}/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
