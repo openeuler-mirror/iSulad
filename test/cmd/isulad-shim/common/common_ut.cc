@@ -129,3 +129,45 @@ TEST_F(CommonUnitTest, test_get_attach_fifo_item)
     free(node2);
     free(attach_fifos);
 }
+
+TEST_F(CommonUnitTest, test_shim_append_error_message)
+{
+    shim_append_error_message("test for log");
+    shim_set_error_message("test for log2");
+    shim_append_error_message("test for log to clear last log");
+}
+
+TEST_F(CommonUnitTest, test_shim_set_error_message) {
+    shim_set_error_message(nullptr);
+    shim_set_error_message("test for log");
+    shim_set_error_message("test for clear log in last time");
+}
+
+TEST_F(CommonUnitTest, test_isulad_shim_log_init) {
+    const char *file = "fifo:\0";
+    const char *file2 = "fifo:/tmp/not_exist_file";
+
+    ASSERT_EQ(isulad_shim_log_init(nullptr, nullptr), -1);
+    ASSERT_EQ(isulad_shim_log_init(file, "ERROR"), -1);
+    ASSERT_EQ(isulad_shim_log_init(file2, "ERROR"), -1);
+}
+
+TEST_F(CommonUnitTest, test_free_shim_fifos_fd)
+{
+    struct shim_fifos_fd *fifos = NULL;
+    fifos = (struct shim_fifos_fd *)isula_common_calloc_s(sizeof(*fifos));
+    ASSERT_TRUE(fifos != nullptr);
+
+    const char *in = "test";
+    const char *out = "for";
+    const char *err = "aaa";
+
+    fifos->in_fifo = isula_strdup_s(in);
+    fifos->out_fifo = isula_strdup_s(out);
+    fifos->err_fifo = isula_strdup_s(err);
+    fifos->in_fd = 1;
+    fifos->out_fd = 2;
+    fifos->err_fd = 3;
+
+    free_shim_fifos_fd(fifos);
+}
