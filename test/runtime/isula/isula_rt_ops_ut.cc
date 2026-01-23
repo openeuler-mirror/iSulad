@@ -238,3 +238,26 @@ TEST_F(IsulaRtOpsUnitTest, test_rt_isula_listpids)
 
     ASSERT_EQ(rt_isula_listpids("123", "runc", &params, &out), -1);
 }
+
+TEST_F(IsulaRtOpsUnitTest, test_rt_isula_attach)
+{
+    rt_attach_params_t params = {};
+    ASSERT_EQ(rt_isula_attach(nullptr, nullptr, nullptr), -1);
+
+    ASSERT_EQ(rt_isula_attach("123", "runc", nullptr), -1);
+
+    ASSERT_EQ(rt_isula_attach("123", nullptr, nullptr), -1);
+
+    ASSERT_EQ(rt_isula_attach("123", "runc", &params), -1);
+
+}
+
+TEST_F(IsulaRtOpsUnitTest, test_rt_isula_resize)
+{
+    ASSERT_EQ(rt_isula_resize("123", "runc", nullptr), 0);
+}
+
+TEST_F(IsulaRtOpsUnitTest, test_rt_isula_rebuild_config)
+{
+    ASSERT_EQ(rt_isula_rebuild_config("123", "runc", nullptr), 0);
+}

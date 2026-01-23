@@ -110,8 +110,24 @@ function tear_down()
     local ret=0
 
     isula rm -f test
+    isula rm -f test1
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container: test" && ((ret++))
 
+    return ${ret}
+}
+
+function test_shim_log()
+{
+    local ret=0
+    local runtime=$1
+
+    containerid=`isula run -tid --name test1 --runtime $runtime busybox sh -c "echo test for log"`
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
+
+    cat /var/lib/isulad/engines/${runtime}/${containerid}/console.log |grep "test for log"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container log: ${image}" && ((ret++))
+
+    msg_info "${test} finished with return ${ret}..."
     return ${ret}
 }
 
@@ -125,6 +141,8 @@ function do_test_t()
     set_up $runtime || ((ret++))
 
     test_attach_fun  || ((ret++))
+
+    test_shim_log $runtime || ((ret++))
 
     tear_down || ((ret++))
 
