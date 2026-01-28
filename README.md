@@ -60,13 +60,45 @@ CRI interface is implemented based on gRPC. iSulad implemented CRI gRPC Server f
 
 ## Getting Started
 
-- [usage guide: openeuler official manual](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html)
+### Quick Links
 
-- [development guide](./docs/build_docs/README.md)
+- 📖 [Usage Guide](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html) - Official openEuler manual
+- 🛠️ [Development Guide](./docs/build_docs/README.md) - Build and development instructions
+- 📚 [User Manual](./docs/manual/README.md) - User documentation
+- 🏗️ [Design Docs](./docs/design/README.md) - Architecture and design documents
 
-- [user manual](./docs/manual/README.md)
+### Development Environment Setup
 
-- [design docs](./docs/design/README.md)
+#### Prerequisites
+
+- **OS**: Linux (Kernel 3.0.x+)
+- **Build Tools**: CMake (2.8+), GCC/G++ (with C++11/17 support)
+- **Dependencies**: See [build guide](./docs/build_docs/guide/build_guide.md) for detailed requirements
+
+#### Quick Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://gitee.com/openeuler/iSulad.git
+   cd iSulad
+   ```
+
+2. **Install dependencies (openEuler):**
+   ```bash
+   sudo dnf builddep iSulad.spec
+   ```
+
+3. **Build from source:**
+   ```bash
+   mkdir build && cd build
+   sudo -E cmake ..
+   sudo -E make
+   sudo -E make install
+   ```
+
+For other distributions, see the [development guide](./docs/build_docs/README.md).
+
+For detailed IDE configuration, code formatting, and static analysis instructions, please refer to the [development guide](./docs/build_docs/README.md).
 
 ### Installing
 
@@ -111,15 +143,20 @@ you should run `rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openEuler` first.
 
 ### Configure
 
-Configure the container image registry address, for example "docker.io" or other registry addrss.
+Configure the container image registry address, for example "docker.io" or other registry address.
 
 ```shell
 # cat /etc/isulad/daemon.json
-.....
+....
     "registry-mirrors": [
         "docker.io"
     ],
-.....
+....
+```
+
+**Note**: After modifying the configuration, restart iSulad service:
+```shell
+$ sudo systemctl restart isulad
 ```
 
 ### Run
@@ -241,3 +278,15 @@ iSulad Version | Kubernetes Version | CRI Version
 v2.0.0+ | v1.13-v1.18 | v1alpha2
 v2.0.8+ | v1.19-v1.22 | v1alpha2
 v2.1.4+ | v1.23-v1.29 | v1, v1alpha2
+
+## Contributing
+
+We welcome contributions! Please see:
+- [Development Guide](./docs/build_docs/README.md) for build instructions
+- [Code Style](./.clang-format) for formatting guidelines
+- [Static Check Tools](./tools/static_check.sh) for code quality checks
+
+Before submitting a PR:
+1. Run `./tools/static_check.sh -i` to check your changes
+2. Ensure all tests pass
+3. Update documentation if needed
