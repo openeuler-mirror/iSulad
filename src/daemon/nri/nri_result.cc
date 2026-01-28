@@ -77,7 +77,6 @@ auto pluginResult::InitByUpdateReq(nri_update_container_request *req) -> bool
         ERROR("Failed to init reply");
         return false;
     }
-    m_update_req = nullptr;
     return true;
 }
 
