@@ -60,13 +60,45 @@ CRI接口基于gRPC实现。iSulad遵循CRI接口规范，实现 CRI gRPC Server
 
 ## Getting Started
 
-- [用法指南：openeuler官方手册](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html)
+### 快速链接
 
-- [开发指南](./docs/build_docs/README_zh.md)
+- 📖 [使用指南](https://docs.openeuler.org/zh/docs/22.03_LTS/docs/Container/container.html) - openEuler官方手册
+- 🛠️ [开发指南](./docs/build_docs/README_zh.md) - 构建和开发说明
+- 📚 [用户手册](./docs/manual/README_zh.md) - 用户文档
+- 🏗️ [设计文档](./docs/design/README_zh.md) - 架构和设计文档
 
-- [用户手册](./docs/manual/README_zh.md)
+### 开发环境设置
 
-- [设计文档](./docs/design/README_zh.md)
+#### 前置要求
+
+- **操作系统**: Linux (内核 3.0.x+)
+- **构建工具**: CMake (2.8+), GCC/G++ (支持 C++11/17)
+- **依赖项**: 详细要求请参考[构建指南](./docs/build_docs/guide/build_guide_zh.md)
+
+#### 快速设置
+
+1. **克隆仓库:**
+   ```bash
+   git clone https://gitee.com/openeuler/iSulad.git
+   cd iSulad
+   ```
+
+2. **安装依赖 (openEuler):**
+   ```bash
+   sudo dnf builddep iSulad.spec
+   ```
+
+3. **从源码构建:**
+   ```bash
+   mkdir build && cd build
+   sudo -E cmake ..
+   sudo -E make
+   sudo -E make install
+   ```
+
+其他发行版的安装方法，请参考[开发指南](./docs/build_docs/README_zh.md)。
+
+详细的 IDE 配置、代码格式化和静态分析说明，请参考[开发指南](./docs/build_docs/README_zh.md)。
 
 ### Installing
 
@@ -113,11 +145,16 @@ For more information contact your distribution or package provider.
 
 ```shell
 # cat /etc/isulad/daemon.json
-.....
+....
     "registry-mirrors": [
         "docker.io"
     ],
-.....
+....
+```
+
+**注意**: 修改配置后，需要重启 iSulad 服务：
+```shell
+$ sudo systemctl restart isulad
 ```
 
 ### Run
@@ -235,4 +272,16 @@ iSulad 版本 | Kubernetes 版本 | CRI 版本
 --- | --- | ---
 v2.0.0+ | v1.13-v1.18 | v1alpha2
 v2.0.8+ | v1.19-v1.22 | v1alpha2
-v2.1.4+ | v1.23-v1.26 | v1, v1alpha2
+v2.1.4+ | v1.23-v1.29 | v1, v1alpha2
+
+## 贡献指南
+
+我们欢迎您的贡献！请参考：
+- [开发指南](./docs/build_docs/README_zh.md) 了解构建说明
+- [代码风格](./.clang-format) 了解格式化规范
+- [静态检查工具](./tools/static_check.sh) 了解代码质量检查
+
+提交 PR 前：
+1. 运行 `./tools/static_check.sh -i` 检查您的更改
+2. 确保所有测试通过
+3. 如需要，更新相关文档
