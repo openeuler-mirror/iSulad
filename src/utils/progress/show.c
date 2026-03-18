@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <term.h>
 #include <unistd.h>
+#include <termios.h>
 
 void move_to_row(int row)
 {
