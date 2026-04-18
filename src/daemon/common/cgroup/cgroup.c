@@ -184,8 +184,9 @@ char *common_convert_cgroup_path(const char *cgroup_path)
     }
 
     // Add /arr[0]/arr[1]-arr[2].scope, 3 include two slashes and one dash
-    if (strlen(cgroup_path) > PATH_MAX || strlen(result) + 3 + strlen(".scope") >
-        PATH_MAX - strlen(arr[0] - strlen(arr[1]) - strlen(arr[2]))) {
+    // Ensure total length (result + "/[arr0]/[arr1]-[arr2].scope") does not exceed PATH_MAX.
+    if (strlen(cgroup_path) > PATH_MAX || (strlen(result) + 3 + strlen(".scope")) >
+        (PATH_MAX - strlen(arr[0]) - strlen(arr[1]) - strlen(arr[2]))) {
         ERROR("Invalid systemd cgroup parent: exceeds max length of path");
         return NULL;
     }
