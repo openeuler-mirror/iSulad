@@ -299,7 +299,7 @@ static int get_bearer_token(pull_descriptor *desc, challenge *c)
     }
 
     // Token have not expired, reuse it.
-    if (c->cached_token != NULL && c->expires_time != 0 && c->expires_time < now) {
+    if (c->cached_token != NULL && c->expires_time != 0 && c->expires_time > now) {
         return 0;
     }
 
