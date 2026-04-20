@@ -336,7 +336,7 @@ static int get_bearer_token(pull_descriptor *desc, challenge *c)
     if (token->expires_in > MIN_TOKEN_EXPIRES_IN) {
         c->expires_time = time(NULL) + token->expires_in;
     } else {
-        c->expires_time = MIN_TOKEN_EXPIRES_IN;
+        c->expires_time = time(NULL) + MIN_TOKEN_EXPIRES_IN;
     }
 
 out:
