@@ -804,6 +804,7 @@ static load_image_t *oci_load_process_manifest(const image_manifest_items_elemen
 {
     int ret = 0;
     char *config_fpath = NULL;
+    char cleanpath[PATH_MAX] = { 0 };
     char *image_digest = NULL;
     char *image_id = NULL;
     load_image_t *im = NULL;
@@ -822,7 +823,19 @@ static load_image_t *oci_load_process_manifest(const image_manifest_items_elemen
         goto out;
     }
 
-    image_digest = sha256_full_file_digest(config_fpath);
+    if (util_clean_path(config_fpath, cleanpath, sizeof(cleanpath)) == NULL) {
+        ret = -1;
+        ERROR("Failed to clean path for %s", config_fpath);
+        goto out;
+    }
+
+    if (strncmp(cleanpath, dstdir, strlen(dstdir)) != 0) {
+        ret = -1;
+        ERROR("Illegal directory: %s", cleanpath);
+        goto out;
+    }
+
+    image_digest = sha256_full_file_digest(cleanpath);
     if (image_digest == NULL) {
         ret = -1;
         ERROR("Calc image config file %s digest err", manifest->config);
@@ -839,7 +852,7 @@ static load_image_t *oci_load_process_manifest(const image_manifest_items_elemen
 
     im->im_id = util_strdup_s(image_id);
     im->im_digest = util_strdup_s(image_digest);
-    im->config_fpath = util_strdup_s(config_fpath);
+    im->config_fpath = util_strdup_s(cleanpath);
     im->repo_tags_len = manifest->repo_tags_len;
     im->repo_tags = manifest->repo_tags_len == 0 ? NULL : str_array_copy(manifest->repo_tags, manifest->repo_tags_len);
 
