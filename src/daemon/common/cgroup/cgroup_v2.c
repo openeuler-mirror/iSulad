@@ -171,13 +171,11 @@ static int cgroup2_enable_all()
 {
     int ret = 0;
     int nret = 0;
-    int n = 0;
     size_t i = 0;
-    const char *space = "";
     __isula_auto_free char *controllers_str = NULL;
     __isula_auto_free char *subtree_controller_str = NULL;
     __isula_auto_array_t char **controllers = NULL;
-    char enable_controllers[PATH_MAX] = { 0 };
+    char enable_one[PATH_MAX] = { 0 };
 
     controllers_str = util_read_content_from_file(CGROUP2_CONTROLLERS_PATH);
     if (controllers_str == NULL || strlen(controllers_str) == 0 || strcmp(controllers_str, "\n") == 0) {
@@ -196,20 +194,20 @@ static int cgroup2_enable_all()
         return -1;
     }
 
+    /* Enable each controller individually, tolerate individual failures */
+    ret = -1;
     for (i = 0; i < util_array_len((const char **)controllers); i++) {
-        nret = snprintf(enable_controllers + n, PATH_MAX - n, "%s+%s", space, controllers[i]);
-        if (nret < 0 || (size_t)nret >= PATH_MAX - n) {
+        nret = snprintf(enable_one, sizeof(enable_one), "+%s", controllers[i]);
+        if (nret < 0 || (size_t)nret >= sizeof(enable_one)) {
             ERROR("Path is too long");
             return -1;
         }
-        n += nret;
-        space = " ";
-    }
-    ret = util_write_file(CGROUP2_SUBTREE_CONTROLLER_PATH, enable_controllers, strlen(enable_controllers),
-                          DEFAULT_CGROUP_FILE_MODE);
-    if (ret != 0) {
-        SYSERROR("write %s to %s failed", enable_controllers, CGROUP2_SUBTREE_CONTROLLER_PATH);
-        return ret;
+        if (util_write_file(CGROUP2_SUBTREE_CONTROLLER_PATH, enable_one, strlen(enable_one),
+                            DEFAULT_CGROUP_FILE_MODE) == 0) {
+            ret = 0;
+        } else {
+            SYSWARN("Failed to enable cgroup controller %s", controllers[i]);
+        }
     }
 
     return ret;
