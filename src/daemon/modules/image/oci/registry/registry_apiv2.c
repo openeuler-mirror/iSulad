@@ -490,6 +490,7 @@ static int parse_manifest_head(char *http_head, char **content_type, char **dige
     int ret = 0;
     struct parsed_http_message *message = NULL;
     char *value = NULL;
+    char *semi = NULL;
 
     if (http_head == NULL || content_type == NULL || digest == NULL) {
         ERROR("Invalid NULL pointer");
@@ -529,6 +530,12 @@ static int parse_manifest_head(char *http_head, char **content_type, char **dige
         ERROR("Get content type from message header failed, response: %s", http_head);
         ret = -1;
         goto out;
+    }
+
+    // Strip optional parameters (e.g. ;charset=utf-8) per RFC 7231 Section 3.1.1.1
+    semi = strchr(value, ';');
+    if (semi != NULL) {
+        *semi = '\0';
     }
 
     ret = check_content_type(value);
