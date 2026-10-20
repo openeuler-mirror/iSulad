@@ -467,7 +467,7 @@ static int mount_points_to_defs_mnts(container_config_v2_common_config_mount_poi
         }
 
         mnts[mnts_len] = mount_point_to_defs_mnt(mount_points->values[i], update_rw_mode);
-        if (mnts[i] == NULL) {
+        if (mnts[mnts_len] == NULL) {
             ret = -1;
             goto out;
         }
