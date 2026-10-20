@@ -299,7 +299,7 @@ static void show_shim_errlog(const int fd)
     if (num == 0) {
         return;
     }
-    isulad_set_error_message(buf);
+    isulad_set_error_message("%s", buf);
 }
 
 bool rt_isula_detect(const char *runtime)
