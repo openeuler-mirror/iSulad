@@ -1417,6 +1417,7 @@ static int copy_data_to_volume(char *base_fs, defs_mount *mnt)
 {
     int ret = 0;
     char *copy_src = NULL;
+    char *resolved_src = NULL;
     char *copy_dst = NULL;
     struct stat st;
     char **entries = NULL;
@@ -1430,6 +1431,15 @@ static int copy_data_to_volume(char *base_fs, defs_mount *mnt)
     // copy data from container volume mount point to host volume directory
     copy_src = container_path_in_host(base_fs, mnt->destination);
     copy_dst = mnt->source;
+
+    resolved_src = util_follow_symlink_in_scope(copy_src, base_fs);
+    if (resolved_src == NULL) {
+        ERROR("Failed to resolve volume path within rootfs");
+        ret = -1;
+        goto out;
+    }
+    free(copy_src);
+    copy_src = resolved_src;
 
     if (stat(copy_src, &st) != 0) {
         if (errno == ENOENT) {
