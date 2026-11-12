@@ -966,6 +966,13 @@ static int parse_docker_config(pull_descriptor *desc)
         goto out;
     }
 
+    if (config->rootfs->diff_ids_len != desc->layers_len) {
+        ERROR("Docker config rootfs diff_ids length (%zu) does not match manifest layers length (%zu)",
+              config->rootfs->diff_ids_len, desc->layers_len);
+        ret = -1;
+        goto out;
+    }
+
     for (i = 0; i < config->rootfs->diff_ids_len; i++) {
         diff_id = config->rootfs->diff_ids[i];
         desc->layers[i].diff_id = util_strdup_s(diff_id);
@@ -1012,6 +1019,13 @@ static int parse_oci_config(pull_descriptor *desc)
 
     if (config->rootfs == NULL || config->rootfs->diff_ids_len == 0) {
         ERROR("No rootfs found in config");
+        ret = -1;
+        goto out;
+    }
+
+    if (config->rootfs->diff_ids_len != desc->layers_len) {
+        ERROR("Config diff_ids length (%zu) does not match manifest layers length (%zu)",
+              config->rootfs->diff_ids_len, desc->layers_len);
         ret = -1;
         goto out;
     }
